@@ -11,7 +11,7 @@
  *
  * All three now have a real source form. Worklets and workers are `*.worklet.ts`
  * / `*.worker.ts` modules bundled into a string by the build (see
- * `@codexo/exojs-config/inline-module`); shaders are `.vert`/`.frag`/`.wgsl`
+ * `@codexo/exojs-build`); shaders are `.vert`/`.frag`/`.wgsl`
  * files inlined by the shader plugin. This gate keeps it that way, because the
  * old shape still works at runtime and would otherwise reappear unnoticed.
  *

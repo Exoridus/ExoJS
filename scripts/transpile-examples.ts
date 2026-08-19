@@ -14,7 +14,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { bundleInlineModule } from '@codexo/exojs-config/inline-module';
+import { createWorkerPlugin } from '@codexo/exojs-build';
 import ts from 'typescript';
 
 /**
@@ -32,6 +32,28 @@ const WORKER_IMPORT = /^import\s+(\w+)\s+from\s+'([^']+)\?worker';[^\S\n]*$/gm;
 export const isTranspiledExampleSource = (name: string): boolean => name.endsWith('.ts') && !name.endsWith('.d.ts') && !name.endsWith('.worker.ts');
 
 /**
+ * The same `?worker` transform the bundlers run, driven directly: this
+ * generator is not a bundler, so it resolves and loads through the plugin's
+ * hooks itself. Going through the published plugin rather than its internals
+ * keeps one implementation of the transform for the build, the tests and this
+ * generator.
+ */
+const workerPlugin = createWorkerPlugin();
+
+const bundledWorkerSource = (entryPoint: string): string => {
+  const id = workerPlugin.resolveId(`${entryPoint}?worker`);
+
+  if (id === null) throw new Error(`transpile-examples: the worker plugin did not claim ${entryPoint}.`);
+
+  const moduleCode = workerPlugin.load.call({}, id);
+  const match = moduleCode === null ? null : /^export default (.*);\n?$/s.exec(moduleCode);
+
+  if (!match) throw new Error(`transpile-examples: the worker plugin did not emit a default-exported string for ${entryPoint}.`);
+
+  return JSON.parse(match[1]!) as string;
+};
+
+/**
  * Replaces every `?worker` import with the bundled source of the imported module,
  * as a string constant. `.worker.ts` files are excluded from the generated `.js`
  * catalog precisely because they only ever ship inlined like this.
@@ -39,9 +61,8 @@ export const isTranspiledExampleSource = (name: string): boolean => name.endsWit
 const inlineWorkerImports = (source: string, tsFilePath: string): string =>
   source.replaceAll(WORKER_IMPORT, (_match, binding: string, specifier: string) => {
     const entryPoint = path.resolve(path.dirname(tsFilePath), specifier);
-    const { code } = bundleInlineModule({ entryPoint });
 
-    return `const ${binding} = ${JSON.stringify(code)};`;
+    return `const ${binding} = ${JSON.stringify(bundledWorkerSource(entryPoint))};`;
   });
 
 /** Header prepended to every generated example `.js` file. */

@@ -2,9 +2,9 @@ import { dirname, relative as relativePath, resolve as resolvePath } from 'node:
 import { fileURLToPath } from 'node:url';
 
 import { codecovRollupPlugin } from '@codecov/rollup-plugin';
+import { createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
 import { createShaderPlugin } from '@codexo/exojs-config/shader-plugin';
-import { createWorkletPlugin } from '@codexo/exojs-config/worklet-plugin';
 import resolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import terser from '@rollup/plugin-terser';
@@ -63,7 +63,7 @@ const codecovBundlePlugin = (bundleName: string): Plugin[] =>
     : [];
 
 // Real, typed AudioWorklet sources imported via `?worklet` (see
-// `@codexo/exojs-config/worklet-plugin`) are bundled - imports and all - and
+// `@codexo/exojs-build`) are bundled - imports and all - and
 // inlined as a JS string. It is a no-op for any input that never uses the
 // `?worklet` query, so it is safe to include in every config below. Mirrors
 // the shader plugin split above: the outputs that minify get the minified

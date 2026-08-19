@@ -1,6 +1,6 @@
 // BeatDetector AudioWorkletProcessor - spectral-flux onset detection + ACF tempogram + PLL beat tracking.
 //
-// Built through the `?worklet` plugin (see `@codexo/exojs-config/worklet-plugin`),
+// Built through the `?worklet` plugin (see `@codexo/exojs-build`),
 // which bundles this module and everything it imports into the single
 // self-contained source string `registerAudioWorkletProcessor`
 // (`#audio/worklet/registerWorklet`) hands to `audioWorklet.addModule()` via a

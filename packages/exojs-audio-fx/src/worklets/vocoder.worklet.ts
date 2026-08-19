@@ -1,6 +1,6 @@
 // Vocoder AudioWorkletProcessor - bandpass filterbank + envelope-follower carrier modulation.
 //
-// Built through the `?worklet` plugin (see `@codexo/exojs-config/worklet-plugin`),
+// Built through the `?worklet` plugin (see `@codexo/exojs-build`),
 // which bundles this module - imports included - into the single self-contained
 // source string `registerAudioWorkletProcessor` (`#audio/worklet/registerWorklet`)
 // hands to `audioWorklet.addModule()` via a Blob URL.

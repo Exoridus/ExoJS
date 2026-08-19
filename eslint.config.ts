@@ -681,6 +681,18 @@ export default defineConfig([
 
   // @codexo/exojs-bench is an internal benchmark TOOL — a Node CLI plus an
   // in-browser rendering harness — not a shipped library. It legitimately
+  // The published build tooling runs in Node: it drives esbuild and reads the
+  // filesystem. The generic `packages/exojs-*/src` block grants browser
+  // globals, which is the wrong environment here, so the Node ones are added on
+  // top. What actually keeps DOM usage out is the package's own tsconfig
+  // (`lib: es2022`, `types: node`), where a `document` reference is an error.
+  {
+    files: ['packages/exojs-build/src/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.es2024 },
+    },
+  },
+
   // monkeypatches live graphics contexts and casts through `unknown` to
   // instrument arbitrary engines, and it was linted under the relaxed `test/**`
   // profile at its former `test/perf/baseline/` location. Preserve that profile

@@ -9,9 +9,6 @@
     "./prettier": "./prettier/index.js",
     "./vitest": "./vitest/index.js",
     "./rollup": "./rollup/index.js",
-    "./inline-module": "./inline-module.js",
-    "./worklet-plugin": "./worklet-plugin.js",
-    "./worker-plugin": "./worker-plugin.js",
     "./shader-plugin": "./shader-plugin.js",
     "./shader-strip": "./shader-strip.js",
     "./build-defines": "./build-defines/index.js",
@@ -24,10 +21,10 @@
   },
   "dependencies": {
     "@codecov/rollup-plugin": "^2.0.1",
+    "@codexo/exojs-build": "workspace:*",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-replace": "^6.0.3",
-    "@rollup/plugin-typescript": "^12.3.0",
-    "esbuild": "^0.25.0"
+    "@rollup/plugin-typescript": "^12.3.0"
   },
   "license": "MIT"
 }

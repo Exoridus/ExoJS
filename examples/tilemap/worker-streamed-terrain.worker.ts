@@ -1,7 +1,7 @@
 // Off-thread terrain sampler for the "Worker-Streamed Terrain" example.
 //
 // Authored as a real module and bundled into one self-contained string by the
-// `?worker` plugin (see @codexo/exojs-config/worker-plugin), which is how it
+// `?worker` plugin (see @codexo/exojs-build), which is how it
 // can import the shared noise implementation: the string is Blob-URL'd into a
 // classic Worker by createWorkerSampledChunkSource, and a classic worker has
 // no module loader. Nothing is resolved at runtime.
