@@ -1,13 +1,13 @@
 // Rollup/Vite plugin that turns a real, typed `*.worklet.ts` module into an
-// inlined JS-string import — the AudioWorklet analogue of the GLSL
+// inlined JS-string import - the AudioWorklet analogue of the GLSL
 // `*.vert`/`*.frag` → string mechanism in `./shader-plugin.js`. Shader sources
 // are already plain text, so that plugin only inlines raw file contents;
 // AudioWorklet code is TypeScript and may import ordinary modules, so this one
 // bundles it first (see `./inline-module.js` for the shared primitive and why
 // the output has to be an IIFE).
 //
-// Selected by an explicit `?worklet` import query — e.g.
-// `import src from './x.worklet.ts?worklet'` — not by the filename, so a
+// Selected by an explicit `?worklet` import query - e.g.
+// `import src from './x.worklet.ts?worklet'` - not by the filename, so a
 // worklet module can still be imported normally where that is wanted.
 import { createInlineModulePlugin } from './inline-module.js';
 

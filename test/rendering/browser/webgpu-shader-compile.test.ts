@@ -6,7 +6,7 @@
  * Mirrors `webgl2-shader-compile.test.ts` (real GLSL compile coverage) for the
  * WebGPU renderer path. Unlike `gl.compileShader`, WGSL compilation is async
  * and non-throwing: `device.createShaderModule({ code })` never throws on a
- * syntax error — the error only surfaces later, off the main thread, via
+ * syntax error - the error only surfaces later, off the main thread, via
  * `shaderModule.getCompilationInfo()`. Nothing else in the test suite calls
  * that API, so a WGSL syntax error anywhere in the WebGPU renderer path would
  * ship completely silently.
@@ -26,7 +26,7 @@
  *    caller inside `src/` (it is exported SDK surface for extension authors).
  *  - `WebGpuSpriteRenderer`'s custom-material path and
  *    `WebGpuMeshRenderer._getOrCreateCustomShaderResources` compile
- *    user-authored `material.shader.wgsl` at runtime — there is no
+ *    user-authored `material.shader.wgsl` at runtime - there is no
  *    engine-owned fixed string to assert against. `spriteMaterialPrologueWgsl`,
  *    the fixed prelude those custom-material shaders are prepended with, IS
  *    covered below.

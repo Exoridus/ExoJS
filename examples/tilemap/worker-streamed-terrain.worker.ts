@@ -6,7 +6,7 @@
 // classic Worker by createWorkerSampledChunkSource, and a classic worker has
 // no module loader. Nothing is resolved at runtime.
 //
-// It typechecks against the Worker global scope only (tsconfig.workers.json) —
+// It typechecks against the Worker global scope only (tsconfig.workers.json) -
 // there is no `window` or `document` here.
 
 import { fbm } from '../shared/terrain-noise';
@@ -56,7 +56,7 @@ self.onmessage = (event: MessageEvent<IncomingMessage>): void => {
                 const tx = cx * chunkWidth + localTx;
                 const ty = cy * chunkHeight + localTy;
                 let value = fbm(seed, tx / featureSize, ty / featureSize);
-                // Burns deterministic CPU to simulate an expensive sampler —
+                // Burns deterministic CPU to simulate an expensive sampler -
                 // the recomputed value is discarded except for the last pass.
                 for (let i = 0; i < extraCost; i++) {
                     value = fbm(seed, tx / featureSize, ty / featureSize);
@@ -68,7 +68,7 @@ self.onmessage = (event: MessageEvent<IncomingMessage>): void => {
         // zero-copy handoff back to the main thread.
         self.postMessage({ requestId, values }, [values.buffer]);
     } catch (error) {
-        // Still exactly one reply — the error branch must also answer, or
+        // Still exactly one reply - the error branch must also answer, or
         // ChunkStreamer treats this chunk as forever in flight (no timeout).
         self.postMessage({ requestId, error: String(error) });
     }

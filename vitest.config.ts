@@ -52,7 +52,7 @@ const browserBase = {
   resolve: { alias: aliasConfig, conditions: srcConditions },
   ssr: { resolve: { conditions: srcConditions } },
   // `workletTransformPlugin` and `workerTransformPlugin` are the real (non-stub)
-  // transforms — the browser-audio-chromium project renders converted worklets
+  // transforms - the browser-audio-chromium project renders converted worklets
   // through a genuine AudioContext and browser-tilemap-chromium runs worker
   // sources in a genuine Worker, so both need functioning code, not a stub.
   plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],

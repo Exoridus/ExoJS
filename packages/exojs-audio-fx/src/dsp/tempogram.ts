@@ -26,8 +26,8 @@
  *      SUPER-harmonics (`2f`, `3f` → lags `p/2, p/3`). A true fundamental has no
  *      super-harmonic energy, so it keeps its full comb; a sub-harmonic candidate is
  *      demoted because its super-harmonic (the real beat) is strong. This realises the
- *      plan's stated goal — "metrical support reinforces the fundamental rather than a
- *      lone sub-harmonic peak" — over the `{f/2, f, 2f, 3f}` family.  [scoreTempoHypotheses]
+ *      plan's stated goal - "metrical support reinforces the fundamental rather than a
+ *      lone sub-harmonic peak" - over the `{f/2, f, 2f, 3f}` family.  [scoreTempoHypotheses]
  *
  *      The super-harmonic penalty is SUBDIVISION-AWARE: a candidate `kf` (k = 2, 3) only
  *      demotes `f` when `kf` could itself be the beat, i.e. `kf` lies within the tempo
@@ -38,7 +38,7 @@
  *      demoted in favour of an unrelated in-band multiple (180 → 120). Pure clicktracks
  *      are unaffected: they have no super-harmonic energy, so the gate changes nothing.
  *   3. A soft log-Gaussian tempo prior centred on ~140 BPM breaks residual ties toward
- *      the musical core (100–200 BPM) without hard-clamping the edges.  [tempoPrior]
+ *      the musical core (100-200 BPM) without hard-clamping the edges.  [tempoPrior]
  */
 
 export interface TempoCandidateResult {

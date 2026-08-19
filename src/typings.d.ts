@@ -14,7 +14,7 @@ declare module '*.wgsl' {
 }
 
 // A real, typed AudioWorklet module (`*.worklet.ts`) bundled and inlined as a
-// JS string — the AudioWorklet analogue of the shader declarations above. The
+// JS string - the AudioWorklet analogue of the shader declarations above. The
 // query, not the filename, selects the transform, so the same file can also be
 // imported as an ordinary module where that is wanted. See
 // `@codexo/exojs-config/worklet-plugin`.

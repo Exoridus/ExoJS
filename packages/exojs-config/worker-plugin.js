@@ -3,13 +3,13 @@
 // `./worklet-plugin.js`. Both share the bundling primitive in
 // `./inline-module.js`.
 //
-// Selected by an explicit `?worker` import query — e.g.
+// Selected by an explicit `?worker` import query - e.g.
 // `import src from './x.worker.ts?worker'`. The emitted string is handed to a
 // classic `Worker` through a Blob URL, which is why the bundle is an IIFE and
 // not an ES module: `new Worker(url)` without `{ type: 'module' }` parses its
 // script as a classic script, where an `import` statement is a SyntaxError.
-// A module worker would also be a deployment regression — Safari only gained
-// support in 15 — and nothing in the emitted source needs one.
+// A module worker would also be a deployment regression - Safari only gained
+// support in 15 - and nothing in the emitted source needs one.
 import { createInlineModulePlugin } from './inline-module.js';
 
 /**

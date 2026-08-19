@@ -3,7 +3,7 @@
  *
  * Three kinds of code in this repository run outside the module that produced
  * them: AudioWorklet processors, Web Workers, and shaders. All three reach
- * their runtime as text, which used to mean they were authored as text — a
+ * their runtime as text, which used to mean they were authored as text - a
  * template literal full of JavaScript or GLSL, invisible to TypeScript, ESLint,
  * the formatter and every test that type-checks anything. The costs compound:
  * such a string cannot import, so whatever it needs gets transliterated beside
@@ -17,8 +17,8 @@
  *
  * It is deliberately not a regular expression over every string in the tree.
  * The file is parsed with the TypeScript compiler, so only real string and
- * template literals are inspected — never a comment, an identifier or JSX text
- * that happens to mention `registerProcessor` — and a literal is only reported
+ * template literals are inspected - never a comment, an identifier or JSX text
+ * that happens to mention `registerProcessor` - and a literal is only reported
  * when it carries a marker that has no other meaning: the call that registers
  * an AudioWorklet processor, the worker global's message plumbing, a GLSL
  * version directive, a WGSL entry-point attribute.
@@ -52,7 +52,7 @@ const SCANNABLE_EXTENSIONS = ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mj
 const MINIMUM_INTERESTING_LENGTH = 60;
 
 /**
- * A module spans lines. Prose does not — and prose is where these markers have a
+ * A module spans lines. Prose does not - and prose is where these markers have a
  * second, innocent reading: a doc string explaining `registerProcessor(name, ctor)`,
  * an error message saying `self.postMessage()` is unavailable here. Requiring a
  * newline separates "this string talks about worker code" from "this string is
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
     console.error(`\x1b[31mExecutable source found in ${violations.length} string literal(s):\x1b[0m`);
 
     for (const violation of violations) {
-      console.error(`  ${violation.file}:${violation.line}  ${violation.kind.label} source in a string literal — ${violation.kind.remedy}`);
+      console.error(`  ${violation.file}:${violation.line}  ${violation.kind.label} source in a string literal - ${violation.kind.remedy}`);
     }
 
     console.error('\nA string literal is invisible to TypeScript, ESLint and the formatter, and cannot import.');

@@ -5,7 +5,7 @@
 // thread through createSampledChunkSource and a Worker through
 // createWorkerSampledChunkSource. A Blob-URL worker shares no scope with the
 // module that created it, so the worker gets this code by bundling it (see
-// worker-streamed-terrain.worker.ts), not by inheriting it — but it is the same
+// worker-streamed-terrain.worker.ts), not by inheriting it - but it is the same
 // source either way, which is what makes the two providers render an identical
 // world for a given seed.
 /** Integer-lattice hash → [0, 1). Any change here changes every generated world. */

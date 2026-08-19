@@ -10,7 +10,7 @@ import { packTile } from './types';
 export interface WorkerSampledChunkSourceOptions {
   /**
    * Complete worker script source as a single self-contained string, Blob-URL'd
-   * into a real `Worker` at construction time — the same technique
+   * into a real `Worker` at construction time - the same technique
    * {@link import('@codexo/exojs').WorkletEffect} uses for AudioWorklet
    * processors. No separate worker asset is fetched and no bundler-specific
    * worker-import syntax is involved.
@@ -26,7 +26,7 @@ export interface WorkerSampledChunkSourceOptions {
    * - Request (received via `self.onmessage`):
    *   `{ requestId: number; cx: number; cy: number; chunkWidth: number; chunkHeight: number }`.
    * - Response, success (send via `self.postMessage`, transferring the
-   *   buffer for a zero-copy handoff — `postMessage(response, [response.values.buffer])`):
+   *   buffer for a zero-copy handoff - `postMessage(response, [response.values.buffer])`):
    *   `{ requestId: number; values: Float64Array }`, `values.length ===
    *   chunkWidth * chunkHeight`, row-major (`localTy * chunkWidth + localTx`),
    *   one sampled value per tile in the requested chunk. Compute each tile's
@@ -37,7 +37,7 @@ export interface WorkerSampledChunkSourceOptions {
    *
    * Your worker must reply to every request with exactly one success or
    * error message bearing the same `requestId`. A request left unanswered
-   * leaves that chunk permanently unfetched — there is no timeout — since
+   * leaves that chunk permanently unfetched - there is no timeout - since
    * `ChunkStreamer` tracks it as still in flight and never retries it.
    */
   workerSource: string;
@@ -45,7 +45,7 @@ export interface WorkerSampledChunkSourceOptions {
    * Posted to the worker once, before any chunk request, when present.
    *
    * The transport for whatever the sampler needs to know that is not per-chunk
-   * — a seed, a feature size, a cost knob. Without it those values would have
+   * - a seed, a feature size, a cost knob. Without it those values would have
    * to be interpolated into {@link WorkerSampledChunkSourceOptions.workerSource}
    * as literals, which turns every parameter change into a source rebuild and a
    * new `Worker`.

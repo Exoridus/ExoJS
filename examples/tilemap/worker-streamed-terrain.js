@@ -111,8 +111,8 @@ class WorkerStreamedTerrainScene extends Scene {
         const cost = this.extraCost;
         if (this.providerMode === 'worker') {
             this.workerSourceHandle = createWorkerSampledChunkSource(this.terrain, {
-                // The worker runs the same fbm this file imports — bundled into
-                // its source string, not restated — so both providers render an
+                // The worker runs the same fbm this file imports - bundled into
+                // its source string, not restated - so both providers render an
                 // identical world for a given seed.
                 workerSource: terrainWorkerSource,
                 // Seed and cost travel as data, so changing either does not mean
