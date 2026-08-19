@@ -1245,6 +1245,17 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
+   * Build a fresh `GPUSampler` for `texture`'s current filter/wrap settings.
+   * Unlike {@link getTextureBinding}, this never touches texture content —
+   * no upload, no `_syncTexture` call. Callers that need a stable sampler
+   * across multiple frames must cache the result themselves; this method
+   * always creates a new one.
+   */
+  public createSamplerFor(texture: Texture | RenderTexture): GPUSampler {
+    return this._createSampler(texture);
+  }
+
+  /**
    * The `GPUTextureFormat` a given `Texture`/`RenderTexture` is (or will be)
    * backed by. Unlike {@link renderTargetFormat} (which reflects whatever
    * target is *currently bound*), this is keyed off the texture itself, so

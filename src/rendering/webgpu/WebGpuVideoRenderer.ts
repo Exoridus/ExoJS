@@ -66,6 +66,8 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
   private _externalPipelineLayout: GPUPipelineLayout | null = null;
   private _externalShaderModule: GPUShaderModule | null = null;
   private readonly _externalPipelines = new WebGpuPipelineVariantCache<GPURenderPipeline>();
+  private _externalSamplerKey: string | null = null;
+  private _externalSampler: GPUSampler | null = null;
 
   private _uniformBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
@@ -179,6 +181,8 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     this._externalPipelineLayout = null;
     this._externalTextureBindGroupLayout = null;
     this._externalShaderModule = null;
+    this._externalSamplerKey = null;
+    this._externalSampler = null;
     this._device = null;
     this._pendingVideo = null;
     this._pendingTexture = null;
@@ -260,6 +264,16 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     if (video !== null && texture !== null && indexBuffer !== null && !maskClipsAll) {
       backend.setBlendMode(this._pendingBlendMode);
 
+      // Decided fresh every flush, never cached: readiness (decoded frame,
+      // origin-clean, not mid-seek) can change between frames, and a stale
+      // "external worked last time" decision must not survive a pause/seek/
+      // source change. Falls through to the texture_2d path on any failure.
+      // Resolved up front (it has no pass-related side effects) so the
+      // texture-mutation guard below can skip the reopen it exists for when
+      // this flush isn't going to touch the texture cache at all.
+      const sourceElement = texture.source instanceof HTMLVideoElement ? texture.source : null;
+      const externalTexture = sourceElement !== null ? this._tryImportExternalTexture(device, sourceElement) : null;
+
       const coordinator = backend._passCoordinator;
       let active = coordinator.acquirePass();
 
@@ -272,7 +286,10 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       // pre-mutation content, then reopen and re-upload into a fresh slice. The
       // texture cache is shared, so the endangered draw need not be this
       // renderer's own — ask the coordinator, not this renderer's own cursor.
-      if (coordinator.passHasDraws && backend._textureUploadWouldMutate(texture)) {
+      // Only relevant when this flush will actually sync the texture cache
+      // (the fallback path) — the external path never calls getTextureBinding,
+      // so a would-be mutation this frame is never actually issued.
+      if (externalTexture === null && coordinator.passHasDraws && backend._textureUploadWouldMutate(texture)) {
         active = this._reopenPass(backend);
       }
 
@@ -305,13 +322,6 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer, storage.tintBuffer);
       const stencil = coordinator.stencilActive;
 
-      // Decided fresh every flush, never cached: readiness (decoded frame,
-      // origin-clean, not mid-seek) can change between frames, and a stale
-      // "external worked last time" decision must not survive a pause/seek/
-      // source change. Falls through to the texture_2d path on any failure.
-      const sourceElement = texture.source instanceof HTMLVideoElement ? texture.source : null;
-      const externalTexture = sourceElement !== null ? this._tryImportExternalTexture(device, sourceElement) : null;
-
       let pipeline: GPURenderPipeline;
       let textureBindGroup: GPUBindGroup;
 
@@ -322,7 +332,10 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
           layout: this._externalTextureBindGroupLayout!,
           entries: [
             { binding: 0, resource: externalTexture },
-            { binding: 1, resource: backend.getTextureBinding(texture).sampler },
+            // A locally-built, locally-cached sampler — NOT backend.getTextureBinding(texture),
+            // which unconditionally runs the backend's texture-sync (the very upload this branch
+            // exists to avoid). See createSamplerFor's doc comment.
+            { binding: 1, resource: this._getOrCreateExternalSampler(backend, texture) },
           ],
         });
       } else {
@@ -518,6 +531,27 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     } catch {
       return null;
     }
+  }
+
+  /**
+   * The sampler for the external-texture branch, built directly from
+   * `backend.createSamplerFor` rather than `backend.getTextureBinding` —
+   * the latter unconditionally re-syncs texture content, which would
+   * reintroduce the very copy-upload the external path exists to avoid.
+   * Cached per (scaleMode, wrapMode) pair and rebuilt only when that pair
+   * changes; safe to call every flush.
+   */
+  private _getOrCreateExternalSampler(backend: WebGpuBackend, texture: Texture | RenderTexture): GPUSampler {
+    const key = `${texture.scaleMode}:${texture.wrapMode}`;
+
+    if (this._externalSampler !== null && this._externalSamplerKey === key) {
+      return this._externalSampler;
+    }
+
+    this._externalSamplerKey = key;
+    this._externalSampler = backend.createSamplerFor(texture);
+
+    return this._externalSampler;
   }
 
   private _getExternalPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
