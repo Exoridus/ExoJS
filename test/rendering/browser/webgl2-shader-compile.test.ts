@@ -25,17 +25,17 @@ import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilema
 // from `@codexo/exojs-particles`, so a glob over `src/` alone would leave the
 // only GLSL outside core uncompiled here.
 //
-// The filter shaders live outside `webgl2/glsl/` and are pulled in explicitly.
-// The filter browser specs render them, so the authored form does reach a
-// driver there; what only this suite compiles is the comment-stripped text the
-// production build ships.
-//
-// `src/rendering/sprite/glsl/sprite-material.vert` is deliberately absent: its
-// fragment stage comes from the application, so it has no fixed pair to link
-// against here. `webgl2-custom-sprite-material.test.ts` compiles and links it
-// against a real one.
+// The filter and custom-material shaders live outside `webgl2/glsl/` and are
+// pulled in explicitly. Their browser specs render them, so the authored form
+// does reach a driver there; what only this suite compiles is the
+// comment-stripped text the production build ships.
 const shaderModules = import.meta.glob(
-  ['/src/rendering/webgl2/glsl/*.{vert,frag}', '/src/rendering/filters/shaders/*.{vert,frag}', '/packages/exojs-*/src/**/glsl/*.{vert,frag}'],
+  [
+    '/src/rendering/webgl2/glsl/*.{vert,frag}',
+    '/src/rendering/filters/shaders/*.{vert,frag}',
+    '/src/rendering/sprite/glsl/*.{vert,frag}',
+    '/packages/exojs-*/src/**/glsl/*.{vert,frag}',
+  ],
   {
     query: '?raw',
     import: 'default',
@@ -88,9 +88,9 @@ const sourceByName: Record<string, string> = Object.fromEntries(shaders.map(entr
 // Vertex/fragment pairs as wired up by the renderer sources; `text.vert` is
 // shared across all three text-fragment variants, while `particle.*` and
 // `ribbon.*` come from the particles package's two render modes. Every file the
-// globs pick up must appear here (guarded below) so a dead `.vert`/`.frag`
-// cannot sit in the folder being compiled-but-never-linked — it has to be wired
-// or removed.
+// globs pick up must appear here or in `standaloneStages` (guarded below) so a
+// dead `.vert`/`.frag` cannot sit in the folder being compiled-but-never-used:
+// it has to be wired, declared or removed.
 const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['sprite.vert', 'sprite.frag'],
   // Persistent-indexed sprite variant: same fragment stage, slot-fetching vertex stage.
@@ -118,6 +118,16 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
 ];
 
 const referencedShaderFiles = new Set(programPairs.flat());
+
+// Engine-owned stages whose counterpart is supplied by the application, so no
+// fixed program exists to link here. They still get the coverage a standalone
+// stage can have - `gl.compileShader` on the authored text and on the
+// production-stripped text - from the two compile cases above; only the link
+// case has no meaning for them. An entry is a claim that the missing half is
+// the caller's, not that the stage is untested.
+const standaloneStages: ReadonlyMap<string, string> = new Map([
+  ['sprite-material.vert', 'the custom SpriteMaterial path takes its fragment stage from the application'],
+]);
 
 interface CompiledShader {
   readonly shader: WebGLShader;
@@ -168,11 +178,24 @@ describe('WebGL2 GLSL shader sources', () => {
     }
   });
 
-  test('every shader file is wired into a program pair (no dead sources)', () => {
+  test('every shader file is accounted for (paired, or standalone with a reason)', () => {
     // Guards against re-introducing an orphan .vert/.frag that the glob would
-    // otherwise compile in isolation while no renderer ever links it.
+    // otherwise compile while no renderer ever uses it. A stage with no
+    // engine-owned counterpart has to say so rather than simply not appear.
     for (const { name } of shaders) {
-      expect(referencedShaderFiles.has(name), `${name} is not referenced by any program pair — wire it up or delete it`).toBe(true);
+      expect(
+        referencedShaderFiles.has(name) || standaloneStages.has(name),
+        `${name} is neither in a program pair nor declared standalone — wire it up, declare it, or delete it`,
+      ).toBe(true);
+    }
+  });
+
+  test('every declared standalone stage still exists and carries a reason', () => {
+    // Keeps the exemption list from outliving the file it exempts.
+    for (const [name, reason] of standaloneStages) {
+      expect(sourceByName[name], `${name} is declared standalone but no longer exists`).toBeDefined();
+      expect(reason.trim().length, `${name} needs a reason`).toBeGreaterThan(0);
+      expect(referencedShaderFiles.has(name), `${name} is declared standalone but is also in a program pair`).toBe(false);
     }
   });
 
