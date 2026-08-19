@@ -12,8 +12,10 @@
  * correctness.
  *
  * `EXOJS_FULL_BUNDLE=1` additionally builds the opt-in all-in-one IIFE bundle
- * (core + every extension package) through `rollup.full-bundle.config.ts`,
- * which stays on Rollup - see that file for why.
+ * (core + every extension package), transpiling TypeScript source across
+ * multiple rootDirs (src/ and each extension package's src/) - Rolldown's
+ * built-in transpiler has no single-Program rootDir constraint, so this needs
+ * no separate esbuild-based path the way the previous Rollup pipeline did.
  */
 import { spawnSync } from 'node:child_process';
 import { dirname, relative as relativePath, resolve as resolvePath } from 'node:path';
@@ -38,6 +40,22 @@ const defines = createBuildDefinesFromRepo({ mode: buildMode, packageDir: rootDi
 // resolved paths to relative specifiers in the emitted ESM tree. The trailing
 // standard conditions keep normal dependency resolution intact.
 const sourceConditions = ['@codexo/exojs-source', 'browser', 'module', 'import', 'default'];
+
+// Full-bundle source conditions: includes per-package source conditions for
+// the extension packages that use `#` subpath imports internally (e.g.
+// exojs-particles).
+const fullSourceConditions = ['@codexo/exojs-source', '@codexo/exojs-particles-source', 'browser', 'module', 'import', 'default'];
+
+// Resolves @codexo/exojs-<name> -> packages/exojs-<name>/src/index.ts so the
+// full IIFE bundle can be built entirely from TypeScript source without
+// requiring the extension packages to be pre-built.
+const extensionSourcePlugin: Plugin = {
+  name: 'extension-source',
+  resolveId(id: string) {
+    const match = /^@codexo\/exojs-([^/]+)$/.exec(id);
+    return match ? resolvePath(rootDir, 'packages', `exojs-${match[1]}`, 'src', 'index.ts') : null;
+  },
+};
 
 // The preserveModules tree emits `sources` one directory level too high
 // (`../../../../src/…` escapes the repo), so consumers (e.g. Vite serving the
@@ -161,6 +179,17 @@ function iife(minify: boolean): RolldownOptions {
   };
 }
 
+function fullBundle(minify: boolean): RolldownOptions {
+  return {
+    cwd: rootDir,
+    input: 'scripts/exo-full.entry.ts',
+    transform: { define: defines },
+    resolve: { conditionNames: fullSourceConditions, mainFields: ['browser', 'module', 'main'] },
+    plugins: [extensionSourcePlugin, ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin('exo-full-iife')],
+    output: { file: minify ? 'dist/exo.full.iife.min.js' : 'dist/exo.full.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
+  };
+}
+
 async function runJob(options: RolldownOptions): Promise<void> {
   const bundle = await rolldown(options);
   await bundle.write(options.output as OutputOptions);
@@ -176,17 +205,6 @@ async function emitDeclarations(): Promise<void> {
   );
   if (result.status !== 0) {
     throw new Error(`declaration emit failed (tsc exit ${result.status})`);
-  }
-}
-
-function buildFullBundle(): void {
-  const rollup = resolvePath(rootDir, 'node_modules/rollup/dist/bin/rollup');
-  const result = spawnSync(process.execPath, ['--import', 'tsx/esm', rollup, '-c', 'rollup.full-bundle.config.ts', '--environment', `EXOJS_ENV:${buildMode}`], {
-    cwd: rootDir,
-    stdio: 'inherit',
-  });
-  if (result.status !== 0) {
-    throw new Error(`full-bundle build failed (rollup exit ${result.status})`);
   }
 }
 
@@ -210,6 +228,9 @@ if (watchMode) {
   await emitDeclarations();
 
   if (process.env.EXOJS_FULL_BUNDLE === '1') {
-    buildFullBundle();
+    const fullBundleJobs = buildMode === 'production' ? [fullBundle(false), fullBundle(true)] : [fullBundle(false)];
+    for (const job of fullBundleJobs) {
+      await runJob(job);
+    }
   }
 }

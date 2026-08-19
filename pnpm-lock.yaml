@@ -216,15 +216,6 @@ importers:
       '@codexo/exojs-build':
         specifier: workspace:*
         version: link:../exojs-build
-      '@rollup/plugin-node-resolve':
-        specifier: ^16.0.3
-        version: 16.0.3(rollup@4.62.4)
-      '@rollup/plugin-replace':
-        specifier: ^6.0.3
-        version: 6.0.3(rollup@4.62.4)
-      '@rollup/plugin-typescript':
-        specifier: ^12.3.0
-        version: 12.3.0(rollup@4.62.4)(tslib@2.8.1)(typescript@6.0.3)
       rolldown:
         specifier: 1.2.4
         version: 1.2.4

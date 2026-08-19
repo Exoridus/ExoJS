@@ -1,10 +1,10 @@
-// Shared Rolldown build for official ExoJS extension packages. Mirrors
-// `../rollup/index.js` (`createExtensionConfig`) for output shape - same
+// Shared Rolldown build for official ExoJS extension packages: the
 // preserveModules ESM tree, Core externalization, source maps, build-constant
-// replacement, GLSL string imports, package-private `#` resolution - but has
-// no `typescript()` transform: Rolldown transpiles TypeScript natively, with
-// no single-Program rootDir constraint. Declarations are a separate step
-// (see `declarationArgs` below), since Rolldown has no declaration emitter.
+// replacement, GLSL string imports, and package-private `#` resolution. No
+// `typescript()` transform - Rolldown transpiles TypeScript natively, with no
+// single-Program rootDir constraint. Declarations are a separate step, driven
+// by `scripts/build-extension.ts` against the package's own
+// `tsconfig.build.json`, since Rolldown has no declaration emitter.
 import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 
