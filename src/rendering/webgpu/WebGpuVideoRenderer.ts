@@ -2,7 +2,6 @@
 
 import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
-import { spriteFragmentMainWgsl, spriteSharedStorageWgsl, spriteVertexCoreWgsl } from '#rendering/sprite/spriteMaterialSources';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
@@ -13,10 +12,11 @@ import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
 import type { WebGpuBackend } from './WebGpuBackend';
 import { getWebGpuBlendState } from './WebGpuBlendState';
 import { WebGpuPassArena } from './WebGpuPassArena';
+import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
 import { pipelineVariantKey, WebGpuPipelineVariantCache } from './webgpuPipelineCache';
+import { packSnapViewport } from './webgpuSnapViewport';
+import { buildSpriteShaderSource } from './WebGpuSpriteRenderer';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
-import spriteDefaultVertexInputWgsl from './wgsl/sprite-default-vertex-input.wgsl';
-import spriteDefaultVertexMainWgsl from './wgsl/sprite-default-vertex-main.wgsl';
 
 // Byte-for-byte the sprite instance layout: localBounds vec4 f32 (16) +
 // uvBounds u16x4 packed as 2×u32 (8) + packedSlotFlags u32 (4) + nodeIndex u32
@@ -40,30 +40,6 @@ const videoInstanceVertexBufferLayout: GPUVertexBufferLayout = {
     { shaderLocation: 6, offset: 28, format: 'uint32' },
   ],
 };
-
-/**
- * WGSL source for the fallback (texture_2d) video pipeline: a 1-texture-slot
- * sprite shader is byte-for-byte what this path needs, so it is built from the
- * same shared building blocks the default sprite pipeline uses rather than
- * duplicated.
- * @internal
- */
-const buildVideoFallbackShaderSource = (): string => `${spriteSharedStorageWgsl}
-@group(1) @binding(0)
-var spriteTexture0: texture_2d<f32>;
-@group(1) @binding(1)
-var spriteSampler0: sampler;
-
-fn sampleTexture(slot: u32, uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> vec4<f32> {
-    switch slot {
-        default: {
-            return textureSampleGrad(spriteTexture0, spriteSampler0, uv, ddx, ddy);
-        }
-    }
-}
-
-${spriteDefaultVertexInputWgsl}${spriteVertexCoreWgsl}
-${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`;
 
 /**
  * WebGPU renderer for {@link Video}: draws exactly one video per flush as an
@@ -110,7 +86,11 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
 
     this._device = backend.device;
 
-    this._fallbackShaderModule = this._device.createShaderModule({ label: 'video:shader:fallback', code: buildVideoFallbackShaderSource() });
+    // A 1-texture-slot sprite shader is byte-for-byte what the fallback path
+    // needs (texture_2d + textureSampleGrad, same vertex stage, same instance
+    // layout); buildSpriteShaderSource is the single generator behind both
+    // paths, so this and the default sprite pipeline cannot drift apart.
+    this._fallbackShaderModule = this._device.createShaderModule({ label: 'video:shader:fallback', code: buildSpriteShaderSource(1) });
 
     this._uniformBindGroupLayout = this._device.createBindGroupLayout({
       label: 'video:bind-group-layout:uniform',
@@ -206,22 +186,25 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
     }
 
     // Mirrors WebGpuSpriteRenderer._endPassOnProjectionChange: if THIS renderer
-    // still has an unsubmitted instance in the currently open pass and the view
-    // changed since it was packed, the pending uniform rewrite below would
-    // retroactively re-project that earlier draw. End (submit) the pass first.
-    const openPass = backend._passCoordinator.activePass;
-
-    if (openPass !== null && this._instanceArena.cursor > 0 && this._instanceArena.tracksPass(openPass) && openPass.viewUpdateId !== backend.view.updateId) {
-      backend._passCoordinator.endPass();
-      this._instanceArena.resetPass();
-    }
+    // still has an unsubmitted instance in the currently open pass and either the
+    // view or the render-group matrix changed since it was packed, the pending
+    // uniform rewrite below would retroactively re-project that earlier draw.
+    // End (submit) the pass first.
+    this._endPassOnProjectionChange(backend);
 
     const view = backend.view;
+    // Staged unconditionally so a snap-rect change (attachment resize with an
+    // unchanged view) forces the rewrite the (view, updateId, group) skip state
+    // cannot see.
+    const viewportChanged = packSnapViewport(backend, this._projectionData, 32);
 
-    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._stagedGroupData, 0);
-    const groupChanged = !this._hasWrittenProjection || packedGroupChanged(this._stagedGroupData, this._projectionData, affineMat4FloatCount);
-
-    if (!this._hasWrittenProjection || this._writtenView !== view || this._writtenViewUpdateId !== view.updateId || groupChanged) {
+    if (
+      !this._hasWrittenProjection ||
+      this._writtenView !== view ||
+      this._writtenViewUpdateId !== view.updateId ||
+      viewportChanged ||
+      this._groupContentChanged(backend)
+    ) {
       packAffineMat4(view.getTransform(), this._projectionData, 0);
       packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
 
@@ -234,82 +217,142 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
 
     const video = this._pendingVideo;
     const texture = this._pendingTexture;
-
-    if (video === null || texture === null) {
-      this._pendingVideo = null;
-      this._pendingTexture = null;
-      return;
-    }
-
-    backend.setBlendMode(this._pendingBlendMode);
-
+    const indexBuffer = this._indexBuffer;
     const scissor = backend.getScissorRect();
     const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
 
-    if (maskClipsAll || this._indexBuffer === null) {
-      this._pendingVideo = null;
-      this._pendingTexture = null;
-      return;
+    if (video !== null && texture !== null && indexBuffer !== null && !maskClipsAll) {
+      backend.setBlendMode(this._pendingBlendMode);
+
+      const coordinator = backend._passCoordinator;
+      let active = coordinator.acquirePass();
+
+      this._instanceArena.syncPass(active);
+
+      // A texture this draw samples whose content/size changed since it was last
+      // uploaded will have its re-upload land on the queue timeline before the
+      // deferred submit, retroactively changing draws already recorded into this
+      // open pass. End (submit) the pass first so those draws capture the
+      // pre-mutation content, then reopen and re-upload into a fresh slice. The
+      // texture cache is shared, so the endangered draw need not be this
+      // renderer's own — ask the coordinator, not this renderer's own cursor.
+      if (coordinator.passHasDraws && backend._textureUploadWouldMutate(texture)) {
+        active = this._reopenPass(backend);
+      }
+
+      const needCount = this._pendingNodeIndex + 1;
+
+      // Resolving the transform storage may reallocate (and free) its GPU
+      // buffer; earlier draws in this open pass still reference the old one, so
+      // end the pass first when it already holds draws, then reopen.
+      if (coordinator.passHasDraws && backend._transformStorageWouldGrow(needCount)) {
+        active = this._reopenPass(backend);
+      }
+
+      if (!this._instanceArena.fits(instanceStrideBytes)) {
+        // Growing reallocates the arena buffer; end (submit) the pass first so
+        // no in-flight draw references the buffer about to be destroyed.
+        if (this._instanceArena.cursor > 0) {
+          active = this._reopenPass(backend);
+        }
+
+        this._instanceArena.grow(device, instanceStrideBytes);
+      }
+
+      const offset = this._instanceArena.take(instanceStrideBytes);
+      const instanceBuffer = this._instanceArena.buffer!;
+
+      this._packInstance(video, texture, backend);
+      device.queue.writeBuffer(instanceBuffer, offset, this._instanceData, 0, instanceStrideBytes);
+
+      const storage = backend.getTransformStorageBuffer(needCount);
+      const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer, storage.tintBuffer);
+      const stencil = coordinator.stencilActive;
+
+      const { view: textureView, sampler } = backend.getTextureBinding(texture);
+      const textureBindGroup = device.createBindGroup({
+        label: 'video:texture-bind-group:fallback',
+        layout: this._fallbackTextureBindGroupLayout!,
+        entries: [
+          { binding: 0, resource: textureView },
+          { binding: 1, resource: sampler },
+        ],
+      });
+      const pipeline = this._getFallbackPipeline(this._pendingBlendMode!, backend.renderTargetFormat, stencil);
+
+      const pass = active.pass;
+
+      pass.setPipeline(pipeline);
+      pass.setBindGroup(0, transformBindGroup);
+      pass.setBindGroup(1, textureBindGroup);
+      pass.setVertexBuffer(0, instanceBuffer, offset);
+      pass.setIndexBuffer(indexBuffer, 'uint16');
+      pass.drawIndexed(indicesPerSprite, 1, 0, 0, 0);
+
+      coordinator.markPassDraws();
+      backend.stats.batches++;
+      backend.stats.drawCalls++;
+    } else if (backend.clearRequested) {
+      // No drawable content but a clear is pending: open the coordinator pass so
+      // createColorAttachment consumes the clear state once (submitted at the
+      // next boundary).
+      backend._passCoordinator.acquirePass();
     }
-
-    const coordinator = backend._passCoordinator;
-
-    if (coordinator.activePass !== null && this._instanceArena.cursor > 0 && this._instanceArena.tracksPass(coordinator.activePass) && backend._textureUploadWouldMutate(texture)) {
-      coordinator.endPass();
-      this._instanceArena.resetPass();
-    }
-
-    const needCount = this._pendingNodeIndex + 1;
-
-    if (coordinator.activePass !== null && coordinator.passHasDraws && backend._transformStorageWouldGrow(needCount)) {
-      coordinator.endPass();
-      this._instanceArena.resetPass();
-    }
-
-    const active = coordinator.acquirePass();
-
-    this._instanceArena.syncPass(active);
-
-    if (!this._instanceArena.fits(instanceStrideBytes)) {
-      this._instanceArena.grow(device, instanceStrideBytes);
-    }
-
-    const offset = this._instanceArena.take(instanceStrideBytes);
-    const instanceBuffer = this._instanceArena.buffer!;
-
-    this._packInstance(video, texture, backend);
-    device.queue.writeBuffer(instanceBuffer, offset, this._instanceData, 0, instanceStrideBytes);
-
-    const storage = backend.getTransformStorageBuffer(needCount);
-    const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer, storage.tintBuffer);
-    const stencil = coordinator.stencilActive;
-
-    const { view: textureView, sampler } = backend.getTextureBinding(texture);
-    const textureBindGroup = device.createBindGroup({
-      label: 'video:texture-bind-group:fallback',
-      layout: this._fallbackTextureBindGroupLayout!,
-      entries: [
-        { binding: 0, resource: textureView },
-        { binding: 1, resource: sampler },
-      ],
-    });
-    const pipeline = this._getFallbackPipeline(this._pendingBlendMode!, backend.renderTargetFormat, stencil);
-
-    const pass = active.pass;
-
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(0, transformBindGroup);
-    pass.setBindGroup(1, textureBindGroup);
-    pass.setVertexBuffer(0, instanceBuffer, offset);
-    pass.setIndexBuffer(this._indexBuffer, 'uint16');
-    pass.drawIndexed(indicesPerSprite, 1, 0, 0, 0);
-
-    coordinator.markPassDraws();
-    backend.stats.batches++;
-    backend.stats.drawCalls++;
 
     this._pendingVideo = null;
     this._pendingTexture = null;
+  }
+
+  /**
+   * End the open pass if its recorded draw was projected with a different view
+   * transform — or different group-matrix bytes — than what this flush is about
+   * to write into the shared projection uniform. Guarded on the arena tracking
+   * the *current* active pass so a stale post-boundary cursor never triggers a
+   * spurious split.
+   */
+  private _endPassOnProjectionChange(backend: WebGpuBackend): void {
+    const activePass = backend._passCoordinator.activePass;
+
+    if (
+      activePass !== null &&
+      this._instanceArena.cursor > 0 &&
+      this._instanceArena.tracksPass(activePass) &&
+      (activePass.viewUpdateId !== backend.view.updateId || this._groupContentChanged(backend))
+    ) {
+      backend._passCoordinator.endPass();
+      this._instanceArena.resetPass();
+    }
+  }
+
+  /**
+   * Whether the packed bytes of the active group matrix differ from what the
+   * shared projection UBO currently holds at [16, 32). Stages the packed matrix
+   * into `_stagedGroupData` as a side effect (idempotent — safe to call more
+   * than once per flush).
+   */
+  private _groupContentChanged(backend: WebGpuBackend): boolean {
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._stagedGroupData, 0);
+
+    if (!this._hasWrittenProjection) {
+      return true;
+    }
+
+    return packedGroupChanged(this._stagedGroupData, this._projectionData, affineMat4FloatCount);
+  }
+
+  /**
+   * End (submit) the open pass and reopen a fresh one, resetting the instance
+   * arena's slice to match.
+   */
+  private _reopenPass(backend: WebGpuBackend): WebGpuActiveRenderPass {
+    backend._passCoordinator.endPass();
+
+    const active = backend._passCoordinator.acquirePass();
+
+    this._instanceArena.resetPass();
+    this._instanceArena.syncPass(active);
+
+    return active;
   }
 
   private _packInstance(video: Video, texture: Texture | RenderTexture, backend: WebGpuBackend): void {
