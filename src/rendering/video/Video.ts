@@ -49,6 +49,7 @@ export class Video extends Sprite {
   private readonly _onMetadataHandler: () => void;
   private readonly _onResizeHandler: () => void;
   private readonly _onVideoFrameHandler: (now: number, metadata: unknown) => void;
+  private readonly _onTimeUpdateHandler: () => void;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this.setupWithAudioContext(ctx);
@@ -68,11 +69,14 @@ export class Video extends Sprite {
     this._onMetadataHandler = this._onVideoMetadataUpdated.bind(this);
     this._onResizeHandler = this._onVideoMetadataUpdated.bind(this);
     this._onVideoFrameHandler = this._onVideoFrame.bind(this);
+    this._onTimeUpdateHandler = this._onTimeUpdate.bind(this);
 
     if (this._videoElement.videoWidth === 0 || this._videoElement.videoHeight === 0) {
       this._videoElement.addEventListener('loadedmetadata', this._onMetadataHandler);
       this._videoElement.addEventListener('resize', this._onResizeHandler);
     }
+
+    this._videoElement.addEventListener('timeupdate', this._onTimeUpdateHandler);
 
     if (playbackOptions) {
       this.applyOptions(playbackOptions);
@@ -384,6 +388,7 @@ export class Video extends Sprite {
     this.stop();
     this._videoElement.removeEventListener('loadedmetadata', this._onMetadataHandler);
     this._videoElement.removeEventListener('resize', this._onResizeHandler);
+    this._videoElement.removeEventListener('timeupdate', this._onTimeUpdateHandler);
     this._cancelVideoFrameCallback();
 
     onAudioContextReady.remove(this._onAudioContextReady);
@@ -419,6 +424,11 @@ export class Video extends Sprite {
       this._textureDirty = true;
       this.invalidateContent();
     }
+  }
+
+  private _onTimeUpdate(): void {
+    this._textureDirty = true;
+    this.invalidateContent();
   }
 
   private _requestVideoFrameCallback(): void {

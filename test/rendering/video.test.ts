@@ -725,5 +725,17 @@ describe('Video', () => {
 
       video.destroy();
     });
+
+    test('a native timeupdate event bumps the content revision independent of _collect (no-rVFC fallback path)', () => {
+      const mockVideo = createMockVideoElement();
+      const video = new Video(mockVideo.element);
+      const revisionBeforeUpdate = video._contentRevision;
+
+      mockVideo.element.dispatchEvent(new Event('timeupdate'));
+
+      expect(video._contentRevision).not.toBe(revisionBeforeUpdate);
+
+      video.destroy();
+    });
   });
 });
