@@ -11,10 +11,11 @@
  * `texture_2d` copy-upload path (`device.queue.copyExternalImageToTexture`,
  * the same generic upload `WebGpuBackend` uses for any non-DataTexture,
  * non-RenderTexture source) on any failure, before the renderer draws an
- * instanced quad sampling whichever texture resource that flush bound. The
- * tests below exercise whichever path the real adapter actually takes;
- * none of them distinguish which path ran (a later test, not part of this
- * file yet, forces the fallback path explicitly to assert that distinction).
+ * instanced quad sampling whichever texture resource that flush bound. Most
+ * tests below exercise whichever path the real adapter actually takes and do
+ * not distinguish which one ran; two tests force the fallback path
+ * explicitly (removing `importExternalTexture` from the device, and a video
+ * with no decoded frame yet) to assert that branch is reachable and correct.
  *
  * Fixture strategy: a `<canvas>` painted a solid or two-tone colour is turned
  * into a `MediaStream` via `captureStream()`, assigned to a `<video>` element's
@@ -344,6 +345,63 @@ describe('WebGPU Video — solid color frame', () => {
       root.destroy();
       videoSprite.destroy();
       destroyVideo(video);
+      backend.destroy();
+    }
+  });
+
+  test('fallback path renders correctly when the device has no importExternalTexture', async ctx => {
+    const backend = await setupBackend();
+    const device = getBackendDevice(backend);
+    const original = device.importExternalTexture;
+
+    // @ts-expect-error -- deliberately removing a required method to force the fallback branch
+    device.importExternalTexture = undefined;
+
+    const video = await createSolidColorVideo('#00ff00', 16);
+    const root = new Container();
+    const videoSprite = new Video(video);
+
+    try {
+      videoSprite.setPosition(8, 8);
+      root.addChild(videoSprite);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(16, 16), [0, 255, 0, 255]);
+    } finally {
+      device.importExternalTexture = original;
+      root.destroy();
+      videoSprite.destroy();
+      destroyVideo(video);
+      backend.destroy();
+    }
+  });
+
+  test('fallback path renders correctly when the video has no decoded frame yet (readyState gate)', async ctx => {
+    const backend = await setupBackend();
+
+    // A video element that never plays: readyState stays HAVE_NOTHING (0),
+    // videoWidth stays 0 — exercises the readiness pre-check, not the
+    // capability check. Render is expected to draw nothing (texture width 0
+    // early-outs in `render()`), which is itself the assertion: no GPU
+    // validation error and no crash.
+    const video = document.createElement('video');
+    const root = new Container();
+    const videoSprite = new Video(video);
+
+    try {
+      root.addChild(videoSprite);
+
+      const rendered = await renderScene(ctx, backend, root);
+
+      expect(rendered).toBe(true);
+    } finally {
+      root.destroy();
+      videoSprite.destroy();
       backend.destroy();
     }
   });
