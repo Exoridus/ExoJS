@@ -6,15 +6,15 @@
  * directly as `source`, and `updateTexture()` calls `texture.updateSource()`
  * to bump the texture version whenever the decoded frame changes. On the
  * WebGPU backend, `Video` resolves to `WebGpuVideoRenderer`
- * (`src/rendering/webgpu/WebGpuVideoRenderer.ts`), which currently draws
- * through its fallback (`texture_2d`) path: the changed texture version
- * triggers a re-upload via `device.queue.copyExternalImageToTexture(...)`,
+ * (`src/rendering/webgpu/WebGpuVideoRenderer.ts`), which attempts a zero-copy
+ * `GPUExternalTexture` import fresh every flush and falls back to a
+ * `texture_2d` copy-upload path (`device.queue.copyExternalImageToTexture`,
  * the same generic upload `WebGpuBackend` uses for any non-DataTexture,
- * non-RenderTexture source (canvas/image/video), before the renderer draws
- * an instanced quad sampling that texture. Later work extends this file with
- * the zero-copy `GPUExternalTexture` path and a scenario that forces the
- * fallback path explicitly; these two tests cover only the fallback path as
- * currently the sole draw path in place.
+ * non-RenderTexture source) on any failure, before the renderer draws an
+ * instanced quad sampling whichever texture resource that flush bound. The
+ * tests below exercise whichever path the real adapter actually takes and
+ * assert only pixel parity — they do not distinguish which path ran. A
+ * later test forces the fallback path explicitly to assert that distinction.
  *
  * Fixture strategy: a `<canvas>` painted a solid colour is turned into a
  * `MediaStream` via `captureStream()`, assigned to a `<video>` element's
@@ -242,6 +242,33 @@ describe('WebGPU Video — solid color frame', () => {
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
       expectPixelNear(readPixel(16, 16), [0, 255, 0, 255]);
+    } finally {
+      root.destroy();
+      videoSprite.destroy();
+      destroyVideo(video);
+      backend.destroy();
+    }
+  });
+
+  test('external-texture path produces the same pixels as the fallback copy path', async ctx => {
+    const backend = await setupBackend();
+
+    const video = await createSolidColorVideo('#0000ff', 16);
+    const root = new Container();
+    const videoSprite = new Video(video);
+
+    try {
+      videoSprite.setPosition(8, 8);
+      root.addChild(videoSprite);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(16, 16), [0, 0, 255, 255]);
+      expectPixelNear(readPixel(40, 40), [0, 0, 0, 255]);
     } finally {
       root.destroy();
       videoSprite.destroy();

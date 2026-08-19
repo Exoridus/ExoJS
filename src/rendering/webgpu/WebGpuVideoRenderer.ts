@@ -2,10 +2,12 @@
 
 import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
+import { spriteFragmentMainWgsl, spriteSharedStorageWgsl, spriteVertexCoreWgsl } from '#rendering/sprite/spriteMaterialSources';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
 import type { Video } from '#rendering/video/Video';
+import { videoExternalTextureGroupWgsl } from '#rendering/video/webgpuVideoMaterialSources';
 import type { View } from '#rendering/View';
 
 import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
@@ -17,6 +19,8 @@ import { pipelineVariantKey, WebGpuPipelineVariantCache } from './webgpuPipeline
 import { packSnapViewport } from './webgpuSnapViewport';
 import { buildSpriteShaderSource } from './WebGpuSpriteRenderer';
 import { stencilContentDepthStencilState } from './WebGpuStencilState';
+import spriteDefaultVertexInputWgsl from './wgsl/sprite-default-vertex-input.wgsl';
+import spriteDefaultVertexMainWgsl from './wgsl/sprite-default-vertex-main.wgsl';
 
 // Byte-for-byte the sprite instance layout: localBounds vec4 f32 (16) +
 // uvBounds u16x4 packed as 2×u32 (8) + packedSlotFlags u32 (4) + nodeIndex u32
@@ -44,9 +48,10 @@ const videoInstanceVertexBufferLayout: GPUVertexBufferLayout = {
 /**
  * WebGPU renderer for {@link Video}: draws exactly one video per flush as an
  * instanced quad, mirroring {@link WebGpuSpriteRenderer}'s default draw path
- * without its multi-texture batching. Currently ships a fallback
- * (`texture_2d`) draw path only; a zero-copy `GPUExternalTexture` path is
- * layered on top of {@link flush} separately.
+ * without its multi-texture batching. Each flush attempts a zero-copy
+ * `GPUExternalTexture` import fresh (never cached across frames — pause,
+ * seek, and source changes all affect readiness), falling back to a
+ * `texture_2d` copy-upload path on any failure.
  */
 export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
   private _device: GPUDevice | null = null;
@@ -56,6 +61,11 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
   private _fallbackPipelineLayout: GPUPipelineLayout | null = null;
   private _fallbackShaderModule: GPUShaderModule | null = null;
   private readonly _fallbackPipelines = new WebGpuPipelineVariantCache<GPURenderPipeline>();
+
+  private _externalTextureBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _externalPipelineLayout: GPUPipelineLayout | null = null;
+  private _externalShaderModule: GPUShaderModule | null = null;
+  private readonly _externalPipelines = new WebGpuPipelineVariantCache<GPURenderPipeline>();
 
   private _uniformBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
@@ -112,6 +122,28 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
       bindGroupLayouts: [this._uniformBindGroupLayout, this._fallbackTextureBindGroupLayout],
     });
 
+    // Same vertex stage and instance layout as the fallback shader (the only
+    // difference is the group(1) binding: texture_external instead of
+    // texture_2d, sampled via textureSampleBaseClampToEdge).
+    this._externalShaderModule = this._device.createShaderModule({
+      label: 'video:shader:external',
+      code: `${spriteSharedStorageWgsl}
+${videoExternalTextureGroupWgsl}
+${spriteDefaultVertexInputWgsl}${spriteVertexCoreWgsl}
+${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
+    });
+    this._externalTextureBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'video:bind-group-layout:texture-external',
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, externalTexture: {} },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      ],
+    });
+    this._externalPipelineLayout = this._device.createPipelineLayout({
+      label: 'video:pipeline-layout:external',
+      bindGroupLayouts: [this._uniformBindGroupLayout, this._externalTextureBindGroupLayout],
+    });
+
     this._uniformBuffer = this._device.createBuffer({
       label: 'video:uniform-buffer',
       size: projectionByteLength,
@@ -131,6 +163,7 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
     this._uniformBuffer?.destroy();
 
     this._fallbackPipelines.clear();
+    this._externalPipelines.clear();
     this._indexBuffer = null;
     this._uniformBuffer = null;
     this._transformBindGroup = null;
@@ -143,6 +176,9 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
     this._fallbackTextureBindGroupLayout = null;
     this._uniformBindGroupLayout = null;
     this._fallbackShaderModule = null;
+    this._externalPipelineLayout = null;
+    this._externalTextureBindGroupLayout = null;
+    this._externalShaderModule = null;
     this._device = null;
     this._pendingVideo = null;
     this._pendingTexture = null;
@@ -269,16 +305,40 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
       const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer, storage.tintBuffer);
       const stencil = coordinator.stencilActive;
 
-      const { view: textureView, sampler } = backend.getTextureBinding(texture);
-      const textureBindGroup = device.createBindGroup({
-        label: 'video:texture-bind-group:fallback',
-        layout: this._fallbackTextureBindGroupLayout!,
-        entries: [
-          { binding: 0, resource: textureView },
-          { binding: 1, resource: sampler },
-        ],
-      });
-      const pipeline = this._getFallbackPipeline(this._pendingBlendMode!, backend.renderTargetFormat, stencil);
+      // Decided fresh every flush, never cached: readiness (decoded frame,
+      // origin-clean, not mid-seek) can change between frames, and a stale
+      // "external worked last time" decision must not survive a pause/seek/
+      // source change. Falls through to the texture_2d path on any failure.
+      const sourceElement = texture.source instanceof HTMLVideoElement ? texture.source : null;
+      const externalTexture = sourceElement !== null ? this._tryImportExternalTexture(device, sourceElement) : null;
+
+      let pipeline: GPURenderPipeline;
+      let textureBindGroup: GPUBindGroup;
+
+      if (externalTexture !== null) {
+        pipeline = this._getExternalPipeline(this._pendingBlendMode!, backend.renderTargetFormat, stencil);
+        textureBindGroup = device.createBindGroup({
+          label: 'video:texture-bind-group:external',
+          layout: this._externalTextureBindGroupLayout!,
+          entries: [
+            { binding: 0, resource: externalTexture },
+            { binding: 1, resource: backend.getTextureBinding(texture).sampler },
+          ],
+        });
+      } else {
+        pipeline = this._getFallbackPipeline(this._pendingBlendMode!, backend.renderTargetFormat, stencil);
+
+        const { view: textureView, sampler } = backend.getTextureBinding(texture);
+
+        textureBindGroup = device.createBindGroup({
+          label: 'video:texture-bind-group:fallback',
+          layout: this._fallbackTextureBindGroupLayout!,
+          entries: [
+            { binding: 0, resource: textureView },
+            { binding: 1, resource: sampler },
+          ],
+        });
+      }
 
       const pass = active.pass;
 
@@ -432,6 +492,61 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
     const pipeline = this._device!.createRenderPipeline(descriptor);
 
     this._fallbackPipelines.set(format, key, pipeline);
+
+    return pipeline;
+  }
+
+  /**
+   * Attempt the zero-copy external-texture import for this frame. Returns
+   * `null` (never throws) whenever the fallback `texture_2d` path must be
+   * used instead: no `importExternalTexture` on the device, no decoded frame
+   * yet, or the import itself throwing (not origin-clean, expired microtask
+   * checkpoint, etc). Not cached — re-evaluated every flush, because
+   * pause/seek/source changes and readiness can all change between frames.
+   */
+  private _tryImportExternalTexture(device: GPUDevice, source: HTMLVideoElement): GPUExternalTexture | null {
+    if (typeof device.importExternalTexture !== 'function') {
+      return null;
+    }
+
+    if (source.readyState < source.HAVE_CURRENT_DATA || source.videoWidth === 0) {
+      return null;
+    }
+
+    try {
+      return device.importExternalTexture({ source });
+    } catch {
+      return null;
+    }
+  }
+
+  private _getExternalPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+    const key = pipelineVariantKey(blendMode, stencil);
+    const existing = this._externalPipelines.get(format, key);
+
+    if (existing) {
+      return existing;
+    }
+
+    const descriptor: GPURenderPipelineDescriptor = {
+      label: 'video:render-pipeline:external',
+      layout: this._externalPipelineLayout!,
+      vertex: { module: this._externalShaderModule!, entryPoint: 'vertexMain', buffers: [videoInstanceVertexBufferLayout] },
+      fragment: {
+        module: this._externalShaderModule!,
+        entryPoint: 'fragmentMain',
+        targets: [{ format, blend: getWebGpuBlendState(blendMode), writeMask: GPUColorWrite.ALL }],
+      },
+      primitive: { topology: 'triangle-list' },
+    };
+
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    const pipeline = this._device!.createRenderPipeline(descriptor);
+
+    this._externalPipelines.set(format, key, pipeline);
 
     return pipeline;
   }
