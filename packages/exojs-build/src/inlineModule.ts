@@ -60,8 +60,18 @@ export interface BundleInlineModuleResult {
 
 /** Bundles `entryPoint` and its entire import graph into one JavaScript string. */
 export function bundleInlineModule({ entryPoint, format = 'iife', target = 'es2022', minify = false, define }: BundleInlineModuleOptions): BundleInlineModuleResult {
+  // esbuild writes each contributing file's path into the bundle as a comment,
+  // relative to its working directory - which defaults to `process.cwd()`. The
+  // emitted string would then differ byte for byte depending on where the build
+  // was started from, which is not a property a bundled artifact may have: the
+  // same source has to produce the same text for every caller. Anchoring to
+  // the entry point's own directory makes those paths a function of the module
+  // graph alone.
+  const workingDirectory = dirname(entryPoint);
+
   const result = buildSync({
     entryPoints: [entryPoint],
+    absWorkingDir: workingDirectory,
     bundle: true,
     write: false,
     metafile: true,
@@ -83,7 +93,8 @@ export function bundleInlineModule({ entryPoint, format = 'iife', target = 'es20
     throw new Error(`inline-module: expected exactly one output artifact for ${entryPoint}, got ${result.outputFiles.length} (${names}).`);
   }
 
-  const inputs = Object.keys(result.metafile.inputs).map(input => resolve(input));
+  // Metafile keys are relative to `absWorkingDir`, not to the process.
+  const inputs = Object.keys(result.metafile.inputs).map(input => resolve(workingDirectory, input));
 
   return { code: artifact.text, inputs };
 }

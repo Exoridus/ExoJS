@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join } from 'node:path';
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -147,6 +147,33 @@ describe('bundleInlineModule', () => {
     const second = bundleInlineModule({ entryPoint: join(fixtureDirectory, 'entry.ts') }).code;
 
     expect(second).toBe(first);
+  });
+
+  it('emits the same text no matter which directory the build runs from', () => {
+    // esbuild writes each contributing file's path into the bundle as a
+    // comment, relative to its working directory. Left at the process default,
+    // the emitted string changes with the caller's cwd - so the same repository
+    // produces different committed artifacts depending on whether a script was
+    // started from the root or from a subdirectory.
+    const entryPoint = join(fixtureDirectory, 'entry.ts');
+    const original = process.cwd();
+
+    try {
+      process.chdir(fixtureDirectory);
+
+      const fromEntryDirectory = bundleInlineModule({ entryPoint });
+
+      process.chdir(tmpdir());
+
+      const fromElsewhere = bundleInlineModule({ entryPoint });
+
+      expect(fromElsewhere.code).toBe(fromEntryDirectory.code);
+      expect(fromElsewhere.inputs).toStrictEqual(fromEntryDirectory.inputs);
+      // Absolute, so a watch registration works from any working directory.
+      expect(fromElsewhere.inputs.every(input => isAbsolute(input))).toBe(true);
+    } finally {
+      process.chdir(original);
+    }
   });
 
   it('applies compile-time defines', () => {
