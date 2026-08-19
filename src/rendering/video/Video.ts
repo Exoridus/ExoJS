@@ -400,12 +400,14 @@ export class Video extends Sprite {
 
   private _onVideoMetadataUpdated(): void {
     this._textureDirty = true;
+    this.invalidateContent();
     this.updateTexture();
   }
 
   private _onVideoFrame(_now: number, _metadata: unknown): void {
     this._videoFrameCallbackHandle = null;
     this._textureDirty = true;
+    this.invalidateContent();
     this._requestVideoFrameCallback();
   }
 
@@ -415,6 +417,7 @@ export class Video extends Sprite {
     if (this._lastVideoTime !== currentTime) {
       this._lastVideoTime = currentTime;
       this._textureDirty = true;
+      this.invalidateContent();
     }
   }
 
