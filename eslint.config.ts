@@ -1216,6 +1216,36 @@ export default defineConfig([
     },
   },
 
+  // Worker sources run in a DedicatedWorkerGlobalScope - no DOM - and are
+  // bundled into a string at build time, so they belong to no importer's
+  // program. `tsconfig.workers.json` is their type-safety authority (it is the
+  // only place `lib: webworker` can be selected without colliding with the DOM
+  // lib every other program needs). ESLint's ProjectService cannot serve two
+  // conflicting global libs for one file, so type-aware linting is off here and
+  // the full syntactic/correctness/stylistic policy stays on; DOM globals are
+  // banned outright as a lint-level backstop that repeats the compiler's answer.
+  {
+    files: ['**/*.worker.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['**/*.worker.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: { projectService: false, project: null },
+      globals: {
+        ...globals.es2024,
+        ...globals.worker,
+      },
+    },
+    rules: {
+      'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'sessionStorage', 'alert', 'confirm', 'prompt'],
+      'no-var': 'error',
+      'prefer-const': 'error',
+    },
+  },
+
   // Physics indexes flat vertex/normal buffers (`number[]`) at provably in-bounds
   // positions; those reads use `arr[i]!` — the same convention core's hot math
   // paths use. Allow the non-null assertion here (packages discourage it by

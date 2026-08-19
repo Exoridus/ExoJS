@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 
 import { createShaderPlugin } from '@codexo/exojs-config/shader-plugin';
-import { createJsdomTestProject, srcConditions, workletTransformPlugin } from '@codexo/exojs-config/vitest';
+import { createJsdomTestProject, srcConditions, workerTransformPlugin, workletTransformPlugin } from '@codexo/exojs-config/vitest';
 import { playwright } from '@vitest/browser-playwright';
 import { webdriverio } from '@vitest/browser-webdriverio';
 import { defineConfig } from 'vitest/config';
@@ -51,10 +51,11 @@ const realShaderPlugin = createShaderPlugin();
 const browserBase = {
   resolve: { alias: aliasConfig, conditions: srcConditions },
   ssr: { resolve: { conditions: srcConditions } },
-  // `workletTransformPlugin` is the real (non-stub) transform — the browser-
-  // audio-chromium project below renders converted worklets through a genuine
-  // AudioContext, so it needs functioning DSP, not an empty string.
-  plugins: [realShaderPlugin, workletTransformPlugin],
+  // `workletTransformPlugin` and `workerTransformPlugin` are the real (non-stub)
+  // transforms — the browser-audio-chromium project renders converted worklets
+  // through a genuine AudioContext and browser-tilemap-chromium runs worker
+  // sources in a genuine Worker, so both need functioning code, not a stub.
+  plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
   define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
 } as const;
 
@@ -159,7 +160,7 @@ export default defineConfig({
             'test/perf/webgpu/**/*.test.ts',
           ],
         }),
-        plugins: [realShaderPlugin, workletTransformPlugin],
+        plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
       },
       {
         ...createJsdomTestProject({
@@ -167,7 +168,7 @@ export default defineConfig({
           alias: aliasConfig,
           include: ['packages/exojs-particles/test/**/*.test.ts'],
         }),
-        plugins: [realShaderPlugin, workletTransformPlugin],
+        plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
       },
       createJsdomTestProject({
         name: 'exojs-tilemap',
@@ -494,7 +495,7 @@ export default defineConfig({
       //
       {
         ...browserBase,
-        plugins: [realShaderPlugin, workletTransformPlugin],
+        plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
         test: {
           name: 'browser-parity-safari',
           globals: true,
