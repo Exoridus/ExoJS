@@ -1,0 +1,168 @@
+---
+title: 'Typed Worklets and Workers'
+description: 'Author AudioWorklet processors and Web Workers as real TypeScript modules and inline them as source strings at build time with @codexo/exojs-build.'
+---
+
+import Callout from '../../../components/Callout.astro';
+
+# Typed Worklets and Workers
+
+An AudioWorklet processor and a Web Worker both run outside the module that created them. The platform takes them as source text - `audioWorklet.addModule(url)` and `new Worker(url)` - which is why this code is so often written as a template literal full of JavaScript. That string is invisible to TypeScript, ESLint and your formatter, and it cannot import anything, so every helper it needs gets copied in beside it and the two copies drift.
+
+`@codexo/exojs-build` removes the trade-off. You author a normal `.worklet.ts` or `.worker.ts` module, import it through a query, and the build hands you its bundled source as a string.
+
+```bash
+npm install --save-dev @codexo/exojs-build
+```
+
+<Callout type="note" title="Build-time only">
+Nothing this package produces depends on it at run time, and ExoJS itself never imports it. It belongs in `devDependencies` and stays out of your shipped bundle.
+</Callout>
+
+## Build setup
+
+Add the plugins to your bundler config. Vite:
+
+```ts
+import { exojs } from '@codexo/exojs-build';
+
+export default {
+    plugins: [exojs()],
+};
+```
+
+Rollup takes the same plugins:
+
+```ts
+import { exojs } from '@codexo/exojs-build';
+
+export default {
+    input: 'src/main.js',
+    output: { dir: 'dist', format: 'es' },
+    plugins: [exojs()],
+};
+```
+
+The `.ts` modules behind the import queries are bundled by esbuild, so Rollup needs no TypeScript plugin for them.
+
+Then tell TypeScript about the two import queries, once, in your `tsconfig.json`:
+
+```json
+{
+    "compilerOptions": {
+        "types": ["@codexo/exojs-build/client"]
+    }
+}
+```
+
+`exojs()` takes one option, `minify`, off by default so the inlined source stays readable in the dev server and in stack traces. Turn it on for production builds - in Vite, `defineConfig(({ mode }) => ({ plugins: [exojs({ minify: mode === 'production' })] }))`. There is no automatic detection: Rollup has no mode of its own, and guessing one would make the same config behave differently in the two bundlers.
+
+## Typed AudioWorklet
+
+Write the DSP as an ordinary module. Nothing about it is worklet-specific, which means your tests can import it directly:
+
+```ts no-check -- a standalone helper module with no imports and no engine surface; there is nothing here for the drift gate to compare against
+// dsp.ts
+export const saturate = (sample: number, drive: number): number => Math.tanh(sample * drive) / Math.tanh(drive);
+```
+
+The processor imports it like any other module:
+
+```ts no-check -- an AudioWorkletGlobalScope declares `AudioWorkletProcessor` and `registerProcessor`, which the app's own TypeScript program cannot also declare
+// saturator.worklet.ts
+import { saturate } from './dsp';
+
+class SaturatorProcessor extends AudioWorkletProcessor {
+    process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
+        const input = inputs[0]?.[0];
+        const output = outputs[0]?.[0];
+
+        if (output) {
+            for (let i = 0; i < output.length; i++) output[i] = saturate(input?.[i] ?? 0, 4);
+        }
+
+        return true;
+    }
+}
+
+registerProcessor('saturator', SaturatorProcessor);
+```
+
+On the main thread, the `?worklet` query gives you that whole module - the imported `dsp` helper included - as one string:
+
+```ts
+import processorSource from './saturator.worklet.ts?worklet';
+
+export const addSaturator = async (context: BaseAudioContext): Promise<AudioWorkletNode> => {
+    const url = URL.createObjectURL(new Blob([processorSource], { type: 'text/javascript' }));
+
+    try {
+        await context.audioWorklet.addModule(url);
+    } finally {
+        URL.revokeObjectURL(url);
+    }
+
+    return new AudioWorkletNode(context, 'saturator');
+};
+```
+
+No separate worklet file is emitted and nothing is fetched at run time.
+
+## Typed inline worker
+
+The worker side works the same way. A shared module, imported by both halves:
+
+```ts no-check -- a standalone helper module with no imports and no engine surface; there is nothing here for the drift gate to compare against
+// shared.ts
+export const GENERATOR_TAG = 'generator';
+
+export const fibonacci = (n: number): number => {
+    let previous = 0;
+    let current = 1;
+
+    for (let step = 0; step < n; step++) [previous, current] = [current, previous + current];
+
+    return previous;
+};
+```
+
+```ts no-check -- a worker module is checked against `lib: webworker`, where `self` is the worker global rather than the window
+// generator.worker.ts
+import { fibonacci, GENERATOR_TAG } from './shared';
+
+self.onmessage = (event: MessageEvent<number>): void => {
+    self.postMessage({ tag: GENERATOR_TAG, value: fibonacci(event.data) });
+};
+```
+
+```ts
+import workerSource from './generator.worker.ts?worker';
+
+const url = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
+const worker = new Worker(url);
+```
+
+The emitted source is classic-script compatible, so a plain `new Worker(url)` works and `{ type: 'module' }` is never required.
+
+## Type-checking the two odd scopes
+
+Worklet and worker code belongs to a global scope your app's program cannot select: an `AudioWorkletGlobalScope` has `registerProcessor` but no `document`, and a worker needs `lib: webworker`, which cannot be combined with `lib: dom`. Give each its own small `tsconfig` rather than widening the app's:
+
+```json
+{
+    "compilerOptions": { "lib": ["es2022", "webworker"], "types": [], "noEmit": true },
+    "include": ["src/**/*.worker.ts"]
+}
+```
+
+Exclude those files from your app's `tsconfig.json`. The import query still type-checks there, because it resolves through the ambient declarations rather than through the file.
+
+<Callout type="pitfall" title="A Blob worker needs blob: in your CSP">
+Creating a worker or worklet from an object URL is a `blob:` script load. A Content Security Policy without `blob:` in `script-src` and `worker-src` blocks it, and the failure shows up only in production where the policy is set.
+</Callout>
+
+## What the query does and does not change
+
+The query, not the filename, selects the transform. `./saturator.worklet.ts` imported without `?worklet` is still an ordinary module, so a unit test can import the processor's helpers directly.
+
+What you get from the query is a `string`, and nothing more. Turning it into a Blob, an object URL, an `AudioWorkletNode` or a `Worker` stays your code - the plugin has no opinion about lifetime, termination or messaging.

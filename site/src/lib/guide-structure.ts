@@ -777,6 +777,11 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 level: 'intermediate',
                 prerequisites: ['recipes/build-orb-dodge'],
             },
+            {
+                slug: 'typed-worklets-and-workers',
+                level: 'advanced',
+                prerequisites: ['shipping/deployment'],
+            },
         ],
     },
 ];
