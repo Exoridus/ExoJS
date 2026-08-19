@@ -24,11 +24,24 @@ import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilema
 // Core shaders plus the extension packages' own — the particle stage ships
 // from `@codexo/exojs-particles`, so a glob over `src/` alone would leave the
 // only GLSL outside core uncompiled here.
-const shaderModules = import.meta.glob(['/src/rendering/webgl2/glsl/*.{vert,frag}', '/packages/exojs-*/src/**/glsl/*.{vert,frag}'], {
-  query: '?raw',
-  import: 'default',
-  eager: true,
-}) as Record<string, string>;
+//
+// The filter shaders live outside `webgl2/glsl/` and are pulled in explicitly.
+// The filter browser specs render them, so the authored form does reach a
+// driver there; what only this suite compiles is the comment-stripped text the
+// production build ships.
+//
+// `src/rendering/sprite/glsl/sprite-material.vert` is deliberately absent: its
+// fragment stage comes from the application, so it has no fixed pair to link
+// against here. `webgl2-custom-sprite-material.test.ts` compiles and links it
+// against a real one.
+const shaderModules = import.meta.glob(
+  ['/src/rendering/webgl2/glsl/*.{vert,frag}', '/src/rendering/filters/shaders/*.{vert,frag}', '/packages/exojs-*/src/**/glsl/*.{vert,frag}'],
+  {
+    query: '?raw',
+    import: 'default',
+    eager: true,
+  },
+) as Record<string, string>;
 
 type ShaderStage = 'vertex' | 'fragment';
 
@@ -97,6 +110,11 @@ const programPairs: ReadonlyArray<readonly [string, string]> = [
   ['stencil-clip.vert', 'stencil-clip.frag'],
   ['mask-compose.vert', 'mask-compose.frag'],
   ['backdrop-blend.vert', 'backdrop-blend.frag'],
+  // The built-in filters: one pass-through fullscreen-quad vertex stage, three
+  // fragment stages, exactly as `ShaderFilter` assembles them.
+  ['default-vertex.vert', 'color-matrix.frag'],
+  ['default-vertex.vert', 'lut-3d.frag'],
+  ['default-vertex.vert', 'lut-rgb1d.frag'],
 ];
 
 const referencedShaderFiles = new Set(programPairs.flat());
