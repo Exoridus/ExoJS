@@ -1,0 +1,395 @@
+/// <reference types="@webgpu/types" />
+
+import { Matrix } from '#math/Matrix';
+import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
+import { spriteFragmentMainWgsl, spriteSharedStorageWgsl, spriteVertexCoreWgsl } from '#rendering/sprite/spriteMaterialSources';
+import type { RenderTexture } from '#rendering/texture/RenderTexture';
+import { Texture } from '#rendering/texture/Texture';
+import type { BlendModes } from '#rendering/types';
+import type { Video } from '#rendering/video/Video';
+import type { View } from '#rendering/View';
+
+import { AbstractWebGpuRenderer } from './AbstractWebGpuRenderer';
+import type { WebGpuBackend } from './WebGpuBackend';
+import { getWebGpuBlendState } from './WebGpuBlendState';
+import { WebGpuPassArena } from './WebGpuPassArena';
+import { pipelineVariantKey, WebGpuPipelineVariantCache } from './webgpuPipelineCache';
+import { stencilContentDepthStencilState } from './WebGpuStencilState';
+import spriteDefaultVertexInputWgsl from './wgsl/sprite-default-vertex-input.wgsl';
+import spriteDefaultVertexMainWgsl from './wgsl/sprite-default-vertex-main.wgsl';
+
+// Byte-for-byte the sprite instance layout: localBounds vec4 f32 (16) +
+// uvBounds u16x4 packed as 2×u32 (8) + packedSlotFlags u32 (4) + nodeIndex u32
+// (4) = 32. Reusing the layout is what lets this renderer reuse the sprite
+// vertex stage WGSL unmodified.
+const instanceStrideBytes = 32;
+// mat4x4 projection + mat4x4 group + vec4 snap viewport (aligned 16, total 144).
+const projectionByteLength = 144;
+const indicesPerSprite = 6;
+// Static index buffer: two triangles forming a quad, vertex IDs 0..3 in
+// TL/TR/BR/BL order so the WGSL `cornerX/cornerY` derivation matches.
+const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
+
+const videoInstanceVertexBufferLayout: GPUVertexBufferLayout = {
+  arrayStride: instanceStrideBytes,
+  stepMode: 'instance',
+  attributes: [
+    { shaderLocation: 0, offset: 0, format: 'float32x4' },
+    { shaderLocation: 3, offset: 16, format: 'unorm16x4' },
+    { shaderLocation: 5, offset: 24, format: 'uint32' },
+    { shaderLocation: 6, offset: 28, format: 'uint32' },
+  ],
+};
+
+/**
+ * WGSL source for the fallback (texture_2d) video pipeline: a 1-texture-slot
+ * sprite shader is byte-for-byte what this path needs, so it is built from the
+ * same shared building blocks the default sprite pipeline uses rather than
+ * duplicated.
+ * @internal
+ */
+const buildVideoFallbackShaderSource = (): string => `${spriteSharedStorageWgsl}
+@group(1) @binding(0)
+var spriteTexture0: texture_2d<f32>;
+@group(1) @binding(1)
+var spriteSampler0: sampler;
+
+fn sampleTexture(slot: u32, uv: vec2<f32>, ddx: vec2<f32>, ddy: vec2<f32>) -> vec4<f32> {
+    switch slot {
+        default: {
+            return textureSampleGrad(spriteTexture0, spriteSampler0, uv, ddx, ddy);
+        }
+    }
+}
+
+${spriteDefaultVertexInputWgsl}${spriteVertexCoreWgsl}
+${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`;
+
+/**
+ * WebGPU renderer for {@link Video}: draws exactly one video per flush as an
+ * instanced quad, mirroring {@link WebGpuSpriteRenderer}'s default draw path
+ * without its multi-texture batching. Currently ships a fallback
+ * (`texture_2d`) draw path only; a zero-copy `GPUExternalTexture` path is
+ * layered on top of {@link flush} separately.
+ */
+export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
+  private _device: GPUDevice | null = null;
+
+  private _uniformBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _fallbackTextureBindGroupLayout: GPUBindGroupLayout | null = null;
+  private _fallbackPipelineLayout: GPUPipelineLayout | null = null;
+  private _fallbackShaderModule: GPUShaderModule | null = null;
+  private readonly _fallbackPipelines = new WebGpuPipelineVariantCache<GPURenderPipeline>();
+
+  private _uniformBuffer: GPUBuffer | null = null;
+  private _indexBuffer: GPUBuffer | null = null;
+  private readonly _instanceArena = new WebGpuPassArena('video:instance-arena', instanceStrideBytes * 4);
+  private readonly _instanceData = new ArrayBuffer(instanceStrideBytes);
+  private readonly _instanceFloat32 = new Float32Array(this._instanceData);
+  private readonly _instanceUint32 = new Uint32Array(this._instanceData);
+
+  private _transformBindGroup: GPUBindGroup | null = null;
+  private _transformStorageBuffer: GPUBuffer | null = null;
+  private _tintStorageBuffer: GPUBuffer | null = null;
+
+  private readonly _projectionData = new Float32Array(projectionByteLength / 4);
+  private readonly _stagedGroupData = new Float32Array(affineMat4FloatCount);
+  private _writtenView: View | null = null;
+  private _writtenViewUpdateId = -1;
+  private _hasWrittenProjection = false;
+
+  private _pendingVideo: Video | null = null;
+  private _pendingTexture: Texture | RenderTexture | null = null;
+  private _pendingNodeIndex = 0;
+  private _pendingBlendMode: BlendModes | null = null;
+
+  protected onConnect(backend: WebGpuBackend): void {
+    if (this._device) {
+      return;
+    }
+
+    this._device = backend.device;
+
+    this._fallbackShaderModule = this._device.createShaderModule({ label: 'video:shader:fallback', code: buildVideoFallbackShaderSource() });
+
+    this._uniformBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'video:bind-group-layout:uniform',
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
+        { binding: 1, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+        { binding: 2, visibility: GPUShaderStage.VERTEX, buffer: { type: 'read-only-storage' } },
+      ],
+    });
+    this._fallbackTextureBindGroupLayout = this._device.createBindGroupLayout({
+      label: 'video:bind-group-layout:texture-fallback',
+      entries: [
+        { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+        { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      ],
+    });
+    this._fallbackPipelineLayout = this._device.createPipelineLayout({
+      label: 'video:pipeline-layout:fallback',
+      bindGroupLayouts: [this._uniformBindGroupLayout, this._fallbackTextureBindGroupLayout],
+    });
+
+    this._uniformBuffer = this._device.createBuffer({
+      label: 'video:uniform-buffer',
+      size: projectionByteLength,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    this._indexBuffer = this._device.createBuffer({
+      label: 'video:index-buffer',
+      size: quadIndices.byteLength,
+      usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+    });
+    this._device.queue.writeBuffer(this._indexBuffer, 0, quadIndices.buffer, quadIndices.byteOffset, quadIndices.byteLength);
+  }
+
+  protected onDisconnect(): void {
+    this._instanceArena.destroy();
+    this._indexBuffer?.destroy();
+    this._uniformBuffer?.destroy();
+
+    this._fallbackPipelines.clear();
+    this._indexBuffer = null;
+    this._uniformBuffer = null;
+    this._transformBindGroup = null;
+    this._transformStorageBuffer = null;
+    this._tintStorageBuffer = null;
+    this._writtenView = null;
+    this._writtenViewUpdateId = -1;
+    this._hasWrittenProjection = false;
+    this._fallbackPipelineLayout = null;
+    this._fallbackTextureBindGroupLayout = null;
+    this._uniformBindGroupLayout = null;
+    this._fallbackShaderModule = null;
+    this._device = null;
+    this._pendingVideo = null;
+    this._pendingTexture = null;
+  }
+
+  public render(video: Video): void {
+    const backend = this.getBackendOrNull();
+    const texture = video.texture;
+
+    if (backend === null || !(texture instanceof Texture) || texture.width === 0 || texture.height === 0 || texture.source === null) {
+      return;
+    }
+
+    // Only one video is ever in flight (no batching across videos — each gets
+    // its own draw); a second render() before this one flushed means two
+    // videos are adjacent in the plan, so drain the pending one first.
+    if (this._pendingVideo !== null) {
+      this.flush();
+    }
+
+    const command = backend.activeDrawCommand;
+    const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(video);
+
+    this._pendingVideo = video;
+    this._pendingTexture = texture;
+    this._pendingNodeIndex = nodeIndex;
+    this._pendingBlendMode = video.blendMode;
+  }
+
+  public flush(): void {
+    const backend = this.getBackendOrNull();
+    const device = this._device;
+    const uniformBuffer = this._uniformBuffer;
+
+    if (backend === null || device === null || uniformBuffer === null) {
+      return;
+    }
+
+    if (this._pendingVideo === null && !backend.clearRequested) {
+      return;
+    }
+
+    // Mirrors WebGpuSpriteRenderer._endPassOnProjectionChange: if THIS renderer
+    // still has an unsubmitted instance in the currently open pass and the view
+    // changed since it was packed, the pending uniform rewrite below would
+    // retroactively re-project that earlier draw. End (submit) the pass first.
+    const openPass = backend._passCoordinator.activePass;
+
+    if (openPass !== null && this._instanceArena.cursor > 0 && this._instanceArena.tracksPass(openPass) && openPass.viewUpdateId !== backend.view.updateId) {
+      backend._passCoordinator.endPass();
+      this._instanceArena.resetPass();
+    }
+
+    const view = backend.view;
+
+    packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._stagedGroupData, 0);
+    const groupChanged = !this._hasWrittenProjection || packedGroupChanged(this._stagedGroupData, this._projectionData, affineMat4FloatCount);
+
+    if (!this._hasWrittenProjection || this._writtenView !== view || this._writtenViewUpdateId !== view.updateId || groupChanged) {
+      packAffineMat4(view.getTransform(), this._projectionData, 0);
+      packAffineMat4(backend.renderGroupTransform ?? Matrix.identity, this._projectionData, 16);
+
+      this._writtenView = view;
+      this._writtenViewUpdateId = view.updateId;
+      this._hasWrittenProjection = true;
+
+      device.queue.writeBuffer(uniformBuffer, 0, this._projectionData.buffer, this._projectionData.byteOffset, this._projectionData.byteLength);
+    }
+
+    const video = this._pendingVideo;
+    const texture = this._pendingTexture;
+
+    if (video === null || texture === null) {
+      this._pendingVideo = null;
+      this._pendingTexture = null;
+      return;
+    }
+
+    backend.setBlendMode(this._pendingBlendMode);
+
+    const scissor = backend.getScissorRect();
+    const maskClipsAll = scissor !== null && (scissor.width <= 0 || scissor.height <= 0);
+
+    if (maskClipsAll || this._indexBuffer === null) {
+      this._pendingVideo = null;
+      this._pendingTexture = null;
+      return;
+    }
+
+    const coordinator = backend._passCoordinator;
+
+    if (coordinator.activePass !== null && this._instanceArena.cursor > 0 && this._instanceArena.tracksPass(coordinator.activePass) && backend._textureUploadWouldMutate(texture)) {
+      coordinator.endPass();
+      this._instanceArena.resetPass();
+    }
+
+    const needCount = this._pendingNodeIndex + 1;
+
+    if (coordinator.activePass !== null && coordinator.passHasDraws && backend._transformStorageWouldGrow(needCount)) {
+      coordinator.endPass();
+      this._instanceArena.resetPass();
+    }
+
+    const active = coordinator.acquirePass();
+
+    this._instanceArena.syncPass(active);
+
+    if (!this._instanceArena.fits(instanceStrideBytes)) {
+      this._instanceArena.grow(device, instanceStrideBytes);
+    }
+
+    const offset = this._instanceArena.take(instanceStrideBytes);
+    const instanceBuffer = this._instanceArena.buffer!;
+
+    this._packInstance(video, texture, backend);
+    device.queue.writeBuffer(instanceBuffer, offset, this._instanceData, 0, instanceStrideBytes);
+
+    const storage = backend.getTransformStorageBuffer(needCount);
+    const transformBindGroup = this._getOrCreateTransformBindGroup(device, uniformBuffer, storage.buffer, storage.tintBuffer);
+    const stencil = coordinator.stencilActive;
+
+    const { view: textureView, sampler } = backend.getTextureBinding(texture);
+    const textureBindGroup = device.createBindGroup({
+      label: 'video:texture-bind-group:fallback',
+      layout: this._fallbackTextureBindGroupLayout!,
+      entries: [
+        { binding: 0, resource: textureView },
+        { binding: 1, resource: sampler },
+      ],
+    });
+    const pipeline = this._getFallbackPipeline(this._pendingBlendMode!, backend.renderTargetFormat, stencil);
+
+    const pass = active.pass;
+
+    pass.setPipeline(pipeline);
+    pass.setBindGroup(0, transformBindGroup);
+    pass.setBindGroup(1, textureBindGroup);
+    pass.setVertexBuffer(0, instanceBuffer, offset);
+    pass.setIndexBuffer(this._indexBuffer, 'uint16');
+    pass.drawIndexed(indicesPerSprite, 1, 0, 0, 0);
+
+    coordinator.markPassDraws();
+    backend.stats.batches++;
+    backend.stats.drawCalls++;
+
+    this._pendingVideo = null;
+    this._pendingTexture = null;
+  }
+
+  private _packInstance(video: Video, texture: Texture | RenderTexture, backend: WebGpuBackend): void {
+    const f32 = this._instanceFloat32;
+    const u32 = this._instanceUint32;
+    const bounds = video.getLocalBounds();
+
+    f32[0] = bounds.left;
+    f32[1] = bounds.top;
+    f32[2] = bounds.right;
+    f32[3] = bounds.bottom;
+
+    const frame = video.textureFrame;
+    const texWidth = texture.width;
+    const texHeight = texture.height;
+    const uMin = ((frame.left / texWidth) * 0xffff) & 0xffff;
+    const uMax = ((frame.right / texWidth) * 0xffff) & 0xffff;
+    const vMinRaw = ((frame.top / texHeight) * 0xffff) & 0xffff;
+    const vMaxRaw = ((frame.bottom / texHeight) * 0xffff) & 0xffff;
+    const flipY = texture instanceof Texture && texture.flipY;
+    const vMin = flipY ? vMaxRaw : vMinRaw;
+    const vMax = flipY ? vMinRaw : vMaxRaw;
+
+    u32[4] = uMin | (vMin << 16);
+    u32[5] = uMax | (vMax << 16);
+
+    const premultiplySample = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
+    u32[6] = 0 | (premultiplySample << 8); // slot is always 0 — one texture per draw
+
+    u32[7] = this._pendingNodeIndex >>> 0;
+  }
+
+  private _getOrCreateTransformBindGroup(device: GPUDevice, uniformBuffer: GPUBuffer, storageBuffer: GPUBuffer, tintBuffer: GPUBuffer): GPUBindGroup {
+    if (this._transformBindGroup !== null && this._transformStorageBuffer === storageBuffer && this._tintStorageBuffer === tintBuffer) {
+      return this._transformBindGroup;
+    }
+
+    this._transformStorageBuffer = storageBuffer;
+    this._tintStorageBuffer = tintBuffer;
+    this._transformBindGroup = device.createBindGroup({
+      label: 'video:transform-bind-group',
+      layout: this._uniformBindGroupLayout!,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: { buffer: storageBuffer } },
+        { binding: 2, resource: { buffer: tintBuffer } },
+      ],
+    });
+
+    return this._transformBindGroup;
+  }
+
+  private _getFallbackPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {
+    const key = pipelineVariantKey(blendMode, stencil);
+    const existing = this._fallbackPipelines.get(format, key);
+
+    if (existing) {
+      return existing;
+    }
+
+    const descriptor: GPURenderPipelineDescriptor = {
+      label: 'video:render-pipeline:fallback',
+      layout: this._fallbackPipelineLayout!,
+      vertex: { module: this._fallbackShaderModule!, entryPoint: 'vertexMain', buffers: [videoInstanceVertexBufferLayout] },
+      fragment: {
+        module: this._fallbackShaderModule!,
+        entryPoint: 'fragmentMain',
+        targets: [{ format, blend: getWebGpuBlendState(blendMode), writeMask: GPUColorWrite.ALL }],
+      },
+      primitive: { topology: 'triangle-list' },
+    };
+
+    if (stencil) {
+      descriptor.depthStencil = stencilContentDepthStencilState();
+    }
+
+    const pipeline = this._device!.createRenderPipeline(descriptor);
+
+    this._fallbackPipelines.set(format, key, pipeline);
+
+    return pipeline;
+  }
+}
