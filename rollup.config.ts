@@ -63,12 +63,11 @@ const codecovBundlePlugin = (bundleName: string): Plugin[] =>
     : [];
 
 // Real, typed AudioWorklet sources imported via `?worklet` (see
-// `@codexo/exojs-config/worklet-plugin`) are transpiled and inlined as a JS
-// string; untouched worklets keep exporting a plain template-string constant
-// and never reach this plugin. It is a no-op for any input that never uses
-// the `?worklet` query - safe to include in every config below. Mirrors the
-// shader plugin split above: the outputs that minify get the minified worklet
-// string, the readable ones keep the plain transpile.
+// `@codexo/exojs-config/worklet-plugin`) are bundled - imports and all - and
+// inlined as a JS string. It is a no-op for any input that never uses the
+// `?worklet` query, so it is safe to include in every config below. Mirrors
+// the shader plugin split above: the outputs that minify get the minified
+// worklet string, the readable ones keep the plain bundle.
 const workletPlugin = createWorkletPlugin();
 const minifiedWorkletPlugin = createWorkletPlugin({ minify: true });
 
