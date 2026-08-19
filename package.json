@@ -119,6 +119,8 @@
     "lint:all": "pnpm lint && pnpm lint:packages",
     "lint:all:fix": "pnpm lint:fix && pnpm lint:packages:fix",
     "lint:source-hygiene": "tsx scripts/check-source-hygiene.ts",
+    "lint:inline-source": "tsx scripts/check-inline-source.ts",
+    "lint:shaders": "tsx scripts/check-shader-sources.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run --project=exojs --project=exojs-particles --project=exojs-tilemap --project=exojs-tiled --project=exojs-physics --project=exojs-audio-fx --project=exojs-aseprite --project=exojs-ldtk --project=exojs-react --project=rendering-perf --project=rendering-alloc",

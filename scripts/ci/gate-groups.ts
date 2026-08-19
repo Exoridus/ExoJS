@@ -19,7 +19,7 @@ export const GATE_GROUPS = {
     'typecheck:packages',
     'typecheck:test',
   ],
-  lint: ['lint:all', 'lint:source-hygiene', 'format:check'],
+  lint: ['lint:all', 'lint:source-hygiene', 'lint:inline-source', 'lint:shaders', 'format:check'],
   sync: ['docs:api:check', 'examples:sync:check'],
   site: ['typecheck:site'],
 } as const satisfies Record<string, readonly string[]>;

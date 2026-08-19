@@ -34,8 +34,11 @@
 
 import spriteVertexGlslModule from './glsl/sprite-material.vert';
 import spriteFragmentMainWgslModule from './wgsl/sprite-fragment-main.wgsl';
+import spriteSampleBaseWgsl from './wgsl/sprite-sample-base.wgsl';
 import spriteSharedStorageWgslModule from './wgsl/sprite-shared-storage.wgsl';
 import spriteVertexCoreWgslModule from './wgsl/sprite-vertex-core.wgsl';
+import spriteVertexInputWgsl from './wgsl/sprite-vertex-input.wgsl';
+import spriteVertexMainWgsl from './wgsl/sprite-vertex-main.wgsl';
 
 /**
  * Base-texture batch slots a custom {@link SpriteMaterial} rotates through.
@@ -200,22 +203,8 @@ export const spriteFragmentMainWgsl: string = spriteFragmentMainWgslModule;
  * @internal
  */
 export const spriteVertexWgsl = `${spriteSharedStorageWgsl}
-struct VertexInput {
-    @location(0) localBounds: vec4<f32>,
-    @location(3) uvBounds: vec4<f32>,
-    @location(5) packedSlotFlags: u32, // bits 0..7 = texture slot, bit 8 = premultiply sample
-    @location(6) nodeIndex: u32,
-};
-${spriteVertexCoreWgsl}
-@vertex
-fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutput {
-    // This instance's world transform and tint, keyed by nodeIndex into the
-    // shared per-frame storage.
-    let slot = transforms[input.nodeIndex];
-
-    return spriteVertexCore(input.localBounds, input.uvBounds, slot.m0, slot.m1, tints[input.nodeIndex], input.packedSlotFlags, vid);
-}
-`;
+${spriteVertexInputWgsl}${spriteVertexCoreWgsl}
+${spriteVertexMainWgsl}`;
 
 /**
  * WGSL multi-texture slot table for `textureSlots` base textures on group(1):
@@ -272,17 +261,4 @@ ${sampleCases}
 export const spriteMaterialPrologueWgsl = `${spriteVertexWgsl}
 ${buildSpriteTextureSlotWgsl(spriteMaterialTextureSlots)}
 
-// Sample this instance's base texture. \`packedSlotFlags\` is the opaque
-// \`input.textureSlot\` carrier: bits 0..7 select the texture and bit 8 asks
-// the engine to convert its unpremultiplied sample to premultiplied alpha.
-// \`uv\` is normally \`input.texcoord\` but may be any coordinate the effect
-// derives from it. Derivatives are taken here, before the per-slot switch, because
-// multi-texture batching makes the slot non-uniform across a quad and
-// textureSampleGrad is the only sampling form valid in that control flow.
-fn sampleBase(packedSlotFlags: u32, uv: vec2<f32>) -> vec4<f32> {
-    let slot = packedSlotFlags & 0xffu;
-    let sample = sampleTexture(slot, uv, dpdx(uv), dpdy(uv));
-    let premultiplySample = ((packedSlotFlags >> 8u) & 1u) == 1u;
-    return select(sample, vec4<f32>(sample.rgb * sample.a, sample.a), premultiplySample);
-}
-`;
+${spriteSampleBaseWgsl}`;

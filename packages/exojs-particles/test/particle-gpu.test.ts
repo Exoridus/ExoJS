@@ -194,8 +194,12 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     expect(env.device.createComputePipeline).toHaveBeenCalledTimes(1);
     expect(env.shaderSources.length).toBe(1);
+    // The simulate skeleton is a `.wgsl` file with three substituted holes; an
+    // unresolved one would ship a literal `{{name}}` that WGSL cannot parse.
     expect(env.shaderSources[0]).toContain('@compute');
     expect(env.shaderSources[0]).toContain('workgroup_size(64)');
+    expect(env.shaderSources[0]).toContain('rawFrameIndex < 1u');
+    expect(env.shaderSources[0]).not.toContain('{{');
     expect(env.shaderSources[0]).toContain('u_ApplyForce');
     expect(env.shaderSources[0]).toContain('u_Drag');
     expect(env.shaderSources[0]).toContain('u_RotateOverLifetime');

@@ -11,13 +11,14 @@
  * that API, so a WGSL syntax error anywhere in the WebGPU renderer path would
  * ship completely silently.
  *
- * The sources under test are the actual module-level WGSL string constants
- * feeding each renderer's `createShaderModule` call (exported — and, for the
- * one call site that had it inline, hoisted — specifically so this spec can
- * import them directly instead of duplicating the WGSL text). A source edit
- * in any of those files is automatically covered here; no `.wgsl` files or
- * `import.meta.glob` are involved because these are TS string constants, not
- * separate assets.
+ * The sources under test are the exported constants each renderer actually
+ * feeds to `createShaderModule`. Every one of them is an authored `.wgsl` file
+ * inlined by the shader plugin, or a composition of several of them plus the
+ * slot-count-dependent text the engine generates; importing the constant rather
+ * than the file is what makes the composed form - the text a GPU really sees -
+ * the thing under test. An edit to any contributing `.wgsl` file is therefore
+ * covered automatically, without an `import.meta.glob` that would only ever
+ * reach the fragments individually.
  *
  * Two `createShaderModule` call sites are intentionally NOT covered:
  *  - `WebGpuComputePipeline.create` takes an arbitrary caller-supplied `wgsl`

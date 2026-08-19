@@ -53,6 +53,10 @@ import {
   type UserUniformState,
   type UserUniformUpload,
 } from './webgpuUserUniforms';
+import spriteDefaultVertexInputWgsl from './wgsl/sprite-default-vertex-input.wgsl';
+import spriteDefaultVertexMainWgsl from './wgsl/sprite-default-vertex-main.wgsl';
+import spritePersistentBindingsWgsl from './wgsl/sprite-persistent-bindings.wgsl';
+import spritePersistentVertexMainWgsl from './wgsl/sprite-persistent-vertex-main.wgsl';
 
 /**
  * Multi-texture batch slot tiers the sprite pipeline can be generated for.
@@ -136,30 +140,8 @@ export const buildSpriteShaderSource = (textureSlots: number): string => {
   return `${spriteSharedStorageWgsl}
 ${buildSpriteTextureSlotWgsl(textureSlots)}
 
-// Per-instance vertex layout (32 bytes per sprite). The four corners
-// of the quad are derived from @builtin(vertex_index) 0..3 inside the
-// vertex shader — there is no per-vertex stream. The world transform AND the
-// tint are fetched from the shared transform storage buffer keyed by nodeIndex
-// instead of being packed inline.
-struct VertexInput {
-    @location(0) localBounds: vec4<f32>,        // left, top, right, bottom (local space)
-    @location(3) uvBounds: vec4<f32>,           // uMin, vMin, uMax, vMax (CPU pre-swaps for flipY)
-    @location(5) packedSlotFlags: u32,          // bits 0..7 = slot, bit 8 = premultiply
-    @location(6) nodeIndex: u32,                // row into the shared transform storage buffer
-};
-${spriteVertexCoreWgsl}
-@vertex
-fn vertexMain(input: VertexInput, @builtin(vertex_index) vid: u32) -> VertexOutput {
-    // vid 0..3 → corners in TL, TR, BR, BL order (matches the static index
-    // buffer [0,1,2,0,2,3] used for indexed triangle-list drawing). The world
-    // transform and the tint are keyed by nodeIndex into the shared per-frame
-    // storage: the node tint IS this sprite's tint, which is what lets the path
-    // unify with the mesh one and drop the per-instance color stream.
-    let slot = transforms[input.nodeIndex];
-
-    return spriteVertexCore(input.localBounds, input.uvBounds, slot.m0, slot.m1, tints[input.nodeIndex], input.packedSlotFlags, vid);
-}
-${spriteFragmentMainWgsl}`;
+${spriteDefaultVertexInputWgsl}${spriteVertexCoreWgsl}
+${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`;
 };
 
 /**
@@ -191,50 +173,10 @@ ${spriteFragmentMainWgsl}`;
  */
 export const buildPersistentSpriteShaderSource = (textureSlots: number): string => {
   return `
-struct ProjectionUniforms {
-    matrix: mat4x4<f32>,
-    group: mat4x4<f32>,
-    viewport: vec4<f32>,        // device-pixel snap rect (x, y, width, height)
-    premultiplyMask: u32,       // bit i = base texture i samples unpremultiplied
-};
-
-struct TransformSlot {
-    m0: vec4<f32>,
-    m1: vec4<f32>,
-};
-
-// One slot's static quad record: the drawable's own local bounds and the
-// frame's UV, with flipY already resolved by the CPU packer.
-struct SlotQuad {
-    bounds: vec4<f32>,
-    uv: vec4<f32>,
-};
-
-@group(0) @binding(0)
-var<uniform> projection: ProjectionUniforms;
-@group(0) @binding(1)
-var<storage, read> transforms: array<TransformSlot>;
-@group(0) @binding(2)
-var<storage, read> tints: array<u32>;
-@group(0) @binding(3)
-var<storage, read> quads: array<SlotQuad>;
-// The draw order, as slot numbers. Instance i draws slot order[i].
-@group(0) @binding(4)
-var<storage, read> order: array<u32>;
-
+${spritePersistentBindingsWgsl}
 ${buildSpriteTextureSlotWgsl(textureSlots)}
 ${spriteVertexCoreWgsl}
-@vertex
-fn vertexMain(@builtin(instance_index) instance: u32, @builtin(vertex_index) vid: u32) -> VertexOutput {
-    let slotIndex = order[instance];
-    let quad = quads[slotIndex];
-    let slot = transforms[slotIndex];
-    let textureSlot = u32(slot.m1.w);
-    let premultiply = (projection.premultiplyMask >> textureSlot) & 1u;
-
-    return spriteVertexCore(quad.bounds, quad.uv, slot.m0, slot.m1, tints[slotIndex], textureSlot | (premultiply << 8u), vid);
-}
-${spriteFragmentMainWgsl}`;
+${spritePersistentVertexMainWgsl}${spriteFragmentMainWgsl}`;
 };
 
 const instanceStrideBytes = 32;
