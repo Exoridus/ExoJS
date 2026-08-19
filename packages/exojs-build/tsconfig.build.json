@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Emit profile. `tsc` alone is the whole build: the package has one runtime
+  // dependency (esbuild) and ships plain Node ESM, so there is nothing for a
+  // bundler to do - and nothing that could make this package depend on the
+  // plugins it exports.
+  //
+  // `module: esnext` emits import specifiers verbatim, which is why the source
+  // writes relative imports with the `.js` extension the emitted files need.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "rootDir": "src",
+    "outDir": "dist/esm",
+    "declarationDir": "dist/esm",
+    "declarationMap": false,
+    "sourceMap": true,
+    "inlineSources": true
+  },
+  "include": ["src/**/*"]
+}

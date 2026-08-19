@@ -3,10 +3,11 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { bundleInlineModule, type createInlineModulePlugin } from '@codexo/exojs-config/inline-module';
-import { createWorkerPlugin } from '@codexo/exojs-config/worker-plugin';
-import { createWorkletPlugin } from '@codexo/exojs-config/worklet-plugin';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { createWorkerPlugin, createWorkletPlugin, exojs } from '../src/index.ts';
+import { bundleInlineModule } from '../src/inlineModule.ts';
+import type { InlineSourcePlugin } from '../src/pluginTypes.ts';
 
 /**
  * What the worklet and worker plugins have to guarantee about their emitted
@@ -23,15 +24,13 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 let fixtureDirectory: string;
 
 /** Loads a module id through a plugin's `resolveId` + `load` pair, as Rollup would. */
-type PluginLike = ReturnType<typeof createInlineModulePlugin>;
-
-const loadThroughPlugin = (plugin: PluginLike, importer: string, specifier: string): string => {
+const loadThroughPlugin = (plugin: InlineSourcePlugin, importer: string, specifier: string): string => {
   const context = { addWatchFile: () => {} };
-  const resolved = (plugin.resolveId as (this: unknown, source: string, importer?: string) => string | null).call(context, specifier, importer);
+  const resolved = plugin.resolveId(specifier, importer);
 
   expect(resolved, `plugin did not claim ${specifier}`).not.toBeNull();
 
-  const loaded = (plugin.load as (this: unknown, id: string) => string | null).call(context, resolved!);
+  const loaded = plugin.load.call(context, resolved!);
 
   expect(loaded, `plugin did not load ${resolved!}`).not.toBeNull();
 
@@ -48,7 +47,7 @@ const loadThroughPlugin = (plugin: PluginLike, importer: string, specifier: stri
 const runInScope = (source: string): Record<string, unknown> => {
   const scope: Record<string, unknown> = {};
 
-  // eslint-disable-next-line @typescript-eslint/no-implied-eval -- the emitted string is the artifact under test; executing it is the assertion
+  // The emitted string is the artifact under test; executing it is the assertion.
   new Function('globalThis', source).call(undefined, scope);
 
   return scope;
@@ -165,10 +164,8 @@ describe('bundleInlineModule', () => {
 describe('createWorkletPlugin', () => {
   it('claims only the ?worklet query', () => {
     const plugin = createWorkletPlugin();
-    const context = { addWatchFile: () => {} };
-    const resolveId = plugin.resolveId as (this: unknown, source: string, importer?: string) => string | null;
 
-    expect(resolveId.call(context, './sample.worklet.ts', join(fixtureDirectory, 'importer.ts'))).toBeNull();
+    expect(plugin.resolveId('./sample.worklet.ts', join(fixtureDirectory, 'importer.ts'))).toBeNull();
   });
 
   it('bundles an imported helper into the emitted worklet source', () => {
@@ -214,5 +211,38 @@ describe('createWorkerPlugin', () => {
     );
 
     expect(minified.length).toBeLessThan(plain.length);
+  });
+});
+
+describe('exojs', () => {
+  it('installs both inline-source plugins', () => {
+    const names = exojs().map(plugin => plugin.name);
+
+    expect(names).toStrictEqual(['exojs-worklet-transform', 'exojs-worker-transform']);
+  });
+
+  it('runs before the bundler resolves the id itself', () => {
+    // Vite would otherwise hand `./x.worklet.ts?worklet` to its own TS
+    // pipeline, which strips the query and returns the module, not its source.
+    expect(exojs().every(plugin => plugin.enforce === 'pre')).toBe(true);
+  });
+
+  it('leaves an import without one of the queries alone', () => {
+    const importer = join(fixtureDirectory, 'importer.ts');
+
+    expect(exojs().map(plugin => plugin.resolveId('./shared/helper', importer))).toStrictEqual([null, null]);
+  });
+
+  it('passes minify through to both plugins', () => {
+    const importer = join(fixtureDirectory, 'importer.ts');
+    const plain = exojs();
+    const minified = exojs({ minify: true });
+
+    for (const [index, specifier] of ['./sample.worklet.ts?worklet', './sample.worker.ts?worker'].entries()) {
+      const plainSource = sourceFromModule(loadThroughPlugin(plain[index]!, importer, specifier));
+      const minifiedSource = sourceFromModule(loadThroughPlugin(minified[index]!, importer, specifier));
+
+      expect(minifiedSource.length).toBeLessThan(plainSource.length);
+    }
   });
 });

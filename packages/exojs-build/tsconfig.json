@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Build-time tooling, not engine code: it runs in Node, never in a browser,
+  // so the DOM libs the shared base selects are replaced by `@types/node`. A
+  // `document` reference here would be a compile error rather than a crash in
+  // somebody's build.
+  "extends": "@codexo/exojs-config/typescript/library.json",
+  "compilerOptions": {
+    "lib": ["es2022"],
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["dist", "node_modules"]
+}

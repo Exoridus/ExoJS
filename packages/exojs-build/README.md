@@ -1,0 +1,159 @@
+# @codexo/exojs-build
+
+Build-time Vite and Rollup plugins that let you author AudioWorklet processors
+and Web Workers as real TypeScript modules and consume them as self-contained
+source strings.
+
+No hand-written JavaScript in a template literal. No separate worklet or worker
+asset. No extra request at runtime.
+
+```bash
+npm install --save-dev @codexo/exojs-build
+```
+
+This package is build-time tooling. Nothing it produces depends on it at
+runtime, and ExoJS itself does not depend on it - keep it in
+`devDependencies`.
+
+## Setup
+
+### Vite
+
+```ts
+import { defineConfig } from 'vite';
+
+import { exojs } from '@codexo/exojs-build';
+
+export default defineConfig(({ mode }) => ({
+  plugins: [exojs({ minify: mode === 'production' })],
+}));
+```
+
+### Rollup
+
+```js
+import { exojs } from '@codexo/exojs-build';
+
+export default {
+  input: 'src/main.js',
+  output: { dir: 'dist', format: 'es' },
+  plugins: [exojs()],
+};
+```
+
+The `.ts` modules behind the import queries are bundled by esbuild, so Rollup
+needs no TypeScript plugin for them.
+
+### TypeScript
+
+Add the published ambient declarations so the import queries type-check:
+
+```json
+{
+  "compilerOptions": {
+    "types": ["@codexo/exojs-build/client"]
+  }
+}
+```
+
+## Typed AudioWorklet
+
+```ts
+// dsp.ts - an ordinary module
+export const saturate = (sample: number, drive: number): number => Math.tanh(sample * drive) / Math.tanh(drive);
+```
+
+```ts
+// saturator.worklet.ts - real TypeScript, with real imports
+import { saturate } from './dsp';
+
+class SaturatorProcessor extends AudioWorkletProcessor {
+  process(inputs: Float32Array[][], outputs: Float32Array[][]): boolean {
+    const input = inputs[0]?.[0];
+    const output = outputs[0]?.[0];
+
+    if (output) {
+      for (let i = 0; i < output.length; i++) output[i] = saturate(input?.[i] ?? 0, 4);
+    }
+
+    return true;
+  }
+}
+
+registerProcessor('saturator', SaturatorProcessor);
+```
+
+```ts
+// main thread
+import processorSource from './saturator.worklet.ts?worklet';
+
+const url = URL.createObjectURL(new Blob([processorSource], { type: 'text/javascript' }));
+
+try {
+  await context.audioWorklet.addModule(url);
+} finally {
+  URL.revokeObjectURL(url);
+}
+
+const node = new AudioWorkletNode(context, 'saturator');
+```
+
+## Typed inline worker
+
+```ts
+// generator.worker.ts
+import { fibonacci } from './shared';
+
+self.onmessage = (event: MessageEvent<number>): void => {
+  self.postMessage(fibonacci(event.data));
+};
+```
+
+```ts
+// main thread
+import workerSource from './generator.worker.ts?worker';
+
+const url = URL.createObjectURL(new Blob([workerSource], { type: 'text/javascript' }));
+const worker = new Worker(url);
+```
+
+The emitted source is classic-script compatible, so a plain `new Worker(url)`
+works and `{ type: 'module' }` is never required.
+
+## API
+
+| Export                  | Purpose                                                     |
+| ----------------------- | ----------------------------------------------------------- |
+| `exojs(options?)`       | Both plugins at once. The normal entry point.                |
+| `createWorkletPlugin()` | Only the `?worklet` transform.                               |
+| `createWorkerPlugin()`  | Only the `?worker` transform.                                |
+
+All three take `{ minify?: boolean }`, off by default so the inlined source
+stays readable in dev servers and stack traces. There is no automatic
+production detection: Rollup has no mode of its own, and inferring one would
+make the same config behave differently in the two supported bundlers.
+
+## What the transform guarantees
+
+- TypeScript syntax and ordinary relative imports, to any depth.
+- No `import` or `export` token in the emitted string - neither an
+  `AudioWorkletGlobalScope` nor a classic worker can resolve one.
+- One string per entry point, never a second emitted asset.
+- Every file that contributed to a bundle is registered for watch-mode
+  invalidation, so editing a shared helper reloads its worklet.
+- Build errors name the offending source file.
+
+## Notes
+
+- The query, not the filename, selects the transform. The same `.worklet.ts` or
+  `.worker.ts` file can still be imported as an ordinary module - by a unit
+  test, say - without going through the bundler.
+- Worklet and worker code belongs to a global scope your app's program cannot
+  select (`AudioWorkletGlobalScope`; `lib: webworker`). Give those files their
+  own `tsconfig` rather than widening the app's.
+- Creating a worker or worklet from a Blob URL needs `blob:` in the
+  `script-src`/`worker-src` Content Security Policy directives.
+
+## Licence
+
+MIT

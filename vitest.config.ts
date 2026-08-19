@@ -238,6 +238,26 @@ export default defineConfig({
         include: ['packages/exojs-bench/test/**/*.test.ts'],
       }),
 
+      // ── exojs-build: the published build-tooling package ───────────────
+      // Plain Node, no jsdom and none of the shader/worklet/worker plugins: the
+      // subject under test IS those plugins, so installing them here would test
+      // the transform through itself. The external-consumer spec packs the
+      // package and drives real Vite and Rollup builds against the tarball,
+      // which is why the timeout is minutes rather than seconds. The browser
+      // fixtures under `test/browser` need a real Worker/AudioWorklet and run in
+      // `browser-build-chromium` instead.
+      {
+        test: {
+          name: 'exojs-build',
+          environment: 'node',
+          globals: true,
+          include: ['packages/exojs-build/test/**/*.test.ts'],
+          exclude: ['packages/exojs-build/test/browser/**'],
+          testTimeout: 300_000,
+          hookTimeout: 300_000,
+        },
+      },
+
       // ── rendering-perf — Node renderer benchmark harness (real shaders) ──
       // Runs the real WebGL2 renderers against a recording fake GL context for
       // deterministic, GPU-free structural metrics. Uses the real-shader loader
@@ -562,6 +582,29 @@ export default defineConfig({
           globals: true,
           setupFiles: browserSetupFiles,
           include: ['packages/exojs-tilemap/test/browser/**/*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({ launchOptions: { channel: 'chromium' } }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── browser-build-chromium: the inlined strings, actually executed ──
+      // The `?worklet`/`?worker` transforms only pay off if the string they
+      // emit runs where it is meant to. jsdom implements neither
+      // `audioWorklet.addModule` nor `Worker`/`URL.createObjectURL`, so the
+      // node lane can prove the bundle's shape but not that a real engine
+      // accepts it. These specs take the emitted source through the production
+      // path - Blob, object URL, real AudioWorklet and real Worker - which is
+      // also the DX a consumer of `@codexo/exojs-build` writes by hand.
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-build-chromium',
+          globals: true,
+          include: ['packages/exojs-build/test/browser/**/*.test.ts'],
           browser: {
             enabled: true,
             headless: true,

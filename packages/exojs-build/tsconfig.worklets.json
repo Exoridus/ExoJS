@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // Typechecks the `*.worklet.ts` fixture against the AudioWorkletGlobalScope
+  // and nothing else. `lib` drops `dom`/`dom.iterable` (they cannot be combined
+  // with the hand-rolled worklet globals, and a `document` reference here would
+  // be a runtime error on the audio thread), which is why the fixture is
+  // excluded from `tsconfig.test.json` and checked here instead. The module it
+  // imports is included too: the `?worklet` bundle inlines it, so it has to hold
+  // up without DOM as well.
+  "extends": "@codexo/exojs-config/typescript/base.json",
+  "compilerOptions": {
+    "lib": ["es2022"],
+    "types": [],
+    "noEmit": true
+  },
+  "include": ["test/**/*.worklet.ts", "test/worklet-globals.d.ts", "test/**/dsp.ts"]
+}

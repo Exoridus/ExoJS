@@ -1,5 +1,6 @@
 packages:
   - site
+  - packages/exojs-build
   - packages/exojs-config
   - packages/exojs-bench
   - packages/exojs-particles

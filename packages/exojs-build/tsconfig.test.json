@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // The package's own tests. The worker and worklet fixtures are excluded:
+  // both belong to a global scope this program cannot select (`webworker` and
+  // the AudioWorkletGlobalScope respectively, neither combinable with `dom`).
+  // They are checked by the repository-root `tsconfig.workers.json` and by
+  // `./tsconfig.worklets.json`.
+  "extends": [
+    "./tsconfig.json",
+    "@codexo/exojs-config/typescript/package-test.json"
+  ],
+  "compilerOptions": {
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": ["node", "vitest/globals"],
+    "allowImportingTsExtensions": true
+  },
+  // `client.d.ts` is the ambient `?worklet`/`?worker` contract this package
+  // publishes; the browser specs import through those queries, so the package's
+  // own tests consume it exactly as a consumer does.
+  "include": ["src/**/*", "test/**/*", "client.d.ts"],
+  "exclude": ["dist", "node_modules", "test/**/*.worker.ts", "test/**/*.worklet.ts"]
+}
