@@ -9,7 +9,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
  *
  * Production code registers these via `materializeRendererBindings` inside
  * `Application.createBackend`. Browser tests that construct a backend directly
- * (bypassing Application) must do the same explicitly — the backend no longer
+ * (bypassing Application) must do the same explicitly - the backend no longer
  * self-registers core renderers.
  */
 export function wireCoreRenderers(backend: RenderBackend, rendering: RenderingApplicationOptions = {}): void {
