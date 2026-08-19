@@ -69,6 +69,53 @@ export function verifyRuntimePackage(dir, opts) {
 }
 
 /**
+ * Verify a published build-tooling package (`@codexo/exojs-build`).
+ *
+ * Same publish contract as a runtime package, minus everything that only makes
+ * sense for engine code: there is no `@codexo/exojs` peer (the whole point is
+ * that it runs at build time and the engine never depends on it), and it is
+ * allowed the build-time dependencies a runtime package may not have. What is
+ * checked instead is the inverse: no engine dependency in either direction, and
+ * no dependency on the private repository config, which would make the package
+ * uninstallable outside this repository.
+ * @param {string} dir absolute package directory
+ * @param {{ name: string }} opts
+ * @returns {PolicyResult}
+ */
+export function verifyToolingPackage(dir, opts) {
+  const pkg = read(dir);
+  const checks = [];
+  const ok = (name, cond, detail) => checks.push({ name, ok: Boolean(cond), detail });
+
+  ok('name matches', pkg.name === opts.name, `${pkg.name} vs ${opts.name}`);
+  ok('type: module', pkg.type === 'module');
+  ok('not private', pkg.private !== true);
+  ok('has version', typeof pkg.version === 'string');
+  ok('exports map', pkg.exports && typeof pkg.exports === 'object');
+  ok('exports "." entry', pkg.exports?.['.']?.types && pkg.exports['.'].import);
+  ok('exports ./package.json', pkg.exports?.['./package.json'] === './package.json');
+  ok('files allowlist', Array.isArray(pkg.files) && pkg.files.length > 0);
+  ok('files ship dist/esm', (pkg.files ?? []).some((f) => f.includes('dist/esm')));
+  ok('ships LICENSE', (pkg.files ?? []).includes('LICENSE'));
+  ok('publishConfig public', pkg.publishConfig?.access === 'public');
+  ok('LICENSE file present', existsSync(join(dir, 'LICENSE')));
+  ok('README present', existsSync(join(dir, 'README.md')));
+  ok('has repository field', pkg.repository != null);
+
+  const exportTargets = JSON.stringify(pkg.exports ?? {});
+  ok('no raw .ts runtime entry', !/\.ts"/.test(exportTargets.replace(/\.d\.ts"/g, '')));
+  ok('no @/ alias in manifest', !JSON.stringify(pkg).includes('"@/'));
+  ok('no workspace: in deps', !JSON.stringify(pkg.dependencies ?? {}).includes('workspace:'));
+
+  const runtimeDeps = { ...pkg.dependencies, ...pkg.peerDependencies };
+  ok('no engine dependency', !Object.keys(runtimeDeps).some((d) => d === '@codexo/exojs' || d.startsWith('@codexo/exojs-')));
+  ok('no private config dependency', !Object.keys({ ...runtimeDeps, ...pkg.devDependencies }).includes('@codexo/exojs-config'));
+  ok('library sideEffects: false', pkg.sideEffects === false);
+
+  return { ok: checks.every((c) => c.ok), checks };
+}
+
+/**
  * Verify the private shared-config package.
  * @param {string} dir
  * @returns {PolicyResult}

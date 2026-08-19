@@ -46,6 +46,39 @@ export const LOCKSTEP_PACKAGES = [
   { name: '@codexo/exojs-react', dir: 'packages/exojs-react', isExtension: true, inOfflineSmoke: false },
 ] as const satisfies readonly LockstepPackage[];
 
+/**
+ * Published packages that are deliberately NOT on the engine's lockstep version
+ * line, with the reason each one is off it.
+ *
+ * A package belongs here when its version means something different from "the
+ * engine release this goes with": build tooling a consumer keeps in
+ * `devDependencies` across engine upgrades, and the app scaffolder, which is
+ * installed once and never pinned. Enumerating them is what lets
+ * `verify:release-matrix` assert the independence instead of silently ignoring
+ * whatever is missing from `LOCKSTEP_PACKAGES`.
+ */
+export interface IndependentPackage {
+  /** npm package name. */
+  readonly name: string;
+  /** Package directory relative to the repo root. */
+  readonly dir: string;
+  /** Why this package is not on the lockstep line. */
+  readonly reason: string;
+}
+
+export const INDEPENDENT_PACKAGES = [
+  {
+    name: '@codexo/exojs-build',
+    dir: 'packages/exojs-build',
+    reason: 'build-time tooling; a consumer keeps one version across engine upgrades and it depends on no engine API',
+  },
+  {
+    name: 'create-exo-app',
+    dir: 'packages/create-exo-app',
+    reason: 'app scaffolder; run once via npx, never pinned to an engine version',
+  },
+] as const satisfies readonly IndependentPackage[];
+
 /** Union of the official package names (literal type, preserved for `OfficialPackageName`). */
 export type OfficialPackageName = (typeof LOCKSTEP_PACKAGES)[number]['name'];
 

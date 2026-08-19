@@ -74,7 +74,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       # Refuse to release unless the resolved tag matches package.json.
       - name: Verify tag matches package.json version
@@ -172,7 +172,7 @@ jobs:
       # Tooling only (tsx + release scripts). Does NOT build the runtime packages
       # — the tarballs are consumed as-is from the prepare stage.
       - name: Install tooling
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       - name: Download release artifacts
         uses: actions/download-artifact@v4

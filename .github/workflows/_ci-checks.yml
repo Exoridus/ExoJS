@@ -99,7 +99,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       # The gate list lives in scripts/ci/gates.ts, which the local verify:quick
       # pre-push hook runs in full. Spelling the commands out here again is what
@@ -144,7 +144,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       - name: Verify package policy
         run: pnpm verify:package-policy
@@ -174,7 +174,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       # lint:all + format:check, from the shared list in scripts/ci/gates.ts.
       #
@@ -215,7 +215,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       # Both are dry-run checks that leave the working tree unchanged.
       - name: Sync gates
@@ -248,7 +248,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       # NOTE: no `--` before the extra args — pnpm (unlike npm) forwards a
       # literal `--` to the script, and vitest silently discards everything
@@ -332,7 +332,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5
@@ -357,6 +357,14 @@ jobs:
           --coverage --coverage.reporter=lcov --coverage.reporter=text-summary
           --coverage.thresholds.statements=0 --coverage.thresholds.branches=0
           --coverage.thresholds.functions=0 --coverage.thresholds.lines=0
+
+      # The inline-source lane rides along here rather than owning a job: it
+      # needs the same headless Chromium and finishes in seconds, and its
+      # subject (`@codexo/exojs-build`) is in the engine path set that already
+      # gates this job. No coverage - it asserts that emitted strings run in a
+      # real AudioWorklet and a real Worker, not that engine lines execute.
+      - name: Browser tests (inline worklet/worker sources, headless Chromium)
+        run: pnpm test:browser:build
 
       - name: Upload coverage to Codecov (browser flag)
         if: ${{ !cancelled() }}
@@ -441,7 +449,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5
@@ -517,7 +525,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5
@@ -600,7 +608,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5
@@ -669,7 +677,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       - name: Cache Playwright browsers
         uses: actions/cache@v5
@@ -747,7 +755,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       # Every lane's `junit-*` artifact, merged into one directory. A
       # path-gated lane that didn't run this time simply contributes nothing:
@@ -804,7 +812,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       - name: Build core
         env:
@@ -872,7 +880,7 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       # Restores dist/ + packages/*/dist/ (built once by the `build` job)
       # instead of rebuilding here.
@@ -908,8 +916,11 @@ jobs:
 
       # Pack each extension package (dry run) so a broken `files`/`exports` set in
       # a package manifest is caught here, not at release time.
+      # `@codexo/exojs-build` is published too, but on its own tooling version
+      # line rather than the engine lockstep, so it is packed here and left out
+      # of the lockstep/publish-order matrix above.
       - name: Extension package dry runs
-        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" pack --dry-run
+        run: pnpm --filter "@codexo/exojs-build" --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" pack --dry-run
 
       # publint validates the published package.json itself (exports map, files,
       # types resolution, module/main coherence) — the layer attw does NOT cover
@@ -967,7 +978,7 @@ jobs:
 
       - name: Install dependencies
         if: steps.filter.outputs.release == 'true'
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       - name: Release prepare (build-once, no publish, no full-zip)
         if: steps.filter.outputs.release == 'true'
@@ -1006,7 +1017,7 @@ jobs:
       # Root install is required because the site consumes the local
       # workspace package and vendor:sync reads from the built dist/ tree.
       - name: Install root dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm bootstrap
 
       # Restores dist/ + packages/*/dist/ (built once by the `build` job)
       # instead of rebuilding here.

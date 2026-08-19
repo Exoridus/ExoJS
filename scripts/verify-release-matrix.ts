@@ -25,7 +25,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { EXTENSION_PACKAGES, LOCKSTEP_PACKAGES } from './release/lockstep-packages.ts';
+import { EXTENSION_PACKAGES, INDEPENDENT_PACKAGES, LOCKSTEP_PACKAGES } from './release/lockstep-packages.ts';
 import { PUBLISH_ORDER } from './release/manifest.ts';
 import { officialPackages } from './release/prepare.ts';
 
@@ -52,7 +52,6 @@ const problems: string[] = [];
 const ok: string[] = [];
 
 const core = readPkg('package.json');
-const createExoApp = readPkg('packages/create-exo-app/package.json');
 
 // Every lockstep package (Core first) + the extension subset, derived from the
 // single source of truth (scripts/release/lockstep-packages.ts).
@@ -92,11 +91,21 @@ for (const pkg of official) {
   }
 }
 
-// 3. create-exo-app independence.
-if (createExoApp.version === version) {
-  problems.push(`create-exo-app must be versioned independently, but matches the lockstep version ${version}.`);
-} else {
-  ok.push(`create-exo-app independently versioned (v${createExoApp.version} ≠ v${version})`);
+// 3. Independently versioned published packages (build tooling, scaffolder).
+// Each must be off the lockstep line AND out of the publish order, so the
+// coordinated release neither bumps it nor publishes it by accident.
+for (const independent of INDEPENDENT_PACKAGES) {
+  const pkg = readPkg(`${independent.dir}/package.json`);
+
+  if (pkg.version === version) {
+    problems.push(`${pkg.name} is versioned independently (${independent.reason}), but matches the lockstep version ${version}.`);
+  } else {
+    ok.push(`${pkg.name} independently versioned (v${pkg.version} ≠ v${version})`);
+  }
+
+  if ((PUBLISH_ORDER as readonly string[]).includes(pkg.name)) {
+    problems.push(`${pkg.name} is independently versioned and must not appear in PUBLISH_ORDER.`);
+  }
 }
 
 // 4-7. release.yml two-stage build-once workflow checks.
