@@ -1,14 +1,20 @@
 /**
  * WebGPU Video browser test — v0.16 renderer-matrix drawable entry.
  *
- * {@link Video} wraps an `HTMLVideoElement` as a live-texture {@link Sprite}
- * (see `src/rendering/video/Video.ts`): its `Texture` holds the video element
+ * {@link Video} wraps an `HTMLVideoElement` as a live-texture drawable (see
+ * `src/rendering/video/Video.ts`): its `Texture` holds the video element
  * directly as `source`, and `updateTexture()` calls `texture.updateSource()`
- * to bump the texture version whenever the decoded frame changes, which makes
- * the backend re-upload via `device.queue.copyExternalImageToTexture(...)` —
- * the same generic path `WebGpuBackend` uses for any non-DataTexture,
- * non-RenderTexture source (canvas/image/video); there is no video-specific
- * upload code.
+ * to bump the texture version whenever the decoded frame changes. On the
+ * WebGPU backend, `Video` resolves to `WebGpuVideoRenderer`
+ * (`src/rendering/webgpu/WebGpuVideoRenderer.ts`), which currently draws
+ * through its fallback (`texture_2d`) path: the changed texture version
+ * triggers a re-upload via `device.queue.copyExternalImageToTexture(...)`,
+ * the same generic upload `WebGpuBackend` uses for any non-DataTexture,
+ * non-RenderTexture source (canvas/image/video), before the renderer draws
+ * an instanced quad sampling that texture. Later work extends this file with
+ * the zero-copy `GPUExternalTexture` path and a scenario that forces the
+ * fallback path explicitly; these two tests cover only the fallback path as
+ * currently the sole draw path in place.
  *
  * Fixture strategy: a `<canvas>` painted a solid colour is turned into a
  * `MediaStream` via `captureStream()`, assigned to a `<video>` element's
