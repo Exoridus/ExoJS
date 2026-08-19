@@ -49,7 +49,7 @@ const videoInstanceVertexBufferLayout: GPUVertexBufferLayout = {
  * WebGPU renderer for {@link Video}: draws exactly one video per flush as an
  * instanced quad, mirroring {@link WebGpuSpriteRenderer}'s default draw path
  * without its multi-texture batching. Each flush attempts a zero-copy
- * `GPUExternalTexture` import fresh (never cached across frames — pause,
+ * `GPUExternalTexture` import fresh (never cached across frames - pause,
  * seek, and source changes all affect readiness), falling back to a
  * `texture_2d` copy-upload path on any failure.
  */
@@ -196,7 +196,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       return;
     }
 
-    // Only one video is ever in flight (no batching across videos — each gets
+    // Only one video is ever in flight (no batching across videos - each gets
     // its own draw); a second render() before this one flushed means two
     // videos are adjacent in the plan, so drain the pending one first.
     if (this._pendingVideo !== null) {
@@ -285,9 +285,9 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
       // open pass. End (submit) the pass first so those draws capture the
       // pre-mutation content, then reopen and re-upload into a fresh slice. The
       // texture cache is shared, so the endangered draw need not be this
-      // renderer's own — ask the coordinator, not this renderer's own cursor.
+      // renderer's own - ask the coordinator, not this renderer's own cursor.
       // Only relevant when this flush will actually sync the texture cache
-      // (the fallback path) — the external path never calls getTextureBinding,
+      // (the fallback path) - the external path never calls getTextureBinding,
       // so a would-be mutation this frame is never actually issued.
       if (externalTexture === null && coordinator.passHasDraws && backend._textureUploadWouldMutate(texture)) {
         active = this._reopenPass(backend);
@@ -332,7 +332,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
           layout: this._externalTextureBindGroupLayout!,
           entries: [
             { binding: 0, resource: externalTexture },
-            // A locally-built, locally-cached sampler — NOT backend.getTextureBinding(texture),
+            // A locally-built, locally-cached sampler - NOT backend.getTextureBinding(texture),
             // which unconditionally runs the backend's texture-sync (the very upload this branch
             // exists to avoid). See createSamplerFor's doc comment.
             { binding: 1, resource: this._getOrCreateExternalSampler(backend, texture) },
@@ -378,7 +378,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
 
   /**
    * End the open pass if its recorded draw was projected with a different view
-   * transform — or different group-matrix bytes — than what this flush is about
+   * transform - or different group-matrix bytes - than what this flush is about
    * to write into the shared projection uniform. Guarded on the arena tracking
    * the *current* active pass so a stale post-boundary cursor never triggers a
    * spurious split.
@@ -400,7 +400,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
   /**
    * Whether the packed bytes of the active group matrix differ from what the
    * shared projection UBO currently holds at [16, 32). Stages the packed matrix
-   * into `_stagedGroupData` as a side effect (idempotent — safe to call more
+   * into `_stagedGroupData` as a side effect (idempotent - safe to call more
    * than once per flush).
    */
   private _groupContentChanged(backend: WebGpuBackend): boolean {
@@ -453,7 +453,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     u32[5] = uMax | (vMax << 16);
 
     const premultiplySample = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
-    u32[6] = 0 | (premultiplySample << 8); // slot is always 0 — one texture per draw
+    u32[6] = 0 | (premultiplySample << 8); // slot is always 0 - one texture per draw
 
     u32[7] = this._pendingNodeIndex >>> 0;
   }
@@ -514,7 +514,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
    * `null` (never throws) whenever the fallback `texture_2d` path must be
    * used instead: no `importExternalTexture` on the device, no decoded frame
    * yet, or the import itself throwing (not origin-clean, expired microtask
-   * checkpoint, etc). Not cached — re-evaluated every flush, because
+   * checkpoint, etc). Not cached - re-evaluated every flush, because
    * pause/seek/source changes and readiness can all change between frames.
    */
   private _tryImportExternalTexture(device: GPUDevice, source: HTMLVideoElement): GPUExternalTexture | null {
@@ -535,7 +535,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
 
   /**
    * The sampler for the external-texture branch, built directly from
-   * `backend.createSamplerFor` rather than `backend.getTextureBinding` —
+   * `backend.createSamplerFor` rather than `backend.getTextureBinding` -
    * the latter unconditionally re-syncs texture content, which would
    * reintroduce the very copy-upload the external path exists to avoid.
    * Cached per (scaleMode, wrapMode) pair and rebuilt only when that pair

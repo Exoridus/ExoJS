@@ -1,5 +1,5 @@
 /**
- * WebGPU persistent-slot tier — a root containing `Video` must be refused.
+ * WebGPU persistent-slot tier - a root containing `Video` must be refused.
  *
  * `WebGpuBackend._acquirePersistentSlots` walks every item in a
  * `RenderRootSource` and requires every resolved renderer to declare
@@ -27,7 +27,7 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
 /**
  * A real `WebGpuBackend` with the core renderer bindings materialized, but
- * never `initialize()`-d against an actual adapter/device — jsdom has none.
+ * never `initialize()`-d against an actual adapter/device - jsdom has none.
  *
  * `_acquirePersistentSlots` only gates on device PRESENCE (`_device === null`
  * / `_deviceLost`); the renderer-eligibility walk it guards makes no device

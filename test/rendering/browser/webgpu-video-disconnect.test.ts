@@ -2,11 +2,11 @@
  * WebGPU Video device-loss teardown browser test.
  *
  * Mechanism: a genuine `GPUDevice.destroy()`, reached through
- * `WebGpuBackend.destroy()` — the same real device-loss mechanism
+ * `WebGpuBackend.destroy()` - the same real device-loss mechanism
  * `webgpu-device-lifecycle.test.ts` uses (not a synthetic `GPUDeviceLostInfo`
  * dispatch). `backend.destroy()` calls `rendererRegistry.destroy()`, which
- * disconnects every bound renderer — `WebGpuVideoRenderer.onDisconnect` among
- * them — before the device itself is destroyed for real. This is the actual
+ * disconnects every bound renderer - `WebGpuVideoRenderer.onDisconnect` among
+ * them - before the device itself is destroyed for real. This is the actual
  * production code path a device loss ultimately drives (see the "device-bound
  * state" teardown `WebGpuBackend` performs on both explicit `destroy()` and
  * device-loss recovery), exercised here without the intermediate JS
@@ -18,9 +18,9 @@
  * there is no event-driven, same-instance reconnect to observe on real
  * hardware. The reconnect side of the contract is instead proven the way
  * `webgpu-device-lifecycle.test.ts`'s own third case proves it for the
- * backend as a whole: a second, independently constructed backend — a fresh
+ * backend as a whole: a second, independently constructed backend - a fresh
  * real device, a fresh `WebGpuVideoRenderer` built from scratch by
- * `onConnect` — renders the SAME `Video` (same `HTMLVideoElement`, same
+ * `onConnect` - renders the SAME `Video` (same `HTMLVideoElement`, same
  * `Texture`) the first backend already rendered and lost, and must still
  * produce correct pixels. That is only possible if `onDisconnect` left
  * nothing about the `Video`/`Texture` corrupted for a later renderer to trip
@@ -45,7 +45,7 @@ const canvasSize = 32;
  * A `<video>` element playing a `MediaStream` sourced from a solid-colour
  * `<canvas>`, resolved once the first frame has decoded.
  *
- * Polls `videoWidth`/`readyState` rather than `requestVideoFrameCallback` —
+ * Polls `videoWidth`/`readyState` rather than `requestVideoFrameCallback` -
  * empirically unreliable in this headless Chromium configuration (see
  * `webgpu-video.test.ts`'s file header for the full rationale).
  */
@@ -142,7 +142,7 @@ describe('WebGPU Video device-loss teardown', () => {
       backend.destroy();
       backendDestroyed = true;
 
-      // Proves the device was genuinely destroyed, not merely abandoned —
+      // Proves the device was genuinely destroyed, not merely abandoned -
       // the same assertion webgpu-device-lifecycle.test.ts makes for its own
       // destroy() cycles.
       expect((await lost).reason).toBe('destroyed');

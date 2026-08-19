@@ -1,5 +1,5 @@
 /**
- * WebGPU Video browser test — v0.16 renderer-matrix drawable entry.
+ * WebGPU Video browser test - v0.16 renderer-matrix drawable entry.
  *
  * {@link Video} wraps an `HTMLVideoElement` as a live-texture drawable (see
  * `src/rendering/video/Video.ts`): its `Texture` holds the video element
@@ -21,21 +21,21 @@
  * into a `MediaStream` via `captureStream()`, assigned to a `<video>` element's
  * `srcObject`, and played (muted, so no user-gesture is required). We poll
  * `videoWidth`/`readyState` for the first decoded frame instead of relying on
- * `requestVideoFrameCallback` — empirically, in this headless Chromium
+ * `requestVideoFrameCallback` - empirically, in this headless Chromium
  * configuration `requestVideoFrameCallback` never fires (even with the video
  * attached to the DOM and a `requestAnimationFrame` pump kept alive for the
  * full test). The bounded wait starts before `video.play()`: under full-lane
  * load that promise can stay pending indefinitely even though isolated runs
  * decode in under a second. A *second*,
- * dynamic scenario — repainting the source canvas after the first decoded
- * frame and asserting the video texture picks up the new colour — was
+ * dynamic scenario - repainting the source canvas after the first decoded
+ * frame and asserting the video texture picks up the new colour - was
  * prototyped and found NOT to be reliably observable within a bounded window
  * in this headless environment (0/5 across two variants, including a
  * `requestAnimationFrame`-pumped + DOM-attached variant); it is intentionally
  * NOT included here to avoid committing a flaky test. Only the reliable,
  * bounded initial-decode-and-render path is asserted below.
  *
- * All WebGPU renderers use inline WGSL — no shader file mocks are needed.
+ * All WebGPU renderers use inline WGSL - no shader file mocks are needed.
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe); `renderScene` only skips when the software adapter
  * drops the device mid-test.
@@ -89,7 +89,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
  * `<canvas>` `paint` leaves in whatever state, resolved once the first frame
  * has decoded.
  *
- * Polls `videoWidth`/`readyState` rather than `requestVideoFrameCallback` —
+ * Polls `videoWidth`/`readyState` rather than `requestVideoFrameCallback` -
  * see the file header comment for why.
  */
 const createPaintedVideo = async (paint: (ctx: CanvasRenderingContext2D, size: number) => void, size = 16): Promise<HTMLVideoElement> => {
@@ -165,7 +165,7 @@ const createSolidColorVideo = (color: string, size = 16): Promise<HTMLVideoEleme
 
 /**
  * A video whose decoded frame is split into a `topColor` top half and a
- * `bottomColor` bottom half — deliberately asymmetric under vertical flip, so
+ * `bottomColor` bottom half - deliberately asymmetric under vertical flip, so
  * a test sampling one pixel from each half can catch a `flipY`/UV-orientation
  * regression that a solid-colour fixture cannot (a uniformly-coloured square
  * looks identical flipped or not).
@@ -203,7 +203,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
     validationError = await device.popErrorScope();
   } catch (error) {
     if (isDeviceLoss(error)) {
-      ctx.skip('WebGPU device lost mid-test — unstable software adapter');
+      ctx.skip('WebGPU device lost mid-test - unstable software adapter');
 
       return false;
     }
@@ -220,7 +220,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('WebGPU Video — solid color frame', () => {
+describe('WebGPU Video - solid color frame', () => {
   test('decoded video frame renders and fills its bounds', async ctx => {
     const backend = await setupBackend();
 
@@ -286,7 +286,7 @@ describe('WebGPU Video — solid color frame', () => {
       videoSprite.setPosition(8, 8);
       // Alpha is 0-1 on Color, not 0-255 (see src/core/Color.ts). A fully
       // opaque tint cannot distinguish premultiplied from unpremultiplied
-      // output — 0.5 makes the two diverge.
+      // output - 0.5 makes the two diverge.
       videoSprite.tint = new Color(255, 0, 0, 0.5);
       root.addChild(videoSprite);
 
@@ -298,12 +298,12 @@ describe('WebGPU Video — solid color frame', () => {
 
       // The vertex stage premultiplies tint by its own alpha before the
       // fragment modulates the (opaque, alpha=1) video sample by it, so the
-      // shaded fragment is (255, 0, 0, 128) premultiplied — 128 from
+      // shaded fragment is (255, 0, 0, 128) premultiplied - 128 from
       // Math.round(0.5 * 255) (see packTintRow in TransformBuffer.ts).
       // Composited with Normal (premultiplied source-over: srcFactor 'one',
       // dstFactor 'one-minus-src-alpha') over the opaque black clear
       // (alpha 1), the output alpha saturates to 1 regardless of the tint's
-      // alpha — only RGB carries the premultiply signal here. A renderer
+      // alpha - only RGB carries the premultiply signal here. A renderer
       // that forgot to premultiply the tint would instead composite full
       // brightness (255, 0, 0), not half.
       expectPixelNear(readPixel(16, 16), [128, 0, 0, 255]);
@@ -320,7 +320,7 @@ describe('WebGPU Video — solid color frame', () => {
 
     // Top half blue, bottom half yellow: a solid-colour fixture is invariant
     // under vertical flip, so it cannot catch a flipY/UV regression on either
-    // draw path — this one can, because top-blue-bottom-yellow-flipped reads
+    // draw path - this one can, because top-blue-bottom-yellow-flipped reads
     // as top-yellow-bottom-blue instead.
     const video = await createTwoToneVideo('#0000ff', '#ffff00', 16);
     const root = new Container();
@@ -385,7 +385,7 @@ describe('WebGPU Video — solid color frame', () => {
     const backend = await setupBackend();
 
     // A video element that never plays: readyState stays HAVE_NOTHING (0),
-    // videoWidth stays 0 — exercises the readiness pre-check, not the
+    // videoWidth stays 0 - exercises the readiness pre-check, not the
     // capability check. Render is expected to draw nothing (texture width 0
     // early-outs in `render()`), which is itself the assertion: no GPU
     // validation error and no crash.

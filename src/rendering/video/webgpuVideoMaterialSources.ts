@@ -1,7 +1,7 @@
 /**
  * WGSL group(1) binding for the WebGPU video renderer's external-texture path:
  * one `texture_external` plus its sampler, sampled via
- * `textureSampleBaseClampToEdge` — the only sampling function `texture_external`
+ * `textureSampleBaseClampToEdge` - the only sampling function `texture_external`
  * supports (no `textureSampleGrad`, no explicit mip level).
  * @internal
  */
