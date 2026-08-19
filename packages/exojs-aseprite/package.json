@@ -26,8 +26,8 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsx ../../node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:production",
-    "build:dev": "tsx ../../node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development",
+    "build": "tsx ../../scripts/build-extension.ts",
+    "build:dev": "tsx ../../scripts/build-extension.ts --dev",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run --root ../.. --project=exojs-aseprite"

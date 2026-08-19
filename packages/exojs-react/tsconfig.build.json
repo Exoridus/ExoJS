@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Declaration emit for the Rolldown build (`rolldown.config.ts`), which has no declaration emitter. `paths` resolves the public `@codexo/exojs` specifier this package's source imports against Core's built declarations (not source, unlike tsconfig.json's own paths, which back the regular source-mode typecheck).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "customConditions": [],
+    "paths": {
+      "@codexo/exojs": ["../../dist/esm/index.d.ts"]
+    }
+  }
+}

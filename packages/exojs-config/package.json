@@ -9,6 +9,7 @@
     "./prettier": "./prettier/index.js",
     "./vitest": "./vitest/index.js",
     "./rollup": "./rollup/index.js",
+    "./rolldown": "./rolldown/index.js",
     "./build-defines": "./build-defines/index.js",
     "./package-policy": "./package-policy/index.js",
     "./typescript/base.json": "./typescript/base.json",
@@ -22,7 +23,8 @@
     "@codexo/exojs-build": "workspace:*",
     "@rollup/plugin-node-resolve": "^16.0.3",
     "@rollup/plugin-replace": "^6.0.3",
-    "@rollup/plugin-typescript": "^12.3.0"
+    "@rollup/plugin-typescript": "^12.3.0",
+    "rolldown": "1.2.4"
   },
   "license": "MIT"
 }
