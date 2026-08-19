@@ -2,51 +2,21 @@
 import { Application, Asset, Color, Container, Keyboard, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
 import { ChunkStreamer, createSampledChunkSource, createWorkerSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
+import { fbm } from '@examples/terrain-noise';
+const terrainWorkerSource = "\"use strict\";\n(() => {\n  // examples/shared/terrain-noise.ts\n  function hash2D(seed2, x, y) {\n    let h = seed2 ^ Math.imul(x, 668265261) ^ Math.imul(y, 374761393) | 0;\n    h = Math.imul(h ^ h >>> 15, 2246822507);\n    h = Math.imul(h ^ h >>> 13, 3266489909);\n    h ^= h >>> 16;\n    return (h >>> 0) / 4294967296;\n  }\n  function valueNoise(seed2, x, y) {\n    const x0 = Math.floor(x);\n    const y0 = Math.floor(y);\n    const fx = x - x0;\n    const fy = y - y0;\n    const sx = fx * fx * (3 - 2 * fx);\n    const sy = fy * fy * (3 - 2 * fy);\n    const n00 = hash2D(seed2, x0, y0);\n    const n10 = hash2D(seed2, x0 + 1, y0);\n    const n01 = hash2D(seed2, x0, y0 + 1);\n    const n11 = hash2D(seed2, x0 + 1, y0 + 1);\n    const nx0 = n00 + (n10 - n00) * sx;\n    const nx1 = n01 + (n11 - n01) * sx;\n    return nx0 + (nx1 - nx0) * sy;\n  }\n  function fbm(seed2, x, y) {\n    let value = 0;\n    let amplitude = 0.5;\n    let frequency = 1;\n    for (let octave = 0; octave < 4; octave++) {\n      value += amplitude * valueNoise(seed2 + octave, x * frequency, y * frequency);\n      amplitude *= 0.5;\n      frequency *= 2;\n    }\n    return value;\n  }\n\n  // examples/tilemap/worker-streamed-terrain.worker.ts\n  var isInit = (message) => \"type\" in message && message.type === \"terrain-init\";\n  var seed = 0;\n  var featureSize = 1;\n  var extraCost = 0;\n  self.onmessage = (event) => {\n    const message = event.data;\n    if (isInit(message)) {\n      seed = message.seed;\n      featureSize = message.featureSize;\n      extraCost = message.extraCost;\n      return;\n    }\n    const { requestId, cx, cy, chunkWidth, chunkHeight } = message;\n    try {\n      const values = new Float64Array(chunkWidth * chunkHeight);\n      for (let localTy = 0; localTy < chunkHeight; localTy++) {\n        for (let localTx = 0; localTx < chunkWidth; localTx++) {\n          const tx = cx * chunkWidth + localTx;\n          const ty = cy * chunkHeight + localTy;\n          let value = fbm(seed, tx / featureSize, ty / featureSize);\n          for (let i = 0; i < extraCost; i++) {\n            value = fbm(seed, tx / featureSize, ty / featureSize);\n          }\n          values[localTy * chunkWidth + localTx] = value;\n        }\n      }\n      self.postMessage({ requestId, values }, [values.buffer]);\n    } catch (error) {\n      self.postMessage({ requestId, error: String(error) });\n    }\n  };\n})();\n";
 // The same infinite, procedurally generated world as "Infinite Procedural
 // Terrain", but the noise sampling can run off the main thread via
 // createWorkerSampledChunkSource. Toggle "Provider" between sync/worker and
 // raise "Sample cost" to make each tile artificially expensive to sample —
 // on the sync path the main thread stalls and the spinning marker + camera
 // motion visibly hitch; on the worker path they stay smooth.
+//
+// Both providers call the same fbm from @examples/terrain-noise: the worker
+// gets it bundled into its source string at build time, which is what keeps
+// the two worlds identical.
 const TILE = 64;
 const FEATURE_SIZE = 28;
 const MOVE_SPEED = 420;
-// Deterministic integer-lattice hash → [0, 1). Any change here changes every
-// world; the worker copy built below must stay byte-identical.
-function hash2D(seed, x, y) {
-    let h = (seed ^ Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1)) | 0;
-    h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
-    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
-    h ^= h >>> 16;
-    return (h >>> 0) / 4294967296;
-}
-function valueNoise(seed, x, y) {
-    const x0 = Math.floor(x);
-    const y0 = Math.floor(y);
-    const fx = x - x0;
-    const fy = y - y0;
-    const sx = fx * fx * (3 - 2 * fx);
-    const sy = fy * fy * (3 - 2 * fy);
-    const n00 = hash2D(seed, x0, y0);
-    const n10 = hash2D(seed, x0 + 1, y0);
-    const n01 = hash2D(seed, x0, y0 + 1);
-    const n11 = hash2D(seed, x0 + 1, y0 + 1);
-    const nx0 = n00 + (n10 - n00) * sx;
-    const nx1 = n01 + (n11 - n01) * sx;
-    return nx0 + (nx1 - nx0) * sy;
-}
-// 4 octaves, persistence 0.5, lacunarity 2 → result in ~[0, 0.94).
-function fbm(seed, x, y) {
-    let value = 0;
-    let amplitude = 0.5;
-    let frequency = 1;
-    for (let octave = 0; octave < 4; octave++) {
-        value += amplitude * valueNoise(seed + octave, x * frequency, y * frequency);
-        amplitude *= 0.5;
-        frequency *= 2;
-    }
-    return value;
-}
 // Biome mapping (elevation-style bands; localTileId values are solid
 // full-square terrain-center tiles read off mapPack_tilesheet.png — 17
 // columns, index = row * 17 + column).
@@ -68,87 +38,6 @@ function biomeTileId(value) {
     if (value < 0.8)
         return TILE_ROCK;
     return TILE_SNOW;
-}
-// The worker must carry its own copy of the noise code: a Blob-URL worker
-// shares no scope with this module — nothing declared above exists inside
-// it, which is exactly why createWorkerSampledChunkSource takes a source
-// string instead of a live function. The functions below are a plain-JS
-// transcription of hash2D/valueNoise/fbm above (annotations stripped only;
-// the string is never type-checked) and must stay byte-identical to them —
-// otherwise the worker and sync providers would render different worlds
-// for the same seed. Seed and cost are baked in at build time, so changing
-// either rebuilds the provider from scratch.
-function buildWorkerSource(seed, extraCost) {
-    return `
-"use strict";
-
-function hash2D(seed, x, y) {
-    let h = (seed ^ Math.imul(x, 0x27d4eb2d) ^ Math.imul(y, 0x165667b1)) | 0;
-    h = Math.imul(h ^ (h >>> 15), 0x85ebca6b);
-    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
-    h ^= h >>> 16;
-    return (h >>> 0) / 4294967296;
-}
-
-function valueNoise(seed, x, y) {
-    const x0 = Math.floor(x);
-    const y0 = Math.floor(y);
-    const fx = x - x0;
-    const fy = y - y0;
-    const sx = fx * fx * (3 - 2 * fx);
-    const sy = fy * fy * (3 - 2 * fy);
-    const n00 = hash2D(seed, x0, y0);
-    const n10 = hash2D(seed, x0 + 1, y0);
-    const n01 = hash2D(seed, x0, y0 + 1);
-    const n11 = hash2D(seed, x0 + 1, y0 + 1);
-    const nx0 = n00 + (n10 - n00) * sx;
-    const nx1 = n01 + (n11 - n01) * sx;
-    return nx0 + (nx1 - nx0) * sy;
-}
-
-function fbm(seed, x, y) {
-    let value = 0;
-    let amplitude = 0.5;
-    let frequency = 1;
-    for (let octave = 0; octave < 4; octave++) {
-        value += amplitude * valueNoise(seed + octave, x * frequency, y * frequency);
-        amplitude *= 0.5;
-        frequency *= 2;
-    }
-    return value;
-}
-
-const SEED = ${seed};
-const FEATURE_SIZE = ${FEATURE_SIZE};
-const EXTRA_COST = ${extraCost};
-
-self.onmessage = (event) => {
-    const { requestId, cx, cy, chunkWidth, chunkHeight } = event.data;
-    try {
-        const values = new Float64Array(chunkWidth * chunkHeight);
-        for (let localTy = 0; localTy < chunkHeight; localTy++) {
-            for (let localTx = 0; localTx < chunkWidth; localTx++) {
-                const tx = cx * chunkWidth + localTx;
-                const ty = cy * chunkHeight + localTy;
-                let value = fbm(SEED, tx / FEATURE_SIZE, ty / FEATURE_SIZE);
-                // Burns deterministic CPU to simulate an expensive sampler —
-                // the recomputed value is discarded except for the last pass.
-                for (let i = 0; i < EXTRA_COST; i++) {
-                    value = fbm(SEED, tx / FEATURE_SIZE, ty / FEATURE_SIZE);
-                }
-                values[localTy * chunkWidth + localTx] = value;
-            }
-        }
-        // Exactly one reply per request, transferring the buffer for a
-        // zero-copy handoff back to the main thread.
-        self.postMessage({ requestId, values }, [values.buffer]);
-    } catch (error) {
-        // Still exactly one reply — the error branch must also answer, or
-        // ChunkStreamer treats this chunk as forever in flight (no timeout).
-        self.postMessage({ requestId, error: String(error) });
-    }
-};
-`;
 }
 class WorkerStreamedTerrainScene extends Scene {
     camera;
@@ -222,7 +111,13 @@ class WorkerStreamedTerrainScene extends Scene {
         const cost = this.extraCost;
         if (this.providerMode === 'worker') {
             this.workerSourceHandle = createWorkerSampledChunkSource(this.terrain, {
-                workerSource: buildWorkerSource(seed, cost),
+                // The worker runs the same fbm this file imports — bundled into
+                // its source string, not restated — so both providers render an
+                // identical world for a given seed.
+                workerSource: terrainWorkerSource,
+                // Seed and cost travel as data, so changing either does not mean
+                // rebuilding a source string.
+                initMessage: { type: 'terrain-init', seed, featureSize: FEATURE_SIZE, extraCost: cost },
                 mapValueToTile: value => ({ tileset: this.tileset, localTileId: biomeTileId(value), transform: TILE_TRANSFORM_IDENTITY }),
             });
             this.streamer = new ChunkStreamer(this.terrain, this.workerSourceHandle, this.camera);

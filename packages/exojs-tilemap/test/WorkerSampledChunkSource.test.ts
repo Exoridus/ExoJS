@@ -215,6 +215,40 @@ describe('createWorkerSampledChunkSource', () => {
     expect(() => source.destroy()).not.toThrow();
   });
 
+  it('posts initMessage once, before any chunk request', async () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset, 2, 2);
+    const source = createWorkerSampledChunkSource(layer, {
+      workerSource: '/* unused */',
+      initMessage: { type: 'terrain-init', seed: 7 },
+      mapValueToTile: () => null,
+    });
+    const worker = lastWorker!;
+
+    // Ordering is the whole contract: postMessage delivery is FIFO, so a config
+    // sent at construction is guaranteed to be processed before request 1.
+    expect(worker.posted).toEqual([{ type: 'terrain-init', seed: 7 }]);
+
+    const payloadPromise = source.getChunk(0, 0);
+    const request = worker.posted[1] as { requestId: number };
+    worker.respond({ requestId: request.requestId, values: new Float64Array([0, 0, 0, 0]) });
+
+    await payloadPromise;
+    expect(worker.posted).toHaveLength(2);
+  });
+
+  it('posts nothing at construction when initMessage is omitted', () => {
+    const tileset = makeTileset();
+    const layer = makeUnboundedLayer(tileset, 2, 2);
+
+    createWorkerSampledChunkSource(layer, {
+      workerSource: '/* unused */',
+      mapValueToTile: () => null,
+    });
+
+    expect(lastWorker!.posted).toEqual([]);
+  });
+
   it('getChunk() called after destroy() rejects immediately without posting a message', async () => {
     const tileset = makeTileset();
     const layer = makeUnboundedLayer(tileset, 2, 2);

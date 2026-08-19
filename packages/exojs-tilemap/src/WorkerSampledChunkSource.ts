@@ -9,12 +9,18 @@ import { packTile } from './types';
  */
 export interface WorkerSampledChunkSourceOptions {
   /**
-   * Complete worker script source, written as a self-contained string (a
-   * template literal in your own module — no separate file, no bundler
-   * worker-import syntax needed). Blob-URL'd into a real `Worker` at
-   * construction time, the same technique
+   * Complete worker script source as a single self-contained string, Blob-URL'd
+   * into a real `Worker` at construction time — the same technique
    * {@link import('@codexo/exojs').WorkletEffect} uses for AudioWorklet
-   * processors.
+   * processors. No separate worker asset is fetched and no bundler-specific
+   * worker-import syntax is involved.
+   *
+   * Producing that string by hand-writing JavaScript into a template literal
+   * works but gives up type checking, linting and shared code. Prefer a build
+   * step that bundles a real module into a string: this repository's own
+   * examples are authored as `*.worker.ts` and imported through a `?worker`
+   * query, which is why they can `import` the sampling functions the main
+   * thread uses instead of restating them.
    *
    * Must implement this request/response protocol:
    * - Request (received via `self.onmessage`):
@@ -35,6 +41,20 @@ export interface WorkerSampledChunkSourceOptions {
    * `ChunkStreamer` tracks it as still in flight and never retries it.
    */
   workerSource: string;
+  /**
+   * Posted to the worker once, before any chunk request, when present.
+   *
+   * The transport for whatever the sampler needs to know that is not per-chunk
+   * — a seed, a feature size, a cost knob. Without it those values would have
+   * to be interpolated into {@link WorkerSampledChunkSourceOptions.workerSource}
+   * as literals, which turns every parameter change into a source rebuild and a
+   * new `Worker`.
+   *
+   * `postMessage` delivery is ordered, so the worker is guaranteed to see this
+   * before the first request. Distinguish it from a chunk request by its own
+   * shape; requests carry a `requestId`.
+   */
+  initMessage?: unknown;
   /**
    * Convert a sampled value (and its absolute tile coordinate) into a
    * resolved tile, or `null` for an empty cell. Always runs on the main
@@ -115,6 +135,10 @@ export function createWorkerSampledChunkSource(
   const url = URL.createObjectURL(blob);
   const worker = new Worker(url);
   URL.revokeObjectURL(url);
+
+  if (options.initMessage !== undefined) {
+    worker.postMessage(options.initMessage);
+  }
 
   let requestCounter = 0;
   const pending = new Map<number, PendingRequest>();
