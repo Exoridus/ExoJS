@@ -19,19 +19,40 @@ export interface PluginLoadContext {
 }
 
 /**
- * A Rollup/Vite plugin that resolves an import query to a bundled source
- * string.
+ * A Rollup/Vite plugin that loads a module as a default-exported source string.
+ *
+ * The two ways of claiming one are deliberately different, which is why this
+ * type carries `resolveId` and `enforce` as optional: a shader is claimed by
+ * the file's own extension, a worklet or worker by an import query on a `.ts`
+ * module that also has an ordinary meaning.
  */
-export interface InlineSourcePlugin {
+export interface SourcePlugin {
   /** Plugin name, as it appears in bundler diagnostics. */
   name: string;
   /**
-   * Vite plugin ordering. `'pre'` puts the hooks ahead of Vite's own resolver
-   * and TypeScript pipeline, which would otherwise claim the `.ts` id first.
+   * Vite plugin ordering, read by Vite and ignored by Rollup.
+   *
+   * `'pre'` puts the hooks ahead of Vite's own resolver and TypeScript
+   * pipeline, which would otherwise claim a `.ts` id first. It is required for
+   * the query-keyed plugins and deliberately absent from the shader plugin,
+   * which has to stay behind Vite's own `?raw`/`?url` handling.
    */
-  enforce: 'pre';
-  /** Claims ids carrying this plugin's import query and resolves them to an absolute path. */
-  resolveId(source: string, importer?: string): string | null;
-  /** Bundles a claimed id and returns it as a module with a default-exported string. */
+  enforce?: 'pre';
+  /**
+   * Claims ids carrying this plugin's import query and resolves them to an
+   * absolute path. Absent where the imported file is itself the module.
+   */
+  resolveId?(source: string, importer?: string): string | null;
+  /** Loads a claimed id and returns it as a module with a default-exported string. */
   load(this: PluginLoadContext, id: string): string | null;
+}
+
+/**
+ * A {@link SourcePlugin} keyed on an import query rather than on a file
+ * extension, which is what makes both hooks mandatory: the query has to be
+ * claimed during resolution before the id can be loaded.
+ */
+export interface InlineSourcePlugin extends SourcePlugin {
+  enforce: 'pre';
+  resolveId(source: string, importer?: string): string | null;
 }

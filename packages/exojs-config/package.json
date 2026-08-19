@@ -9,8 +9,6 @@
     "./prettier": "./prettier/index.js",
     "./vitest": "./vitest/index.js",
     "./rollup": "./rollup/index.js",
-    "./shader-plugin": "./shader-plugin.js",
-    "./shader-strip": "./shader-strip.js",
     "./build-defines": "./build-defines/index.js",
     "./package-policy": "./package-policy/index.js",
     "./typescript/base.json": "./typescript/base.json",

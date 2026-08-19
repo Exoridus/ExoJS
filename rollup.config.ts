@@ -2,9 +2,8 @@ import { dirname, relative as relativePath, resolve as resolvePath } from 'node:
 import { fileURLToPath } from 'node:url';
 
 import { codecovRollupPlugin } from '@codecov/rollup-plugin';
-import { createWorkletPlugin } from '@codexo/exojs-build';
+import { createShaderPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
-import { createShaderPlugin } from '@codexo/exojs-config/shader-plugin';
 import resolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import terser from '@rollup/plugin-terser';

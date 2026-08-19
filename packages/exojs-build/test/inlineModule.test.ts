@@ -7,7 +7,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { createWorkerPlugin, createWorkletPlugin, exojs } from '../src/index.ts';
 import { bundleInlineModule } from '../src/inlineModule.ts';
-import type { InlineSourcePlugin } from '../src/pluginTypes.ts';
+import type { InlineSourcePlugin, SourcePlugin } from '../src/pluginTypes.ts';
 
 /**
  * What the worklet and worker plugins have to guarantee about their emitted
@@ -215,28 +215,33 @@ describe('createWorkerPlugin', () => {
 });
 
 describe('exojs', () => {
-  it('installs both inline-source plugins', () => {
+  const queryPlugins = (plugins: SourcePlugin[]): InlineSourcePlugin[] => plugins.filter((plugin): plugin is InlineSourcePlugin => plugin.resolveId !== undefined);
+
+  it('installs every source plugin', () => {
     const names = exojs().map(plugin => plugin.name);
 
-    expect(names).toStrictEqual(['exojs-worklet-transform', 'exojs-worker-transform']);
+    expect(names).toStrictEqual(['exojs-shader-source', 'exojs-worklet-transform', 'exojs-worker-transform']);
   });
 
-  it('runs before the bundler resolves the id itself', () => {
+  it('runs the query-keyed plugins before the bundler resolves the id itself', () => {
     // Vite would otherwise hand `./x.worklet.ts?worklet` to its own TS
     // pipeline, which strips the query and returns the module, not its source.
-    expect(exojs().every(plugin => plugin.enforce === 'pre')).toBe(true);
+    // The shader plugin must NOT be `pre`: it has to stay behind Vite's own
+    // `?raw`/`?url` handling.
+    expect(queryPlugins(exojs()).every(plugin => plugin.enforce === 'pre')).toBe(true);
+    expect(exojs().find(plugin => plugin.name === 'exojs-shader-source')?.enforce).toBeUndefined();
   });
 
   it('leaves an import without one of the queries alone', () => {
     const importer = join(fixtureDirectory, 'importer.ts');
 
-    expect(exojs().map(plugin => plugin.resolveId('./shared/helper', importer))).toStrictEqual([null, null]);
+    expect(queryPlugins(exojs()).map(plugin => plugin.resolveId('./shared/helper', importer))).toStrictEqual([null, null]);
   });
 
-  it('passes minify through to both plugins', () => {
+  it('passes minify through to the query-keyed plugins', () => {
     const importer = join(fixtureDirectory, 'importer.ts');
-    const plain = exojs();
-    const minified = exojs({ minify: true });
+    const plain = queryPlugins(exojs());
+    const minified = queryPlugins(exojs({ minify: true }));
 
     for (const [index, specifier] of ['./sample.worklet.ts?worklet', './sample.worker.ts?worker'].entries()) {
       const plainSource = sourceFromModule(loadThroughPlugin(plain[index]!, importer, specifier));

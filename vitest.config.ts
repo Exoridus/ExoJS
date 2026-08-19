@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 
-import { createShaderPlugin } from '@codexo/exojs-config/shader-plugin';
+import { createShaderPlugin } from '@codexo/exojs-build';
 import { createJsdomTestProject, srcConditions, workerTransformPlugin, workletTransformPlugin } from '@codexo/exojs-config/vitest';
 import { playwright } from '@vitest/browser-playwright';
 import { webdriverio } from '@vitest/browser-webdriverio';

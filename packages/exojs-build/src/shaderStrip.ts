@@ -1,5 +1,5 @@
 // Comment/whitespace stripping for shader sources, kept free of any Node import
-// so browser test lanes can compile the exact text the production build ships.
+// so a browser test lane can compile the exact text a production build ships.
 //
 // Shader text is shipped verbatim inside the bundle: neither Terser nor
 // esbuild descends into a string literal, so every explanatory comment in a
@@ -9,8 +9,8 @@
 // identifier, reorders a statement or joins two lines. What it removes cannot
 // change program meaning:
 //
-//  - `//` line comments and `/* … */` block comments (the latter replaced by a
-//    space, so `a/*x*/b` cannot become the single token `ab`),
+//  - `//` line comments and block comments (the latter replaced by a space, so
+//    `a/*x*/b` cannot become the single token `ab`),
 //  - leading/trailing whitespace and runs of interior whitespace,
 //  - lines left empty by the above.
 //
@@ -19,27 +19,36 @@
 // `#ifdef`) valid - each must own its line, and `#version` must be the first
 // of them.
 
-/** Engine-owned `//`-prefixed directives, kept verbatim by {@link stripShaderSource}. */
+/**
+ * `//`-prefixed directives an engine expands at compile time rather than
+ * comments, kept verbatim by {@link stripShaderSource}.
+ */
 const EXO_DIRECTIVE = /^\/\/\s*#exo-/;
 
-/** Extensions loaded as shader source text. */
-export const SHADER_EXTENSIONS = ['.vert', '.frag', '.wgsl'];
+/** File extensions {@link createShaderPlugin} loads as shader source text. */
+export const SHADER_EXTENSIONS: readonly string[] = ['.vert', '.frag', '.wgsl'];
 
-/** @param {string} id */
-export const isShaderId = id => SHADER_EXTENSIONS.some(extension => id.endsWith(extension));
+/** Whether a path carries one of {@link SHADER_EXTENSIONS}. */
+export const isShaderId = (id: string): boolean => SHADER_EXTENSIONS.some(extension => id.endsWith(extension));
 
 /**
- * Removes comments and layout whitespace from GLSL/WGSL source.
+ * Removes comments and layout whitespace from GLSL or WGSL source.
+ *
+ * The transform is semantics-preserving: no identifier is renamed, no
+ * expression rewritten, no statement reordered, and every line that still has
+ * content keeps its own line. Source built at runtime rather than imported
+ * from a file can be put through this to ship on the same terms as
+ * `createShaderPlugin({ minify: true })` output.
+ *
+ * `// #exo-` directive lines are preserved - they are instructions to a shader
+ * composer, not commentary.
  *
  * Both languages share C-style comment syntax and neither has string literals
- * in any form the engine's shaders use, so a comment scanner needs no lexer
- * state beyond "inside a block comment".
- *
- * @param {string} source
- * @returns {string}
+ * in any form a shader uses, so a comment scanner needs no lexer state beyond
+ * "inside a block comment".
  */
-export function stripShaderSource(source) {
-  const out = [];
+export function stripShaderSource(source: string): string {
+  const out: string[] = [];
   let inBlockComment = false;
 
   for (const rawLine of source.split('\n')) {
@@ -57,8 +66,6 @@ export function stripShaderSource(source) {
       }
 
       if (rawLine[i] === '/' && rawLine[i + 1] === '/') {
-        // `// #exo-include …` is a directive the engine expands at runtime, not
-        // a comment: it has to survive into the shipped source.
         if (EXO_DIRECTIVE.test(rawLine.slice(i))) line += rawLine.slice(i);
         break;
       }

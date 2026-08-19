@@ -1,6 +1,6 @@
 /**
  * The production build ships shader sources with their comments and layout
- * whitespace removed (`@codexo/exojs-config/shader-strip`), because neither
+ * whitespace removed (`@codexo/exojs-build/shader-strip`), because neither
  * Terser nor esbuild descends into a string literal - every comment in a
  * shader would otherwise be payload in every consumer's bundle.
  *
@@ -15,7 +15,7 @@
  * driver; this spec is the fast, exhaustive half that covers every shader file
  * in the repository, including those no renderer compiles standalone.
  */
-import { stripShaderSource } from '@codexo/exojs-config/shader-strip';
+import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 import { describe, expect, test } from 'vitest';
 
 const shaderModules = import.meta.glob(['/src/**/*.{vert,frag,wgsl}', '/packages/exojs-*/src/**/*.{vert,frag,wgsl}'], {

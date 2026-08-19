@@ -24,7 +24,7 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
 
-import { SHADER_EXTENSIONS, stripShaderSource } from '@codexo/exojs-config/shader-strip';
+import { SHADER_EXTENSIONS, stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
 

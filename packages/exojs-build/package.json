@@ -1,12 +1,14 @@
 {
   "name": "@codexo/exojs-build",
   "version": "0.1.0",
-  "description": "Build-time Vite/Rollup plugins that inline typed AudioWorklet and Web Worker TypeScript modules as self-contained source strings.",
+  "description": "Build-time Vite/Rollup plugins that load ExoJS shader files and inline typed AudioWorklet and Web Worker TypeScript modules as source strings.",
   "keywords": [
     "audioworklet",
+    "glsl",
     "rollup-plugin",
     "vite-plugin",
     "web-worker",
+    "wgsl",
     "worklet"
   ],
   "repository": {
@@ -30,6 +32,11 @@
     },
     "./client": {
       "types": "./client.d.ts"
+    },
+    "./shader-strip": {
+      "types": "./dist/esm/shaderStrip.d.ts",
+      "import": "./dist/esm/shaderStrip.js",
+      "default": "./dist/esm/shaderStrip.js"
     },
     "./package.json": "./package.json"
   },

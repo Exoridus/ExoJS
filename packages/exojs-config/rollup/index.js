@@ -7,9 +7,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 
 import { codecovRollupPlugin } from '@codecov/rollup-plugin';
-import { createWorkletPlugin } from '@codexo/exojs-build';
+import { createShaderPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '../build-defines/index.js';
-import { createShaderPlugin } from '../shader-plugin.js';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';

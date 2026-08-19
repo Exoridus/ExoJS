@@ -1,3 +1,7 @@
+// Shader files loaded as source text by the ExoJS shader plugin. Declared here
+// rather than pulled in from `@codexo/exojs-build/client` because the engine's
+// own program must not depend on a package it only uses at build time.
+// See `@codexo/exojs-build`.
 declare module '*.vert' {
   const content: string;
   export default content;

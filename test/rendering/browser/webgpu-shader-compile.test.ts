@@ -36,7 +36,7 @@
  * device mid-test. Run via: pnpm test:browser:webgpu
  */
 
-import { stripShaderSource } from '@codexo/exojs-config/shader-strip';
+import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/spriteMaterialSources';
 import { compositorShaderSource as backdropBlendCompositorWgsl } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';

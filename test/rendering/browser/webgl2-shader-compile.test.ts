@@ -1,19 +1,19 @@
 // Real-shader compile coverage.
 //
-// The vitest `shaderPlugin` rewrites every `.vert`/`.frag` import to
-// `export default ""`, and the other browser specs additionally `vi.mock` the
-// shaders with hand-written GLSL — so the engine's ACTUAL shader sources are
-// never compiled by the test suite. That blind spot let a GLSL ES 3.00
-// reserved-word bug (`sample`) ship undetected: it only surfaced when the
-// playground booted on a strict ANGLE/SwiftShader driver.
+// The other browser specs `vi.mock` the shaders with hand-written GLSL, so the
+// engine's ACTUAL shader sources reach a driver only where a spec renders the
+// feature that owns them. That blind spot let a GLSL ES 3.00 reserved-word bug
+// (`sample`) ship undetected: it only surfaced when the playground booted on a
+// strict ANGLE/SwiftShader driver.
 //
-// This spec closes the gap. It pulls the REAL shader text through `?raw`
-// imports — the `?raw` query makes the resolved id end in `?raw`, so the
-// `.vert`/`.frag` stub plugin skips it — and compiles/links every shader
-// against the same SwiftShader driver the WebGL2 browser project runs on. A
-// reserved-word (or any other compile) regression now fails right here.
+// This spec closes it. It pulls every shader's text in through a `?raw` glob,
+// which the shader plugin deliberately leaves to Vite, and compiles and links
+// all of them against the same SwiftShader driver the WebGL2 browser project
+// runs on, in both the authored form and the comment-stripped form the
+// production build ships. A reserved-word (or any other compile) regression
+// fails right here, on either form, whether or not any spec renders it.
 
-import { stripShaderSource } from '@codexo/exojs-config/shader-strip';
+import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
 import { fillShaderSource } from '#rendering/shader/fillShaderSource';
 import { resolveTransformTextureGlsl } from '#rendering/shader/transformTextureLayout';
@@ -139,12 +139,13 @@ describe('WebGL2 GLSL shader sources', () => {
     gl = context;
   });
 
-  test('imports the real shader sources, not the empty-string stub', () => {
-    // 7 vertex + 9 fragment files today; the stub would surface as empty strings.
+  test('imports the real shader sources', () => {
+    // A loader that returned a placeholder instead of the file would surface
+    // here as empty strings rather than as a driver error further down.
     expect(shaders.length).toBeGreaterThanOrEqual(8);
 
     for (const { name, source } of shaders) {
-      expect(source.length, `${name} is empty — the shader stub leaked into the test`).toBeGreaterThan(0);
+      expect(source.length, `${name} is empty — the shader text did not reach the test`).toBeGreaterThan(0);
       expect(source.startsWith('#version 300 es'), `${name} is missing its #version directive`).toBe(true);
     }
   });

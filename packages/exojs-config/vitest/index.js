@@ -3,8 +3,7 @@
 // and the playwright provider; this module centralizes the parts every project
 // shares: the package source conditions, the shader-stub plugin, the `?worklet`
 // and `?worker` inline-source plugins, and a jsdom unit-test project factory.
-import { createWorkerPlugin, createWorkletPlugin } from '@codexo/exojs-build';
-import { createShaderPlugin } from '../shader-plugin.js';
+import { createShaderPlugin, createWorkerPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 
 /**
  * Conditions that activate each package's package-private `@codexo/…-source`
