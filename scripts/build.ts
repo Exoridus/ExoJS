@@ -141,6 +141,13 @@ function modules(): RolldownOptions {
       entryFileNames: preservedModuleNaming,
       chunkFileNames: preservedModuleNaming,
       sourcemapPathTransform,
+      // Rolldown's own default is 'dce-only', not off - left implicit here it
+      // would silently remove the (verified side-effect-free) assert/
+      // assertDefined callsites from this tree too. Explicit `false` to match
+      // this tree's actual intent: intentionally unoptimized, so consumers do
+      // their own tree-shaking against predictable, unmodified-beyond-
+      // transpilation source.
+      minify: false,
     },
   };
 }
