@@ -274,6 +274,46 @@ describe('WebGPU Video — solid color frame', () => {
     }
   });
 
+  test('premultiply semantics hold for a translucent tint', async ctx => {
+    const backend = await setupBackend();
+
+    const video = await createSolidColorVideo('#ffffff', 16);
+    const root = new Container();
+    const videoSprite = new Video(video);
+
+    try {
+      videoSprite.setPosition(8, 8);
+      // Alpha is 0-1 on Color, not 0-255 (see src/core/Color.ts). A fully
+      // opaque tint cannot distinguish premultiplied from unpremultiplied
+      // output — 0.5 makes the two diverge.
+      videoSprite.tint = new Color(255, 0, 0, 0.5);
+      root.addChild(videoSprite);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      // The vertex stage premultiplies tint by its own alpha before the
+      // fragment modulates the (opaque, alpha=1) video sample by it, so the
+      // shaded fragment is (255, 0, 0, 128) premultiplied — 128 from
+      // Math.round(0.5 * 255) (see packTintRow in TransformBuffer.ts).
+      // Composited with Normal (premultiplied source-over: srcFactor 'one',
+      // dstFactor 'one-minus-src-alpha') over the opaque black clear
+      // (alpha 1), the output alpha saturates to 1 regardless of the tint's
+      // alpha — only RGB carries the premultiply signal here. A renderer
+      // that forgot to premultiply the tint would instead composite full
+      // brightness (255, 0, 0), not half.
+      expectPixelNear(readPixel(16, 16), [128, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      videoSprite.destroy();
+      destroyVideo(video);
+      backend.destroy();
+    }
+  });
+
   test('external-texture path renders the decoded frame in the correct orientation', async ctx => {
     const backend = await setupBackend();
 
