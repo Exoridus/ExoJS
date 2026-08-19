@@ -4,8 +4,8 @@ import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
 /**
- * Wire the built-in core renderers (Sprite, Mesh, Text/BitmapText) into a bare
- * backend created directly in a browser test.
+ * Wire the built-in core renderers (Sprite, Mesh, Text/BitmapText, Video) into
+ * a bare backend created directly in a browser test.
  *
  * Production code registers these via `materializeRendererBindings` inside
  * `Application.createBackend`. Browser tests that construct a backend directly

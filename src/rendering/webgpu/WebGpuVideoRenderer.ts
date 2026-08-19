@@ -52,6 +52,17 @@ const videoInstanceVertexBufferLayout: GPUVertexBufferLayout = {
  * `GPUExternalTexture` import fresh (never cached across frames - pause,
  * seek, and source changes all affect readiness), falling back to a
  * `texture_2d` copy-upload path on any failure.
+ *
+ * Deliberately declares neither `_supportsRetainedBatches` nor
+ * `_supportsPersistentSlots`, unlike {@link WebGpuSpriteRenderer}. The cost is
+ * real: `isRetainedFragmentRecordable` requires every draw's renderer to
+ * declare `_supportsRetainedBatches`, so a retained fragment containing a
+ * `Video` is never recorded into the WebGPU retained-batch tier at all - not
+ * just the video draw, the WHOLE fragment, siblings included. That is not
+ * incidental; it is the mechanism that keeps a video from freezing when its
+ * enclosing `RetainedContainer` stops re-collecting: a node that is never
+ * recorded into a retained batch can never go stale inside one. Do not add
+ * either flag here without re-solving that freeze some other way first.
  */
 export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
   private _device: GPUDevice | null = null;
@@ -87,7 +98,7 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
   private _hasWrittenProjection = false;
 
   private _pendingVideo: Video | null = null;
-  private _pendingTexture: Texture | RenderTexture | null = null;
+  private _pendingTexture: Texture | null = null;
   private _pendingNodeIndex = 0;
   private _pendingBlendMode: BlendModes | null = null;
 
@@ -428,7 +439,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     return active;
   }
 
-  private _packInstance(video: Video, texture: Texture | RenderTexture, backend: WebGpuBackend): void {
+  private _packInstance(video: Video, texture: Texture, backend: WebGpuBackend): void {
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
     const bounds = video.getLocalBounds();
@@ -445,7 +456,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     const uMax = ((frame.right / texWidth) * 0xffff) & 0xffff;
     const vMinRaw = ((frame.top / texHeight) * 0xffff) & 0xffff;
     const vMaxRaw = ((frame.bottom / texHeight) * 0xffff) & 0xffff;
-    const flipY = texture instanceof Texture && texture.flipY;
+    const flipY = texture.flipY;
     const vMin = flipY ? vMaxRaw : vMinRaw;
     const vMax = flipY ? vMinRaw : vMaxRaw;
 

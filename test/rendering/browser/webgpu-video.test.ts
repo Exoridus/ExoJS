@@ -13,9 +13,11 @@
  * non-RenderTexture source) on any failure, before the renderer draws an
  * instanced quad sampling whichever texture resource that flush bound. Most
  * tests below exercise whichever path the real adapter actually takes and do
- * not distinguish which one ran; two tests force the fallback path
- * explicitly (removing `importExternalTexture` from the device, and a video
- * with no decoded frame yet) to assert that branch is reachable and correct.
+ * not distinguish which one ran; one test forces the fallback path explicitly
+ * (removing `importExternalTexture` from the device) to assert that branch is
+ * reachable and correct. A separate test covers an unplayable video (no
+ * decoded frame, `texture.width === 0`) - a different early-out inside
+ * `render()` itself, before either draw path is ever attempted.
  *
  * Fixture strategy: a `<canvas>` painted a solid or two-tone colour is turned
  * into a `MediaStream` via `captureStream()`, assigned to a `<video>` element's
@@ -220,7 +222,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('WebGPU Video - solid color frame', () => {
+describe('WebGPU Video', () => {
   test('decoded video frame renders and fills its bounds', async ctx => {
     const backend = await setupBackend();
 
@@ -349,7 +351,7 @@ describe('WebGPU Video - solid color frame', () => {
     }
   });
 
-  test('fallback path renders correctly when the device has no importExternalTexture', async ctx => {
+  test('fallback path renders the decoded frame in the correct orientation when the device has no importExternalTexture', async ctx => {
     const backend = await setupBackend();
     const device = getBackendDevice(backend);
     const original = device.importExternalTexture;
@@ -357,7 +359,14 @@ describe('WebGPU Video - solid color frame', () => {
     // @ts-expect-error -- deliberately removing a required method to force the fallback branch
     device.importExternalTexture = undefined;
 
-    const video = await createSolidColorVideo('#00ff00', 16);
+    // Top half blue, bottom half yellow, same fixture and reasoning as the
+    // external-texture orientation test above: a solid-colour fixture is
+    // invariant under vertical flip and cannot catch a flipY/UV regression.
+    // This is the `copyExternalImageToTexture` + `texture.flipY` +
+    // `textureSampleGrad` path specifically - the one most likely to diverge
+    // from the external-texture path's orientation - so it needs the same
+    // two-tone coverage, not a weaker one.
+    const video = await createTwoToneVideo('#0000ff', '#ffff00', 16);
     const root = new Container();
     const videoSprite = new Video(video);
 
@@ -371,7 +380,11 @@ describe('WebGPU Video - solid color frame', () => {
 
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
-      expectPixelNear(readPixel(16, 16), [0, 255, 0, 255]);
+      // Same geometry as the external-texture orientation test: sprite bounds
+      // canvas [8, 24) x [8, 24), source midline at canvas y = 16, sampled
+      // clear of that boundary and of the sprite's own edges.
+      expectPixelNear(readPixel(16, 10), [0, 0, 255, 255]);
+      expectPixelNear(readPixel(16, 22), [255, 255, 0, 255]);
     } finally {
       device.importExternalTexture = original;
       root.destroy();
@@ -381,14 +394,15 @@ describe('WebGPU Video - solid color frame', () => {
     }
   });
 
-  test('fallback path renders correctly when the video has no decoded frame yet (readyState gate)', async ctx => {
+  test('an unplayable video with no decoded frame draws nothing and raises no validation error', async ctx => {
     const backend = await setupBackend();
 
     // A video element that never plays: readyState stays HAVE_NOTHING (0),
-    // videoWidth stays 0 - exercises the readiness pre-check, not the
-    // capability check. Render is expected to draw nothing (texture width 0
-    // early-outs in `render()`), which is itself the assertion: no GPU
-    // validation error and no crash.
+    // videoWidth stays 0. This is `render()`'s own `texture.width === 0`
+    // early-out, before either draw path is ever attempted - `flush()` then
+    // takes the `_pendingVideo === null` route and `_tryImportExternalTexture`
+    // is never called. Render is expected to draw nothing, which is itself the
+    // assertion: no GPU validation error and no crash.
     const video = document.createElement('video');
     const root = new Container();
     const videoSprite = new Video(video);
