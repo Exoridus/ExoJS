@@ -200,8 +200,8 @@ const manifest: Record<string, unknown> = {
   },
   files: ['dist/esm/', 'README.md', 'LICENSE'],
   scripts: {
-    build: 'tsx ../../node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:production',
-    'build:dev': 'tsx ../../node_modules/rollup/dist/bin/rollup -c --environment EXOJS_ENV:development',
+    build: 'tsx ../../scripts/build-extension.ts',
+    'build:dev': 'tsx ../../scripts/build-extension.ts --dev',
     typecheck: 'tsc --noEmit',
     lint: 'eslint "src/**/*.ts" "test/**/*.ts"',
     test: `vitest run --root ../.. --project=exojs-${name}`,
@@ -266,20 +266,50 @@ ${pathLines}
 `,
 );
 
-// rollup.config.ts — a single side-effect-free entry (the factory default).
+// rolldown.config.ts - a single side-effect-free entry (the factory default).
 // No internal `#` imports, so sourceCondition is null.
-const rollupConfig = `import { createExtensionConfig } from '@codexo/exojs-config/rollup';
+const rolldownConfig = `import { createExtensionBuildOptions } from '@codexo/exojs-config/rolldown';
 
 // ${pkgName} is a library package: a single side-effect-free entry. No
 // package-internal \`#\` imports (all same-directory \`./\`), so no source
 // condition / node-resolve is needed; Core's \`#\` resolves to its dist.
-export default createExtensionConfig({
+export default createExtensionBuildOptions({
   root: import.meta.dirname,
   sourceCondition: null,
   inputs: ['src/index.ts'],
 });
 `;
-emit('rollup.config.ts', rollupConfig);
+emit('rolldown.config.ts', rolldownConfig);
+
+// tsconfig.build.json - declaration emit for the Rolldown build (no emitter
+// of its own). Same `paths` shape as tsconfig.json, but resolved against
+// Core's (and each runtime dep's) *built* declarations, not source - see
+// packages/exojs-particles/tsconfig.build.json for the pattern this mirrors.
+const buildPathEntries: [string, string][] = [
+  ['@codexo/exojs', '../../dist/esm/index.d.ts'],
+  ['@codexo/exojs/extensions', '../../dist/esm/extensions/index.d.ts'],
+  ['@codexo/exojs/renderer-sdk', '../../dist/esm/renderer-sdk.d.ts'],
+  ['@codexo/exojs/debug', '../../dist/esm/debug/index.d.ts'],
+  ...deps.map((dep): [string, string] => [`@codexo/exojs-${dep}`, `../exojs-${dep}/dist/esm/index.d.ts`]),
+];
+const buildPathLines = buildPathEntries.map(([k, v]) => `      "${k}": ["${v}"]`).join(',\n');
+
+emit(
+  'tsconfig.build.json',
+  `{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Declaration emit for the Rolldown build (\`rolldown.config.ts\`), which has no declaration emitter. \`paths\` resolves the public \`@codexo/exojs*\` specifiers this package's source imports against Core's built declarations (not source, unlike tsconfig.json's own paths, which back the regular source-mode typecheck).",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "customConditions": [],
+    "paths": {
+${buildPathLines}
+    }
+  }
+}
+`,
+);
 
 // src/index.ts
 const indexHeader = `// ${pkgName} — side-effect-free root entry.`;
@@ -462,19 +492,9 @@ ${
     ? `
    Runtime deps build first, so place it AFTER: ${deps.map(d => `pnpm --filter @codexo/exojs-${d} build`).join(', ')}.`
     : ''
-}${
-  deps.filter(d => d !== 'tilemap').length
-    ? `
-5) packages/exojs-config/rollup/index.js — add a \`corePaths\` declaration entry for
-   each non-tilemap runtime dep so the build's .d.ts emit resolves it:
-${deps
-  .filter(d => d !== 'tilemap')
-  .map(d => `     '@codexo/exojs-${d}': ['../exojs-${d}/dist/esm/index.d.ts'],`)
-  .join('\n')}
-`
-    : ''
 }
-${deps.filter(d => d !== 'tilemap').length ? '6' : '5'}) npm / OIDC bootstrap BEFORE the first release (see scripts/release/RELEASING.md
+
+5) npm / OIDC bootstrap BEFORE the first release (see scripts/release/RELEASING.md
    "Adding a NEW package to the lockstep set"):
      - Publish a one-off placeholder manually (e.g. ${coreVersion}-next.0 via \`npm login\` + \`npm publish\`).
        Trusted Publishing (OIDC) cannot publish a package that does not yet exist on npm.

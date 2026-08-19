@@ -4,15 +4,16 @@
  * Vitest always compiles `__DEV__` to `true`, so the production severity
  * filter (`!__DEV__ && severity < Error`) is dead code in the normal unit
  * lane and cannot be exercised there. This suite instead runs `logging.ts`
- * through the REAL production pipeline `rollup.config.ts` uses
- * (`@rollup/plugin-replace` with `__DEV__ → false`, then `terser` with the
- * repo's `pure_funcs`) and executes the minified output, the same recipe
+ * through a Rollup+terser pipeline that models the real production build's
+ * stripping semantics (`@rollup/plugin-replace` with `__DEV__` set to
+ * `false`, then `terser` with a `pure_funcs` list derived from
+ * `src/core/dev.ts`) and executes the minified output, the same recipe
  * `scene-scope-sync-hooks.test.ts` uses for its guard.
  *
  * The contract under test: a call that the production filter drops must not
  * consume its `once` key. Otherwise the dedup set grows without bound for
- * dynamic keys in shipped builds — paying memory forever for entries that are
- * never emitted — and a dropped low-severity call silently swallows a later
+ * dynamic keys in shipped builds - paying memory forever for entries that are
+ * never emitted - and a dropped low-severity call silently swallows a later
  * `error()` that shares the key.
  */
 
@@ -26,20 +27,11 @@ import { type Plugin, rollup } from 'rollup';
 import ts from 'typescript';
 
 import { createBuildDefines, resolveVersion } from '../../packages/exojs-config/build-defines/index.js';
+import { devGatedPureFuncs } from '../build-defines/dev-pure-funcs';
 
 const rootDir = resolve(import.meta.dirname!, '..', '..');
 
 const readSource = (rel: string): string => readFileSync(resolve(rootDir, rel), 'utf8');
-
-/** Extracts the `pure_funcs` list from `rollup.config.ts` — never hard-coded here. */
-const extractPureFuncs = (): string[] => {
-  const config = readSource('rollup.config.ts');
-  const match = /pure_funcs:\s*\[([^\]]*)\]/.exec(config);
-
-  expect(match).not.toBeNull();
-
-  return [...match![1]!.matchAll(/'([^']+)'/g)].map(m => m[1]!);
-};
 
 /**
  * Bundles `src/core/logging.ts` through the exact production transform chain
@@ -97,7 +89,7 @@ interface ProductionLoggingModule {
 }
 
 const loadProductionLogging = async (): Promise<ProductionLoggingModule> => {
-  const output = await buildProductionLogging(extractPureFuncs());
+  const output = await buildProductionLogging(devGatedPureFuncs());
   const sandbox: { logging?: ProductionLoggingModule; console: Console } = { console };
 
   runInNewContext(output, sandbox);

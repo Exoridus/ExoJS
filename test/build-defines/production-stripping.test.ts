@@ -9,15 +9,16 @@
  *   - invariant (the always-on contract check) surviving into production
  *
  * The dist-dependent checks are skipped when `dist/` has not been built in
- * production mode (run `pnpm build` first) — unless
+ * production mode (run `pnpm build` first) - unless
  * `EXOJS_REQUIRE_PRODUCTION_BUILD=1` demands them, which is how the build lane
- * runs them. Below that, a self-contained
- * pipeline test runs the SAME mechanism the real prod build uses
- * (`@rollup/plugin-replace` + `terser` with the repo's `pure_funcs`) against a
- * small representative snippet, so the assert/assertDefined-stripped vs.
- * invariant-survives guarantee is verified against real minified output on
- * every run — independent of whether `dist/` has been built, and independent
- * of which internal call sites currently exist for either helper.
+ * runs them. Below that, a self-contained pipeline test models the same
+ * stripping semantics the real production build (Rolldown) applies -
+ * `@rollup/plugin-replace` + `terser` with a `pure_funcs` list derived from
+ * `src/core/dev.ts` (`dev-pure-funcs.ts`) - against a small representative
+ * snippet, so the assert/assertDefined-stripped vs. invariant-survives
+ * guarantee is verified against real minified output on every run -
+ * independent of whether `dist/` has been built, and independent of which
+ * internal call sites currently exist for either helper.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -29,6 +30,7 @@ import ts from 'typescript';
 import { describe, expect, it } from 'vitest';
 
 import { createBuildDefines, resolveVersion } from '../../packages/exojs-config/build-defines/index.js';
+import { devGatedPureFuncs } from './dev-pure-funcs';
 
 const rootDir = resolve(import.meta.dirname!, '..', '..');
 
@@ -62,22 +64,15 @@ const read = (rel: string): string => {
 // ---------------------------------------------------------------------------
 // Real-pipeline test: assert/assertDefined stripped, invariant survives.
 //
-// Builds a tiny representative module through the EXACT same transform chain
-// `rollup.config.ts` uses for production (`@rollup/plugin-replace` setting
-// `__DEV__ → false`, then `terser` with the repo's `pure_funcs` list), using
-// the real `src/core/dev.ts` implementations and real runtime messages lifted
-// from their actual call sites (Container.addChild's cycle guard). This is
-// self-contained (no dependency on a pre-built `dist/`) and fast (bundles one
-// tiny file), so it runs unconditionally on every `pnpm test`.
+// Builds a tiny representative module through a Rollup+terser pipeline that
+// models the real production build's stripping semantics (`@rollup/plugin-
+// replace` setting `__DEV__` to `false`, then `terser` with a `pure_funcs`
+// list derived from `src/core/dev.ts`), using the real `src/core/dev.ts`
+// implementations and real runtime messages lifted from their actual call
+// sites (Container.addChild's cycle guard). This is self-contained (no
+// dependency on a pre-built `dist/`) and fast (bundles one tiny file), so it
+// runs unconditionally on every `pnpm test`.
 // ---------------------------------------------------------------------------
-
-/** Extracts the `pure_funcs` list from `rollup.config.ts` — never hard-coded here. */
-function extractPureFuncs(): string[] {
-  const config = readFileSync(resolve(rootDir, 'rollup.config.ts'), 'utf8');
-  const match = /pure_funcs:\s*\[([^\]]*)\]/.exec(config);
-  expect(match).not.toBeNull();
-  return [...match![1]!.matchAll(/'([^']+)'/g)].map(m => m[1]!);
-}
 
 /** Extracts the real invariant message from Container.addChild's scene-graph cycle guard. */
 function extractContainerCycleMessage(): string {
@@ -89,13 +84,12 @@ function extractContainerCycleMessage(): string {
 
 /**
  * Strips TypeScript syntax down to plain JS via the TypeScript compiler's own
- * `transpileModule` API — the same tool `dist/exo.esm.js` (the bundle these
- * dist-content checks care about) is actually compiled with, via
- * `@rollup/plugin-typescript` in `rollup.config.ts`. `ts.transpileModule` is
- * pure JS with no native binary, so it runs safely inside vitest's jsdom
- * environment (unlike esbuild, which relies on a `TextEncoder` sanity check
- * that jsdom's patched globals fail — irrelevant to production reality, since
- * the real `dist/exo.esm.js` build never runs esbuild at all).
+ * `transpileModule` API. `dist/exo.esm.js` (the bundle these dist-content
+ * checks care about) is actually compiled with Rolldown's own transpiler, not
+ * this one - but `ts.transpileModule` is pure JS with no native binary, so it
+ * runs safely inside vitest's jsdom environment where a native bundler binary
+ * cannot be relied on. The syntax-stripping step is not what this test
+ * models; the define-replace and terser passes below it are.
  */
 function transpileTs(source: string): string {
   return ts.transpileModule(source, {
@@ -163,7 +157,7 @@ async function buildProductionSnippet(cycleMessage: string, pureFuncs: string[])
 
 describe('assert/assertDefined stripped vs. invariant survives (real terser production pipeline)', () => {
   it('strips assert/assertDefined callsites but keeps invariant and its real runtime message', async () => {
-    const pureFuncs = extractPureFuncs();
+    const pureFuncs = devGatedPureFuncs();
     const cycleMessage = extractContainerCycleMessage();
     const output = await buildProductionSnippet(cycleMessage, pureFuncs);
 
@@ -199,29 +193,25 @@ describe('invariant always-on contract (source-level, no build required)', () =>
     expect(match![1]).toMatch(/throw new Error/);
   });
 
-  it('is absent from every rollup pure_funcs list (never stripped), unlike assert/assertDefined', () => {
-    const config = readFileSync(resolve(rootDir, 'rollup.config.ts'), 'utf8');
-    const pureFuncsBlocks = [...config.matchAll(/pure_funcs:\s*\[([^\]]*)\]/g)].map(m => m[1]!);
-    expect(pureFuncsBlocks.length).toBeGreaterThan(0);
-
-    for (const block of pureFuncsBlocks) {
-      expect(block).toContain("'assert'");
-      expect(block).toContain("'assertDefined'");
-      expect(block).not.toContain("'invariant'");
-      expect(block).not.toContain("'warnOnce'");
-    }
+  it('is absent from the derived dev-gated pure-funcs list, unlike assert/assertDefined', () => {
+    const pureFuncs = devGatedPureFuncs();
+    expect(pureFuncs).toContain('assert');
+    expect(pureFuncs).toContain('assertDefined');
+    expect(pureFuncs).not.toContain('invariant');
   });
 });
 
 describe.runIf(hasProductionBuild || mustHaveProductionBuild)('production build stripping', () => {
   const expectedVersion = resolveVersion(rootDir);
 
-  it('has no bare __DEV__ reference in the dev helper (replaced with false)', () => {
+  it('has no bare __DEV__ reference in the dev helper', () => {
     const content = read('dist/esm/core/dev.js');
-    // The guard `if (__DEV__ && ...)` must become `if (false && ...)`
+    // The guard `if (__DEV__ && ...)` must not survive as a literal token. The
+    // bundler is free to leave `if (false && ...)` in place or fold the whole
+    // dead branch away - both satisfy "no unresolved __DEV__ reference", and
+    // which one happens is a bundler DCE-depth detail, not part of the
+    // contract this test verifies.
     expect(content).not.toMatch(/(?<![a-zA-Z0-9_$])__DEV__(?![a-zA-Z0-9_$])/);
-    // The literal `false` must appear where __DEV__ was.
-    expect(content).toContain('false');
   });
 
   it('strips the __DEV__-gated assert/assertDefined bodies to no-ops', () => {

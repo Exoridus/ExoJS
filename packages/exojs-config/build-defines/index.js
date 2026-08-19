@@ -171,8 +171,9 @@ export const resolveShortRevision = (opts = {}) => {
 // ---- define serialization --------------------------------------------------
 
 /**
- * Creates a replacement-values map suitable for @rollup/plugin-replace or
- * Vite's `define`. Every value is a valid source-code expression string.
+ * Creates a replacement-values map suitable for Rolldown's `transform.define`,
+ * @rollup/plugin-replace, or Vite's `define`. Every value is a valid
+ * source-code expression string.
  *
  * @param {{ mode: 'development' | 'production', version: string, revision: string }} opts
  * @returns {{ __DEV__: string, __VERSION__: string, __REVISION__: string }}

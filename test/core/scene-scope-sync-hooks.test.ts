@@ -5,19 +5,20 @@
  *
  * Two halves:
  *
- *   1. Behaviour — an `async` override is a hard failure, not a warning: it
+ *   1. Behaviour - an `async` override is a hard failure, not a warning: it
  *      throws, names the owner and the hook, and points at `load()`. The
  *      abandoned thenable's rejection is detached so it never surfaces as an
  *      unhandled rejection on top of the lifecycle error. `load()`/`unload()`
  *      stay legitimately asynchronous.
  *
- *   2. Production parity — the guard is never `__DEV__`-gated, so dev and
+ *   2. Production parity - the guard is never `__DEV__`-gated, so dev and
  *      production behave identically. Vitest always compiles `__DEV__` to
  *      `true`, so production is verified two ways: structurally (no `__DEV__`
  *      anywhere near the guard or inside it) and empirically, by running the
- *      guard module through the REAL production pipeline
- *      (`@rollup/plugin-replace` with `__DEV__ → false`, then `terser` with the
- *      repo's `pure_funcs`) and executing the minified output.
+ *      guard module through a Rollup+terser pipeline that models the real
+ *      production build's stripping semantics (`@rollup/plugin-replace` with
+ *      `__DEV__` set to `false`, then `terser` with a `pure_funcs` list
+ *      derived from `src/core/dev.ts`) and executing the minified output.
  */
 
 import { readFileSync } from 'node:fs';
@@ -37,6 +38,7 @@ import { SystemRegistry } from '#core/SystemRegistry';
 import { Time } from '#core/Time';
 
 import { createBuildDefines, resolveVersion } from '../../packages/exojs-config/build-defines/index.js';
+import { devGatedPureFuncs } from '../build-defines/dev-pure-funcs';
 
 const rootDir = resolve(import.meta.dirname!, '..', '..');
 
@@ -375,20 +377,11 @@ describe('synchronous hook contract', () => {
 // Production parity.
 // ---------------------------------------------------------------------------
 
-/** Extracts the `pure_funcs` list from `rollup.config.ts` — never hard-coded here. */
-const extractPureFuncs = (): string[] => {
-  const config = readSource('rollup.config.ts');
-  const match = /pure_funcs:\s*\[([^\]]*)\]/.exec(config);
-
-  expect(match).not.toBeNull();
-
-  return [...match![1]!.matchAll(/'([^']+)'/g)].map(m => m[1]!);
-};
-
 /**
- * Bundles `src/core/syncHooks.ts` through the EXACT transform chain
- * `rollup.config.ts` uses for production (`__DEV__ → false`, then `terser` with
- * the repo's `pure_funcs`) and returns the minified IIFE. The module imports
+ * Bundles `src/core/syncHooks.ts` through a Rollup+terser pipeline that
+ * models the real production build's stripping semantics (`__DEV__` set to
+ * `false`, then `terser` with a `pure_funcs` list derived from
+ * `src/core/dev.ts`) and returns the minified IIFE. The module imports
  * nothing, so this bundles one small file and stays fast.
  */
 const buildProductionSyncHooks = async (pureFuncs: string[]): Promise<string> => {
@@ -461,19 +454,12 @@ describe('production parity of the synchronous-hook guard', () => {
     expect(calls.map(call => isDevGated(call, probe))).toEqual([true, true]);
   });
 
-  test('the guard is absent from every rollup pure_funcs list, so terser never drops its callsites', () => {
-    const config = readSource('rollup.config.ts');
-    const blocks = [...config.matchAll(/pure_funcs:\s*\[([^\]]*)\]/g)].map(m => m[1]!);
-
-    expect(blocks.length).toBeGreaterThan(0);
-
-    for (const block of blocks) {
-      expect(block).not.toContain("'requireSynchronousHook'");
-    }
+  test('the guard is absent from the derived dev-gated pure-funcs list, so terser never drops its callsites', () => {
+    expect(devGatedPureFuncs()).not.toContain('requireSynchronousHook');
   });
 
   test('still throws after the real production pipeline (__DEV__ → false + terser)', async () => {
-    const output = await buildProductionSyncHooks(extractPureFuncs());
+    const output = await buildProductionSyncHooks(devGatedPureFuncs());
     const sandbox: { syncHooks?: { requireSynchronousHook: (result: unknown, subject: string, remedy: string) => void } } = {};
 
     runInNewContext(output, sandbox);

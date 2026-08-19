@@ -1475,11 +1475,11 @@ export default defineConfig([
   // given a real tsconfig program, since these files intentionally sit
   // outside any typed program.
   {
-    files: ['*.config.ts', 'rollup.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
+    files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
     ...tseslint.configs.disableTypeChecked,
   },
   {
-    files: ['*.config.ts', 'rollup.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
+    files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
