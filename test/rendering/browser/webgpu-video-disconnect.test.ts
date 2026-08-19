@@ -127,6 +127,8 @@ describe('WebGPU Video device-loss teardown', () => {
     videoSprite.setPosition(8, 8);
     root.addChild(videoSprite);
 
+    let backendDestroyed = false;
+
     try {
       if (!(await renderWebGpuOnce(ctx, backend, root))) {
         return;
@@ -138,12 +140,21 @@ describe('WebGPU Video device-loss teardown', () => {
       // every bound renderer's disconnect() (WebGpuVideoRenderer.onDisconnect
       // included) -> the actual GPUDevice.destroy() call.
       backend.destroy();
+      backendDestroyed = true;
 
       // Proves the device was genuinely destroyed, not merely abandoned —
       // the same assertion webgpu-device-lifecycle.test.ts makes for its own
       // destroy() cycles.
       expect((await lost).reason).toBe('destroyed');
     } finally {
+      // A skip (renderWebGpuOnce returning false) returns before the
+      // explicit destroy() above runs; the live-device count is finite (see
+      // webgpu-device-lifecycle.test.ts's file header), so every path out of
+      // this test must still release the device.
+      if (!backendDestroyed) {
+        backend.destroy();
+      }
+
       root.destroy();
       videoSprite.destroy();
       destroyVideo(video);
@@ -160,6 +171,7 @@ describe('WebGPU Video device-loss teardown', () => {
     root.addChild(videoSprite);
 
     let second: WebGpuBackend | null = null;
+    let firstDestroyed = false;
 
     try {
       if (!(await renderWebGpuOnce(ctx, first, root))) {
@@ -167,6 +179,7 @@ describe('WebGPU Video device-loss teardown', () => {
       }
 
       first.destroy();
+      firstDestroyed = true;
 
       second = await createWebGpuTestBackend(canvasSize);
 
@@ -178,6 +191,14 @@ describe('WebGPU Video device-loss teardown', () => {
 
       expectPixelNear(readPixel(16, 16), [0, 255, 0, 255]);
     } finally {
+      // A skip on the FIRST render returns before first.destroy() above
+      // runs; the live-device count is finite (see
+      // webgpu-device-lifecycle.test.ts's file header), so every path out of
+      // this test must still release both backends.
+      if (!firstDestroyed) {
+        first.destroy();
+      }
+
       root.destroy();
       videoSprite.destroy();
       destroyVideo(video);
