@@ -1,0 +1,145 @@
+---
+title: 'Typed Shaders'
+description: 'Author GLSL and WGSL as real .vert/.frag/.wgsl files and import them as source strings at build time with @codexo/exojs-build.'
+---
+
+import Callout from '../../../components/Callout.astro';
+
+# Typed Shaders
+
+Every shader-taking API in ExoJS - `ShaderFilter`, `ShaderSource`, `MeshMaterial`, `SpriteMaterial`, the WebGPU compute pipeline - takes source as a `string`. The guides show that string as a template literal, because a literal is the one form that always works. It is also the form your editor cannot help you with: no syntax highlighting, no GLSL or WGSL language service, no formatter, no shader linter, and an error the driver reports at line 34 is line 34 of a string embedded somewhere in a `.ts` file.
+
+`@codexo/exojs-build` gives you the other form. The shader lives in a real `.vert`, `.frag` or `.wgsl` file, and the build hands its text to the same API as a string.
+
+```bash
+npm install --save-dev @codexo/exojs-build
+```
+
+<Callout type="note" title="Build-time only">
+Nothing this package produces depends on it at run time, and ExoJS itself never imports it. It belongs in `devDependencies` and stays out of your shipped bundle.
+</Callout>
+
+## Build setup
+
+The same setup the [typed worklets and workers](/ExoJS/en/guide/shipping/typed-worklets-and-workers/) guide describes covers shaders too - `exojs()` installs the shader loader alongside the worklet and worker transforms:
+
+```ts
+import { exojs } from '@codexo/exojs-build';
+
+export default {
+    plugins: [exojs()],
+};
+```
+
+and the published ambient declarations type the imports:
+
+```json
+{
+    "compilerOptions": {
+        "types": ["@codexo/exojs-build/client"]
+    }
+}
+```
+
+That is the whole configuration. Rollup needs nothing else either; unlike a `.ts` module there is no transform involved, only the file's text.
+
+## Authoring
+
+Write the shader as you would write it in any shader-aware editor:
+
+```glsl
+/* ripple.frag */
+#version 300 es
+
+precision mediump float;
+
+in vec2 vUv;
+
+uniform sampler2D u_texture;
+uniform float u_time;
+uniform float u_amplitude;
+
+out vec4 fragColor;
+
+void main() {
+    float wave = sin(vUv.y * 24.0 + u_time * 3.0) * u_amplitude;
+
+    fragColor = texture(u_texture, vec2(vUv.x + wave, vUv.y));
+}
+```
+
+```wgsl
+/* ripple.wgsl */
+struct Uniforms {
+    time: f32,
+    amplitude: f32,
+};
+
+@group(0) @binding(0) var<uniform> uniforms: Uniforms;
+@group(0) @binding(1) var inputTexture: texture_2d<f32>;
+@group(0) @binding(2) var inputSampler: sampler;
+
+@fragment
+fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
+    let wave = sin(vUv.y * 24.0 + uniforms.time * 3.0) * uniforms.amplitude;
+
+    return textureSample(inputTexture, inputSampler, vec2<f32>(vUv.x + wave, vUv.y));
+}
+```
+
+and import each file where the source is needed:
+
+```ts
+import { ShaderFilter } from '@codexo/exojs';
+
+import fragment from './ripple.frag';
+import wgsl from './ripple.wgsl';
+
+const ripple = new ShaderFilter({
+    glsl: { fragment },
+    wgsl,
+    uniforms: { u_time: 0, u_amplitude: 0.02 },
+});
+```
+
+The import evaluates to the file's text - the API sees exactly the `string` it always saw. A cross-backend effect needs both languages, so keeping them as two files beside each other is also what makes the pair obvious.
+
+<Callout type="tip" title="One file, one stage">
+Give the vertex stage its own `.vert` file only when you actually replace it. `ShaderFilter` fills in a pass-through fullscreen quad, and a `MeshMaterial` that only changes colour needs no vertex source at all.
+</Callout>
+
+## What the build does with it
+
+The text is inlined into your bundle. No shader is emitted as a separate file and none is fetched at runtime, so there is no load order to arrange and no request to fail.
+
+For production, `exojs({ minify: true })` strips comments and layout whitespace from the shader text. This matters more than it looks: shader source travels inside a JavaScript string literal, and no JavaScript minifier descends into one, so without this step every explanatory comment you wrote is bytes every visitor downloads.
+
+<Callout type="warning" title="Stripping is not optimizing">
+The transform removes comments and whitespace and nothing else. It never renames an identifier, reorders an expression, reduces a precision or removes a branch, and there is no option that makes it do so. Shader optimization belongs to the driver, which is the only party that knows the target GPU; a build-time rewrite would only take information away from it. Make performance changes in the source, then measure them.
+</Callout>
+
+## Coexisting with your bundler
+
+Only a bare import is claimed. An import carrying a query - `./ripple.frag?raw`, `?url`, anything else - is left to the bundler, so Vite's own asset handling keeps working next to the plugin:
+
+```ts no-check -- `?url` is Vite's own import query, typed by `vite/client` rather than by this package
+import shaderUrl from './ripple.frag?url';
+```
+
+The two can appear in the same program. Use the bare import for source you compile, and a query when you genuinely want the file as something else.
+
+## Shader source you build at runtime
+
+Source assembled at runtime - a fragment stage composed from several strings, a variant switched on a feature flag - never passes through the plugin, so `minify` cannot reach it. Put it through the same transform explicitly and both halves ship on the same terms:
+
+```ts no-check -- `stripShaderSource` is build-time tooling, checked against the published package rather than against the engine
+import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
+
+const composed = stripShaderSource(`${prelude}\n${body}`);
+```
+
+## Next steps
+
+- [Filters](/ExoJS/en/guide/effects/filters/) - what a `ShaderFilter` receives and how its uniforms are updated.
+- [Custom mesh shaders](/ExoJS/en/guide/effects/custom-mesh-shaders/) - the vertex contract a `MeshMaterial` shader has to honour.
+- [Typed worklets and workers](/ExoJS/en/guide/shipping/typed-worklets-and-workers/) - the same package's other half.

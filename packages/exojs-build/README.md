@@ -1,11 +1,11 @@
 # @codexo/exojs-build
 
-Build-time Vite and Rollup plugins that let you author AudioWorklet processors
-and Web Workers as real TypeScript modules and consume them as self-contained
-source strings.
+Build-time Vite and Rollup plugins that let you author shaders as real
+`.vert`/`.frag`/`.wgsl` files, and AudioWorklet processors and Web Workers as
+real TypeScript modules, then consume all of them as plain source strings.
 
-No hand-written JavaScript in a template literal. No separate worklet or worker
-asset. No extra request at runtime.
+No shader in a template literal. No hand-written JavaScript in one either. No
+separate shader, worklet or worker asset. No extra request at runtime.
 
 ```bash
 npm install --save-dev @codexo/exojs-build
@@ -46,7 +46,8 @@ needs no TypeScript plugin for them.
 
 ### TypeScript
 
-Add the published ambient declarations so the import queries type-check:
+Add the published ambient declarations so the shader imports and the import
+queries type-check:
 
 ```json
 {
@@ -55,6 +56,52 @@ Add the published ambient declarations so the import queries type-check:
   }
 }
 ```
+
+## Shaders as files
+
+ExoJS takes shader source as a `string` everywhere - `ShaderFilter`,
+`ShaderSource`, `MeshMaterial`, `SpriteMaterial`, the WebGPU compute pipeline.
+This plugin is what lets that string live in a real shader file, where an
+editor's language service, a formatter and every shader-aware tool can reach
+it.
+
+```glsl
+/* effect.frag */
+#version 300 es
+
+precision mediump float;
+
+in vec2 vUv;
+uniform float u_time;
+
+out vec4 fragColor;
+
+void main() {
+  fragColor = vec4(vUv, abs(sin(u_time)), 1.0);
+}
+```
+
+```ts
+import { ShaderFilter } from '@codexo/exojs';
+
+import fragment from './effect.frag';
+import wgsl from './effect.wgsl';
+
+const filter = new ShaderFilter({ glsl: { fragment }, wgsl, uniforms: { u_time: 0 } });
+```
+
+The text is inlined into the bundle, so nothing is fetched at runtime.
+
+Only a bare import is claimed. `./effect.frag?raw`, `?url` and any other query
+are left to the bundler, so Vite's asset handling keeps working next to this
+plugin.
+
+Under `minify` the emitted text loses its comments and layout whitespace and
+nothing else - no identifier is renamed, no expression rewritten, no statement
+reordered, and every line that still has content keeps its own line, which is
+what keeps `#version` and the other preprocessor directives valid. This is not
+a shader optimizer and there is deliberately no option that would make it one:
+the driver already has one, and it is the only one that knows the target GPU.
 
 ## Typed AudioWorklet
 
@@ -122,19 +169,25 @@ works and `{ type: 'module' }` is never required.
 
 ## API
 
-| Export                  | Purpose                                                     |
-| ----------------------- | ----------------------------------------------------------- |
-| `exojs(options?)`       | Both plugins at once. The normal entry point.                |
-| `createWorkletPlugin()` | Only the `?worklet` transform.                               |
-| `createWorkerPlugin()`  | Only the `?worker` transform.                                |
+| Export                  | Purpose                                            |
+| ----------------------- | -------------------------------------------------- |
+| `exojs(options?)`       | All three plugins at once. The normal entry point. |
+| `createShaderPlugin()`  | Only the `.vert`/`.frag`/`.wgsl` loader.           |
+| `createWorkletPlugin()` | Only the `?worklet` transform.                     |
+| `createWorkerPlugin()`  | Only the `?worker` transform.                      |
 
-All three take `{ minify?: boolean }`, off by default so the inlined source
+All of them take `{ minify?: boolean }`, off by default so the inlined source
 stays readable in dev servers and stack traces. There is no automatic
 production detection: Rollup has no mode of its own, and inferring one would
 make the same config behave differently in the two supported bundlers.
 
-## What the transform guarantees
+`@codexo/exojs-build/shader-strip` exports `stripShaderSource`, the exact
+transform `minify` applies. Use it on shader text you build at runtime rather
+than import from a file, so both halves ship on the same terms.
 
+## What the transforms guarantee
+
+- Shader files arrive as their own text, byte for byte, unless `minify` is on.
 - TypeScript syntax and ordinary relative imports, to any depth.
 - No `import` or `export` token in the emitted string - neither an
   `AudioWorkletGlobalScope` nor a classic worker can resolve one.
@@ -145,7 +198,8 @@ make the same config behave differently in the two supported bundlers.
 
 ## Notes
 
-- The query, not the filename, selects the transform. The same `.worklet.ts` or
+- Shaders are selected by extension, worklets and workers by import query. The
+  query, not the filename, selects those two transforms: the same `.worklet.ts` or
   `.worker.ts` file can still be imported as an ordinary module - by a unit
   test, say - without going through the bundler.
 - Worklet and worker code belongs to a global scope your app's program cannot

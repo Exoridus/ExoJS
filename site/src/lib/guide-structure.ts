@@ -782,6 +782,11 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 level: 'advanced',
                 prerequisites: ['shipping/deployment'],
             },
+            {
+                slug: 'typed-shaders',
+                level: 'advanced',
+                prerequisites: ['effects/filters'],
+            },
         ],
     },
 ];
