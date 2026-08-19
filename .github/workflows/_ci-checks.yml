@@ -28,6 +28,10 @@ permissions:
 
 env:
   CI: true
+  # Pinned so the WGSL gate is reproducible and its cache key is exact. Bumping
+  # it is a deliberate change: a newer Naga accepts more of the language, which
+  # moves what this gate rejects.
+  NAGA_VERSION: 26.0.0
 
 jobs:
   changes:
@@ -250,11 +254,31 @@ jobs:
       - name: Install dependencies
         run: pnpm bootstrap
 
+      # Naga is the WGSL front end of wgpu, and therefore of Firefox's WebGPU.
+      # `test/rendering/wgsl-naga-validation.test.ts` is the only gate in CI
+      # that sees WGSL through anything but Tint: the Firefox WebGPU lane gets
+      # no adapter here and runs non-blocking. Restored from cache on almost
+      # every run — the key pins the exact version, so a hit is a hit.
+      - name: Cache the Naga validator
+        id: naga-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin/naga
+          key: naga-cli-${{ env.NAGA_VERSION }}-${{ runner.os }}
+
+      - name: Install the Naga validator
+        if: steps.naga-cache.outputs.cache-hit != 'true'
+        run: cargo install naga-cli --version "$NAGA_VERSION" --locked
+
       # NOTE: no `--` before the extra args — pnpm (unlike npm) forwards a
       # literal `--` to the script, and vitest silently discards everything
       # after it (the junit reporter args here were dropped that way for
       # months; the analytics upload below only warned, never failed).
       - name: Test (with coverage)
+        # EXOJS_REQUIRE_NAGA turns a missing binary from a skip into a failure:
+        # locally the validator is optional, in CI its absence is a broken lane.
+        env:
+          EXOJS_REQUIRE_NAGA: '1'
         run: pnpm test:coverage --reporter=default --reporter=junit --outputFile.junit=./test-results/unit.junit.xml
 
       # Deliberately OUTSIDE the coverage run. Istanbul rewrites every statement
