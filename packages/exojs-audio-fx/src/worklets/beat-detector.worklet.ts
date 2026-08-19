@@ -1,30 +1,42 @@
 // BeatDetector AudioWorkletProcessor - spectral-flux onset detection + ACF tempogram + PLL beat tracking.
 //
-// This worklet is built through the `.worklet.ts` → `?worklet`
-// build plugin (see `@codexo/exojs-config/worklet-plugin`): real, typed
-// TypeScript instead of a template-string constant. It typechecks against the
-// AudioWorkletGlobalScope (see `worklet-globals.d.ts` + `../../tsconfig.worklets.json`),
-// NOT the DOM - this file must stay self-contained (no imports at runtime):
-// `registerAudioWorkletProcessor` (`#audio/worklet/registerWorklet`) loads the
-// build-inlined source via a Blob URL passed to `audioWorklet.addModule()`.
+// Built through the `?worklet` plugin (see `@codexo/exojs-build`),
+// which bundles this module and everything it imports into the single
+// self-contained source string `registerAudioWorkletProcessor`
+// (`#audio/worklet/registerWorklet`) hands to `audioWorklet.addModule()` via a
+// Blob URL. Imports are therefore resolved at build time; there is no module
+// loader inside AudioWorkletGlobalScope.
 //
-// Consumed via `import beatDetectorWorkletSource from './beat-detector.worklet.ts?worklet'`
-// (see `../BeatDetector.ts`) - the `?worklet` query is what routes
-// this file through the transpile-to-string plugin instead of normal
-// TypeScript module resolution.
+// Typechecked against the AudioWorkletGlobalScope (`worklet-globals.d.ts` +
+// `../../tsconfig.worklets.json`), not the DOM, so a stray `window`/`document`
+// reference is a compile error rather than a runtime surprise on the audio thread.
+//
+// The DSP this file drives - FFT, mel filterbank, tempogram - lives in `../dsp/`
+// and is imported, not copied. What stays here is the real-time orchestration
+// around it: preallocated scratch buffers, ring-buffer bookkeeping, and the PLL
+// beat tracker. The audio thread cannot allocate, so this file calls the
+// out-parameter primitives (`computeAcfInto`) rather than the allocating
+// convenience wrappers built on them.
 
-interface MelBandFilter {
-  startBin: number;
-  peakBin: number;
-  endBin: number;
-  weights: Float32Array;
-}
-
-interface TempoCandidateInline {
-  bpm: number;
-  score: number;
-  lag: number;
-}
+import { fft } from '../dsp/fft';
+import { buildMelFilterbank, computeMelBands, type MelBand } from '../dsp/mel';
+import {
+  acfAtLag,
+  acfExtendedMinLag,
+  candidateEdgeTolerance,
+  combPenaltyDouble,
+  combPenaltyTriple,
+  combWeightFundamental,
+  combWeightHalf,
+  combWeightThird,
+  computeAcfInto,
+  defaultPriorMu,
+  defaultPriorSigma,
+  isOctaveRelated,
+  parabolicPeakOffset,
+  type TempoCandidateResult,
+  tempoPrior,
+} from '../dsp/tempogram';
 
 interface UpcomingBeatInline {
   audioTime: number;
@@ -52,119 +64,6 @@ interface BeatDetectorProcessorOptions {
   enableTimeSignatureDetection?: boolean;
   acfIntervalHops?: number;
 }
-
-// ---- Hann window + FFT (radix-2 Cooley-Tukey) ----
-function applyHannWindow(real: Float32Array, imag: Float32Array): void {
-  const n = real.length;
-  for (let i = 0; i < n; i++) {
-    const w = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (n - 1)));
-    real[i]! *= w;
-    imag[i] = 0;
-  }
-}
-
-function bitReversePermute(real: Float32Array, imag: Float32Array): void {
-  const n = real.length;
-  let j = 0;
-  for (let i = 1; i < n; i++) {
-    let bit = n >> 1;
-    for (; j & bit; bit >>= 1) {
-      j ^= bit;
-    }
-    j ^= bit;
-    if (i < j) {
-      let t = real[i]!;
-      real[i] = real[j]!;
-      real[j] = t;
-      t = imag[i]!;
-      imag[i] = imag[j]!;
-      imag[j] = t;
-    }
-  }
-}
-
-function fftInPlace(real: Float32Array, imag: Float32Array): void {
-  applyHannWindow(real, imag);
-  bitReversePermute(real, imag);
-  const n = real.length;
-  for (let len = 2; len <= n; len <<= 1) {
-    const halfLen = len >> 1;
-    const step = (-2 * Math.PI) / len;
-    for (let i = 0; i < n; i += len) {
-      for (let k = 0; k < halfLen; k++) {
-        const angle = step * k;
-        const cos = Math.cos(angle);
-        const sin = Math.sin(angle);
-        const re = real[i + k + halfLen]! * cos - imag[i + k + halfLen]! * sin;
-        const im = real[i + k + halfLen]! * sin + imag[i + k + halfLen]! * cos;
-        real[i + k + halfLen] = real[i + k]! - re;
-        imag[i + k + halfLen] = imag[i + k]! - im;
-        real[i + k]! += re;
-        imag[i + k]! += im;
-      }
-    }
-  }
-}
-
-// ---- Mel filterbank ----
-function buildMelFilterbank(numBands: number, fMin: number, fMax: number, fftSize: number, sampleRateHz: number): MelBandFilter[] {
-  const numBins = fftSize >> 1;
-  const nyquist = sampleRateHz / 2;
-  const melMin = 2595 * Math.log10(1 + fMin / 700);
-  const melMax = 2595 * Math.log10(1 + fMax / 700);
-  const melPoints = new Float32Array(numBands + 2);
-  for (let i = 0; i < numBands + 2; i++) {
-    melPoints[i] = melMin + ((melMax - melMin) * i) / (numBands + 1);
-  }
-  const binPoints = new Float32Array(numBands + 2);
-  for (let i = 0; i < numBands + 2; i++) {
-    const hz = 700 * (Math.pow(10, melPoints[i]! / 2595) - 1);
-    binPoints[i] = Math.round((hz / nyquist) * (numBins - 1));
-  }
-  const bands: MelBandFilter[] = [];
-  for (let b = 0; b < numBands; b++) {
-    const startBin = Math.max(0, Math.min(numBins - 1, binPoints[b]!));
-    const peakBin = Math.max(0, Math.min(numBins - 1, binPoints[b + 1]!));
-    const endBin = Math.max(0, Math.min(numBins - 1, binPoints[b + 2]!));
-    const len = endBin - startBin + 1;
-    const weights = new Float32Array(len);
-    for (let i = 0; i < len; i++) {
-      const bin = startBin + i;
-      if (bin <= peakBin && peakBin > startBin) {
-        weights[i] = (bin - startBin) / (peakBin - startBin);
-      } else if (bin > peakBin && endBin > peakBin) {
-        weights[i] = (endBin - bin) / (endBin - peakBin);
-      } else {
-        weights[i] = 1;
-      }
-    }
-    bands.push({ startBin, peakBin, endBin, weights });
-  }
-  return bands;
-}
-
-function computeMelBands(mag: Float32Array, bands: MelBandFilter[], out: Float32Array): void {
-  for (let b = 0; b < bands.length; b++) {
-    const band = bands[b]!;
-    let energy = 0;
-    for (let i = 0; i < band.weights.length; i++) {
-      energy += mag[band.startBin + i]! * band.weights[i]!;
-    }
-    out[b] = Math.log(1 + energy);
-  }
-}
-
-// ---- Tempogram (single source of truth — transliterated from src/dsp/tempogram.ts) ----
-// Guarded by test/dsp/worklet-parity.test.ts: these MUST stay numerically identical to
-// computeAcf / scoreTempoHypotheses / computeTempoCandidates / isOctaveRelated in
-// src/dsp/tempogram.ts.
-const TEMPO_PRIOR_MU = 140;
-const TEMPO_PRIOR_SIGMA = Math.log(2) * 0.9;
-const COMB_W_FUNDAMENTAL = 1;
-const COMB_W_HALF = 0.5;
-const COMB_W_THIRD = 0.3;
-const COMB_PENALTY_DOUBLE = 1;
-const COMB_PENALTY_TRIPLE = 0.5;
 
 // ---- Utility ----
 // Sorts arr[0..n-1] in-place using insertion sort. Avoids creating a subarray view so
@@ -246,67 +145,6 @@ const DRIFT_CONFIRM_HOPS = 3; // consecutive confirming ACF hops required before
 const LOCK_PROMOTE_BEATS = 3; // beats emitted after the authoritative lock before promotion to locked
 const LOCK_PROMOTE_CONFIDENCE = 0.1; // confidence floor that must be cleared to promote to locked
 
-// Mean-subtracted, biased (÷n), zero-lag-normalised ACF. Writes lagCount values into out.
-function computeAcfInline(flux: Float32Array, n: number, minLag: number, maxLag: number, out: Float32Array): void {
-  const lagCount = maxLag - minLag + 1;
-  let mean = 0;
-  for (let t = 0; t < n; t++) {
-    mean += flux[t]!;
-  }
-  mean = n > 0 ? mean / n : 0;
-  let zeroLag = 0;
-  for (let z = 0; z < n; z++) {
-    const cz = flux[z]! - mean;
-    zeroLag += cz * cz;
-  }
-  zeroLag = n > 0 ? zeroLag / n : 1;
-  const norm = zeroLag > 0 ? zeroLag : 1;
-  for (let lagIndex = 0; lagIndex < lagCount; lagIndex++) {
-    const lag = minLag + lagIndex;
-    let sum = 0;
-    for (let t2 = lag; t2 < n; t2++) {
-      sum += (flux[t2]! - mean) * (flux[t2 - lag]! - mean);
-    }
-    out[lagIndex] = n > 0 ? sum / n / norm : 0;
-  }
-}
-
-// Linear-interpolated ACF sample; 0 outside range, negative correlation clamped to 0.
-function acfAtLagInline(acf: Float32Array, acfLen: number, minLag: number, lag: number): number {
-  const maxIndex = acfLen - 1;
-  const f = lag - minLag;
-  if (f < 0 || f > maxIndex) {
-    return 0;
-  }
-  const i0 = Math.floor(f);
-  const i1 = i0 < maxIndex ? i0 + 1 : maxIndex;
-  const frac = f - i0;
-  const v = acf[i0]! * (1 - frac) + acf[i1]! * frac;
-  return v > 0 ? v : 0;
-}
-
-function tempoPriorInline(bpm: number, mu: number, sigma: number): number {
-  const zp = Math.log(bpm / mu) / sigma;
-  return Math.exp(-0.5 * zp * zp);
-}
-
-// Sub-lag peak refinement: fit a parabola through (i-1, i, i+1) and return the vertex
-// offset in [-0.5, 0.5]. Gives sub-hop BPM resolution where the lag grid is coarse (the
-// 300 BPM top end sits at lag ~19 hops, ~5 ms/lag). Mirrors parabolicPeakOffset.
-function parabolicPeakOffsetInline(yPrev: number, yMid: number, yNext: number): number {
-  const denom = yPrev - 2 * yMid + yNext;
-  if (denom >= 0) {
-    return 0;
-  }
-  let d = (0.5 * (yPrev - yNext)) / denom;
-  if (d < -0.5) {
-    d = -0.5;
-  } else if (d > 0.5) {
-    d = 0.5;
-  }
-  return d;
-}
-
 // ---- Processor ----
 class BeatDetectorProcessor extends AudioWorkletProcessor {
   private readonly _sampleRate: number;
@@ -329,7 +167,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   private _sampleCount: number;
   private _hopAccum: number;
 
-  private readonly _melBandFilters: MelBandFilter[];
+  private readonly _melBandFilters: readonly MelBand[];
   private readonly _melOut: Float32Array;
   private readonly _fluxWindow: Float32Array;
   private readonly _linFlux: Float32Array;
@@ -350,7 +188,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
   private _bestBpm: number;
   private _bestScore: number;
-  private _candidates: TempoCandidateInline[];
+  private _candidates: TempoCandidateResult[];
   private _firstLockSample: number;
 
   private _driftBpm: number;
@@ -454,10 +292,10 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     // Lag range in hops for BPM range
     this._minLag = Math.max(1, Math.round((60 / this._maxBpm) * this._sampleRate / this._hopSize));
     this._maxLag = Math.round((60 / this._minBpm) * this._sampleRate / this._hopSize);
-    // ACF is computed down to a shorter lag than the candidate band (see tempogram.ts
-    // acfExtendedMinLag): high-BPM fundamentals become interior peaks and the 2f/3f
-    // super-harmonic penalty can read energy above maxBpm.
-    this._acfMinLag = Math.max(1, Math.round(this._minLag / 3));
+    // ACF is computed down to a shorter lag than the candidate band: high-BPM
+    // fundamentals become interior peaks and the 2f/3f super-harmonic penalty can read
+    // energy above maxBpm.
+    this._acfMinLag = acfExtendedMinLag(this._minLag);
     this._acf = new Float32Array(this._maxLag - this._acfMinLag + 1); // scratch ACF buffer
 
     this._hopsSinceACF = 0;
@@ -588,7 +426,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     }
 
     // FFT
-    fftInPlace(this._real, this._imag);
+    fft(this._real, this._imag);
 
     // Magnitude spectrum
     const bins = n >> 1;
@@ -674,7 +512,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   // × tempo prior → top-3 sorted by score. The STABLE span (whole ring) is the parity-checked
   // candidate set. Shares the _linFlux / _acf scratch buffers, so the caller must consume the
   // returned array before the next call.
-  private _scoreSpan(spanHops: number): TempoCandidateInline[] {
+  private _scoreSpan(spanHops: number): TempoCandidateResult[] {
     const buf = this._fluxWindow;
     const wp = this._fluxWritePos;
     const len = buf.length;
@@ -682,8 +520,8 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     const minLag = this._acfMinLag; // extended ACF base (see constructor)
     const maxLag = this._maxLag;
     const numLags = maxLag - minLag + 1;
-    const loBpm = this._minBpm * 0.95; // CANDIDATE_EDGE_TOLERANCE = 0.05
-    const hiBpm = this._maxBpm * 1.05;
+    const loBpm = this._minBpm * (1 - candidateEdgeTolerance);
+    const hiBpm = this._maxBpm * (1 + candidateEdgeTolerance);
 
     // Linearise the most-recent n hops of the flux ring (oldest first) into a scratch array
     // so the ACF operates on the same layout src/dsp/tempogram.computeAcf expects.
@@ -694,17 +532,17 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
 
     // ACF (mean-subtracted, biased, zero-lag normalised) - mirrors computeAcf.
     const acf = this._acf;
-    computeAcfInline(lin, n, minLag, maxLag, acf);
+    computeAcfInto(lin, n, minLag, maxLag, acf);
 
     // Raw positive peaks (interior + endpoints) - mirrors findTempoPeaks.
-    const peaks: TempoCandidateInline[] = [];
+    const peaks: TempoCandidateResult[] = [];
     const lastIdx = numLags - 1;
     if (numLags > 1 && acf[0]! > acf[1]! && acf[0]! > 0) {
       peaks.push({ bpm: (60 * this._sampleRate) / (minLag * this._hopSize), score: acf[0]!, lag: minLag });
     }
     for (let i = 1; i < lastIdx; i++) {
       if (acf[i]! > acf[i - 1]! && acf[i]! > acf[i + 1]! && acf[i]! > 0) {
-        const lagI = minLag + i + parabolicPeakOffsetInline(acf[i - 1]!, acf[i]!, acf[i + 1]!);
+        const lagI = minLag + i + parabolicPeakOffset(acf[i - 1]!, acf[i]!, acf[i + 1]!);
         peaks.push({ bpm: (60 * this._sampleRate) / (lagI * this._hopSize), score: acf[i]!, lag: lagI });
       }
     }
@@ -715,7 +553,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     peaks.sort((a, b) => b.score - a.score);
 
     // Filter to BPM range (with edge tolerance) - mirrors computeTempoCandidates filter.
-    const inRange: TempoCandidateInline[] = [];
+    const inRange: TempoCandidateResult[] = [];
     for (let pf = 0; pf < peaks.length; pf++) {
       if (peaks[pf]!.bpm >= loBpm && peaks[pf]!.bpm <= hiBpm) inRange.push(peaks[pf]!);
     }
@@ -725,43 +563,26 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     // The penalty is SUBDIVISION-AWARE: a super-harmonic kf only demotes f when kf is
     // itself a plausible beat (kf <= maxBpm). Energy above maxBpm is a subdivision (hats
     // on 8ths over a 180 kick), not a competing fundamental, so it must not demote f.
-    const superHi = hiBpm; // maxBpm * 1.05 (CANDIDATE_EDGE_TOLERANCE)
-    const scored: TempoCandidateInline[] = [];
+    const superHi = hiBpm;
+    const scored: TempoCandidateResult[] = [];
     for (let q = 0; q < inRange.length; q++) {
       const lag = inRange[q]!.lag;
-      const aF = acfAtLagInline(acf, numLags, minLag, lag);
-      const aHalf = acfAtLagInline(acf, numLags, minLag, lag * 2);
-      const aThird = acfAtLagInline(acf, numLags, minLag, lag * 3);
-      const aDouble = acfAtLagInline(acf, numLags, minLag, lag / 2);
-      const aTriple = acfAtLagInline(acf, numLags, minLag, lag / 3);
-      const support = COMB_W_FUNDAMENTAL * aF + COMB_W_HALF * aHalf + COMB_W_THIRD * aThird;
-      const penDbl = inRange[q]!.bpm * 2 <= superHi ? COMB_PENALTY_DOUBLE * aDouble : 0;
-      const penTrip = inRange[q]!.bpm * 3 <= superHi ? COMB_PENALTY_TRIPLE * aTriple : 0;
+      const aF = acfAtLag(acf, minLag, lag);
+      const aHalf = acfAtLag(acf, minLag, lag * 2);
+      const aThird = acfAtLag(acf, minLag, lag * 3);
+      const aDouble = acfAtLag(acf, minLag, lag / 2);
+      const aTriple = acfAtLag(acf, minLag, lag / 3);
+      const support = combWeightFundamental * aF + combWeightHalf * aHalf + combWeightThird * aThird;
+      const penDbl = inRange[q]!.bpm * 2 <= superHi ? combPenaltyDouble * aDouble : 0;
+      const penTrip = inRange[q]!.bpm * 3 <= superHi ? combPenaltyTriple * aTriple : 0;
       let comb = support - penDbl - penTrip;
       if (comb < 0) comb = 0;
-      const w = tempoPriorInline(inRange[q]!.bpm, TEMPO_PRIOR_MU, TEMPO_PRIOR_SIGMA);
+      const w = tempoPrior(inRange[q]!.bpm, defaultPriorMu, defaultPriorSigma);
       scored.push({ bpm: inRange[q]!.bpm, score: comb * w, lag });
     }
     scored.sort((a, b) => b.score - a.score);
 
     return scored.slice(0, 3);
-  }
-
-  // Metrically-related = same beat at another level (octaves + 3:2/2:3 dotted/triple).
-  // Switching across these needs the strong margin so subdivision artefacts (e.g. the
-  // 120 "dotted" grouping of a drifting 180 kit) cannot steal the lock. Independent
-  // reimplementation of isOctaveRelated (src/dsp/tempogram.ts) - constants must stay in sync.
-  // Shared by the stable-window hysteresis and the fast-window drift check below, which both
-  // apply this exact test to their own tempo ratio.
-  private _isOctaveRelated(ratio: number): boolean {
-    return (
-      Math.abs(ratio - 0.5) < 0.05 ||
-      Math.abs(ratio - 2) < 0.1 ||
-      Math.abs(ratio - 3) < 0.15 ||
-      Math.abs(ratio - 1 / 3) < 0.05 ||
-      Math.abs(ratio - 2 / 3) < 0.04 ||
-      Math.abs(ratio - 3 / 2) < 0.06
-    );
   }
 
   private _computeACFAndCandidates(): void {
@@ -818,8 +639,9 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
       if (currentScore <= 0) currentScore = this._bestScore * 0.9;
 
       const inGrace = this._firstLockSample >= 0 && this._sampleCount - this._firstLockSample < 2 * this._sampleRate;
-      const ratio = top.bpm / this._bestBpm;
-      const isOctave = this._isOctaveRelated(ratio);
+      // Metrically-related = the same beat counted at another level; switching across one
+      // needs the strong margin so a subdivision artefact cannot steal the lock.
+      const isOctave = isOctaveRelated(top.bpm, this._bestBpm);
       let margin: number;
       if (inGrace) {
         margin = 1;
@@ -855,7 +677,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
   // consecutive ACF hops, the grid follows it. Octave-scale and hard-jump disagreements are
   // left to the stable hysteresis above (it carries the octave guards); single noisy hops are
   // filtered out by the persistence streak - so a static tempo is never made nervous.
-  private _trackDrift(fast: TempoCandidateInline[]): void {
+  private _trackDrift(fast: TempoCandidateResult[]): void {
     if (fast.length === 0) {
       this._driftHops = 0;
       this._driftBpm = 0;
@@ -865,7 +687,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     const r = fastTop.bpm / this._bestBpm;
     const diff = r > 1 ? r - 1 : 1 - r;
 
-    const octave = this._isOctaveRelated(r);
+    const octave = isOctaveRelated(fastTop.bpm, this._bestBpm);
 
     // Fast agrees with the grid, or disagrees at octave / hard-jump scale → not a drift.
     if (octave || diff <= DRIFT_MIN_FRAC || diff > DRIFT_MAX_FRAC) {

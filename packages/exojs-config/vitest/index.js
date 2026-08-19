@@ -1,10 +1,9 @@
 // Shared Vitest building blocks for the ExoJS monorepo. The browser (WebGL2/
 // WebGPU) projects stay repository-local because they need repo path knowledge
 // and the playwright provider; this module centralizes the parts every project
-// shares: the package source conditions, the shader-stub plugin, the AudioWorklet
-// `?worklet` transform plugin, and a jsdom unit-test project factory.
-import { createShaderPlugin } from '../shader-plugin.js';
-import { createWorkletPlugin } from '../worklet-plugin.js';
+// shares: the package source conditions, the shader-stub plugin, the `?worklet`
+// and `?worker` inline-source plugins, and a jsdom unit-test project factory.
+import { createShaderPlugin, createWorkerPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 
 /**
  * Conditions that activate each package's package-private `@codexo/…-source`
@@ -26,6 +25,14 @@ export const srcConditions = ['@codexo/exojs-source', '@codexo/exojs-particles-s
 export const workletTransformPlugin = createWorkletPlugin();
 
 /**
+ * The `?worker` counterpart. Worker sources are executed for real by the browser
+ * lanes (jsdom implements neither `Worker` nor `URL.createObjectURL`), so this
+ * has to be the production transform rather than a stub. Wired the same two
+ * ways as `workletTransformPlugin`.
+ */
+export const workerTransformPlugin = createWorkerPlugin();
+
+/**
  * A jsdom unit/integration test project. Used for Core and each extension.
  *
  * `execArgv` passes `--expose-gc` to the worker so specs that assert weak-retention
@@ -41,7 +48,7 @@ export function createJsdomTestProject(opts) {
   return {
     resolve: { alias, conditions: srcConditions },
     ssr: { resolve: { conditions: srcConditions } },
-    plugins: [createShaderPlugin(), workletTransformPlugin],
+    plugins: [createShaderPlugin(), workletTransformPlugin, workerTransformPlugin],
     define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
     test: {
       name,

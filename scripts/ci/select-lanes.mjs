@@ -60,6 +60,7 @@ import { pathToFileURL } from 'node:url';
  * that TS module).
  */
 const RUNTIME_PACKAGES = [
+  'exojs-build',
   'exojs-config',
   'exojs-particles',
   'exojs-tilemap',

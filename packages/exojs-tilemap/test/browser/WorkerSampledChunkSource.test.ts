@@ -6,6 +6,8 @@ import { ChunkStreamer } from '../../src/ChunkStreamer';
 import { TileLayer } from '../../src/TileLayer';
 import { TileSet } from '../../src/TileSet';
 import { createWorkerSampledChunkSource } from '../../src/WorkerSampledChunkSource';
+import sumSamplerWorkerSource from './fixtures/sum-sampler.worker.ts?worker';
+import { packSampleValue } from './fixtures/sum-sampler-math';
 
 function fakeTexture(): Texture {
   return {
@@ -28,26 +30,6 @@ function makeTileset(): TileSet {
   });
 }
 
-// A minimal, self-contained worker script matching the documented protocol:
-// sample(tx, ty) = tx + ty, response for every requested chunk. Written as a
-// literal template string, the same pattern this file's WorkerSampledChunkSource
-// consumer documents and WorkletEffect._workletSource already establishes
-// elsewhere in this codebase.
-const WORKER_SOURCE = `
-  self.onmessage = (event) => {
-    const { requestId, cx, cy, chunkWidth, chunkHeight } = event.data;
-    const values = new Float64Array(chunkWidth * chunkHeight);
-    const startTx = cx * chunkWidth;
-    const startTy = cy * chunkHeight;
-    for (let ty = 0; ty < chunkHeight; ty++) {
-      for (let tx = 0; tx < chunkWidth; tx++) {
-        values[ty * chunkWidth + tx] = (startTx + tx) + (startTy + ty);
-      }
-    }
-    self.postMessage({ requestId, values }, [values.buffer]);
-  };
-`;
-
 describe('createWorkerSampledChunkSource — real Worker', () => {
   it('tiles installed via ChunkStreamer are readable through TileLayer.getTileAt', async () => {
     const tileset = makeTileset();
@@ -57,7 +39,7 @@ describe('createWorkerSampledChunkSource — real Worker', () => {
       chunkWidth: 4, chunkHeight: 4,
     });
     const source = createWorkerSampledChunkSource(layer, {
-      workerSource: WORKER_SOURCE,
+      workerSource: sumSamplerWorkerSource,
       mapValueToTile: value => (value % 2 === 0 ? { tileset, localTileId: 1, transform: { flipX: false, flipY: false, diagonal: false } } : null),
     });
     const view = new View(0, 0, 32, 32);
@@ -72,11 +54,14 @@ describe('createWorkerSampledChunkSource — real Worker', () => {
         expect(layer.getTileAt(0, 0)).not.toBeNull();
       }, { timeout: 5000 });
 
-      // (0,0): sample = 0, even -> resolves.
+      // Even samples resolve to a tile, odd ones stay empty. The expectation is
+      // derived from the same helper the worker bundled, so a build that dropped
+      // that import fails here rather than agreeing by coincidence.
+      expect(packSampleValue(0, 0) % 2).toBe(0);
       expect(layer.getTileAt(0, 0)).toEqual({ tileset, localTileId: 1, transform: { flipX: false, flipY: false, diagonal: false } });
-      // (1,0): sample = 1, odd -> stays empty.
+      expect(packSampleValue(1, 0) % 2).toBe(1);
       expect(layer.getTileAt(1, 0)).toBeNull();
-      // (2,0): sample = 2, even -> resolves.
+      expect(packSampleValue(2, 0) % 2).toBe(0);
       expect(layer.getTileAt(2, 0)).toEqual({ tileset, localTileId: 1, transform: { flipX: false, flipY: false, diagonal: false } });
     } finally {
       streamer.destroy();

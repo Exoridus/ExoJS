@@ -25,10 +25,9 @@ void main(void) {
   // texel 2: fillColor
   // texel 3: outlineColor
   // texel 4: (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
-  // texel 6: (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
   //          outlineMin = 0.5 → disabled; outlineMin < 0.5 → enabled
   // texel 5: shadowColor
-  // texel 6: (shadowOffsetX_px, shadowOffsetY_px, gradientVertical, unused)
+  // texel 6: (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
   // texel 7: gradientTop
   // texel 8: gradientBottom
   vec4 tFill    = texelFetch(u_nodeData, ivec2(2, ni), 0);

@@ -1,16 +1,20 @@
 /**
- * Single-source-of-truth guard for the beat-detector tempogram.
+ * Behavioural equivalence of the worklet's real-time tempogram path and the canonical one.
  *
- * The worklet runs as an `eval`'d source string and cannot import modules, so its ACF +
- * tempo-candidate logic is transliterated by hand from `src/dsp/tempogram.ts`. This test
- * drives the REAL worklet over several fixtures and asserts that the candidates it
- * produces from its internal flux window are numerically identical to running the
- * canonical `computeTempoCandidates(...)` pipeline on the same window.
+ * The worklet imports `src/dsp/tempogram.ts`, so the scoring arithmetic is shared and needs
+ * no guarding. What is NOT shared is the orchestration around it: the audio thread cannot
+ * allocate, so the worklet linearises its flux ring into a scratch buffer and drives the
+ * out-parameter primitives (`computeAcfInto`, `acfAtLag`, `tempoPrior`) itself instead of
+ * calling the allocating `computeTempoCandidates` wrapper. That hand-rolled pipeline is
+ * what this spec pins: several fixtures are driven through the REAL worklet, and the
+ * candidates it derives from its internal flux window must be numerically identical to
+ * running `computeTempoCandidates(...)` over the same window.
  *
- * If the two ever diverge (someone edits one copy but not the other) this fails.
+ * A ring-buffer indexing slip, a wrong lag bound, or a scratch buffer consumed out of order
+ * shows up here and nowhere else.
  */
 
-import { computeTempoCandidates, isOctaveRelated } from '../../src/dsp/tempogram';
+import { computeTempoCandidates } from '../../src/dsp/tempogram';
 import { clicktrack, doubleTime, halfTime, swing } from '../fixtures/beat-fixtures';
 import { buildBeatProcessor, SAMPLE_RATE } from '../harness/beat-sandbox';
 
@@ -19,7 +23,6 @@ interface ParityProc {
   port: { postMessage: (m: unknown) => void };
   process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean;
   _computeACFAndCandidates(): void;
-  _isOctaveRelated(ratio: number): boolean;
   _fluxWindow: Float32Array;
   _fluxWritePos: number;
   _fluxCount: number;
@@ -84,41 +87,7 @@ function driveAndCompare(samples: Float32Array): void {
   }
 }
 
-/**
- * Builds a callable that invokes the worklet's own `_isOctaveRelated` method on a real,
- * running processor instance (via the eval sandbox). Exercising the actual method - rather
- * than pattern-matching it out of the emitted source text - keeps this parity check valid
- * regardless of minification or any other source-level transform.
- */
-function buildWorkletOctaveCheck(): (bpm: number, ref: number) => boolean {
-  const Ctor = buildBeatProcessor();
-  const proc = new Ctor({ processorOptions: {} }) as unknown as ParityProc;
-  return (bpm: number, ref: number) => proc._isOctaveRelated(bpm / ref);
-}
-
-describe('isOctaveRelated ↔ worklet inline octave check parity', () => {
-  // Invoked live on a real worklet processor instance - if worklet constants drift, this fails.
-  const workletIsOctave = buildWorkletOctaveCheck();
-
-  const cases: [number, number, boolean, string][] = [
-    [60, 120, true, 'ratio 0.5 (half)'],
-    [120, 120, false, 'ratio 1.0 (unison — not metrical)'],
-    [240, 120, true, 'ratio 2.0 (double)'],
-    [360, 120, true, 'ratio 3.0 (triple)'],
-    [180, 120, true, 'ratio 1.5 (3:2 dotted)'],
-    [80, 120, true, 'ratio 0.667 (2:3 triple)'],
-    [130, 120, false, 'ratio ~1.083 (near-miss, legitimate drift)'],
-  ];
-
-  for (const [bpm, ref, expected, label] of cases) {
-    it(`${label}: isOctaveRelated and worklet agree (→ ${String(expected)})`, () => {
-      expect(isOctaveRelated(bpm, ref)).toBe(expected);
-      expect(workletIsOctave(bpm, ref)).toBe(expected);
-    });
-  }
-});
-
-describe('worklet ↔ src/dsp tempogram parity', () => {
+describe('worklet real-time tempogram path ↔ canonical computeTempoCandidates', () => {
   it('clicktrack_120 candidates match computeTempoCandidates', () => {
     driveAndCompare(clicktrack(120).samples);
   });

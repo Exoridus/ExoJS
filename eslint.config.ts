@@ -681,6 +681,18 @@ export default defineConfig([
 
   // @codexo/exojs-bench is an internal benchmark TOOL — a Node CLI plus an
   // in-browser rendering harness — not a shipped library. It legitimately
+  // The published build tooling runs in Node: it drives esbuild and reads the
+  // filesystem. The generic `packages/exojs-*/src` block grants browser
+  // globals, which is the wrong environment here, so the Node ones are added on
+  // top. What actually keeps DOM usage out is the package's own tsconfig
+  // (`lib: es2022`, `types: node`), where a `document` reference is an error.
+  {
+    files: ['packages/exojs-build/src/**/*.ts'],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.es2024 },
+    },
+  },
+
   // monkeypatches live graphics contexts and casts through `unknown` to
   // instrument arbitrary engines, and it was linted under the relaxed `test/**`
   // profile at its former `test/perf/baseline/` location. Preserve that profile
@@ -1213,6 +1225,36 @@ export default defineConfig([
     },
     rules: {
       'no-restricted-globals': ['error', 'window', 'document', 'navigator', 'fetch', 'localStorage', 'sessionStorage', 'alert', 'confirm', 'prompt'],
+    },
+  },
+
+  // Worker sources run in a DedicatedWorkerGlobalScope - no DOM - and are
+  // bundled into a string at build time, so they belong to no importer's
+  // program. `tsconfig.workers.json` is their type-safety authority (it is the
+  // only place `lib: webworker` can be selected without colliding with the DOM
+  // lib every other program needs). ESLint's ProjectService cannot serve two
+  // conflicting global libs for one file, so type-aware linting is off here and
+  // the full syntactic/correctness/stylistic policy stays on; DOM globals are
+  // banned outright as a lint-level backstop that repeats the compiler's answer.
+  {
+    files: ['**/*.worker.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['**/*.worker.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: { projectService: false, project: null },
+      globals: {
+        ...globals.es2024,
+        ...globals.worker,
+      },
+    },
+    rules: {
+      'no-restricted-globals': ['error', 'window', 'document', 'localStorage', 'sessionStorage', 'alert', 'confirm', 'prompt'],
+      'no-var': 'error',
+      'prefer-const': 'error',
     },
   },
 

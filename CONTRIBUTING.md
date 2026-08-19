@@ -32,6 +32,27 @@ remote-tracking refs whose upstream is gone on every fetch:
 git config fetch.prune true
 ```
 
+## Shader tooling
+
+The WGSL validation gate (`test/rendering/wgsl-naga-validation.test.ts`) shells
+out to Naga, the WGSL front end of wgpu and therefore of Firefox's WebGPU. It
+is the only gate that sees WGSL through anything but Tint — the Chromium WebGPU
+lane is Dawn, and the Firefox WebGPU lane gets no adapter in CI. Naga is not an
+npm dependency; install the pinned version once:
+
+```sh
+cargo install naga-cli --version 26.0.0 --locked
+```
+
+Without it every case in that spec skips, and `EXOJS_NAGA` points at an
+existing binary if it is not on `PATH`. CI installs the same version and sets
+`EXOJS_REQUIRE_NAGA=1`, which turns the absence into a failure.
+
+For authoring, [wgsl-analyzer](https://github.com/wgsl-analyzer/wgsl-analyzer)
+is worth having in the editor — it gives `.wgsl` files a language server rather
+than syntax highlighting alone. It is a developer convenience, not a build
+dependency: nothing in the repository invokes it, and CI does not install it.
+
 ## Import policy
 
 Package-internal imports use Node `package.json#imports` subpath imports — never a

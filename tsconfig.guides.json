@@ -42,6 +42,7 @@
       "@codexo/exojs/extensions": ["./src/extensions/index.ts"],
       "@codexo/exojs/renderer-sdk": ["./src/renderer-sdk.ts"],
       "@codexo/exojs/debug": ["./src/debug/index.ts"],
+      "@codexo/exojs-build": ["./packages/exojs-build/src/index.ts"],
       "@codexo/exojs-particles": ["./packages/exojs-particles/src/index.ts"],
       "@codexo/exojs-audio-fx": ["./packages/exojs-audio-fx/src/index.ts"],
       "@codexo/exojs-tiled": ["./packages/exojs-tiled/src/index.ts"],

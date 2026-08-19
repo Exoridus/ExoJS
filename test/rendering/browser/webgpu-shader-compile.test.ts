@@ -6,18 +6,19 @@
  * Mirrors `webgl2-shader-compile.test.ts` (real GLSL compile coverage) for the
  * WebGPU renderer path. Unlike `gl.compileShader`, WGSL compilation is async
  * and non-throwing: `device.createShaderModule({ code })` never throws on a
- * syntax error — the error only surfaces later, off the main thread, via
+ * syntax error - the error only surfaces later, off the main thread, via
  * `shaderModule.getCompilationInfo()`. Nothing else in the test suite calls
  * that API, so a WGSL syntax error anywhere in the WebGPU renderer path would
  * ship completely silently.
  *
- * The sources under test are the actual module-level WGSL string constants
- * feeding each renderer's `createShaderModule` call (exported — and, for the
- * one call site that had it inline, hoisted — specifically so this spec can
- * import them directly instead of duplicating the WGSL text). A source edit
- * in any of those files is automatically covered here; no `.wgsl` files or
- * `import.meta.glob` are involved because these are TS string constants, not
- * separate assets.
+ * The sources under test are the exported constants each renderer actually
+ * feeds to `createShaderModule`. Every one of them is an authored `.wgsl` file
+ * inlined by the shader plugin, or a composition of several of them plus the
+ * slot-count-dependent text the engine generates; importing the constant rather
+ * than the file is what makes the composed form - the text a GPU really sees -
+ * the thing under test. An edit to any contributing `.wgsl` file is therefore
+ * covered automatically, without an `import.meta.glob` that would only ever
+ * reach the fragments individually.
  *
  * Two `createShaderModule` call sites are intentionally NOT covered:
  *  - `WebGpuComputePipeline.create` takes an arbitrary caller-supplied `wgsl`
@@ -25,7 +26,7 @@
  *    caller inside `src/` (it is exported SDK surface for extension authors).
  *  - `WebGpuSpriteRenderer`'s custom-material path and
  *    `WebGpuMeshRenderer._getOrCreateCustomShaderResources` compile
- *    user-authored `material.shader.wgsl` at runtime — there is no
+ *    user-authored `material.shader.wgsl` at runtime - there is no
  *    engine-owned fixed string to assert against. `spriteMaterialPrologueWgsl`,
  *    the fixed prelude those custom-material shaders are prepended with, IS
  *    covered below.
@@ -35,7 +36,7 @@
  * device mid-test. Run via: pnpm test:browser:webgpu
  */
 
-import { stripShaderSource } from '@codexo/exojs-config/shader-strip';
+import { stripShaderSource } from '@codexo/exojs-build/shader-strip';
 
 import { spriteMaterialPrologueWgsl } from '#rendering/sprite/spriteMaterialSources';
 import { compositorShaderSource as backdropBlendCompositorWgsl } from '#rendering/webgpu/WebGpuBackdropBlendCompositor';

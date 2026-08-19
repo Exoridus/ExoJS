@@ -1,12 +1,14 @@
 /**
  * Fails when a published `.d.ts` imports a module a consumer cannot resolve.
  *
- * The shader and worklet imports (`.vert`, `.frag`, `.wgsl`, `?worklet`) only
- * resolve inside this repository, where a build plugin loads them as strings
- * and `src/typings.d.ts` declares their shape. Neither travels with the
- * package, so a declaration file that names one type-checks here and fails in
- * every consumer's `tsc` - a failure the repository's own gates cannot see,
- * because they never read the emitted declarations the way a consumer does.
+ * The shader and inline-source imports (`.vert`, `.frag`, `.wgsl`, `?worklet`,
+ * `?worker`) only resolve where a build plugin loads them as strings and an
+ * ambient declaration gives them a shape. Neither travels with the package, so
+ * a declaration file that names one type-checks here and fails in every
+ * consumer's `tsc` - a failure the repository's own gates cannot see, because
+ * they never read the emitted declarations the way a consumer does. The private
+ * `@codexo/exojs-config` package is unresolvable for the plainer reason that it
+ * is never published.
  *
  * Such an import reaches the emit when a value loaded from one of those
  * modules is re-exported: the declaration then has to name where the type came
@@ -24,8 +26,10 @@ import { join, relative } from 'node:path';
 const REPO_ROOT = join(import.meta.dirname, '..');
 
 // Every extension a build plugin resolves in this repository and nothing
-// resolves outside it, plus the worklet import query.
-const UNRESOLVABLE_SPECIFIER = /\.(?:vert|frag|glsl|wgsl|comp)['"]|\?worklet['"]/;
+// resolves outside it, plus the two inline-source import queries and the
+// private tooling config, which is never published and therefore never
+// installable next to a consumer's copy of these declarations.
+const UNRESOLVABLE_SPECIFIER = /\.(?:vert|frag|glsl|wgsl|comp)['"]|\?(?:worklet|worker)['"]|@codexo\/exojs-config/;
 const IMPORT_LINE = /^\s*(?:import|export)\b[^\n]*from\s*['"][^'"]+['"]/;
 
 interface DeclarationRoot {

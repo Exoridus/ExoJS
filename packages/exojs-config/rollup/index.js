@@ -7,9 +7,8 @@ import { readFileSync } from 'node:fs';
 import { dirname, relative, resolve } from 'node:path';
 
 import { codecovRollupPlugin } from '@codecov/rollup-plugin';
+import { createShaderPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '../build-defines/index.js';
-import { createShaderPlugin } from '../shader-plugin.js';
-import { createWorkletPlugin } from '../worklet-plugin.js';
 import nodeResolve from '@rollup/plugin-node-resolve';
 import replace from '@rollup/plugin-replace';
 import typescript from '@rollup/plugin-typescript';
@@ -92,8 +91,7 @@ export function createExtensionConfig(opts) {
       ...(sourceCondition ? [nodeResolve({ exportConditions: [sourceCondition, 'browser', 'module', 'import', 'default'], extensions: ['.ts', '.js'] })] : []),
       createShaderPlugin(),
       // Real, typed AudioWorklet sources imported via `?worklet` (see
-      // `../worklet-plugin.js`); untouched worklets keep exporting a plain
-      // template-string constant and are unaffected.
+      // `@codexo/exojs-build`); a package that imports none is unaffected.
       createWorkletPlugin(),
       typescript({
         compilerOptions: {

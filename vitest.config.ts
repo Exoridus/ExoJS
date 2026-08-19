@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url';
 
-import { createShaderPlugin } from '@codexo/exojs-config/shader-plugin';
-import { createJsdomTestProject, srcConditions, workletTransformPlugin } from '@codexo/exojs-config/vitest';
+import { createShaderPlugin } from '@codexo/exojs-build';
+import { createJsdomTestProject, srcConditions, workerTransformPlugin, workletTransformPlugin } from '@codexo/exojs-config/vitest';
 import { playwright } from '@vitest/browser-playwright';
 import { webdriverio } from '@vitest/browser-webdriverio';
 import { defineConfig } from 'vitest/config';
@@ -51,10 +51,11 @@ const realShaderPlugin = createShaderPlugin();
 const browserBase = {
   resolve: { alias: aliasConfig, conditions: srcConditions },
   ssr: { resolve: { conditions: srcConditions } },
-  // `workletTransformPlugin` is the real (non-stub) transform — the browser-
-  // audio-chromium project below renders converted worklets through a genuine
-  // AudioContext, so it needs functioning DSP, not an empty string.
-  plugins: [realShaderPlugin, workletTransformPlugin],
+  // `workletTransformPlugin` and `workerTransformPlugin` are the real (non-stub)
+  // transforms - the browser-audio-chromium project renders converted worklets
+  // through a genuine AudioContext and browser-tilemap-chromium runs worker
+  // sources in a genuine Worker, so both need functioning code, not a stub.
+  plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
   define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
 } as const;
 
@@ -159,7 +160,7 @@ export default defineConfig({
             'test/perf/webgpu/**/*.test.ts',
           ],
         }),
-        plugins: [realShaderPlugin, workletTransformPlugin],
+        plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
       },
       {
         ...createJsdomTestProject({
@@ -167,7 +168,7 @@ export default defineConfig({
           alias: aliasConfig,
           include: ['packages/exojs-particles/test/**/*.test.ts'],
         }),
-        plugins: [realShaderPlugin, workletTransformPlugin],
+        plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
       },
       createJsdomTestProject({
         name: 'exojs-tilemap',
@@ -236,6 +237,26 @@ export default defineConfig({
         alias: [...aliasConfig, { find: /^#(.*)$/, replacement: `${fileURLToPath(new URL('./src', import.meta.url))}/$1` }],
         include: ['packages/exojs-bench/test/**/*.test.ts'],
       }),
+
+      // ── exojs-build: the published build-tooling package ───────────────
+      // Plain Node, no jsdom and none of the shader/worklet/worker plugins: the
+      // subject under test IS those plugins, so installing them here would test
+      // the transform through itself. The external-consumer spec packs the
+      // package and drives real Vite and Rollup builds against the tarball,
+      // which is why the timeout is minutes rather than seconds. The browser
+      // fixtures under `test/browser` need a real Worker/AudioWorklet and run in
+      // `browser-build-chromium` instead.
+      {
+        test: {
+          name: 'exojs-build',
+          environment: 'node',
+          globals: true,
+          include: ['packages/exojs-build/test/**/*.test.ts'],
+          exclude: ['packages/exojs-build/test/browser/**'],
+          testTimeout: 300_000,
+          hookTimeout: 300_000,
+        },
+      },
 
       // ── rendering-perf — Node renderer benchmark harness (real shaders) ──
       // Runs the real WebGL2 renderers against a recording fake GL context for
@@ -494,7 +515,7 @@ export default defineConfig({
       //
       {
         ...browserBase,
-        plugins: [realShaderPlugin, workletTransformPlugin],
+        plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
         test: {
           name: 'browser-parity-safari',
           globals: true,
@@ -561,6 +582,29 @@ export default defineConfig({
           globals: true,
           setupFiles: browserSetupFiles,
           include: ['packages/exojs-tilemap/test/browser/**/*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({ launchOptions: { channel: 'chromium' } }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── browser-build-chromium: the inlined strings, actually executed ──
+      // The `?worklet`/`?worker` transforms only pay off if the string they
+      // emit runs where it is meant to. jsdom implements neither
+      // `audioWorklet.addModule` nor `Worker`/`URL.createObjectURL`, so the
+      // node lane can prove the bundle's shape but not that a real engine
+      // accepts it. These specs take the emitted source through the production
+      // path - Blob, object URL, real AudioWorklet and real Worker - which is
+      // also the DX a consumer of `@codexo/exojs-build` writes by hand.
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-build-chromium',
+          globals: true,
+          include: ['packages/exojs-build/test/browser/**/*.test.ts'],
           browser: {
             enabled: true,
             headless: true,

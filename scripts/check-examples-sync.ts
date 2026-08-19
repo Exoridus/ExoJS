@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { findFiles, transpileExampleSource } from './transpile-examples.ts';
+import { findFiles, isTranspiledExampleSource, transpileExampleSource } from './transpile-examples.ts';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -42,7 +42,7 @@ function main(): void {
 
   console.log('Regenerating example .js files in a scratch directory...');
 
-  const tsFiles = findFiles(examplesDir, name => name.endsWith('.ts') && !name.endsWith('.d.ts'));
+  const tsFiles = findFiles(examplesDir, isTranspiledExampleSource);
   const expectedJsRelPaths = new Set<string>();
   const diffs: string[] = [];
 
@@ -51,7 +51,7 @@ function main(): void {
     expectedJsRelPaths.add(relJs);
 
     const committedPath = path.join(examplesDir, relJs);
-    const generated = transpileExampleSource(fs.readFileSync(tsFile, 'utf8'), path.basename(tsFile));
+    const generated = transpileExampleSource(fs.readFileSync(tsFile, 'utf8'), tsFile);
 
     // Materialize the regenerated output in the scratch directory so a
     // failing run leaves something diffable on disk, not just a verdict.
