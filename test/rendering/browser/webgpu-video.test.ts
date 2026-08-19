@@ -12,12 +12,12 @@
  * the same generic upload `WebGpuBackend` uses for any non-DataTexture,
  * non-RenderTexture source) on any failure, before the renderer draws an
  * instanced quad sampling whichever texture resource that flush bound. The
- * tests below exercise whichever path the real adapter actually takes and
- * assert only pixel parity — they do not distinguish which path ran. A
- * later test forces the fallback path explicitly to assert that distinction.
+ * tests below exercise whichever path the real adapter actually takes;
+ * none of them distinguish which path ran (a later test, not part of this
+ * file yet, forces the fallback path explicitly to assert that distinction).
  *
- * Fixture strategy: a `<canvas>` painted a solid colour is turned into a
- * `MediaStream` via `captureStream()`, assigned to a `<video>` element's
+ * Fixture strategy: a `<canvas>` painted a solid or two-tone colour is turned
+ * into a `MediaStream` via `captureStream()`, assigned to a `<video>` element's
  * `srcObject`, and played (muted, so no user-gesture is required). We poll
  * `videoWidth`/`readyState` for the first decoded frame instead of relying on
  * `requestVideoFrameCallback` — empirically, in this headless Chromium
@@ -32,7 +32,7 @@
  * in this headless environment (0/5 across two variants, including a
  * `requestAnimationFrame`-pumped + DOM-attached variant); it is intentionally
  * NOT included here to avoid committing a flaky test. Only the reliable,
- * bounded initial-decode-and-upload path is asserted below.
+ * bounded initial-decode-and-render path is asserted below.
  *
  * All WebGPU renderers use inline WGSL — no shader file mocks are needed.
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
@@ -84,13 +84,14 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 };
 
 /**
- * Create an `HTMLVideoElement` playing a solid-colour `MediaStream` sourced
- * from a painted `<canvas>`, resolved once the first frame has decoded.
+ * Create an `HTMLVideoElement` playing a `MediaStream` sourced from a
+ * `<canvas>` `paint` leaves in whatever state, resolved once the first frame
+ * has decoded.
  *
  * Polls `videoWidth`/`readyState` rather than `requestVideoFrameCallback` —
  * see the file header comment for why.
  */
-const createSolidColorVideo = async (color: string, size = 16): Promise<HTMLVideoElement> => {
+const createPaintedVideo = async (paint: (ctx: CanvasRenderingContext2D, size: number) => void, size = 16): Promise<HTMLVideoElement> => {
   const source = document.createElement('canvas');
 
   source.width = size;
@@ -98,8 +99,7 @@ const createSolidColorVideo = async (color: string, size = 16): Promise<HTMLVide
 
   const ctx = source.getContext('2d')!;
 
-  ctx.fillStyle = color;
-  ctx.fillRect(0, 0, size, size);
+  paint(ctx, size);
 
   const stream = (source as HTMLCanvasElement & { captureStream: (fps?: number) => MediaStream }).captureStream(30);
 
@@ -155,6 +155,30 @@ const createSolidColorVideo = async (color: string, size = 16): Promise<HTMLVide
   return video;
 };
 
+/** A video whose decoded frame is a single solid colour. */
+const createSolidColorVideo = (color: string, size = 16): Promise<HTMLVideoElement> =>
+  createPaintedVideo((ctx, fillSize) => {
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, fillSize, fillSize);
+  }, size);
+
+/**
+ * A video whose decoded frame is split into a `topColor` top half and a
+ * `bottomColor` bottom half — deliberately asymmetric under vertical flip, so
+ * a test sampling one pixel from each half can catch a `flipY`/UV-orientation
+ * regression that a solid-colour fixture cannot (a uniformly-coloured square
+ * looks identical flipped or not).
+ */
+const createTwoToneVideo = (topColor: string, bottomColor: string, size = 16): Promise<HTMLVideoElement> =>
+  createPaintedVideo((ctx, fillSize) => {
+    const half = fillSize / 2;
+
+    ctx.fillStyle = topColor;
+    ctx.fillRect(0, 0, fillSize, half);
+    ctx.fillStyle = bottomColor;
+    ctx.fillRect(0, half, fillSize, half);
+  }, size);
+
 const destroyVideo = (video: HTMLVideoElement): void => {
   video.pause();
   (video.srcObject as MediaStream | null)?.getTracks().forEach(track => track.stop());
@@ -196,7 +220,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 // ---------------------------------------------------------------------------
 
 describe('WebGPU Video — solid color frame', () => {
-  test('decoded video frame uploads to the sprite texture and fills its bounds', async ctx => {
+  test('decoded video frame renders and fills its bounds', async ctx => {
     const backend = await setupBackend();
 
     const video = await createSolidColorVideo('#ff0000', 16);
@@ -250,10 +274,14 @@ describe('WebGPU Video — solid color frame', () => {
     }
   });
 
-  test('external-texture path produces the same pixels as the fallback copy path', async ctx => {
+  test('external-texture path renders the decoded frame in the correct orientation', async ctx => {
     const backend = await setupBackend();
 
-    const video = await createSolidColorVideo('#0000ff', 16);
+    // Top half blue, bottom half yellow: a solid-colour fixture is invariant
+    // under vertical flip, so it cannot catch a flipY/UV regression on either
+    // draw path — this one can, because top-blue-bottom-yellow-flipped reads
+    // as top-yellow-bottom-blue instead.
+    const video = await createTwoToneVideo('#0000ff', '#ffff00', 16);
     const root = new Container();
     const videoSprite = new Video(video);
 
@@ -267,8 +295,11 @@ describe('WebGPU Video — solid color frame', () => {
 
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
-      expectPixelNear(readPixel(16, 16), [0, 0, 255, 255]);
-      expectPixelNear(readPixel(40, 40), [0, 0, 0, 255]);
+      // Sprite bounds are canvas [8, 24) x [8, 24); the source's vertical
+      // midline lands at canvas y = 16. Sampled well clear of that boundary
+      // and of the sprite's own edges.
+      expectPixelNear(readPixel(16, 10), [0, 0, 255, 255]);
+      expectPixelNear(readPixel(16, 22), [255, 255, 0, 255]);
     } finally {
       root.destroy();
       videoSprite.destroy();
