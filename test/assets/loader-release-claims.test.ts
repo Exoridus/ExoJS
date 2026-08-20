@@ -71,8 +71,8 @@ describe('LoaderScope.release() scope safety', () => {
 
   test('release() drops only the releasing scope claim, leaving another scope holding the payload', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
-    const sceneScope = loader.scope('scene');
+    const owner = loader.createScope({ name: 'owner' });
+    const sceneScope = loader.createScope({ name: 'scene' });
 
     const handle = owner.get('ship.png');
     sceneScope.get('ship.png');
@@ -96,7 +96,7 @@ describe('LoaderScope.release() scope safety', () => {
 
   test('assets acquired on the loader itself are held for the application lifetime', async () => {
     const loader = createCoreLoader();
-    const scope = loader.scope('scene');
+    const scope = loader.createScope({ name: 'scene' });
 
     const handle = loader.get('ship.png');
     scope.get('ship.png');
@@ -115,8 +115,8 @@ describe('LoaderScope.release() scope safety', () => {
 
   test('release(catalog) never touches a claim held by another scope', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
-    const sceneScope = loader.scope('scene');
+    const owner = loader.createScope({ name: 'owner' });
+    const sceneScope = loader.createScope({ name: 'scene' });
 
     const catalog = new Assets({ hero: { type: 'texture', source: 'hero.png' } });
 
@@ -133,7 +133,7 @@ describe('LoaderScope.release() scope safety', () => {
 
   test('release(asset) resolves the same claim key the load path registered', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const asset = new Asset({ type: 'texture', source: 'boss.png' });
 
     await owner.load(asset);
@@ -149,7 +149,7 @@ describe('LoaderScope.release() scope safety', () => {
 
   test('release() is idempotent and a no-op for an unclaimed key', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const handle = owner.get('ship.png');
     await handle.loaded;
 
@@ -161,8 +161,8 @@ describe('LoaderScope.release() scope safety', () => {
 
   test('two scopes taken under the same name are independent owners', async () => {
     const loader = createCoreLoader();
-    const first = loader.scope('world');
-    const second = loader.scope('world');
+    const first = loader.createScope({ name: 'world' });
+    const second = loader.createScope({ name: 'world' });
 
     const handle = first.get('ship.png');
     second.get('ship.png');
@@ -180,7 +180,7 @@ describe('LoaderScope.release() scope safety', () => {
 
   test('release() on a background-queued entry drops it from the queue', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     loader.setConcurrency(0); // nothing drains
 
     const catalog = new Assets({ late: { type: 'texture', source: 'late.png' } });
@@ -265,7 +265,7 @@ describe('internal hard-reset claim consistency', () => {
 
   test('a source evicts correctly again after a reset -> reload cycle', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     const first = owner.get('ship.png');
     await first.loaded;

@@ -14,7 +14,7 @@ import { Texture } from '#rendering/texture/Texture';
 
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  const owner = loader.scope('owner');
+  const owner = loader.createScope({ name: 'owner' });
   materializeAssetBindings(loader, coreAssetBindings);
 
   return loader;
@@ -248,7 +248,7 @@ describe('composed catalogs in the loader', () => {
   it('loads and releases like an ordinary catalog, healing the input catalogs own leaves', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const shared = Assets.from({ boom: 'sfx/boom.ogg' });
     const local = Assets.from({ hit: 'sfx/hit.ogg' });
     const composed = Assets.compose(shared, local);
@@ -269,7 +269,7 @@ describe('composed catalogs in the loader', () => {
   it('claims each key exactly once — composition adds no ownership of its own', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const shared = Assets.from({ boom: 'sfx/boom.ogg' });
     const composed = Assets.compose(shared, shared);
 

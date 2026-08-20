@@ -48,7 +48,7 @@ describe('SceneLoader', () => {
   test('get() claims under its own scope, distinct from the app loader', async () => {
     const { app } = makeAppWithAudio();
     const sceneLoader = new SceneLoader(app);
-    const other = app.loader.scope('other');
+    const other = app.loader.createScope({ name: 'other' });
 
     const handle = sceneLoader.get('boom.ogg');
     await handle.loaded;

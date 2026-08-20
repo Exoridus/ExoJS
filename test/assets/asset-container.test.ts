@@ -242,7 +242,7 @@ describe('Loader.loadContainer', () => {
 
     const loader = createCoreLoader();
     const pack = await loader.loadContainer('assets/pack.exoa');
-    const scope = loader.scope('gameplay');
+    const scope = loader.createScope({ name: 'gameplay' });
 
     const ref = scope.get('data/level.json');
 
@@ -262,7 +262,7 @@ describe('Loader.loadContainer', () => {
     mockContainerFetch(container);
 
     const loader = createCoreLoader();
-    const level = loader.scope('level-1');
+    const level = loader.createScope({ name: 'level-1' });
 
     await level.loadContainer('assets/pack.exoa');
 

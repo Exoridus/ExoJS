@@ -1,6 +1,6 @@
 {
   "title": "LoaderScopeKind",
-  "description": "What a claim scope represents, for diagnostics only. Ownership never varies by kind: every scope holds and releases claims identically. `'app'` is the loader's own application-lifetime scope, `'scene'` a scene's automatic scope, `'scope'` one taken explicitly via Loader.scope, `'container'` the entries an asset container unpacked, and `'dependency'` the sub-assets a single asset's own load pulled in.",
+  "description": "What a claim scope represents, for diagnostics only. Ownership never varies by kind: every scope holds and releases claims identically. `'app'` is the loader's own application-lifetime scope, `'scene'` a scene's automatic scope, `'scope'` one created explicitly via Loader.createScope or LoaderScope.createScope, `'container'` the entries an asset container unpacked, and `'dependency'` the sub-assets a single asset's own load pulled in.",
   "symbol": "LoaderScopeKind",
   "kind": "type",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "What a claim scope represents, for diagnostics only. Ownership never varies by kind: every scope holds and releases claims identically.",
-        "`'app'` is the loader's own application-lifetime scope, `'scene'` a scene's automatic scope, `'scope'` one taken explicitly via Loader.scope, `'container'` the entries an asset container unpacked, and `'dependency'` the sub-assets a single asset's own load pulled in."
+        "`'app'` is the loader's own application-lifetime scope, `'scene'` a scene's automatic scope, `'scope'` one created explicitly via Loader.createScope or LoaderScope.createScope, `'container'` the entries an asset container unpacked, and `'dependency'` the sub-assets a single asset's own load pulled in."
       ],
       "importLine": "import { LoaderScopeKind } from '@codexo/exojs'",
       "sourceLink": null

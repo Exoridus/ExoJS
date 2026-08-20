@@ -325,14 +325,14 @@ An asset stays in memory for as long as somebody owns it. There are three kinds 
 
 - **the application** — anything acquired directly on `this.app.loader` is held until the app is destroyed;
 - **a scene** — anything acquired through `this.loader` (that is, `scene.loader`) is released when the scene ends;
-- **a scope you take yourself** — `this.app.loader.scope(name?)` returns an owner you destroy when you are done with it.
+- **a scope you create yourself** — `this.app.loader.createScope({ name })` returns an owner you destroy when you are done with it.
 
 Several owners can hold the same asset at the same time. They share one fetch and one resident payload, and one owner letting go never invalidates another:
 
 ```ts
 async load() {
-    const level = this.app.loader.scope('level-1');
-    const hud = this.app.loader.scope('ui:hud');
+    const level = this.app.loader.createScope({ name: 'level-1' });
+    const hud = this.app.loader.createScope({ name: 'ui:hud' });
 
     const font = level.get('fonts/ui.png');
 
@@ -346,13 +346,29 @@ async load() {
 }
 ```
 
-Take a scope whenever an asset's lifetime is shorter than the application's — a level, a streamed chunk, a UI panel, a prefetch. The name is a label for `inspect()`; two scopes taken under the same name are still two independent owners.
+Create a scope whenever an asset's lifetime is shorter than the application's — a level, a streamed chunk, a UI panel, a prefetch. Every `createScope()` call returns a new owner, never an existing one: the name is a diagnostic label for `inspect()`, never an identifier, so two scopes created under the same name are still two independent owners.
+
+Scopes nest. `scope.createScope({ name })` creates a child that claims independently but cannot outlive its parent: destroying the child frees only the child's claims, while destroying the parent destroys whatever children it still has, recursively. A scope created through `this.loader.createScope(...)` inside a scene is therefore cleaned up with that scene, even if you never destroy it yourself:
+
+```ts
+async load() {
+    const world = this.loader.createScope({ name: 'world' });
+    const chunk = world.createScope({ name: 'chunk:12,8' });
+
+    await chunk.load(ChunkAssets);
+
+    chunk.destroy(); // frees only the chunk's claims
+    // the scene ending destroys `world` — and any chunk still alive under it
+}
+```
+
+The hierarchy is a lifetime hierarchy only: it never affects asset identity or what a release frees. A child holding the same asset as its parent is two claims, not one.
 
 `scope.release(...)` drops that scope's claim on one asset; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again. It accepts a handle, an `Asset` descriptor, a whole catalog, or a `(type, source)` pair. Releasing a valid form that scope never claimed is a harmless no-op, and releasing twice is always idempotent:
 
 ```ts
 async load() {
-    const title = this.app.loader.scope('title');
+    const title = this.app.loader.createScope({ name: 'title' });
     const logo = title.get('ui/logo.png');
 
     await title.load(TitleAssets);

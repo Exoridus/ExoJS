@@ -67,7 +67,7 @@ afterEach(() => {
 
 describe('LoaderScope.release() fail-loud contract', () => {
   test('throws for an unsupported raw object, naming the supported forms', () => {
-    const scope = new Loader().scope();
+    const scope = new Loader().createScope();
 
     expect(() => scope.release({ arbitrary: true } as never)).toThrow(/no claim identity/);
   });
@@ -84,7 +84,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
       }),
     ]);
 
-    const scope = loader.scope();
+    const scope = loader.createScope();
     const asset = new Asset({ type: 'dxNonLeafAsset', source: 'thing.dat' });
     const resource = await scope.load(asset);
 
@@ -100,7 +100,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
 
   test('stays an idempotent no-op for a never-adopted VALUE catalog leaf', () => {
     const loader = new Loader();
-    const scope = loader.scope();
+    const scope = loader.createScope();
     const catalog = Assets.from({ note: 'note.txt' });
 
     expect(() => scope.release(catalog.note)).not.toThrow();
@@ -110,7 +110,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
 
   test('stays an idempotent no-op for a never-adopted RESOURCE catalog leaf', () => {
     const loader = createCoreLoader();
-    const scope = loader.scope();
+    const scope = loader.createScope();
     const catalog = Assets.from({ hero: 'hero.png' });
 
     expect(() => scope.release(catalog.hero)).not.toThrow();
@@ -120,7 +120,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
 
   test('supported release identities are unchanged: descriptor, catalog, (type, source), and an adopted handle all still clear their claim', async () => {
     const loader = createCoreLoader();
-    const scope = loader.scope();
+    const scope = loader.createScope();
     mockFetchImage();
     vi.stubGlobal(
       'createImageBitmap',
@@ -165,7 +165,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
       vi.fn(async () => ({ width: 1, height: 1 })),
     );
 
-    const scope = loader.scope();
+    const scope = loader.createScope();
     const handle = scope.get('hero.png');
     await handle.loaded;
 
@@ -311,7 +311,7 @@ describe('Loader.inspect() snapshot contract', () => {
       'createImageBitmap',
       vi.fn(async () => ({ width: 1, height: 1 })),
     );
-    const sceneScope = loader.scope('scene');
+    const sceneScope = loader.createScope({ name: 'scene' });
 
     const handle = loader.get('hero.png'); // root scope
     loader.get('hero.png'); // same source → same deduped handle, same scope again (no-op)
@@ -387,7 +387,7 @@ describe('Loader.inspect() snapshot contract', () => {
       }
     )._residency;
 
-    residency._claims.set(asset.key, { scopes: new Set<LoaderScope>([loader.scope('scope')]), asset });
+    residency._claims.set(asset.key, { scopes: new Set<LoaderScope>([loader.createScope({ name: 'scope' })]), asset });
     residency._backgroundQueue.push({ asset, options: undefined });
     residency._resources.set(asset.key, { asset, value: {} });
 

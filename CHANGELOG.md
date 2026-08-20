@@ -18,23 +18,31 @@ release and includes intentional breaking changes; see **Changed** and
 ### Added
 
 - **Asset ownership is explicit and safe for several consumers at once.**
-  `Loader.scope(name?)` returns a `LoaderScope` — an owner with `get`, `load`,
-  `release` and `destroy` whose lifetime you decide. Several scopes can hold the
-  same asset independently: they share one fetch and one resident payload, and
-  one scope releasing never invalidates another. Every call returns a fresh
-  owner, so a name is a label for `inspect()` and never a lookup key; two scopes
-  taken as `scope('world')` cannot free each other's assets. `SceneLoader` is now
-  such a scope, and scene teardown is unchanged.
+  `Loader.createScope(options?)` returns a `LoaderScope` — an owner with `get`,
+  `load`, `release` and `destroy` whose lifetime you decide. Several scopes can
+  hold the same asset independently: they share one fetch and one resident
+  payload, and one scope releasing never invalidates another. Every call creates
+  a new owner and never looks one up, so `name` is a label for `inspect()` and
+  never an identifier; two scopes created as `createScope({ name: 'world' })`
+  cannot free each other's assets. `SceneLoader` is now such a scope, and scene
+  teardown is unchanged.
 
   ```ts
-  const level = app.loader.scope('level-1');
-  const hud = app.loader.scope('ui:hud');
+  const level = app.loader.createScope({ name: 'level-1' });
+  const hud = app.loader.createScope({ name: 'ui:hud' });
 
   const font = level.get('fonts/ui.png');
   hud.get('fonts/ui.png'); // the same instance — one fetch, two owners
 
   level.destroy(); // the font stays loaded: the HUD still owns it
   ```
+
+  Scopes nest: `scope.createScope(options?)` creates a child that claims
+  independently but cannot outlive its parent. Destroying the child frees only
+  its own claims; destroying the parent destroys every child it still has,
+  recursively, so a scope created under `scene.loader` is cleaned up with that
+  scene. The hierarchy is a lifetime hierarchy only — it never affects asset
+  identity, and a child holding the same asset as its parent is two claims.
 
   Each scope also reports its own foreground progress via `onLoadStart` /
   `onLoadProgress` / `onLoadComplete` / `onLoadError`, while the loader keeps

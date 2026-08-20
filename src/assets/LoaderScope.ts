@@ -15,11 +15,24 @@ import type { LoadingQueue } from './LoadingQueue';
  * by kind: every scope holds and releases claims identically.
  *
  * `'app'` is the loader's own application-lifetime scope, `'scene'` a scene's
- * automatic scope, `'scope'` one taken explicitly via {@link Loader.scope},
- * `'container'` the entries an asset container unpacked, and `'dependency'` the
- * sub-assets a single asset's own load pulled in.
+ * automatic scope, `'scope'` one created explicitly via
+ * {@link Loader.createScope} or {@link LoaderScope.createScope}, `'container'`
+ * the entries an asset container unpacked, and `'dependency'` the sub-assets a
+ * single asset's own load pulled in.
  */
 export type LoaderScopeKind = 'app' | 'scene' | 'scope' | 'container' | 'dependency';
+
+/** Options for {@link Loader.createScope} and {@link LoaderScope.createScope}. */
+export interface LoaderScopeOptions {
+  /**
+   * Human-readable label for this scope, surfaced by {@link Loader.inspect}.
+   *
+   * Diagnostics only: it takes no part in asset identity, claim identity or
+   * scope lookup, and two scopes created under the same name are two
+   * independent owners.
+   */
+  readonly name?: string;
+}
 
 let nextScopeId = 1;
 
@@ -32,14 +45,22 @@ let nextScopeId = 1;
  * share a single fetch and a single resident payload, and one scope releasing
  * never invalidates another.
  *
- * Take a scope with {@link Loader.scope} whenever an asset's lifetime is shorter
- * than the application's - a level, a streamed chunk, a UI panel, a prefetch.
- * Assets acquired directly on the {@link Loader} are held for the application's
- * lifetime instead and are freed only when the loader is destroyed.
+ * Create a scope with {@link Loader.createScope} whenever an asset's lifetime is
+ * shorter than the application's - a level, a streamed chunk, a UI panel, a
+ * prefetch. Assets acquired directly on the {@link Loader} are held for the
+ * application's lifetime instead and are freed only when the loader is
+ * destroyed.
+ *
+ * A scope describes a lifetime, never a set of assets: what to acquire comes
+ * from an {@link Assets} catalog or an {@link Asset} descriptor passed to
+ * {@link get} / {@link load}, and typed access stays on that catalog.
+ *
+ * Scopes nest: {@link createScope} makes a child whose claims are independent
+ * but whose lifetime cannot outlive its parent's.
  *
  * @example
  * ```ts
- * const chunk = app.loader.scope('chunk:12,8');
+ * const chunk = app.loader.createScope({ name: 'chunk:12,8' });
  *
  * await chunk.load(chunkAssets);
  * // ... later, when the chunk streams out:
@@ -52,7 +73,7 @@ export class LoaderScope implements Destroyable {
   /**
    * Optional human-readable label, surfaced by {@link Loader.inspect}.
    *
-   * Purely descriptive: two scopes taken under the same name are two
+   * Purely descriptive: two scopes created under the same name are two
    * independent owners, never the same scope. Naming a scope can therefore
    * never make one consumer release another's claim.
    */
@@ -73,14 +94,56 @@ export class LoaderScope implements Destroyable {
 
   protected readonly _loader: Loader;
 
-  /** Scopes are created by {@link Loader.scope}, not directly. @internal */
-  public constructor(loader: Loader, kind: LoaderScopeKind = 'scope', name?: string) {
+  private readonly _parent?: LoaderScope;
+  // Allocated on first child: most scopes never nest, and dependency scopes are
+  // created per asset key on the load path.
+  private _children?: Set<LoaderScope>;
+  private _destroyed = false;
+
+  /** Scopes are created by {@link Loader.createScope} / {@link createScope}, not directly. @internal */
+  public constructor(loader: Loader, kind: LoaderScopeKind = 'scope', name?: string, parent?: LoaderScope) {
     this._loader = loader;
     this.kind = kind;
 
     if (name !== undefined) {
       this.name = name;
     }
+
+    if (parent !== undefined) {
+      this._parent = parent;
+    }
+  }
+
+  /**
+   * Creates a child scope: an independent claim owner that cannot outlive this
+   * one.
+   *
+   * The child claims, shares and releases assets exactly like any other scope -
+   * one fetch, one resident payload, one claim per owner - and holding the same
+   * asset as its parent means two claims, not one. Destroying the child frees
+   * only the child's claims; destroying the parent destroys every child it still
+   * has first, recursively, so a scene or level teardown reaches the scopes
+   * created underneath it without extra bookkeeping.
+   *
+   * The hierarchy is a lifetime hierarchy only. It never affects asset identity,
+   * ownership or what a release frees.
+   *
+   * @example
+   * ```ts
+   * const world = scene.loader.createScope({ name: 'world' });
+   * const chunk = world.createScope({ name: 'chunk:12,8' });
+   *
+   * chunk.destroy(); // frees only the chunk's claims
+   * world.destroy(); // frees the world's claims and any chunk still alive
+   * ```
+   */
+  public createScope(options?: LoaderScopeOptions): LoaderScope {
+    const child = new LoaderScope(this._loader, 'scope', options?.name, this);
+
+    this._children ??= new Set<LoaderScope>();
+    this._children.add(child);
+
+    return child;
   }
 
   // Bare path: a resource suffix yields its heal-in-place handle, a value suffix a stable AssetRef.
@@ -136,8 +199,28 @@ export class LoaderScope implements Destroyable {
     this._loader._releaseFrom(this, handleOrType, source);
   }
 
-  /** Releases every claim this scope still holds. Assets other scopes also hold stay resident. */
+  /**
+   * Releases every claim this scope still holds and destroys any child scope it
+   * still has. Assets another scope also holds stay resident, and destroying an
+   * already-destroyed scope is a no-op.
+   */
   public destroy(): void {
+    if (this._destroyed) {
+      return;
+    }
+
+    this._destroyed = true;
+
+    if (this._children !== undefined) {
+      // Each child removes itself from this set while destroying, so iterate a copy.
+      for (const child of [...this._children]) {
+        child.destroy();
+      }
+
+      this._children.clear();
+    }
+
+    this._parent?._children?.delete(this);
     this._loader._releaseScope(this);
   }
 }

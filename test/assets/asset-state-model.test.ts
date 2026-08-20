@@ -103,7 +103,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
   const R_KEYS = ['r0', 'r1', 'r2'];
   const L_KEYS = ['l0', 'l1', 'l2'];
   const loader = new Loader();
-  const SCOPES = [loader.scope('scope0'), loader.scope('scope1'), loader.scope('scope2'), loader.scope('scope3')];
+  const SCOPES = [loader.createScope({ name: 'scope0' }), loader.createScope({ name: 'scope1' }), loader.createScope({ name: 'scope2' }), loader.createScope({ name: 'scope3' })];
 
   let fetchCount = 0;
   // Handler invocations are synchronous up to their own Promise executor (verified

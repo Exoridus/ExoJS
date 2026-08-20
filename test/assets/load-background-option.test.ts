@@ -6,7 +6,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling adopt/background specs). */
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  const owner = loader.scope('owner');
+  const owner = loader.createScope({ name: 'owner' });
   materializeAssetBindings(loader, coreAssetBindings);
   return loader;
 }
@@ -63,7 +63,7 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('claims + queues each catalog leaf instead of fetching immediately, then heals in place on drain', async () => {
     const fetchMock = mockFetchImage();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     loader.setConcurrency(0); // park the queue so the divert is observable
 
@@ -88,7 +88,7 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('get() on a background-queued source boosts it past the parked queue and heals the SAME leaf', async () => {
     const fetchMock = mockFetchImage();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     loader.setConcurrency(0); // keep the queue parked so boost is observable
 
@@ -114,7 +114,7 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('foreground load(catalog) (no option) still fetches immediately — unchanged', async () => {
     const fetchMock = mockFetchImage();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     loader.setConcurrency(0); // background parked, but the foreground path ignores concurrency
 
@@ -131,7 +131,7 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('onProgress reports across a background catalog load', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const ticks: Array<[number, number]> = [];
 
     loader.onProgress.add((loaded, total) => ticks.push([loaded, total]));
@@ -144,7 +144,7 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('a value leaf (json) in a background catalog also defers then fills in place', async () => {
     const fetchMock = mockFetchJson({ hp: 9 });
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     loader.setConcurrency(0);
 
@@ -165,7 +165,7 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('releasing a background-queued catalog at refcount 0 drops the entry from the queue', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     loader.setConcurrency(0);
 

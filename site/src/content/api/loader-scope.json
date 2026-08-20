@@ -1,15 +1,15 @@
 {
   "title": "LoaderScope",
-  "description": "An owner of asset claims with an explicit lifetime. Assets acquired through a scope stay resident for as long as that scope holds them, and are freed when it releases them - but only if no other scope still holds the same asset. Several scopes can own one asset independently: they share a single fetch and a single resident payload, and one scope releasing never invalidates another. Take a scope with Loader.scope whenever an asset's lifetime is shorter than the application's - a level, a streamed chunk, a UI panel, a prefetch. Assets acquired directly on the Loader are held for the application's lifetime instead and are freed only when the loader is destroyed.",
+  "description": "An owner of asset claims with an explicit lifetime. Assets acquired through a scope stay resident for as long as that scope holds them, and are freed when it releases them - but only if no other scope still holds the same asset. Several scopes can own one asset independently: they share a single fetch and a single resident payload, and one scope releasing never invalidates another. Create a scope with Loader.createScope whenever an asset's lifetime is shorter than the application's - a level, a streamed chunk, a UI panel, a prefetch. Assets acquired directly on the Loader are held for the application's lifetime instead and are freed only when the loader is destroyed. A scope describes a lifetime, never a set of assets: what to acquire comes from an Assets catalog or an Asset descriptor passed to get / load, and typed access stays on that catalog. Scopes nest: createScope makes a child whose claims are independent but whose lifetime cannot outlive its parent's.",
   "symbol": "LoaderScope",
   "kind": "class",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 23,
+  "memberCount": 24,
   "counts": {
     "constructors": 0,
-    "methods": 16,
+    "methods": 17,
     "properties": 3,
     "events": 4
   },
@@ -21,7 +21,9 @@
       "paragraphs": [
         "An owner of asset claims with an explicit lifetime.",
         "Assets acquired through a scope stay resident for as long as that scope holds them, and are freed when it releases them - but only if no other scope still holds the same asset. Several scopes can own one asset independently: they share a single fetch and a single resident payload, and one scope releasing never invalidates another.",
-        "Take a scope with Loader.scope whenever an asset's lifetime is shorter than the application's - a level, a streamed chunk, a UI panel, a prefetch. Assets acquired directly on the Loader are held for the application's lifetime instead and are freed only when the loader is destroyed."
+        "Create a scope with Loader.createScope whenever an asset's lifetime is shorter than the application's - a level, a streamed chunk, a UI panel, a prefetch. Assets acquired directly on the Loader are held for the application's lifetime instead and are freed only when the loader is destroyed.",
+        "A scope describes a lifetime, never a set of assets: what to acquire comes from an Assets catalog or an Asset descriptor passed to get / load, and typed access stays on that catalog.",
+        "Scopes nest: createScope makes a child whose claims are independent but whose lifetime cannot outlive its parent's."
       ],
       "importLine": "import { LoaderScope } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,6 +32,57 @@
       "id": "methods",
       "title": "Methods",
       "members": [
+        {
+          "name": "createScope",
+          "signature": "createScope(options?: LoaderScopeOptions): LoaderScope",
+          "signatureTokens": [
+            {
+              "text": "createScope",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScopeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScope",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "LoaderScopeOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "LoaderScope",
+          "description": "Creates a child scope: an independent claim owner that cannot outlive this one. The child claims, shares and releases assets exactly like any other scope - one fetch, one resident payload, one claim per owner - and holding the same asset as its parent means two claims, not one. Destroying the child frees only the child's claims; destroying the parent destroys every child it still has first, recursively, so a scene or level teardown reaches the scopes created underneath it without extra bookkeeping. The hierarchy is a lifetime hierarchy only. It never affects asset identity, ownership or what a release frees."
+        },
         {
           "name": "destroy",
           "signature": "destroy(): void",
@@ -57,7 +110,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Releases every claim this scope still holds. Assets other scopes also hold stay resident."
+          "description": "Releases every claim this scope still holds and destroys any child scope it still has. Assets another scope also holds stay resident, and destroying an already-destroyed scope is a no-op."
         },
         {
           "name": "get",
@@ -1387,7 +1440,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Optional human-readable label, surfaced by Loader.inspect. Purely descriptive: two scopes taken under the same name are two independent owners, never the same scope. Naming a scope can therefore never make one consumer release another's claim."
+          "description": "Optional human-readable label, surfaced by Loader.inspect. Purely descriptive: two scopes created under the same name are two independent owners, never the same scope. Naming a scope can therefore never make one consumer release another's claim."
         }
       ],
       "paragraphs": [],

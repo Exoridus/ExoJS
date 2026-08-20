@@ -27,7 +27,7 @@ import type { CacheStrategy } from './CacheStrategy';
 import { type CanonicalAsset, type CanonicalAssetKey, canonicalAssetKey, canonicalizeSource } from './canonicalKey';
 import type { AssetConstructor } from './FactoryRegistry';
 import { LoadBatch } from './LoadBatch';
-import { LoaderScope } from './LoaderScope';
+import { LoaderScope, type LoaderScopeOptions } from './LoaderScope';
 import { LoadingQueue } from './LoadingQueue';
 import type { SeamlessAdapter } from './seamless';
 import { isAbortError } from './SharedAbort';
@@ -355,20 +355,22 @@ export class Loader {
   }
 
   /**
-   * Takes a new claim scope: an owner whose assets are freed when it is
+   * Creates a new claim scope: an owner whose assets are freed when it is
    * destroyed, rather than when the application ends.
    *
-   * Every call returns an independent owner. Two scopes taken under the same
-   * name are still two owners - a name is a label for diagnostics, never a
-   * lookup key - so one consumer can never release another's claim.
+   * Every call returns a new, independent owner - never a lookup of an existing
+   * one. Two scopes created under the same name are still two owners, because a
+   * name is a label for diagnostics and never an identifier, so one consumer can
+   * never release another's claim.
    *
    * Assets acquired directly on the loader are claimed for the application's
-   * lifetime instead, and released only by {@link destroy}.
+   * lifetime instead, and released only by {@link destroy}. Nest shorter
+   * lifetimes with {@link LoaderScope.createScope}.
    *
    * @example
    * ```ts
-   * const level = app.loader.scope('level-1');
-   * const hud = app.loader.scope('ui:hud');
+   * const level = app.loader.createScope({ name: 'level-1' });
+   * const hud = app.loader.createScope({ name: 'ui:hud' });
    *
    * const font = level.get('fonts/ui.png');
    * hud.get('fonts/ui.png'); // same instance, one fetch, two independent owners
@@ -376,8 +378,8 @@ export class Loader {
    * level.destroy(); // the font stays resident - the HUD still owns it
    * ```
    */
-  public scope(name?: string): LoaderScope {
-    return new LoaderScope(this, 'scope', name);
+  public createScope(options?: LoaderScopeOptions): LoaderScope {
+    return new LoaderScope(this, 'scope', options?.name);
   }
 
   // -----------------------------------------------------------------------

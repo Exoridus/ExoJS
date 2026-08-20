@@ -129,6 +129,57 @@
           "description": "Resolves when the low-priority background queue has fully drained — every leaf enqueued via load(target, { priority: LoadPriority.Background }) has finished loading (successfully or not). Kicks the queue first, so a concurrency change that left pending entries unstarted still makes progress. Individual asset errors are reported via onError but do not reject the returned promise."
         },
         {
+          "name": "createScope",
+          "signature": "createScope(options?: LoaderScopeOptions): LoaderScope",
+          "signatureTokens": [
+            {
+              "text": "createScope",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScopeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScope",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "LoaderScopeOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "LoaderScope",
+          "description": "Creates a new claim scope: an owner whose assets are freed when it is destroyed, rather than when the application ends. Every call returns a new, independent owner - never a lookup of an existing one. Two scopes created under the same name are still two owners, because a name is a label for diagnostics and never an identifier, so one consumer can never release another's claim. Assets acquired directly on the loader are claimed for the application's lifetime instead, and released only by destroy. Nest shorter lifetimes with LoaderScope.createScope."
+        },
+        {
           "name": "destroy",
           "signature": "destroy(): void",
           "signatureTokens": [
@@ -1820,57 +1871,6 @@
           ],
           "returnType": "this",
           "description": "Registers an extension→type override for bare-path resolution, scoped to **this Loader instance only**: it applies to bare paths passed to this loader's get(…) / load(…), and takes precedence over both the type declared by the bindAsset binding that claimed the suffix and the global defineAsset default. It does NOT affect loader-free catalog construction — Assets.from('level.json') has no loader to consult and always resolves through the global table. Use Asset.type(type, source) there instead. type is the string AssetDefinitions discriminator, not a constructor. This call does not install a handler; a core/extension binding must still provide the named type. Repeating the same pair is idempotent, while changing an existing explicit override to another type throws. Use Asset.type(...) for a one-off exception."
-        },
-        {
-          "name": "scope",
-          "signature": "scope(name?: string): LoaderScope",
-          "signatureTokens": [
-            {
-              "text": "scope",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "name",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "LoaderScope",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "name",
-              "type": "string",
-              "optional": true
-            }
-          ],
-          "returnType": "LoaderScope",
-          "description": "Takes a new claim scope: an owner whose assets are freed when it is destroyed, rather than when the application ends. Every call returns an independent owner. Two scopes taken under the same name are still two owners - a name is a label for diagnostics, never a lookup key - so one consumer can never release another's claim. Assets acquired directly on the loader are claimed for the application's lifetime instead, and released only by destroy."
         },
         {
           "name": "setConcurrency",

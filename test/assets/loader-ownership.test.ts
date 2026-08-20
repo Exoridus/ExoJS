@@ -59,8 +59,8 @@ describe('multi-consumer ownership', () => {
   test('two scopes acquiring one asset share a single fetch and a single resident payload', async () => {
     const calls = mockFetch();
     const loader = createCoreLoader();
-    const a = loader.scope('a');
-    const b = loader.scope('b');
+    const a = loader.createScope({ name: 'a' });
+    const b = loader.createScope({ name: 'b' });
 
     const first = a.get('hero.png');
     const second = b.get('hero.png');
@@ -76,7 +76,7 @@ describe('multi-consumer ownership', () => {
   test('get() and load() racing on one source in the same tick fetch it once', async () => {
     const calls = mockFetch();
     const loader = createCoreLoader();
-    const scope = loader.scope();
+    const scope = loader.createScope();
 
     const handle = scope.get('hero.png');
     const queued = scope.load(Asset.type('texture', 'hero.png'));
@@ -90,8 +90,8 @@ describe('multi-consumer ownership', () => {
   test('one scope releasing leaves the other consumer fully valid', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const a = loader.scope('a');
-    const b = loader.scope('b');
+    const a = loader.createScope({ name: 'a' });
+    const b = loader.createScope({ name: 'b' });
 
     const handle = a.get('hero.png');
     b.get('hero.png');
@@ -108,8 +108,8 @@ describe('multi-consumer ownership', () => {
   test('the last owner releasing frees the payload and re-arms the handle in place', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const a = loader.scope('a');
-    const b = loader.scope('b');
+    const a = loader.createScope({ name: 'a' });
+    const b = loader.createScope({ name: 'b' });
 
     const handle = a.get('hero.png');
     b.get('hero.png');
@@ -127,8 +127,8 @@ describe('multi-consumer ownership', () => {
   test('destroy() releases only that scope claims', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const level = loader.scope('level');
-    const hud = loader.scope('hud');
+    const level = loader.createScope({ name: 'level' });
+    const hud = loader.createScope({ name: 'hud' });
 
     const shared = level.get('shared.png');
     const private_ = level.get('private.png');
@@ -147,7 +147,7 @@ describe('multi-consumer ownership', () => {
   test('a released scope can be released again without effect', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const scope = loader.scope();
+    const scope = loader.createScope();
     const catalog = new Assets({ hero: { type: 'texture', source: 'hero.png' } });
 
     await scope.load(catalog);
@@ -166,7 +166,7 @@ describe('multi-consumer ownership', () => {
     const loader = createCoreLoader();
 
     for (let i = 0; i < 3; i++) {
-      const scope = loader.scope(`cycle-${i}`);
+      const scope = loader.createScope({ name: `cycle-${i}` });
       const handle = scope.get('hero.png');
 
       await handle.loaded;
@@ -181,8 +181,8 @@ describe('dependent asset ownership', () => {
   test('a sub-asset outlives the scope that happened to start the parent load', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const first = loader.scope('first');
-    const second = loader.scope('second');
+    const first = loader.createScope({ name: 'first' });
+    const second = loader.createScope({ name: 'second' });
 
     // `first` starts the font load; `second` joins the very same request.
     const [font] = await Promise.all([first.load(Asset.type('bmFont', 'fonts/ui.fnt')), second.load(Asset.type('bmFont', 'fonts/ui.fnt'))]);
@@ -200,7 +200,7 @@ describe('dependent asset ownership', () => {
   test('a sub-asset is released once the asset that pulled it in loses its last owner', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const scope = loader.scope('only');
+    const scope = loader.createScope({ name: 'only' });
 
     const font = await scope.load(Asset.type('bmFont', 'fonts/ui.fnt'));
     const page = font.textures[0]!;
@@ -217,8 +217,8 @@ describe('dependent asset ownership', () => {
   test('a sub-asset an independent owner also holds survives its parent', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const scope = loader.scope('font-owner');
-    const pageOwner = loader.scope('page-owner');
+    const scope = loader.createScope({ name: 'font-owner' });
+    const pageOwner = loader.createScope({ name: 'page-owner' });
 
     const font = await scope.load(Asset.type('bmFont', 'fonts/ui.fnt'));
     const page = pageOwner.get('fonts/page0.png') as Texture;
@@ -236,8 +236,8 @@ describe('ownership diagnostics', () => {
   test('inspect() names every owner of a shared asset', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const level = loader.scope('level-1');
-    const hud = loader.scope('ui:hud');
+    const level = loader.createScope({ name: 'level-1' });
+    const hud = loader.createScope({ name: 'ui:hud' });
 
     const handle = level.get('hero.png');
     hud.get('hero.png');
@@ -258,7 +258,7 @@ describe('ownership diagnostics', () => {
   test('inspect() reports the canonical key, locator and every alias that named it', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const scope = loader.scope();
+    const scope = loader.createScope();
 
     const handle = scope.get('hero.png');
     scope.get('./sub/../hero.png');
@@ -277,8 +277,8 @@ describe('per-scope load progress', () => {
   test('a scope reports its own batch while the loader reports the aggregate', async () => {
     mockFetch();
     const loader = createCoreLoader();
-    const level = loader.scope('level');
-    const hud = loader.scope('hud');
+    const level = loader.createScope({ name: 'level' });
+    const hud = loader.createScope({ name: 'hud' });
 
     const levelProgress: number[] = [];
     const loaderProgress: number[] = [];
@@ -302,7 +302,7 @@ describe('per-scope load progress', () => {
 
   test('a failing asset reports through the acquiring scope', async () => {
     const loader = createCoreLoader();
-    const scope = loader.scope('level');
+    const scope = loader.createScope({ name: 'level' });
     const errors: string[] = [];
 
     global.fetch = vi.fn(

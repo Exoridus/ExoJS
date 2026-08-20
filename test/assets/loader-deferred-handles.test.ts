@@ -8,7 +8,7 @@ import { Texture } from '#rendering/texture/Texture';
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling suites). */
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  const owner = loader.scope('owner');
+  const owner = loader.createScope({ name: 'owner' });
   materializeAssetBindings(loader, coreAssetBindings);
   return loader;
 }
@@ -75,7 +75,7 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
 
   test('A4: an evicted handle is re-registered WEAKLY (WeakHandleSet), not in a strong Set', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const key = keyOf(loader, 'x.png');
 
     const handle = owner.get('x.png');
@@ -95,7 +95,7 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
 
   test('A4: identity still heals in place after eviction (weak retention keeps the live handle)', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     const handle = owner.get('x.png');
     await handle.loaded;
@@ -114,7 +114,7 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
   // above covers the wiring; only this one proves the reclamation happens.
   test('A4: a fully-released evicted handle is pruned from _deferred by the GC', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const key = keyOf(loader, 'orphan.png');
 
     let handle: Texture | null = owner.get('orphan.png');
@@ -139,7 +139,7 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
 
   test('A5: a co-handle adopted from a stored donor appears in the deferred set', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const key = keyOf(loader, 'x.png');
 
     // Donor stored first (loaded elsewhere before the co-handle is adopted).
@@ -151,7 +151,7 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
     const coHandle = createLeaf('texture', 'x.png') as Texture;
     expect(coHandle).not.toBe(donor);
 
-    loader._adopt(coHandle, loader.scope('adopter'));
+    loader._adopt(coHandle, loader.createScope({ name: 'adopter' }));
 
     // Filled in place from the stored donor…
     expect(coHandle.loadState).toBe('ready');
@@ -164,9 +164,9 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
 
   test('A5: a co-handle is evicted AND healed alongside the donor across an eviction cycle', async () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const key = keyOf(loader, 'x.png');
-    const adopter = loader.scope('adopter');
+    const adopter = loader.createScope({ name: 'adopter' });
 
     const donor = owner.get('x.png'); // claims under the app-lifetime root scope
     await donor.loaded;

@@ -626,7 +626,7 @@ describe('Asset / Assets identity and alias semantics', () => {
       logo: { type: 'texture', source: 'logo.png' },
     });
 
-    const scope = loader.scope();
+    const scope = loader.createScope();
 
     await scope.load(container);
 
@@ -1113,7 +1113,7 @@ describe('keyFor()', () => {
 describe('LoaderScope.release() edge cases', () => {
   test('release(asset) is a no-op when the asset type was never registered', () => {
     const loader = new Loader({ basePath: '/' });
-    const scope = loader.scope();
+    const scope = loader.createScope();
     const orphan = new Asset({ type: 'mockAsset', source: 'x.dat' });
 
     expect(() => scope.release(orphan)).not.toThrow();
@@ -1121,7 +1121,7 @@ describe('LoaderScope.release() edge cases', () => {
 
   test('release(asset) is a no-op when the asset was never loaded, and is idempotent', () => {
     const loader = new Loader({ basePath: '/' });
-    const scope = loader.scope();
+    const scope = loader.createScope();
 
     loader.bindAsset<string>({ ctor: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
 
@@ -1137,7 +1137,7 @@ describe('LoaderScope.release() edge cases', () => {
     // thrown. A bare loader (no core bindings) never adopted the leaf, so its
     // release finds no registered key and does nothing.
     const loader = new Loader({ basePath: '/' });
-    const scope = loader.scope();
+    const scope = loader.createScope();
     const container = new Assets({ orphan: { type: 'texture', source: 'x.png' } });
 
     expect(() => scope.release(container)).not.toThrow();
@@ -1146,7 +1146,7 @@ describe('LoaderScope.release() edge cases', () => {
   test('release(assets) is a silent no-op when the container was never adopted/loaded', () => {
     // Releasing entries that were never tracked does nothing.
     const loader = createCoreLoader({ basePath: '/' });
-    const scope = loader.scope();
+    const scope = loader.createScope();
     const container = new Assets({ orphan: { type: 'texture', source: 'never.png' } });
 
     expect(() => scope.release(container)).not.toThrow();

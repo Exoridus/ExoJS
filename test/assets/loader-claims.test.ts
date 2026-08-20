@@ -10,7 +10,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts). */
 function createCoreLoader(options?: LoaderOptions): Loader {
   const loader = new Loader(options);
-  const owner = loader.scope('owner');
+  const owner = loader.createScope({ name: 'owner' });
   materializeAssetBindings(loader, coreAssetBindings);
   return loader;
 }
@@ -49,7 +49,7 @@ describe('seamless Sound', () => {
   test('get(Sound, src) hands out a deferred, healing Sound', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     const handle = owner.get('boom.ogg');
 
@@ -65,7 +65,7 @@ describe('seamless Sound', () => {
 
   test("get('boom.ogg') infers Sound via extension", () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     expectTypeOf(owner.get('boom.ogg')).toEqualTypeOf<Sound>();
     expectTypeOf(owner.get('music/track.mp3')).toEqualTypeOf<Sound>();
@@ -91,7 +91,7 @@ describe('refcount / claims', () => {
   test('app.loader.get claims under app lifetime; release() at refcount 0 evicts the payload', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const handle = owner.get('boom.ogg');
     await handle.loaded;
     expect(handle.audioBuffer).not.toBeNull();
@@ -104,7 +104,7 @@ describe('refcount / claims', () => {
   test('claiming again re-fetches into the SAME handle (in-place heal)', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const handle = owner.get('boom.ogg');
     await handle.loaded;
     owner.release(handle);
@@ -125,7 +125,7 @@ describe('refcount / claims', () => {
     // eviction queue-drop splice is actually exercised (at the default cap of 6
     // all three drain synchronously and the queue is already empty).
     const loader = createCoreLoader({ concurrency: 1 });
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     owner.load(Assets.from({ a: 'a.ogg', b: 'b.ogg', c: 'c.ogg' }), { priority: LoadPriority.Background });
 
     expect(loader['_residency']['_isQueuedInBackground'](loader['_canonicalize'](Sound, 'c.ogg').key)).toBe(true); // still queued behind the cap
@@ -136,9 +136,9 @@ describe('refcount / claims', () => {
   test('two distinct claim scopes keep the payload until both release', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
-    const scopeA = loader.scope('A');
-    const scopeB = loader.scope('B');
+    const owner = loader.createScope({ name: 'owner' });
+    const scopeA = loader.createScope({ name: 'A' });
+    const scopeB = loader.createScope({ name: 'B' });
     const handle = loader._getClaimed(scopeA, Asset.type('sound', 'boom.ogg')) as Sound;
     loader._getClaimed(scopeB, Asset.type('sound', 'boom.ogg'));
     await handle.loaded;
@@ -152,7 +152,7 @@ describe('refcount / claims', () => {
   test('release while the fetch is still in flight frees the handle on arrival (§4.7)', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const key = loader['_canonicalize'](Sound, 'boom.ogg').key;
 
     const handle = owner.get('boom.ogg');
@@ -182,7 +182,7 @@ describe('refcount / claims', () => {
   test('a concurrent load in the reclaim window does not overwrite the healed handle (identity race)', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     const key = loader['_canonicalize'](Sound, 'boom.ogg').key;
 
     const handle = owner.get('boom.ogg');
@@ -215,7 +215,7 @@ describe('refcount / claims', () => {
   test('in-flight arrival at refcount 0 frees immediately but .loaded still resolves (§4.7)', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     const handle = owner.get('boom.ogg');
     // Capture the pending .loaded before releasing: this is the promise the fill
@@ -233,14 +233,14 @@ describe('refcount / claims', () => {
 
   test('release of an unheld key is a no-op (no throw)', () => {
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
     expect(() => owner.release(Sound, 'never.ogg')).not.toThrow();
   });
 
   test('Texture eviction frees the source and heals on re-get', async () => {
     mockFetchAudio(); // arrayBuffer response feeds the stubbed createImageBitmap
     const loader = createCoreLoader();
-    const owner = loader.scope('owner');
+    const owner = loader.createScope({ name: 'owner' });
 
     const handle = owner.get('x.png');
     await handle.loaded;
