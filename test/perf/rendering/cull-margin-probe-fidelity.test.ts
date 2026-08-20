@@ -6,7 +6,7 @@
  * drifts silently: a changed grid inset or camera path would leave every margin
  * number in the calibration report describing a scene the benchmark no longer
  * runs, with nothing failing. So the copy is pinned here against the bench's own
- * `world.ts` — the single source both the harness page and every arm use.
+ * `world.ts` - the single source both the harness page and every arm use.
  *
  * Type-only import chain: `world.ts` pulls one `type` from `EngineAdapter`,
  * which pulls one `type` from `shared/result`, and neither reaches a competitor

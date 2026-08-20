@@ -1,6 +1,6 @@
 /**
  * The retention tiers must answer every camera operation with the set of nodes
- * the view actually contains — not just the small continuous step the capture
+ * the view actually contains - not just the small continuous step the capture
  * margin is tuned for.
  *
  * The margin makes a capture (and an indexed selection) valid for a RANGE of
@@ -13,7 +13,7 @@
  *
  * - **The tier is right.** An operation that leaves the valid range must NOT be
  *   answered by a replay. This is the one a stale product fails, and it is
- *   exact — the probe reads which branch the builder took, not a symptom.
+ *   exact - the probe reads which branch the builder took, not a symptom.
  * - **The set is complete.** The frame must submit at least every leaf whose
  *   quad meets the view, computed analytically from the scene's own layout. The
  *   tiers may legitimately submit MORE (a node that has left the view since the
@@ -114,7 +114,7 @@ const cold = (ops: readonly CameraOp[]): FrameResult => {
   return render(fixture);
 };
 
-/** Every leaf whose quad meets `harness`'s current view — the floor no tier may fall below. */
+/** Every leaf whose quad meets `harness`'s current view - the floor no tier may fall below. */
 const analyticVisible = (harness: WebGl2Harness): number => {
   const columns = Math.max(1, Math.ceil(Math.sqrt(NODE_COUNT)));
   const rows = Math.max(1, Math.ceil(NODE_COUNT / columns));

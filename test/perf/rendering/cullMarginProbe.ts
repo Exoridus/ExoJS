@@ -84,8 +84,8 @@ export const reflect = (value: number, span: number): number => {
 
 /**
  * Camera centre for `frame`, as a closed form in the frame index. The camera
- * travels the diagonal at `speed` world units per frame — equal per-axis
- * components of a unit diagonal — and reflects off the world edges.
+ * travels the diagonal at `speed` world units per frame - equal per-axis
+ * components of a unit diagonal - and reflects off the world edges.
  */
 export const cameraCenterAt = (frame: number, speed: number, worldSpan: number): { x: number; y: number } => {
   const worldW = VIEWPORT_WIDTH * worldSpan;
@@ -98,7 +98,7 @@ export const cameraCenterAt = (frame: number, speed: number, worldSpan: number):
   };
 };
 
-/** Leaves whose quad intersects the view rect at `frame` — the on-screen count. */
+/** Leaves whose quad intersects the view rect at `frame` - the on-screen count. */
 export const visibleLeafCount = (nodeCount: number, frame: number, speed: number, worldSpan: number): number => {
   const layout = gridLayout(nodeCount, VIEWPORT_WIDTH * worldSpan, VIEWPORT_HEIGHT * worldSpan, GRID_MARGIN);
   const centre = cameraCenterAt(frame, speed, worldSpan);
@@ -184,7 +184,7 @@ interface BuilderInternals {
 
 // Cast to the internals shape ALONE, never to an intersection with the class:
 // `_captureCullRect` is `private` on `RenderPlanBuilder` and public here, and TypeScript
-// reduces such an intersection to `never` — after which every member access on it is an
+// reduces such an intersection to `never` - after which every member access on it is an
 // error (TS2339). The `unknown` hop is what makes the reinterpretation legal.
 const originalInflate = (RenderPlanBuilder.prototype as unknown as BuilderInternals)._inflateCaptureCullRect;
 
@@ -215,7 +215,7 @@ export const restoreCaptureMargin = (): void => {
  * so a root falls to the capture / source-selection tiers instead.
  *
  * `scrolling-world` qualifies for persistent slots, and a qualifying root never
- * reaches the capture tier at all — which would leave the tier the capture
+ * reaches the capture tier at all - which would leave the tier the capture
  * margin is NAMED after unmeasured. Refusing here rather than deforming the
  * scene (mixed z, a non-group sibling) keeps the two runs comparable: identical
  * geometry, identical camera, one tier apart.
@@ -297,7 +297,7 @@ interface PlanBuilderPrivate {
  *
  * Cheap by construction: each wrapper runs once per render root per frame and
  * does one boolean write, so the accounting can stay installed while the same
- * run is timed. The alternative — a second, uninstrumented run — would compare
+ * run is timed. The alternative - a second, uninstrumented run - would compare
  * two different JIT histories, which is the exact hazard `run-allocation-cell`
  * documents for this scene.
  */
@@ -389,7 +389,7 @@ export const beginProbeFrame = (): void => {
   probeState.captured = false;
 };
 
-/** Which tier answered one frame — the return of {@link endProbeFrame}. */
+/** Which tier answered one frame - the return of {@link endProbeFrame}. */
 export type ServedBy = 'slotReplay' | 'slotReselect' | 'captureReplay' | 'sourceSelect' | 'fullCollect';
 
 /**
@@ -433,7 +433,7 @@ export const endProbeFrame = (root: RenderNode): ServedBy => {
 
   // Only a frame that actually queried has a delta worth folding. Both replay
   // tiers leave the previous selection's numbers in place, so folding them
-  // would count the same query once per frame it stayed valid for — which is
+  // would count the same query once per frame it stayed valid for - which is
   // precisely the quantity the margin is supposed to reduce.
   if (served === 'slotReplay' || served === 'captureReplay') {
     return served;

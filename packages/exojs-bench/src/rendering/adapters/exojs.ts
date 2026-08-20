@@ -211,8 +211,8 @@ const buildViewGrid = (count: number): View[] => {
  * The calibration arms exist because `RETAINED_CULL_MARGIN_RATIO` is a module
  * constant in the engine: sweeping it would otherwise mean one source edit and
  * one build per point, which is not a comparison. The arm patches the builder's
- * private inflation step instead — the harness page imports engine SOURCE
- * through the `#` alias, so the same object the engine uses is reachable — and
+ * private inflation step instead - the harness page imports engine SOURCE
+ * through the `#` alias, so the same object the engine uses is reachable - and
  * every other arm, the production default included, is left untouched.
  */
 export type ExoJsAdapterConfig = 'current' | 'retained' | `cull-margin-${string}`;

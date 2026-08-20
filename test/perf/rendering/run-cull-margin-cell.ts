@@ -78,7 +78,7 @@ gc?.();
 const heapBefore = process.memoryUsage().heapUsed;
 const totals = installTierProbe();
 const samples = new Float64Array(frames);
-/** Timings split by which tier served the frame — the replay/miss contrast O45 is about. */
+/** Timings split by which tier served the frame: the replay/miss contrast the sweep is about. */
 const replaySamples: number[] = [];
 const missSamples: number[] = [];
 
@@ -125,7 +125,7 @@ const heapAfter = process.memoryUsage().heapUsed;
 const sorted = Float64Array.from(samples).sort();
 const at = (percentile: number): number => sorted[Math.max(0, Math.ceil((percentile / 100) * sorted.length) - 1)]!;
 
-/** Count, median, mean and worst of one tier's frames — `null` when it served none. */
+/** Count, median, mean and worst of one tier's frames - `null` when it served none. */
 const summarize = (values: readonly number[]): { count: number; median: number; mean: number; max: number } | null => {
   if (values.length === 0) {
     return null;

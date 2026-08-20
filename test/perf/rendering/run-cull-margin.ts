@@ -2,13 +2,12 @@
  * Capture-margin sweep driver.
  *
  * Spawns one {@link file://./run-cull-margin-cell.ts} process per
- * (margin, nodeCount, cameraSpeed) point — see that file for why a cell owns its
- * process — collects the JSON each prints, and writes a Markdown table plus the
+ * (margin, nodeCount, cameraSpeed) point - see that file for why a cell owns its
+ * process - collects the JSON each prints, and writes a Markdown table plus the
  * raw JSONL.
  *
  *   pnpm perf:renderers:cull-margin [--margins 0,0.0625,0.125] [--nodes 25000,100000]
- *                                   [--speeds 8] [--frames 300] [--warmup 60] [--repeats 3]
- *                                   [--out .workspace/output/cull-margin]
+ *                                   [--speeds 8] [--frames 300] [--warmup 60] [--repeats 3] [--out <dir>]
  *
  * @internal Test/perf-only.
  */
@@ -100,7 +99,7 @@ for (const nodes of nodeCounts) {
   }
 }
 
-/** Median of a numeric series — the repeats are combined, never averaged. */
+/** Median of a numeric series - the repeats are combined, never averaged. */
 const median = (values: number[]): number => {
   const sorted = [...values].sort((a, b) => a - b);
 

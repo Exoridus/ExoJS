@@ -1,11 +1,11 @@
 /**
- * The capture tier's SECOND view tolerance — the one the capture cull rect
+ * The capture tier's SECOND view tolerance - the one the capture cull rect
  * cannot express.
  *
  * `RetainedRootRepresentation.isCleanIgnoringTransform` accepts a moved view two
  * ways. The first is the capture margin: the view still fits the rect the
- * capture culled against. The second is `_keptBounds` — nothing was culled and
- * the view still contains every kept node — and it exists for the case the first
+ * capture culled against. The second is `_keptBounds` - nothing was culled and
+ * the view still contains every kept node - and it exists for the case the first
  * one structurally cannot cover: a view that GREW past the capture rect.
  *
  * That distinction decides what the two fields are. `_keptBounds` / `_keptEmpty`
@@ -43,7 +43,7 @@ const VIEW_HEIGHT = 600;
 const live: Array<{ harness: WebGl2Harness; root: Container }> = [];
 
 /**
- * A handful of sprites clustered in the middle of the view, plus — when asked —
+ * A handful of sprites clustered in the middle of the view, plus - when asked -
  * one far enough away that the capturing collect has to drop it.
  */
 const openScene = (withOffscreen: boolean): { harness: WebGl2Harness; root: Container } => {
