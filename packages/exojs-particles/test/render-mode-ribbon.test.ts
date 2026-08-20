@@ -5,13 +5,13 @@ import { RibbonParticles } from '../src/renderModes/RibbonParticles';
 
 const spawnChain = (system: ParticleSystem, count: number): void => {
   for (let i = 0; i < count; i++) {
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.posX[slot] = i * 10;
-    system.posY[slot] = 0;
-    system.scaleX[slot] = 1;
-    system.scaleY[slot] = 1;
-    system.lifetime[slot] = 5;
+    system._storage.posX[slot] = i * 10;
+    system._storage.posY[slot] = 0;
+    system._storage.scaleX[slot] = 1;
+    system._storage.scaleY[slot] = 1;
+    system._storage.lifetime[slot] = 5;
   }
 };
 
@@ -29,7 +29,7 @@ describe('RibbonParticles', () => {
     const mode = new RibbonParticles({ width: 4 });
 
     spawnChain(system, 5);
-    mode.build(system);
+    mode.build(system, system._storage);
 
     expect(mode.count).toBe(10);
   });
@@ -39,7 +39,7 @@ describe('RibbonParticles', () => {
     const mode = new RibbonParticles();
 
     spawnChain(system, 1);
-    mode.build(system);
+    mode.build(system, system._storage);
 
     expect(mode.count).toBe(0);
   });
@@ -49,7 +49,7 @@ describe('RibbonParticles', () => {
     const mode = new RibbonParticles({ width: 4 });
 
     spawnChain(system, 2);
-    mode.build(system);
+    mode.build(system, system._storage);
 
     const floats = new Float32Array(mode.data);
     // Path runs along +X, so the pair straddles it in Y by half of width * scaleX.
@@ -63,9 +63,9 @@ describe('RibbonParticles', () => {
 
     spawnChain(system, 3);
     // Uneven spacing: 10 units to the second particle, 90 to the third.
-    system.posX[2] = 100;
+    system._storage.posX[2] = 100;
 
-    mode.build(system);
+    mode.build(system, system._storage);
 
     const floats = new Float32Array(mode.data);
     const u = (particle: number): number => floats[particle * 2 * mode.floatsPerVertex + 2]!;
@@ -80,7 +80,7 @@ describe('RibbonParticles', () => {
     const mode = new RibbonParticles();
 
     spawnChain(system, 2);
-    mode.build(system);
+    mode.build(system, system._storage);
 
     const floats = new Float32Array(mode.data);
 
@@ -93,10 +93,10 @@ describe('RibbonParticles', () => {
     const mode = new RibbonParticles();
 
     spawnChain(system, 2);
-    system.color[0] = 0xff0000ff;
-    system.color[1] = 0xff00ff00;
+    system._storage.color[0] = 0xff0000ff;
+    system._storage.color[1] = 0xff00ff00;
 
-    mode.build(system);
+    mode.build(system, system._storage);
 
     const words = new Uint32Array(mode.data);
 
@@ -111,9 +111,9 @@ describe('RibbonParticles', () => {
     const mode = new RibbonParticles({ width: 4 });
 
     spawnChain(system, 2);
-    system.scaleX[1] = 0.5;
+    system._storage.scaleX[1] = 0.5;
 
-    mode.build(system);
+    mode.build(system, system._storage);
 
     const floats = new Float32Array(mode.data);
 
@@ -128,9 +128,9 @@ describe('RibbonParticles', () => {
     spawnChain(system, 3);
     // The first two particles share a position, so the head has no direction
     // and no previous one to inherit.
-    system.posX[1] = 0;
+    system._storage.posX[1] = 0;
 
-    mode.build(system);
+    mode.build(system, system._storage);
 
     expect(mode.count).toBe(4);
   });

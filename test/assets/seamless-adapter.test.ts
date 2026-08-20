@@ -18,8 +18,8 @@ describe('textureSeamlessAdapter', () => {
     expect(handle.height).toBe(0);
   });
 
-  test('createPlaceholder applies the handle-OWN sampler options from samplerOptions', () => {
-    const handle = textureSeamlessAdapter.createPlaceholder({ samplerOptions: { flipY: true, generateMipMap: false } });
+  test('createPlaceholder applies the handle-OWN sampler options from textureOptions', () => {
+    const handle = textureSeamlessAdapter.createPlaceholder({ textureOptions: { flipY: true, generateMipMap: false } });
 
     expect(handle.flipY).toBe(true);
     expect(handle.generateMipMap).toBe(false);
@@ -28,7 +28,7 @@ describe('textureSeamlessAdapter', () => {
   test('fill transplants ONLY the decoded source and settles ready — the handle keeps its own sampler', async () => {
     // Per-handle sampler: the placeholder carries flipY:false; fill must NOT copy
     // the donor's flipY:true (shared decode, independent samplers).
-    const handle = textureSeamlessAdapter.createPlaceholder({ samplerOptions: { flipY: false, generateMipMap: true } });
+    const handle = textureSeamlessAdapter.createPlaceholder({ textureOptions: { flipY: false, generateMipMap: true } });
     const versionBefore = handle.version;
     const canvas = document.createElement('canvas');
 

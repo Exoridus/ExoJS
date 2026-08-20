@@ -1,4 +1,4 @@
-﻿import type { ParticleSystem } from "#ParticleSystem";
+﻿import type { ParticleBatch } from "#ParticleStorage";
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
@@ -33,13 +33,15 @@ export class Turbulence extends UpdateModule {
     this.timeScale = timeScale;
   }
 
-  public override apply(system: ParticleSystem, dt: number): void {
+  public override apply(particles: ParticleBatch, dt: number): void {
     this._time += dt * this.timeScale;
     const t = this._time;
     const f = this.frequency;
     const s = this.strength * dt;
 
-    const { posX, posY, velX, velY, liveCount } = system;
+    const { x: posX, y: posY } = particles.position;
+    const { x: velX, y: velY } = particles.velocity;
+    const liveCount = particles.count;
 
     for (let i = 0; i < liveCount; i++) {
       const x = (posX[i] ?? 0) * f;

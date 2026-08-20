@@ -49,12 +49,12 @@ describe('DataTexture', () => {
       expect(tex.premultiplyAlpha).toBe(false);
     });
 
-    test('samplerOptions overrides defaults', () => {
+    test('textureOptions overrides defaults', () => {
       const tex = new DataTexture({
         width: 4,
         height: 4,
         format: TextureFormat.R8,
-        samplerOptions: { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.Repeat },
+        textureOptions: { scaleMode: ScaleModes.Linear, wrapMode: WrapModes.Repeat },
       });
       expect(tex.scaleMode).toBe(ScaleModes.Linear);
       expect(tex.wrapMode).toBe(WrapModes.Repeat);

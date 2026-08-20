@@ -1,6 +1,5 @@
 import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 
-import type { Asset } from './Asset';
 import type { AssetDefinitions } from './AssetDefinitions';
 import { getExtensionKind, normalizeExtension } from './extensionKindRegistry';
 import type { AssetConstructor } from './FactoryRegistry';
@@ -10,8 +9,8 @@ import type { SeamlessAdapter } from './seamless';
 /** Stored entry for handler-based asset bindings (via `bindAsset`). */
 export interface HandlerEntry {
   load: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>;
-  /** Optional discriminator for in-flight identity keying; overrides source-only default. */
-  getIdentityKey?: (config: unknown) => string;
+  /** Optional identity-relevant discriminator appended to the canonical key; absent means type + locator alone. */
+  getIdentityDiscriminator?: (source: string, options: unknown) => string;
   /** Optional byte-source constructor used by container loading (bypasses fetch). */
   createFromBytes?: (bytes: ArrayBuffer, options?: unknown) => Promise<unknown>;
   /** Optional per-resource teardown, invoked by `AssetResidency` when a value asset of this type is evicted at refcount 0. */
@@ -150,7 +149,7 @@ export class AssetTypeRegistry {
    * Erase one {@link AssetHandler}'s typed surface into the flat
    * {@link HandlerEntry} every dispatch path reads. Each optional hook is
    * carried over only when the handler actually implements it, so a missing
-   * `getIdentityKey`/`createFromBytes`/`dispose` stays `undefined` on the entry
+   * `getIdentityDiscriminator`/`createFromBytes`/`dispose` stays `undefined` on the entry
    * rather than becoming a wrapper that calls nothing.
    *
    * This is the single type-erasure boundary of the binding install: the
@@ -158,7 +157,7 @@ export class AssetTypeRegistry {
    * public `AssetHandler<Result, Options>` interface uses
    * `AssetLoadRequest<Options> = { source, options? }`. The `toRequest` helper
    * below is the only place the erased flat config is cast back to the typed
-   * request — justified by the `AssetBinding<Result, Options>` contract that
+   * request - justified by the `AssetBinding<Result, Options>` contract that
    * associates this handler's `Options` with the registered constructor.
    */
   private _createHandlerEntry<Result, Options>(handler: AssetHandler<Result, Options>, storageName: string | undefined): HandlerEntry {
@@ -172,13 +171,15 @@ export class AssetTypeRegistry {
       return { source, options: rest as Options };
     };
 
-    const boundIdentityKey = handler.getIdentityKey?.bind(handler);
+    const boundDiscriminator = handler.getIdentityDiscriminator?.bind(handler);
     const boundCreateFromBytes = handler.createFromBytes?.bind(handler);
     const boundDispose = handler.dispose?.bind(handler);
 
     return {
       load: (config, ctx) => handler.load(toRequest(config), ctx),
-      ...(boundIdentityKey && { getIdentityKey: (config: unknown) => boundIdentityKey(toRequest(config)) }),
+      ...(boundDiscriminator && {
+        getIdentityDiscriminator: (source: string, options: unknown) => boundDiscriminator({ source, options: options as Options }),
+      }),
       ...(boundCreateFromBytes && { createFromBytes: (bytes: ArrayBuffer, options?: unknown) => boundCreateFromBytes(bytes, options as Options) }),
       ...(boundDispose && { dispose: (resource: unknown) => boundDispose(resource as Result) }),
       ...(storageName !== undefined && { storageName }),
@@ -232,28 +233,18 @@ export class AssetTypeRegistry {
     return typeId;
   }
 
-  /** @internal */
-  public _key(type: AssetConstructor, alias: string): string {
-    return `${this._getTypeId(type)}:${alias}`;
-  }
-
-  /** @internal */
-  public _identityKey(type: AssetConstructor, source: string): string {
-    return `id:${this._getTypeId(type)}:${source}`;
-  }
-
   /**
-   * Resolves the effective identity key for an `Asset<T>` reference. For
-   * handler types with `getIdentityKey`, the config-sensitive discriminator
-   * is used; otherwise source is the discriminator (same as `_identityKey`).
+   * The identity-relevant discriminator the bound handler contributes for a
+   * request, or `undefined` when the type identifies by source alone. The core
+   * always owns `type + locator`; a handler may only widen a key, never
+   * replace it.
    * @internal
    */
-  public _resolveAssetIdentityKey(type: AssetConstructor, asset: Asset<unknown>): string {
-    const rawConfig = asset._config as Record<string, unknown>;
-    const handlerEntry = this._handlerFunctions.get(type);
-    const discriminator = handlerEntry?.getIdentityKey?.(rawConfig) ?? asset.source;
-
-    return `id:${this._getTypeId(type)}:${discriminator}`;
+  public _identityDiscriminator(type: AssetConstructor, source: string, options?: unknown): string | undefined {
+    // The options object is handed over untouched rather than merged into a flat
+    // config: canonicalization runs on every request, so it must not walk (and
+    // possibly trip over) properties no type declares as identity-relevant.
+    return this._handlerFunctions.get(type)?.getIdentityDiscriminator?.(source, options);
   }
 
   /**

@@ -3,6 +3,7 @@ import { ActionMap } from '#input/actions/ActionMap';
 import { ChordAction } from '#input/actions/ChordAction';
 import { SequenceAction } from '#input/actions/SequenceAction';
 import type { ActionSample, ChannelEvent } from '#input/actions/types';
+import { Gamepad } from '#input/Gamepad';
 import { GamepadButton } from '#input/GamepadButton';
 import { ChannelSize, Keyboard, resolveGamepadSlotChannel } from '#input/types';
 
@@ -112,9 +113,10 @@ describe('ChordAction', () => {
     expect(action.released).toBe(true);
   });
 
-  test('gamepadSlot remaps every channel in an array-bound chord to the requested pad slot', () => {
+  test("an owning map's gamepad context remaps every channel in an array-bound chord", () => {
     const driver = createSample();
-    const action = new ChordAction([GamepadButton.South, GamepadButton.West], { gamepadSlot: 2 });
+    const action = new ChordAction([GamepadButton.South, GamepadButton.West]);
+    const map = new ActionMap({ combo: action }, { gamepad: new Gamepad(2, driver.sample.values) });
 
     const slot0South = resolveGamepadSlotChannel(GamepadButton.South, 0);
     const slot2South = resolveGamepadSlotChannel(GamepadButton.South, 2);
@@ -122,7 +124,7 @@ describe('ChordAction', () => {
 
     // Activity on the default slot (0) must never reach a chord bound to slot 2.
     driver.batch(10, [[slot0South, 1]]);
-    action._update(driver.sample);
+    map._update(driver.sample);
     expect(action.active).toBe(false);
 
     driver.frame();
@@ -130,7 +132,7 @@ describe('ChordAction', () => {
       [slot2South, 1],
       [slot2West, 1],
     ]);
-    action._update(driver.sample);
+    map._update(driver.sample);
     expect(action.active).toBe(true);
   });
 
@@ -565,9 +567,10 @@ describe('SequenceAction', () => {
     expect(action.progress).toBeCloseTo(0.5);
   });
 
-  test('gamepadSlot remaps every channel in an array-bound sequence to the requested pad slot', () => {
+  test("an owning map's gamepad context remaps every channel in an array-bound sequence", () => {
     const driver = createSample();
-    const action = new SequenceAction([GamepadButton.South, GamepadButton.West], { gamepadSlot: 2 });
+    const action = new SequenceAction([GamepadButton.South, GamepadButton.West]);
+    const map = new ActionMap({ combo: action }, { gamepad: new Gamepad(2, driver.sample.values) });
 
     const slot0South = resolveGamepadSlotChannel(GamepadButton.South, 0);
     const slot2South = resolveGamepadSlotChannel(GamepadButton.South, 2);
@@ -575,13 +578,13 @@ describe('SequenceAction', () => {
 
     // Activity on the default slot (0) must never reach a sequence bound to slot 2.
     driver.batch(10, [[slot0South, 1]]);
-    action._update(driver.sample);
+    map._update(driver.sample);
     expect(action.progress).toBe(0);
 
     driver.frame();
     driver.batch(20, [[slot2South, 1]]);
     driver.batch(30, [[slot2West, 1]]);
-    action._update(driver.sample);
+    map._update(driver.sample);
     expect(action.triggered).toBe(true);
   });
 

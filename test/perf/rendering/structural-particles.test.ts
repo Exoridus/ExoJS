@@ -41,15 +41,7 @@ const buildParticleScene = (count: number): { root: Container; system: ParticleS
   const root = new Container();
 
   for (let i = 0; i < count; i++) {
-    const slot = system.spawn();
-
-    system.posX[slot] = 0;
-    system.posY[slot] = 0;
-    system.scaleX[slot] = 1;
-    system.scaleY[slot] = 1;
-    system.rotations[slot] = 0;
-    system.color[slot] = 0xffffffff;
-    system.lifetime[slot] = 1;
+    system.emit();
   }
 
   system.setPosition(640, 360);

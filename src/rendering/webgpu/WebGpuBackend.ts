@@ -12,7 +12,6 @@ import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
-import type { MaterialSamplerOptions } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
@@ -39,6 +38,7 @@ import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
 import type { BlendModes, ColorTextureFormat } from '#rendering/types';
 import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 import type { View } from '#rendering/View';
@@ -67,6 +67,12 @@ interface ManagedWebGpuTextureState {
   texture: GPUTexture;
   view: GPUTextureView;
   sampler: GPUSampler;
+  /**
+   * Sampling state `sampler` was resolved for. Tracked separately from
+   * `version` so a content re-upload does not re-resolve the sampler and a
+   * filter/wrap change does not force a re-upload.
+   */
+  samplerKey: number;
   version: number;
   width: number;
   height: number;
@@ -96,8 +102,8 @@ interface ManagedWebGpuTextureState {
    * Cached exact-length view over the texture's own buffer for the last
    * full-width dirty region. Full-width rows need no packing at all (see
    * `_syncTexture`'s partial branch), so this view replaces the scratch
-   * entirely; caching it keeps a steady-state band — the transform/tint pair's
-   * usual shape — allocation-free.
+   * entirely; caching it keeps a steady-state band - the transform/tint pair's
+   * usual shape - allocation-free.
    */
   contiguousUploadView: Float32Array | Uint8Array | null;
   /**
@@ -105,7 +111,7 @@ interface ManagedWebGpuTextureState {
    * when no material sampler override is in play. Owned by the state and
    * refreshed in place rather than minted per call: the renderers resolve one
    * binding per bound texture per draw, so a fresh two-field literal there was
-   * the last per-draw allocation left in the sprite path — ~20 KB/frame on a
+   * the last per-draw allocation left in the sprite path - ~20 KB/frame on a
    * 1000-flush frame.
    */
   binding: { view: GPUTextureView; sampler: GPUSampler };
@@ -117,6 +123,12 @@ interface PixelClipBoundsState {
   width: number;
   height: number;
 }
+
+/**
+ * Key offset marking a non-filterable sampler. Sits above the packed scale/wrap
+ * enums so it cannot collide with a filterable state.
+ */
+const NON_FILTERABLE_SAMPLER_KEY_BIT = 0x1_0000_0000;
 
 const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
 // Managed content + render textures use rgba8unorm = 4 bytes/px.
@@ -180,8 +192,12 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<Texture | RenderTexture, ManagedWebGpuTextureState>();
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
-  /** Device-local material sampler overrides, interned by effective filter/wrap state. */
-  private readonly _materialSamplers = new Map<string, GPUSampler>();
+  /**
+   * Device-local samplers, interned by sampling state. Shared by the managed
+   * texture path and by material sampler overrides so one state never yields
+   * two devices objects.
+   */
+  private readonly _samplers = new Map<number, GPUSampler>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
   /**
@@ -218,9 +234,9 @@ export class WebGpuBackend implements RenderBackend {
   private _renderTarget: RenderTarget;
   // Reused scratch for the device-pixel snap viewport rect (see _snapViewport).
   private readonly _snapViewportRect = { x: 0, y: 0, width: 0, height: 0 };
-  /** Reused record handed out by `_getAttachmentPixelSize` — see the contract there. */
+  /** Reused record handed out by `_getAttachmentPixelSize` - see the contract there. */
   private readonly _attachmentPixelSize = { width: 0, height: 0 };
-  /** Reused colour attachment + its clear value — see `createColorAttachment`. */
+  /** Reused colour attachment + its clear value - see `createColorAttachment`. */
   private readonly _clearValue = { r: 0, g: 0, b: 0, a: 0 };
   private readonly _colorAttachment: GPURenderPassColorAttachment = {
     view: undefined as unknown as GPUTextureView,
@@ -252,7 +268,7 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _retainedBundles = new Set<WebGpuRetainedGroupBundle>();
   /**
    * Live persistent slot stores, so a device loss can invalidate every one of
-   * them — their buffers belong to the device that just went away.
+   * them - their buffers belong to the device that just went away.
    */
   private readonly _persistentStores = new Set<WebGpuPersistentSlotStore>();
   private readonly _rejectedRetainedSets = new WeakSet<RetainedInstructionSet>();
@@ -476,7 +492,7 @@ export class WebGpuBackend implements RenderBackend {
     this._renderPlanEpoch++;
     const storage = this._getTransformStorage();
 
-    // Do NOT reset the transform buffer here — it is frame-scoped (reset in
+    // Do NOT reset the transform buffer here - it is frame-scoped (reset in
     // resetStats). The builder already based this plan's node indices at the
     // current buffer count, so writes land in fresh frame-global slots and
     // batches survive across render() calls. Remember this plan's base so a
@@ -496,7 +512,7 @@ export class WebGpuBackend implements RenderBackend {
       // freeing it under them invalidates the whole merged command buffer at the
       // next submit. End (submit) the open pass first when a growth is imminent,
       // mirroring the renderers' flush-time `wouldGrow` guard (which runs too
-      // late here — `reserve` frees the buffer before any renderer flushes).
+      // late here - `reserve` frees the buffer before any renderer flushes).
       if (this._passCoordinatorInstance?.hasActivePass === true && storage.wouldGrow(reserveCount)) {
         this._flushActiveRendererAndEndPass();
       }
@@ -519,7 +535,7 @@ export class WebGpuBackend implements RenderBackend {
     // entry in it is a draw, so the player no longer materializes a group array.
     //
     // Renderers that pack their own per-node data (Text, Particle) never read
-    // the shared storage, so their commands are skipped — no consuming draw
+    // the shared storage, so their commands are skipped - no consuming draw
     // ever references their slots (nodeIndex is unique per command).
     const storage = this._getTransformStorage();
     const end = startIndex + count;
@@ -549,7 +565,7 @@ export class WebGpuBackend implements RenderBackend {
    *
    * The backend's own check is narrow: every item in the source must resolve to
    * ONE renderer, and that renderer must implement the indexed path. Everything
-   * beyond that — materials, blend modes, the texture table — is the renderer's
+   * beyond that - materials, blend modes, the texture table - is the renderer's
    * rule, so the decision is delegated rather than duplicated here.
    *
    * Called once per built source. A refusal is remembered by the caller, so the
@@ -673,7 +689,7 @@ export class WebGpuBackend implements RenderBackend {
     const renderer = this.rendererRegistry.resolve(drawable);
 
     // Defensive: a draw the recorder cannot capture inside an active
-    // window poisons it — the predicate excludes these at collect time, but
+    // window poisons it - the predicate excludes these at collect time, but
     // an incomplete replay stream must never be committable.
     if (this._retainedCaptureFrames.length > 0 && (renderer as { _supportsRetainedBatches?: boolean })._supportsRetainedBatches !== true) {
       this._poisonActiveRetainedCaptures();
@@ -974,7 +990,7 @@ export class WebGpuBackend implements RenderBackend {
     // With a pass kept open across batch flushes, a mid-frame clear must end
     // (submit) that open pass NOW. Otherwise the next `acquirePass` early-returns
     // the still-open pass without consuming the clear, so the clear silently
-    // defers to a later pass open — surviving this frame, then detonating at the
+    // defers to a later pass open - surviving this frame, then detonating at the
     // next open (wiping content drawn after this point, or leaking into the next
     // frame). Ending here means the next fresh pass resolves loadOp='clear' at
     // exactly this request point: the clear wipes prior content and nothing else.
@@ -1035,7 +1051,7 @@ export class WebGpuBackend implements RenderBackend {
     this._passCoordinatorInstance?.discardPass();
     this.rendererRegistry.destroy();
     this._destroyManagedTextures();
-    this._materialSamplers.clear();
+    this._samplers.clear();
     this._renderTexturePool.destroy();
 
     this._clipPixelStack.length = 0;
@@ -1100,7 +1116,7 @@ export class WebGpuBackend implements RenderBackend {
 
     // Last, so every buffer/texture destroy above still ran against a live
     // device. The resulting device loss carries reason `'destroyed'`, and
-    // `_destroyed` was set at the top of this method — both the loss
+    // `_destroyed` was set at the top of this method - both the loss
     // subscription and `_handleDeviceLoss` bail out on it, so this cannot
     // start a recovery attempt. Guarded for the mock devices the jsdom suites
     // hand the backend, which implement no `destroy`.
@@ -1112,7 +1128,7 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * **The returned record is reused**, including its nested `clearValue`. The
    * one caller (`WebGpuPassCoordinator.acquirePass`) hands it straight to
-   * `beginRenderPass`, which reads the descriptor synchronously — so nothing
+   * `beginRenderPass`, which reads the descriptor synchronously - so nothing
    * ever needs it to survive the call. An effect-heavy frame opens hundreds of
    * passes (501 on `filter/color 100`), and two fresh records per pass was one
    * of the larger remaining per-pass costs.
@@ -1197,7 +1213,7 @@ export class WebGpuBackend implements RenderBackend {
    * next call; it is never safe to keep. The reason is the call frequency:
    * `_snapViewport` reaches it once per flush and once per replayed retained
    * batch, so a fresh two-field literal per call was the single largest
-   * per-draw allocation in the WebGPU backend — 106 KB/frame on a 1000-flush
+   * per-draw allocation in the WebGPU backend - 106 KB/frame on a 1000-flush
    * frame, against a whole-frame total of 127 KB.
    * @internal
    */
@@ -1219,7 +1235,7 @@ export class WebGpuBackend implements RenderBackend {
 
   public getTextureBinding(
     texture: Texture | RenderTexture,
-    samplerOverride: MaterialSamplerOptions | null = null,
+    samplerOverride: SamplerOptions | null = null,
   ): {
     readonly view: GPUTextureView;
     readonly sampler: GPUSampler;
@@ -1231,7 +1247,7 @@ export class WebGpuBackend implements RenderBackend {
       // fresh record costs nothing measurable; giving them the state's own
       // record would mean the default path and an override path could not be
       // resolved in the same batch.
-      return { view: state.view, sampler: this._getMaterialSampler(texture, samplerOverride) };
+      return { view: state.view, sampler: this._getSampler(samplerOverride.scaleMode, samplerOverride.wrapMode, this._isNonFilterable(texture)) };
     }
 
     // Refreshed in place: `_syncTexture` may have replaced the GPU texture (and
@@ -1245,11 +1261,24 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
+   * The device sampler for `texture`'s current filter and wrap state.
+   *
+   * Unlike {@link getTextureBinding} this resolves sampling state only: it
+   * never synchronizes or uploads texture content, which makes it the correct
+   * source of a sampler for a draw that binds the pixels some other way (an
+   * imported external texture, for instance). The result is interned per
+   * sampling state and safe to hold across frames as long as the device lives.
+   */
+  public getTextureSampler(texture: Texture | RenderTexture): GPUSampler {
+    return this._getSampler(texture.scaleMode, texture.wrapMode, this._isNonFilterable(texture));
+  }
+
+  /**
    * The `GPUTextureFormat` a given `Texture`/`RenderTexture` is (or will be)
    * backed by. Unlike {@link renderTargetFormat} (which reflects whatever
    * target is *currently bound*), this is keyed off the texture itself, so
-   * callers that build a pipeline for a specific offscreen target — before
-   * that target is bound as the active render target — can match its format
+   * callers that build a pipeline for a specific offscreen target - before
+   * that target is bound as the active render target - can match its format
    * exactly instead of reading unrelated, possibly-stale backend state.
    */
   public getTextureFormat(texture: Texture | RenderTexture): GPUTextureFormat {
@@ -1268,7 +1297,7 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * Append a drawable's world transform (+ tint) to the shared transform storage
    * and return the slot it was written to. Used by instanced renderers for draws
-   * that arrive without a render-group upload boundary — i.e. a direct
+   * that arrive without a render-group upload boundary - i.e. a direct
    * `backend.draw(drawable)` outside the plan player (`activeDrawCommand === null`),
    * where no stable `nodeIndex` was assigned. Each call allocates a fresh slot, so
    * a batch of synthetic draws does not collide on a single row.
@@ -1280,14 +1309,14 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
-   * Device-pixel viewport rect of the active render pass — the region the pass
+   * Device-pixel viewport rect of the active render pass - the region the pass
    * coordinator applies via `setViewport`, or the full colour attachment when
    * the view uses the default `0..1` viewport. The core vertex stages read this
    * (staged into their `viewport` uniform) to project a drawable's clip-space
    * origin into device pixels for GPU-side position snapping. Mirrors
    * {@link WebGpuPassCoordinator._applyViewport}; because the rect is whole
    * device pixels, grid alignment is independent of WebGPU's y-up clip
-   * convention. The returned object is a reused scratch — read it immediately.
+   * convention. The returned object is a reused scratch - read it immediately.
    * @internal
    */
   public get _snapViewport(): { readonly x: number; readonly y: number; readonly width: number; readonly height: number } {
@@ -1305,7 +1334,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // WebGPU's framebuffer origin is top-left (y-down), so `viewport.y` maps
-    // directly — no flip (unlike WebGL2's bottom-left `gl.viewport`).
+    // directly - no flip (unlike WebGL2's bottom-left `gl.viewport`).
     rect.x = Math.floor(vp.x * width);
     rect.y = Math.floor(vp.y * height);
     rect.width = Math.max(1, Math.round(vp.width * width));
@@ -1319,8 +1348,8 @@ export class WebGpuBackend implements RenderBackend {
    * GPU pass is NOT ended: a renderer switch is a batching boundary, not a
    * submit boundary, so a mixed sprite/mesh scene records both renderers' draws
    * into one pass instead of paying a pass plus a `queue.submit` per
-   * alternation. What the pass end used to buy — every renderer's hazard guards
-   * only ever seeing its own draws — is replaced by
+   * alternation. What the pass end used to buy - every renderer's hazard guards
+   * only ever seeing its own draws - is replaced by
    * `WebGpuPassCoordinator.passHasDraws`, which the guards against SHARED
    * resources (transform storage growth, managed texture re-upload) consult
    * instead of their own cursors.
@@ -1334,7 +1363,7 @@ export class WebGpuBackend implements RenderBackend {
 
   private _flushActiveRendererAndEndPass(): void {
     this._renderer?.flush();
-    // Ending the active GPU pass — and thus `queue.submit` — is centralized here
+    // Ending the active GPU pass - and thus `queue.submit` - is centralized here
     // so it happens only at genuine boundaries (render-target / view / scissor /
     // stencil change, compositor, execute, plan / frame end), NOT once per batch
     // flush and not on a renderer switch. Instanced renderers record consecutive
@@ -1366,14 +1395,14 @@ export class WebGpuBackend implements RenderBackend {
 
   /**
    * Playback hook (RenderPlanPlayer): enter/leave a retained transform group.
-   * A group is a flush boundary by design — the pending batch must
+   * A group is a flush boundary by design - the pending batch must
    * drain under the OLD group matrix before the new one takes effect. The GPU
    * pass deliberately stays OPEN across the boundary: renderers
    * that share a per-flush projection UBO guard it themselves against content
    * changes within an open pass (`_endPassOnProjectionChange`, so uncached
    * playback splits lazily at the next conflicting flush instead of eagerly
    * here), and replayed retained batches bind group-owned UBOs that never
-   * alias the shared one — N cached groups cost zero extra submits.
+   * alias the shared one - N cached groups cost zero extra submits.
    * @internal
    */
   public _setRenderGroupTransform(transform: Matrix | null): void {
@@ -1396,7 +1425,7 @@ export class WebGpuBackend implements RenderBackend {
    * A fresh `WebGpuRetainedCaptureFrame` instance is created per capture-open
    * call (even across re-records of the same bundle) and discarded at
    * `_endRetainedCapture`, so its identity is a precise "this specific
-   * open/close cycle" token — lets a renderer that can record at most once per
+   * open/close cycle" token - lets a renderer that can record at most once per
    * capture (e.g. Text, whose per-batch replay state isn't keyed for more)
    * detect a second record attempt within the SAME window via a `WeakSet`,
    * without needing bundle-level bookkeeping of its own.
@@ -1466,16 +1495,16 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * Playback hook: replay one recorded batch from group-owned resources into
    * the OPEN pass (no end/submit at group boundaries on the cached path).
-   * All state — pipeline, projection/group uniforms, texture bindings
-   * — is resolved live; only the recorded data is reused. Dispatches to the
+   * All state - pipeline, projection/group uniforms, texture bindings
+   * - is resolved live; only the recorded data is reused. Dispatches to the
    * renderer that recorded the batch (any {@link WebGpuRetainedBatchReplayer},
    * not just the sprite renderer).
    * @internal
    */
   public _replayRetainedBatch(batch: RetainedBatchInstruction): void {
     // Drain the pending LIVE batch first (WebGL2 parity). The player's ordering
-    // guarantee — a group-transform switch, and therefore a flush, immediately
-    // before the first replay of a spliced scope — only holds for scopes entered
+    // guarantee - a group-transform switch, and therefore a flush, immediately
+    // before the first replay of a spliced scope - only holds for scopes entered
     // through a transform-group boundary. The automatic render-root
     // representation splices a scope with no boundary of its own, and
     // `_setActiveRenderer` below flushes only on a renderer CHANGE, so a pending
@@ -1507,12 +1536,12 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * Collect-time backend validation on top of the plan-level
    * generation check: every recorded batch's managed texture views must still
-   * be the recorded identities — `_syncTexture` recreates the view on resize,
+   * be the recorded identities - `_syncTexture` recreates the view on resize,
    * and resized textures invalidate the UV words baked into the cached
    * instance bytes. A failed check also DROPS the recording (the plan-level
    * key would otherwise stay "valid" and block the player from re-recording),
    * so the group re-records on this same clean frame and returns to the fast
-   * tier. Poisoned sets stay vetoed without re-record (entry replay forever —
+   * tier. Poisoned sets stay vetoed without re-record (entry replay forever -
    * correct, and re-recording would just re-poison).
    * @internal
    */
@@ -1559,8 +1588,17 @@ export class WebGpuBackend implements RenderBackend {
         // managed view only refreshes at the next binding resolve, which
         // happens after this collect-time validation): recorded UV words are
         // normalized against the record-time texture size, so any size change
-        // — pending or materialized — must force a recapture.
-        if (state === undefined || state.view !== payload.recordedViews[i] || state.width !== texture.width || state.height !== texture.height) {
+        // - pending or materialized - must force a recapture.
+        // The orientation check is the same argument one axis further: the
+        // recorded UV words carry the flipY swap baked in, so a texture that
+        // flips afterwards replays upside down while view and size still match.
+        if (
+          state === undefined ||
+          state.view !== payload.recordedViews[i] ||
+          state.width !== texture.width ||
+          state.height !== texture.height ||
+          (texture instanceof Texture && texture.flipY) !== payload.recordedFlipY[i]
+        ) {
           set.invalidate();
 
           return false;
@@ -1617,7 +1655,7 @@ export class WebGpuBackend implements RenderBackend {
 
     // Scan the frame-global node indices so capture end can rebase them
     // group-local and copy the row range once. Layout-aware (word offset,
-    // stride) — delegated to the renderer that packed the bytes.
+    // stride) - delegated to the renderer that packed the bytes.
     const range = this._retainedBatchIndexRange;
 
     range.min = 0xffffffff;
@@ -1626,6 +1664,7 @@ export class WebGpuBackend implements RenderBackend {
 
     const textureList: Array<Texture | RenderTexture> = [];
     const recordedViews: GPUTextureView[] = [];
+    const recordedFlipY: boolean[] = [];
 
     for (let i = 0; i < slotCount; i++) {
       const texture = textures[i];
@@ -1638,6 +1677,7 @@ export class WebGpuBackend implements RenderBackend {
       // The flush that stages this batch just resolved every slot's binding,
       // so the managed state exists and this is a pure cache read.
       recordedViews.push(this._getTextureState(texture).view);
+      recordedFlipY.push(texture instanceof Texture && texture.flipY);
     }
 
     const payload: WebGpuRetainedBatchPayload = {
@@ -1647,11 +1687,12 @@ export class WebGpuBackend implements RenderBackend {
       instanceCount,
       blendMode,
       geometry,
-      // This batch's ordinal within the owning bundle — the group-owned UBO
+      // This batch's ordinal within the owning bundle - the group-owned UBO
       // slot an indexed replayer writes with dynamic offset (sprite ignores it).
       batchIndexInBundle: owner.staged.length,
       textures: textureList,
       recordedViews,
+      recordedFlipY,
       rendererData,
     };
     // Generation is stamped at capture end (post-growth, official plan-layer
@@ -1683,7 +1724,7 @@ export class WebGpuBackend implements RenderBackend {
    * stream.
    *
    * Most callers are defensive and the collect-time recordability predicate
-   * keeps them unreachable — a renderer whose non-recordable draws are decidable
+   * keeps them unreachable - a renderer whose non-recordable draws are decidable
    * PER DRAWABLE states that through `_admitsRetainedRecording` so no capture is
    * opened for them at all. Two callers do fire on healthy frames and cannot be
    * pre-empted per drawable, because both are properties of how a frame's draws
@@ -1721,12 +1762,12 @@ export class WebGpuBackend implements RenderBackend {
     let base = 0xffffffff;
     let maxNodeIndex = 0;
     // A batch whose renderer opts out of the shared transform store
-    // (`_consumesSharedTransform === false`, e.g. Text — its per-instance
+    // (`_consumesSharedTransform === false`, e.g. Text - its per-instance
     // "node index" addresses its OWN private data store, not a row in the
     // shared TransformBuffer) leaves `_scanRetainedNodeIndexRange` a no-op, so
     // its `minNodeIndex`/`maxNodeIndex` stay at the unset sentinel
     // (`max < min`). Such batches must not contribute to the shared-range
-    // span below — merging their sentinel into `base`/`maxNodeIndex` would
+    // span below - merging their sentinel into `base`/`maxNodeIndex` would
     // corrupt the span for every OTHER (shared-transform-consuming) renderer
     // recorded into the same bundle, and a capture containing ONLY such
     // batches would otherwise compute a negative `rowCount` and hand
@@ -1759,9 +1800,9 @@ export class WebGpuBackend implements RenderBackend {
     bundle.ensureCapacity(device, frame.totalBytes, transformBytes, tintBytes);
 
     for (const batch of staged) {
-      // Rebase this batch's instance node indices to group-local indices —
+      // Rebase this batch's instance node indices to group-local indices -
       // the cached bytes become immune to frame-local index shifts
-      // and address the group-owned row copy below. Layout-aware — delegated
+      // and address the group-owned row copy below. Layout-aware - delegated
       // to the renderer that packed the bytes (the payload was already
       // created at record time, so its renderer is in hand here). A
       // shared-transform opt-out renderer's rebase is a no-op (see above);
@@ -1775,9 +1816,9 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     if (hasSharedTransformRange) {
-      // Copy the group's transform + tint rows [base, base + rowCount) —
+      // Copy the group's transform + tint rows [base, base + rowCount) -
       // written by this playback's Phase-1 pre-pass into the frame-scoped CPU
-      // buffers — into the group-owned storage at group-local row 0. Tint
+      // buffers - into the group-owned storage at group-local row 0. Tint
       // lives in its own buffer (see TransformBuffer's class doc), copied
       // separately from the same frame-scoped source.
       const transformStorage = this._getTransformStorage().buffer;
@@ -1810,7 +1851,7 @@ export class WebGpuBackend implements RenderBackend {
 
   /**
    * Whether syncing `texture` would issue a *mutating* GPU op on a resource
-   * earlier draws in an open pass may already reference — i.e. a re-upload (its
+   * earlier draws in an open pass may already reference - i.e. a re-upload (its
    * content version bumped) or a resize (destroy + recreate of the backing
    * `GPUTexture`). A first-time upload (no managed state yet, or state still at
    * the sentinel version) is NOT a mutation: no recorded draw can reference a
@@ -1822,7 +1863,7 @@ export class WebGpuBackend implements RenderBackend {
    * merged flushes would retroactively change draws already recorded into the
    * pass. When true (and the pass already holds batches) the renderer ends
    * (submits) the pass first, capturing those draws against the pre-mutation
-   * content, then reopens with a fresh slice — mirroring the `wouldGrow` guard.
+   * content, then reopens with a fresh slice - mirroring the `wouldGrow` guard.
    * @internal
    */
   public _textureUploadWouldMutate(texture: Texture | RenderTexture): boolean {
@@ -1861,7 +1902,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // Request the adapter AND the device before acquiring a WebGPU canvas
-    // context — see the getContext('webgpu') call below for why the order
+    // context - see the getContext('webgpu') call below for why the order
     // matters.
     let adapter: GPUAdapter | null;
 
@@ -1926,15 +1967,15 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     // Acquire the WebGPU canvas context only after BOTH the adapter and the
-    // device are secured. getContext('webgpu') is exclusive per canvas — once
+    // device are secured. getContext('webgpu') is exclusive per canvas - once
     // it succeeds, the same canvas can no longer produce a WebGL2 context.
     // Acquiring it earlier would lock the canvas even when WebGPU ultimately
-    // fails (a usable adapter but a failing requestDevice — e.g. a missing
+    // fails (a usable adapter but a failing requestDevice - e.g. a missing
     // backend library), which breaks the automatic WebGL2 fallback in
     // Application.
     // From here on the device exists but is not yet owned by `this._device`,
     // so a failure would strand it beyond the reach of `destroy()`. Every
-    // throw on this stretch releases it explicitly — the driver's live-device
+    // throw on this stretch releases it explicitly - the driver's live-device
     // ceiling is low enough that a leak per failed initialization matters,
     // and `Application`'s WebGPU→WebGL2 fallback walks exactly this path.
     try {
@@ -2021,7 +2062,7 @@ export class WebGpuBackend implements RenderBackend {
     this.onDeviceLost.dispatch(info);
 
     // Reason 'destroyed' means destroy() was called explicitly (by us or by
-    // user code). Don't try to recover — the loss is intentional.
+    // user code). Don't try to recover - the loss is intentional.
     if (info.reason === 'destroyed') {
       return;
     }
@@ -2035,7 +2076,7 @@ export class WebGpuBackend implements RenderBackend {
     }
 
     this._isRecovering = true;
-    // Every attempt's failure cause is kept, not just the last one — an early
+    // Every attempt's failure cause is kept, not just the last one - an early
     // attempt can fail for a different reason (e.g. adapter momentarily gone)
     // than the final one (e.g. device creation rejected), and that history
     // matters for diagnosing why recovery never completed.
@@ -2090,7 +2131,7 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * All {@link _maxRecoveryAttempts} device-recovery retries failed: the
    * canvas is now permanently dead (frozen on its last presented frame)
-   * until the app is reloaded. Report this loudly — the alternative is a
+   * until the app is reloaded. Report this loudly - the alternative is a
    * black, frozen canvas with a silent console, the hardest failure mode to
    * self-diagnose. Dispatched through {@link onRenderError} (which
    * {@link Application} already forwards to `onError`) rather than a
@@ -2111,7 +2152,7 @@ export class WebGpuBackend implements RenderBackend {
   /**
    * Tear down all device-bound state in preparation for re-initialization.
    * User-facing handles (Texture, RenderTexture, RenderTarget) keep their
-   * identity — their GPU-side state is rebuilt lazily on next use against
+   * identity - their GPU-side state is rebuilt lazily on next use against
    * the new device.
    */
   private _teardownDeviceState(): void {
@@ -2121,7 +2162,7 @@ export class WebGpuBackend implements RenderBackend {
 
     // Detach destroy listeners from cached textures, then drop the cache.
     // The underlying GPUTexture objects belonged to the dead device, so we
-    // do not (and cannot) call .destroy() on them — the dead device will
+    // do not (and cannot) call .destroy() on them - the dead device will
     // garbage-collect them. A fresh GPUTexture is created on next access.
     for (const [texture, handler] of this._textureDestroyHandlers) {
       texture.removeDestroyListener(handler);
@@ -2134,9 +2175,9 @@ export class WebGpuBackend implements RenderBackend {
     this._textureDestroyHandlers.clear();
     this._textureReleaseHandlers.clear();
     this._textureStates.clear();
-    this._materialSamplers.clear();
+    this._samplers.clear();
 
-    // Recycled RenderTexture pool: drop entries — their backing GPUTexture
+    // Recycled RenderTexture pool: drop entries - their backing GPUTexture
     // is gone with the dead device.
     this._renderTexturePool.forget();
 
@@ -2144,8 +2185,8 @@ export class WebGpuBackend implements RenderBackend {
     // groups tied to the dead device. They reconnect during _initialize().
     this.rendererRegistry.disconnect();
 
-    // Whatever those flushes recorded — and anything a renderer switch left
-    // open before the loss — belongs to the dead device. The coordinator
+    // Whatever those flushes recorded - and anything a renderer switch left
+    // open before the loss - belongs to the dead device. The coordinator
     // survives recovery and `acquirePass` short-circuits on an open pass, so a
     // pass left set here would be handed to the RESTORED device and every later
     // frame would record into the dead encoder. Drop it, never submit it.
@@ -2161,7 +2202,7 @@ export class WebGpuBackend implements RenderBackend {
       this._backdropBlendCompositorConnected = false;
     }
 
-    // Mipmap pipeline cache is keyed to the dead device — drop it.
+    // Mipmap pipeline cache is keyed to the dead device - drop it.
     this._mipmapShaderModule = null;
     this._mipmapBindGroupLayout = null;
     this._mipmapPipelineLayout = null;
@@ -2265,7 +2306,7 @@ export class WebGpuBackend implements RenderBackend {
           });
       }
     } catch {
-      /* no compilation-info support — skip the check */
+      /* no compilation-info support - skip the check */
     }
 
     return module;
@@ -2273,7 +2314,7 @@ export class WebGpuBackend implements RenderBackend {
 
   /**
    * Dispatch `error` through {@link onRenderError}, deduplicated per unique
-   * `code + message` key (capped at 100 keys — a pathological error storm
+   * `code + message` key (capped at 100 keys - a pathological error storm
    * stops reporting new uniques beyond that). Logs through the `rendering`
    * channel on first occurrence so headless/backend-only users get the log
    * without subscribing.
@@ -2353,12 +2394,15 @@ export class WebGpuBackend implements RenderBackend {
       const mipLevelCount = this._getMipLevelCount(texture);
 
       const view = gpuTexture.createView();
-      const sampler = this._createSampler(texture);
+      const nonFilterable = this._isNonFilterable(texture);
+      const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
+      const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
 
       state = {
         texture: gpuTexture,
         view,
         sampler,
+        samplerKey,
         version: -1,
         width: texture.width,
         height: texture.height,
@@ -2399,16 +2443,16 @@ export class WebGpuBackend implements RenderBackend {
    * Whether `copyExternalImageToTexture` actually writes pixels when its
    * source is a 2D `<canvas>`. Safari's WebGPU accepts the call and reports
    * no validation error, but the destination texture is left at its cleared
-   * contents — a correctness bug with no capability or feature flag to read
+   * contents - a correctness bug with no capability or feature flag to read
    * it off, so this uploads a known pixel and reads it back for real.
    *
    * Runs once per backend instance, kicked off lazily on the first canvas-
-   * sourced texture upload rather than during `initialize()` — an app that
+   * sourced texture upload rather than during `initialize()` - an app that
    * never uses one (no `Graphics`, no gradients, no `HTMLText`) shouldn't pay
    * for it. Until it resolves, uploads fall back to the always-correct
    * `getImageData` path; this promotes them to the cheaper direct copy only
    * once actually confirmed, and stays on the fallback forever on a browser
-   * where the probe reports `false` — including transparently picking up a
+   * where the probe reports `false` - including transparently picking up a
    * future Safari that fixes it, with no version sniffing.
    */
   private async _probeCanvasExternalImageCopy(): Promise<boolean> {
@@ -2436,7 +2480,7 @@ export class WebGpuBackend implements RenderBackend {
         size: { width: 2, height: 2 },
         format: managedTextureFormat,
         // `copyExternalImageToTexture` requires RENDER_ATTACHMENT on its
-        // destination, not just COPY_DST — the managed-texture path above
+        // destination, not just COPY_DST - the managed-texture path above
         // gets this for free through `_getTextureUsage`'s mipmap usage
         // (mipmapping defaults on), but this standalone probe texture has to
         // ask for it explicitly.
@@ -2469,7 +2513,7 @@ export class WebGpuBackend implements RenderBackend {
       return pixel[0] === 255 && pixel[1] === 0 && pixel[2] === 0 && pixel[3] === 255;
     } catch {
       // An unexpected failure here says nothing about the real browser
-      // behaviour — stay on the always-correct fallback rather than guess.
+      // behaviour - stay on the always-correct fallback rather than guess.
       return false;
     } finally {
       readback?.destroy();
@@ -2481,14 +2525,14 @@ export class WebGpuBackend implements RenderBackend {
    * Return a packing scratch view sized exactly `length`, backed by
    * `state.partialUploadScratch` (grown on demand, never shrunk, kind-matched
    * to `source`). Reusing this buffer across every partial `DataTexture`
-   * upload — instead of allocating a fresh temporary array per sync — is what
+   * upload - instead of allocating a fresh temporary array per sync - is what
    * keeps a barrier-heavy scene's per-frame CPU garbage flat instead of
    * scaling with flush count: each flush's transform (and separate tint) sync
    * would otherwise allocate its own throwaway packing buffer.
    *
    * The exact-length view over an over-sized scratch is cached alongside it
    * (`partialUploadView`), so a texture whose dirty region keeps the same size
-   * — the steady state for the transform/tint pair — allocates nothing at all
+   * - the steady state for the transform/tint pair - allocates nothing at all
    * rather than a fresh `subarray` per sync. Handing `writeTexture` the whole
    * scratch instead would also be legal (it derives its read extent from
    * `dataLayout` + `size`, and an over-sized `data` only has to satisfy
@@ -2504,7 +2548,7 @@ export class WebGpuBackend implements RenderBackend {
     if (scratch === null || scratch.length < length || isFloat !== scratch instanceof Float32Array) {
       scratch = isFloat ? new Float32Array(length) : new Uint8Array(length);
       state.partialUploadScratch = scratch;
-      // The cached view belongs to the replaced buffer — drop it with it.
+      // The cached view belongs to the replaced buffer - drop it with it.
       state.partialUploadView = null;
     }
 
@@ -2528,14 +2572,14 @@ export class WebGpuBackend implements RenderBackend {
    * therefore already contiguous in the row-major buffer.
    *
    * `writeTexture` copies out of whatever `ArrayBufferView` it is handed, so a
-   * contiguous region needs no packing step at all — the packing scratch would
+   * contiguous region needs no packing step at all - the packing scratch would
    * only add a full memcpy of the region per sync. The view is exact-length
    * rather than the whole buffer plus a `dataLayout.offset`, so validation
    * never has to lean on the spec's `offset + requiredBytesInCopy <=
    * byteLength` upper bound.
    *
    * The view is cached the same way the scratch's is: a band of the same size
-   * at the same offset — a scrolling ring buffer's steady state — then
+   * at the same offset - a scrolling ring buffer's steady state - then
    * allocates nothing. Identity is re-checked against the source, so a texture
    * whose region moves or resizes simply mints a new view.
    */
@@ -2575,6 +2619,13 @@ export class WebGpuBackend implements RenderBackend {
     const state = this._getTextureState(texture);
     const textureVersion = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
     const mipLevelCount = this._getMipLevelCount(texture);
+    const nonFilterable = this._isNonFilterable(texture);
+    const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
+
+    if (state.samplerKey !== samplerKey) {
+      state.samplerKey = samplerKey;
+      state.sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
+    }
 
     if (state.version !== textureVersion) {
       if (state.width !== texture.width || state.height !== texture.height || state.mipLevelCount !== mipLevelCount) {
@@ -2601,8 +2652,6 @@ export class WebGpuBackend implements RenderBackend {
         state.accountedBytes = this._accountant.reallocate(state.accountedBytes, this._estimateTextureBytes(texture, mipLevelCount));
       }
 
-      state.sampler = this._createSampler(texture);
-
       if (texture instanceof DataTexture) {
         // `instanceof DataTexture` narrows to `DataTexture<any>` (the generic is
         // erased), so `texture.format` widens to `any`; the class invariant
@@ -2626,8 +2675,8 @@ export class WebGpuBackend implements RenderBackend {
         } else {
           // Partial upload. `queue.writeTexture` reads a tightly packed block,
           // so unless the dirty rows span the full texture width they have to
-          // be lifted out of the row-major buffer first — into a reusable
-          // scratch view (grown once, never reallocated per call — see
+          // be lifted out of the row-major buffer first - into a reusable
+          // scratch view (grown once, never reallocated per call - see
           // `_acquirePartialUploadScratch`). `queue.writeTexture` snapshots the
           // bytes at call time, so the same buffer is free to be repacked on
           // the very next sync.
@@ -2639,7 +2688,7 @@ export class WebGpuBackend implements RenderBackend {
           let subBuffer: Float32Array | Uint8Array;
 
           if (region.x === 0 && region.width === texture.width) {
-            // Full-width rows are already contiguous and tightly packed — hand
+            // Full-width rows are already contiguous and tightly packed - hand
             // `writeTexture` a view straight onto the texture buffer and skip
             // the packing copy entirely. This is the shape every ring-buffer
             // style upload takes (transform/tint rows, scrolling spectrograms),
@@ -2669,19 +2718,19 @@ export class WebGpuBackend implements RenderBackend {
         const source = texture.source!;
 
         // `copyExternalImageToTexture` from a <canvas> silently uploads nothing
-        // on Safari's WebGPU — the destination texture stays at its cleared
+        // on Safari's WebGPU - the destination texture stays at its cleared
         // contents and no validation error surfaces to catch it. `getImageData`
         // + `writeTexture` reads the same unpremultiplied bytes `rgba8unorm`
         // (this backend's managed texture format) expects, so it produces an
         // identical upload on browsers where the external-image path already
-        // works — but it forces a GPU→CPU→GPU round trip that
+        // works - but it forces a GPU→CPU→GPU round trip that
         // `copyExternalImageToTexture` normally avoids, so it only runs while
         // `_canvasExternalImageCopySupported` isn't confirmed `true` (unknown,
         // still probing, or confirmed broken). See
         // `_probeCanvasExternalImageCopy`.
         //
         // The fallback needs a 2D context, and `getContext('2d')` returns null
-        // on a canvas already bound to another context type — a WebGL minimap,
+        // on a canvas already bound to another context type - a WebGL minimap,
         // a `bitmaprenderer` target. `TextureSource` accepts those, and
         // `copyExternalImageToTexture` handles them, so they take the direct
         // path rather than failing the upload. On Safari that leaves them
@@ -2740,7 +2789,7 @@ export class WebGpuBackend implements RenderBackend {
    * Free a texture's GPU-side state. `unsubscribeDestroy` is `false` only
    * when called from a {@link Texture.releaseGpu} listener: the handle isn't
    * actually destroyed there, so the destroy subscription must survive for a
-   * real, later `destroy()`. The release subscription is always dropped —
+   * real, later `destroy()`. The release subscription is always dropped -
    * `_getTextureState` re-subscribes it fresh if the handle is bound again.
    */
   private _evictTexture(texture: Texture | RenderTexture, unsubscribeDestroy = true): void {
@@ -2811,7 +2860,7 @@ export class WebGpuBackend implements RenderBackend {
     }
   }
 
-  /** Writes into `out` and returns it — see {@link _clipPixelStack} for why nothing here allocates. */
+  /** Writes into `out` and returns it - see {@link _clipPixelStack} for why nothing here allocates. */
   private _toClipPixels(bounds: Rectangle, out: PixelClipBoundsState): PixelClipBoundsState {
     const topLeft = this._renderTarget._mapCoordsToPixelInPlace(this._clipPointA.set(bounds.left, bounds.top));
     const bottomRight = this._renderTarget._mapCoordsToPixelInPlace(this._clipPointB.set(bounds.right, bounds.bottom));
@@ -2849,46 +2898,53 @@ export class WebGpuBackend implements RenderBackend {
     out.height = Math.max(0, bottom - top);
   }
 
-  private _createSampler(texture: Texture | RenderTexture): GPUSampler {
-    // Float32 textures (r32float, rgba32float) are non-filterable by default
-    // in WebGPU; force nearest filtering to avoid validation errors. Apps
-    // that need linear filtering on floats can opt into the
-    // 'float32-filterable' device feature and pass linear via samplerOptions
-    // (not yet exposed).
-    const isFloatData = texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
-    const filter: GPUFilterMode = isFloatData ? 'nearest' : this._getFilterMode(texture.scaleMode);
-
-    return this.device.createSampler({
-      label: 'backend:sampler',
-      addressModeU: this._getAddressMode(texture.wrapMode),
-      addressModeV: this._getAddressMode(texture.wrapMode),
-      magFilter: filter,
-      minFilter: filter,
-      mipmapFilter: isFloatData ? 'nearest' : this._getMipmapFilterMode(texture.scaleMode),
-    });
+  /**
+   * Float32 textures (r32float, rgba32float) are non-filterable by default in
+   * WebGPU, so a linear sampler on one is a validation error. Apps that need
+   * linear filtering on floats can opt into the 'float32-filterable' device
+   * feature, which this backend does not expose yet.
+   */
+  private _isNonFilterable(texture: Texture | RenderTexture): boolean {
+    return texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
   }
 
-  private _getMaterialSampler(texture: Texture | RenderTexture, options: MaterialSamplerOptions): GPUSampler {
-    // Match the managed-texture path: float32 data textures are non-filterable
-    // unless an optional device feature is requested, which this backend does
-    // not currently expose.
-    const isFloatData = texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
-    const filter: GPUFilterMode = isFloatData ? 'nearest' : this._getFilterMode(options.scaleMode);
-    const addressMode = this._getAddressMode(options.wrapMode);
-    const key = `${filter}:${addressMode}`;
-    let sampler = this._materialSamplers.get(key);
+  /**
+   * Cache key covering everything {@link _getSampler} reads. The non-filterable
+   * flag is part of it because it overrides both filter fields, so two textures
+   * with the same modes but different formats need different samplers.
+   */
+  private _samplerKey(scaleMode: ScaleModes, wrapMode: WrapModes, nonFilterable: boolean): number {
+    return samplerStateKey(scaleMode, wrapMode) + (nonFilterable ? NON_FILTERABLE_SAMPLER_KEY_BIT : 0);
+  }
 
-    if (sampler === undefined) {
-      sampler = this.device.createSampler({
-        label: 'backend:material-sampler',
-        addressModeU: addressMode,
-        addressModeV: addressMode,
-        magFilter: filter,
-        minFilter: filter,
-        mipmapFilter: isFloatData ? 'nearest' : this._getMipmapFilterMode(options.scaleMode),
-      });
-      this._materialSamplers.set(key, sampler);
+  /**
+   * The device's sampler for one sampling state, created on first use.
+   *
+   * Sampling state is a small closed set, so every texture and every material
+   * override in a scene shares a handful of samplers. Deriving them here rather
+   * than per texture also keeps a texture that re-uploads every frame (video,
+   * a canvas redrawn per frame) from minting a sampler per frame.
+   */
+  private _getSampler(scaleMode: ScaleModes, wrapMode: WrapModes, nonFilterable: boolean): GPUSampler {
+    const key = this._samplerKey(scaleMode, wrapMode, nonFilterable);
+    const existing = this._samplers.get(key);
+
+    if (existing !== undefined) {
+      return existing;
     }
+
+    const filter: GPUFilterMode = nonFilterable ? 'nearest' : this._getFilterMode(scaleMode);
+    const addressMode = this._getAddressMode(wrapMode);
+    const sampler = this.device.createSampler({
+      label: 'backend:sampler',
+      addressModeU: addressMode,
+      addressModeV: addressMode,
+      magFilter: filter,
+      minFilter: filter,
+      mipmapFilter: nonFilterable ? 'nearest' : this._getMipmapFilterMode(scaleMode),
+    });
+
+    this._samplers.set(key, sampler);
 
     return sampler;
   }

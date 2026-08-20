@@ -90,7 +90,7 @@ describe('InputManager gamepad lifecycle', () => {
       inputManager.preUpdate(Time.zero);
 
       expect(inputManager.gamepads[0].connected).toBe(true);
-      expect(inputManager.gamepads[0].mappingFamily).toBe(GamepadMappingFamily.Xbox);
+      expect(inputManager.gamepads[0].family).toBe(GamepadMappingFamily.Xbox);
       expect(onConnected).toHaveBeenCalledTimes(1);
 
       const buttonSouthChannel = Gamepad.resolveChannelOffset(0, GamepadButton.South);
@@ -180,16 +180,16 @@ describe('InputManager gamepad lifecycle', () => {
       setSnapshot([padA, padB, padC, null]);
       inputManager.preUpdate(Time.zero);
 
-      expect(inputManager.gamepads[0].mappingFamily).toBe(GamepadMappingFamily.Xbox);
-      expect(inputManager.gamepads[1].mappingFamily).toBe(GamepadMappingFamily.PlayStation);
-      expect(inputManager.gamepads[2].mappingFamily).toBe(GamepadMappingFamily.SwitchPro);
+      expect(inputManager.gamepads[0].family).toBe(GamepadMappingFamily.Xbox);
+      expect(inputManager.gamepads[1].family).toBe(GamepadMappingFamily.PlayStation);
+      expect(inputManager.gamepads[2].family).toBe(GamepadMappingFamily.SwitchPro);
 
       // Drop padA (slot 0). Compact should shift padB → 0, padC → 1, slot 2 empty.
       setSnapshot([null, padB, padC, null]);
       inputManager.preUpdate(Time.zero);
 
-      expect(inputManager.gamepads[0].mappingFamily).toBe(GamepadMappingFamily.PlayStation);
-      expect(inputManager.gamepads[1].mappingFamily).toBe(GamepadMappingFamily.SwitchPro);
+      expect(inputManager.gamepads[0].family).toBe(GamepadMappingFamily.PlayStation);
+      expect(inputManager.gamepads[1].family).toBe(GamepadMappingFamily.SwitchPro);
       expect(inputManager.gamepads[2].connected).toBe(false);
 
       // The slot that fired onDisconnect is the one that ended up empty.

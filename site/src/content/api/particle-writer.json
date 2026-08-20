@@ -1,0 +1,220 @@
+{
+  "title": "ParticleWriter",
+  "description": "A single freshly emitted particle, addressed by name. Every field starts at its default - zero position, velocity, rotation and rotation speed, unit scale, opaque white, frame 0, lifetime 1 - so a spawner writes only what it varies. The writer is a cursor onto the emitting system, not a particle object: it is reused by the next ParticleEmitter.emit call and must not be kept. Read what you need before emitting again.",
+  "symbol": "ParticleWriter",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 8,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A single freshly emitted particle, addressed by name.",
+        "Every field starts at its default - zero position, velocity, rotation and rotation speed, unit scale, opaque white, frame 0, lifetime 1 - so a spawner writes only what it varies.",
+        "The writer is a cursor onto the emitting system, not a particle object: it is reused by the next ParticleEmitter.emit call and must not be kept. Read what you need before emitting again."
+      ],
+      "importLine": "import { ParticleWriter } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "color",
+          "signature": "color: number",
+          "signatureTokens": [
+            {
+              "text": "color",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Packed 0xAABBGGRR tint."
+        },
+        {
+          "name": "frame",
+          "signature": "frame: number",
+          "signatureTokens": [
+            {
+              "text": "frame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Atlas frame index. Ignored by a system that declares no frames."
+        },
+        {
+          "name": "lifetime",
+          "signature": "lifetime: number",
+          "signatureTokens": [
+            {
+              "text": "lifetime",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Total seconds before this particle expires."
+        },
+        {
+          "name": "position",
+          "signature": "position: ParticleVectorWriter",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleVectorWriter",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: number",
+          "signatureTokens": [
+            {
+              "text": "rotation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rotationSpeed",
+          "signature": "rotationSpeed: number",
+          "signatureTokens": [
+            {
+              "text": "rotationSpeed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "scale",
+          "signature": "scale: ParticleVectorWriter",
+          "signatureTokens": [
+            {
+              "text": "scale",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleVectorWriter",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "velocity",
+          "signature": "velocity: ParticleVectorWriter",
+          "signatureTokens": [
+            {
+              "text": "velocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleVectorWriter",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/ParticleStorage.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/ParticleStorage.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/ParticleStorage.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/ParticleStorage.ts"
+}

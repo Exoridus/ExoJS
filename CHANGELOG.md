@@ -17,6 +17,155 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **Particles are addressed by channel, and a death is a snapshot.** The whole
+  particle SoA was public and the guide recommended mutating it, which made the
+  CPU/GPU packing a permanent contract — and on the GPU path it was not even
+  true: only the compute shader advances position, velocity, scale, rotation and
+  colour, nothing reads them back, so every CPU reader saw the values a particle
+  was born with. A sub-emitter fired at the parent's birthplace on WebGPU and at
+  its death place on WebGL2.
+
+  An update module and a render mode now receive a `ParticleBatch` — `position`,
+  `velocity`, `scale`, `rotation`, `timing`, `color`, `frame`, `count`,
+  `isAlive` — whose arrays are still the simulation's own storage, so bulk loops
+  keep their speed while the packing behind the names stays free to change.
+
+  ```ts
+  class Sway extends UpdateModule {
+    apply(particles: ParticleBatch, dt: number): void {
+      const { x: velX } = particles.velocity;
+      const { elapsed } = particles.timing;
+
+      for (let i = 0; i < particles.count; i++) {
+        velX[i] += Math.sin(elapsed[i] * 8) * 250 * dt;
+      }
+    }
+  }
+  ```
+
+  Particles come into existence through `system.emit()`, which returns a writer
+  for one particle at its spawn defaults — the one per-particle write that is
+  true on both backends. `liveCount` is read-only, `spawn()` and the raw arrays
+  are gone, and a spawn module fills what an emitter hands it rather than
+  writing slots.
+
+  A death module receives a `ParticleDeathContext` — position, velocity,
+  rotation, scale, colour, elapsed and lifetime at the moment of death — instead
+  of a slot. On the GPU path the compute shader appends a death record and the
+  system reads it back, so both backends report the same death state; the slot
+  is deliberately absent, because it may already hold a different particle by
+  the time the callback runs. Delivery is exactly once per expired particle, in
+  slot order, but no longer necessarily in the frame it expired: a GPU death
+  arrives with its readback, typically the next frame. Readbacks overlap - the
+  records travel through a ring of staging buffers, so consecutive frames that
+  each report deaths do not wait on one another, and neither the frame loop nor
+  the simulation ever blocks on a mapping. Deaths reported while every staging
+  slot is still in flight stay on the device and travel with the next batch;
+  batches are delivered in the order they were submitted. Exactly-once holds
+  while that backlog fits the system's capacity - past it the excess is dropped
+  rather than stalling the frame loop, and a development build reports it once
+  per system. A system without death modules allocates no death buffer and reads
+  nothing back.
+
+- **Particle modules can be changed while particles are in flight.**
+  `addUpdateModule` threw after the first `update()` and `clearUpdateModules`
+  left the system compiled, so there was no way to retune a running effect. The
+  simulation state and the compiled program are now separate lifetimes: changing
+  the module list rebuilds the program, and on the GPU path the live particles
+  keep the position and velocity the device has been integrating. Adding a
+  module without a `wgsl()` implementation to a running GPU system is the one
+  transition that cannot preserve them — the simulation moves to the CPU, which
+  has no copy of the device's state, so the system clears its particles rather
+  than continuing from stale values.
+
+- **`music` and `video` assets actually stream.** Both types downloaded the
+  complete file into an `ArrayBuffer`, wrapped it in a blob and only then handed
+  it to the media element, so "streaming" described the decode and nothing else -
+  a long video cost its full size in memory before a single frame played. A
+  URL-backed `music`/`video` asset now hands the resolved URL to the element and
+  lets the browser own the transport.
+
+  ```ts
+  const intro = await loader.load(Asset.type('video', 'video/intro.mp4'));
+  const packed = await loader.load(Asset.type('video', 'video/logo.mp4', { download: true }));
+  ```
+
+  The contract that comes with it:
+
+  - **Readiness is `canplay`** for both transports (it was `canplaythrough`), and
+    a streamed asset being ready means it can start playing, not that it has
+    fully arrived.
+  - **`download: true`** fetches the complete bytes through the loader's
+    cache pipeline first - cacheable, available offline, real byte progress, and
+    what container (`.exoa`) entries always do. Streamed media reports asset-level
+    progress only: the loader cannot see inside a browser-owned transfer and does
+    not invent a percentage for one.
+  - **A failure before readiness fails the load** and is reported by
+    `Loader.onError`, as before. **A failure after readiness** - a transfer that
+    breaks mid-playback - now reaches the new `Video.onError` / `AudioStream.onError`
+    signals instead, so one load can never appear to fail twice.
+  - **Streamed media defaults to `crossOrigin: 'anonymous'`**, set before the
+    source. Without it a cross-origin video plays but cannot be uploaded as a
+    texture. Pass `crossOrigin: null` for playback-only media, or
+    `'use-credentials'` where the host requires it.
+  - **Releasing the last claim detaches the element** (pause, drop source,
+    reload), ending playback and the transfer rather than leaving a released
+    video streaming in the background. Cancelling a load in flight does the same
+    and rejects with an `AbortError`.
+  - **The transport is not identity, the CORS mode is.** One URL is one asset
+    however its bytes arrived, so a container entry and a network load share a
+    single resident resource - and `download: true` therefore decides how the
+    asset is built by the load that materializes it, not for a load that joins
+    one already resident. A non-default `crossOrigin` is identity instead: it is
+    baked into the element, so `null`, `'anonymous'` and `'use-credentials'` for
+    one URL are separate assets and no consumer is handed an element whose CORS
+    mode it did not ask for.
+  - **A container entry never rebuilds a resident asset.** Unpacking an entry
+    whose canonical asset is already resident (or already being fetched) now
+    claims it and stops there, instead of storing a second payload under one
+    identity.
+
+  `AssetLoaderContext` gained `resolveUrl(source)` for custom handlers that need
+  to hand a URL to a browser primitive rather than fetch it themselves.
+
+- **Asset ownership is explicit and safe for several consumers at once.**
+  `Loader.createScope(options?)` returns a `LoaderScope` — an owner with `get`,
+  `load`, `release` and `destroy` whose lifetime you decide. Several scopes can
+  hold the same asset independently: they share one fetch and one resident
+  payload, and one scope releasing never invalidates another. Every call creates
+  a new owner and never looks one up, so `name` is a label for `inspect()` and
+  never an identifier; two scopes created as `createScope({ name: 'world' })`
+  cannot free each other's assets. `SceneLoader` is now such a scope, and scene
+  teardown is unchanged.
+
+  ```ts
+  const level = app.loader.createScope({ name: 'level-1' });
+  const hud = app.loader.createScope({ name: 'ui:hud' });
+
+  const font = level.get('fonts/ui.png');
+  hud.get('fonts/ui.png'); // the same instance — one fetch, two owners
+
+  level.destroy(); // the font stays loaded: the HUD still owns it
+  ```
+
+  Scopes nest: `scope.createScope(options?)` creates a child that claims
+  independently but cannot outlive its parent. Destroying the child frees only
+  its own claims; destroying the parent destroys every child it still has,
+  recursively, so a scope created under `scene.loader` is cleaned up with that
+  scene. The hierarchy is a lifetime hierarchy only — it never affects asset
+  identity, and a child holding the same asset as its parent is two claims.
+
+  Each scope also reports its own foreground progress via `onLoadStart` /
+  `onLoadProgress` / `onLoadComplete` / `onLoadError`, while the loader keeps
+  reporting the aggregate, so a streamed chunk no longer interleaves with
+  unrelated work in one counter.
+
+- **`AssetLoaderContext.scope` owns an asset's sub-assets.** A handler that loads
+  dependencies — a bitmap font pulling its page textures, a Tiled map pulling its
+  tilesets — now loads them through `context.scope`, which lives exactly as long
+  as the asset being built. The claims drop when that asset loses its last owner,
+  and a dependency another consumer holds independently survives.
+
 - **Effects declare the bounds they produce.** A drawable's source bounds were
   assumed to be its final visual bounds, so an effect that reaches outside what
   it was handed had nowhere to put the result — a `BlurFilter` was clipped by its
@@ -362,6 +511,59 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING — one canonical identity is resolved before every fetch.** Residency
+  had two uncoordinated dedup layers: `get()`, bare paths and the background
+  queue keyed on `typeId:alias`, while the `Asset<T>` descriptor path keyed on a
+  separate identity map. Reaching one asset through both verbs concurrently
+  fetched and decoded it twice, and the alias-keyed store made the opposite
+  mistake — an identity-relevant option (a differing `mimeType`, a differing
+  Tiled format) was swallowed whenever the alias already held a payload, silently
+  handing the second caller the first one's decode.
+
+  A canonical key is now `typeId | locator` plus, where the type declares one, a
+  handler-supplied discriminator. The locator applies the base path, collapses
+  `.`/`..`, drops the fragment (never sent on a fetch) and keeps the query, so
+  `hero.png`, `./hero.png` and `a/../hero.png` are one asset and one request;
+  `blob:` and `data:` sources pass through untouched. The same resolution backs
+  the fetched URL and the cache key, so what is fetched cannot drift from what a
+  load is keyed by. Aliases, catalog keys and container entry names are names for
+  a canonical asset and no longer create residency entries of their own — loading
+  one `Asset` under several record keys stores it once, addressed by its source.
+
+  `AssetHandler.getIdentityKey` becomes `getIdentityDiscriminator` and is
+  narrowed: the core always owns type and locator, and a handler may only
+  contribute the additional identity-relevant part, so an extension cannot build
+  a parallel identity space. Core bindings declare their own — `mimeType` for the
+  decoded types, `family` for fonts. Sampler state, placeholder sizing and
+  playback settings stay out: they belong to a consumer, not to a resource. The
+  conflicting-options warning is gone with the ambiguity it reported.
+
+  Cache-store keys are now the resolved URL, which invalidates previously
+  persisted entries.
+
+- **BREAKING — asset containers claim through normal residency, `.exoa` is
+  version 2.** `loadContainer` stored each unpacked entry under the container's
+  own opaque alias and registered no claim at all: the payloads were resident but
+  invisible to `inspect()`, unreachable by `release`, and had no teardown short
+  of destroying the loader. Index entries now carry the logical `source` they
+  stand in for — the same relative path a network load uses — which the loader
+  canonicalizes like any descriptor. A packed asset and a loose one are therefore
+  one identity with one payload, and a container is no longer welded to the path
+  it was built at. `Loader.loadContainer(url)` resolves to the `LoaderScope` that
+  owns the entries, one ordinary claim each; `LoaderScope.loadContainer(url)`
+  claims them under an existing scope. Version 1 containers are rejected rather
+  than misread — rebuild them with `scripts/build-container`, whose manifest
+  field is renamed from `alias` to `source`.
+
+- **BREAKING — `inspect()` walks the residency, not the claim map.** The one
+  thing a diagnostic snapshot most needs to show — a payload resident with nobody
+  owning it — was exactly what it could not see. Rows now carry `canonicalKey`,
+  `locator`, `aliases` and `owners` (id, optional name, kind) in place of `key`
+  and `source`. A key that only remembers a handle identity for healing is
+  skipped rather than burying the rows that matter. `bytes` and `lastUsed` stay
+  out: there is no honest size for a GPU resource next to an `ArrayBuffer`, and a
+  last-used stamp would cost a write on every read.
+
 - **BREAKING — canvas compositing is one backend-neutral option.** How the
   finished frame composites against the page used to be spelled per backend:
   WebGL2 read it from `rendering.webglAttributes.alpha` /
@@ -575,6 +777,20 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   are unchanged and stay asynchronous.
 
 ### Removed
+
+- **BREAKING — `Loader.release()` is removed.** Claims were held per scope, but
+  the only scope a direct `app.loader` call could use was one shared symbol. Two
+  unrelated modules that both used `app.loader` therefore shared a single claim,
+  and the first `release()` evicted the payload for both — the second consumer's
+  live handle fell back to `'loading'` with no fetch in flight, and nothing
+  restarted it until someone called `get()` again. Ownership was safe only as
+  long as every consumer remembered it was not the only one.
+
+  Assets acquired on the loader itself are now application-lifetime by
+  construction and are freed only by `destroy()`, so no consumer can drop a claim
+  another one relies on. Anything meant to be freed later is acquired through
+  `scene.loader` or a scope from `loader.scope()`, and released with
+  `scope.release(...)` or `scope.destroy()`.
 
 - **BREAKING — playing a `Sound` before the autoplay unlock is now a no-op.**
   `SoundVoice` started its buffer source in its own constructor with

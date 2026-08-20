@@ -711,4 +711,31 @@ describe('Video', () => {
       expect(disconnectSpy).toHaveBeenCalled();
     });
   });
+
+  describe('content invalidation', () => {
+    test('a new decoded frame bumps the content revision so Retained/cacheAsTexture see it as dirty', () => {
+      const mockVideo = createMockVideoElement();
+      const video = new Video(mockVideo.element);
+      const revisionBeforeFrame = video._contentRevision;
+
+      // Simulate the requestVideoFrameCallback firing with a new decoded frame.
+      (video as unknown as { _onVideoFrame: (now: number, metadata: unknown) => void })._onVideoFrame(0, {});
+
+      expect(video._contentRevision).not.toBe(revisionBeforeFrame);
+
+      video.destroy();
+    });
+
+    test('a native timeupdate event bumps the content revision independent of _collect (no-rVFC fallback path)', () => {
+      const mockVideo = createMockVideoElement();
+      const video = new Video(mockVideo.element);
+      const revisionBeforeUpdate = video._contentRevision;
+
+      mockVideo.element.dispatchEvent(new Event('timeupdate'));
+
+      expect(video._contentRevision).not.toBe(revisionBeforeUpdate);
+
+      video.destroy();
+    });
+  });
 });

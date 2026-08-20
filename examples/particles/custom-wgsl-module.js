@@ -18,9 +18,11 @@ class SwayModule extends UpdateModule {
         this.amplitude = amplitude;
         this.frequency = frequency;
     }
-    apply(system, dt) {
-        for (let i = 0; i < system.liveCount; i++) {
-            system.velX[i] += Math.sin(system.elapsed[i] * this.frequency) * this.amplitude * dt;
+    apply(particles, dt) {
+        const { x: velX } = particles.velocity;
+        const { elapsed } = particles.timing;
+        for (let i = 0; i < particles.count; i++) {
+            velX[i] += Math.sin(elapsed[i] * this.frequency) * this.amplitude * dt;
         }
     }
     wgsl() {

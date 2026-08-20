@@ -6,6 +6,8 @@ import type { GamepadButton } from './GamepadButton';
 import type { GamepadButtonChannel } from './GamepadButton';
 import type { BrowserGamepad, ResolvedGamepadDefinition } from './GamepadDefinitions';
 import type { GamepadMapping, GamepadMappingFamily } from './GamepadMapping';
+import type { GamepadPromptControl } from './GamepadPromptLayouts';
+import { GamepadPromptLayouts } from './GamepadPromptLayouts';
 import type { InputBindingOptions, InputChannel } from './InputBinding';
 import { InputBinding } from './InputBinding';
 import { ChannelOffset, ChannelSize } from './types';
@@ -99,8 +101,18 @@ export class Gamepad {
     return this._mapping;
   }
 
-  /** The {@link GamepadMappingFamily}, or `null` when disconnected. */
-  public get mappingFamily(): GamepadMappingFamily | null {
+  /**
+   * Device family of the connected pad, or `null` when the slot is empty.
+   *
+   * The value to key a game's own button-glyph or controller artwork on; ExoJS
+   * ships no glyph assets of its own.
+   *
+   * @example
+   * ```ts
+   * const set = pad.family === null ? icons.keyboard : icons[pad.family];
+   * ```
+   */
+  public get family(): GamepadMappingFamily | null {
     return this._mapping?.family ?? null;
   }
 
@@ -139,6 +151,26 @@ export class Gamepad {
    */
   public hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean {
     return this._mapping?.hasChannel(channel) ?? false;
+  }
+
+  /**
+   * Name this device prints on `control` - "A" on an Xbox pad, "Cross" on a
+   * PlayStation one, "B" on a Switch one - or `undefined` when the slot is
+   * empty or this family does not label that control.
+   *
+   * Resolved against the connected pad's own mapping, so a generation that
+   * deviates from its family default is honoured: the PlayStation `Select`
+   * control reads "Share" on a DualShock 4 and "Create" on a DualSense.
+   *
+   * @example
+   * ```ts
+   * hint.text = `Press ${pad.getLabel('ButtonSouth') ?? 'Jump'} to jump`;
+   * ```
+   */
+  public getLabel(control: GamepadPromptControl): string | undefined {
+    const mapping = this._mapping;
+
+    return mapping === null ? undefined : GamepadPromptLayouts.getControlLabels(mapping).get(control);
   }
 
   /**

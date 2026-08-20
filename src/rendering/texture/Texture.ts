@@ -7,18 +7,19 @@ import { isPowerOfTwo } from '#math/utils';
 import { ScaleModes, WrapModes } from '#rendering/types';
 import { createCanvas, createCheckerCanvas } from '#rendering/utils';
 
-import type { SamplerOptions } from './Sampler';
+import type { TextureOptions } from './TextureOptions';
 
 /**
  * A static GPU texture sourced from an image, canvas, or video element.
  *
- * Holds the pixel source and sampling parameters ({@link ScaleModes}, {@link WrapModes},
- * mip generation, alpha premultiplication). A `version` counter is incremented on every
- * mutation so backends can detect stale GPU uploads without polling.
+ * Holds the pixel source, its sampling state ({@link ScaleModes}, {@link WrapModes})
+ * and its upload state (mip generation, alpha premultiplication). A `version`
+ * counter is incremented on every mutation that invalidates the GPU copy, so
+ * backends detect stale uploads without polling.
  *
  * Static helpers {@link Texture.black}, {@link Texture.white}, and {@link Texture.empty}
  * provide ready-made placeholder textures. Default sampler options are configurable via
- * {@link Texture.defaultSamplerOptions}.
+ * {@link Texture.defaultOptions}.
  * @stable
  */
 export class Texture {
@@ -26,7 +27,7 @@ export class Texture {
   private static _white: Texture | null = null;
   private static _missing: Texture | null = null;
 
-  public static defaultSamplerOptions: SamplerOptions = {
+  public static defaultOptions: TextureOptions = {
     scaleMode: ScaleModes.Linear,
     wrapMode: WrapModes.ClampToEdge,
     premultiplyAlpha: true,
@@ -99,9 +100,9 @@ export class Texture {
   private _generateMipMap = false;
   private _flipY = false;
 
-  public constructor(source: TextureSource = null, options?: Partial<SamplerOptions>) {
+  public constructor(source: TextureSource = null, options?: Partial<TextureOptions>) {
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
-      ...Texture.defaultSamplerOptions,
+      ...Texture.defaultOptions,
       ...options,
     };
 
@@ -177,7 +178,7 @@ export class Texture {
   }
 
   public set generateMipMap(generateMipMap: boolean) {
-    this._generateMipMap = generateMipMap;
+    this.setGenerateMipMap(generateMipMap);
   }
 
   public get flipY(): boolean {
@@ -198,9 +199,9 @@ export class Texture {
 
   /**
    * Monotonically increasing version counter.
-   * Incremented by any mutation that requires a GPU re-upload (source change,
-   * size change, or sampler parameter change). Backends compare this value to
-   * their cached version to decide whether to re-upload the texture.
+   * Incremented by any mutation that requires a GPU re-upload: a source, size,
+   * or upload-parameter change. Filter and wrap changes do not bump it -
+   * backends resolve sampling state separately, so changing it costs no upload.
    */
   public get version(): number {
     return this._version;
@@ -289,17 +290,20 @@ export class Texture {
   }
 
   public setScaleMode(scaleMode: ScaleModes): this {
-    if (this._scaleMode !== scaleMode) {
-      this._scaleMode = scaleMode;
-      this._touch();
-    }
+    this._scaleMode = scaleMode;
 
     return this;
   }
 
   public setWrapMode(wrapMode: WrapModes): this {
-    if (this._wrapMode !== wrapMode) {
-      this._wrapMode = wrapMode;
+    this._wrapMode = wrapMode;
+
+    return this;
+  }
+
+  public setGenerateMipMap(generateMipMap: boolean): this {
+    if (this._generateMipMap !== generateMipMap) {
+      this._generateMipMap = generateMipMap;
       this._touch();
     }
 

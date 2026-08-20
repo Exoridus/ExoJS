@@ -1,10 +1,10 @@
 /**
- * Phase 0B — Typed Declarative Asset Handlers & Identity
+ * Phase 0B - Typed Declarative Asset Handlers & Identity
  *
  * Type-level tests: verify that AssetLoadRequest, AssetHandler, and AssetBinding
  * generics behave as specified (options typing, result derivation, satisfies pattern).
  *
- * Runtime tests: verify that a declarative handler's getIdentityKey propagates
+ * Runtime tests: verify that a declarative handler's getIdentityDiscriminator propagates
  * through the full Extension → AssetBinding → materializeAssetBindings →
  * Loader.bindAsset → identity resolution path.
  */
@@ -40,7 +40,7 @@ interface ExampleLoadOptions {
 }
 
 // ---------------------------------------------------------------------------
-// Shared normalization helper (used by both getIdentityKey and load to stay aligned)
+// Shared normalization helper (used by both getIdentityDiscriminator and load to stay aligned)
 // ---------------------------------------------------------------------------
 
 interface ResolvedExampleOptions {
@@ -73,7 +73,7 @@ describe('AssetHandler type contracts', () => {
 
   it('handler with options: request.options is typed and optional', () => {
     const handler: AssetHandler<ExampleAsset, ExampleLoadOptions> = {
-      getIdentityKey(request) {
+      getIdentityDiscriminator(request) {
         expectTypeOf(request.options).toEqualTypeOf<ExampleLoadOptions | undefined>();
         void request.options?.format;
         void request.options?.strict;
@@ -91,11 +91,11 @@ describe('AssetHandler type contracts', () => {
     expectTypeOf(handler).toMatchTypeOf<AssetHandler<ExampleAsset, ExampleLoadOptions>>();
   });
 
-  it('getIdentityKey and load receive the same request type', () => {
-    type RequestInGetIdentity = Parameters<NonNullable<AssetHandler<ExampleAsset, ExampleLoadOptions>['getIdentityKey']>>[0];
+  it('getIdentityDiscriminator and load receive the same request type', () => {
+    type RequestInGetDiscriminator = Parameters<NonNullable<AssetHandler<ExampleAsset, ExampleLoadOptions>['getIdentityDiscriminator']>>[0];
     type RequestInLoad = Parameters<AssetHandler<ExampleAsset, ExampleLoadOptions>['load']>[0];
 
-    expectTypeOf<RequestInGetIdentity>().toEqualTypeOf<RequestInLoad>();
+    expectTypeOf<RequestInGetDiscriminator>().toEqualTypeOf<RequestInLoad>();
   });
 
   it('handler without options cannot access typed option properties', () => {
@@ -131,7 +131,7 @@ describe('AssetBinding type contracts', () => {
 
       create() {
         return {
-          getIdentityKey(request: AssetLoadRequest<ExampleLoadOptions>) {
+          getIdentityDiscriminator(request: AssetLoadRequest<ExampleLoadOptions>) {
             const o = resolveExampleOptions(request.options);
             return [request.source, o.format, String(o.strict)].join('|');
           },
@@ -237,7 +237,7 @@ describe('declarative bindAsset identity propagation', () => {
 
       create() {
         return {
-          getIdentityKey(request) {
+          getIdentityDiscriminator(request) {
             const o = resolveExampleOptions(request.options);
             return [request.source, o.format, String(o.strict)].join('|');
           },
@@ -252,7 +252,7 @@ describe('declarative bindAsset identity propagation', () => {
     };
   }
 
-  it('getIdentityKey is forwarded through bindAsset into the internal HandlerEntry', async () => {
+  it('getIdentityDiscriminator is forwarded through bindAsset into the internal HandlerEntry', async () => {
     let loadCount = 0;
     materializeAssetBindings(loader, [buildExampleBinding(() => loadCount++)]);
 
@@ -320,7 +320,7 @@ describe('declarative bindAsset identity propagation', () => {
 
       create() {
         return {
-          getIdentityKey(request) {
+          getIdentityDiscriminator(request) {
             // Intentionally excludes `trace` — it is control-only
             const o = resolveExampleOptions(request.options);
             return [request.source, o.format, String(o.strict)].join('|');
@@ -348,7 +348,7 @@ describe('declarative bindAsset identity propagation', () => {
     loader.destroy();
   });
 
-  it('handler without getIdentityKey preserves source-based identity', async () => {
+  it('handler without getIdentityDiscriminator preserves source-based identity', async () => {
     let loadCount = 0;
 
     const noIdentityBinding: AssetBinding<ExampleAsset> = {

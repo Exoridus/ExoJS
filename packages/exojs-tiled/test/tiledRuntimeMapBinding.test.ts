@@ -41,7 +41,9 @@ function makeContext(fixtures: Record<string, unknown>) {
 
   const context: AssetLoaderContext = {
     loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
+    scope: { load: loaderLoad } as unknown as AssetLoaderContext['scope'],
     identityKey: 'test',
+    resolveUrl: (source: string) => source,
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),
     fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
@@ -86,30 +88,26 @@ describe('tiledRuntimeMapBinding descriptor', () => {
     expect(typeof tiledRuntimeMapBinding.create(fakeLoader()).load).toBe('function');
   });
 
-  it('create() returns an object with a getIdentityKey function', () => {
-    expect(typeof tiledRuntimeMapBinding.create(fakeLoader()).getIdentityKey).toBe('function');
+  it('create() returns an object with a getIdentityDiscriminator function', () => {
+    expect(typeof tiledRuntimeMapBinding.create(fakeLoader()).getIdentityDiscriminator).toBe('function');
   });
 });
 
-// ── getIdentityKey tests ─────────────────────────────────────────────────────
+// ── getIdentityDiscriminator tests ───────────────────────────────────────────
 
-describe('tiledRuntimeMapBinding.getIdentityKey', () => {
+describe('tiledRuntimeMapBinding.getIdentityDiscriminator', () => {
   const handler = tiledRuntimeMapBinding.create(fakeLoader());
 
-  it('includes source and format in the key', () => {
-    const key = handler.getIdentityKey!({ source: 'world.tmj' });
-    expect(key).toBe('world.tmj|tiled');
+  it('contributes the resolved format and nothing else', () => {
+    expect(handler.getIdentityDiscriminator!({ source: 'world.tmj' })).toBe('tiled');
   });
 
-  it('uses explicit format when provided', () => {
-    const key = handler.getIdentityKey!({ source: 'world.tmj', options: { format: 'tiled' } });
-    expect(key).toBe('world.tmj|tiled');
+  it('uses an explicit format when provided', () => {
+    expect(handler.getIdentityDiscriminator!({ source: 'world.tmj', options: { format: 'tiled' } })).toBe('tiled');
   });
 
-  it('different sources produce different keys', () => {
-    const key1 = handler.getIdentityKey!({ source: 'a.tmj' });
-    const key2 = handler.getIdentityKey!({ source: 'b.tmj' });
-    expect(key1).not.toBe(key2);
+  it('does not vary by source — the loader already keys by locator', () => {
+    expect(handler.getIdentityDiscriminator!({ source: 'a.tmj' })).toBe(handler.getIdentityDiscriminator!({ source: 'b.tmj' }));
   });
 });
 

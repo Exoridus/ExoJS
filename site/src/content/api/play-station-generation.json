@@ -1,6 +1,6 @@
 {
   "title": "PlayStationGeneration",
-  "description": "Console generation a PlayStationGamepadMapping targets. The three generations share one button layout but not one set of button names, and only the two newer ones have a touchpad — so the generation decides both the prompt labels and whether index 17 exists.",
+  "description": "Console generation a PlayStation mapping targets. The three generations share one button layout but not one set of button names, and only the two newer ones have a touchpad - so the generation decides both the prompt labels and whether index 17 exists.",
   "symbol": "PlayStationGeneration",
   "kind": "enum",
   "subsystem": "input",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Console generation a PlayStationGamepadMapping targets.",
-        "The three generations share one button layout but not one set of button names, and only the two newer ones have a touchpad — so the generation decides both the prompt labels and whether index 17 exists."
+        "Console generation a PlayStation mapping targets.",
+        "The three generations share one button layout but not one set of button names, and only the two newer ones have a touchpad - so the generation decides both the prompt labels and whether index 17 exists."
       ],
       "importLine": "import { PlayStationGeneration } from '@codexo/exojs'",
       "sourceLink": null
@@ -80,11 +80,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/input/PlayStationGamepadMapping.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/PlayStationGamepadMapping.ts"
+        "label": "src/input/gamepadMappings.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/gamepadMappings.ts"
       }
     }
   ],
-  "sourcePath": "src/input/PlayStationGamepadMapping.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/PlayStationGamepadMapping.ts"
+  "sourcePath": "src/input/gamepadMappings.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/gamepadMappings.ts"
 }

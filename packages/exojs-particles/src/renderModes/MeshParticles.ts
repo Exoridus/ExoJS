@@ -1,6 +1,7 @@
 import type { AttributeType, GeometryAttribute, Material } from '@codexo/exojs';
 import { Geometry, ShaderSource } from '@codexo/exojs';
 
+import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
 
 import fragmentSource from '../renderers/glsl/particle.frag';
@@ -259,14 +260,14 @@ export class MeshParticles extends ParticleRenderMode {
     return this._material;
   }
 
-  public build(system: ParticleSystem): void {
+  public build(system: ParticleSystem, particles: ParticleBatch): void {
     this._syncMesh();
 
     // Must precede the view reads below: growing swaps in fresh typed-array
     // views over a new backing buffer.
-    this._ensureCapacity(system.liveCount * instanceStrideBytes);
+    this._ensureCapacity(particles.count * instanceStrideBytes);
 
-    this._setCount(this._writer.write(system, this._float32, this._uint32));
+    this._setCount(this._writer.write(system, particles, this._float32, this._uint32));
   }
 
   public override destroy(): void {

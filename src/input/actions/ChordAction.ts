@@ -1,5 +1,10 @@
+import { resolveGamepadSlotChannel } from '#input/types';
+
+import type { GamepadSlot } from './ActionBase';
+import { channelsFromTokens, tokensFromChannels } from './ActionBase';
 import { ButtonLikeAction } from './ButtonLikeAction';
 import { type InputAlternation, type InputChord, normalizeSequence, type ValidatedChordBinding } from './pattern';
+import type { SerializedActionBinding } from './serialization';
 import type { ActionOptions } from './types';
 
 /**
@@ -71,9 +76,11 @@ function weakestAt(values: Float32Array, indices: readonly number[]): number {
  * const swap = new ChordAction([GamepadButton.LeftShoulder, GamepadButton.RightShoulder]);
  * ```
  */
-export class ChordAction<const Binding extends ChordBinding = ChordBinding> extends ButtonLikeAction {
+export class ChordAction<const Binding extends ChordBinding = ChordBinding> extends ButtonLikeAction<ChordBinding> {
+  public override readonly kind = 'chord' as const;
+
   /** One entry per alternative; each lists that alternative's channels as indices into {@link ButtonLikeAction._values}. */
-  private readonly _alternativeIndices: ReadonlyArray<readonly number[]>;
+  private _alternativeIndices: ReadonlyArray<readonly number[]> = [];
 
   /**
    * @throws {Error} If a string binding contains a `>` step separator (use
@@ -84,7 +91,32 @@ export class ChordAction<const Binding extends ChordBinding = ChordBinding> exte
    * {@link ValidatedChordBinding}.
    */
   public constructor(binding: ValidatedChordBinding<Binding>, options: ActionOptions = {}) {
-    const steps = normalizeSequence(typeof binding === 'string' ? binding : [binding], options.gamepadSlot ?? 0, 'ChordAction');
+    super(binding, options.threshold ?? 0);
+    this._rebind(null, 0);
+  }
+
+  public override serialize(): SerializedActionBinding {
+    return {
+      kind: 'chord',
+      binding: this._alternativeIndices.map(indices => tokensFromChannels(indices.map(index => this._channels[index]!))),
+    };
+  }
+
+  /** @internal */
+  public override _deserialize(data: SerializedActionBinding): ChordBinding {
+    if (data.kind !== 'chord') {
+      throw new Error(`ChordAction: cannot apply a "${data.kind}" binding.`);
+    }
+
+    if (!Array.isArray(data.binding)) {
+      throw new Error('ChordAction: a serialized chord binding must be an array of alternatives.');
+    }
+
+    return (data.binding as readonly unknown[]).map(alternative => channelsFromTokens(alternative, 'a chord alternative'));
+  }
+
+  protected override _resolve(binding: ChordBinding, slot: GamepadSlot): void {
+    const steps = normalizeSequence(typeof binding === 'string' ? binding : [binding], 'ChordAction');
 
     if (steps.length !== 1) {
       const patternText = typeof binding === 'string' ? ` ("${binding}")` : '';
@@ -93,12 +125,12 @@ export class ChordAction<const Binding extends ChordBinding = ChordBinding> exte
       );
     }
 
-    const alternatives = steps[0]!;
+    const alternatives = steps[0]!.map(alternative => alternative.map(channel => resolveGamepadSlotChannel(channel, slot)));
     const channels = [...new Set(alternatives.flat())];
 
-    super(channels, options.threshold ?? 0);
-
+    this._channels = channels;
     this._alternativeIndices = alternatives.map(alternative => alternative.map(channel => channels.indexOf(channel)));
+    this._allocateValues();
   }
 
   protected override _aggregate(values: Float32Array): number {

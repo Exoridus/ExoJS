@@ -13,9 +13,9 @@ import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 
 /**
  * Per-load request passed to {@link AssetHandler.load} and
- * {@link AssetHandler.getIdentityKey}.
+ * {@link AssetHandler.getIdentityDiscriminator}.
  *
- * `Options` is `undefined` by default — a handler without typed options receives
+ * `Options` is `undefined` by default - a handler without typed options receives
  * `request.options: undefined`. A handler with typed options receives
  * `request.options: Options | undefined` (options remain optional even when typed).
  * @advanced
@@ -28,29 +28,36 @@ export interface AssetLoadRequest<Options = undefined> {
 /**
  * A loader-local instance produced by {@link AssetBinding.create}; owned and destroyed
  * by the Loader. May hold state. Called once per `loader.load(...)` invocation.
- * Sub-assets loaded via `context.loader.load(...)` are owned by the Loader's cache —
- * NOT by this handler or the asset returned by `load`.
+ * Sub-assets must be loaded via `context.scope.load(...)`: that scope lives
+ * exactly as long as the asset being built, so its sub-assets are released with
+ * it unless another owner also holds them. `context.loader.load(...)` would
+ * instead claim them for the application's lifetime.
  * @advanced
  */
 export interface AssetHandler<Result = unknown, Options = undefined> {
   /**
-   * Returns the deterministic identity key used for in-flight deduplication and
-   * loaded-resource reuse (and cache/resource-store identity where applicable).
+   * Returns the identity-relevant discriminator for a request: the part of an
+   * asset's identity that the source alone does not capture.
+   *
+   * The loader always owns `type + canonical locator`; whatever this returns is
+   * appended to it. Two requests for the same source that differ only in a
+   * discriminator are two distinct resources, each with its own fetch, residency
+   * entry and claims.
    *
    * Include every option that **changes the produced resource** (format, locale,
    * variant, color space, decoding mode, strictness when it affects output).
-   * Exclude control-only values that do not alter the resource (callbacks,
-   * `AbortSignal`, logger, request priority, timeout).
+   * Exclude load policy (priority, `AbortSignal`, timeout) and per-consumer
+   * presentation options (sampler state, placeholder size) - neither changes the
+   * bytes, and folding them in would fetch and decode the same resource twice.
    *
-   * Do **not** use `JSON.stringify(request.options)` — property-order instability,
+   * Do **not** use `JSON.stringify(request.options)` - property-order instability,
    * control-only field inclusion, and unbounded key size make it unsuitable.
    * Explicitly select the identity-relevant fields instead.
    *
-   * The Loader namespaces the key with the asset type, so the returned string may
-   * be type-local. Omit this hook to use the default (source-only) identity.
+   * Omit this hook when the source alone identifies the resource.
    * @advanced
    */
-  getIdentityKey?(request: AssetLoadRequest<Options>): string;
+  getIdentityDiscriminator?(request: AssetLoadRequest<Options>): string;
   load(request: AssetLoadRequest<Options>, context: AssetLoaderContext): Promise<Result>;
   /**
    * Optionally produce the asset directly from in-memory bytes, bypassing the

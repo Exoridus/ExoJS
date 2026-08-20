@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
-    "methods": 3,
-    "properties": 3,
+    "methods": 4,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -205,6 +205,53 @@
           ],
           "returnType": "Promise<string>",
           "description": "Fetches source as UTF-8 text, routing through the loader's cache/IDB."
+        },
+        {
+          "name": "resolveUrl",
+          "signature": "resolveUrl(source: string): string",
+          "signatureTokens": [
+            {
+              "text": "resolveUrl",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "The URL source resolves to, base path applied. The same resolution the loader's own fetches and canonical identity use, so a handler that hands a URL to a browser primitive - a media element, an image, a worker - can never address a different resource than the one it was asked to load."
         }
       ],
       "paragraphs": [],
@@ -234,7 +281,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The identity key for this load — id:<typeId>:<discriminator>. Useful for diagnostics; also equals the key used for in-flight dedup."
+          "description": "The canonical key for this load. Useful for diagnostics; also the key the loader dedupes in-flight requests and claims on."
         },
         {
           "name": "loader",
@@ -255,7 +302,28 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The owning Loader instance."
+          "description": "The owning Loader instance, for configuration and registry reads. Do NOT load sub-assets through it: anything acquired on the loader itself is held for the application's lifetime and outlives the asset being built. Use scope instead."
+        },
+        {
+          "name": "scope",
+          "signature": "scope: LoaderScope",
+          "signatureTokens": [
+            {
+              "text": "scope",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScope",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The claim scope that owns whatever sub-assets this handler loads. It lives exactly as long as the asset being built: when that asset is released by its last owner, everything loaded through this scope is released with it - unless another owner still holds it independently."
         },
         {
           "name": "signal",

@@ -1638,19 +1638,18 @@ describe('WebGpuBackend', () => {
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const system = new ParticleSystem(texture);
-      const slot = system.spawn();
+      const particle = system.emit()!;
 
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
       texture.updateSource();
 
-      system.posX[slot] = 10;
-      system.posY[slot] = 12;
-      system.scaleX[slot] = 2;
-      system.scaleY[slot] = 3;
-      system.rotations[slot] = 45;
-      system.color[slot] = Color.red.toRgba();
-      system.lifetime[slot] = 1;
+      particle.position.x = 10;
+      particle.position.y = 12;
+      particle.scale.x = 2;
+      particle.scale.y = 3;
+      particle.rotation = 45;
+      particle.color = Color.red.toRgba();
 
       await manager.initialize();
 
@@ -1683,27 +1682,22 @@ describe('WebGpuBackend', () => {
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const system = new ParticleSystem(texture);
-      const firstSlot = system.spawn();
-      const secondSlot = system.spawn();
+      // One writer at a time: the cursor rebinds on the next emit, so each
+      // particle is filled before the following one is emitted.
+      const firstParticle = system.emit()!;
+
+      firstParticle.position.set(10, 12);
+
+      const secondParticle = system.emit()!;
+
+      secondParticle.position.set(20, 24);
+      secondParticle.rotation = 20;
+      secondParticle.scale.set(2, 2);
+      secondParticle.color = Color.red.toRgba();
 
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
       texture.updateSource();
-
-      system.posX[firstSlot] = 10;
-      system.posY[firstSlot] = 12;
-      system.scaleX[firstSlot] = 1;
-      system.scaleY[firstSlot] = 1;
-      system.color[firstSlot] = 0xffffffff;
-      system.lifetime[firstSlot] = 1;
-
-      system.posX[secondSlot] = 20;
-      system.posY[secondSlot] = 24;
-      system.rotations[secondSlot] = 20;
-      system.scaleX[secondSlot] = 2;
-      system.scaleY[secondSlot] = 2;
-      system.color[secondSlot] = Color.red.toRgba();
-      system.lifetime[secondSlot] = 1;
 
       await manager.initialize();
 
@@ -1734,16 +1728,13 @@ describe('WebGpuBackend', () => {
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const system = new ParticleSystem(texture);
-      const slot = system.spawn();
+      const particle = system.emit()!;
 
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
       texture.updateSource();
 
-      system.color[slot] = Color.red.toRgba();
-      system.lifetime[slot] = 1;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
+      particle.color = Color.red.toRgba();
       system.blendMode = BlendModes.Additive;
 
       await manager.initialize();
@@ -1786,16 +1777,13 @@ describe('WebGpuBackend', () => {
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const system = new ParticleSystem(texture);
-      const slot = system.spawn();
+      const particle = system.emit()!;
 
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
       texture.updateSource();
 
-      system.color[slot] = Color.red.toRgba();
-      system.lifetime[slot] = 1;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
+      particle.color = Color.red.toRgba();
       system.blendMode = BlendModes.Screen;
 
       await manager.initialize();
@@ -1838,16 +1826,11 @@ describe('WebGpuBackend', () => {
       const sourceCanvas = document.createElement('canvas');
       const texture = new Texture(sourceCanvas);
       const system = new ParticleSystem(texture);
-      const slot = system.spawn();
+      const particle = system.emit()!;
 
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
       texture.updateSource();
-
-      system.color[slot] = 0xffffffff;
-      system.lifetime[slot] = 1;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
 
       await manager.initialize();
 

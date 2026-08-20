@@ -6,12 +6,12 @@
   "subsystem": "audio",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
     "methods": 2,
     "properties": 7,
-    "events": 0
+    "events": 1
   },
   "sections": [
     {
@@ -376,6 +376,56 @@
           "params": [],
           "returnType": null,
           "description": "Total media duration in seconds (NaN until metadata has loaded)."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onError",
+          "signature": "onError: Signal<[error]>",
+          "signatureTokens": [
+            {
+              "text": "onError",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "error",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched when the media fails after the asset was already usable - a transfer that breaks mid-playback, or a decode error further into the file. A failure BEFORE the asset becomes ready fails the load instead, and is reported by Loader.onError; this signal is the runtime counterpart, so one load never appears to fail twice."
         }
       ],
       "paragraphs": [],

@@ -24,8 +24,14 @@
 /** Magic bytes at the start of every container: ASCII `"EXOA"`. */
 export const CONTAINER_MAGIC = 'EXOA';
 
-/** Current container format version written by {@link encodeContainer}. */
-export const CONTAINER_VERSION = 1;
+/**
+ * Current container format version written by {@link encodeContainer}.
+ *
+ * Version 2 replaced the index entry's opaque `alias` with the logical `source`
+ * the entry stands in for, so a container is a transport for ordinary assets
+ * rather than a second naming system. Version 1 containers are rejected.
+ */
+export const CONTAINER_VERSION = 2;
 
 /** Fixed header size: magic (4) + version (4) + indexLength (4). */
 export const CONTAINER_HEADER_SIZE = 12;
@@ -37,8 +43,14 @@ export const CONTAINER_HEADER_SIZE = 12;
  * handler's `createFromBytes`.
  */
 export interface ContainerEntry {
-  /** Loader alias the unpacked resource is stored under. */
-  readonly alias: string;
+  /**
+   * The logical source this entry stands in for - the very same relative path a
+   * network load would use. The loader canonicalizes it with its own base path,
+   * so an entry resolves to the same asset identity whether it arrived through
+   * the container or over the network, and a container is never welded to the
+   * path it was built at.
+   */
+  readonly source: string;
   /** Asset type name (resolved to a constructor via the loader's type map). */
   readonly type: string;
   /** Byte offset of this asset within the data section. */
@@ -61,7 +73,7 @@ export interface ParsedContainer {
 
 /** Input for {@link encodeContainer}: an asset's bytes plus its index metadata. */
 export interface ContainerInput {
-  readonly alias: string;
+  readonly source: string;
   readonly type: string;
   readonly bytes: ArrayBuffer | Uint8Array;
   readonly mime?: string;
@@ -84,7 +96,7 @@ export function encodeContainer(inputs: readonly ContainerInput[]): ArrayBuffer 
   for (const input of inputs) {
     const slice = toUint8(input.bytes);
     index.push({
-      alias: input.alias,
+      source: input.source,
       type: input.type,
       offset,
       length: slice.byteLength,
@@ -130,17 +142,17 @@ function readEntry(value: unknown, i: number, dataLength: number): ContainerEntr
   }
 
   const record = value as Record<string, unknown>;
-  const { alias, type, offset, length, mime } = record;
+  const { source, type, offset, length, mime } = record;
 
-  if (typeof alias !== 'string') fail(`index entry ${i} has a non-string "alias"`);
-  if (typeof type !== 'string') fail(`index entry ${i} ("${alias}") has a non-string "type"`);
-  if (typeof offset !== 'number' || !Number.isFinite(offset) || offset < 0) fail(`index entry "${alias}" has an invalid "offset"`);
-  if (typeof length !== 'number' || !Number.isFinite(length) || length < 0) fail(`index entry "${alias}" has an invalid "length"`);
-  if (offset + length > dataLength) fail(`index entry "${alias}" runs past the data section (offset ${offset} + length ${length} > ${dataLength})`);
-  if (mime !== undefined && typeof mime !== 'string') fail(`index entry "${alias}" has a non-string "mime"`);
+  if (typeof source !== 'string') fail(`index entry ${i} has a non-string "source"`);
+  if (typeof type !== 'string') fail(`index entry ${i} ("${source}") has a non-string "type"`);
+  if (typeof offset !== 'number' || !Number.isFinite(offset) || offset < 0) fail(`index entry "${source}" has an invalid "offset"`);
+  if (typeof length !== 'number' || !Number.isFinite(length) || length < 0) fail(`index entry "${source}" has an invalid "length"`);
+  if (offset + length > dataLength) fail(`index entry "${source}" runs past the data section (offset ${offset} + length ${length} > ${dataLength})`);
+  if (mime !== undefined && typeof mime !== 'string') fail(`index entry "${source}" has a non-string "mime"`);
 
   return {
-    alias,
+    source,
     type,
     offset,
     length,
@@ -169,8 +181,11 @@ export function parseContainer(buffer: ArrayBuffer): ParsedContainer {
   }
 
   const version = view.getUint32(4, true);
-  if (version > CONTAINER_VERSION) {
-    fail(`unsupported version ${version} (this build reads up to ${CONTAINER_VERSION})`);
+  if (version !== CONTAINER_VERSION) {
+    // Version 1 indexed entries by an opaque alias rather than by their logical
+    // source, so its entries cannot be resolved to an asset identity at all.
+    // There is nothing to read partially: rebuild the container.
+    fail(`unsupported version ${version} (this build reads version ${CONTAINER_VERSION}) — rebuild it with scripts/build-container`);
   }
 
   const indexLength = view.getUint32(8, true);

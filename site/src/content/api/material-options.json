@@ -56,7 +56,7 @@
         },
         {
           "name": "sampler",
-          "signature": "sampler?: MaterialSamplerOptions | null",
+          "signature": "sampler?: SamplerOptions | null",
           "signatureTokens": [
             {
               "text": "sampler",
@@ -71,7 +71,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "MaterialSamplerOptions",
+              "text": "SamplerOptions",
               "kind": "type"
             },
             {

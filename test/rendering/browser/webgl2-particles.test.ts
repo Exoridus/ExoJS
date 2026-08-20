@@ -5,11 +5,10 @@
  * a particle spawned with a fixed slot, position, scale and packed color is
  * rendered to a real WebGL2 canvas and read back with `gl.readPixels`.
  *
- * Determinism note: `ParticleSystem` has no built-in RNG — spawn/update
+ * Determinism note: `ParticleSystem` has no built-in RNG - spawn/update
  * modules (which may use distributions) are entirely optional. These tests
  * bypass spawn modules altogether and write the SoA arrays
- * (`posX`/`posY`/`scaleX`/`scaleY`/`color`/`lifetime`) directly after calling
- * `system.spawn()`, then render without ever calling `system.update()` — so
+ * through `system.emit()`, then render without ever calling `system.update()` - so
  * `elapsed` stays at 0 and the particle never expires. This yields fully
  * deterministic, seed-free particle placement across runs.
  *
@@ -70,7 +69,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
 
   await backend.initialize();
   wireCoreRenderers(backend, app.options.rendering);
-  // The particle renderer is not part of the core renderer bindings — the
+  // The particle renderer is not part of the core renderer bindings - the
   // `@codexo/exojs-particles` package materialises it itself via its
   // Extension descriptor. Browser tests construct a bare backend (bypassing
   // Application), so the particle binding must be wired explicitly, same as
@@ -150,19 +149,10 @@ describe('WebGL2 ParticleSystem — solid color', () => {
     const system = new ParticleSystem(texture, { capacity: 4 });
 
     try {
-      // Deterministic placement: bypass spawn/update modules entirely and
-      // write the SoA slot directly. `lifetime` only matters if `update()`
-      // is called — it never is here, so the particle can't expire.
-      const slot = system.spawn();
-
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.rotations[slot] = 0;
-      system.color[slot] = 0xffffffff; // opaque white — no tint, texture color passes through
-      system.lifetime[slot] = 1;
-
+      // Deterministic placement: bypass spawn modules and emit one particle at
+      // its defaults. `lifetime` only matters if `update()` is called - it never
+      // is here, so the particle can't expire.
+      system.emit();
       // Position the system itself so the particle (system-local quad
       // centered on 0,0, half-extent 8px for a 16x16 texture) lands at
       // (32, 32), well clear of the canvas edges.
@@ -193,14 +183,7 @@ describe('WebGL2 ParticleSystem — solid color', () => {
     const second = new ParticleSystem(greenTexture, { capacity: 4 });
 
     const place = (system: ParticleSystem, x: number, y: number): void => {
-      const slot = system.spawn();
-
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.color[slot] = 0xffffffff;
-      system.lifetime[slot] = 1;
+      system.emit();
       system.setPosition(x, y);
       root.addChild(system);
     };
@@ -217,7 +200,7 @@ describe('WebGL2 ParticleSystem — solid color', () => {
       render(backend, root);
 
       // Both systems default to the shared render mode, whose material is what
-      // the renderer caches its program, VAO and buffers against — so the second
+      // the renderer caches its program, VAO and buffers against - so the second
       // system must reuse the first system's program rather than compile its own.
       expect(createProgram).not.toHaveBeenCalled();
       expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
@@ -248,15 +231,9 @@ describe('WebGL2 ParticleSystem — solid color', () => {
     const system = new ParticleSystem(texture, { capacity: 4 });
 
     try {
-      const slot = system.spawn();
+      const particle = system.emit()!;
 
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.color[slot] = new Color(0, 255, 0).toRgba();
-      system.lifetime[slot] = 1;
-
+      particle.color = new Color(0, 255, 0).toRgba();
       system.setPosition(32, 32);
       root.addChild(system);
 
@@ -278,7 +255,7 @@ describe('WebGL2 ParticleSystem — ribbon', () => {
     const texture = createSolidTexture('#ffffff', 16, 16);
     const root = new Container();
     // The ribbon mode ships its own shader pair, which only a real backend ever
-    // compiles — a broken one draws nothing and fails the interior assertions
+    // compiles - a broken one draws nothing and fails the interior assertions
     // below rather than passing silently in the node lanes.
     const system = new ParticleSystem(texture, { capacity: 8, render: new RibbonParticles({ width: 12 }) });
 
@@ -286,14 +263,10 @@ describe('WebGL2 ParticleSystem — ribbon', () => {
       // Three particles on a horizontal line, system-local. The strip expands
       // ±6px around it, so at (32, 32) it covers x 16..48, y 26..38.
       for (const x of [-16, 0, 16]) {
-        const slot = system.spawn();
+        const particle = system.emit()!;
 
-        system.posX[slot] = x;
-        system.posY[slot] = 0;
-        system.scaleX[slot] = 1;
-        system.scaleY[slot] = 1;
-        system.color[slot] = new Color(0, 255, 0).toRgba();
-        system.lifetime[slot] = 1;
+        particle.position.x = x;
+        particle.color = new Color(0, 255, 0).toRgba();
       }
 
       system.setPosition(32, 32);
@@ -331,14 +304,11 @@ describe('WebGL2 ParticleSystem — ribbon', () => {
       const scales = [1, 0.1];
 
       for (let i = 0; i < scales.length; i++) {
-        const slot = system.spawn();
+        const particle = system.emit()!;
 
-        system.posX[slot] = i === 0 ? -16 : 16;
-        system.posY[slot] = 0;
-        system.scaleX[slot] = scales[i]!;
-        system.scaleY[slot] = 1;
-        system.color[slot] = new Color(0, 255, 0).toRgba();
-        system.lifetime[slot] = 1;
+        particle.position.x = i === 0 ? -16 : 16;
+        particle.scale.x = scales[i]!;
+        particle.color = new Color(0, 255, 0).toRgba();
       }
 
       system.setPosition(32, 32);
@@ -366,21 +336,12 @@ describe('WebGL2 ParticleSystem — mesh', () => {
     const mesh = createTriangleMesh();
     const root = new Container();
     // The mesh mode bakes its own shader pair around the geometry, which only a
-    // real backend ever compiles — a broken one draws nothing and fails the
+    // real backend ever compiles - a broken one draws nothing and fails the
     // interior assertions below rather than passing silently in the node lanes.
     const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
 
     try {
-      const slot = system.spawn();
-
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.rotations[slot] = 0;
-      system.color[slot] = 0xffffffff; // opaque white — texture color passes through
-      system.lifetime[slot] = 1;
-
+      system.emit();
       // At (32, 32) the triangle covers x 16..48, y 16..48 below the diagonal
       // running from (48, 16) to (16, 48).
       system.setPosition(32, 32);
@@ -393,7 +354,7 @@ describe('WebGL2 ParticleSystem — mesh', () => {
       // Inside, right of it: samples the blue half. Both together prove the mesh
       // UVs reach the sampler rather than the quad's corner UVs.
       expectPixelNear(readWebGl2Pixel(backend, 38, 18), [0, 0, 255, 255]);
-      // Inside the mesh's bounding box but past its hypotenuse — the assertion a
+      // Inside the mesh's bounding box but past its hypotenuse - the assertion a
       // mesh drawn as a quad would fail.
       expectPixelNear(readWebGl2Pixel(backend, 44, 44), [0, 0, 0, 255]);
       // A safely mesh-free corner remains the clear color.
@@ -414,16 +375,12 @@ describe('WebGL2 ParticleSystem — mesh', () => {
     const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
 
     try {
-      const slot = system.spawn();
+      const particle = system.emit()!;
 
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 0.5;
-      system.scaleY[slot] = 0.5;
-      // 180° puts the right angle at the bottom-right instead of the top-left.
-      system.rotations[slot] = 180;
-      system.color[slot] = new Color(0, 255, 0).toRgba();
-      system.lifetime[slot] = 1;
+      particle.scale.set(0.5, 0.5);
+      // 180 degrees puts the right angle at the bottom-right instead of the top-left.
+      particle.rotation = 180;
+      particle.color = new Color(0, 255, 0).toRgba();
 
       system.setPosition(32, 32);
       root.addChild(system);
@@ -453,16 +410,9 @@ describe('WebGL2 ParticleSystem — mesh mutation', () => {
     const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
 
     try {
-      const slot = system.spawn();
+      const particle = system.emit()!;
 
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.rotations[slot] = 0;
-      system.color[slot] = new Color(0, 255, 0).toRgba();
-      system.lifetime[slot] = 1;
-
+      particle.color = new Color(0, 255, 0).toRgba();
       system.setPosition(32, 32);
       root.addChild(system);
 

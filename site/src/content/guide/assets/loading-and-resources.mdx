@@ -319,14 +319,67 @@ async load() {
 
 `get()` returns before network work settles. A later load failure moves the handle/ref to `'failed'`, rejects its `.loaded` promise, and is reported through `this.app.loader.onError`; calling `get()` again retries and can heal that same source-keyed handle. By contrast, the awaitable returned by `load()` rejects at the call site on failure and reports the same `Error` through `this.app.loader.onError`. Invalid input or a missing type/handler is a synchronous configuration error for either API. A catalog entry's optional `parse` transform must be synchronous — if it returns a Promise (or anything else thenable), the ref it belongs to fails with an explicit error instead of silently awaiting it; do any asynchronous decoding inside the asset handler's load phase instead.
 
-`this.app.loader.release(...)` drops your claim on an asset; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again. It accepts a handle, an `Asset` descriptor, a whole catalog, or a `(type, source)` pair. Releasing a valid form that was never claimed — a descriptor you never loaded, a catalog leaf you never adopted — is a harmless no-op, and releasing twice is always idempotent:
+### Ownership and scopes
+
+An asset stays in memory for as long as somebody owns it. There are three kinds of owner:
+
+- **the application** — anything acquired directly on `this.app.loader` is held until the app is destroyed;
+- **a scene** — anything acquired through `this.loader` (that is, `scene.loader`) is released when the scene ends;
+- **a scope you create yourself** — `this.app.loader.createScope({ name })` returns an owner you destroy when you are done with it.
+
+Several owners can hold the same asset at the same time. They share one fetch and one resident payload, and one owner letting go never invalidates another:
 
 ```ts
-this.app.loader.release(TitleAssets); // releases every leaf in the catalog
-this.app.loader.release(logo); // a single handle from get()
+async load() {
+    const level = this.app.loader.createScope({ name: 'level-1' });
+    const hud = this.app.loader.createScope({ name: 'ui:hud' });
+
+    const font = level.get('fonts/ui.png');
+
+    hud.get('fonts/ui.png'); // the same instance — one fetch, two independent owners
+
+    level.destroy();
+    console.log(font.loadState); // 'ready' — the HUD still owns it
+
+    hud.destroy();
+    console.log(font.loadState); // 'loading' — the last owner let go
+}
 ```
 
-Releasing only ever drops _your_ claim. Assets loaded through `scene.loader` belong to that scene and are released when it ends, so releasing at app level can never pull an asset out from under a scene that still needs it. The payload is evicted once the last owner lets go.
+Create a scope whenever an asset's lifetime is shorter than the application's — a level, a streamed chunk, a UI panel, a prefetch. Every `createScope()` call returns a new owner, never an existing one: the name is a diagnostic label for `inspect()`, never an identifier, so two scopes created under the same name are still two independent owners.
+
+Scopes nest. `scope.createScope({ name })` creates a child that claims independently but cannot outlive its parent: destroying the child frees only the child's claims, while destroying the parent destroys whatever children it still has, recursively. A scope created through `this.loader.createScope(...)` inside a scene is therefore cleaned up with that scene, even if you never destroy it yourself:
+
+```ts
+async load() {
+    const world = this.loader.createScope({ name: 'world' });
+    const chunk = world.createScope({ name: 'chunk:12,8' });
+
+    await chunk.load(ChunkAssets);
+
+    chunk.destroy(); // frees only the chunk's claims
+    // the scene ending destroys `world` — and any chunk still alive under it
+}
+```
+
+The hierarchy is a lifetime hierarchy only: it never affects asset identity or what a release frees. A child holding the same asset as its parent is two claims, not one.
+
+`scope.release(...)` drops that scope's claim on one asset; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again. It accepts a handle, an `Asset` descriptor, a whole catalog, or a `(type, source)` pair. Releasing a valid form that scope never claimed is a harmless no-op, and releasing twice is always idempotent:
+
+```ts
+async load() {
+    const title = this.app.loader.createScope({ name: 'title' });
+    const logo = title.get('ui/logo.png');
+
+    await title.load(TitleAssets);
+
+    title.release(TitleAssets); // releases every leaf in the catalog
+    title.release(logo); // a single handle from get()
+    title.destroy(); // or just drop everything this scope still holds
+}
+```
+
+There is deliberately no way to release an application-lifetime claim: `app.loader.get(...)` means "I want this for as long as the app runs". Anything you intend to free later is acquired through a scene or a scope instead.
 
 <Callout type="pitfall" title="release() only accepts a real asset identity">
   Passing something that isn't a handle, descriptor, catalog, or `(type, source)` pair — a plain object, a resolved non-seamless resource, anything `release()`
@@ -341,9 +394,41 @@ Releasing only ever drops _your_ claim. Assets loaded through `scene.loader` bel
   promise) before you use it.
 </Callout>
 
+### Streaming media
+
+`music` and `video` assets are streamed by the browser: the loader hands the media element the resolved URL and lets it pull the file in as it plays. Nothing is buffered into memory up front, which is what makes a long track or a full-screen video affordable.
+
+```ts
+async load() {
+    const intro = await this.loader.load(Asset.type('video', 'video/intro.mp4'));
+    const theme = await this.loader.load(Asset.type('music', 'audio/theme.ogg'));
+}
+```
+
+A streamed asset is **ready when it can start playing**, not when it has fully arrived — the load resolves on the element's `canplay` event. Two consequences are worth internalising:
+
+- Progress for a streamed asset is per asset, not per byte. The loader cannot know how much of a browser-owned transfer has landed, and it does not pretend to.
+- A failure *before* readiness fails the load and is reported through `loader.onError`. A failure *after* readiness — the connection dropping mid-playback — is a runtime media error and is reported by `video.onError` / `stream.onError` instead, so one load never appears to fail twice.
+
+Streamed elements get `crossOrigin: 'anonymous'` by default. This matters for video: a cross-origin element without it plays, but cannot be uploaded as a texture. Pass `crossOrigin: null` for playback-only media on a host that sends no CORS headers, accepting that it cannot be rendered.
+
+Ask for the complete bytes when you want ExoJS to own them:
+
+```ts
+async load() {
+    const intro = await this.loader.load(Asset.type('video', 'video/intro.mp4', { download: true }));
+}
+```
+
+`download: true` fetches the whole file through the loader's cache pipeline before building the element. That is what makes it cacheable and available offline, gives real byte progress, and it is always what a container (`.exoa`) entry does — container bytes are already owned by the application. The trade is that nothing plays until everything has arrived.
+
+Whichever transport an asset arrives through, it is the same canonical asset: a source loaded over the network and the same source unpacked from a container resolve to one identity and one resident resource, never two. That is also the limit of `download: true` — it decides how the asset is built by the load that *materializes* it, so a load that joins an already-resident asset gets what is resident. Acquire it through the downloading load first when a consumer depends on the byte backing.
+
+The CORS mode is the exception, because it is baked into the element rather than into the bytes: `crossOrigin: null` and the default `'anonymous'` for one URL are two assets, and so is `'use-credentials'`. Nobody is ever handed an element whose CORS mode they did not ask for — a video that cannot be a texture never arrives where a texture was expected.
+
 <Callout type="hint" title="Inspecting what's currently loaded">
-  `this.app.loader.inspect()` returns a frozen, sorted snapshot — one row per claimed asset, with its state, claim count, and whether it's in flight or still queued in
-  the background — for debugging or a support bundle. It's read-only: nothing you do with the returned array changes what's actually loaded.
+  `this.app.loader.inspect()` returns a frozen, sorted snapshot — one row per canonical asset, with its state, how many owners hold it, and whether it's in flight or
+  still queued in the background — for debugging or a support bundle. It's read-only: nothing you do with the returned array changes what's actually loaded.
 </Callout>
 
 ## When are resources available?

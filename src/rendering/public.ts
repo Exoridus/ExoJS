@@ -61,7 +61,7 @@ export type { GradientStop, GradientToTextureOptions, GradientType } from '#rend
 export { Gradient } from '#rendering/gradient/Gradient';
 export { LinearGradient } from '#rendering/gradient/LinearGradient';
 export { RadialGradient } from '#rendering/gradient/RadialGradient';
-export type { MaterialOptions, MaterialSamplerOptions, UniformValue } from '#rendering/material/Material';
+export type { MaterialOptions, UniformValue } from '#rendering/material/Material';
 export { Material } from '#rendering/material/Material';
 export { MeshMaterial } from '#rendering/material/MeshMaterial';
 export type { ShaderSourceOptions } from '#rendering/material/ShaderSource';
@@ -114,9 +114,8 @@ export type { DataTextureBuffer, DataTextureDirtyRegion, DataTextureFormat, Data
 export { DataTexture } from '#rendering/texture/DataTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';
 export type { RepeatFit, RepeatMode, RepeatPlan, RepeatSegment } from '#rendering/texture/repeat';
-export type { SamplerOptions } from '#rendering/texture/Sampler';
-export { Sampler } from '#rendering/texture/Sampler';
 export { Texture } from '#rendering/texture/Texture';
+export type { SamplerOptions, TextureOptions, TextureUploadOptions } from '#rendering/texture/TextureOptions';
 export type { TextureRegionInsets, TextureRegionOptions } from '#rendering/texture/TextureRegion';
 export { TextureRegion } from '#rendering/texture/TextureRegion';
 export { Video } from '#rendering/video/Video';

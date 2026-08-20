@@ -1,0 +1,117 @@
+{
+  "title": "AssetOwnerInspection",
+  "description": "One row of Loader.inspect's diagnostic snapshot: everything a developer needs to reason about a single canonical asset without reaching into `Loader`'s private residency bookkeeping - its lifecycle state, how many independent claim scopes hold it, and whether its fetch is queued, in flight, or settled. Every row is plain, frozen data: numbers, strings, booleans, and the asset's constructor token - never a `Set`, a claim symbol, or a live handle/ref object, so nothing returned here can be used to mutate residency state.",
+  "symbol": "AssetOwnerInspection",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One row of Loader.inspect's diagnostic snapshot: everything a developer needs to reason about a single canonical asset without reaching into `Loader`'s private residency bookkeeping - its lifecycle state, how many independent claim scopes hold it, and whether its fetch is queued, in flight, or settled. Every row is plain, frozen data: numbers, strings, booleans, and the asset's constructor token - never a `Set`, a claim symbol, or a live handle/ref object, so nothing returned here can be used to mutate residency state."
+      ],
+      "importLine": "import { AssetOwnerInspection } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "id",
+          "signature": "id: number",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable, unique per loader run."
+        },
+        {
+          "name": "kind",
+          "signature": "kind: LoaderScopeKind",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScopeKind",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "name",
+          "signature": "name?: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The scope's human-readable label, when it was given one. Never an identity."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetResidency.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetResidency.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetResidency.ts"
+}

@@ -6,10 +6,10 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 25,
+  "memberCount": 26,
   "counts": {
     "constructors": 1,
-    "methods": 10,
+    "methods": 11,
     "properties": 8,
     "events": 6
   },
@@ -159,6 +159,61 @@
           "params": [],
           "returnType": "void",
           "description": "Tear down this gamepad slot. Called on application shutdown."
+        },
+        {
+          "name": "getLabel",
+          "signature": "getLabel(control: GamepadPromptControl): string | undefined",
+          "signatureTokens": [
+            {
+              "text": "getLabel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "control",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "control",
+              "type": "GamepadPromptControl",
+              "optional": false
+            }
+          ],
+          "returnType": "string | undefined",
+          "description": "Name this device prints on control - \"A\" on an Xbox pad, \"Cross\" on a PlayStation one, \"B\" on a Switch one - or undefined when the slot is empty or this family does not label that control. Resolved against the connected pad's own mapping, so a generation that deviates from its family default is honoured: the PlayStation Select control reads \"Share\" on a DualShock 4 and \"Create\" on a DualSense."
         },
         {
           "name": "hasChannel",
@@ -1063,6 +1118,35 @@
           "description": "true while a physical pad is attached to this slot."
         },
         {
+          "name": "family",
+          "signature": "family: GamepadMappingFamily | null",
+          "signatureTokens": [
+            {
+              "text": "family",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMappingFamily",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device family of the connected pad, or null when the slot is empty. The value to key a game's own button-glyph or controller artwork on; ExoJS ships no glyph assets of its own."
+        },
+        {
           "name": "info",
           "signature": "info: GamepadInfo | null",
           "signatureTokens": [
@@ -1148,35 +1232,6 @@
           "params": [],
           "returnType": null,
           "description": "The active mapping, or null when disconnected."
-        },
-        {
-          "name": "mappingFamily",
-          "signature": "mappingFamily: GamepadMappingFamily | null",
-          "signatureTokens": [
-            {
-              "text": "mappingFamily",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "GamepadMappingFamily",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "null",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The GamepadMappingFamily, or null when disconnected."
         },
         {
           "name": "slot",

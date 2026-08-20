@@ -93,6 +93,13 @@ export interface WebGpuRetainedBatchPayload {
    */
   readonly recordedViews: readonly GPUTextureView[];
   /**
+   * `Texture.flipY` at record time, parallel to {@link textures}. The recorded
+   * UV words carry the vertical swap already applied, so a texture that flips
+   * afterwards must force a recapture even though its view and size are
+   * unchanged.
+   */
+  readonly recordedFlipY: readonly boolean[];
+  /**
    * Opaque, renderer-private data captured alongside this batch (Text opt-in):
    * for a renderer whose per-instance node index addresses its OWN private
    * data store rather than the shared transform buffer (`_consumesSharedTransform

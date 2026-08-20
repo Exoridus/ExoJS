@@ -1,8 +1,9 @@
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
+import type { SamplerOptions } from '#rendering/texture/TextureOptions';
 import type { BlendModes } from '#rendering/types';
 
-import type { MaterialSamplerOptions, UniformValue } from './Material';
+import type { UniformValue } from './Material';
 
 /**
  * @internal
@@ -59,7 +60,7 @@ const intern = (registry: Map<string, number>, descriptor: string, allocate: () 
   return key;
 };
 
-const samplerDescriptor = (sampler: MaterialSamplerOptions | null): string => {
+const samplerDescriptor = (sampler: SamplerOptions | null): string => {
   if (sampler === null) {
     return '-';
   }
@@ -91,7 +92,7 @@ export const deriveBindKey = (
   materialId: number,
   uniforms: Record<string, UniformValue>,
   textures: Record<string, Texture | RenderTexture>,
-  sampler: MaterialSamplerOptions | null,
+  sampler: SamplerOptions | null,
 ): number => {
   const entries: string[] = [];
 

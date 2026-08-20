@@ -3,7 +3,7 @@
 import { Color } from '@codexo/exojs';
 
 import type { ColorGradient } from "#distributions/ColorGradient";
-import type { ParticleSystem } from "#ParticleSystem";
+import type { ParticleBatch } from "#ParticleStorage";
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
@@ -27,8 +27,10 @@ export class ColorOverLifetime extends UpdateModule {
     this.gradient = gradient;
   }
 
-  public override apply(system: ParticleSystem, _dt: number): void {
-    const { color, elapsed, lifetime, liveCount } = system;
+  public override apply(particles: ParticleBatch, _dt: number): void {
+    const { elapsed, lifetime } = particles.timing;
+    const color = particles.color;
+    const liveCount = particles.count;
     const gradient = this.gradient;
 
     for (let i = 0; i < liveCount; i++) {

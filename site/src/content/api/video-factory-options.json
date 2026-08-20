@@ -1,16 +1,16 @@
 {
   "title": "VideoFactoryOptions",
-  "description": "Construction options for VideoFactory.create.",
+  "description": "Construction options for VideoFactory.create and VideoFactory.createFromUrl.",
   "symbol": "VideoFactoryOptions",
   "kind": "interface",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Construction options for VideoFactory.create."
+        "Construction options for VideoFactory.create and VideoFactory.createFromUrl."
       ],
       "importLine": "import { VideoFactoryOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -28,6 +28,56 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "crossOrigin",
+          "signature": "crossOrigin?: MediaCrossOrigin",
+          "signatureTokens": [
+            {
+              "text": "crossOrigin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MediaCrossOrigin",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Defaults to 'anonymous'. Ignored for downloaded or container-backed media, whose bytes are already owned by the application. Unlike the transport, a non-default CORS mode IS part of asset identity: it is baked into the element, so a null and an 'anonymous' media resource for one URL are two assets, and a consumer never receives an element whose CORS mode it did not ask for."
+        },
+        {
+          "name": "download",
+          "signature": "download?: boolean",
+          "signatureTokens": [
+            {
+              "text": "download",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fetch the complete resource through the loader's byte/cache pipeline before the media element is built, instead of letting the browser stream it from its URL. Downloading makes the bytes cacheable and available offline, reports real fetch progress, and is what container (.exoa) entries always use. It also means nothing plays until the whole file has arrived. The transport is not part of asset identity: one URL is one asset however its bytes arrived, which is what lets a container entry and a network load share a single resident resource. This option therefore decides how the asset is built by the load that MATERIALIZES it - a load that joins an already-resident asset gets what is resident, whichever way that arrived. Acquire the asset through the download load first when the byte backing matters to a consumer."
+        },
         {
           "name": "loadEvent",
           "signature": "loadEvent?: StreamingLoadEvent",
@@ -51,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The HTMLVideoElement event that signals the asset is ready for playback. Defaults to 'canplaythrough'. Use 'loadedmetadata' for faster (dimensions-only) readiness."
+          "description": "The media event that marks the asset ready. Defaults to 'canplay': playback can start, which for streamed media deliberately does not mean the resource has fully arrived. 'loadedmetadata' resolves earlier (duration and dimensions only, nothing playable yet), 'canplaythrough' waits for the browser to predict uninterrupted playback."
         },
         {
           "name": "mimeType",
@@ -76,7 +126,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "MIME type for the video blob. Inferred from magic bytes when omitted."
+          "description": "MIME type for the video blob. Inferred from magic bytes when omitted, and unused by streamed media, whose type comes from the response."
         },
         {
           "name": "playbackOptions",
@@ -116,43 +166,6 @@
           "description": "Initial playback settings forwarded to the Video instance."
         },
         {
-          "name": "samplerOptions",
-          "signature": "samplerOptions?: Partial<SamplerOptions>",
-          "signatureTokens": [
-            {
-              "text": "samplerOptions",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Partial",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SamplerOptions",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Sampler parameters forwarded to the Video instance's texture."
-        },
-        {
           "name": "stallTimeout",
           "signature": "stallTimeout?: number",
           "signatureTokens": [
@@ -175,7 +188,44 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Milliseconds to wait after a stalled event before rejecting the load promise. When omitted no timeout is applied and a stalled load will wait indefinitely. Each subsequent stalled event resets the timer."
+          "description": "Milliseconds to wait after a stalled event before failing the load. When omitted a stalled load waits indefinitely. Each further stalled event restarts the timer."
+        },
+        {
+          "name": "textureOptions",
+          "signature": "textureOptions?: Partial<TextureOptions>",
+          "signatureTokens": [
+            {
+              "text": "textureOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Sampling and upload state forwarded to the Video instance's texture."
         }
       ],
       "paragraphs": [],

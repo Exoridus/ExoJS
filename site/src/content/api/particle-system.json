@@ -1,16 +1,16 @@
 {
   "title": "ParticleSystem",
-  "description": "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns: - **SoA particle storage** — one typed array per attribute (position, velocity, scale, rotation, color, lifetime, ...), sized to a fixed capacity at construction. User code reads/writes via `system.posX[slot]`, `system.velX[slot]`, etc. - **Spawn modules** — write new particles into freshly allocated slots. - **Update modules** — mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** — fire once per dying particle, before its slot is recycled (sub-emitters, event hooks). **Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()` AND the render mode is GPU-eligible, the GPU path engages — a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops. **Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count. **Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** — slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes. **Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering — both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`. **Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output — snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable.",
+  "description": "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns: - **Particle storage** - one channel per attribute (position, velocity, scale, rotation, color, timing, ...), sized to a fixed capacity at construction. Modules and render modes address it by name through a ParticleBatch; user code brings particles into existence with emit. - **Spawn modules** - fill freshly emitted particles. - **Update modules** - mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** - fire once per dying particle, before its slot is recycled (sub-emitters, event hooks). **Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()` AND the render mode is GPU-eligible, the GPU path engages - a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops. **Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count. **Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** - slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes. **Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering - both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`. **Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output - snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable.",
   "symbol": "ParticleSystem",
   "kind": "class",
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 127,
+  "memberCount": 114,
   "counts": {
     "constructors": 4,
     "methods": 47,
-    "properties": 62,
+    "properties": 49,
     "events": 14
   },
   "sections": [
@@ -20,12 +20,12 @@
       "members": [],
       "paragraphs": [
         "The central coordinator of the particle pipeline. `ParticleSystem` is a Drawable that owns:",
-        "- **SoA particle storage** — one typed array per attribute (position, velocity, scale, rotation, color, lifetime, ...), sized to a fixed capacity at construction. User code reads/writes via `system.posX[slot]`, `system.velX[slot]`, etc. - **Spawn modules** — write new particles into freshly allocated slots. - **Update modules** — mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** — fire once per dying particle, before its slot is recycled (sub-emitters, event hooks).",
-        "**Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()` AND the render mode is GPU-eligible, the GPU path engages — a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops.",
+        "- **Particle storage** - one channel per attribute (position, velocity, scale, rotation, color, timing, ...), sized to a fixed capacity at construction. Modules and render modes address it by name through a ParticleBatch; user code brings particles into existence with emit. - **Spawn modules** - fill freshly emitted particles. - **Update modules** - mutate the live range each frame (forces, color blends, scale curves, drag, ...). Built-in modules ship both CPU and WGSL implementations; custom modules can opt into GPU acceleration by implementing `wgsl()`. - **Death modules** - fire once per dying particle, before its slot is recycled (sub-emitters, event hooks).",
+        "**Auto-routing CPU vs GPU:** at first update, the system checks: if a `WebGpuBackend` was supplied AND every registered update module has `wgsl()` AND the render mode is GPU-eligible, the GPU path engages - a composite compute pipeline runs integration plus all module bodies in one dispatch and writes directly into the renderer's instance buffer (no CPU readback). Otherwise the CPU path runs the existing per-module `apply()` loops.",
         "**Per-frame order in update (CPU mode):** 1. Run every spawn module. 2. Integrate position from velocity, rotation from rotationSpeed, advance `elapsed`. 3. Run every update module on the live range. 4. Compact: scan `[0, liveCount)` forward, fire death modules on expired slots, copy survivors down. `liveCount` shrinks to the survivor count.",
-        "**Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** — slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes.",
-        "**Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering — both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`.",
-        "**Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output — snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable."
+        "**Per-frame order in update (GPU mode):** 1. Run every spawn module (CPU writes initial values into the spawn slot). 2. Detect expiries on CPU (via `elapsed >= lifetime`); fire death modules; set `lifetime[slot] = -1` sentinel + clear `alive[slot]` so the GPU shader skips them. **No compaction** - slots are recycled on next spawn. 3. Dispatch the composite compute pipeline. Integration + update modules + pack-instances run in one pass; the instance buffer is written directly. CPU SoA stays as-is for spawn writes.",
+        "**Coordinate space:** particle positions are LOCAL to the system. The system's `getGlobalTransform()` is applied on top during rendering - both the WebGL2 and WebGPU shaders multiply `projection * translation * rotated`. Setting world-space positions on individual particles double-translates. Position the system itself via `system.setPosition(...)` and emit relative to `(0, 0)`.",
+        "**Pixel snapping:** Drawable.pixelSnapMode is intentionally ignored for particle systems. Particle instances bake their own per-particle transforms in the emitter/compute path rather than reading the shared pixel-snap transform row, so a snap mode set on the system has no effect on rendered output - snapping thousands of independently-moving sub-pixel particles to the device grid is neither meaningful nor desirable."
       ],
       "importLine": "import { ParticleSystem } from '@codexo/exojs-particles'",
       "sourceLink": null
@@ -83,7 +83,7 @@
             }
           ],
           "returnType": "ParticleSystem",
-          "description": "No texture — particles render as solid-color quads on a 1×1 white default."
+          "description": "No texture - particles render as solid-color quads on a 1×1 white default."
         },
         {
           "name": "new",
@@ -155,7 +155,7 @@
             }
           ],
           "returnType": "ParticleSystem",
-          "description": "Single texture, no atlas — every particle uses the full texture as one frame."
+          "description": "Single texture, no atlas - every particle uses the full texture as one frame."
         },
         {
           "name": "new",
@@ -260,7 +260,7 @@
             }
           ],
           "returnType": "ParticleSystem",
-          "description": "Multi-frame atlas — each particle's textureIndex selects a frame."
+          "description": "Multi-frame atlas - each particle's textureIndex selects a frame."
         },
         {
           "name": "new",
@@ -332,7 +332,7 @@
             }
           ],
           "returnType": "ParticleSystem",
-          "description": "Spritesheet shorthand — texture + frames pulled from the sheet."
+          "description": "Spritesheet shorthand - texture + frames pulled from the sheet."
         }
       ],
       "paragraphs": [],
@@ -558,7 +558,7 @@
             }
           ],
           "returnType": "this",
-          "description": ""
+          "description": "Registers an update module. Modules run in registration order, each seeing what the previous ones did. Modules may be added and removed at any time, including mid-flight: the next update rebuilds whatever the change invalidated. On the GPU path that is the compute program alone - live particles keep the state the device has been integrating. Adding a module without a wgsl() implementation to a running GPU system is the one change that cannot preserve them: the simulation moves to the CPU, which has no copy of the integrated state, so the system clears its live particles rather than continuing from stale values (see clearParticles)."
         },
         {
           "name": "blur",
@@ -885,6 +885,43 @@
           "params": [],
           "returnType": "void",
           "description": ""
+        },
+        {
+          "name": "emit",
+          "signature": "emit(): ParticleWriter | null",
+          "signatureTokens": [
+            {
+              "text": "emit",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleWriter",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "ParticleWriter | null",
+          "description": "Brings one particle into existence and returns a writer for its initial values, or null when the system is at capacity. The particle starts at the spawn defaults - origin, no velocity, unit scale, no rotation, opaque white, frame 0, one second of life - so a caller writes only what it varies. The returned writer is a cursor that the next emit() rebinds, so it must not be stored. Emission is the only per-particle write that is true on every backend: spawn values originate on the CPU and are uploaded from there, while everything the simulation integrates afterwards lives wherever the simulation runs."
         },
         {
           "name": "focus",
@@ -2149,35 +2186,6 @@
           "description": "Set the tint colour by copying color into the internal Color instance. Invalidates the render cache so the change is picked up on the next frame."
         },
         {
-          "name": "spawn",
-          "signature": "spawn(): number",
-          "signatureTokens": [
-            {
-              "text": "spawn",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "number",
-          "description": "Allocates a particle slot and returns its index. Returns -1 when the system is at capacity. **CPU mode:** slots are dense in [0, liveCount). spawn() returns the next sequential slot; liveCount++. **GPU mode:** slots may have dead holes. spawn() finds the first alive[i] === 0 slot via a round-robin hint pointer (amortised O(1), worst case O(capacity) on full systems)."
-        },
-        {
           "name": "update",
           "signature": "update(delta: Time): this",
           "signatureTokens": [
@@ -2384,27 +2392,6 @@
       "title": "Properties",
       "members": [
         {
-          "name": "alive",
-          "signature": "alive: Uint8Array",
-          "signatureTokens": [
-            {
-              "text": "alive",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Uint8Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Per-slot alive flag (1 = alive, 0 = dead). Maintained in both CPU and GPU mode. Custom modules iterating the live range should check this to skip dead slots in GPU mode."
-        },
-        {
           "name": "capacity",
           "signature": "capacity: number",
           "signatureTokens": [
@@ -2439,27 +2426,6 @@
             },
             {
               "text": "CollisionType",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "color",
-          "signature": "color: Uint32Array",
-          "signatureTokens": [
-            {
-              "text": "color",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Uint32Array",
               "kind": "type"
             }
           ],
@@ -2518,27 +2484,6 @@
           "description": "When true and interactive is also true, this node will be automatically repositioned to follow the pointer during a drag gesture. The framework captures the pointer offset at drag-start so the node doesn't snap to the cursor position. Both interactive and draggable must be set for dragging to work — a draggable but non-interactive node will never receive pointerdown and therefore cannot start a drag."
         },
         {
-          "name": "elapsed",
-          "signature": "elapsed: Float32Array",
-          "signatureTokens": [
-            {
-              "text": "elapsed",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Float32Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
           "name": "flags",
           "signature": "flags: Flags<SceneNodeTransformFlags>",
           "signatureTokens": [
@@ -2593,48 +2538,6 @@
           "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.interaction.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do). A Widget additionally has to be enabled: disabling one takes it out of the Tab order and rejects programmatic focus, without touching this flag."
         },
         {
-          "name": "lifetime",
-          "signature": "lifetime: Float32Array",
-          "signatureTokens": [
-            {
-              "text": "lifetime",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Float32Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "liveCount",
-          "signature": "liveCount: number",
-          "signatureTokens": [
-            {
-              "text": "liveCount",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Number of currently live particles. In CPU mode this is exact: slots [0, liveCount) are all alive after each update(). In GPU mode this is a high-water mark — slots [0, liveCount) may contain dead holes (filled in by future spawns); use aliveCount for the actual alive count."
-        },
-        {
           "name": "name",
           "signature": "name: null | string",
           "signatureTokens": [
@@ -2664,132 +2567,6 @@
           "description": "Optional human-readable identity for this node. Defaults to null. Purely a label the engine never interprets: useful for debugging, find-by-name lookups, prefab references, and as a stable key when merging serialized state back onto an existing tree. Not required to be unique."
         },
         {
-          "name": "posX",
-          "signature": "posX: Float32Array",
-          "signatureTokens": [
-            {
-              "text": "posX",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Float32Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "posY",
-          "signature": "posY: Float32Array",
-          "signatureTokens": [
-            {
-              "text": "posY",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Float32Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "rotations",
-          "signature": "rotations: Float32Array",
-          "signatureTokens": [
-            {
-              "text": "rotations",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Float32Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "rotationSpeeds",
-          "signature": "rotationSpeeds: Float32Array",
-          "signatureTokens": [
-            {
-              "text": "rotationSpeeds",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Float32Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "scaleX",
-          "signature": "scaleX: Float32Array",
-          "signatureTokens": [
-            {
-              "text": "scaleX",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Float32Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "scaleY",
-          "signature": "scaleY: Float32Array",
-          "signatureTokens": [
-            {
-              "text": "scaleY",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Float32Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
           "name": "tabIndex",
           "signature": "tabIndex: number",
           "signatureTokens": [
@@ -2811,69 +2588,6 @@
           "description": "Tab-traversal order among focusable nodes in the same focus scope. Lower values are visited first; equal values keep document (tree) order."
         },
         {
-          "name": "textureIndex",
-          "signature": "textureIndex: Uint16Array",
-          "signatureTokens": [
-            {
-              "text": "textureIndex",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Uint16Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Per-slot atlas frame selector: an index into frames. **Anything that is not a valid explicit index shows frame 0.** The array is zero-initialised, so a particle whose index was never set already shows frame 0, and an index at or past the declared frame count falls back to the same frame rather than to the last one — one rule instead of two different behaviours depending on how the index went wrong. It holds identically on the CPU packer and in the compute pipeline, so a system looks the same on either backend. Ignored entirely when the system declares no frames: the whole texture is then the single frame."
-        },
-        {
-          "name": "velX",
-          "signature": "velX: Float32Array",
-          "signatureTokens": [
-            {
-              "text": "velX",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Float32Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "velY",
-          "signature": "velY: Float32Array",
-          "signatureTokens": [
-            {
-              "text": "velY",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Float32Array",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
           "name": "aliveCount",
           "signature": "aliveCount: number",
           "signatureTokens": [
@@ -2892,7 +2606,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Actual count of live particles (slots with alive[i] === 1). May differ from liveCount in GPU mode."
+          "description": "Actual count of live particles. May be below liveCount on the GPU path."
         },
         {
           "name": "anchor",
@@ -3320,6 +3034,27 @@
           "description": ""
         },
         {
+          "name": "liveCount",
+          "signature": "liveCount: number",
+          "signatureTokens": [
+            {
+              "text": "liveCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Upper bound of the slot range that can hold live particles. Exact on the CPU path: after each update() slots [0, liveCount) are all alive. On the GPU path it is a high-water mark whose range can contain dead holes that future emissions fill; aliveCount counts the live ones."
+        },
+        {
           "name": "mask",
           "signature": "mask: MaskSource",
           "signatureTokens": [
@@ -3472,7 +3207,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The render mode this system's particles are drawn with. Fixed at construction via ParticleSystemOptions.render; the backend renderers read it every draw to learn the vertex layout, shader and draw model. Without that option this is the shared default mode — the same instance every other defaulted system draws with, so do not destroy it or mutate its material."
+          "description": "The render mode this system's particles are drawn with. Fixed at construction via ParticleSystemOptions.render; the backend renderers read it every draw to learn the vertex layout, shader and draw model. Without that option this is the shared default mode - the same instance every other defaulted system draws with, so do not destroy it or mutate its material."
         },
         {
           "name": "rotation",

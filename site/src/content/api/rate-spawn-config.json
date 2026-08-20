@@ -1,6 +1,6 @@
 {
   "title": "RateSpawnConfig",
-  "description": "Per-property spawn configuration. Every entry is a Distribution sampled once per spawned particle. Omitting an entry leaves the slot's field at its zero/default value (zero position/velocity/rotation, unit scale, opaque white, lifetime 1 s).",
+  "description": "Spawn configuration for RateSpawn: the emission rate plus the shared per-property fields.",
   "symbol": "RateSpawnConfig",
   "kind": "interface",
   "subsystem": "particles",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Per-property spawn configuration. Every entry is a Distribution sampled once per spawned particle. Omitting an entry leaves the slot's field at its zero/default value (zero position/velocity/rotation, unit scale, opaque white, lifetime 1 s)."
+        "Spawn configuration for RateSpawn: the emission rate plus the shared per-property fields."
       ],
       "importLine": "import { RateSpawnConfig } from '@codexo/exojs-particles'",
       "sourceLink": null
@@ -63,7 +63,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Total lifetime in seconds. Required — drives expiry. Default 1."
+          "description": "Total lifetime in seconds. Drives expiry."
         },
         {
           "name": "position",
@@ -281,7 +281,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Atlas frame index. Ignored by a system that declares no frames."
         },
         {
           "name": "tint",
@@ -318,7 +318,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Initial tint at spawn. For per-frame fade use a ColorOverLifetime update module."
+          "description": "Initial tint. For a per-frame fade use a ColorOverLifetime update module."
         },
         {
           "name": "velocity",

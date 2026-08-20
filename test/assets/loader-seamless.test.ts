@@ -176,7 +176,7 @@ describe('Loader seamless get (Texture)', () => {
     expect(calls).toBe(2);
   });
 
-  test('conflicting FETCH options (mimeType) warn once and the first call wins', async () => {
+  test('an identity-relevant option (mimeType) splits one source into independent handles, silently', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const warnings: string[] = [];
@@ -185,23 +185,25 @@ describe('Loader seamless get (Texture)', () => {
     });
 
     try {
-      const handle = loader.get('ship.png', { mimeType: 'image/png' });
+      const png = loader.get('ship.png', { mimeType: 'image/png' });
+      const webp = loader.get('ship.png', { mimeType: 'image/webp' });
 
-      // A different mimeType for one source cannot share the source-keyed decode.
-      loader.get('ship.png', { mimeType: 'image/webp' });
-      loader.get('ship.png', { mimeType: 'image/webp' });
+      // mimeType decides the decode, so these are two resources - not one
+      // resource with a losing second opinion about how to read it.
+      expect(webp).not.toBe(png);
+      // The same identity-relevant option resolves back to the same handle.
+      expect(loader.get('ship.png', { mimeType: 'image/webp' })).toBe(webp);
+      expect(warnings).toHaveLength(0);
 
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toContain('first call');
-
-      await handle.loaded;
-      expect(handle.loadState).toBe('ready');
+      await Promise.all([png.loaded, webp.loaded]);
+      expect(png.loadState).toBe('ready');
+      expect(webp.loadState).toBe('ready');
     } finally {
       removeSink();
     }
   });
 
-  test('differing per-handle samplerOptions across get() do NOT warn; the first sampler wins on the shared handle', async () => {
+  test('differing per-handle textureOptions across get() do NOT warn; the first sampler wins on the shared handle', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const warnings: string[] = [];
@@ -213,9 +215,9 @@ describe('Loader seamless get (Texture)', () => {
       // get() returns the SAME handle per source; sampler options are per-handle
       // now, so a later differing sampler is silently first-wins (no warn). Use a
       // distinct handle (e.g. an Assets catalog leaf) for an independent sampler.
-      const handle = loader.get('ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
+      const handle = loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Nearest } });
 
-      expect(handle).toBe(loader.get('ship.png', { samplerOptions: { scaleMode: ScaleModes.Linear } }));
+      expect(handle).toBe(loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Linear } }));
       expect(warnings).toHaveLength(0);
       expect(handle.scaleMode).toBe(ScaleModes.Nearest); // first call's sampler, baked at createPlaceholder
 
@@ -226,11 +228,11 @@ describe('Loader seamless get (Texture)', () => {
     }
   });
 
-  test('samplerOptions on a background-adopted catalog leaf survive a later bare get()', async () => {
+  test('textureOptions on a background-adopted catalog leaf survive a later bare get()', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } } });
+    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png', textureOptions: { scaleMode: ScaleModes.Nearest } } });
     loader.load(catalog, { priority: LoadPriority.Background });
 
     // A bare get() for the same source returns the adopted leaf, whose sampler
@@ -246,7 +248,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const handle = loader.get('ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
+    const handle = loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Nearest } });
 
     expect(handle.scaleMode).toBe(ScaleModes.Nearest);
   });
@@ -260,8 +262,8 @@ describe('Loader seamless get (Texture)', () => {
     });
 
     try {
-      loader.get('ship.png', { samplerOptions: { flipY: true } });
-      loader.get('ship.png', { samplerOptions: { flipY: true } });
+      loader.get('ship.png', { textureOptions: { flipY: true } });
+      loader.get('ship.png', { textureOptions: { flipY: true } });
 
       expect(warnings).toHaveLength(0);
     } finally {
@@ -277,7 +279,7 @@ describe('Loader seamless get (Texture)', () => {
 
     // The hard reset path is internal-only: it forgets every scope's claim, so
     // it is deliberately not reachable through the public surface.
-    (loader as unknown as { _residency: { _unloadOne(type: unknown, alias: string): void } })._residency._unloadOne(Texture, 'ship.png');
+    (loader as unknown as { _residency: { _unloadOne(asset: unknown): void } })._residency._unloadOne(loader['_canonicalize'](Texture, 'ship.png'));
 
     await expect(handle.loaded).rejects.toThrow('unloaded while');
     expect(handle.loadState).toBe('failed');

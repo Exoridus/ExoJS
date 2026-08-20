@@ -91,28 +91,28 @@ describe('@codexo/exojs-tiled asset handler — tiledSourceBinding', () => {
     expect(typeof handler.load).toBe('function');
   });
 
-  it('create() returns an object with a getIdentityKey function', () => {
+  it('create() returns an object with a getIdentityDiscriminator function', () => {
     const handler = tiledSourceBinding.create(fakeLoader());
-    expect(typeof handler.getIdentityKey).toBe('function');
+    expect(typeof handler.getIdentityDiscriminator).toBe('function');
   });
 });
 
-describe('tiledSourceBinding.getIdentityKey', () => {
+describe('tiledSourceBinding.getIdentityDiscriminator', () => {
   const handler = tiledSourceBinding.create(fakeLoader());
 
-  it('includes source and format in the key', () => {
-    expect(handler.getIdentityKey!({ source: 'world.tmj' })).toBe('world.tmj|tiled');
+  it('contributes only the format — the loader owns type and locator', () => {
+    expect(handler.getIdentityDiscriminator!({ source: 'world.tmj' })).toBe('tiled');
+    expect(handler.getIdentityDiscriminator!({ source: 'other.tmj' })).toBe('tiled');
   });
 });
 
-describe('tiledRuntimeMapBinding and tiledSourceBinding identity keys', () => {
-  it('produce the same key string for the same source (Loader namespaces them by type)', () => {
+describe('tiledRuntimeMapBinding and tiledSourceBinding discriminators', () => {
+  it('agree on the format, and the loader keeps their keys apart by type', () => {
     const runtimeHandler = tiledRuntimeMapBinding.create(fakeLoader());
-    const sourceHandler  = tiledSourceBinding.create(fakeLoader());
-    // Both use the same discriminator; the Loader prepends distinct type IDs so
-    // their cache keys are different even though this string matches.
+    const sourceHandler = tiledSourceBinding.create(fakeLoader());
     const req = { source: 'world.tmj' };
-    expect(runtimeHandler.getIdentityKey!(req)).toBe(sourceHandler.getIdentityKey!(req));
+
+    expect(runtimeHandler.getIdentityDiscriminator!(req)).toBe(sourceHandler.getIdentityDiscriminator!(req));
   });
 });
 

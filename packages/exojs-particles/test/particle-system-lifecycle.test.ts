@@ -245,13 +245,13 @@ describe('ParticleSystem.aliveCount', () => {
   test('counts only slots flagged alive within [0, liveCount), distinct from liveCount itself', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 8 });
 
-    system.spawn();
-    system.spawn();
-    system.spawn();
+    system._spawnSlot();
+    system._spawnSlot();
+    system._spawnSlot();
 
     // Directly clear one slot's alive flag without going through the
     // normal compaction path (simulates a GPU-mode dead hole).
-    system.alive[1] = 0;
+    system._storage.alive[1] = 0;
 
     expect(system.liveCount).toBe(3);
     expect(system.aliveCount).toBe(2);
@@ -270,9 +270,9 @@ describe('ParticleSystem.clearParticles', () => {
     system.clearParticles();
 
     expect(system.liveCount).toBe(0);
-    expect(Array.from(system.alive)).toEqual(new Array(8).fill(0));
-    expect(Array.from(system.lifetime)).toEqual(new Array(8).fill(0));
-    expect(Array.from(system.elapsed)).toEqual(new Array(8).fill(0));
+    expect(Array.from(system._storage.alive)).toEqual(new Array(8).fill(0));
+    expect(Array.from(system._storage.lifetime)).toEqual(new Array(8).fill(0));
+    expect(Array.from(system._storage.elapsed)).toEqual(new Array(8).fill(0));
   });
 });
 
@@ -291,7 +291,7 @@ describe('ParticleSystem.destroy', () => {
     expect(system.liveCount).toBe(0);
     expect(system.spawnModules.length).toBe(0);
     expect(system.updateModules.length).toBe(0);
-    expect(Array.from(system.alive)).toEqual(new Array(4).fill(0));
+    expect(Array.from(system._storage.alive)).toEqual(new Array(4).fill(0));
   });
 });
 
@@ -327,9 +327,9 @@ describe('RateSpawn — capacity exhaustion and full field config', () => {
     expect(system.liveCount).toBeGreaterThan(0);
 
     for (let i = 0; i < system.liveCount; i++) {
-      expect(system.rotations[i]).toBeCloseTo(90);
-      expect(system.color[i] & 0xff).toBe(255); // red channel of packed RGBA
-      expect(system.textureIndex[i]).toBe(2);
+      expect(system._storage.rotations[i]).toBeCloseTo(90);
+      expect(system._storage.color[i] & 0xff).toBe(255); // red channel of packed RGBA
+      expect(system._storage.frame[i]).toBe(2);
     }
   });
 });
@@ -369,15 +369,15 @@ describe('BurstSpawn — capacity exhaustion and full field config', () => {
       // update() integrates position by velocity * dt in the same frame the
       // particles are spawned in, so posX/posY have already advanced by
       // velX/velY * 0.1 from their spawn position.
-      expect(system.posX[i]).toBeCloseTo(1 + 3 * 0.1);
-      expect(system.posY[i]).toBeCloseTo(2 + 4 * 0.1);
-      expect(system.velX[i]).toBeCloseTo(3);
-      expect(system.velY[i]).toBeCloseTo(4);
-      expect(system.scaleX[i]).toBeCloseTo(5);
-      expect(system.scaleY[i]).toBeCloseTo(6);
-      expect(system.rotations[i]).toBeCloseTo(45);
-      expect((system.color[i] >>> 8) & 0xff).toBe(255); // green channel
-      expect(system.textureIndex[i]).toBe(1);
+      expect(system._storage.posX[i]).toBeCloseTo(1 + 3 * 0.1);
+      expect(system._storage.posY[i]).toBeCloseTo(2 + 4 * 0.1);
+      expect(system._storage.velX[i]).toBeCloseTo(3);
+      expect(system._storage.velY[i]).toBeCloseTo(4);
+      expect(system._storage.scaleX[i]).toBeCloseTo(5);
+      expect(system._storage.scaleY[i]).toBeCloseTo(6);
+      expect(system._storage.rotations[i]).toBeCloseTo(45);
+      expect((system._storage.color[i] >>> 8) & 0xff).toBe(255); // green channel
+      expect(system._storage.frame[i]).toBe(1);
     }
   });
 });

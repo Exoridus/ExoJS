@@ -17,15 +17,15 @@ describe('QuadParticles', () => {
     const mode = new QuadParticles();
 
     for (let i = 0; i < 3; i++) {
-      const slot = system.spawn();
-      system.posX[slot] = i * 10;
-      system.posY[slot] = i * 20;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.lifetime[slot] = 5;
+      const slot = system._spawnSlot();
+      system._storage.posX[slot] = i * 10;
+      system._storage.posY[slot] = i * 20;
+      system._storage.scaleX[slot] = 1;
+      system._storage.scaleY[slot] = 1;
+      system._storage.lifetime[slot] = 5;
     }
 
-    mode.build(system);
+    mode.build(system, system._storage);
 
     expect(mode.count).toBe(3);
     expect(mode.data.byteLength).toBeGreaterThanOrEqual(3 * 40);
@@ -40,7 +40,9 @@ describe('QuadParticles', () => {
   it('reports zero instances for an empty system', () => {
     const mode = new QuadParticles();
 
-    mode.build(new ParticleSystem({ capacity: 8 }));
+    const empty = new ParticleSystem({ capacity: 8 });
+
+    mode.build(empty, empty._storage);
 
     expect(mode.count).toBe(0);
   });

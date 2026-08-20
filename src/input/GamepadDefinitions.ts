@@ -1,14 +1,17 @@
-import { ArcadeStickGamepadMapping } from './ArcadeStickGamepadMapping';
 import type { GamepadMapping } from './GamepadMapping';
 import { GamepadMappingLayout } from './GamepadMapping';
-import { GenericDualAnalogGamepadMapping } from './GenericDualAnalogGamepadMapping';
-import { JoyConLeftGamepadMapping } from './JoyConLeftGamepadMapping';
-import { JoyConRightGamepadMapping } from './JoyConRightGamepadMapping';
-import { PlayStationGamepadMapping, PlayStationGeneration } from './PlayStationGamepadMapping';
-import { SteamControllerGamepadMapping } from './SteamControllerGamepadMapping';
-import { SteamDeckGamepadMapping } from './SteamDeckGamepadMapping';
-import { SwitchProGamepadMapping } from './SwitchProGamepadMapping';
-import { XboxGamepadMapping } from './XboxGamepadMapping';
+import {
+  createArcadeStickGamepadMapping,
+  createJoyConLeftGamepadMapping,
+  createJoyConRightGamepadMapping,
+  createPlayStationGamepadMapping,
+  createStandardGamepadMapping,
+  createSteamControllerGamepadMapping,
+  createSteamDeckGamepadMapping,
+  createSwitchProGamepadMapping,
+  createXboxGamepadMapping,
+  PlayStationGeneration,
+} from './gamepadMappings';
 
 /** Convenience alias for the non-null element type returned by `navigator.getGamepads()`. */
 export type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
@@ -238,9 +241,11 @@ const withStandardLayoutGuard = (resolved: ResolvedGamepadDefinition, descriptor
     return resolved;
   }
 
+  const { family, promptLabels } = resolved.mapping;
+
   return {
     ...resolved,
-    mapping: new GenericDualAnalogGamepadMapping([], resolved.mapping.promptLabels, resolved.mapping.family),
+    mapping: createStandardGamepadMapping({ family, ...(promptLabels !== undefined && { promptLabels }) }),
   };
 };
 
@@ -274,44 +279,44 @@ export const resolveGamepadDefinition = (
   return {
     descriptor,
     name: descriptor.name ?? descriptor.label,
-    mapping: new GenericDualAnalogGamepadMapping(),
+    mapping: createStandardGamepadMapping(),
   };
 };
 
 const exactDeviceDefinitions: GamepadDefinition[] = [
-  createStaticGamepadDefinition('Xbox 360 Controller', () => new XboxGamepadMapping(), '045e:028e'),
-  createStaticGamepadDefinition('Xbox One Controller', () => new XboxGamepadMapping(), ['045e:02d1', '045e:02dd']),
-  createStaticGamepadDefinition('Xbox Wireless Controller', () => new XboxGamepadMapping(), ['045e:02e0', '045e:02ea', '045e:02fd', '045e:0b20']),
-  createStaticGamepadDefinition('Xbox One Elite Controller', () => new XboxGamepadMapping(), '045e:02e3'),
-  createStaticGamepadDefinition('Xbox Elite Wireless Controller Series 2', () => new XboxGamepadMapping(), ['045e:0b00', '045e:0b05', '045e:0b22']),
-  createStaticGamepadDefinition('Xbox Series Controller', () => new XboxGamepadMapping(), ['045e:0b12', '045e:0b13']),
-  createStaticGamepadDefinition('PlayStation 3 Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS3), '054c:0268'),
-  createStaticGamepadDefinition('DualShock 4 Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), [
+  createStaticGamepadDefinition('Xbox 360 Controller', () => createXboxGamepadMapping(), '045e:028e'),
+  createStaticGamepadDefinition('Xbox One Controller', () => createXboxGamepadMapping(), ['045e:02d1', '045e:02dd']),
+  createStaticGamepadDefinition('Xbox Wireless Controller', () => createXboxGamepadMapping(), ['045e:02e0', '045e:02ea', '045e:02fd', '045e:0b20']),
+  createStaticGamepadDefinition('Xbox One Elite Controller', () => createXboxGamepadMapping(), '045e:02e3'),
+  createStaticGamepadDefinition('Xbox Elite Wireless Controller Series 2', () => createXboxGamepadMapping(), ['045e:0b00', '045e:0b05', '045e:0b22']),
+  createStaticGamepadDefinition('Xbox Series Controller', () => createXboxGamepadMapping(), ['045e:0b12', '045e:0b13']),
+  createStaticGamepadDefinition('PlayStation 3 Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS3), '054c:0268'),
+  createStaticGamepadDefinition('DualShock 4 Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), [
     '054c:05c4',
     '054c:09cc',
     '054c:0ba0',
   ]),
-  createStaticGamepadDefinition('DualSense Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS5), '054c:0ce6'),
-  createStaticGamepadDefinition('DualSense Edge Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS5), '054c:0df2'),
-  createStaticGamepadDefinition('Joy-Con (L)', () => new JoyConLeftGamepadMapping(), '057e:2006'),
-  createStaticGamepadDefinition('Joy-Con (R)', () => new JoyConRightGamepadMapping(), '057e:2007'),
-  createStaticGamepadDefinition('Joy-Con Charging Grip', () => new SwitchProGamepadMapping(), '057e:200e'),
-  createStaticGamepadDefinition('Switch Pro Controller', () => new SwitchProGamepadMapping(), '057e:2009'),
+  createStaticGamepadDefinition('DualSense Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS5), '054c:0ce6'),
+  createStaticGamepadDefinition('DualSense Edge Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS5), '054c:0df2'),
+  createStaticGamepadDefinition('Joy-Con (L)', () => createJoyConLeftGamepadMapping(), '057e:2006'),
+  createStaticGamepadDefinition('Joy-Con (R)', () => createJoyConRightGamepadMapping(), '057e:2007'),
+  createStaticGamepadDefinition('Joy-Con Charging Grip', () => createSwitchProGamepadMapping(), '057e:200e'),
+  createStaticGamepadDefinition('Switch Pro Controller', () => createSwitchProGamepadMapping(), '057e:2009'),
   // Switch 2 product IDs: unverified against real hardware, and absent from
   // Chromium's Nintendo device tables, so the browser does not normalise them
   // to the standard layout either. The mappings below are the plausible
   // Switch 1 analogues, not confirmed layouts.
-  createStaticGamepadDefinition('Joy-Con 2 (L)', () => new JoyConLeftGamepadMapping(), '057e:2066'),
-  createStaticGamepadDefinition('Joy-Con 2 (R)', () => new JoyConRightGamepadMapping(), '057e:2067'),
-  createStaticGamepadDefinition('Switch 2 Pro Controller', () => new SwitchProGamepadMapping(), '057e:2069'),
-  createStaticGamepadDefinition('Steam Controller', () => new SteamControllerGamepadMapping(), ['28de:1102', '28de:1142']),
-  createStaticGamepadDefinition('Steam Virtual Gamepad', () => new GenericDualAnalogGamepadMapping(), '28de:11ff'),
-  createStaticGamepadDefinition('Steam Deck', () => new SteamDeckGamepadMapping(), '28de:1205'),
-  createStaticGamepadDefinition('F310 Gamepad', () => new GenericDualAnalogGamepadMapping(), '046d:c216'),
-  createStaticGamepadDefinition('F710 Gamepad', () => new GenericDualAnalogGamepadMapping(), ['046d:c219', '046d:c21f']),
-  createStaticGamepadDefinition('8BitDo P30 Controller', () => new GenericDualAnalogGamepadMapping(), ['2dc8:5107', '2dc8:5108']),
-  createStaticGamepadDefinition('8BitDo SF30 Pro Controller', () => new SwitchProGamepadMapping(), ['2dc8:3000', '2dc8:6100', '2dc8:6101']),
-  createStaticGamepadDefinition('8BitDo SN30 Controller', () => new SwitchProGamepadMapping(), [
+  createStaticGamepadDefinition('Joy-Con 2 (L)', () => createJoyConLeftGamepadMapping(), '057e:2066'),
+  createStaticGamepadDefinition('Joy-Con 2 (R)', () => createJoyConRightGamepadMapping(), '057e:2067'),
+  createStaticGamepadDefinition('Switch 2 Pro Controller', () => createSwitchProGamepadMapping(), '057e:2069'),
+  createStaticGamepadDefinition('Steam Controller', () => createSteamControllerGamepadMapping(), ['28de:1102', '28de:1142']),
+  createStaticGamepadDefinition('Steam Virtual Gamepad', () => createStandardGamepadMapping(), '28de:11ff'),
+  createStaticGamepadDefinition('Steam Deck', () => createSteamDeckGamepadMapping(), '28de:1205'),
+  createStaticGamepadDefinition('F310 Gamepad', () => createStandardGamepadMapping(), '046d:c216'),
+  createStaticGamepadDefinition('F710 Gamepad', () => createStandardGamepadMapping(), ['046d:c219', '046d:c21f']),
+  createStaticGamepadDefinition('8BitDo P30 Controller', () => createStandardGamepadMapping(), ['2dc8:5107', '2dc8:5108']),
+  createStaticGamepadDefinition('8BitDo SF30 Pro Controller', () => createSwitchProGamepadMapping(), ['2dc8:3000', '2dc8:6100', '2dc8:6101']),
+  createStaticGamepadDefinition('8BitDo SN30 Controller', () => createSwitchProGamepadMapping(), [
     '2dc8:3001',
     '2dc8:5103',
     '2dc8:9020',
@@ -319,37 +324,40 @@ const exactDeviceDefinitions: GamepadDefinition[] = [
     '2dc8:2840',
     '2dc8:2862',
   ]),
-  createStaticGamepadDefinition('8BitDo NES30 Controller', () => new GenericDualAnalogGamepadMapping(), '2dc8:ab12'),
-  createStaticGamepadDefinition('PowerA Switch Controller', () => new SwitchProGamepadMapping(), '20d6:a713'),
-  createStaticGamepadDefinition('PowerA OPS Pro Wireless Controller', () => new GenericDualAnalogGamepadMapping(), '20d6:4033'),
-  createStaticGamepadDefinition('PowerA OPS Wireless Controller', () => new GenericDualAnalogGamepadMapping(), '20d6:4026'),
-  createStaticGamepadDefinition('Nacon Revolution 3 Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0611'),
-  createStaticGamepadDefinition('Nacon Revolution Unlimited Pro Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0d08'),
-  createStaticGamepadDefinition('Nacon Revolution Infinity Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0d10'),
-  createStaticGamepadDefinition('Nacon Revolution 5 Pro Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS5), [
+  createStaticGamepadDefinition('8BitDo NES30 Controller', () => createStandardGamepadMapping(), '2dc8:ab12'),
+  createStaticGamepadDefinition('PowerA Switch Controller', () => createSwitchProGamepadMapping(), '20d6:a713'),
+  createStaticGamepadDefinition('PowerA OPS Pro Wireless Controller', () => createStandardGamepadMapping(), '20d6:4033'),
+  createStaticGamepadDefinition('PowerA OPS Wireless Controller', () => createStandardGamepadMapping(), '20d6:4026'),
+  createStaticGamepadDefinition('Nacon Revolution 3 Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0611'),
+  createStaticGamepadDefinition('Nacon Revolution Unlimited Pro Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0d08'),
+  createStaticGamepadDefinition('Nacon Revolution Infinity Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), '146b:0d10'),
+  createStaticGamepadDefinition('Nacon Revolution 5 Pro Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS5), [
     '3285:0d17',
     '3285:0d19',
   ]),
-  createStaticGamepadDefinition('Razer Raiju Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), '1532:1000'),
-  createStaticGamepadDefinition('Razer Raiju Mobile Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), ['1532:0705', '1532:0707']),
-  createStaticGamepadDefinition('Razer Raiju Tournament Edition Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), [
+  createStaticGamepadDefinition('Razer Raiju Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), '1532:1000'),
+  createStaticGamepadDefinition('Razer Raiju Mobile Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), ['1532:0705', '1532:0707']),
+  createStaticGamepadDefinition('Razer Raiju Tournament Edition Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), [
     '1532:1007',
     '1532:100a',
   ]),
-  createStaticGamepadDefinition('Razer Raiju Ultimate Controller', () => new PlayStationGamepadMapping(PlayStationGeneration.PS4), ['1532:1004', '1532:1009']),
-  createStaticGamepadDefinition('Razer Raion Controller', () => new ArcadeStickGamepadMapping(), '1532:1100'),
+  createStaticGamepadDefinition('Razer Raiju Ultimate Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), [
+    '1532:1004',
+    '1532:1009',
+  ]),
+  createStaticGamepadDefinition('Razer Raion Controller', () => createArcadeStickGamepadMapping(), '1532:1100'),
 ];
 
 const vendorFallbackDefinitions: GamepadDefinition[] = [
-  createStaticGamepadDefinition('Microsoft Controller', () => new XboxGamepadMapping(), '045e'),
-  createStaticGamepadDefinition('Sony Controller', () => new PlayStationGamepadMapping(), '054c'),
+  createStaticGamepadDefinition('Microsoft Controller', () => createXboxGamepadMapping(), '045e'),
+  createStaticGamepadDefinition('Sony Controller', () => createPlayStationGamepadMapping(), '054c'),
   // Deliberately generic, not the Steam Deck layout: that layout is raw HID
   // order for one specific device, and handing it to any unrecognised Valve
   // product would route every channel through the wrong index.
-  createStaticGamepadDefinition('Valve Controller', () => new GenericDualAnalogGamepadMapping(), '28de'),
+  createStaticGamepadDefinition('Valve Controller', () => createStandardGamepadMapping(), '28de'),
 ];
 
-const genericFallbackDefinition = createStaticGamepadDefinition('Generic Gamepad', () => new GenericDualAnalogGamepadMapping());
+const genericFallbackDefinition = createStaticGamepadDefinition('Generic Gamepad', () => createStandardGamepadMapping());
 
 /**
  * The default ordered list of {@link GamepadDefinition} entries used by

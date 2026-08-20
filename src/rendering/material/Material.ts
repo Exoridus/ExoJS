@@ -1,6 +1,7 @@
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
-import { BlendModes, type ScaleModes, type WrapModes } from '#rendering/types';
+import type { SamplerOptions } from '#rendering/texture/TextureOptions';
+import { BlendModes } from '#rendering/types';
 
 import { deriveBindKey, derivePipelineKey } from './MaterialKey';
 import type { ShaderSource } from './ShaderSource';
@@ -21,18 +22,6 @@ export type UniformValue =
   | Int32Array
   | Texture
   | RenderTexture;
-
-/**
- * Sampling state a material can override for the drawable's base texture.
- * Upload state remains owned by the texture because one texture may be drawn
- * through several materials in the same frame.
- */
-export interface MaterialSamplerOptions {
-  /** Minification and magnification filter applied when sampling the base texture. */
-  scaleMode: ScaleModes;
-  /** Behaviour when base-texture UV coordinates exceed [0, 1]. */
-  wrapMode: WrapModes;
-}
 
 /** Whether a material-uniform value occupies a texture binding. @internal */
 export const isTextureUniformValue = (value: UniformValue): value is Texture | RenderTexture =>
@@ -77,7 +66,7 @@ export interface MaterialOptions {
    * that texture's sampler. Additional material textures keep their own
    * sampler state. Defaults to `null`.
    */
-  readonly sampler?: MaterialSamplerOptions | null;
+  readonly sampler?: SamplerOptions | null;
 }
 
 let nextMaterialId = 1;
@@ -124,7 +113,7 @@ export abstract class Material {
   public blendMode: BlendModes;
 
   /** Filter/wrap override for the drawable's base texture, or `null` to inherit it. */
-  public sampler: MaterialSamplerOptions | null;
+  public sampler: SamplerOptions | null;
 
   /** Which drawable class this material can serve; renderers check compatibility. */
   public abstract readonly target: 'mesh' | 'sprite' | 'particle';

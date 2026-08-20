@@ -1,7 +1,7 @@
 ﻿/// <reference types="@webgpu/types" />
 
 import { Curve } from "#distributions/Curve";
-import type { ParticleSystem } from "#ParticleSystem";
+import type { ParticleBatch } from "#ParticleStorage";
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
@@ -34,8 +34,10 @@ export class AlphaFadeOverLifetime extends UpdateModule {
     this.curve = curve;
   }
 
-  public override apply(system: ParticleSystem, _dt: number): void {
-    const { color, elapsed, lifetime, liveCount } = system;
+  public override apply(particles: ParticleBatch, _dt: number): void {
+    const { elapsed, lifetime } = particles.timing;
+    const color = particles.color;
+    const liveCount = particles.count;
     const curve = this.curve;
 
     for (let i = 0; i < liveCount; i++) {

@@ -1,7 +1,7 @@
 ﻿/// <reference types="@webgpu/types" />
 
 import type { Curve } from "#distributions/Curve";
-import type { ParticleSystem } from "#ParticleSystem";
+import type { ParticleBatch } from "#ParticleStorage";
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
@@ -28,8 +28,10 @@ export class ScaleOverLifetime extends UpdateModule {
     this.curve = curve;
   }
 
-  public override apply(system: ParticleSystem, _dt: number): void {
-    const { scaleX, scaleY, elapsed, lifetime, liveCount } = system;
+  public override apply(particles: ParticleBatch, _dt: number): void {
+    const { x: scaleX, y: scaleY } = particles.scale;
+    const { elapsed, lifetime } = particles.timing;
+    const liveCount = particles.count;
     const curve = this.curve;
 
     for (let i = 0; i < liveCount; i++) {

@@ -1,6 +1,6 @@
 {
   "title": "AssetHandler",
-  "description": "A loader-local instance produced by AssetBinding.create; owned and destroyed by the Loader. May hold state. Called once per `loader.load(...)` invocation. Sub-assets loaded via `context.loader.load(...)` are owned by the Loader's cache — NOT by this handler or the asset returned by `load`.",
+  "description": "A loader-local instance produced by AssetBinding.create; owned and destroyed by the Loader. May hold state. Called once per `loader.load(...)` invocation. Sub-assets must be loaded via `context.scope.load(...)`: that scope lives exactly as long as the asset being built, so its sub-assets are released with it unless another owner also holds them. `context.loader.load(...)` would instead claim them for the application's lifetime.",
   "symbol": "AssetHandler",
   "kind": "interface",
   "subsystem": "extensions",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A loader-local instance produced by AssetBinding.create; owned and destroyed by the Loader. May hold state. Called once per `loader.load(...)` invocation. Sub-assets loaded via `context.loader.load(...)` are owned by the Loader's cache — NOT by this handler or the asset returned by `load`."
+        "A loader-local instance produced by AssetBinding.create; owned and destroyed by the Loader. May hold state. Called once per `loader.load(...)` invocation. Sub-assets must be loaded via `context.scope.load(...)`: that scope lives exactly as long as the asset being built, so its sub-assets are released with it unless another owner also holds them. `context.loader.load(...)` would instead claim them for the application's lifetime."
       ],
       "importLine": "import { AssetHandler } from '@codexo/exojs/extensions'",
       "sourceLink": null
@@ -201,11 +201,11 @@
           "description": "Releases the resources held by ONE loaded asset, called when the Loader evicts it at refcount 0 (its last claim was released). The handler stays alive; only that asset is torn down. A factory-backed handler forwards this to AssetFactory.dispose. Optional and safe to omit — implement it only when the produced asset owns something the garbage collector cannot reclaim on its own (a media element, a FontFace registered on document.fonts, a GPU buffer, a worker). Must be synchronous; use destroy for handler-wide teardown instead."
         },
         {
-          "name": "getIdentityKey",
-          "signature": "getIdentityKey?(request: AssetLoadRequest<Options>): string",
+          "name": "getIdentityDiscriminator",
+          "signature": "getIdentityDiscriminator?(request: AssetLoadRequest<Options>): string",
           "signatureTokens": [
             {
-              "text": "getIdentityKey",
+              "text": "getIdentityDiscriminator",
               "kind": "name"
             },
             {
@@ -261,7 +261,7 @@
             }
           ],
           "returnType": "string",
-          "description": "Returns the deterministic identity key used for in-flight deduplication and loaded-resource reuse (and cache/resource-store identity where applicable). Include every option that **changes the produced resource** (format, locale, variant, color space, decoding mode, strictness when it affects output). Exclude control-only values that do not alter the resource (callbacks, AbortSignal, logger, request priority, timeout). Do **not** use JSON.stringify(request.options) — property-order instability, control-only field inclusion, and unbounded key size make it unsuitable. Explicitly select the identity-relevant fields instead. The Loader namespaces the key with the asset type, so the returned string may be type-local. Omit this hook to use the default (source-only) identity."
+          "description": "Returns the identity-relevant discriminator for a request: the part of an asset's identity that the source alone does not capture. The loader always owns type + canonical locator; whatever this returns is appended to it. Two requests for the same source that differ only in a discriminator are two distinct resources, each with its own fetch, residency entry and claims. Include every option that **changes the produced resource** (format, locale, variant, color space, decoding mode, strictness when it affects output). Exclude load policy (priority, AbortSignal, timeout) and per-consumer presentation options (sampler state, placeholder size) - neither changes the bytes, and folding them in would fetch and decode the same resource twice. Do **not** use JSON.stringify(request.options) - property-order instability, control-only field inclusion, and unbounded key size make it unsuitable. Explicitly select the identity-relevant fields instead. Omit this hook when the source alone identifies the resource."
         },
         {
           "name": "load",

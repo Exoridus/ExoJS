@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 8,
   "counts": {
     "constructors": 1,
-    "methods": 0,
-    "properties": 2,
+    "methods": 1,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -115,9 +115,68 @@
       "sourceLink": null
     },
     {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "serialize",
+          "signature": "serialize(): SerializedActionBinding",
+          "signatureTokens": [
+            {
+              "text": "serialize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedActionBinding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "SerializedActionBinding",
+          "description": "This action's effective binding in persistable form."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "kind",
+          "signature": "kind: \"vector\"",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"vector\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which action kind this is - the discriminant a serialized binding is validated against."
+        },
         {
           "name": "value",
           "signature": "value: Vector",
@@ -159,6 +218,81 @@
           "params": [],
           "returnType": null,
           "description": "true while the vector's length exceeds the action's threshold."
+        },
+        {
+          "name": "binding",
+          "signature": "binding: Binding",
+          "signatureTokens": [
+            {
+              "text": "binding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Binding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The binding currently in effect: the default, or whatever last replaced it."
+        },
+        {
+          "name": "channels",
+          "signature": "channels: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "channels",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Absolute channel indices this action reads right now. Reflects the effective binding and the owning map's gamepad slot, and is what an InputScope claims on this action's behalf. The array is replaced, not mutated, on every rebind - do not retain it across one."
+        },
+        {
+          "name": "defaultBinding",
+          "signature": "defaultBinding: Binding",
+          "signatureTokens": [
+            {
+              "text": "defaultBinding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Binding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The binding this action was constructed with - what a null rebind restores."
         }
       ],
       "paragraphs": [],

@@ -3,10 +3,10 @@ import { isPowerOfTwo } from '#math/utils';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { type ColorTextureFormat, ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 
-import type { SamplerOptions } from './Sampler';
+import type { TextureOptions } from './TextureOptions';
 
 /** Construction options for {@link RenderTexture}. */
-export interface RenderTextureOptions extends Partial<SamplerOptions> {
+export interface RenderTextureOptions extends Partial<TextureOptions> {
   /**
    * Color attachment format. Defaults to {@link TextureFormat.Rgba8}.
    * The float formats ({@link TextureFormat.Rgba16F} / {@link TextureFormat.Rgba32F})
@@ -29,7 +29,7 @@ export interface RenderTextureOptions extends Partial<SamplerOptions> {
  * updated every frame and mip generation is expensive.
  */
 export class RenderTexture extends RenderTarget {
-  public static defaultSamplerOptions: SamplerOptions = {
+  public static defaultOptions: TextureOptions = {
     scaleMode: ScaleModes.Linear,
     wrapMode: WrapModes.ClampToEdge,
     premultiplyAlpha: true,
@@ -55,8 +55,8 @@ export class RenderTexture extends RenderTarget {
     // Float targets are point-sampled by default: linear filtering of a float
     // texture requires OES_texture_float_linear, which is not guaranteed. An
     // explicit `scaleMode` in `options` still overrides this.
-    const defaults: SamplerOptions =
-      format === TextureFormat.Rgba8 ? RenderTexture.defaultSamplerOptions : { ...RenderTexture.defaultSamplerOptions, scaleMode: ScaleModes.Nearest };
+    const defaults: TextureOptions =
+      format === TextureFormat.Rgba8 ? RenderTexture.defaultOptions : { ...RenderTexture.defaultOptions, scaleMode: ScaleModes.Nearest };
 
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
       ...defaults,
@@ -114,7 +114,7 @@ export class RenderTexture extends RenderTarget {
   }
 
   public set generateMipMap(generateMipMap: boolean) {
-    this._generateMipMap = generateMipMap;
+    this.setGenerateMipMap(generateMipMap);
   }
 
   public get flipY(): boolean {
@@ -131,25 +131,29 @@ export class RenderTexture extends RenderTarget {
   }
 
   /**
-   * Monotonically increasing counter incremented whenever a sampler parameter changes
-   * or the source data is updated. Backends use this to detect stale GPU texture state.
+   * Monotonically increasing counter incremented whenever the source data or an
+   * upload parameter changes. Filter and wrap changes do not bump it - backends
+   * resolve sampling state separately.
    */
   public get textureVersion(): number {
     return this._textureVersion;
   }
 
   public setScaleMode(scaleMode: ScaleModes): this {
-    if (this._scaleMode !== scaleMode) {
-      this._scaleMode = scaleMode;
-      this._touchTexture();
-    }
+    this._scaleMode = scaleMode;
 
     return this;
   }
 
   public setWrapMode(wrapMode: WrapModes): this {
-    if (this._wrapMode !== wrapMode) {
-      this._wrapMode = wrapMode;
+    this._wrapMode = wrapMode;
+
+    return this;
+  }
+
+  public setGenerateMipMap(generateMipMap: boolean): this {
+    if (this._generateMipMap !== generateMipMap) {
+      this._generateMipMap = generateMipMap;
       this._touchTexture();
     }
 

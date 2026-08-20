@@ -3,7 +3,7 @@ import { GamepadAxis } from '#input/GamepadAxis';
 import { GamepadButton } from '#input/GamepadButton';
 import { resolveGamepadDefinition } from '#input/GamepadDefinitions';
 import { GamepadMappingFamily } from '#input/GamepadMapping';
-import { GenericDualAnalogGamepadMapping } from '#input/GenericDualAnalogGamepadMapping';
+import { createStandardGamepadMapping } from '#input/gamepadMappings';
 import { ChannelSize, Keyboard } from '#input/types';
 
 type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
@@ -20,7 +20,7 @@ const createNativeGamepad = (id: string, index = 0, buttonValues: number[] = [],
     vibrationActuator: null,
   }) as unknown as BrowserGamepad;
 
-const buildDefinition = (mapping = new GenericDualAnalogGamepadMapping()) => ({
+const buildDefinition = (mapping = createStandardGamepadMapping()) => ({
   name: 'Generic Gamepad',
   descriptor: {
     id: 'generic',
@@ -83,7 +83,7 @@ describe('Gamepad', () => {
     pad._bind(nativeGamepad, definition);
 
     expect(pad.info?.name).toBe('DualSense Controller');
-    expect(pad.mappingFamily).toBe(GamepadMappingFamily.PlayStation);
+    expect(pad.family).toBe(GamepadMappingFamily.PlayStation);
   });
 
   test('hasChannel reflects active mapping', () => {
@@ -189,7 +189,7 @@ describe('Gamepad', () => {
   test('mappingFamily is null while disconnected', () => {
     const pad = new Gamepad(0, new Float32Array(ChannelSize.Container));
 
-    expect(pad.mappingFamily).toBeNull();
+    expect(pad.family).toBeNull();
   });
 
   test('vibrate is a silent no-op when disconnected (no actuator)', async () => {

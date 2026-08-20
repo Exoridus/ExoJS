@@ -13,6 +13,7 @@ export { RateSpawn } from './RateSpawn';
 export { RepelFromPoint } from './RepelFromPoint';
 export { RotateOverLifetime } from './RotateOverLifetime';
 export { ScaleOverLifetime } from './ScaleOverLifetime';
+export type { ParticleSpawnFields } from './spawnFields';
 export { SpawnModule } from './SpawnModule';
 export { SpawnOnDeath } from './SpawnOnDeath';
 export { Turbulence } from './Turbulence';

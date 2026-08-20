@@ -13,7 +13,19 @@
 // the catalog-input/-leaf overloads only) — every assertion below must hold
 // under both lanes it does run in.
 
-import { ActionMap, AxisAction, ButtonAction, GamepadAxis, GamepadButton, Keyboard, PointerButton, VectorAction } from '@codexo/exojs';
+import type { Action, AnyActionMap, BindingConflict, Gamepad } from '@codexo/exojs';
+import {
+  ActionMap,
+  AxisAction,
+  BindingProfile,
+  ButtonAction,
+  GamepadAxis,
+  GamepadButton,
+  InputScope,
+  Keyboard,
+  PointerButton,
+  VectorAction,
+} from '@codexo/exojs';
 
 type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ? 1 : 2 ? true : false;
 
@@ -132,4 +144,73 @@ export function actionMapRejectsUnknownMembers(): void {
 
   // @ts-expect-error -- an action map holds actions, not arbitrary values
   new ActionMap({ speed: 4 });
+}
+
+// ---------------------------------------------------------------------------
+// Rebinding, profiles and scopes
+// ---------------------------------------------------------------------------
+
+export function rebindIsTypedPerActionKind(): void {
+  const controls = new ActionMap({
+    jump: new ButtonAction(Keyboard.Space),
+    steer: new AxisAction(GamepadAxis.LeftStickX),
+    move: new VectorAction({ up: Keyboard.W, down: Keyboard.S }),
+  });
+
+  controls.rebind('jump', Keyboard.J);
+  controls.rebind('jump', [Keyboard.J, GamepadButton.South]);
+  controls.rebind('jump', null);
+  controls.rebind('steer', { negative: Keyboard.A, positive: Keyboard.D });
+  controls.rebind('move', { x: GamepadAxis.LeftStickX });
+
+  // @ts-expect-error -- an options object is not a binding
+  controls.rebind('jump', { threshold: 0.5 });
+
+  // @ts-expect-error -- only declared actions can be rebound
+  controls.rebind('crouch', Keyboard.C);
+}
+
+export function bindingProfileRoundTripsAsPlainData(): void {
+  const profile = new BindingProfile().set('jump', { kind: 'button', binding: ['keyboard.key-j'] });
+  const data = profile.toJSON();
+
+  expectType<Equal<typeof data.version, 1>>();
+  expectType<Equal<typeof profile.size, number>>();
+  expectType<Equal<ReturnType<typeof BindingProfile.fromJSON>, BindingProfile>>();
+
+  // @ts-expect-error -- an action kind must be one of the five known ones
+  profile.set('jump', { kind: 'trigger', binding: ['keyboard.key-j'] });
+}
+
+export function actionsShareAReadableBindingSurface(): void {
+  const controls = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+  const action = controls.get('jump');
+
+  expectType<Equal<typeof controls.jump.kind, 'button'>>();
+  expectType<Equal<typeof controls.jump.channels, readonly number[]>>();
+  expectType<Equal<typeof action, Action | undefined>>();
+  expectType<Equal<ReturnType<typeof controls.conflicts>, readonly BindingConflict[]>>();
+}
+
+declare const pad: Gamepad;
+
+export function inputScopeTakesMapsOnly(): void {
+  const controls = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+  const scope = new InputScope(controls);
+
+  scope.add(new ActionMap({ fire: new ButtonAction(Keyboard.Control) }));
+  expectType<Equal<typeof scope.maps, readonly AnyActionMap[]>>();
+
+  // @ts-expect-error -- a scope groups maps, never bare actions
+  scope.add(new ButtonAction(Keyboard.Space));
+}
+
+export function actionMapTakesAGamepadContextNotASlot(): void {
+  new ActionMap({ jump: new ButtonAction(GamepadButton.South) }, { gamepad: pad });
+
+  // @ts-expect-error -- gamepad context is a pad, not a slot index
+  new ActionMap({ jump: new ButtonAction(GamepadButton.South) }, { gamepad: 1 });
+
+  // @ts-expect-error -- an action no longer carries a gamepad slot of its own
+  new ButtonAction(GamepadButton.South, { gamepadSlot: 1 });
 }

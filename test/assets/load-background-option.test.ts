@@ -6,6 +6,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling adopt/background specs). */
 function createCoreLoader(): Loader {
   const loader = new Loader();
+  const owner = loader.createScope({ name: 'owner' });
   materializeAssetBindings(loader, coreAssetBindings);
   return loader;
 }
@@ -42,7 +43,9 @@ const mockFetchJson = (payload: unknown): ReturnType<typeof vi.fn> => {
 
 /** Alias-keyed queue probe — avoids coupling the assertions to token identity. */
 const isQueued = (loader: Loader, alias: string): boolean =>
-  (loader as unknown as { _residency: { _backgroundQueue: Array<{ alias: string }> } })._residency._backgroundQueue.some(e => e.alias === alias);
+  (loader as unknown as { _residency: { _backgroundQueue: Array<{ asset: { source: string } }> } })._residency._backgroundQueue.some(
+    e => e.asset.source === alias,
+  );
 
 describe('load(target, { priority: LoadPriority.Background })', () => {
   beforeEach(() => {
@@ -60,11 +63,12 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('claims + queues each catalog leaf instead of fetching immediately, then heals in place on drain', async () => {
     const fetchMock = mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     loader.setConcurrency(0); // park the queue so the divert is observable
 
     const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
-    loader.load(catalog, { priority: LoadPriority.Background });
+    owner.load(catalog, { priority: LoadPriority.Background });
 
     // Adopted (registered + claimed) but NOT fetched — the leaf sits in the background queue.
     expect(catalog.ship.loadState).toBe('loading');
@@ -78,12 +82,13 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
     expect(catalog.ship.width).toBe(4);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     // The loader's own get() for the same source resolves to the adopted, healed leaf.
-    expect(loader.get('ship.png')).toBe(catalog.ship);
+    expect(owner.get('ship.png')).toBe(catalog.ship);
   });
 
   test('get() on a background-queued source boosts it past the parked queue and heals the SAME leaf', async () => {
     const fetchMock = mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     loader.setConcurrency(0); // keep the queue parked so boost is observable
 
@@ -91,12 +96,12 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
       ship: { type: 'texture', source: 'ship.png' },
       logo: { type: 'texture', source: 'logo.png' },
     });
-    loader.load(catalog, { priority: LoadPriority.Background });
+    owner.load(catalog, { priority: LoadPriority.Background });
 
     expect(fetchMock).not.toHaveBeenCalled();
     expect(isQueued(loader, 'ship.png')).toBe(true);
 
-    const ship = loader.get('ship.png'); // boosts ship past the parked queue
+    const ship = owner.get('ship.png'); // boosts ship past the parked queue
 
     await expect(ship.loaded).resolves.toBe(ship);
     expect(ship).toBe(catalog.ship); // the adopted handle healed, not a new instance
@@ -109,11 +114,12 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('foreground load(catalog) (no option) still fetches immediately — unchanged', async () => {
     const fetchMock = mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     loader.setConcurrency(0); // background parked, but the foreground path ignores concurrency
 
     const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
-    loader.load(catalog);
+    owner.load(catalog);
 
     expect(isQueued(loader, 'ship.png')).toBe(false);
 
@@ -125,10 +131,11 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('onProgress reports across a background catalog load', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const ticks: Array<[number, number]> = [];
 
     loader.onProgress.add((loaded, total) => ticks.push([loaded, total]));
-    loader.load(Assets.from({ ship: 'ship.png', logo: 'logo.png' }), { priority: LoadPriority.Background });
+    owner.load(Assets.from({ ship: 'ship.png', logo: 'logo.png' }), { priority: LoadPriority.Background });
     await loader.awaitBackground();
 
     expect(ticks.at(-1)).toEqual([2, 2]);
@@ -137,11 +144,12 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('a value leaf (json) in a background catalog also defers then fills in place', async () => {
     const fetchMock = mockFetchJson({ hp: 9 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     loader.setConcurrency(0);
 
     const catalog = new Assets({ config: { type: 'json', source: 'cfg.json' } });
-    loader.load(catalog, { priority: LoadPriority.Background });
+    owner.load(catalog, { priority: LoadPriority.Background });
 
     expect(catalog.config.loadState).toBe('loading');
     expect(isQueued(loader, 'cfg.json')).toBe(true);
@@ -157,15 +165,16 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
   test('releasing a background-queued catalog at refcount 0 drops the entry from the queue', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     loader.setConcurrency(0);
 
     const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
-    loader.load(catalog, { priority: LoadPriority.Background });
+    owner.load(catalog, { priority: LoadPriority.Background });
 
     expect(isQueued(loader, 'ship.png')).toBe(true);
 
-    loader.release(catalog.ship); // last (root) claim released → refcount 0 → drop
+    owner.release(catalog.ship); // last (root) claim released → refcount 0 → drop
 
     expect(isQueued(loader, 'ship.png')).toBe(false);
   });

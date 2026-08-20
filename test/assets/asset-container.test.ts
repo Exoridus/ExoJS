@@ -24,16 +24,16 @@ function mockContainerFetch(container: ArrayBuffer): ReturnType<typeof vi.fn> {
 describe('asset container format', () => {
   test('encode → parse round-trips the index and data offsets', () => {
     const inputs: ContainerInput[] = [
-      { alias: 'level', type: 'json', bytes: utf8('{"score":1}'), mime: 'application/json' },
-      { alias: 'note', type: 'text', bytes: utf8('hello') },
+      { source: 'level', type: 'json', bytes: utf8('{"score":1}'), mime: 'application/json' },
+      { source: 'note', type: 'text', bytes: utf8('hello') },
     ];
 
     const { version, entries, dataStart } = parseContainer(encodeContainer(inputs));
 
-    expect(version).toBe(1);
+    expect(version).toBe(2);
     expect(entries).toHaveLength(2);
-    expect(entries[0]).toMatchObject({ alias: 'level', type: 'json', offset: 0, length: 11, mime: 'application/json' });
-    expect(entries[1]).toMatchObject({ alias: 'note', type: 'text', offset: 11, length: 5 });
+    expect(entries[0]).toMatchObject({ source: 'level', type: 'json', offset: 0, length: 11, mime: 'application/json' });
+    expect(entries[1]).toMatchObject({ source: 'note', type: 'text', offset: 11, length: 5 });
 
     const buffer = encodeContainer(inputs);
     const second = entries[1]!;
@@ -44,8 +44,8 @@ describe('asset container format', () => {
 
   test('preserves arbitrary binary bytes (no JSON coercion of data)', () => {
     const raw = new Uint8Array([0, 255, 1, 254, 128]);
-    const { entries, dataStart } = parseContainer(encodeContainer([{ alias: 'b', type: 'binary', bytes: raw }]));
-    const buffer = encodeContainer([{ alias: 'b', type: 'binary', bytes: raw }]);
+    const { entries, dataStart } = parseContainer(encodeContainer([{ source: 'b', type: 'binary', bytes: raw }]));
+    const buffer = encodeContainer([{ source: 'b', type: 'binary', bytes: raw }]);
     const first = entries[0]!;
 
     expect(new Uint8Array(buffer.slice(dataStart + first.offset, dataStart + first.offset + first.length))).toEqual(raw);
@@ -60,7 +60,7 @@ describe('asset container format', () => {
   });
 
   test('rejects bad magic', () => {
-    const buffer = encodeContainer([{ alias: 'a', type: 'text', bytes: utf8('x') }]);
+    const buffer = encodeContainer([{ source: 'a', type: 'text', bytes: utf8('x') }]);
     new Uint8Array(buffer)[0] = 'Z'.charCodeAt(0);
 
     expect(() => parseContainer(buffer)).toThrow(/bad magic/);
@@ -73,15 +73,25 @@ describe('asset container format', () => {
     expect(() => parseContainer(buffer)).toThrow(/unsupported version/);
   });
 
+  test('rejects a version 1 container instead of misreading its index', () => {
+    const buffer = encodeContainer([]);
+    new DataView(buffer).setUint32(4, 1, true);
+
+    // v1 indexed entries by an opaque alias, which cannot be resolved to an
+    // asset identity at all - there is nothing to read partially.
+    expect(() => parseContainer(buffer)).toThrow(/unsupported version 1/);
+    expect(() => parseContainer(buffer)).toThrow(/build-container/);
+  });
+
   test('rejects an index length that runs past the buffer', () => {
-    const buffer = encodeContainer([{ alias: 'a', type: 'text', bytes: utf8('x') }]);
+    const buffer = encodeContainer([{ source: 'a', type: 'text', bytes: utf8('x') }]);
     new DataView(buffer).setUint32(8, 0xffff, true);
 
     expect(() => parseContainer(buffer)).toThrow(/runs past the buffer/);
   });
 
   test('rejects an entry whose slice runs past the data section', () => {
-    const indexBytes = utf8(JSON.stringify([{ alias: 'a', type: 'text', offset: 0, length: 999 }]));
+    const indexBytes = utf8(JSON.stringify([{ source: 'a', type: 'text', offset: 0, length: 999 }]));
     const buffer = new ArrayBuffer(CONTAINER_HEADER_SIZE + indexBytes.byteLength + 2);
     const bytes = new Uint8Array(buffer);
     const view = new DataView(buffer);
@@ -89,7 +99,7 @@ describe('asset container format', () => {
     for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
       bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
     }
-    view.setUint32(4, 1, true);
+    view.setUint32(4, 2, true);
     view.setUint32(8, indexBytes.byteLength, true);
     bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
 
@@ -105,7 +115,7 @@ describe('asset container format', () => {
     for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
       bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
     }
-    view.setUint32(4, 1, true);
+    view.setUint32(4, 2, true);
     view.setUint32(8, indexBytes.byteLength, true);
     bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
 
@@ -126,7 +136,7 @@ describe('asset container format', () => {
     for (let i = 0; i < CONTAINER_MAGIC.length; i++) {
       bytes[i] = CONTAINER_MAGIC.charCodeAt(i);
     }
-    view.setUint32(4, 1, true);
+    view.setUint32(4, 2, true);
     view.setUint32(8, indexBytes.byteLength, true);
     bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
 
@@ -141,24 +151,24 @@ describe('asset container format', () => {
     expect(() => parseContainer(encodeRawIndex([42]))).toThrow(/index entry 0 is not an object/);
   });
 
-  test('rejects an entry with a non-string alias', () => {
-    expect(() => parseContainer(encodeRawIndex([{ alias: 42, type: 'text', offset: 0, length: 0 }]))).toThrow(/non-string "alias"/);
+  test('rejects an entry with a non-string source', () => {
+    expect(() => parseContainer(encodeRawIndex([{ source: 42, type: 'text', offset: 0, length: 0 }]))).toThrow(/non-string "source"/);
   });
 
   test('rejects an entry with a non-string type', () => {
-    expect(() => parseContainer(encodeRawIndex([{ alias: 'a', type: 42, offset: 0, length: 0 }]))).toThrow(/non-string "type"/);
+    expect(() => parseContainer(encodeRawIndex([{ source: 'a', type: 42, offset: 0, length: 0 }]))).toThrow(/non-string "type"/);
   });
 
   test('rejects an entry with an invalid (negative) offset', () => {
-    expect(() => parseContainer(encodeRawIndex([{ alias: 'a', type: 'text', offset: -1, length: 0 }]))).toThrow(/invalid "offset"/);
+    expect(() => parseContainer(encodeRawIndex([{ source: 'a', type: 'text', offset: -1, length: 0 }]))).toThrow(/invalid "offset"/);
   });
 
   test('rejects an entry with an invalid (non-numeric) length', () => {
-    expect(() => parseContainer(encodeRawIndex([{ alias: 'a', type: 'text', offset: 0, length: 'x' }]))).toThrow(/invalid "length"/);
+    expect(() => parseContainer(encodeRawIndex([{ source: 'a', type: 'text', offset: 0, length: 'x' }]))).toThrow(/invalid "length"/);
   });
 
   test('rejects an entry with a non-string mime', () => {
-    expect(() => parseContainer(encodeRawIndex([{ alias: 'a', type: 'text', offset: 0, length: 0, mime: 123 }]))).toThrow(/non-string "mime"/);
+    expect(() => parseContainer(encodeRawIndex([{ source: 'a', type: 'text', offset: 0, length: 0, mime: 123 }]))).toThrow(/non-string "mime"/);
   });
 
   test('rejects an index region that is not valid JSON', () => {
@@ -166,13 +176,13 @@ describe('asset container format', () => {
   });
 
   test('an entry carrying "options" round-trips through the raw index', () => {
-    const { entries } = parseContainer(encodeRawIndex([{ alias: 'a', type: 'text', offset: 0, length: 0, options: { mode: 'fast' } }]));
+    const { entries } = parseContainer(encodeRawIndex([{ source: 'a', type: 'text', offset: 0, length: 0, options: { mode: 'fast' } }]));
 
     expect(entries[0]).toMatchObject({ options: { mode: 'fast' } });
   });
 
   test('encodeContainer round-trips per-asset "options"', () => {
-    const inputs: ContainerInput[] = [{ alias: 'a', type: 'json', bytes: utf8('{}'), options: { strict: true } }];
+    const inputs: ContainerInput[] = [{ source: 'a', type: 'json', bytes: utf8('{}'), options: { strict: true } }];
 
     const { entries } = parseContainer(encodeContainer(inputs));
 
@@ -190,9 +200,9 @@ describe('Loader.loadContainer', () => {
 
   test('loads N assets from one container in a single request', async () => {
     const container = encodeContainer([
-      { alias: 'level', type: 'json', bytes: utf8('{"score":42}') },
-      { alias: 'readme', type: 'text', bytes: utf8('hello world') },
-      { alias: 'blob', type: 'binary', bytes: new Uint8Array([1, 2, 3, 4]) },
+      { source: 'data/level.json', type: 'json', bytes: utf8('{"score":42}') },
+      { source: 'docs/readme.txt', type: 'text', bytes: utf8('hello world') },
+      { source: 'data/blob.bin', type: 'binary', bytes: new Uint8Array([1, 2, 3, 4]) },
     ]);
     const fetchSpy = mockContainerFetch(container);
 
@@ -200,13 +210,71 @@ describe('Loader.loadContainer', () => {
     await loader.loadContainer('assets/pack.exoa');
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
-    expect(loader.get(Asset.type('json', 'level')).value).toEqual({ score: 42 });
-    expect(loader.get(Asset.type('text', 'readme')).value).toBe('hello world');
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'blob')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get(Asset.type('json', 'data/level.json')).value).toEqual({ score: 42 });
+    expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
+    expect(new Uint8Array(loader.get(Asset.type('binary', 'data/blob.bin')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+  });
+
+  test('container entries are ordinary claimed assets, visible and releasable', async () => {
+    const container = encodeContainer([
+      { source: 'data/level.json', type: 'json', bytes: utf8('{"score":42}') },
+      { source: 'docs/readme.txt', type: 'text', bytes: utf8('hello world') },
+    ]);
+    mockContainerFetch(container);
+
+    const loader = createCoreLoader();
+    const pack = await loader.loadContainer('assets/pack.exoa');
+
+    // The old container path stored payloads with no claim at all, so they were
+    // invisible to inspect() and could never be freed.
+    expect(loader.inspect()).toHaveLength(2);
+    expect(loader.inspect().every(row => row.claims === 1)).toBe(true);
+
+    pack.destroy();
+
+    expect(loader.inspect()).toHaveLength(0);
+    expect(loader.peek(Asset.type('json', 'data/level.json'))).toBeUndefined();
+  });
+
+  test('a container entry and a network load of the same source are one asset', async () => {
+    const container = encodeContainer([{ source: 'data/level.json', type: 'json', bytes: utf8('{"score":42}') }]);
+    mockContainerFetch(container);
+
+    const loader = createCoreLoader();
+    const pack = await loader.loadContainer('assets/pack.exoa');
+    const scope = loader.createScope({ name: 'gameplay' });
+
+    const ref = scope.get('data/level.json');
+
+    expect(ref.value).toEqual({ score: 42 });
+    expect(loader.inspect()).toHaveLength(1);
+    expect(loader.inspect()[0]?.claims).toBe(2);
+
+    // The container going away must not strip an asset a live consumer holds.
+    pack.destroy();
+
+    expect(loader.peek(Asset.type('json', 'data/level.json'))).toEqual({ score: 42 });
+    expect(loader.inspect()[0]?.claims).toBe(1);
+  });
+
+  test('loadContainer on a scope claims the entries under that scope', async () => {
+    const container = encodeContainer([{ source: 'data/level.json', type: 'json', bytes: utf8('{"score":42}') }]);
+    mockContainerFetch(container);
+
+    const loader = createCoreLoader();
+    const level = loader.createScope({ name: 'level-1' });
+
+    await level.loadContainer('assets/pack.exoa');
+
+    expect(loader.inspect()).toHaveLength(1);
+
+    level.destroy();
+
+    expect(loader.inspect()).toHaveLength(0);
   });
 
   test('throws on an unknown asset type and stores nothing', async () => {
-    const container = encodeContainer([{ alias: 'x', type: 'nonsense', bytes: utf8('x') }]);
+    const container = encodeContainer([{ source: 'x.dat', type: 'nonsense', bytes: utf8('x') }]);
     mockContainerFetch(container);
 
     const loader = createCoreLoader();

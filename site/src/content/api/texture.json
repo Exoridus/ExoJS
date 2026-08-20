@@ -1,15 +1,15 @@
 {
   "title": "Texture",
-  "description": "A static GPU texture sourced from an image, canvas, or video element. Holds the pixel source and sampling parameters (ScaleModes, WrapModes, mip generation, alpha premultiplication). A `version` counter is incremented on every mutation so backends can detect stale GPU uploads without polling. Static helpers Texture.black, Texture.white, and Texture.empty provide ready-made placeholder textures. Default sampler options are configurable via Texture.defaultSamplerOptions.",
+  "description": "A static GPU texture sourced from an image, canvas, or video element. Holds the pixel source, its sampling state (ScaleModes, WrapModes) and its upload state (mip generation, alpha premultiplication). A `version` counter is incremented on every mutation that invalidates the GPU copy, so backends detect stale uploads without polling. Static helpers Texture.black, Texture.white, and Texture.empty provide ready-made placeholder textures. Default sampler options are configurable via Texture.defaultOptions.",
   "symbol": "Texture",
   "kind": "class",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 33,
+  "memberCount": 34,
   "counts": {
     "constructors": 1,
-    "methods": 10,
+    "methods": 11,
     "properties": 22,
     "events": 0
   },
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "A static GPU texture sourced from an image, canvas, or video element.",
-        "Holds the pixel source and sampling parameters (ScaleModes, WrapModes, mip generation, alpha premultiplication). A `version` counter is incremented on every mutation so backends can detect stale GPU uploads without polling.",
-        "Static helpers Texture.black, Texture.white, and Texture.empty provide ready-made placeholder textures. Default sampler options are configurable via Texture.defaultSamplerOptions."
+        "Holds the pixel source, its sampling state (ScaleModes, WrapModes) and its upload state (mip generation, alpha premultiplication). A `version` counter is incremented on every mutation that invalidates the GPU copy, so backends detect stale uploads without polling.",
+        "Static helpers Texture.black, Texture.white, and Texture.empty provide ready-made placeholder textures. Default sampler options are configurable via Texture.defaultOptions."
       ],
       "importLine": "import { Texture } from '@codexo/exojs'",
       "sourceLink": null
@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(source: TextureSource, options?: Partial<SamplerOptions>): Texture",
+          "signature": "new(source: TextureSource, options?: Partial<TextureOptions>): Texture",
           "signatureTokens": [
             {
               "text": "new",
@@ -79,7 +79,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SamplerOptions",
+              "text": "TextureOptions",
               "kind": "type"
             },
             {
@@ -107,7 +107,7 @@
             },
             {
               "name": "options",
-              "type": "Partial<SamplerOptions>",
+              "type": "Partial<TextureOptions>",
               "optional": true
             }
           ],
@@ -256,6 +256,53 @@
             {
               "name": "listener",
               "type": "() => void",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setGenerateMipMap",
+          "signature": "setGenerateMipMap(generateMipMap: boolean): this",
+          "signatureTokens": [
+            {
+              "text": "setGenerateMipMap",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "generateMipMap",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "generateMipMap",
+              "type": "boolean",
               "optional": false
             }
           ],
@@ -633,11 +680,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "defaultSamplerOptions",
-          "signature": "defaultSamplerOptions: SamplerOptions",
+          "name": "defaultOptions",
+          "signature": "defaultOptions: TextureOptions",
           "signatureTokens": [
             {
-              "text": "defaultSamplerOptions",
+              "text": "defaultOptions",
               "kind": "name"
             },
             {
@@ -645,7 +692,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SamplerOptions",
+              "text": "TextureOptions",
               "kind": "type"
             }
           ],
@@ -1007,7 +1054,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Monotonically increasing version counter. Incremented by any mutation that requires a GPU re-upload (source change, size change, or sampler parameter change). Backends compare this value to their cached version to decide whether to re-upload the texture."
+          "description": "Monotonically increasing version counter. Incremented by any mutation that requires a GPU re-upload: a source, size, or upload-parameter change. Filter and wrap changes do not bump it - backends resolve sampling state separately, so changing it costs no upload."
         },
         {
           "name": "width",

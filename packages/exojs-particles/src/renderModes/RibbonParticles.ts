@@ -1,6 +1,7 @@
 import type { Material } from '@codexo/exojs';
 import { ShaderSource } from '@codexo/exojs';
 
+import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
 
 import fragmentSource from './glsl/ribbon.frag';
@@ -131,8 +132,8 @@ export class RibbonParticles extends ParticleRenderMode {
     return this._material;
   }
 
-  public build(system: ParticleSystem): void {
-    const limit = system.liveCount;
+  public build(_system: ParticleSystem, particles: ParticleBatch): void {
+    const limit = particles.count;
 
     // A strip needs a segment, and a segment needs two particles.
     if (limit < 2) {
@@ -141,7 +142,9 @@ export class RibbonParticles extends ParticleRenderMode {
       return;
     }
 
-    const { posX, posY, scaleX, color } = system;
+    const { x: posX, y: posY } = particles.position;
+    const { x: scaleX } = particles.scale;
+    const { color } = particles;
 
     // UVs run along the strip by arc length rather than by particle index, so
     // unevenly spaced particles do not stretch the texture unevenly. That needs

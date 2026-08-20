@@ -1,15 +1,15 @@
 {
   "title": "MusicFactory",
-  "description": "AssetFactory implementation that loads streaming audio assets (MP3, OGG, WAV, AAC, and other browser-supported formats) and produces an AudioStream instance backed by an `<audio>` element. Unlike SoundFactory, stream assets are decoded lazily via the browser's streaming audio pipeline rather than being fully decoded into an AudioBuffer up-front, making them appropriate for long-form background tracks. The underlying `<audio>` elements are paused and detached when MusicFactory.destroy is called.",
+  "description": "AssetFactory implementation that loads streaming audio assets (MP3, OGG, WAV, AAC, and other browser-supported formats) and produces an AudioStream instance backed by an `<audio>` element. A URL-backed asset hands the resolved URL to the element and lets the browser stream it, so memory and network scale with playback rather than with total duration. create takes the complete bytes instead - the path used by `download: true` and by container entries - and wraps them in a blob. The `<audio>` elements this factory created are paused and detached when the asset is released, and again when MusicFactory.destroy runs.",
   "symbol": "MusicFactory",
   "kind": "class",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 9,
   "counts": {
     "constructors": 1,
-    "methods": 5,
+    "methods": 7,
     "properties": 1,
     "events": 0
   },
@@ -20,7 +20,8 @@
       "members": [],
       "paragraphs": [
         "AssetFactory implementation that loads streaming audio assets (MP3, OGG, WAV, AAC, and other browser-supported formats) and produces an AudioStream instance backed by an `<audio>` element.",
-        "Unlike SoundFactory, stream assets are decoded lazily via the browser's streaming audio pipeline rather than being fully decoded into an AudioBuffer up-front, making them appropriate for long-form background tracks. The underlying `<audio>` elements are paused and detached when MusicFactory.destroy is called."
+        "A URL-backed asset hands the resolved URL to the element and lets the browser stream it, so memory and network scale with playback rather than with total duration. create takes the complete bytes instead - the path used by `download: true` and by container entries - and wraps them in a blob.",
+        "The `<audio>` elements this factory created are paused and detached when the asset is released, and again when MusicFactory.destroy runs."
       ],
       "importLine": "import { MusicFactory } from '@codexo/exojs'",
       "sourceLink": null
@@ -145,7 +146,112 @@
             }
           ],
           "returnType": "Promise<AudioStream>",
-          "description": "Wraps audio bytes in an <audio> element and resolves with an AudioStream instance once the configured loadEvent fires. Rejects if the element emits an error or abort event before the load event is received."
+          "description": "Wraps audio bytes in an <audio> element and resolves with an AudioStream instance once the configured loadEvent fires. Rejects if the element emits an error, abort or emptied event before the load event is received."
+        },
+        {
+          "name": "createFromUrl",
+          "signature": "createFromUrl(url: string, options: MusicFactoryOptions, signal?: AbortSignal): Promise<AudioStream>",
+          "signatureTokens": [
+            {
+              "text": "createFromUrl",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "url",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MusicFactoryOptions",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "signal",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStream",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "url",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "MusicFactoryOptions",
+              "optional": false
+            },
+            {
+              "name": "signal",
+              "type": "AbortSignal",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<AudioStream>",
+          "description": "Streams the media at url through an <audio> element and resolves with an AudioStream once the configured loadEvent fires. The resource is ready to play, not fully downloaded: the browser continues transferring during playback, and a failure after this point is reported by AudioStream.onError rather than by this promise."
         },
         {
           "name": "createObjectUrl",
@@ -222,6 +328,53 @@
           "params": [],
           "returnType": "void",
           "description": "Pauses and resets all <audio> elements created by this factory to release media resources, then delegates to the base AbstractAssetFactory.destroy to revoke any object URLs."
+        },
+        {
+          "name": "dispose",
+          "signature": "dispose(resource: AudioStream): void",
+          "signatureTokens": [
+            {
+              "text": "dispose",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resource",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioStream",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "resource",
+              "type": "AudioStream",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Ends playback and the transfer behind a released stream."
         },
         {
           "name": "process",

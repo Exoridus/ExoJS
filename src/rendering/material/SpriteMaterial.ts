@@ -1,4 +1,4 @@
-import type { SamplerOptions } from '#rendering/texture/Sampler';
+import type { SamplerOptions } from '#rendering/texture/TextureOptions';
 import type { BlendModes } from '#rendering/types';
 
 import type { MaterialOptions, UniformValue } from './Material';

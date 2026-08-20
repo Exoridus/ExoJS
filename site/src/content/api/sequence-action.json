@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 8,
   "counts": {
     "constructors": 1,
-    "methods": 2,
-    "properties": 2,
+    "methods": 1,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -135,11 +135,11 @@
       "title": "Methods",
       "members": [
         {
-          "name": "_reset",
-          "signature": "_reset(): void",
+          "name": "serialize",
+          "signature": "serialize(): SerializedActionBinding",
           "signatureTokens": [
             {
-              "text": "_reset",
+              "text": "serialize",
               "kind": "name"
             },
             {
@@ -155,60 +155,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "SerializedActionBinding",
+              "kind": "type"
             }
           ],
           "params": [],
-          "returnType": "void",
-          "description": ""
-        },
-        {
-          "name": "_update",
-          "signature": "_update(sample: ActionSample): void",
-          "signatureTokens": [
-            {
-              "text": "_update",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "sample",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ActionSample",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "sample",
-              "type": "ActionSample",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": ""
+          "returnType": "SerializedActionBinding",
+          "description": "This action's effective binding in persistable form."
         }
       ],
       "paragraphs": [],
@@ -219,6 +172,102 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "kind",
+          "signature": "kind: \"sequence\"",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"sequence\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which action kind this is - the discriminant a serialized binding is validated against."
+        },
+        {
+          "name": "binding",
+          "signature": "binding: Binding",
+          "signatureTokens": [
+            {
+              "text": "binding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Binding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The binding currently in effect: the default, or whatever last replaced it."
+        },
+        {
+          "name": "channels",
+          "signature": "channels: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "channels",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Absolute channel indices this action reads right now. Reflects the effective binding and the owning map's gamepad slot, and is what an InputScope claims on this action's behalf. The array is replaced, not mutated, on every rebind - do not retain it across one."
+        },
+        {
+          "name": "defaultBinding",
+          "signature": "defaultBinding: Binding",
+          "signatureTokens": [
+            {
+              "text": "defaultBinding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Binding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The binding this action was constructed with - what a null rebind restores."
+        },
         {
           "name": "progress",
           "signature": "progress: number",

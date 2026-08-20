@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import { Color, Rectangle, Texture, Time } from '@codexo/exojs';
+import { Color, logger, Rectangle, Texture, Time } from '@codexo/exojs';
 import type { RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
 import { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
 import type { MockInstance } from 'vitest';
@@ -12,12 +12,14 @@ import { ParticleGpuState } from '../src/gpu/ParticleGpuState';
 import { ApplyForce } from '../src/modules/ApplyForce';
 import { BurstSpawn } from '../src/modules/BurstSpawn';
 import { ColorOverLifetime } from '../src/modules/ColorOverLifetime';
+import { DeathModule } from '../src/modules/DeathModule';
 import { Drag } from '../src/modules/Drag';
 import { RotateOverLifetime } from '../src/modules/RotateOverLifetime';
 import { ScaleOverLifetime } from '../src/modules/ScaleOverLifetime';
 import { SpawnOnDeath } from '../src/modules/SpawnOnDeath';
 import { Turbulence } from '../src/modules/Turbulence';
 import { UpdateModule } from '../src/modules/UpdateModule';
+import type { ParticleDeathContext } from '../src/ParticleStorage';
 import { ParticleSystem } from '../src/ParticleSystem';
 import { QuadParticles } from '../src/renderModes/QuadParticles';
 
@@ -39,6 +41,7 @@ interface MockComputePass {
 
 interface MockEncoder {
   beginComputePass: MockInstance;
+  copyBufferToBuffer: MockInstance;
   finish: MockInstance;
 }
 
@@ -47,6 +50,7 @@ const installGlobals = (): (() => void) => {
     bufferUsage: Object.getOwnPropertyDescriptor(globalThis, 'GPUBufferUsage'),
     shaderStage: Object.getOwnPropertyDescriptor(globalThis, 'GPUShaderStage'),
     textureUsage: Object.getOwnPropertyDescriptor(globalThis, 'GPUTextureUsage'),
+    mapMode: Object.getOwnPropertyDescriptor(globalThis, 'GPUMapMode'),
   };
 
   Object.defineProperty(globalThis, 'GPUBufferUsage', {
@@ -70,8 +74,14 @@ const installGlobals = (): (() => void) => {
     configurable: true,
     value: { COPY_DST: 1, TEXTURE_BINDING: 2, STORAGE_BINDING: 4, RENDER_ATTACHMENT: 8 },
   });
+  Object.defineProperty(globalThis, 'GPUMapMode', {
+    configurable: true,
+    value: { READ: 1, WRITE: 2 },
+  });
 
   return () => {
+    if (previous.mapMode) Object.defineProperty(globalThis, 'GPUMapMode', previous.mapMode);
+    else Reflect.deleteProperty(globalThis, 'GPUMapMode');
     if (previous.bufferUsage) Object.defineProperty(globalThis, 'GPUBufferUsage', previous.bufferUsage);
     else delete (globalThis as { GPUBufferUsage?: unknown }).GPUBufferUsage;
     if (previous.shaderStage) Object.defineProperty(globalThis, 'GPUShaderStage', previous.shaderStage);
@@ -81,8 +91,16 @@ const installGlobals = (): (() => void) => {
   };
 };
 
+interface MockBuffer {
+  destroy: MockInstance;
+  bytes: ArrayBuffer;
+  mapAsync: MockInstance;
+  getMappedRange: MockInstance;
+  unmap: MockInstance;
+}
+
 const makeMockDevice = () => {
-  const buffers: { destroy: MockInstance }[] = [];
+  const buffers: MockBuffer[] = [];
   const textures: { destroy: MockInstance; createView: MockInstance }[] = [];
   const pass: MockComputePass = {
     setPipeline: vi.fn(),
@@ -90,8 +108,12 @@ const makeMockDevice = () => {
     dispatchWorkgroups: vi.fn(),
     end: vi.fn(),
   };
+  const copies: { source: unknown; sourceOffset: number; destination: MockBuffer; size: number }[] = [];
   const encoder: MockEncoder = {
     beginComputePass: vi.fn(() => pass),
+    copyBufferToBuffer: vi.fn((source: unknown, sourceOffset: number, destination: MockBuffer, _destinationOffset: number, size: number) => {
+      copies.push({ source, sourceOffset, destination, size });
+    }),
     finish: vi.fn(() => ({ label: 'cb' }) as unknown as GPUCommandBuffer),
   };
   const queue = {
@@ -116,8 +138,17 @@ const makeMockDevice = () => {
     createBindGroup: vi.fn(() => ({}) as GPUBindGroup),
     createComputePipeline,
     createCommandEncoder: vi.fn(() => encoder as unknown as GPUCommandEncoder),
-    createBuffer: vi.fn(() => {
-      const buffer = { destroy: vi.fn() };
+    createBuffer: vi.fn((descriptor: GPUBufferDescriptor) => {
+      // A mapped range is backed by real bytes so a test can stage death
+      // records into it exactly as the compute shader would.
+      const bytes = new ArrayBuffer(descriptor.size);
+      const buffer: MockBuffer = {
+        destroy: vi.fn(),
+        bytes,
+        mapAsync: vi.fn(async () => undefined),
+        getMappedRange: vi.fn((offset = 0, size = descriptor.size) => bytes.slice(offset, offset + size)),
+        unmap: vi.fn(),
+      };
       buffers.push(buffer);
       return buffer as unknown as GPUBuffer;
     }),
@@ -133,17 +164,92 @@ const makeMockDevice = () => {
     queue,
   } as unknown as GPUDevice;
 
-  return { device, encoder, pass, queue, buffers, textures, computePipelineDescriptors, shaderSources };
+  return { device, encoder, pass, queue, buffers, textures, copies, computePipelineDescriptors, shaderSources };
+};
+
+/** Finds every mock GPUBuffer created with a given `label`, in creation order. */
+const findBuffersByLabel = (env: ReturnType<typeof makeMockDevice>, label: string): MockBuffer[] => {
+  const calls = (env.device.createBuffer as unknown as MockInstance).mock.calls as [GPUBufferDescriptor][];
+
+  return calls.flatMap(([descriptor], index) => (descriptor.label === label ? [env.buffers[index]!] : []));
 };
 
 /** Finds the mock GPUBuffer created with a given `label`, by call order. */
-const findBufferByLabel = (env: ReturnType<typeof makeMockDevice>, label: string): { destroy: MockInstance } => {
-  const calls = (env.device.createBuffer as unknown as MockInstance).mock.calls as [GPUBufferDescriptor][];
-  const index = calls.findIndex(([descriptor]) => descriptor.label === label);
+const findBufferByLabel = (env: ReturnType<typeof makeMockDevice>, label: string): MockBuffer => {
+  const [first] = findBuffersByLabel(env, label);
 
-  if (index === -1) throw new Error(`No buffer created with label "${label}"`);
+  if (first === undefined) throw new Error(`No buffer created with label "${label}"`);
 
-  return env.buffers[index]!;
+  return first;
+};
+
+/**
+ * Keeps every death readback pending until released, so a test can hold the
+ * staging ring occupied the way a device that maps slower than a frame does.
+ */
+const holdDeathMaps = (env: ReturnType<typeof makeMockDevice>): { release: (index?: number) => void } => {
+  const waiting: (() => void)[] = [];
+  const create = env.device.createBuffer as unknown as MockInstance;
+  const inner = create.getMockImplementation()!;
+
+  create.mockImplementation((descriptor: GPUBufferDescriptor) => {
+    const buffer = inner(descriptor) as MockBuffer;
+
+    if (descriptor.label === 'particle-deaths-staging') {
+      buffer.mapAsync = vi.fn(() => new Promise<undefined>(resolve => waiting.push(() => resolve(undefined))));
+    }
+
+    return buffer;
+  });
+
+  return {
+    release: (index = 0) => waiting.splice(index, 1)[0]?.(),
+  };
+};
+
+interface StagedDeath {
+  x: number;
+  y: number;
+  velocityX: number;
+  velocityY: number;
+  rotation: number;
+  scaleX: number;
+  scaleY: number;
+  elapsed: number;
+  color: number;
+  slot: number;
+}
+
+/**
+ * Writes death records into the staging buffer the readback maps, in the
+ * 40-byte layout the compute shader appends.
+ */
+const stageDeathRecords = (env: ReturnType<typeof makeMockDevice>, records: readonly StagedDeath[], slot = 0): void => {
+  const staging = findBuffersByLabel(env, 'particle-deaths-staging')[slot]!;
+  const floats = new Float32Array(staging.bytes);
+  const uints = new Uint32Array(staging.bytes);
+
+  records.forEach((record, index) => {
+    const base = index * 10;
+
+    floats[base + 0] = record.x;
+    floats[base + 1] = record.y;
+    floats[base + 2] = record.velocityX;
+    floats[base + 3] = record.velocityY;
+    floats[base + 4] = record.rotation;
+    floats[base + 5] = record.scaleX;
+    floats[base + 6] = record.scaleY;
+    floats[base + 7] = record.elapsed;
+    uints[base + 8] = record.color;
+    uints[base + 9] = record.slot;
+  });
+};
+
+/** Lets the readback promise chain settle. */
+const flushDeathReadback = async (): Promise<void> => {
+  await Promise.resolve();
+  await Promise.resolve();
+  await Promise.resolve();
 };
 
 const makeBuilder = (device: GPUDevice | null): RenderPlanBuilder => ({ backend: { device } }) as unknown as RenderPlanBuilder;
@@ -165,8 +271,8 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     system.addUpdateModule(new ApplyForce(0, 100));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
 
     system.update(tick(0.1));
 
@@ -183,10 +289,10 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     system.addUpdateModule(new Drag(0.5));
     system.addUpdateModule(new RotateOverLifetime(360));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
-    system.scaleX[slot] = 1;
-    system.scaleY[slot] = 1;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
+    system._storage.scaleX[slot] = 1;
+    system._storage.scaleY[slot] = 1;
 
     expect(system.gpuMode).toBe(false);
     system.update(tick(0.016));
@@ -218,8 +324,8 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     system.addUpdateModule(new ApplyForce(0, 100));
     system.addUpdateModule(new CpuOnly());
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
 
     system.update(tick(0.016));
 
@@ -248,8 +354,8 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
       ),
     );
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
 
     system.update(tick(0.016));
 
@@ -263,8 +369,8 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     system.addUpdateModule(new ApplyForce(0, 100));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
 
     system.update(tick(0.016));
 
@@ -277,15 +383,52 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     expect(env.encoder.beginComputePass).toHaveBeenCalledTimes(2);
   });
 
-  test('Adding update modules after compile throws', () => {
+  test('adding a GPU-eligible module rebuilds the program and keeps the particles', () => {
     const env = makeMockDevice();
     const system = new ParticleSystem(makeTexture(), { capacity: 64, device: env.device });
 
     system.addUpdateModule(new ApplyForce(0, 100));
-    system.spawn();
+
+    const particle = system.emit()!;
+
+    particle.lifetime = 100;
     system.update(tick(0.016));
 
-    expect(() => system.addUpdateModule(new Drag(0.5))).toThrow(/after the system has been compiled/);
+    const pipelinesBefore = env.computePipelineDescriptors.length;
+
+    system.addUpdateModule(new Drag(0.5));
+    system.update(tick(0.016));
+
+    expect(env.computePipelineDescriptors.length).toBe(pipelinesBefore + 1);
+    expect(system.gpuMode).toBe(true);
+    expect(system.liveCount).toBe(1);
+    // The simulation buffers survive a program swap, so the positions buffer is
+    // still the one the device has been integrating into.
+    expect(findBufferByLabel(env, 'particle-positions').destroy).not.toHaveBeenCalled();
+  });
+
+  test('a module without wgsl() moves the system to the CPU and clears the particles it cannot carry over', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 64, device: env.device });
+
+    system.addUpdateModule(new ApplyForce(0, 100));
+
+    const particle = system.emit()!;
+
+    particle.lifetime = 100;
+    system.update(tick(0.016));
+    expect(system.gpuMode).toBe(true);
+
+    class CpuOnly extends UpdateModule {
+      public override apply(): void {}
+    }
+
+    system.addUpdateModule(new CpuOnly());
+    system.update(tick(0.016));
+
+    expect(system.gpuMode).toBe(false);
+    expect(system.liveCount).toBe(0);
+    expect(findBufferByLabel(env, 'particle-positions').destroy).toHaveBeenCalled();
   });
 
   test('destroy releases GPU resources', () => {
@@ -293,7 +436,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 64, device: env.device });
 
     system.addUpdateModule(new ApplyForce(0, 100));
-    system.spawn();
+    system._spawnSlot();
     system.update(tick(0.016));
 
     const buffersBefore = env.buffers.length;
@@ -326,20 +469,20 @@ describe('ParticleSystem alive-flag in GPU mode', () => {
     system.update(tick(0));
     expect(system.gpuMode).toBe(true);
 
-    const a = system.spawn();
-    const b = system.spawn();
-    const c = system.spawn();
+    const a = system._spawnSlot();
+    const b = system._spawnSlot();
+    const c = system._spawnSlot();
 
     expect(a).toBe(0);
     expect(b).toBe(1);
     expect(c).toBe(2);
 
-    system.alive[b] = 0;
-    const d = system.spawn();
+    system._storage.alive[b] = 0;
+    const d = system._spawnSlot();
     expect(d).toBe(3);
 
-    system.alive[3] = 0;
-    const e = system.spawn();
+    system._storage.alive[3] = 0;
+    const e = system._spawnSlot();
     expect([1, 3].includes(e)).toBe(true);
   });
 
@@ -349,13 +492,13 @@ describe('ParticleSystem alive-flag in GPU mode', () => {
 
     system.addUpdateModule(new ApplyForce(0, 0));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 0.05;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 0.05;
 
     system.update(tick(0.1));
 
-    expect(system.alive[slot]).toBe(0);
-    expect(system.lifetime[slot]).toBe(-1);
+    expect(system._storage.alive[slot]).toBe(0);
+    expect(system._storage.lifetime[slot]).toBe(-1);
     expect(system.aliveCount).toBe(0);
   });
 });
@@ -416,8 +559,8 @@ describe('ParticleSystem render-inject backend detection', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
     system.addUpdateModule(new ApplyForce(0, 0));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
     expect(system.gpuMode).toBe(false);
 
@@ -455,8 +598,8 @@ describe('ParticleSystem._collect backend-change detection', () => {
     system._collect(builderA);
     expect(system.gpuState).toBeNull();
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
     expect(system.gpuMode).toBe(true);
 
@@ -493,14 +636,14 @@ describe('ParticleSystem._compile pre-existing dead slots', () => {
 
     // Two slots spawned in dense CPU fashion before any update() call (the
     // system is still in CPU mode at this point — _compile() hasn't run).
-    const a = system.spawn();
-    const b = system.spawn();
+    const a = system._spawnSlot();
+    const b = system._spawnSlot();
 
-    system.lifetime[a] = 10;
-    system.lifetime[b] = 10;
+    system._storage.lifetime[a] = 10;
+    system._storage.lifetime[b] = 10;
     // Kill slot b directly, bypassing recycling — it's still within
     // [0, liveCount) when _compile() runs on the first update().
-    system.alive[b] = 0;
+    system._storage.alive[b] = 0;
 
     system.addUpdateModule(new ApplyForce(0, 0));
     system.update(tick(0.016));
@@ -539,23 +682,23 @@ describe('ParticleSystem._spawnGpu wrap-around search', () => {
     expect(system.gpuMode).toBe(true);
 
     // Fill all 4 slots — the round-robin hint wraps back to 0.
-    const a = system.spawn();
-    const b = system.spawn();
-    const c = system.spawn();
-    const d = system.spawn();
+    const a = system._spawnSlot();
+    const b = system._spawnSlot();
+    const c = system._spawnSlot();
+    const d = system._spawnSlot();
 
     expect([a, b, c, d]).toEqual([0, 1, 2, 3]);
 
     // Free slot 2 — found by the forward-scan first loop, hint becomes 3.
-    system.alive[2] = 0;
-    expect(system.spawn()).toBe(2);
+    system._storage.alive[2] = 0;
+    expect(system._spawnSlot()).toBe(2);
 
     // Free slot 1 (but leave slot 0 alive). The forward-scan loop
     // (hint(3)..capacity-1) finds nothing since slot 3 is still alive, so
     // the wrap-around loop (0..hint) must run: it skips over still-alive
     // slot 0 before finding dead slot 1.
-    system.alive[1] = 0;
-    expect(system.spawn()).toBe(1);
+    system._storage.alive[1] = 0;
+    expect(system._spawnSlot()).toBe(1);
   });
 
   test('returns -1 once every slot is alive and no gap exists to wrap into', () => {
@@ -566,9 +709,9 @@ describe('ParticleSystem._spawnGpu wrap-around search', () => {
     system.update(tick(0));
     expect(system.gpuMode).toBe(true);
 
-    expect(system.spawn()).toBe(0);
-    expect(system.spawn()).toBe(1);
-    expect(system.spawn()).toBe(-1);
+    expect(system._spawnSlot()).toBe(0);
+    expect(system._spawnSlot()).toBe(1);
+    expect(system._spawnSlot()).toBe(-1);
   });
 });
 
@@ -589,23 +732,23 @@ describe('ParticleSystem._updateGpu dead-slot skipping', () => {
 
     system.addUpdateModule(new ApplyForce(0, 0));
 
-    const a = system.spawn();
-    const b = system.spawn();
+    const a = system._spawnSlot();
+    const b = system._spawnSlot();
 
-    system.lifetime[a] = 10;
-    system.lifetime[b] = 10;
+    system._storage.lifetime[a] = 10;
+    system._storage.lifetime[b] = 10;
     system.update(tick(0));
     expect(system.gpuMode).toBe(true);
 
     // Kill b directly — not via natural expiry — while it's still within
     // [0, liveCount).
-    system.alive[b] = 0;
+    system._storage.alive[b] = 0;
     system.update(tick(0.1));
 
-    expect(system.elapsed[a]).toBeCloseTo(0.1);
+    expect(system._storage.elapsed[a]).toBeCloseTo(0.1);
     // b was skipped by the `if (alive[i] === 0) continue;` guard, so its
     // elapsed time is untouched.
-    expect(system.elapsed[b]).toBe(0);
+    expect(system._storage.elapsed[b]).toBe(0);
   });
 });
 
@@ -620,26 +763,254 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
     restoreGlobals();
   });
 
-  test('fires death modules when a particle expires naturally (elapsed >= lifetime) in GPU mode', () => {
+  test('reports a GPU death from the readback, carrying what the device integrated', async () => {
     const env = makeMockDevice();
     const parent = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
     const child = new ParticleSystem(makeTexture(), { capacity: 4 });
+    const deaths: ParticleDeathContext[] = [];
 
     parent.addUpdateModule(new ApplyForce(0, 0));
     parent.addDeathModule(new SpawnOnDeath(child, new BurstSpawn({ schedule: [{ time: 0, count: 1 }], lifetime: new Constant(5) })));
+    parent.addDeathModule(
+      new (class extends DeathModule {
+        public override onDeath(_system: ParticleSystem, death: ParticleDeathContext): void {
+          deaths.push(death);
+        }
+      })(),
+    );
 
-    const slot = parent.spawn();
-    parent.lifetime[slot] = 0.05;
+    const particle = parent.emit()!;
 
+    particle.lifetime = 0.05;
     parent.update(tick(0));
     expect(parent.gpuMode).toBe(true);
 
     // elapsed (integrated in _updateGpu) reaches 0.1 >= lifetime 0.05 -> natural expiry.
     parent.update(tick(0.1));
 
-    expect(parent.alive[slot]).toBe(0);
-    expect(parent.lifetime[slot]).toBe(-1);
+    expect(parent._storage.alive[0]).toBe(0);
+    expect(parent._storage.lifetime[0]).toBe(-1);
+    // Nothing is delivered from CPU storage: the record has to come back first.
+    expect(deaths).toHaveLength(0);
+    expect(child.liveCount).toBe(0);
+
+    stageDeathRecords(env, [{ x: 120, y: -40, velocityX: 55, velocityY: 5, rotation: 0.5, scaleX: 2, scaleY: 3, color: 0xff00ff00, slot: 0, elapsed: 0.1 }]);
+    await flushDeathReadback();
+
+    expect(deaths).toHaveLength(1);
+    expect(deaths[0]).toMatchObject({ x: 120, y: -40, velocityX: 55, rotation: 0.5, scaleX: 2, scaleY: 3, color: 0xff00ff00 });
+    // The lifetime comes from the CPU: the device only ever saw the sentinel.
+    expect(deaths[0]!.lifetime).toBeCloseTo(0.05, 5);
     expect(child.liveCount).toBe(1);
+    expect(child._storage.posX[0]).toBe(120);
+    expect(child._storage.posY[0]).toBe(-40);
+  });
+
+  test('delivers several deaths from one readback in slot order, exactly once each', async () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 8, device: env.device });
+    const slots: number[] = [];
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.addDeathModule(
+      new (class extends DeathModule {
+        public override onDeath(_system: ParticleSystem, death: ParticleDeathContext): void {
+          slots.push(death.x);
+        }
+      })(),
+    );
+
+    for (let i = 0; i < 3; i++) {
+      const particle = system.emit()!;
+
+      particle.lifetime = 0.05;
+    }
+
+    system.update(tick(0));
+    system.update(tick(0.1));
+
+    // Appended in whatever order the workgroups finished.
+    stageDeathRecords(env, [
+      { x: 2, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 2, elapsed: 0.1 },
+      { x: 0, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 0, elapsed: 0.1 },
+      { x: 1, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 1, elapsed: 0.1 },
+    ]);
+    await flushDeathReadback();
+
+    expect(slots).toEqual([0, 1, 2]);
+
+    // A further frame re-visits the dead slots without reporting them again.
+    system.update(tick(0.016));
+    await flushDeathReadback();
+
+    expect(slots).toEqual([0, 1, 2]);
+  });
+
+  test('deaths reported while every staging slot is in flight reach a later readback', async () => {
+    const env = makeMockDevice();
+    const maps = holdDeathMaps(env);
+    const system = new ParticleSystem(makeTexture(), { capacity: 8, device: env.device });
+    const slots: number[] = [];
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.addDeathModule(
+      new (class extends DeathModule {
+        public override onDeath(_system: ParticleSystem, death: ParticleDeathContext): void {
+          slots.push(death.x);
+        }
+      })(),
+    );
+
+    // One particle expires per step, so every step reports a death.
+    for (let i = 0; i < 5; i++) {
+      const particle = system.emit()!;
+
+      particle.lifetime = 0.02 * (i + 1);
+    }
+
+    system.update(tick(0));
+
+    for (let i = 0; i < 5; i++) {
+      system.update(tick(0.02));
+      await flushDeathReadback();
+    }
+
+    const deathBuffer = findBufferByLabel(env, 'particle-deaths');
+    const resets = (env.queue.writeBuffer as unknown as MockInstance).mock.calls.filter(call => call[0] === deathBuffer);
+
+    // Three slots take a copy each; the last two steps find the ring occupied.
+    expect(findBuffersByLabel(env, 'particle-deaths-staging')).toHaveLength(3);
+    expect(env.copies).toHaveLength(3);
+    // The append counter is reset by every step that starts with an empty
+    // buffer - the first three plus the fourth, whose records then stay put.
+    // The fifth appends behind them instead of overwriting them.
+    expect(resets).toHaveLength(4);
+
+    maps.release();
+    await flushDeathReadback();
+
+    system.update(tick(0.02));
+
+    expect(env.copies).toHaveLength(4);
+    expect(env.copies.at(-1)!.size).toBe(2 * 40);
+  });
+
+  test('batches are delivered in submission order even when their maps resolve out of order', async () => {
+    const env = makeMockDevice();
+    const maps = holdDeathMaps(env);
+    const system = new ParticleSystem(makeTexture(), { capacity: 8, device: env.device });
+    const seen: number[] = [];
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.addDeathModule(
+      new (class extends DeathModule {
+        public override onDeath(_system: ParticleSystem, death: ParticleDeathContext): void {
+          seen.push(death.x);
+        }
+      })(),
+    );
+
+    for (let i = 0; i < 2; i++) {
+      const particle = system.emit()!;
+
+      particle.lifetime = 0.02 * (i + 1);
+    }
+
+    system.update(tick(0));
+    system.update(tick(0.02));
+    system.update(tick(0.02));
+
+    expect(env.copies).toHaveLength(2);
+
+    stageDeathRecords(env, [{ x: 10, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 0, elapsed: 0.02 }], 0);
+    stageDeathRecords(env, [{ x: 20, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 1, elapsed: 0.04 }], 1);
+
+    // The second batch resolves first: it still waits for the one ahead of it.
+    maps.release(1);
+    maps.release(0);
+    await flushDeathReadback();
+
+    expect(seen).toEqual([10, 20]);
+  });
+
+  test('a death backlog past capacity is dropped rather than stalling, and reported once', async () => {
+    const env = makeMockDevice();
+    const maps = holdDeathMaps(env);
+    const capacity = 2;
+    const system = new ParticleSystem(makeTexture(), { capacity, device: env.device });
+    const warnings: string[] = [];
+
+    logger._resetOnce();
+
+    const removeSink = logger.addSink(entry => {
+      warnings.push(entry.message);
+    });
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.addDeathModule(
+      new (class extends DeathModule {
+        public override onDeath(): void {
+          // The delivery itself is covered elsewhere; this test is about the bound.
+        }
+      })(),
+    );
+
+    const emitDying = (): void => {
+      const particle = system.emit();
+
+      if (particle) particle.lifetime = 0.02;
+    };
+
+    try {
+      emitDying();
+      system.update(tick(0));
+
+      // One particle expires per step and the slot is refilled right after, so
+      // the backlog grows past capacity once the staging ring is occupied.
+      for (let step = 0; step < 6; step++) {
+        system.update(tick(0.02));
+        emitDying();
+      }
+
+      expect(env.copies).toHaveLength(3);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain('more than');
+
+      // A second overflow on the same system stays quiet.
+      system.update(tick(0.02));
+      emitDying();
+
+      expect(warnings).toHaveLength(1);
+
+      // The simulation keeps running, and the copy never claims more than the
+      // death buffer holds.
+      maps.release();
+      await flushDeathReadback();
+      system.update(tick(0.02));
+
+      expect(env.copies).toHaveLength(4);
+      expect(env.copies.at(-1)!.size).toBe(capacity * 40);
+    } finally {
+      removeSink();
+      logger._resetOnce();
+    }
+  });
+
+  test('a system without death modules neither allocates nor reads a death buffer', () => {
+    const env = makeMockDevice();
+    const system = new ParticleSystem(makeTexture(), { capacity: 8, device: env.device });
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+
+    const particle = system.emit()!;
+
+    particle.lifetime = 0.05;
+    system.update(tick(0));
+    system.update(tick(0.1));
+
+    expect(() => findBufferByLabel(env, 'particle-deaths')).toThrow(/No buffer created/);
+    expect(env.copies).toHaveLength(0);
+    expect(env.shaderSources.at(-1)).not.toContain('atomicAdd');
   });
 });
 
@@ -703,8 +1074,8 @@ describe('ParticleGpuState direct construction', () => {
       ),
     );
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
 
     expect(system.gpuMode).toBe(true);
@@ -743,8 +1114,8 @@ describe('ParticleGpuState frame-UV packing (_writeFrames)', () => {
     const system = new ParticleSystem(tex, frames, { capacity: 4, device: env.device });
 
     system.addUpdateModule(new ApplyForce(0, 0));
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
 
     expect(system.gpuMode).toBe(true);
@@ -771,8 +1142,8 @@ describe('ParticleGpuState frame-UV packing (_writeFrames)', () => {
     const system = new ParticleSystem(tex, frames, { capacity: 4, device: env.device });
 
     system.addUpdateModule(new ApplyForce(0, 0));
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
 
     const view = readFramesUniforms(env);
@@ -789,8 +1160,8 @@ describe('ParticleGpuState frame-UV packing (_writeFrames)', () => {
     const system = new ParticleSystem(tex, { capacity: 4, device: env.device });
 
     system.addUpdateModule(new ApplyForce(0, 0));
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
 
     const view = readFramesUniforms(env);
@@ -821,16 +1192,16 @@ describe('Out-of-range textureIndex', () => {
 
     system.addUpdateModule(new ApplyForce(0, 0));
 
-    const inRange = system.spawn();
-    const outOfRange = system.spawn();
-    const neverSet = system.spawn();
+    const inRange = system._spawnSlot();
+    const outOfRange = system._spawnSlot();
+    const neverSet = system._spawnSlot();
 
     for (const slot of [inRange, outOfRange, neverSet]) {
-      system.lifetime[slot] = 10;
+      system._storage.lifetime[slot] = 10;
     }
 
-    system.textureIndex[inRange] = 1;
-    system.textureIndex[outOfRange] = 7;
+    system._storage.frame[inRange] = 1;
+    system._storage.frame[outOfRange] = 7;
     // `neverSet` keeps the zero-initialised default.
 
     system.update(tick(0.016));
@@ -847,7 +1218,7 @@ describe('Out-of-range textureIndex', () => {
     // CPU side: the same three particles packed through the render mode.
     const mode = new QuadParticles();
 
-    mode.build(system);
+    mode.build(system, system._storage);
 
     const floats = new Float32Array(mode.data);
     const uvMinU = (instance: number): number => floats[instance * 10 + 6]!;
@@ -884,8 +1255,8 @@ describe('ParticleGpuState prelude deduplication', () => {
     system.addUpdateModule(new Turbulence(50));
     system.addUpdateModule(new Turbulence(30));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
 
     expect(system.gpuMode).toBe(true);
@@ -944,15 +1315,15 @@ describe('SpawnOnDeath into a GPU-mode target system', () => {
     target.update(tick(0));
 
     for (let i = 0; i < capacity; i++) {
-      const slot = target.spawn();
+      const slot = target._spawnSlot();
 
-      target.lifetime[slot] = 10;
+      target._storage.lifetime[slot] = 10;
     }
 
     // Mirror what the GPU death path leaves behind: a dead slot below the
     // live-range high-water mark.
-    target.alive[hole] = 0;
-    target.lifetime[hole] = -1;
+    target._storage.alive[hole] = 0;
+    target._storage.lifetime[hole] = -1;
 
     return target;
   };
@@ -963,39 +1334,39 @@ describe('SpawnOnDeath into a GPU-mode target system', () => {
 
     expect(target.gpuMode).toBe(true);
 
-    const parentSlot = parent.spawn();
+    const parentSlot = parent._spawnSlot();
 
-    parent.posX[parentSlot] = 100;
-    parent.posY[parentSlot] = 50;
+    parent._storage.posX[parentSlot] = 100;
+    parent._storage.posY[parentSlot] = 50;
 
     const death = new SpawnOnDeath(target, new BurstSpawn({ schedule: [{ time: 0, count: 1 }], lifetime: new Constant(5) }));
     const liveCountBefore = target.liveCount;
 
-    death.onDeath(parent, parentSlot);
+    death.onDeath(parent, parent._storage.snapshot(parentSlot));
 
     // The spawn refilled the hole, so liveCount is unchanged — the signal the
     // old count-diff heuristic relied on never fires here.
     expect(target.liveCount).toBe(liveCountBefore);
-    expect(target.alive[1]).toBe(1);
-    expect(target.posX[1]).toBe(100);
-    expect(target.posY[1]).toBe(50);
+    expect(target._storage.alive[1]).toBe(1);
+    expect(target._storage.posX[1]).toBe(100);
+    expect(target._storage.posY[1]).toBe(50);
   });
 
   test('CPU-mode targets still receive the dying particle position', () => {
     const target = new ParticleSystem(makeTexture(), { capacity: 4 });
     const parent = new ParticleSystem(makeTexture(), { capacity: 4 });
 
-    const parentSlot = parent.spawn();
+    const parentSlot = parent._spawnSlot();
 
-    parent.posX[parentSlot] = -20;
-    parent.posY[parentSlot] = 7;
+    parent._storage.posX[parentSlot] = -20;
+    parent._storage.posY[parentSlot] = 7;
 
     const death = new SpawnOnDeath(target, new BurstSpawn({ schedule: [{ time: 0, count: 1 }], lifetime: new Constant(5) }));
 
-    death.onDeath(parent, parentSlot);
+    death.onDeath(parent, parent._storage.snapshot(parentSlot));
 
     expect(target.liveCount).toBe(1);
-    expect(target.posX[0]).toBe(-20);
-    expect(target.posY[0]).toBe(7);
+    expect(target._storage.posX[0]).toBe(-20);
+    expect(target._storage.posY[0]).toBe(7);
   });
 });

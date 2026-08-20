@@ -48,13 +48,15 @@ describe('SceneLoader', () => {
   test('get() claims under its own scope, distinct from the app loader', async () => {
     const { app } = makeAppWithAudio();
     const sceneLoader = new SceneLoader(app);
+    const other = app.loader.createScope({ name: 'other' });
 
     const handle = sceneLoader.get('boom.ogg');
     await handle.loaded;
     expect(handle.audioBuffer).not.toBeNull();
 
-    // app-level release must NOT free it — the scene scope holds the claim.
-    app.loader.release(handle);
+    // Another scope releasing must NOT free it - the scene holds its own claim,
+    // and a scope can only ever drop the claim it took itself.
+    other.release(handle);
     expect(handle.audioBuffer).not.toBeNull();
   });
 

@@ -178,7 +178,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       shader.getUniform('u_localBounds').setValue(system.vertices);
     }
 
-    mode.build(system);
+    mode.build(system, system._storage);
 
     this._pendingMode = mode;
     this._pendingResources = resources;

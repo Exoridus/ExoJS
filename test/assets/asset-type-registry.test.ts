@@ -124,12 +124,46 @@ describe('AssetTypeRegistry', () => {
     expect(registry.hasExtension('ta')).toBe(false);
   });
 
-  test('_key/_identityKey derive stable, distinct per-type-per-alias keys', () => {
+  test('_getTypeId is stable per type and distinct across types', () => {
     const registry = new AssetTypeRegistry();
 
-    expect(registry._key(TypeA, 'a.png')).toBe(registry._key(TypeA, 'a.png'));
-    expect(registry._key(TypeA, 'a.png')).not.toBe(registry._key(TypeB, 'a.png'));
-    expect(registry._identityKey(TypeA, 'a.png')).not.toBe(registry._key(TypeA, 'a.png'));
+    expect(registry._getTypeId(TypeA)).toBe(registry._getTypeId(TypeA));
+    expect(registry._getTypeId(TypeA)).not.toBe(registry._getTypeId(TypeB));
+  });
+
+  test('_identityDiscriminator is undefined without a handler hook and forwards source + options with one', () => {
+    const registry = new AssetTypeRegistry();
+
+    expect(registry._identityDiscriminator(TypeA, 'a.png', { format: 'x' })).toBeUndefined();
+
+    registry.bindAsset(
+      { ctor: TypeA },
+      {
+        getIdentityDiscriminator: request => String((request.options as { format?: string } | undefined)?.format),
+        load: vi.fn(async () => ({})),
+      },
+    );
+
+    expect(registry._identityDiscriminator(TypeA, 'a.png', { format: 'x' })).toBe('x');
+    expect(registry._identityDiscriminator(TypeA, 'a.png', { format: 'y' })).toBe('y');
+  });
+
+  test('_identityDiscriminator never walks options a type has not declared identity-relevant', () => {
+    const registry = new AssetTypeRegistry();
+
+    registry.bindAsset(
+      { ctor: TypeA },
+      { getIdentityDiscriminator: request => String((request.options as { format?: string } | undefined)?.format), load: vi.fn(async () => ({})) },
+    );
+
+    const hostile = {
+      format: 'x',
+      get unrelated(): never {
+        throw new Error('must not be read during canonicalization');
+      },
+    };
+
+    expect(() => registry._identityDiscriminator(TypeA, 'a.png', hostile)).not.toThrow();
   });
 
   test('_resolveTypeForPath matches the longest registered dot-suffix first', () => {

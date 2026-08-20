@@ -1,6 +1,6 @@
 {
   "title": "StreamingLoadEvent",
-  "description": "`HTMLMediaElement` ready-state events the streaming asset factories (MusicFactory, VideoFactory) accept as the load-completion signal. Pick the earliest event that meets your latency requirement; `'canplaythrough'` is the safest default.",
+  "description": "`HTMLMediaElement` ready-state events the streaming asset factories (MusicFactory, VideoFactory) accept as the load-completion signal. Pick the earliest event that meets your latency requirement; `'canplay'` is the default - the media can start playing, which for streamed media deliberately does not mean it has fully arrived.",
   "symbol": "StreamingLoadEvent",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "`HTMLMediaElement` ready-state events the streaming asset factories (MusicFactory, VideoFactory) accept as the load-completion signal. Pick the earliest event that meets your latency requirement; `'canplaythrough'` is the safest default."
+        "`HTMLMediaElement` ready-state events the streaming asset factories (MusicFactory, VideoFactory) accept as the load-completion signal. Pick the earliest event that meets your latency requirement; `'canplay'` is the default - the media can start playing, which for streamed media deliberately does not mean it has fully arrived."
       ],
       "importLine": "import { StreamingLoadEvent } from '@codexo/exojs'",
       "sourceLink": null

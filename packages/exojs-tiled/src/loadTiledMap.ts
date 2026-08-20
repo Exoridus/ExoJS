@@ -24,7 +24,7 @@ async function loadTiledTilesetResources(data: TiledTilesetData, baseUrl: string
 
   if (data.image !== undefined) {
     imageUrl = resolveTiledUrl(data.image, baseUrl);
-    texture = await context.loader.load(Asset.type('texture', imageUrl));
+    texture = await context.scope.load(Asset.type('texture', imageUrl));
   }
 
   let tileTextures: Map<number, Texture> | undefined;
@@ -36,7 +36,7 @@ async function loadTiledTilesetResources(data: TiledTilesetData, baseUrl: string
       }
 
       const tileImageUrl = resolveTiledUrl(tile.image, baseUrl);
-      const tileTexture: Texture = await context.loader.load(Asset.type('texture', tileImageUrl));
+      const tileTexture: Texture = await context.scope.load(Asset.type('texture', tileImageUrl));
 
       tileTextures ??= new Map();
       tileTextures.set(tile.id, tileTexture);
@@ -82,7 +82,7 @@ async function loadImageLayerTextures(
   for (const layer of layers) {
     if (layer.type === 'imagelayer' && layer.image) {
       const imageUrl = resolveTiledUrl(layer.image, mapSource);
-      const texture: Texture = await context.loader.load(Asset.type('texture', imageUrl));
+      const texture: Texture = await context.scope.load(Asset.type('texture', imageUrl));
       result.set(layer.id, texture);
     } else if (layer.type === 'group') {
       const nested = await loadImageLayerTextures(layer.layers, mapSource, context);

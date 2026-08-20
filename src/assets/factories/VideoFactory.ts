@@ -1,33 +1,29 @@
 import { AbstractAssetFactory } from '#assets/AbstractAssetFactory';
 import { determineMimeType } from '#assets/utils';
-import type { PlaybackOptions, StreamingLoadEvent } from '#core/types';
-import type { SamplerOptions } from '#rendering/texture/Sampler';
+import type { PlaybackOptions } from '#core/types';
+import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import { Video } from '#rendering/video/Video';
 
-const onceListenerOption = { once: true };
+import { attachMediaSource, detachMediaElement, type MediaLoadMessages, type MediaLoadOptions } from './mediaSource';
 
-/** Construction options for {@link VideoFactory.create}. */
-export interface VideoFactoryOptions {
+const MESSAGES: MediaLoadMessages = {
+  error: 'Video loading error.',
+  abort: 'Video loading error: cancelled.',
+  emptied: 'Video loading error: emptied.',
+  stalled: 'Video loading stalled.',
+};
+
+/** Construction options for {@link VideoFactory.create} and {@link VideoFactory.createFromUrl}. */
+export interface VideoFactoryOptions extends MediaLoadOptions {
   /**
-   * MIME type for the video blob. Inferred from magic bytes when omitted.
+   * MIME type for the video blob. Inferred from magic bytes when omitted, and
+   * unused by streamed media, whose type comes from the response.
    */
   mimeType?: string;
-  /**
-   * The `HTMLVideoElement` event that signals the asset is ready for
-   * playback. Defaults to `'canplaythrough'`. Use `'loadedmetadata'` for
-   * faster (dimensions-only) readiness.
-   */
-  loadEvent?: StreamingLoadEvent;
   /** Initial playback settings forwarded to the {@link Video} instance. */
   playbackOptions?: Partial<PlaybackOptions>;
-  /** Sampler parameters forwarded to the {@link Video} instance's texture. */
-  samplerOptions?: Partial<SamplerOptions>;
-  /**
-   * Milliseconds to wait after a `stalled` event before rejecting the load
-   * promise. When omitted no timeout is applied and a stalled load will wait
-   * indefinitely. Each subsequent `stalled` event resets the timer.
-   */
-  stallTimeout?: number;
+  /** Sampling and upload state forwarded to the {@link Video} instance's texture. */
+  textureOptions?: Partial<TextureOptions>;
 }
 
 /**
@@ -36,10 +32,16 @@ export interface VideoFactoryOptions {
  * instance suitable for use as a dynamic texture source in the rendering
  * pipeline.
  *
- * Video data is buffered via a `<video>` element rather than decoded up-front.
- * The `'stalled'` event is intentionally not treated as an error because it
- * fires transiently during normal buffering on slow connections. All `<video>`
- * elements are paused and detached when {@link VideoFactory.destroy} is called.
+ * A URL-backed asset hands the resolved URL to the element and lets the browser
+ * stream it, which is what keeps a long video off the heap. {@link create}
+ * takes the complete bytes instead - the path used by `download: true` and by
+ * container entries - and wraps them in a blob.
+ *
+ * Streamed video defaults to `crossOrigin: 'anonymous'`, because a cross-origin
+ * element without it plays but cannot be uploaded as a texture.
+ *
+ * The `<video>` elements this factory created are paused and detached when the
+ * asset is released, and again when {@link VideoFactory.destroy} runs.
  */
 export class VideoFactory extends AbstractAssetFactory<Video> {
   public readonly storageName = 'video';
@@ -55,53 +57,67 @@ export class VideoFactory extends AbstractAssetFactory<Video> {
   }
 
   /**
-   * Wraps video bytes in a `<video>` element and resolves with a
-   * {@link Video} instance once the configured `loadEvent` fires.
+   * Wraps video bytes in a `<video>` element and resolves with a {@link Video}
+   * instance once the configured `loadEvent` fires.
    *
    * Rejects if the element emits `error`, `abort`, or `emptied` before the
    * load event is received.
    */
   public async create(source: ArrayBuffer, options: VideoFactoryOptions = {}): Promise<Video> {
-    const { mimeType, loadEvent, playbackOptions, samplerOptions, stallTimeout } = options;
+    const { mimeType, playbackOptions, textureOptions } = options;
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
     const objectUrl = this.createObjectUrl(blob);
+    const video = this._createElement();
 
-    return new Promise((resolve, reject) => {
-      const video = document.createElement('video');
-      this._videoElements.push(video);
-
-      let stallTimer: ReturnType<typeof setTimeout> | undefined;
-      let settled = false;
-
-      const settle = (fn: () => void): void => {
-        if (settled) return;
-        settled = true;
-        if (stallTimer !== undefined) {
-          clearTimeout(stallTimer);
-          stallTimer = undefined;
-        }
-        this.revokeObjectUrl(objectUrl);
-        fn();
-      };
-
-      video.addEventListener('error', () => settle(() => reject(new Error('Video loading error.'))), onceListenerOption);
-      video.addEventListener('abort', () => settle(() => reject(new Error('Video loading error: cancelled.'))), onceListenerOption);
-      video.addEventListener('emptied', () => settle(() => reject(new Error('Video loading error: emptied.'))), onceListenerOption);
-      video.addEventListener(loadEvent ?? 'canplaythrough', () => settle(() => resolve(new Video(video, playbackOptions, samplerOptions))), onceListenerOption);
-
-      // 'stalled' fires transiently during normal buffering on slow connections and is not
-      // treated as an error by default. Supply stallTimeout to reject after a stall persists.
-      if (stallTimeout !== undefined) {
-        video.addEventListener('stalled', () => {
-          if (settled) return;
-          if (stallTimer !== undefined) clearTimeout(stallTimer);
-          stallTimer = setTimeout(() => settle(() => reject(new Error('Video loading stalled.'))), stallTimeout);
-        });
-      }
-
-      video.preload = 'auto';
-      video.src = objectUrl;
+    await attachMediaSource({
+      element: video,
+      src: objectUrl,
+      messages: MESSAGES,
+      loadEvent: options.loadEvent,
+      stallTimeout: options.stallTimeout,
+      signal: undefined,
+      onSettled: () => this.revokeObjectUrl(objectUrl),
     });
+
+    return new Video(video, playbackOptions, textureOptions);
+  }
+
+  /**
+   * Streams the media at `url` through a `<video>` element and resolves with a
+   * {@link Video} once the configured `loadEvent` fires.
+   *
+   * The resource is ready to play, not fully downloaded: the browser continues
+   * transferring during playback, and a failure after this point is reported by
+   * {@link Video.onError} rather than by this promise.
+   */
+  public async createFromUrl(url: string, options: VideoFactoryOptions = {}, signal?: AbortSignal): Promise<Video> {
+    const video = this._createElement();
+
+    await attachMediaSource({
+      element: video,
+      src: url,
+      messages: MESSAGES,
+      loadEvent: options.loadEvent,
+      stallTimeout: options.stallTimeout,
+      crossOrigin: options.crossOrigin === undefined ? 'anonymous' : options.crossOrigin,
+      signal,
+    });
+
+    return new Video(video, options.playbackOptions, options.textureOptions);
+  }
+
+  /** Ends playback and the transfer behind a released video. */
+  public dispose(resource: Video): void {
+    const video = resource.videoElement;
+
+    resource.destroy();
+    detachMediaElement(video);
+
+    const index = this._videoElements.indexOf(video);
+
+    if (index !== -1) {
+      this._videoElements.splice(index, 1);
+    }
   }
 
   /**
@@ -111,11 +127,17 @@ export class VideoFactory extends AbstractAssetFactory<Video> {
    */
   public override destroy(): void {
     for (const video of this._videoElements) {
-      video.pause();
-      video.src = '';
-      video.load();
+      detachMediaElement(video);
     }
     this._videoElements.length = 0;
     super.destroy();
+  }
+
+  private _createElement(): HTMLVideoElement {
+    const video = document.createElement('video');
+
+    this._videoElements.push(video);
+
+    return video;
   }
 }

@@ -9,7 +9,6 @@ import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
-import type { MaterialSamplerOptions } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
@@ -45,6 +44,7 @@ import {
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/types';
 import type { View } from '#rendering/View';
@@ -109,6 +109,13 @@ const makeWebGl2DebugContext = (gl: WebGL2RenderingContext): WebGL2RenderingCont
 
 interface ManagedTextureState {
   readonly handle: WebGLTexture;
+  /**
+   * Sampling state the handle's filter/wrap parameters were last set from.
+   * Tracked separately from `version` because GL keeps those parameters on the
+   * texture object: a content re-upload must not re-issue them, and a
+   * filter/wrap change must not drag a full re-upload along with it.
+   */
+  samplerKey: number;
   version: number;
   width: number;
   height: number;
@@ -249,7 +256,7 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
   /** Context-local base-texture sampler overrides shared by custom materials. */
-  private readonly _materialSamplers = new Map<string, WebGLSampler>();
+  private readonly _materialSamplers = new Map<number, WebGLSampler>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
   /**
@@ -1138,8 +1145,8 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /** Bind a material's base-texture sampler override to one texture unit. @internal */
-  public bindMaterialSampler(options: MaterialSamplerOptions, unit: number): this {
-    const key = `${options.scaleMode}:${options.wrapMode}`;
+  public bindMaterialSampler(options: SamplerOptions, unit: number): this {
+    const key = samplerStateKey(options.scaleMode, options.wrapMode);
     let sampler = this._materialSamplers.get(key);
 
     if (sampler === undefined) {
@@ -2221,6 +2228,7 @@ export class WebGl2Backend implements RenderBackend {
 
     const state: ManagedTextureState = {
       handle: this._createTextureHandle(),
+      samplerKey: -1,
       version: -1,
       width: 0,
       height: 0,
@@ -2549,11 +2557,33 @@ export class WebGl2Backend implements RenderBackend {
 
     this._bindTextureHandle(state.handle);
 
+    const samplerKey = samplerStateKey(texture.scaleMode, texture.wrapMode);
+
+    if (state.samplerKey !== samplerKey) {
+      this._applySamplerParameters(texture, state, samplerKey);
+    }
+
     if (state.version === version) {
       return state;
     }
 
     return this._syncTextureUpload(texture, state, version);
+  }
+
+  /**
+   * Push `texture`'s filter and wrap state onto its already-bound GL texture
+   * object. Only reached when the state actually changed, so the four calls
+   * never land on a steady-state frame.
+   */
+  private _applySamplerParameters(texture: Texture | RenderTexture, state: ManagedTextureState, samplerKey: number): void {
+    const gl = this._context;
+
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, texture.scaleMode);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapMode);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapMode);
+
+    state.samplerKey = samplerKey;
   }
 
   /**
@@ -2564,10 +2594,6 @@ export class WebGl2Backend implements RenderBackend {
   private _syncTextureUpload(texture: Texture | RenderTexture, state: ManagedTextureState, version: number): ManagedTextureState {
     const gl = this._context;
 
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, texture.scaleMode);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, texture.scaleMode);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, texture.wrapMode);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, texture.wrapMode);
     gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, texture.premultiplyAlpha);
 
     if (texture instanceof DataTexture) {

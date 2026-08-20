@@ -12,11 +12,11 @@ import { ParticleSystem } from '../src/ParticleSystem';
 import { QuadParticles } from '../src/renderModes/QuadParticles';
 
 const spawnParticle = (system: ParticleSystem): void => {
-  const slot = system.spawn();
+  const slot = system._spawnSlot();
 
-  system.scaleX[slot] = 1;
-  system.scaleY[slot] = 1;
-  system.lifetime[slot] = 5;
+  system._storage.scaleX[slot] = 1;
+  system._storage.scaleY[slot] = 1;
+  system._storage.lifetime[slot] = 5;
 };
 
 describe('default render mode sharing', () => {
@@ -53,7 +53,7 @@ describe('default render mode sharing', () => {
     expect(survivor.renderMode.material).toBe(material);
 
     spawnParticle(survivor);
-    survivor.renderMode.build(survivor);
+    survivor.renderMode.build(survivor, survivor._storage);
 
     expect(survivor.renderMode.count).toBe(1);
   });

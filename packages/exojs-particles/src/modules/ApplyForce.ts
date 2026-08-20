@@ -1,4 +1,4 @@
-﻿import type { ParticleSystem } from "#ParticleSystem";
+﻿import type { ParticleBatch } from "#ParticleStorage";
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
@@ -22,8 +22,9 @@ export class ApplyForce extends UpdateModule {
     this.accelerationY = accelerationY;
   }
 
-  public override apply(system: ParticleSystem, dt: number): void {
-    const { velX, velY, liveCount } = system;
+  public override apply(particles: ParticleBatch, dt: number): void {
+    const { x: velX, y: velY } = particles.velocity;
+    const liveCount = particles.count;
     const ax = this.accelerationX * dt;
     const ay = this.accelerationY * dt;
 

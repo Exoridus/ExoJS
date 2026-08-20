@@ -1,6 +1,6 @@
 {
   "title": "BurstSpawnConfig",
-  "description": "Per-property spawn configuration for BurstSpawn. Same fields as RateSpawnConfig except no rate — the schedule drives counts.",
+  "description": "Spawn configuration for BurstSpawn: the burst schedule plus the shared per-property fields.",
   "symbol": "BurstSpawnConfig",
   "kind": "interface",
   "subsystem": "particles",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Per-property spawn configuration for BurstSpawn. Same fields as RateSpawnConfig except no rate — the schedule drives counts."
+        "Spawn configuration for BurstSpawn: the burst schedule plus the shared per-property fields."
       ],
       "importLine": "import { BurstSpawnConfig } from '@codexo/exojs-particles'",
       "sourceLink": null
@@ -63,7 +63,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Total lifetime in seconds. Drives expiry."
         },
         {
           "name": "loop",
@@ -306,7 +306,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Atlas frame index. Ignored by a system that declares no frames."
         },
         {
           "name": "tint",
@@ -343,7 +343,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Initial tint. For a per-frame fade use a ColorOverLifetime update module."
         },
         {
           "name": "velocity",

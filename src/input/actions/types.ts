@@ -23,11 +23,6 @@ export interface ActionOptions {
    * reaches the channel buffer.
    */
   readonly threshold?: number;
-  /**
-   * Resolve gamepad channels against this slot (0..3) instead of the primary
-   * pad. Non-gamepad channels are unaffected.
-   */
-  readonly gamepadSlot?: 0 | 1 | 2 | 3;
 }
 
 /** One channel write within a {@link ChannelEventBatch}. @internal */

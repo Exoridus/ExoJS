@@ -1,0 +1,428 @@
+{
+  "title": "BindingProfile",
+  "description": "A player's rebindings, as the persistable delta against the developer's defaults. A profile stores ONLY the actions a player actually changed. That is the whole point of keeping it separate from the defaults: a full snapshot taken today would freeze every action a game gains tomorrow at whatever binding it had - or lacked - when the save was written, so adding a new action with a new default would silently do nothing for returning players. A profile holds no reference to any live action or map. Apply it with ActionMap.applyProfile, which validates it against the map's actual actions and applies it as one transaction.",
+  "symbol": "BindingProfile",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 9,
+  "counts": {
+    "constructors": 1,
+    "methods": 6,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A player's rebindings, as the persistable delta against the developer's defaults.",
+        "A profile stores ONLY the actions a player actually changed. That is the whole point of keeping it separate from the defaults: a full snapshot taken today would freeze every action a game gains tomorrow at whatever binding it had - or lacked - when the save was written, so adding a new action with a new default would silently do nothing for returning players.",
+        "A profile holds no reference to any live action or map. Apply it with ActionMap.applyProfile, which validates it against the map's actual actions and applies it as one transaction."
+      ],
+      "importLine": "import { BindingProfile } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): BindingProfile",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BindingProfile",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "BindingProfile",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(): this",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "this",
+          "description": "Drop every override."
+        },
+        {
+          "name": "get",
+          "signature": "get(action: string): SerializedActionBinding | undefined",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "action",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedActionBinding",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "action",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "SerializedActionBinding | undefined",
+          "description": "The stored override for action, or undefined when it keeps its default."
+        },
+        {
+          "name": "reset",
+          "signature": "reset(action: string): this",
+          "signatureTokens": [
+            {
+              "text": "reset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "action",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "action",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Drop action's override so it falls back to its developer default."
+        },
+        {
+          "name": "set",
+          "signature": "set(action: string, binding: SerializedActionBinding): this",
+          "signatureTokens": [
+            {
+              "text": "set",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "action",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "binding",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedActionBinding",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "action",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "binding",
+              "type": "SerializedActionBinding",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Record binding as action's override, replacing any earlier one."
+        },
+        {
+          "name": "toJSON",
+          "signature": "toJSON(): BindingProfileData",
+          "signatureTokens": [
+            {
+              "text": "toJSON",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BindingProfileData",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "BindingProfileData",
+          "description": "Snapshot suitable for JSON.stringify. Contains tokens only - no gamepad slots, no device indices."
+        },
+        {
+          "name": "fromJSON",
+          "signature": "fromJSON(data: unknown): BindingProfile",
+          "signatureTokens": [
+            {
+              "text": "fromJSON",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BindingProfile",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "data",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "BindingProfile",
+          "description": "Rebuild a profile from toJSON output (or from JSON.parse of it). Structure is validated here; individual tokens are validated when the profile is applied to a map, since only the map knows which action kind each entry has to fit."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "names",
+          "signature": "names: readonly string[]",
+          "signatureTokens": [
+            {
+              "text": "names",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Names of the overridden actions, in insertion order."
+        },
+        {
+          "name": "size",
+          "signature": "size: number",
+          "signatureTokens": [
+            {
+              "text": "size",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of actions this profile overrides."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/BindingProfile.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/BindingProfile.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/BindingProfile.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/BindingProfile.ts"
+}

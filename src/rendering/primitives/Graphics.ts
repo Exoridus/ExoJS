@@ -512,7 +512,7 @@ export class Graphics extends Container {
 
   private _rasterizeGradient(gradient: Gradient): DataTexture<TextureFormat.Rgba8> {
     const texture = gradient.toTexture(gradientTextureSize, gradientTextureSize, {
-      samplerOptions: { scaleMode: ScaleModes.Linear },
+      textureOptions: { scaleMode: ScaleModes.Linear },
     });
 
     this._ownedTextures.add(texture);

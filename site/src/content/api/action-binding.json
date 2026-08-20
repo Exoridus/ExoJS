@@ -1,0 +1,120 @@
+{
+  "title": "ActionBinding",
+  "description": "Any binding descriptor an action can be rebound with - the second argument of ActionMap.rebind. Deliberately the union of every kind's descriptor rather than a conditional type resolved from the action being rebound. A conditional over the map's own type parameter, however written, stops TypeScript inferring that parameter at every OTHER `ActionMap<T>` site - `scene.inputs.attach(map)` included - so the precision would be paid for by breaking inference for every caller. The ACTION NAME is still checked against the map's declared actions, and a mismatched binding shape is rejected at runtime by the action itself.",
+  "symbol": "ActionBinding",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Any binding descriptor an action can be rebound with - the second argument of ActionMap.rebind.",
+        "Deliberately the union of every kind's descriptor rather than a conditional type resolved from the action being rebound. A conditional over the map's own type parameter, however written, stops TypeScript inferring that parameter at every OTHER `ActionMap<T>` site - `scene.inputs.attach(map)` included - so the precision would be paid for by breaking inference for every caller. The ACTION NAME is still checked against the map's declared actions, and a mismatched binding shape is rejected at runtime by the action itself."
+      ],
+      "importLine": "import { ActionBinding } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ActionBinding",
+          "signature": "ButtonBinding | ChordBinding | OneOrMany<AxisBinding> | OneOrMany<VectorBinding> | SequenceBinding",
+          "signatureTokens": [
+            {
+              "text": "ButtonBinding",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChordBinding",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OneOrMany",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AxisBinding",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OneOrMany",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VectorBinding",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SequenceBinding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/ActionMap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/ActionMap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
+}

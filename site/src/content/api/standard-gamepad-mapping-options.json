@@ -1,0 +1,157 @@
+{
+  "title": "StandardGamepadMappingOptions",
+  "description": "Options for a device that follows the standard layout with at most one extra button.",
+  "symbol": "StandardGamepadMappingOptions",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for a device that follows the standard layout with at most one extra button."
+      ],
+      "importLine": "import { StandardGamepadMappingOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "extraButtons",
+          "signature": "extraButtons?: readonly GamepadButton[]",
+          "signatureTokens": [
+            {
+              "text": "extraButtons",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadButton",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device-specific buttons appended after the standard layout. Their raw indices must not collide with 0-16."
+        },
+        {
+          "name": "family",
+          "signature": "family?: GamepadMappingFamily",
+          "signatureTokens": [
+            {
+              "text": "family",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMappingFamily",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Family to report. Defaults to GamepadMappingFamily.GenericDualAnalog."
+        },
+        {
+          "name": "promptLabels",
+          "signature": "promptLabels?: ReadonlyMap<GamepadPromptControl, string>",
+          "signatureTokens": [
+            {
+              "text": "promptLabels",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadPromptControl",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Prompt labels that differ from the family default."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/gamepadMappings.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/gamepadMappings.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/gamepadMappings.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/gamepadMappings.ts"
+}

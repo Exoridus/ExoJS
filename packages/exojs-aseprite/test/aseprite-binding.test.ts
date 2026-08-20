@@ -32,7 +32,9 @@ function makeContext(fixtures: Record<string, unknown>) {
 
   const context: AssetLoaderContext = {
     loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
+    scope: { load: loaderLoad } as unknown as AssetLoaderContext['scope'],
     identityKey: 'test',
+    resolveUrl: (source: string) => source,
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),
     fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
@@ -70,8 +72,8 @@ describe('asepriteBinding descriptor', () => {
     expect(typeof asepriteBinding.create(fakeLoader()).load).toBe('function');
   });
 
-  it('create() handler has no custom getIdentityKey (default source identity)', () => {
-    expect(asepriteBinding.create(fakeLoader()).getIdentityKey).toBeUndefined();
+  it('create() handler declares no identity discriminator (type + locator alone identify it)', () => {
+    expect(asepriteBinding.create(fakeLoader()).getIdentityDiscriminator).toBeUndefined();
   });
 });
 

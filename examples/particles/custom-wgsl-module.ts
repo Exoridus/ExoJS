@@ -1,6 +1,7 @@
 import { Application, Color, type RenderingContext, Scene, type Time, Vector } from '@codexo/exojs';
 import {
     Constant,
+    type ParticleBatch,
     particlesExtension,
     ParticleSystem,
     RateSpawn,
@@ -29,9 +30,12 @@ class SwayModule extends UpdateModule {
         this.frequency = frequency;
     }
 
-    override apply(system: ParticleSystem, dt: number): void {
-        for (let i = 0; i < system.liveCount; i++) {
-            system.velX[i] += Math.sin(system.elapsed[i] * this.frequency) * this.amplitude * dt;
+    override apply(particles: ParticleBatch, dt: number): void {
+        const { x: velX } = particles.velocity;
+        const { elapsed } = particles.timing;
+
+        for (let i = 0; i < particles.count; i++) {
+            velX[i] += Math.sin(elapsed[i] * this.frequency) * this.amplitude * dt;
         }
     }
 

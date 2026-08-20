@@ -1,27 +1,27 @@
-﻿import type { ParticleSystem } from "#ParticleSystem";
+﻿import type { ParticleBatch } from "#ParticleStorage";
 
 import type { WgslContribution } from './WgslContribution';
 
 /**
- * Per-frame, per-batch mutator. Operates on the system's SoA storage
- * directly — typically a single tight loop over `[0, system.liveCount)`
- * that reads/writes the relevant `Float32Array`s.
+ * Per-frame, per-batch mutator. Operates on the live particles through their
+ * named channels - typically a single tight loop over `[0, particles.count)`
+ * that reads and writes the channel arrays it needs.
  *
  * Implementations must always provide a CPU `apply()`. To make a module
  * GPU-eligible (executed inside the system's composite compute shader on
  * WebGPU backends), additionally implement {@link wgsl} and
  * {@link writeUniforms}. Modules that declare a {@link WgslContribution}
  * may also opt to declare a 1D texture binding via the `textures` field
- * (used by `Curve` / `ColorGradient`-driven modules) — in which case
+ * (used by `Curve` / `ColorGradient`-driven modules) - in which case
  * {@link uploadTextures} runs once at compile time to upload the data.
  *
  * Implementation pattern (CPU-only module):
  *
  * ```ts
  * class MyModule extends UpdateModule {
- *     apply(system, dt) {
- *         const { velX, velY, liveCount } = system;
- *         for (let i = 0; i < liveCount; i++) { velX[i] *= 0.99; velY[i] *= 0.99; }
+ *     apply(particles, dt) {
+ *         const { x: velX, y: velY } = particles.velocity;
+ *         for (let i = 0; i < particles.count; i++) { velX[i] *= 0.99; velY[i] *= 0.99; }
  *     }
  * }
  * ```
@@ -32,9 +32,9 @@ import type { WgslContribution } from './WgslContribution';
  * class MyForce extends UpdateModule {
  *     constructor(public ax: number, public ay: number) { super(); }
  *
- *     apply(system, dt) {
- *         const { velX, velY, liveCount } = system;
- *         for (let i = 0; i < liveCount; i++) { velX[i] += this.ax * dt; velY[i] += this.ay * dt; }
+ *     apply(particles, dt) {
+ *         const { x: velX, y: velY } = particles.velocity;
+ *         for (let i = 0; i < particles.count; i++) { velX[i] += this.ax * dt; velY[i] += this.ay * dt; }
  *     }
  *
  *     wgsl(): WgslContribution {
@@ -53,7 +53,7 @@ import type { WgslContribution } from './WgslContribution';
  * ```
  *
  * If *any* registered update module on a system lacks `wgsl()`, the system
- * forces CPU mode regardless of backend — preserving the contract that
+ * forces CPU mode regardless of backend - preserving the contract that
  * `apply()` is always honoured. Built-in modules ship both
  * implementations; custom modules can opt into GPU acceleration at their
  * authors' discretion.
@@ -62,7 +62,14 @@ import type { WgslContribution } from './WgslContribution';
  * in registration order; later modules see the effects of earlier ones.
  */
 export abstract class UpdateModule {
-  public abstract apply(system: ParticleSystem, dt: number): void;
+  /**
+   * Mutates the live particles for one frame.
+   *
+   * Runs only on the CPU path: a system whose modules are all GPU-eligible
+   * executes {@link wgsl} bodies inside its compute shader instead, and never
+   * calls this.
+   */
+  public abstract apply(particles: ParticleBatch, dt: number): void;
 
   /**
    * Override to declare a GPU contribution. Returning a {@link WgslContribution}

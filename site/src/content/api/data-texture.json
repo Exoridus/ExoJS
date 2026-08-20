@@ -6,10 +6,10 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 37,
+  "memberCount": 38,
   "counts": {
     "constructors": 1,
-    "methods": 12,
+    "methods": 13,
     "properties": 24,
     "events": 0
   },
@@ -402,6 +402,53 @@
             {
               "name": "listener",
               "type": "() => void",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": ""
+        },
+        {
+          "name": "setGenerateMipMap",
+          "signature": "setGenerateMipMap(generateMipMap: boolean): this",
+          "signatureTokens": [
+            {
+              "text": "setGenerateMipMap",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "generateMipMap",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "generateMipMap",
+              "type": "boolean",
               "optional": false
             }
           ],
@@ -833,11 +880,11 @@
           "description": ""
         },
         {
-          "name": "defaultSamplerOptions",
-          "signature": "defaultSamplerOptions: SamplerOptions",
+          "name": "defaultOptions",
+          "signature": "defaultOptions: TextureOptions",
           "signatureTokens": [
             {
-              "text": "defaultSamplerOptions",
+              "text": "defaultOptions",
               "kind": "name"
             },
             {
@@ -845,7 +892,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SamplerOptions",
+              "text": "TextureOptions",
               "kind": "type"
             }
           ],
@@ -1207,7 +1254,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Monotonically increasing version counter. Incremented by any mutation that requires a GPU re-upload (source change, size change, or sampler parameter change). Backends compare this value to their cached version to decide whether to re-upload the texture."
+          "description": "Monotonically increasing version counter. Incremented by any mutation that requires a GPU re-upload: a source, size, or upload-parameter change. Filter and wrap changes do not bump it - backends resolve sampling state separately, so changing it costs no upload."
         },
         {
           "name": "width",

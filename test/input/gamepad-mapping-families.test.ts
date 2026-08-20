@@ -1,18 +1,21 @@
 import { GamepadAxis } from '#input/GamepadAxis';
 import { GamepadButton } from '#input/GamepadButton';
 import { GamepadMappingFamily } from '#input/GamepadMapping';
-import { GenericDualAnalogGamepadMapping } from '#input/GenericDualAnalogGamepadMapping';
-import { JoyConLeftGamepadMapping } from '#input/JoyConLeftGamepadMapping';
-import { JoyConRightGamepadMapping } from '#input/JoyConRightGamepadMapping';
-import { PlayStationGamepadMapping, PlayStationGeneration } from '#input/PlayStationGamepadMapping';
-import { SteamControllerGamepadMapping } from '#input/SteamControllerGamepadMapping';
-import { SwitchProGamepadMapping } from '#input/SwitchProGamepadMapping';
-import { XboxGamepadMapping } from '#input/XboxGamepadMapping';
+import {
+  createJoyConLeftGamepadMapping,
+  createJoyConRightGamepadMapping,
+  createPlayStationGamepadMapping,
+  createStandardGamepadMapping,
+  createSteamControllerGamepadMapping,
+  createSwitchProGamepadMapping,
+  createXboxGamepadMapping,
+  PlayStationGeneration,
+} from '#input/gamepadMappings';
 
 describe('trivial device-family mappings', () => {
   test('SteamControllerGamepadMapping inherits the generic dual-analog layout under its own family tag', () => {
-    const mapping = new SteamControllerGamepadMapping();
-    const generic = new GenericDualAnalogGamepadMapping();
+    const mapping = createSteamControllerGamepadMapping();
+    const generic = createStandardGamepadMapping();
 
     expect(mapping.family).toBe(GamepadMappingFamily.SteamController);
     expect(mapping.buttons).toHaveLength(generic.buttons.length);
@@ -20,7 +23,7 @@ describe('trivial device-family mappings', () => {
   });
 
   test('JoyConLeftGamepadMapping declares only the controls physically present on a solo left Joy-Con', () => {
-    const mapping = new JoyConLeftGamepadMapping();
+    const mapping = createJoyConLeftGamepadMapping();
     const buttonsByIndex = new Map(mapping.buttons.map(button => [button.index, button.channel]));
 
     expect(mapping.family).toBe(GamepadMappingFamily.JoyConLeft);
@@ -41,7 +44,7 @@ describe('trivial device-family mappings', () => {
   });
 
   test('JoyConRightGamepadMapping declares only the controls physically present on a solo right Joy-Con', () => {
-    const mapping = new JoyConRightGamepadMapping();
+    const mapping = createJoyConRightGamepadMapping();
     const buttonsByIndex = new Map(mapping.buttons.map(button => [button.index, button.channel]));
 
     expect(mapping.family).toBe(GamepadMappingFamily.JoyConRight);
@@ -74,30 +77,30 @@ describe('the device-specific button slot at index 17', () => {
     mapping.buttons.find(button => button.index === 17)?.channel;
 
   test('an Xbox Series pad puts Share there', () => {
-    const mapping = new XboxGamepadMapping();
+    const mapping = createXboxGamepadMapping();
 
     expect(mapping.family).toBe(GamepadMappingFamily.Xbox);
     expect(slot17(mapping)).toBe(GamepadButton.Share);
   });
 
   test('a Switch Pro controller puts Capture there', () => {
-    const mapping = new SwitchProGamepadMapping();
+    const mapping = createSwitchProGamepadMapping();
 
     expect(mapping.family).toBe(GamepadMappingFamily.SwitchPro);
     expect(slot17(mapping)).toBe(GamepadButton.Capture);
   });
 
   test('a DualShock 4 / DualSense puts the touchpad click there', () => {
-    const mapping = new PlayStationGamepadMapping();
+    const mapping = createPlayStationGamepadMapping();
 
     expect(mapping.family).toBe(GamepadMappingFamily.PlayStation);
     expect(slot17(mapping)).toBe(GamepadButton.Touchpad);
-    expect(slot17(new PlayStationGamepadMapping(PlayStationGeneration.PS4))).toBe(GamepadButton.Touchpad);
+    expect(slot17(createPlayStationGamepadMapping(PlayStationGeneration.PS4))).toBe(GamepadButton.Touchpad);
   });
 
   // A PS3 pad has no touchpad, so the standard layout ends at index 16 for it.
   test('a PlayStation 3 controller claims nothing there', () => {
-    const mapping = new PlayStationGamepadMapping(PlayStationGeneration.PS3);
+    const mapping = createPlayStationGamepadMapping(PlayStationGeneration.PS3);
 
     expect(mapping.family).toBe(GamepadMappingFamily.PlayStation);
     expect(slot17(mapping)).toBeUndefined();
@@ -105,13 +108,13 @@ describe('the device-specific button slot at index 17', () => {
   });
 
   test('the three devices disagree about slot 17, so no baseline value can be right', () => {
-    const channels = new Set([slot17(new XboxGamepadMapping()), slot17(new SwitchProGamepadMapping()), slot17(new PlayStationGamepadMapping())]);
+    const channels = new Set([slot17(createXboxGamepadMapping()), slot17(createSwitchProGamepadMapping()), slot17(createPlayStationGamepadMapping())]);
 
     expect(channels.size).toBe(3);
   });
 
   test('no built-in standard-layout mapping claims an index above 17', () => {
-    const mappings = [new XboxGamepadMapping(), new SwitchProGamepadMapping(), new PlayStationGamepadMapping(), new SteamControllerGamepadMapping()];
+    const mappings = [createXboxGamepadMapping(), createSwitchProGamepadMapping(), createPlayStationGamepadMapping(), createSteamControllerGamepadMapping()];
 
     for (const mapping of mappings) {
       expect(mapping.buttons.filter(button => button.index > 17)).toEqual([]);
@@ -121,6 +124,6 @@ describe('the device-specific button slot at index 17', () => {
   // The raw Steam Controller is not normalized by Chromium at all, so it keeps
   // the bare generic layout - including no slot-17 entry.
   test('the Steam Controller claims nothing there', () => {
-    expect(slot17(new SteamControllerGamepadMapping())).toBeUndefined();
+    expect(slot17(createSteamControllerGamepadMapping())).toBeUndefined();
   });
 });

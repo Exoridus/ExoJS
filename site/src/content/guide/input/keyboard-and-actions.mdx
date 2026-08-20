@@ -425,8 +425,22 @@ class GameScene extends Scene {
 
 Attaching through `this.inputs` ties the map to the scene: it is detached when
 the scene ends, and its actions are reset across a suspend so a key held while
-the scene was away does not read as a fresh press on resume. Use
-`app.input.attach(map)` for a map that should live as long as the application.
+the scene was away does not read as a fresh press on resume.
+
+### Which input object to use
+
+Inside a scene, reach for `this.inputs` for everything — action maps, scopes,
+per-channel bindings, and the gamepad slots (`this.inputs.gamepads`,
+`this.inputs.connectedGamepads`, `this.inputs.getGamepad(0)`). Everything it
+creates dies with the scene, which is what you want for gameplay.
+
+`app.input` is the application-lifetime surface. Use it for input that must
+outlive any single scene — a debug overlay's hotkeys, a global pause key, a
+device-configuration screen that watches every pad — via `app.input.attach(map)`.
+Nothing there is scoped to a scene, and nothing there takes part in a scene's
+scope stack.
+
+The rule of thumb: gameplay is `this.inputs`; system input is `app.input`.
 
 ### The action kinds
 
@@ -485,6 +499,122 @@ A single sprite controlled by both keyboard (WASD + Space) and gamepad (left sti
   examples={['input/keyboard', 'input/key-rebinding', 'input/action-mapping']}
   api={['keyboard', 'input-manager']}
 />
+
+## Rebinding and saved profiles
+
+An action's binding is data. A map can hand it out, take a replacement, and
+report what a player's saved settings say — without the gameplay code that reads
+`controls.jump.pressed` changing at all.
+
+Every control has a stable, lowercase token: `keyboard.space`, `keyboard.key-w`,
+`pointer.primary`, `gamepad.button.south`, `gamepad.axis.left-stick-x`. Tokens are
+the only form that may be written to disk. They carry no gamepad slot, no browser
+device index, and no enum number, so a save file survives a new build, a
+different browser, and a controller plugged into a different port.
+
+```ts
+import { ActionMap, BindingProfile, ButtonAction, Keyboard, Scene } from '@codexo/exojs';
+
+class RebindScene extends Scene {
+    controls = new ActionMap({
+        jump: new ButtonAction(Keyboard.Space),
+        crouch: new ButtonAction(Keyboard.ControlLeft),
+    });
+
+    init() {
+        this.inputs.attach(this.controls);
+
+        const saved = localStorage.getItem('bindings');
+
+        if (saved !== null) {
+            this.controls.applyProfile(BindingProfile.fromJSON(JSON.parse(saved)));
+        }
+    }
+
+    rebindJump(key: Keyboard) {
+        this.controls.rebind('jump', key);
+
+        const profile = new BindingProfile().set('jump', this.controls.jump.serialize());
+
+        localStorage.setItem('bindings', JSON.stringify(profile));
+    }
+}
+```
+
+A few properties are worth knowing:
+
+- **A profile stores overrides, not a snapshot.** An action the profile never
+  mentions keeps whatever default the current build gives it, so shipping a new
+  action does not leave returning players unable to use it.
+- **Application is all-or-nothing.** An unknown token or a binding whose kind no
+  longer matches its action throws, and the map is left exactly as it was.
+  Unknown tokens are never quietly mapped onto some other control.
+- **A rebind is baseline-safe.** A key held across the change does not surface as
+  a fresh press, and a release that follows is still reported.
+- **Conflicts are reported, not resolved.** `map.conflicts()` lists every channel
+  two of its actions bind, for a settings screen to warn with; two actions on one
+  key stays a legitimate design.
+
+For iterating a map in a rebinding UI, `map.names`, `map.get(name)` and
+`map.entries()` expose the actions with the names they were declared under, and
+every action reports its `kind`, its effective `binding`, its `defaultBinding`
+and the `channels` it currently reads.
+
+## Input scopes
+
+A pause menu should take the keys it needs and leave the rest alone. That is what
+an `InputScope` is: one or more action maps that, while pushed, own the controls
+they bind.
+
+```ts
+import { ActionMap, ButtonAction, InputScope, Keyboard, Scene, VectorAction } from '@codexo/exojs';
+
+class GameplayScene extends Scene {
+    controls = new ActionMap({
+        jump: new ButtonAction(Keyboard.Space),
+        move: new VectorAction({ up: Keyboard.W, down: Keyboard.S, left: Keyboard.A, right: Keyboard.D }),
+    });
+
+    menu = new InputScope(new ActionMap({
+        close: new ButtonAction(Keyboard.Escape),
+        confirm: new ButtonAction(Keyboard.Space),
+    }));
+
+    init() {
+        this.inputs.attach(this.controls);
+    }
+
+    openMenu() {
+        this.inputs.pushScope(this.menu);
+    }
+
+    closeMenu() {
+        this.inputs.popScope(this.menu);
+    }
+}
+```
+
+While the menu scope is pushed, `Space` reaches only `confirm` — `jump` sees
+neither the value nor the press edge, so it cannot reconstruct one. `W`/`A`/`S`/`D`
+are not bound by the menu and keep reaching `move`.
+
+The rules are short:
+
+- Maps attached with `this.inputs.attach()` sit at the bottom, below every scope.
+- A scope claims exactly the controls its maps currently bind — rebind one and
+  the claim follows.
+- Only LOWER levels are masked. Maps inside one scope are peers and never hide
+  anything from each other.
+- Pushing and popping re-baselines the levels whose controls changed, so a button
+  held while a menu opens or closes never fires an edge it should not.
+- A scope's maps are attached on push and detached on pop.
+
+A scope is not a `preventDefault()`: it decides which of your actions sees a
+control, not what the browser does with the event.
+
+`when` still answers a different question. It says whether a map is active at all
+given the scene's state (`'active'`, `'paused'`, `'always'`); a scope says which
+of the currently active contexts gets an overlapping control.
 
 ## Where to go next
 

@@ -1,7 +1,7 @@
 import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 
-import type { SamplerOptions } from './Sampler';
 import { Texture } from './Texture';
+import type { TextureOptions } from './TextureOptions';
 
 /**
  * Pixel format for {@link DataTexture} — the {@link TextureFormat} subset that
@@ -76,8 +76,8 @@ export interface DataTextureOptions {
    * otherwise the constructor throws.
    */
   readonly data?: Uint8Array | Float32Array | ArrayBuffer;
-  /** Sampler overrides; defaults to nearest filtering and clamp-to-edge wrapping. */
-  readonly samplerOptions?: Partial<SamplerOptions>;
+  /** Sampling and upload overrides; defaults to nearest filtering and clamp-to-edge wrapping. */
+  readonly textureOptions?: Partial<TextureOptions>;
 }
 
 /**
@@ -118,7 +118,7 @@ export interface DataTextureOptions {
  *   r32f.buffer  // Float32Array
  */
 export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extends Texture {
-  public static override defaultSamplerOptions: SamplerOptions = {
+  public static override defaultOptions: TextureOptions = {
     scaleMode: ScaleModes.Nearest,
     wrapMode: WrapModes.ClampToEdge,
     premultiplyAlpha: false,
@@ -144,7 +144,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
   private _dirtyPending = false;
 
   public constructor(options: DataTextureOptions & { format: F }) {
-    super(null, { ...DataTexture.defaultSamplerOptions, ...options.samplerOptions });
+    super(null, { ...DataTexture.defaultOptions, ...options.textureOptions });
 
     const { width, height, format, data } = options;
 

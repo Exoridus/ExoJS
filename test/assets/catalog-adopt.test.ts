@@ -4,6 +4,7 @@ import { type AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
 import { coreAssetBindings } from '#assets/coreAssetBindings';
 import { Loader } from '#assets/Loader';
+import type { LoaderScope } from '#assets/LoaderScope';
 import type { LoadingQueue } from '#assets/LoadingQueue';
 import { Json } from '#assets/tokens';
 import { logger } from '#core/logging';
@@ -14,6 +15,7 @@ import { ScaleModes } from '#rendering/types';
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts / asset-ref.test.ts). */
 function createCoreLoader(): Loader {
   const loader = new Loader();
+  const owner = loader.createScope({ name: 'owner' });
   materializeAssetBindings(loader, coreAssetBindings);
   return loader;
 }
@@ -101,7 +103,9 @@ function togglableJsonFetch(payload: unknown): { readonly fetchMock: ReturnType<
 
 /** Alias-keyed background-queue probe (mirrors load-background-option.test.ts). */
 const isQueued = (loader: Loader, alias: string): boolean =>
-  (loader as unknown as { _residency: { _backgroundQueue: Array<{ alias: string }> } })._residency._backgroundQueue.some(e => e.alias === alias);
+  (loader as unknown as { _residency: { _backgroundQueue: Array<{ asset: { source: string } }> } })._residency._backgroundQueue.some(
+    e => e.asset.source === alias,
+  );
 
 describe('Loader._adopt', () => {
   beforeEach(() => {
@@ -119,6 +123,7 @@ describe('Loader._adopt', () => {
   test('fills an externally-created placeholder Texture in place after fetch (identity preserved)', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     // Built with NO loader at all — mirrors what Assets.from() hands back.
     const leaf = createLeaf('texture', 'ship.png') as Texture;
@@ -126,7 +131,7 @@ describe('Loader._adopt', () => {
     expect(leaf.loadState).toBe('idle');
     expect(leaf.width).toBe(0);
 
-    loader._adopt(leaf, Symbol('claimer'));
+    loader._adopt(leaf, loader.createScope({ name: 'claimer' }));
 
     await expect(leaf.loaded).resolves.toBe(leaf); // heals in place — SAME object
     expect(leaf.loadState).toBe('ready');
@@ -134,14 +139,15 @@ describe('Loader._adopt', () => {
     expect(leaf.width).toBe(4);
 
     // The loader's own get() for the same source resolves to the adopted handle.
-    expect(loader.get('ship.png')).toBe(leaf);
+    expect(owner.get('ship.png')).toBe(leaf);
   });
 
   test('adopting the same handle twice does not restart the fetch (idempotent)', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const leaf = createLeaf('texture', 'ship.png') as Texture;
-    const claimer = Symbol('claimer');
+    const claimer = loader.createScope({ name: 'claimer' });
     const warnSpy = vi.spyOn(logger, 'warn');
 
     loader._adopt(leaf, claimer);
@@ -159,13 +165,14 @@ describe('Loader._adopt', () => {
   test('duplicate source, two distinct handles adopted while in flight: BOTH heal from ONE fetch, no warn (§7 multi-handle fill)', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const warnSpy = vi.spyOn(logger, 'warn');
 
     const a = createLeaf('texture', 'x.png') as Texture;
     const b = createLeaf('texture', 'x.png') as Texture;
 
-    loader._adopt(a, Symbol('claimer-a'));
-    loader._adopt(b, Symbol('claimer-b')); // second distinct handle, first still in flight
+    loader._adopt(a, loader.createScope({ name: 'claimer-a' }));
+    loader._adopt(b, loader.createScope({ name: 'claimer-b' })); // second distinct handle, first still in flight
 
     await Promise.all([a.loaded, b.loaded]);
 
@@ -181,18 +188,19 @@ describe('Loader._adopt', () => {
     warnSpy.mockRestore();
   });
 
-  test('duplicate source, two handles with DIFFERENT samplerOptions: one fetch, independent per-handle samplers', async () => {
+  test('duplicate source, two handles with DIFFERENT textureOptions: one fetch, independent per-handle samplers', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
-    const a = createLeaf('texture', 'x.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } }) as Texture;
-    const b = createLeaf('texture', 'x.png', { samplerOptions: { scaleMode: ScaleModes.Linear } }) as Texture;
+    const a = createLeaf('texture', 'x.png', { textureOptions: { scaleMode: ScaleModes.Nearest } }) as Texture;
+    const b = createLeaf('texture', 'x.png', { textureOptions: { scaleMode: ScaleModes.Linear } }) as Texture;
 
     expect(a.scaleMode).toBe(ScaleModes.Nearest); // applied at createPlaceholder
     expect(b.scaleMode).toBe(ScaleModes.Linear);
 
-    loader._adopt(a, Symbol('claimer-a'));
-    loader._adopt(b, Symbol('claimer-b'));
+    loader._adopt(a, loader.createScope({ name: 'claimer-a' }));
+    loader._adopt(b, loader.createScope({ name: 'claimer-b' }));
 
     await Promise.all([a.loaded, b.loaded]);
 
@@ -210,12 +218,13 @@ describe('Loader._adopt', () => {
   test('duplicate source in flight: a failing fetch fails BOTH co-handles', async () => {
     global.fetch = vi.fn(async () => ({ ok: false, status: 404, statusText: 'Not Found' }) as unknown as Response);
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const a = createLeaf('texture', 'x.png') as Texture;
     const b = createLeaf('texture', 'x.png') as Texture;
 
-    loader._adopt(a, Symbol('claimer-a'));
-    loader._adopt(b, Symbol('claimer-b'));
+    loader._adopt(a, loader.createScope({ name: 'claimer-a' }));
+    loader._adopt(b, loader.createScope({ name: 'claimer-b' }));
 
     await expect(a.loaded).rejects.toThrow();
     await expect(b.loaded).rejects.toThrow();
@@ -226,12 +235,13 @@ describe('Loader._adopt', () => {
   test('duplicate source, two value refs (json) adopted while in flight: BOTH fill from ONE fetch', async () => {
     mockFetchJson({ hp: 5 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const a = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
     const b = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
 
-    loader._adopt(a, Symbol('claimer-a'));
-    loader._adopt(b, Symbol('claimer-b'));
+    loader._adopt(a, loader.createScope({ name: 'claimer-a' }));
+    loader._adopt(b, loader.createScope({ name: 'claimer-b' }));
 
     await Promise.all([a.loaded, b.loaded]);
 
@@ -241,22 +251,30 @@ describe('Loader._adopt', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test('duplicate source in flight with a genuinely conflicting FETCH option (mimeType) warns once; sampler differences do not', async () => {
+  test('duplicate source with a differing identity-relevant option (mimeType) yields two independent assets', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const warnSpy = vi.spyOn(logger, 'warn');
 
     const a = createLeaf('texture', 'x.png', { mimeType: 'image/png' }) as Texture;
     const b = createLeaf('texture', 'x.png', { mimeType: 'image/webp' }) as Texture;
 
-    loader._adopt(a, Symbol('claimer-a'));
-    loader._adopt(b, Symbol('claimer-b'));
+    loader._adopt(a, loader.createScope({ name: 'claimer-a' }));
+    loader._adopt(b, loader.createScope({ name: 'claimer-b' }));
 
     await Promise.all([a.loaded, b.loaded]);
 
-    // Different mimeType for one source cannot share a decode → the first call wins, second warns.
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0]?.[0]).toContain('first call');
+    // mimeType decides how the bytes are decoded, so the two requests are two
+    // resources: each gets its own canonical key, fetch and residency row -
+    // where the old alias-keyed model silently handed the second the first's
+    // decode and warned about it.
+    expect(loader['_canonicalize'](Texture, 'x.png', { mimeType: 'image/png' }).key).not.toBe(
+      loader['_canonicalize'](Texture, 'x.png', { mimeType: 'image/webp' }).key,
+    );
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(loader.inspect()).toHaveLength(2);
+    expect(warnSpy).not.toHaveBeenCalled();
 
     warnSpy.mockRestore();
   });
@@ -264,11 +282,12 @@ describe('Loader._adopt', () => {
   test('resource already stored elsewhere before adopt: fills the adopted handle in place, preserves per-catalog identity, and release() finds its claim', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     // "Loaded elsewhere earlier" — the core catalog scenario: some other
     // consumer already claimed and fully loaded this source under its own
     // scope, well before this leaf is ever adopted.
-    const stored = loader.get('x.png');
+    const stored = owner.get('x.png');
     await stored.loaded;
     expect(stored.loadState).toBe('ready');
     expect(stored.width).toBe(4);
@@ -279,7 +298,7 @@ describe('Loader._adopt', () => {
     expect(leaf.loadState).toBe('idle');
     expect(leaf).not.toBe(stored);
 
-    const claimer = Symbol('adopter');
+    const claimer = loader.createScope({ name: 'adopter' });
     loader._adopt(leaf, claimer);
 
     // Bug: previously only _claim() ran for the already-stored branch, so the
@@ -290,15 +309,14 @@ describe('Loader._adopt', () => {
     expect(leaf).not.toBe(stored); // filled in place, not swapped — identity preserved
 
     // Bug: _handleKeys was never registered for this branch, so release(handle)
-    // silently couldn't resolve the key and the claim leaked. release(handle)
-    // always targets the app-lifetime root claimer (same scope loader.get()
-    // claimed under above), so it must now actually drop that scope.
-    const key = loader['_typeRegistry']['_key'](Texture, 'x.png');
-    expect(loader['_residency']['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(true);
+    // silently couldn't resolve the key and the claim leaked - release(handle)
+    // must resolve the very key this scope claimed above.
+    const key = loader['_canonicalize'](Texture, 'x.png').key;
+    expect(loader['_residency']['_claims'].get(key)?.scopes.has(owner)).toBe(true);
 
-    loader.release(leaf);
+    owner.release(leaf);
 
-    expect(loader['_residency']['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(false);
+    expect(loader['_residency']['_claims'].get(key)?.scopes.has(owner)).toBe(false);
     expect(stored.loadState).toBe('ready'); // adopter's own claim still holds it alive
     expect(stored.width).toBe(4);
 
@@ -311,13 +329,14 @@ describe('Loader._adopt', () => {
   test('fills an externally-created value leaf (AssetRef) in place after fetch', async () => {
     mockFetchJson({ hp: 3 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const leaf = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
 
     expect(leaf.loadState).toBe('idle');
     expect(() => leaf.value).toThrow("'idle'");
 
-    loader._adopt(leaf, Symbol('claimer'));
+    loader._adopt(leaf, loader.createScope({ name: 'claimer' }));
 
     await expect(leaf.loaded).resolves.toEqual({ hp: 3 });
     expect(leaf.loadState).toBe('ready');
@@ -327,18 +346,19 @@ describe('Loader._adopt', () => {
   test('value already stored elsewhere before adopt: fills the adopted AssetRef in place and release() finds its claim', async () => {
     mockFetchJson({ hp: 3 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     // "Loaded elsewhere earlier" — the core catalog scenario: a bulk load()
     // (not get()) already resolved this value under its own scope, well
     // before this leaf is ever adopted, and — crucially — WITHOUT ever
     // creating an AssetRef for the key (load() never touches `_refs`), so
     // this exercises the exact stored-raw-value fast path `_getRef` uses.
-    await loader.load('cfg.json');
+    await owner.load('cfg.json');
 
     const leaf = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
     expect(leaf.loadState).toBe('idle');
 
-    const claimer = Symbol('adopter');
+    const claimer = loader.createScope({ name: 'adopter' });
     loader._adopt(leaf, claimer);
 
     // Bug: previously only _claim() ran, so the adopted ref never filled and
@@ -348,18 +368,19 @@ describe('Loader._adopt', () => {
     expect(leaf.value).toEqual({ hp: 3 });
 
     // Bug: release(handle) couldn't resolve the key for this branch either.
-    const key = loader['_typeRegistry']['_key'](Json, 'cfg.json');
-    expect(loader['_residency']['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(true);
+    const key = loader['_canonicalize'](Json, 'cfg.json').key;
+    expect(loader['_residency']['_claims'].get(key)?.scopes.has(owner)).toBe(true);
 
-    loader.release(leaf);
+    owner.release(leaf);
 
-    expect(loader['_residency']['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(false);
+    expect(loader['_residency']['_claims'].get(key)?.scopes.has(owner)).toBe(false);
   });
 
   test('throws for a value with no assetMeta stamp', () => {
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
-    expect(() => loader._adopt({}, Symbol('claimer'))).toThrow('no assetMeta');
+    expect(() => loader._adopt({}, loader.createScope({ name: 'claimer' }))).toThrow('no assetMeta');
   });
 });
 
@@ -381,8 +402,9 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('re-adopting a failed seamless leaf retries and heals the SAME handle: failed → loading → ready (foreground)', async () => {
     const { fetchMock, succeed } = togglableImageFetch();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const leaf = createLeaf('texture', 'flaky.png') as Texture;
-    const claimer = Symbol('claimer');
+    const claimer = loader.createScope({ name: 'claimer' });
 
     loader._adopt(leaf, claimer);
     await expect(leaf.loaded).rejects.toThrow();
@@ -403,12 +425,13 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('re-adopting one of several failed co-handles heals ALL of them from ONE retry fetch (seamless)', async () => {
     const { fetchMock, succeed } = togglableImageFetch();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const a = createLeaf('texture', 'x.png') as Texture;
     const b = createLeaf('texture', 'x.png') as Texture;
 
-    loader._adopt(a, Symbol('claimer-a'));
-    loader._adopt(b, Symbol('claimer-b'));
+    loader._adopt(a, loader.createScope({ name: 'claimer-a' }));
+    loader._adopt(b, loader.createScope({ name: 'claimer-b' }));
 
     await expect(a.loaded).rejects.toThrow();
     await expect(b.loaded).rejects.toThrow();
@@ -417,7 +440,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1); // the ONE shared fetch failed both
 
     succeed();
-    loader._adopt(a, Symbol('claimer-a')); // re-adopt only `a`
+    loader._adopt(a, loader.createScope({ name: 'claimer-a' })); // re-adopt only `a`
 
     // The co-handle `b` — never touched directly — heals too.
     expect(a.loadState).toBe('loading');
@@ -434,10 +457,11 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('adopting a BRAND-NEW leaf for a key whose earlier load FAILED retries the key instead of stranding the new leaf', async () => {
     const { fetchMock, succeed } = togglableImageFetch();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const first = createLeaf('texture', 'scene-handoff.png') as Texture;
 
-    loader._adopt(first, Symbol('scene-a'));
+    loader._adopt(first, loader.createScope({ name: 'scene-a' }));
     await expect(first.loaded).rejects.toThrow();
     expect(first.loadState).toBe('failed');
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -451,17 +475,17 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
 
     const fresh = createLeaf('texture', 'scene-handoff.png') as Texture;
 
-    loader._adopt(fresh, Symbol('scene-b'));
+    loader._adopt(fresh, loader.createScope({ name: 'scene-b' }));
 
     expect(fresh.loadState).toBe('loading');
     expect(fetchMock).toHaveBeenCalledTimes(2); // re-armed AND refetched — never 'loading' with nothing in flight
-    expect(loader.inspect().find(r => r.source === 'scene-handoff.png')).toMatchObject({ state: 'loading', inFlight: true });
+    expect(loader.inspect().find(r => r.aliases.includes('scene-handoff.png'))).toMatchObject({ state: 'loading', inFlight: true });
 
     // A THIRD brand-new leaf joining in the SAME tick must not fetch again: the
     // adopt above already re-armed every sibling, so no handle reads 'failed'.
     const alsoFresh = createLeaf('texture', 'scene-handoff.png') as Texture;
 
-    loader._adopt(alsoFresh, Symbol('scene-c'));
+    loader._adopt(alsoFresh, loader.createScope({ name: 'scene-c' }));
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     await expect(fresh.loaded).resolves.toBe(fresh);
@@ -469,34 +493,36 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(alsoFresh.loadState).toBe('ready');
     expect(first.loadState).toBe('ready'); // the originally-failed leaf heals in place too
     expect(fetchMock).toHaveBeenCalledTimes(2); // exactly ONE retry fetch served all three
-    expect(loader.inspect().find(r => r.source === 'scene-handoff.png')).toMatchObject({ state: 'ready', inFlight: false });
+    expect(loader.inspect().find(r => r.aliases.includes('scene-handoff.png'))).toMatchObject({ state: 'ready', inFlight: false });
   });
 
   test('a BRAND-NEW leaf adopted onto a still-broken failed key fails honestly again instead of hanging in loading', async () => {
     const { fetchMock } = togglableImageFetch();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const first = createLeaf('texture', 'still-down.png') as Texture;
 
-    loader._adopt(first, Symbol('scene-a'));
+    loader._adopt(first, loader.createScope({ name: 'scene-a' }));
     await expect(first.loaded).rejects.toThrow();
 
     const fresh = createLeaf('texture', 'still-down.png') as Texture;
 
-    loader._adopt(fresh, Symbol('scene-b')); // source is still down
+    loader._adopt(fresh, loader.createScope({ name: 'scene-b' })); // source is still down
 
     await expect(fresh.loaded).rejects.toThrow();
     expect(fresh.loadState).toBe('failed'); // an honest re-failure, not a silent hang
     expect(first.loadState).toBe('failed');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(loader.inspect().find(r => r.source === 'still-down.png')).toMatchObject({ state: 'failed', inFlight: false });
+    expect(loader.inspect().find(r => r.aliases.includes('still-down.png'))).toMatchObject({ state: 'failed', inFlight: false });
   });
 
   test('re-adopting a failed seamless leaf with { priority: LoadPriority.Background } queues the retry instead of fetching immediately', async () => {
     const { fetchMock, succeed } = togglableImageFetch();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const leaf = createLeaf('texture', 'flaky-bg.png') as Texture;
-    const claimer = Symbol('claimer');
+    const claimer = loader.createScope({ name: 'claimer' });
 
     loader._adopt(leaf, claimer);
     await expect(leaf.loaded).rejects.toThrow();
@@ -521,8 +547,9 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('re-adopting an already-ready leaf is untouched — retryingFailedLeaf must not misfire on a settled success', async () => {
     const { fetchMock, succeed } = togglableImageFetch();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const leaf = createLeaf('texture', 'ship2.png') as Texture;
-    const claimer = Symbol('claimer');
+    const claimer = loader.createScope({ name: 'claimer' });
 
     succeed(); // this leaf's fetch succeeds on the very first attempt
 
@@ -540,15 +567,16 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('retrying a failed leaf under a NEW claimer adds that claim without disturbing the original scope', async () => {
     const { succeed } = togglableImageFetch();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const leaf = createLeaf('texture', 'owned.png') as Texture;
-    const original = Symbol('original');
-    const retryClaimer = Symbol('retry');
+    const original = loader.createScope({ name: 'original' });
+    const retryClaimer = loader.createScope({ name: 'retry' });
 
     loader._adopt(leaf, original);
     await expect(leaf.loaded).rejects.toThrow();
 
-    const key = loader['_typeRegistry']['_key'](Texture, 'owned.png');
-    const claims = (): Set<symbol> | undefined => loader['_residency']['_claims'].get(key)?.scopes;
+    const key = loader['_canonicalize'](Texture, 'owned.png').key;
+    const claims = (): Set<LoaderScope> | undefined => loader['_residency']['_claims'].get(key)?.scopes;
 
     expect(claims()?.has(original)).toBe(true);
 
@@ -573,12 +601,13 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('a second failure after a retry fails every co-handle again and the leaf stays retryable', async () => {
     const { fetchMock, succeed } = togglableImageFetch();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const a = createLeaf('texture', 'flip-flop.png') as Texture;
     const b = createLeaf('texture', 'flip-flop.png') as Texture;
 
-    loader._adopt(a, Symbol('a1'));
-    loader._adopt(b, Symbol('b1'));
+    loader._adopt(a, loader.createScope({ name: 'a1' }));
+    loader._adopt(b, loader.createScope({ name: 'b1' }));
 
     await expect(a.loaded).rejects.toThrow();
     expect(a.loadState).toBe('failed');
@@ -586,7 +615,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     // Retry — but the source is STILL down.
-    loader._adopt(a, Symbol('a2'));
+    loader._adopt(a, loader.createScope({ name: 'a2' }));
     expect(a.loadState).toBe('loading');
     expect(b.loadState).toBe('loading');
 
@@ -597,7 +626,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
 
     // Still retryable — the source recovers on the NEXT attempt.
     succeed();
-    loader._adopt(a, Symbol('a3'));
+    loader._adopt(a, loader.createScope({ name: 'a3' }));
 
     await expect(a.loaded).resolves.toBe(a);
     expect(a.loadState).toBe('ready');
@@ -610,8 +639,9 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('re-adopting a failed value ref retries and heals the SAME ref: failed → loading → ready (foreground)', async () => {
     const { fetchMock, succeed } = togglableJsonFetch({ hp: 5 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const leaf = createLeaf('json', 'flaky.json') as AssetRef<unknown>;
-    const claimer = Symbol('claimer');
+    const claimer = loader.createScope({ name: 'claimer' });
 
     loader._adopt(leaf, claimer);
     await expect(leaf.loaded).rejects.toThrow();
@@ -632,12 +662,13 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('re-adopting one of several failed co-refs heals ALL of them from ONE retry fetch (value/ref)', async () => {
     const { fetchMock, succeed } = togglableJsonFetch({ hp: 9 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const a = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
     const b = createLeaf('json', 'cfg.json') as AssetRef<unknown>;
 
-    loader._adopt(a, Symbol('claimer-a'));
-    loader._adopt(b, Symbol('claimer-b'));
+    loader._adopt(a, loader.createScope({ name: 'claimer-a' }));
+    loader._adopt(b, loader.createScope({ name: 'claimer-b' }));
 
     await expect(a.loaded).rejects.toThrow();
     await expect(b.loaded).rejects.toThrow();
@@ -646,7 +677,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     succeed();
-    loader._adopt(a, Symbol('claimer-a')); // re-adopt only `a`
+    loader._adopt(a, loader.createScope({ name: 'claimer-a' })); // re-adopt only `a`
 
     expect(a.loadState).toBe('loading');
     expect(b.loadState).toBe('loading'); // co-ref healed too
@@ -662,10 +693,11 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('adopting a BRAND-NEW value ref for a key whose earlier load FAILED retries the key instead of stranding the new ref', async () => {
     const { fetchMock, succeed } = togglableJsonFetch({ hp: 7 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const first = createLeaf('json', 'scene-handoff.json') as AssetRef<unknown>;
 
-    loader._adopt(first, Symbol('scene-a'));
+    loader._adopt(first, loader.createScope({ name: 'scene-a' }));
     await expect(first.loaded).rejects.toThrow();
     expect(first.loadState).toBe('failed');
     expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -679,17 +711,17 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
 
     const fresh = createLeaf('json', 'scene-handoff.json') as AssetRef<unknown>;
 
-    loader._adopt(fresh, Symbol('scene-b'));
+    loader._adopt(fresh, loader.createScope({ name: 'scene-b' }));
 
     expect(fresh.loadState).toBe('loading');
     expect(fetchMock).toHaveBeenCalledTimes(2); // re-armed AND refetched — never 'loading' with nothing in flight
-    expect(loader.inspect().find(r => r.source === 'scene-handoff.json')).toMatchObject({ state: 'loading', inFlight: true });
+    expect(loader.inspect().find(r => r.aliases.includes('scene-handoff.json'))).toMatchObject({ state: 'loading', inFlight: true });
 
     // A THIRD brand-new ref joining in the SAME tick must not fetch again: the
     // adopt above already re-armed every sibling, so none reads 'failed'.
     const alsoFresh = createLeaf('json', 'scene-handoff.json') as AssetRef<unknown>;
 
-    loader._adopt(alsoFresh, Symbol('scene-c'));
+    loader._adopt(alsoFresh, loader.createScope({ name: 'scene-c' }));
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     await expect(fresh.loaded).resolves.toEqual({ hp: 7 });
@@ -697,34 +729,36 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(alsoFresh.loadState).toBe('ready');
     expect(first.loadState).toBe('ready'); // the originally-failed ref heals in place too
     expect(fetchMock).toHaveBeenCalledTimes(2); // exactly ONE retry fetch served all three
-    expect(loader.inspect().find(r => r.source === 'scene-handoff.json')).toMatchObject({ state: 'ready', inFlight: false });
+    expect(loader.inspect().find(r => r.aliases.includes('scene-handoff.json'))).toMatchObject({ state: 'ready', inFlight: false });
   });
 
   test('a BRAND-NEW value ref adopted onto a still-broken failed key fails honestly again instead of hanging in loading', async () => {
     const { fetchMock } = togglableJsonFetch({ hp: 0 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const first = createLeaf('json', 'still-down.json') as AssetRef<unknown>;
 
-    loader._adopt(first, Symbol('scene-a'));
+    loader._adopt(first, loader.createScope({ name: 'scene-a' }));
     await expect(first.loaded).rejects.toThrow();
 
     const fresh = createLeaf('json', 'still-down.json') as AssetRef<unknown>;
 
-    loader._adopt(fresh, Symbol('scene-b')); // source is still down
+    loader._adopt(fresh, loader.createScope({ name: 'scene-b' })); // source is still down
 
     await expect(fresh.loaded).rejects.toThrow();
     expect(fresh.loadState).toBe('failed'); // an honest re-failure, not a silent hang
     expect(first.loadState).toBe('failed');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(loader.inspect().find(r => r.source === 'still-down.json')).toMatchObject({ state: 'failed', inFlight: false });
+    expect(loader.inspect().find(r => r.aliases.includes('still-down.json'))).toMatchObject({ state: 'failed', inFlight: false });
   });
 
   test('re-adopting a failed value ref with { priority: LoadPriority.Background } queues the retry instead of fetching immediately', async () => {
     const { fetchMock, succeed } = togglableJsonFetch({ ready: true });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const leaf = createLeaf('json', 'flaky-bg.json') as AssetRef<unknown>;
-    const claimer = Symbol('claimer');
+    const claimer = loader.createScope({ name: 'claimer' });
 
     loader._adopt(leaf, claimer);
     await expect(leaf.loaded).rejects.toThrow();
@@ -749,19 +783,20 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('a second failure after a retry fails every co-ref again and the ref stays retryable', async () => {
     const { fetchMock, succeed } = togglableJsonFetch({ hp: 1 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
 
     const a = createLeaf('json', 'flip-flop.json') as AssetRef<unknown>;
     const b = createLeaf('json', 'flip-flop.json') as AssetRef<unknown>;
 
-    loader._adopt(a, Symbol('a1'));
-    loader._adopt(b, Symbol('b1'));
+    loader._adopt(a, loader.createScope({ name: 'a1' }));
+    loader._adopt(b, loader.createScope({ name: 'b1' }));
 
     await expect(a.loaded).rejects.toThrow();
     expect(a.loadState).toBe('failed');
     expect(b.loadState).toBe('failed');
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    loader._adopt(a, Symbol('a2')); // retry — still down
+    loader._adopt(a, loader.createScope({ name: 'a2' })); // retry — still down
     expect(a.loadState).toBe('loading');
     expect(b.loadState).toBe('loading');
 
@@ -771,7 +806,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
     succeed();
-    loader._adopt(a, Symbol('a3'));
+    loader._adopt(a, loader.createScope({ name: 'a3' }));
 
     await expect(a.loaded).resolves.toEqual({ hp: 1 });
     expect(a.loadState).toBe('ready');
@@ -782,8 +817,9 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('re-adopting an already-ready ref is untouched — retryingFailedLeaf must not misfire on a settled success (value/ref)', async () => {
     const { fetchMock, succeed } = togglableJsonFetch({ hp: 2 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const leaf = createLeaf('json', 'ready.json') as AssetRef<unknown>;
-    const claimer = Symbol('claimer');
+    const claimer = loader.createScope({ name: 'claimer' });
 
     succeed(); // this ref's fetch succeeds on the very first attempt
 
@@ -802,15 +838,16 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('retrying a failed ref under a NEW claimer adds that claim without disturbing the original scope (value/ref)', async () => {
     const { succeed } = togglableJsonFetch({ hp: 3 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const leaf = createLeaf('json', 'owned.json') as AssetRef<unknown>;
-    const original = Symbol('original');
-    const retryClaimer = Symbol('retry');
+    const original = loader.createScope({ name: 'original' });
+    const retryClaimer = loader.createScope({ name: 'retry' });
 
     loader._adopt(leaf, original);
     await expect(leaf.loaded).rejects.toThrow();
 
-    const key = loader['_typeRegistry']['_key'](Json, 'owned.json');
-    const claims = (): Set<symbol> | undefined => loader['_residency']['_claims'].get(key)?.scopes;
+    const key = loader['_canonicalize'](Json, 'owned.json').key;
+    const claims = (): Set<LoaderScope> | undefined => loader['_residency']['_claims'].get(key)?.scopes;
 
     expect(claims()?.has(original)).toBe(true);
 
@@ -842,8 +879,9 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   test('a ref that was ready, then failed, has its stale value actually cleared on retry (not just gated by state)', async () => {
     const { fetchMock, succeed } = togglableJsonFetch({ hp: 42 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const leaf = createLeaf('json', 'stale.json') as AssetRef<unknown>;
-    const claimer = Symbol('claimer');
+    const claimer = loader.createScope({ name: 'claimer' });
 
     succeed();
     loader._adopt(leaf, claimer);
@@ -858,7 +896,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     // comment), so this reaches into internals to set up the precondition
     // rather than exercising a real eviction API that does not exist.
     leaf._fail(new Error('later failure'));
-    (loader as unknown as { _residency: { _resources: Map<unknown, Map<string, unknown>> } })._residency._resources.get(Json)?.delete('stale.json');
+    (loader as unknown as { _residency: { _resources: Map<string, unknown> } })._residency._resources.delete(loader['_canonicalize'](Json, 'stale.json').key);
 
     expect(leaf.loadState).toBe('failed');
     expect(() => leaf.value).toThrow("'failed'"); // gated by state, as expected
@@ -906,12 +944,13 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
   test('get(catalog) adopts every leaf, returns the SAME leaf objects, and they heal after fetch', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const catalog = new Assets({
       ship: { type: 'texture', source: 'ship.png' },
       logo: { type: 'texture', source: 'logo.png' },
     });
 
-    const got = loader.get(catalog);
+    const got = owner.get(catalog);
 
     // Per-catalog identity: the returned map holds the catalog's own leaves.
     expect(got.ship).toBe(catalog.ship);
@@ -923,19 +962,20 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     expect(catalog.ship.loadState).toBe('ready');
     expect(catalog.ship.width).toBe(4);
     // The loader's own get() for the same source resolves to the adopted leaf.
-    expect(loader.get('ship.png')).toBe(catalog.ship);
+    expect(owner.get('ship.png')).toBe(catalog.ship);
   });
 
   test('load(catalog) resolves to a map of loaded values, forwards onProgress, and heals the SAME leaves as get', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const catalog = new Assets({
       ship: { type: 'texture', source: 'ship.png' },
       logo: { type: 'texture', source: 'logo.png' },
     });
 
     const progress: number[] = [];
-    const queue = loader.load(catalog);
+    const queue = owner.load(catalog);
     queue.onProgress.add(p => progress.push(p.loaded));
 
     const result = await queue;
@@ -951,9 +991,10 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
   test('load(catalog) resolves a value leaf to its raw parsed value while healing its ref in place', async () => {
     mockFetchJson({ hp: 7 });
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const catalog = new Assets({ config: { type: 'json', source: 'cfg.json' } });
 
-    const result = await loader.load(catalog);
+    const result = await owner.load(catalog);
 
     expect(result.config).toEqual({ hp: 7 }); // raw value in the resolved map
     expect(catalog.config.value).toEqual({ hp: 7 }); // the ref healed in place
@@ -967,6 +1008,7 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
   // AssetRef<T>): LoadingQueue<T>` overload must be declared first so it wins.
   test('type-level: load(AssetRef leaf) resolves LoadingQueue<T>, not LoadingQueue<AssetRef<T>>', () => {
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const catalog = new Assets({ config: { type: 'json', source: 'cfg.json' } });
     const textureCatalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
 
@@ -976,26 +1018,27 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     //
     // catalog.config: AssetRef<unknown> — load() must resolve to the raw value
     // type (`unknown`), never to `LoadingQueue<AssetRef<unknown>>`.
-    expectTypeOf(() => loader.load(catalog.config)).returns.toEqualTypeOf<LoadingQueue<unknown>>();
+    expectTypeOf(() => owner.load(catalog.config)).returns.toEqualTypeOf<LoadingQueue<unknown>>();
 
     // A resource leaf (Texture) is unaffected: it still resolves to itself.
-    expectTypeOf(() => loader.load(textureCatalog.ship)).returns.toEqualTypeOf<LoadingQueue<Texture>>();
+    expectTypeOf(() => owner.load(textureCatalog.ship)).returns.toEqualTypeOf<LoadingQueue<Texture>>();
   });
 
   test('two catalogs with the same source get DISTINCT leaf objects that both heal from ONE fetch (source-keyed dedup)', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const a = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
     const b = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
 
     expect(a.ship).not.toBe(b.ship); // per-catalog identity
 
-    loader.get(a);
+    owner.get(a);
     await a.ship.loaded;
     expect(a.ship.loadState).toBe('ready');
 
     // Adopting b's leaf fills it in place from the already-stored payload.
-    loader.get(b);
+    owner.get(b);
     await b.ship.loaded;
 
     expect(b.ship.loadState).toBe('ready');
@@ -1012,13 +1055,14 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
   test('duplicate source within one catalog: both leaves heal from ONE fetch (no hang, no warn)', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const warnSpy = vi.spyOn(logger, 'warn');
     const catalog = new Assets({
       a: { type: 'texture', source: 'x.png' },
       b: { type: 'texture', source: 'x.png' },
     });
 
-    loader.get(catalog);
+    owner.get(catalog);
 
     await Promise.all([catalog.a.loaded, catalog.b.loaded]);
 
@@ -1038,15 +1082,16 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
   // stamped (it comes from `createLeaf`); a bare-path `get(path)` handle is NOT
   // — that branch resolves through the source-keyed dedup instead. This is why
   // `LeafForPath` (the `get(path)` result) stays unbranded while the catalog
-  // twin is branded: branding both would let `load(loader.get('x.png'))`
+  // twin is branded: branding both would let `load(owner.get('x.png'))`
   // compile into the record fallback.
   test('catalog leaves carry the meta stamp; a bare-path get() handle does not', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
+    const owner = loader.createScope({ name: 'owner' });
     const catalog = new Assets({ ship: 'ship.png' });
 
-    const catalogLeaf = loader.get(catalog).ship;
-    const barePathHandle = loader.get('other.png');
+    const catalogLeaf = owner.get(catalog).ship;
+    const barePathHandle = owner.get('other.png');
 
     expect(_readMeta(catalogLeaf)).toEqual({ kind: 'texture', src: 'ship.png', opts: undefined });
     expect(_readMeta(barePathHandle)).toBeUndefined();

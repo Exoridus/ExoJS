@@ -8,14 +8,18 @@
  *   {
  *     "output": "dist/level1.exoa",
  *     "assets": [
- *       { "alias": "hero",  "type": "texture", "file": "hero.png", "mime": "image/png" },
- *       { "alias": "jump",  "type": "sound",   "file": "jump.wav" },
- *       { "alias": "level", "type": "json",    "file": "level1.json" }
+ *       { "source": "images/hero.png", "type": "texture", "file": "hero.png", "mime": "image/png" },
+ *       { "source": "audio/jump.wav",  "type": "sound",   "file": "jump.wav" },
+ *       { "source": "data/level1.json","type": "json",    "file": "level1.json" }
  *     ]
  *   }
  *
+ * `source` is the logical, base-path-relative path the entry stands in for - the
+ * same string a network load would use, so the packed asset and the loose one
+ * are one identity. `file` is where the bytes are read from at build time.
+ *
  * `type` is the loader type name (lowercase, e.g. `texture`/`sound`/`json`), the
- * same tag used by the config-map load path — not the constructor name. The
+ * same tag used by the config-map load path - not the constructor name. The
  * container is unpacked at runtime via `loader.loadContainer(url)`.
  *
  * Shares the format with the runtime reader through `encodeContainer`
@@ -28,7 +32,7 @@ import process from 'node:process';
 import { type ContainerInput, encodeContainer } from '../src/assets/AssetContainer';
 
 interface ManifestAsset {
-  alias: string;
+  source: string;
   type: string;
   file: string;
   mime?: string;
@@ -60,7 +64,7 @@ function main(): void {
     const fileBytes = readFileSync(resolve(manifestDir, asset.file));
 
     return {
-      alias: asset.alias,
+      source: asset.source,
       type: asset.type,
       bytes: new Uint8Array(fileBytes.buffer, fileBytes.byteOffset, fileBytes.byteLength),
       ...(asset.mime !== undefined && { mime: asset.mime }),

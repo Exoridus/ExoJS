@@ -102,9 +102,14 @@ registerAssetKind('stub' as keyof AssetDefinitions, { isValue: false, adapter: s
 test('readiness x residency: seeded random claim/release/fetch/fail sequence keeps every invariant', async () => {
   const R_KEYS = ['r0', 'r1', 'r2'];
   const L_KEYS = ['l0', 'l1', 'l2'];
-  const SCOPES = [Symbol('scope0'), Symbol('scope1'), Symbol('scope2'), Symbol('scope3')];
-
   const loader = new Loader();
+  const SCOPES = [
+    loader.createScope({ name: 'scope0' }),
+    loader.createScope({ name: 'scope1' }),
+    loader.createScope({ name: 'scope2' }),
+    loader.createScope({ name: 'scope3' }),
+  ];
+
   let fetchCount = 0;
   // Handler invocations are synchronous up to their own Promise executor (verified
   // against AssetDecoder._dispatchFetch/_fetchWithHandler), so `pending` always
@@ -187,7 +192,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
           const model = ch1.get(pick.key)!;
           const wasReady = model.ready;
 
-          loader._release(loader['_typeRegistry']['_key'](StubHandle, pick.key), SCOPES[pick.scopeIdx]!);
+          loader._release(loader['_canonicalize'](StubHandle, pick.key).key, SCOPES[pick.scopeIdx]!);
           model.claims.delete(pick.scopeIdx);
 
           if (model.claims.size === 0 && wasReady) {

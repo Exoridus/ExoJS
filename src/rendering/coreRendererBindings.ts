@@ -6,6 +6,7 @@ import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { BitmapText } from '#rendering/text/BitmapText';
 import { Text } from '#rendering/text/Text';
+import { Video } from '#rendering/video/Video';
 import { WebGl2MeshRenderer } from '#rendering/webgl2/WebGl2MeshRenderer';
 import { WebGl2NineSliceSpriteRenderer } from '#rendering/webgl2/WebGl2NineSliceSpriteRenderer';
 import { WebGl2RepeatingSpriteRenderer } from '#rendering/webgl2/WebGl2RepeatingSpriteRenderer';
@@ -16,6 +17,7 @@ import { WebGpuNineSliceSpriteRenderer } from '#rendering/webgpu/WebGpuNineSlice
 import { WebGpuRepeatingSpriteRenderer } from '#rendering/webgpu/WebGpuRepeatingSpriteRenderer';
 import { WebGpuSpriteRenderer } from '#rendering/webgpu/WebGpuSpriteRenderer';
 import { WebGpuTextRenderer } from '#rendering/webgpu/WebGpuTextRenderer';
+import { WebGpuVideoRenderer } from '#rendering/webgpu/WebGpuVideoRenderer';
 
 import { RenderBackendType } from './RenderBackendType';
 import type { Renderer } from './Renderer';
@@ -51,11 +53,18 @@ export function buildCoreRendererBindings(options: RenderingApplicationOptions):
     [RenderBackendType.WebGl2]: () => new WebGl2RepeatingSpriteRenderer(spriteRendererBatchSize),
     [RenderBackendType.WebGpu]: () => new WebGpuRepeatingSpriteRenderer(),
   };
+  const videoRenderers: BackendRendererMap = {
+    [RenderBackendType.WebGpu]: () => new WebGpuVideoRenderer(),
+  };
 
   return [
     {
       targets: [Sprite],
       create: backend => spriteRenderers[backend.backendType]?.(),
+    },
+    {
+      targets: [Video],
+      create: backend => videoRenderers[backend.backendType]?.(),
     },
     {
       targets: [Mesh],

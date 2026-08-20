@@ -3,6 +3,7 @@ import { parseBmFontText } from '#assets/factories/BmFontFactory';
 import { CsvFactory } from '#assets/factories/CsvFactory';
 import { FontFactory } from '#assets/factories/FontFactory';
 import { ImageFactory } from '#assets/factories/ImageFactory';
+import type { MediaLoadOptions } from '#assets/factories/mediaSource';
 import { MusicFactory } from '#assets/factories/MusicFactory';
 import { SoundFactory } from '#assets/factories/SoundFactory';
 import { SubtitleFactory } from '#assets/factories/SubtitleFactory';
@@ -40,14 +41,111 @@ interface FactoryLike<Source, T> {
   destroy(): void;
 }
 
+/** A factory that can also build its resource straight from a URL, letting the browser stream it. */
+interface MediaFactoryLike<T> extends FactoryLike<ArrayBuffer, T> {
+  createFromUrl(url: string, options?: unknown, signal?: AbortSignal): Promise<T>;
+}
+
+/**
+ * The option keys a core factory bakes irreversibly into the resource it
+ * produces, and which therefore identify a distinct resource rather than a
+ * distinct consumer of one.
+ *
+ * Everything absent from this list is deliberately NOT identity: sampler state
+ * and placeholder sizing belong to the individual handle, and playback settings
+ * stay mutable on the produced stream, so folding either in would fetch and
+ * decode the same bytes twice.
+ */
+function identityDiscriminatorFor(keys: readonly string[]): (request: AssetLoadRequest) => string {
+  return ({ options }: AssetLoadRequest): string => {
+    if (typeof options !== 'object') {
+      return '';
+    }
+
+    const record = options as Record<string, unknown>;
+
+    return keys
+      .filter(key => record[key] !== undefined)
+      .map(key => `${key}=${String(record[key])}`)
+      .join(',');
+  };
+}
+
 /** Create an AssetHandler backed by a factory that uses fetchArrayBuffer. */
-function binaryFactoryHandler<T>(makeFactory: () => FactoryLike<ArrayBuffer, T>): (loader: Loader) => AssetHandler {
+function binaryFactoryHandler<T>(makeFactory: () => FactoryLike<ArrayBuffer, T>, identityOptions: readonly string[] = []): (loader: Loader) => AssetHandler {
   return () => {
     const factory = makeFactory();
     return {
+      ...(identityOptions.length > 0 && { getIdentityDiscriminator: identityDiscriminatorFor(identityOptions) }),
       async load({ source, options }: AssetLoadRequest, context: AssetLoaderContext): Promise<T> {
         const raw = await context.fetchArrayBuffer(source);
         return factory.create(raw, options);
+      },
+      createFromBytes(bytes: ArrayBuffer, options?: unknown): Promise<T> {
+        return factory.create(bytes, options);
+      },
+      dispose(resource: unknown): void {
+        factory.dispose?.(resource as T);
+      },
+      destroy() {
+        factory.destroy();
+      },
+    };
+  };
+}
+
+/**
+ * Identity for streaming media.
+ *
+ * The transport is deliberately absent: the same URL streamed by the browser,
+ * downloaded as bytes, or unpacked from a container is one asset with one
+ * resident resource, so whichever load materializes it first decides how it was
+ * built and every later consumer joins it.
+ *
+ * A non-default CORS mode is identity, because it is baked into the element:
+ * a `null` media element plays but can never be uploaded as a texture, and
+ * `'use-credentials'` can resolve to a different response altogether. Neither
+ * can be handed to a consumer that asked for the other. It is irrelevant to
+ * bytes the application already owns, so a downloaded asset ignores it.
+ */
+function mediaIdentityDiscriminator({ options }: AssetLoadRequest): string {
+  if (typeof options !== 'object') {
+    return '';
+  }
+
+  const { mimeType, crossOrigin, download } = options as MediaLoadOptions & { mimeType?: string };
+  const parts: string[] = [];
+
+  if (mimeType !== undefined) {
+    parts.push(`mimeType=${String(mimeType)}`);
+  }
+
+  if (download !== true && crossOrigin !== undefined && crossOrigin !== 'anonymous') {
+    parts.push(`crossOrigin=${String(crossOrigin)}`);
+  }
+
+  return parts.join(',');
+}
+
+/**
+ * Create an AssetHandler for a streaming media factory.
+ *
+ * A URL-backed load hands the resolved URL to the media element so the browser
+ * owns the transport; `download: true` and container bytes take the complete-
+ * bytes path instead. See {@link mediaIdentityDiscriminator} for what of that is
+ * identity and what is not.
+ */
+function mediaFactoryHandler<T>(makeFactory: () => MediaFactoryLike<T>): (loader: Loader) => AssetHandler {
+  return () => {
+    const factory = makeFactory();
+    return {
+      getIdentityDiscriminator: mediaIdentityDiscriminator,
+      async load({ source, options }: AssetLoadRequest, context: AssetLoaderContext): Promise<T> {
+        if ((options as MediaLoadOptions | undefined)?.download === true) {
+          return factory.create(await context.fetchArrayBuffer(source), options);
+        }
+
+        return factory.createFromUrl(context.resolveUrl(source), options, context.signal);
       },
       createFromBytes(bytes: ArrayBuffer, options?: unknown): Promise<T> {
         return factory.create(bytes, options);
@@ -116,7 +214,7 @@ const textureBinding = defineAsset({
   type: 'texture',
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif'],
   seamless: textureSeamlessAdapter,
-  create: binaryFactoryHandler(() => new TextureFactory()),
+  create: binaryFactoryHandler(() => new TextureFactory(), ['mimeType']),
 });
 
 const soundBinding = defineAsset({
@@ -124,7 +222,7 @@ const soundBinding = defineAsset({
   type: 'sound',
   extensions: ['ogg', 'mp3', 'wav', 'm4a', 'aac'],
   seamless: soundSeamlessAdapter,
-  create: binaryFactoryHandler(() => new SoundFactory()),
+  create: binaryFactoryHandler(() => new SoundFactory(), ['mimeType']),
 });
 
 // music/video/svg/font/image/bmFont are non-leaf resource types: no placeholder
@@ -134,14 +232,14 @@ const musicBinding = defineAsset({
   ctor: AudioStream,
   type: 'music',
   isValue: false,
-  create: binaryFactoryHandler(() => new MusicFactory()),
+  create: mediaFactoryHandler(() => new MusicFactory()),
 });
 
 const videoBinding = defineAsset({
   ctor: Video,
   type: 'video',
   isValue: false,
-  create: binaryFactoryHandler(() => new VideoFactory()),
+  create: mediaFactoryHandler(() => new VideoFactory()),
 });
 
 const jsonBinding = defineAsset({
@@ -234,11 +332,14 @@ const bmFontBinding = defineAsset({
   type: 'bmFont',
   extensions: ['fnt'],
   isValue: false,
-  create: (loader: Loader) => ({
+  create: () => ({
     async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<BmFont> {
       const text = await context.fetchText(source);
       const fontData = parseBmFontText(text);
-      const textures = await Promise.all(fontData.pages.map(page => loader.load(Asset.type('texture', resolveSubAssetPath(page, source)))));
+      // Page textures are claimed by this font's own dependency scope, not by
+      // whichever consumer asked for the font: a deduped font load serves many
+      // consumers, and the first to release must not take the pages with it.
+      const textures = await Promise.all(fontData.pages.map(page => context.scope.load(Asset.type('texture', resolveSubAssetPath(page, source)))));
       return new BmFont(fontData, textures);
     },
   }),
@@ -254,7 +355,7 @@ if (typeof FontFace !== 'undefined') {
       type: 'font',
       extensions: ['woff', 'woff2', 'ttf', 'otf'],
       isValue: false,
-      create: binaryFactoryHandler(() => new FontFactory()),
+      create: binaryFactoryHandler(() => new FontFactory(), ['family']),
     }),
   );
 }
@@ -265,7 +366,7 @@ if (typeof HTMLImageElement !== 'undefined') {
       ctor: ImageAsset,
       type: 'image',
       isValue: false,
-      create: binaryFactoryHandler(() => new ImageFactory()),
+      create: binaryFactoryHandler(() => new ImageFactory(), ['mimeType']),
     }),
   );
 }

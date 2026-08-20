@@ -1,16 +1,71 @@
-import type { AxisAction } from './AxisAction';
-import type { ButtonAction } from './ButtonAction';
-import type { ChordAction } from './ChordAction';
-import type { SequenceAction } from './SequenceAction';
-import type { ActionSample } from './types';
+import type { Gamepad } from '#input/Gamepad';
+import type { InputToken } from '#input/InputToken';
+
+import type { ActionBase, GamepadSlot } from './ActionBase';
+import { tokensFromChannels } from './ActionBase';
+import type { AxisAction, AxisBinding } from './AxisAction';
+import type { BindingProfile } from './BindingProfile';
+import type { ButtonAction, ButtonBinding } from './ButtonAction';
+import type { ChordAction, ChordBinding } from './ChordAction';
+import type { SequenceAction, SequenceBinding } from './SequenceAction';
+import type { SerializedActionBinding } from './serialization';
+import type { ActionSample, OneOrMany } from './types';
 import { ActionOwnership } from './types';
-import type { VectorAction } from './VectorAction';
+import type { VectorAction, VectorBinding } from './VectorAction';
 
 /** Any action kind an {@link ActionMap} can hold. */
 export type Action = ButtonAction | AxisAction | VectorAction | ChordAction | SequenceAction;
 
+/**
+ * Any binding descriptor an action can be rebound with - the second argument of
+ * {@link ActionMap.rebind}.
+ *
+ * Deliberately the union of every kind's descriptor rather than a conditional
+ * type resolved from the action being rebound. A conditional over the map's own
+ * type parameter, however written, stops TypeScript inferring that parameter at
+ * every OTHER `ActionMap<T>` site - `scene.inputs.attach(map)` included - so the
+ * precision would be paid for by breaking inference for every caller. The
+ * ACTION NAME is still checked against the map's declared actions, and a
+ * mismatched binding shape is rejected at runtime by the action itself.
+ */
+export type ActionBinding = ButtonBinding | OneOrMany<AxisBinding> | OneOrMany<VectorBinding> | ChordBinding | SequenceBinding;
+
 /** The shape an {@link ActionMap} is built from. */
 export type ActionRecord = Readonly<Record<string, Action>>;
+
+/** Construction options for an {@link ActionMap}. */
+export interface ActionMapOptions {
+  /**
+   * Pad every gamepad binding in this map reads from. Defaults to the primary
+   * pad (slot 0).
+   *
+   * This is RUNTIME context, not part of a binding: an action still binds the
+   * semantic control (`GamepadButton.South`), and the map rebases it onto this
+   * pad's slot. Nothing about the pad is ever serialized, so a two-player save
+   * file describes one control scheme rather than two slot-specific ones.
+   *
+   * Local multiplayer is therefore one map per player:
+   *
+   * ```ts
+   * const p1 = new ActionMap({ ... }, { gamepad: this.inputs.gamepads[0] });
+   * const p2 = new ActionMap({ ... }, { gamepad: this.inputs.gamepads[1] });
+   * ```
+   *
+   * A {@link Gamepad} is a stable slot mailbox that outlives any physical
+   * device, so a map keeps working across disconnect and reconnect.
+   */
+  readonly gamepad?: Gamepad;
+}
+
+/** One channel bound by more than one action of the same map. */
+export interface BindingConflict {
+  /** The contested control, as its serializable token. */
+  readonly token: InputToken;
+  /** Absolute channel index, after gamepad-slot resolution. */
+  readonly channel: number;
+  /** Names of the actions that bind it, in declaration order. */
+  readonly actions: readonly string[];
+}
 
 /**
  * Owner an action map detaches itself from. @internal
@@ -103,30 +158,18 @@ function assertClaimable(action: Action, name: string, pending: ReadonlySet<Acti
  * ```
  */
 class ActionMapBase<T extends ActionRecord> {
-  /**
-   * The actions this map owns, in declaration order — internal on purpose.
-   *
-   * The {@link Action} union has no public member common to all five variants:
-   * `ButtonAction`/`ChordAction` carry `value`/`active`/`pressed`/`released`,
-   * `AxisAction` a numeric `value`, `VectorAction` a `Vector` one, and
-   * `SequenceAction` neither — it reports `triggered`/`progress`. An array of
-   * that union is therefore unusable to a caller without narrowing every
-   * element, which is the same reason an `ActionMap` is not iterable. Exposing
-   * one and withholding the other would only be inconsistent.
-   *
-   * `_update`/`_reset` iterate it because those are internal and every variant
-   * implements them. If generic iteration ever becomes a goal — a remapping UI,
-   * an input-state serializer — it gets a designed public surface then, rather
-   * than this array reinstated as one.
-   */
+  /** The actions this map owns, keyed by name, in declaration order. */
+  private readonly _byName: ReadonlyMap<string, Action>;
+  /** The same actions as a dense array, for the per-frame update loop. */
   private readonly _actions: readonly Action[];
+  private readonly _gamepad: Gamepad | null;
 
   private _owner: ActionMapOwner | null = null;
   private readonly _ownership = new ActionOwnership();
   private _availability: (() => boolean) | null = null;
   private _wasAvailable = true;
 
-  public constructor(actions: T) {
+  public constructor(actions: T, options: ActionMapOptions = {}) {
     // Reads every enumerable getter on `actions` exactly once. Neither
     // `this._actions` nor the instance assignment below may touch `actions`
     // again after this line — a getter that is not perfectly idempotent (or
@@ -156,7 +199,178 @@ class ActionMapBase<T extends ActionRecord> {
     }
 
     this._actions = entries.map(([, action]) => action);
+    this._byName = new Map(entries);
+    this._gamepad = options.gamepad ?? null;
     Object.assign(this, Object.fromEntries(entries));
+
+    if (this._gamepad !== null) {
+      this._applyAtomically(this._actions.map(action => [action, action.binding] as const));
+    }
+  }
+
+  /** Action names in declaration order. */
+  public get names(): readonly string[] {
+    return [...this._byName.keys()];
+  }
+
+  /** The pad this map's gamepad bindings resolve against, or `null` for the primary pad. */
+  public get gamepad(): Gamepad | null {
+    return this._gamepad;
+  }
+
+  /**
+   * Every action with the name it was declared under.
+   *
+   * The entry point for a rebinding UI or a binding inspector; gameplay code
+   * reads the actions directly off the map instead (`map.jump`).
+   */
+  public entries(): IterableIterator<readonly [string, Action]> {
+    return this._byName.entries();
+  }
+
+  /** The action declared under `name`, or `undefined`. */
+  public get(name: string): Action | undefined {
+    return this._byName.get(name);
+  }
+
+  /**
+   * Replace one action's binding, or restore its declared default with `null`.
+   *
+   * Applied together with a full baseline re-arm, so a source held across the
+   * call neither surfaces as a fresh press nor loses its release.
+   *
+   * @throws {Error} If no action is declared under `name`.
+   */
+  public rebind<K extends keyof T & string>(name: K, binding: ActionBinding | null): void {
+    const action = this._byName.get(name);
+
+    if (action === undefined) {
+      throw new Error(`ActionMap: no action named "${name}".`);
+    }
+
+    this._applyAtomically([[action, binding]]);
+  }
+
+  /**
+   * Apply a player's rebindings on top of this map's declared defaults, or
+   * restore every default with `null`.
+   *
+   * Every override is resolved and validated BEFORE any of them is applied, so
+   * a profile with one bad entry leaves the map untouched instead of
+   * half-rebound. Actions the profile does not mention fall back to their
+   * declared default - which is what lets a build add a new action without an
+   * older save file freezing it.
+   *
+   * @throws {Error} If an override names an action this map does not declare,
+   * its kind does not match that action, or it contains an unknown input token.
+   */
+  public applyProfile(profile: BindingProfile | null): void {
+    const changes: Array<readonly [Action, unknown]> = [];
+    const overridden = new Set<Action>();
+
+    if (profile !== null) {
+      for (const name of profile.names) {
+        const action = this._byName.get(name);
+
+        if (action === undefined) {
+          throw new Error(`ActionMap: the profile overrides "${name}", which this map does not declare.`);
+        }
+
+        changes.push([action, action._deserialize(profile.get(name)!)]);
+        overridden.add(action);
+      }
+    }
+
+    for (const action of this._actions) {
+      if (!overridden.has(action)) {
+        changes.push([action, null]);
+      }
+    }
+
+    this._applyAtomically(changes);
+  }
+
+  /** Every action's effective binding in persistable form, keyed by action name. */
+  public serializeBindings(): Readonly<Record<string, SerializedActionBinding>> {
+    const result: Record<string, SerializedActionBinding> = {};
+
+    for (const [name, action] of this._byName) {
+      result[name] = action.serialize();
+    }
+
+    return result;
+  }
+
+  /**
+   * Channels bound by more than one of this map's actions, with the actions
+   * that contest them.
+   *
+   * Reported, never resolved: two actions on one control is a legitimate
+   * design, so this exists for a rebinding UI to warn with rather than for the
+   * engine to arbitrate on.
+   */
+  public conflicts(): readonly BindingConflict[] {
+    const byChannel = new Map<number, string[]>();
+
+    for (const [name, action] of this._byName) {
+      for (const channel of action.channels) {
+        const actions = byChannel.get(channel);
+
+        if (actions === undefined) {
+          byChannel.set(channel, [name]);
+        } else if (!actions.includes(name)) {
+          actions.push(name);
+        }
+      }
+    }
+
+    const conflicts: BindingConflict[] = [];
+
+    for (const [channel, actions] of byChannel) {
+      if (actions.length > 1) {
+        conflicts.push({ token: tokensFromChannels([channel])[0]!, channel, actions });
+      }
+    }
+
+    return conflicts;
+  }
+
+  /** Collect every absolute channel this map's actions currently read. @internal */
+  public _claimChannels(into: Set<number>): void {
+    for (const action of this._actions) {
+      for (const channel of action.channels) {
+        into.add(channel);
+      }
+    }
+  }
+
+  /** `true` while this map's availability policy currently permits sampling. @internal */
+  public _isAvailable(): boolean {
+    return this._availability?.() ?? true;
+  }
+
+  /**
+   * Rebind a whole set of actions and re-establish the shared baseline once.
+   *
+   * Applying the descriptors in one pass matters twice over: a bad token
+   * throws out of the caller's own resolve step before anything is mutated,
+   * and the actions never become observable in a half-rebound state. Re-arming
+   * afterwards is what keeps a source held across the change from reading as a
+   * fresh press - every action was just reset, so without a fresh snapshot they
+   * would seed from zero and manufacture an edge on the next real batch.
+   */
+  private _applyAtomically(changes: ReadonlyArray<readonly [Action, unknown]>): void {
+    const slot: GamepadSlot = this._gamepad?.slot ?? 0;
+
+    for (const [action, binding] of changes) {
+      (action as ActionBase<unknown>)._rebind(binding, slot);
+    }
+
+    const owner = this._owner;
+
+    if (owner !== null) {
+      this._ownership.arm(owner._currentBatchSequence?.() ?? 0, owner._snapshotActionChannels?.() ?? null);
+    }
   }
 
   /** `true` while this map is attached to an input owner and being updated. */
@@ -302,7 +516,7 @@ class ActionMapBase<T extends ActionRecord> {
 }
 
 /**
- * Names an action cannot be declared under — the constructor assigns every
+ * Names an action cannot be declared under - the constructor assigns every
  * action directly onto the instance (`Object.assign(this, actions)`), so an
  * action named after one of these would silently overwrite it (`actions`
  * collapsing from the internal array to a single Action being the most
@@ -310,9 +524,11 @@ class ActionMapBase<T extends ActionRecord> {
  * just the colliding one) instead of throwing anywhere near the mistake.
  *
  * `Object.getOwnPropertyNames(ActionMapBase.prototype)` covers everything
- * declared as a prototype member — `constructor`, `attached`, `detach`,
- * `_attach`, `_armBaseline`, `_update`, `_reset` — but class FIELDS
- * (`actions`, `_owner`, `_ownership`, `_availability`, `_wasAvailable`) are
+ * declared as a prototype member - `constructor`, `attached`, `names`,
+ * `gamepad`, `entries`, `get`, `rebind`, `applyProfile`, `serializeBindings`,
+ * `conflicts`, `detach`, `_attach`, `_armBaseline`, `_update`, `_reset` - but
+ * class FIELDS (`_actions`, `_byName`, `_gamepad`, `_owner`, `_ownership`,
+ * `_availability`, `_wasAvailable`) are
  * assigned per-instance in the constructor, never on the prototype, so
  * reflection alone cannot see them; they are listed explicitly instead.
  * `__proto__` and `prototype` are listed for the same reason `constructor`
@@ -330,6 +546,8 @@ class ActionMapBase<T extends ActionRecord> {
  */
 const reservedActionMapNames: ReadonlySet<string> = new Set([
   '_actions',
+  '_byName',
+  '_gamepad',
   '_owner',
   '_ownership',
   '_availability',
@@ -345,9 +563,20 @@ const reservedActionMapNames: ReadonlySet<string> = new Set([
  * it was built from. TypeScript cannot express that through `extends` on a
  * generic parameter, so the merged shape is applied to the constructor here.
  */
-type ActionMapConstructor = new <T extends ActionRecord>(actions: T) => ActionMapBase<T> & Readonly<T>;
+type ActionMapConstructor = new <T extends ActionRecord>(actions: T, options?: ActionMapOptions) => ActionMapBase<T> & Readonly<T>;
 
 export const ActionMap = ActionMapBase as unknown as ActionMapConstructor;
 
 /** A constructed action map together with its actions. */
 export type ActionMap<T extends ActionRecord = ActionRecord> = ActionMapBase<T> & Readonly<T>;
+
+/**
+ * Any action map, whatever actions it declares - the type a collection of maps
+ * (an {@link InputScope}, a scope stack) is written against.
+ *
+ * {@link ActionMap} itself cannot serve that role: its default type argument
+ * carries `Readonly<Record<string, Action>>`, and a map declared with concrete
+ * action names has no index signature to satisfy it. This alias names the map
+ * WITHOUT its merged action members, which every concrete map does satisfy.
+ */
+export type AnyActionMap = ActionMapBase<ActionRecord>;

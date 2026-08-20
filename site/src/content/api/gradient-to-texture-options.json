@@ -60,11 +60,11 @@
           "description": ""
         },
         {
-          "name": "samplerOptions",
-          "signature": "samplerOptions?: Partial<SamplerOptions>",
+          "name": "textureOptions",
+          "signature": "textureOptions?: Partial<TextureOptions>",
           "signatureTokens": [
             {
-              "text": "samplerOptions",
+              "text": "textureOptions",
               "kind": "name"
             },
             {
@@ -84,7 +84,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SamplerOptions",
+              "text": "TextureOptions",
               "kind": "type"
             },
             {

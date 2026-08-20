@@ -5,12 +5,13 @@ import { Assets } from '#assets/Assets';
 import { coreAssetBindings } from '#assets/coreAssetBindings';
 import { defineAsset } from '#assets/defineAsset';
 import { Loader, LoadPriority } from '#assets/Loader';
+import type { LoaderScope } from '#assets/LoaderScope';
 import { TextAsset } from '#assets/tokens';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
 // A test-only, non-leaf asset kind — no seamless adapter, `isValue: false` —
-// the exact shape `Loader.release()`'s `@remarks` calls out (a resource loaded
+// the exact shape `LoaderScope.release()` calls out (a resource loaded
 // with `load(Asset.type('bmFont', …))`): it never goes through `createLeaf`,
 // so it carries no `_assetMeta` stamp and is never adopted/registered in the
 // handle→key map either.
@@ -64,11 +65,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Loader.release() fail-loud contract', () => {
+describe('LoaderScope.release() fail-loud contract', () => {
   test('throws for an unsupported raw object, naming the supported forms', () => {
-    const loader = new Loader();
+    const scope = new Loader().createScope();
 
-    expect(() => loader.release({ arbitrary: true } as never)).toThrow(/no claim identity/);
+    expect(() => scope.release({ arbitrary: true } as never)).toThrow(/no claim identity/);
   });
 
   test('throws for a resolved non-leaf resource, and the corrective guidance it points to actually works', async () => {
@@ -83,72 +84,76 @@ describe('Loader.release() fail-loud contract', () => {
       }),
     ]);
 
+    const scope = loader.createScope();
     const asset = new Asset({ type: 'dxNonLeafAsset', source: 'thing.dat' });
-    const resource = await loader.load(asset);
+    const resource = await scope.load(asset);
 
     expect(loader.inspect()).toHaveLength(1);
-    expect(() => loader.release(resource as unknown as object)).toThrow(/no claim identity/);
+    expect(() => scope.release(resource as unknown as object)).toThrow(/no claim identity/);
     // The claim survives the throw — nothing was silently discarded.
     expect(loader.inspect()).toHaveLength(1);
 
-    // The `@remarks`-documented workaround (release the descriptor instead) works.
-    expect(() => loader.release(asset)).not.toThrow();
+    // The documented workaround (release the descriptor instead) works.
+    expect(() => scope.release(asset)).not.toThrow();
     expect(loader.inspect()).toHaveLength(0);
   });
 
   test('stays an idempotent no-op for a never-adopted VALUE catalog leaf', () => {
     const loader = new Loader();
+    const scope = loader.createScope();
     const catalog = Assets.from({ note: 'note.txt' });
 
-    expect(() => loader.release(catalog.note)).not.toThrow();
-    expect(() => loader.release(catalog.note)).not.toThrow();
+    expect(() => scope.release(catalog.note)).not.toThrow();
+    expect(() => scope.release(catalog.note)).not.toThrow();
     expect(loader.inspect()).toHaveLength(0);
   });
 
   test('stays an idempotent no-op for a never-adopted RESOURCE catalog leaf', () => {
     const loader = createCoreLoader();
+    const scope = loader.createScope();
     const catalog = Assets.from({ hero: 'hero.png' });
 
-    expect(() => loader.release(catalog.hero)).not.toThrow();
-    expect(() => loader.release(catalog.hero)).not.toThrow();
+    expect(() => scope.release(catalog.hero)).not.toThrow();
+    expect(() => scope.release(catalog.hero)).not.toThrow();
     expect(loader.inspect()).toHaveLength(0);
   });
 
   test('supported release identities are unchanged: descriptor, catalog, (type, source), and an adopted handle all still clear their claim', async () => {
     const loader = createCoreLoader();
+    const scope = loader.createScope();
     mockFetchImage();
     vi.stubGlobal(
       'createImageBitmap',
       vi.fn(async () => ({ width: 1, height: 1 })),
     );
 
-    const hasRow = (source: string): boolean => loader.inspect().some(row => row.source === source);
+    const hasRow = (source: string): boolean => loader.inspect().some(row => row.aliases.includes(source));
 
     // 1. Asset descriptor.
     const asset = new Asset({ type: 'texture', source: 'a.png' });
-    await loader.load(asset);
+    await scope.load(asset);
     expect(hasRow('a.png')).toBe(true);
-    loader.release(asset);
+    scope.release(asset);
     expect(hasRow('a.png')).toBe(false);
 
     // 2. Assets catalog.
     const catalog = new Assets({ b: { type: 'texture', source: 'b.png' } });
-    await loader.load(catalog);
+    await scope.load(catalog);
     expect(hasRow('b.png')).toBe(true);
-    loader.release(catalog);
+    scope.release(catalog);
     expect(hasRow('b.png')).toBe(false);
 
     // 3. (type, source) pair.
-    await loader.load(Asset.type('texture', 'c.png'));
+    await scope.load(Asset.type('texture', 'c.png'));
     expect(hasRow('c.png')).toBe(true);
-    loader.release(Texture, 'c.png');
+    scope.release(Texture, 'c.png');
     expect(hasRow('c.png')).toBe(false);
 
     // 4. An adopted seamless handle.
-    const handle = loader.get('d.png');
+    const handle = scope.get('d.png');
     await handle.loaded;
     expect(hasRow('d.png')).toBe(true);
-    loader.release(handle);
+    scope.release(handle);
     expect(hasRow('d.png')).toBe(false);
   });
 
@@ -160,18 +165,19 @@ describe('Loader.release() fail-loud contract', () => {
       vi.fn(async () => ({ width: 1, height: 1 })),
     );
 
-    const handle = loader.get('hero.png');
+    const scope = loader.createScope();
+    const handle = scope.get('hero.png');
     await handle.loaded;
 
     // AssetResidency.unloadAll() is a deliberately-internal hard reset (NOT
-    // exposed on Loader — release()/`_releaseScope()` are the only public
+    // exposed on Loader - scope release and destroy are the only public
     // teardown verbs) that forgets claim/handle bookkeeping entirely, the same
     // way existing tests reach it via direct residency access.
     (loader as unknown as { _residency: { unloadAll(): void } })._residency.unloadAll();
 
     // The throw must depend only on whether THIS object is a real handle —
     // never on unrelated internal state that changed since it was handed out.
-    expect(() => loader.release(handle)).not.toThrow();
+    expect(() => scope.release(handle)).not.toThrow();
   });
 });
 
@@ -217,7 +223,7 @@ describe('Loader.inspect() snapshot contract', () => {
 
     const row = snapshot[0]!;
 
-    expect(Object.keys(row).sort()).toEqual(['background', 'claims', 'inFlight', 'key', 'source', 'state', 'type']);
+    expect(Object.keys(row).sort()).toEqual(['aliases', 'background', 'canonicalKey', 'claims', 'inFlight', 'locator', 'owners', 'state', 'type']);
 
     for (const [field, value] of Object.entries(row)) {
       if (field === 'type') {
@@ -227,6 +233,13 @@ describe('Loader.inspect() snapshot contract', () => {
       expect(value).not.toBeInstanceOf(Set);
       expect(value).not.toBeInstanceOf(AssetRef);
       expect(typeof value).not.toBe('symbol');
+
+      // `aliases` and `owners` are frozen arrays of plain data, never live state.
+      if (field === 'aliases' || field === 'owners') {
+        expect(Object.isFrozen(value)).toBe(true);
+        continue;
+      }
+
       expect(typeof value).not.toBe('object');
     }
 
@@ -234,7 +247,7 @@ describe('Loader.inspect() snapshot contract', () => {
     await ref.loaded;
   });
 
-  test('rows are sorted by key regardless of claim order', () => {
+  test('rows are sorted by canonical key regardless of claim order', () => {
     mockFetchText();
     const loader = new Loader();
     loader.bindAsset<string>({ ctor: TextAsset, storageName: 'text' }, { load: async request => `text:${request.source}` });
@@ -243,7 +256,7 @@ describe('Loader.inspect() snapshot contract', () => {
     loader.get('aaa.txt');
     loader.get('mmm.txt');
 
-    expect(loader.inspect().map(row => row.source)).toEqual(['aaa.txt', 'mmm.txt', 'zzz.txt']);
+    expect(loader.inspect().map(row => row.aliases[0])).toEqual(['aaa.txt', 'mmm.txt', 'zzz.txt']);
   });
 
   test('tracks the loading → ready transition; an earlier snapshot never mutates in place', async () => {
@@ -255,14 +268,14 @@ describe('Loader.inspect() snapshot contract', () => {
     const loading = loader.inspect();
 
     expect(loading).toHaveLength(1);
-    expect(loading[0]).toMatchObject({ source: 'note.txt', state: 'loading', claims: 1, inFlight: true, background: false });
+    expect(loading[0]).toMatchObject({ aliases: ['note.txt'], state: 'loading', claims: 1, inFlight: true, background: false });
 
     pending.resolve('ready');
     await ref.loaded;
     await Promise.resolve(); // let the in-flight bookkeeping's own .finally() cleanup run too
 
     const ready = loader.inspect();
-    expect(ready[0]).toMatchObject({ source: 'note.txt', state: 'ready', claims: 1, inFlight: false, background: false });
+    expect(ready[0]).toMatchObject({ aliases: ['note.txt'], state: 'ready', claims: 1, inFlight: false, background: false });
     // The array returned earlier is a detached snapshot, not a live view.
     expect(loading[0]?.state).toBe('loading');
   });
@@ -274,7 +287,7 @@ describe('Loader.inspect() snapshot contract', () => {
     const catalog = new Assets({ late: { type: 'texture', source: 'late.png' } });
     loader.load(catalog, { priority: LoadPriority.Background });
 
-    const row = loader.inspect().find(r => r.source === 'late.png');
+    const row = loader.inspect().find(r => r.aliases.includes('late.png'));
     // `background` here is the inspection row's own field — whether the key is
     // sitting in the queue right now, not the priority it was requested with.
     expect(row).toMatchObject({ state: 'queued', background: true, inFlight: false, claims: 1 });
@@ -287,7 +300,7 @@ describe('Loader.inspect() snapshot contract', () => {
     const handle = loader.get('gone.png');
     await expect(handle.loaded).rejects.toThrow();
 
-    const row = loader.inspect().find(r => r.source === 'gone.png');
+    const row = loader.inspect().find(r => r.aliases.includes('gone.png'));
     expect(row).toMatchObject({ state: 'failed', inFlight: false, background: false, claims: 1 });
   });
 
@@ -298,14 +311,14 @@ describe('Loader.inspect() snapshot contract', () => {
       'createImageBitmap',
       vi.fn(async () => ({ width: 1, height: 1 })),
     );
-    const sceneScope = Symbol('scene');
+    const sceneScope = loader.createScope({ name: 'scene' });
 
     const handle = loader.get('hero.png'); // root scope
     loader.get('hero.png'); // same source → same deduped handle, same scope again (no-op)
     loader._getClaimed(sceneScope, 'hero.png'); // a second, distinct scope
     await handle.loaded;
 
-    const row = loader.inspect().find(r => r.source === 'hero.png');
+    const row = loader.inspect().find(r => r.aliases.includes('hero.png'));
     expect(row?.claims).toBe(2);
   });
 
@@ -325,7 +338,7 @@ describe('Loader.inspect() snapshot contract', () => {
 
     expect(catalog.bad.state).toBe('failed');
 
-    const row = loader.inspect().find(r => r.source === 'note.txt');
+    const row = loader.inspect().find(r => r.aliases.includes('note.txt'));
     expect(row?.state).toBe('failed');
   });
 
@@ -351,7 +364,7 @@ describe('Loader.inspect() snapshot contract', () => {
 
     expect(catalog.bad.state).toBe('failed');
     await expect(catalog.bad.loaded).rejects.toThrow(/parse\(\) must be synchronous/);
-    expect(loader.inspect().find(r => r.source === 'note.txt')?.state).toBe('failed');
+    expect(loader.inspect().find(r => r.aliases.includes('note.txt'))?.state).toBe('failed');
   });
 
   test('never reports background:true for a row that has already settled', () => {
@@ -360,25 +373,25 @@ describe('Loader.inspect() snapshot contract', () => {
     // through the background queue's own dequeue/boost bookkeeping — must not
     // leave a settled row also claiming to still be queued.
     const loader = new Loader();
+    class FakeType {}
+
+    const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string): { key: string } })._canonicalize.bind(loader);
+    const asset = canonicalize(FakeType, 'bundled.bin');
     const residency = (
       loader as unknown as {
         _residency: {
-          _claims: Map<string, { scopes: Set<symbol>; type: unknown; source: string }>;
-          _resources: Map<unknown, Map<string, unknown>>;
-          _backgroundQueue: Array<{ type: unknown; alias: string; path: string; options: unknown }>;
-          _typeRegistry: { _key(type: unknown, source: string): string };
+          _claims: Map<string, { scopes: Set<LoaderScope>; asset: unknown }>;
+          _resources: Map<string, { asset: unknown; value: unknown }>;
+          _backgroundQueue: Array<{ asset: unknown; options: unknown }>;
         };
       }
     )._residency;
 
-    class FakeType {}
-    const key = residency._typeRegistry._key(FakeType, 'bundled.bin');
+    residency._claims.set(asset.key, { scopes: new Set<LoaderScope>([loader.createScope({ name: 'scope' })]), asset });
+    residency._backgroundQueue.push({ asset, options: undefined });
+    residency._resources.set(asset.key, { asset, value: {} });
 
-    residency._claims.set(key, { scopes: new Set([Symbol('scope')]), type: FakeType, source: 'bundled.bin' });
-    residency._backgroundQueue.push({ type: FakeType, alias: 'bundled.bin', path: 'bundled.bin', options: undefined });
-    residency._resources.set(FakeType, new Map([['bundled.bin', {}]]));
-
-    const row = loader.inspect().find(r => r.source === 'bundled.bin');
+    const row = loader.inspect().find(r => r.aliases.includes('bundled.bin'));
 
     expect(row?.state).toBe('ready');
     expect(row?.background).toBe(false);

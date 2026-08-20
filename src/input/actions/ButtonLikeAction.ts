@@ -1,18 +1,23 @@
+import { ActionBase } from './ActionBase';
 import type { ActionSample } from './types';
 
 /**
  * Shared mechanism behind every action that reduces a set of bound channels
- * to a single on/off `active`/`pressed`/`released` (plus `value`) triad —
+ * to a single on/off `active`/`pressed`/`released` (plus `value`) triad -
  * {@link ButtonAction} (strongest of a set of alternative sources) and
  * {@link ChordAction} (weakest of a set of required members). A subclass
- * supplies only {@link _aggregate}; this base owns the batch-replay update
- * loop, initial-baseline seeding, and reset.
+ * supplies only {@link _aggregate} and its own {@link ActionBase._resolve};
+ * this base owns the batch-replay update loop, initial-baseline seeding, and
+ * reset.
  */
-export abstract class ButtonLikeAction {
-  protected readonly _channels: readonly number[];
+export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
   protected readonly _threshold: number;
-  /** Last known value of each bound channel, in `_channels` order — the replay baseline `_update` advances. */
-  protected readonly _values: Float32Array;
+  /**
+   * Last known value of each bound channel, in `_channels` order - the replay
+   * baseline `_update` advances. Reallocated by {@link _allocateValues} on
+   * every rebind, since a new binding may bind a different number of channels.
+   */
+  protected _values: Float32Array = new Float32Array(0);
   /**
    * `false` until this action has established an initial baseline for every
    * bound channel — see `_update`'s doc comment. Reset by `_reset()`, and
@@ -26,10 +31,9 @@ export abstract class ButtonLikeAction {
   protected _pressedThisFrame = false;
   protected _releasedThisFrame = false;
 
-  protected constructor(channels: readonly number[], threshold: number) {
-    this._channels = channels;
+  protected constructor(binding: Binding, threshold: number) {
+    super(binding);
     this._threshold = threshold;
-    this._values = new Float32Array(channels.length);
   }
 
   /**
@@ -45,6 +49,11 @@ export abstract class ButtonLikeAction {
    * @internal
    */
   protected abstract _aggregate(values: Float32Array): number;
+
+  /** Size `_values` to the current channel list. Called from every `_resolve`. */
+  protected _allocateValues(): void {
+    this._values = new Float32Array(this._channels.length);
+  }
 
   /**
    * Aggregate source value this frame, in 0..1. Reads `0` on a frame where the
@@ -167,11 +176,11 @@ export abstract class ButtonLikeAction {
   }
 
   /**
-   * Clear all state, as if no source had ever been touched — used when an
-   * owner stops feeding this action (a scene suspend), and by the owning
-   * {@link ActionMap} to force a fresh baseline on a legitimate ownership
-   * handoff, since the new owner's channel buffer is unrelated to the old
-   * one's.
+   * Clear all state, as if no source had ever been touched - used when an
+   * owner stops feeding this action (a scene suspend), after a rebind, and by
+   * the owning {@link ActionMap} to force a fresh baseline on a legitimate
+   * ownership handoff, since the new owner's channel buffer is unrelated to
+   * the old one's.
    *
    * @internal
    */

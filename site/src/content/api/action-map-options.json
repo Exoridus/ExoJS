@@ -1,0 +1,75 @@
+{
+  "title": "ActionMapOptions",
+  "description": "Construction options for an ActionMap.",
+  "symbol": "ActionMapOptions",
+  "kind": "interface",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for an ActionMap."
+      ],
+      "importLine": "import { ActionMapOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "gamepad",
+          "signature": "gamepad?: Gamepad",
+          "signatureTokens": [
+            {
+              "text": "gamepad",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Pad every gamepad binding in this map reads from. Defaults to the primary pad (slot 0). This is RUNTIME context, not part of a binding: an action still binds the semantic control (GamepadButton.South), and the map rebases it onto this pad's slot. Nothing about the pad is ever serialized, so a two-player save file describes one control scheme rather than two slot-specific ones. Local multiplayer is therefore one map per player: ts const p1 = new ActionMap({ ... }, { gamepad: this.inputs.gamepads[0] }); const p2 = new ActionMap({ ... }, { gamepad: this.inputs.gamepads[1] });  A Gamepad is a stable slot mailbox that outlives any physical device, so a map keeps working across disconnect and reconnect."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/ActionMap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/ActionMap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
+}

@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 27,
+  "memberCount": 38,
   "counts": {
     "constructors": 0,
-    "methods": 18,
+    "methods": 29,
     "properties": 9,
     "events": 0
   },
@@ -118,6 +118,140 @@
           "description": "Clamp value to the closed interval [min, max]."
         },
         {
+          "name": "createArcadeStickGamepadMapping",
+          "signature": "createArcadeStickGamepadMapping(): GamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "createArcadeStickGamepadMapping",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GamepadMapping",
+          "description": "Generic arcade-stick controllers. Covers the standard 8-button plus shoulder/trigger layout common to most fightsticks. No analog sticks are present, so the axis list is empty and the D-pad is exposed as discrete buttons (indices 12-15)."
+        },
+        {
+          "name": "createJoyConLeftGamepadMapping",
+          "signature": "createJoyConLeftGamepadMapping(): GamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "createJoyConLeftGamepadMapping",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GamepadMapping",
+          "description": "Nintendo Joy-Con (L) held horizontally as a solo controller. Declares only channels that physically exist on the device - one stick (surfaced through the LeftStick channels so gamepad-agnostic code that binds \"the stick\" works regardless of which half is held), four face buttons, the L and ZL outer shoulders, the SL/SR rail buttons, Minus, Capture, and the stick-click. Right-stick channels, Plus/Home, Touchpad and auxiliary axes are intentionally absent - use Gamepad.hasChannel before binding anything that may not exist on every family. The SL/SR rail buttons take paddle channels rather than the standard shoulder channels, which belong to the physical L and ZL. Naming the channel after the physical button is what keeps the prompt labels honest: LeftShoulder renders as \"L\" and LeftTrigger as \"ZL\", so a prompt only points at the right button when those channels carry the buttons actually labelled that way. Which of them is comfortable in the horizontal solo grip is a question for the game's binding layer. The specific slots follow SDL, which assigns the rail buttons by the hand they sit under rather than by grip: left SL is SDL_GAMEPAD_BUTTON_LEFT_PADDLE1 (this engine's Paddle1) and left SR is LEFT_PADDLE2 (Paddle3). The right half takes the two right-hand slots, so a pair of solo Joy-Cons never collides on a paddle channel. Button indices are verified against hardware (Chromium on Windows, Bluetooth, 057e:2006), which reports the pad as mapping: \"standard\" with 17 buttons and 2 axes."
+        },
+        {
+          "name": "createJoyConRightGamepadMapping",
+          "signature": "createJoyConRightGamepadMapping(): GamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "createJoyConRightGamepadMapping",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GamepadMapping",
+          "description": "Nintendo Joy-Con (R) held horizontally as a solo controller. Mirrors createJoyConLeftGamepadMapping - see it for why the lone stick takes the LeftStick channels and why the SL/SR rail buttons take paddle channels. Following SDL, this half takes the two right-hand slots: SR is SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1 (Paddle2) and SL is RIGHT_PADDLE2 (Paddle4). Button indices are verified against hardware (Chromium on Windows, Bluetooth, 057e:2007), which reports the pad as mapping: \"standard\" with 17 buttons and 2 axes."
+        },
+        {
+          "name": "createPlayStationGamepadMapping",
+          "signature": "createPlayStationGamepadMapping(generation: PlayStationGeneration): GamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "createPlayStationGamepadMapping",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "generation",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlayStationGeneration",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "generation",
+              "type": "PlayStationGeneration",
+              "optional": false
+            }
+          ],
+          "returnType": "GamepadMapping",
+          "description": "Sony PlayStation controllers - DualShock 3, DualShock 4 and DualSense (PS3 / PS4 / PS5) over USB or Bluetooth. On PS4 and PS5 pads index 17 is the touchpad **click** (DUALSHOCK_BUTTON_TOUCHPAD == DUAL_SENSE_BUTTON_TOUCHPAD == 17); a PS3 pad has no touchpad and stops at the standard index 16. Select/Share/Create sits on the standard Select slot (index 8) on all three, so it needs no entry of its own - it is only printed differently, which is what the per-generation prompt labels carry. Touchpad *coordinates* are not available: browsers model the touchpad as a button, and the standard axis set stops after the two sticks. Reading finger positions requires WebHID and a custom GamepadDefinition."
+        },
+        {
           "name": "createRenderStats",
           "signature": "createRenderStats(): RenderStats",
           "signatureTokens": [
@@ -145,6 +279,169 @@
           "params": [],
           "returnType": "RenderStats",
           "description": "Allocate a zeroed RenderStats object for the first frame."
+        },
+        {
+          "name": "createStandardGamepadMapping",
+          "signature": "createStandardGamepadMapping(options: StandardGamepadMappingOptions): GamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "createStandardGamepadMapping",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "StandardGamepadMappingOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "StandardGamepadMappingOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "GamepadMapping",
+          "description": "Baseline mapping for dual-analog controllers that follow the standard W3C Gamepad API layout (axes 0-3 for both sticks, axes 4-7 auxiliary). Every standard-layout device is this layout plus a family tag and at most the one device-specific button at index 17."
+        },
+        {
+          "name": "createSteamControllerGamepadMapping",
+          "signature": "createSteamControllerGamepadMapping(): GamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "createSteamControllerGamepadMapping",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GamepadMapping",
+          "description": "Valve Steam Controller (28de:1102, 28de:1142). The device is recognised by family - a game that ships Steam artwork gets to pick it - but its LAYOUT is the generic standard one and is **not verified** for this device. Chromium lists both product IDs in gamepad_id_list.cc as kXInputTypeNone and normalises neither, so a raw Steam Controller may well report a different index order than the standard layout assumed here; no hardware confirmation exists either way. With Steam Input active the device instead appears as 28de:11ff \"Steam Virtual Gamepad\", which genuinely is standard-mapped. The right trackpad is surfaced as the right stick and the left trackpad as the left stick. Gyro and haptic-only inputs are not represented."
+        },
+        {
+          "name": "createSteamDeckGamepadMapping",
+          "signature": "createSteamDeckGamepadMapping(): GamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "createSteamDeckGamepadMapping",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GamepadMapping",
+          "description": "Valve Steam Deck (and the new Valve Controller via vendor fallback) when its raw HID gamepad is exposed directly to the browser - i.e. when Steam Input is *not* intercepting the device. With Steam Input intercepting, the device appears as 28de:11ff \"Steam Virtual Gamepad\" with a standard W3C layout instead. The raw layout is non-standard: face buttons live at indices 3-6 (not the W3C-standard 0-3), the D-pad at 16-19, paddles at 20-23, and triggers report as analog axes 8/9 rather than buttons 6/7. Indices are derived from the Linux SDL_GameControllerDB entry for Valve Steam Deck. Because those indices are raw rather than W3C-standard, this mapping declares GamepadMappingLayout.Raw: should a browser ever report the same device as mapping: \"standard\", resolveGamepadDefinition discards this layout in favour of the generic one rather than routing standard indices through raw slots."
+        },
+        {
+          "name": "createSwitchProGamepadMapping",
+          "signature": "createSwitchProGamepadMapping(): GamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "createSwitchProGamepadMapping",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GamepadMapping",
+          "description": "Nintendo Switch Pro Controller over USB or Bluetooth. Index 17 is the Capture button (SWITCH_PRO_BUTTON_CAPTURE == BUTTON_INDEX_COUNT); Home maps to Guide, Minus/Plus to Select/Start. Some browsers only recognise the controller after it has been paired through Steam or a dedicated driver."
+        },
+        {
+          "name": "createXboxGamepadMapping",
+          "signature": "createXboxGamepadMapping(): GamepadMapping",
+          "signatureTokens": [
+            {
+              "text": "createXboxGamepadMapping",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "GamepadMapping",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "GamepadMapping",
+          "description": "Microsoft Xbox controllers (Xbox One, Xbox Series X/S, and compatible third-party XInput devices) over USB or Bluetooth. XInput follows the W3C standard layout natively. Index 17 is the Share button of the Xbox Series pads (XBOX_SERIES_X_BUTTON_SHARE == BUTTON_INDEX_COUNT). The Elite paddles are deliberately absent: the Windows path is XInput, whose XINPUT_GAMEPAD struct has no paddle bits, and no browser mapper emits them. They are reachable only through WebHID and therefore belong to a custom GamepadDefinition, not here."
         },
         {
           "name": "crossFade",
@@ -539,6 +836,108 @@
           "params": [],
           "returnType": "OfflineAudioContext",
           "description": "Return the shared singleton OfflineAudioContext used for audio decoding. Its sample rate matches the live AudioContext when one already exists, otherwise a 44.1 kHz default is used. Never creates a live AudioContext — decoding before the first user gesture must not spawn a suspended context (AU2); buffers resample transparently on playback if the rates differ."
+        },
+        {
+          "name": "inputChannelFromToken",
+          "signature": "inputChannelFromToken(token: string): InputChannel | null",
+          "signatureTokens": [
+            {
+              "text": "inputChannelFromToken",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "token",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "token",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "InputChannel | null",
+          "description": "Channel token names, or null when no control carries that token. Returning null rather than falling back to a nearby control is the point: a profile saved by a newer build, a hand-edited file, or a typo must be reported to the player, never silently rebound to a different input. Callers that persist bindings (see BindingProfile.fromJSON) turn the null into a throw. Gamepad tokens resolve to slot-0-relative channels; the owning ActionMap rebases them onto its own pad."
+        },
+        {
+          "name": "inputToken",
+          "signature": "inputToken(channel: InputChannel): string",
+          "signatureTokens": [
+            {
+              "text": "inputToken",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "channel",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "channel",
+              "type": "InputChannel",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "Canonical InputToken for channel."
         },
         {
           "name": "inRange",

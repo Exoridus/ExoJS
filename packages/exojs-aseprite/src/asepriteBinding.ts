@@ -120,7 +120,7 @@ export const asepriteBinding = defineAsset({
         const raw = await ctx.fetchJson(req.source);
         const data = validateAsepriteData(raw, req.source);
         const imageUrl = resolveAsepriteUrl(data.meta.image, req.source);
-        const texture = await ctx.loader.load(Asset.type('texture', imageUrl));
+        const texture = await ctx.scope.load(Asset.type('texture', imageUrl));
 
         return AsepriteSheet.parse(data, texture);
       },

@@ -56,11 +56,11 @@ describe('VideoFactory', () => {
     expect(result).toBe(VIDEO_HEADER);
   });
 
-  test('create() resolves with a Video once the default "canplaythrough" event fires', async () => {
+  test('create() resolves with a Video once the default "canplay" event fires', async () => {
     const factory = new VideoFactory();
 
     const promise = factory.create(VIDEO_HEADER);
-    lastVideo().dispatchEvent(new Event('canplaythrough'));
+    lastVideo().dispatchEvent(new Event('canplay'));
 
     const video = await promise;
 
@@ -85,7 +85,7 @@ describe('VideoFactory', () => {
     const factory = new VideoFactory();
 
     const promise = factory.create(VIDEO_HEADER, { playbackOptions: { volume: 0.3, loop: true } });
-    lastVideo().dispatchEvent(new Event('canplaythrough'));
+    lastVideo().dispatchEvent(new Event('canplay'));
 
     const video = await promise;
 
@@ -95,11 +95,11 @@ describe('VideoFactory', () => {
     video.destroy();
   });
 
-  test('create() forwards samplerOptions to the underlying Texture', async () => {
+  test('create() forwards textureOptions to the underlying Texture', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create(VIDEO_HEADER, { samplerOptions: { flipY: true } });
-    lastVideo().dispatchEvent(new Event('canplaythrough'));
+    const promise = factory.create(VIDEO_HEADER, { textureOptions: { flipY: true } });
+    lastVideo().dispatchEvent(new Event('canplay'));
 
     const video = await promise;
 
@@ -176,7 +176,7 @@ describe('VideoFactory', () => {
     const promise = factory.create(VIDEO_HEADER, { stallTimeout: 50 });
     const videoElement = lastVideo();
 
-    videoElement.dispatchEvent(new Event('canplaythrough'));
+    videoElement.dispatchEvent(new Event('canplay'));
     const video = await promise;
 
     expect(() => videoElement.dispatchEvent(new Event('stalled'))).not.toThrow();
@@ -192,7 +192,7 @@ describe('VideoFactory', () => {
     const promise = factory.create(VIDEO_HEADER);
     const videoElement = lastVideo();
 
-    videoElement.dispatchEvent(new Event('canplaythrough'));
+    videoElement.dispatchEvent(new Event('canplay'));
     const video = await promise;
 
     revokeSpy.mockClear();
@@ -215,7 +215,7 @@ describe('VideoFactory', () => {
     const videoElement = lastVideo();
 
     videoElement.dispatchEvent(new Event('stalled'));
-    videoElement.dispatchEvent(new Event('canplaythrough'));
+    videoElement.dispatchEvent(new Event('canplay'));
 
     const video = await promise;
 
@@ -232,7 +232,7 @@ describe('VideoFactory', () => {
     const factory = new VideoFactory();
 
     const promise = factory.create(VIDEO_HEADER);
-    lastVideo().dispatchEvent(new Event('canplaythrough'));
+    lastVideo().dispatchEvent(new Event('canplay'));
     const video = await promise;
 
     expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
@@ -245,7 +245,7 @@ describe('VideoFactory', () => {
     const promise = factory.create(VIDEO_HEADER);
     const videoElement = lastVideo();
     const pauseSpy = vi.spyOn(videoElement, 'pause');
-    videoElement.dispatchEvent(new Event('canplaythrough'));
+    videoElement.dispatchEvent(new Event('canplay'));
     const video = await promise;
 
     factory.destroy();

@@ -1,6 +1,6 @@
 {
   "title": "SpawnOnDeath",
-  "description": "Sub-emitter: triggers a child SpawnModule on a target system at the dying particle's position. Use for explosion-on-impact, sparks at end-of-life, multi-stage VFX. The child module receives a synthesized `dt` of 0 — it must spawn immediately rather than rely on rate accumulation. BurstSpawn works naturally; RateSpawn is the wrong fit here. Position is the only field forwarded — child distributions decide everything else. To keep child particles riding the parent's velocity, configure the child's velocity distribution to match.",
+  "description": "Sub-emitter: triggers a child SpawnModule on a target system at the dying particle's position. Use for explosion-on-impact, sparks at end of life, multi-stage VFX. The child module receives a synthesized `dt` of 0 - it must spawn immediately rather than rely on rate accumulation. BurstSpawn works naturally; RateSpawn is the wrong fit here. Position is the only field taken from the dying particle - child distributions decide everything else, and their sampled positions are treated as offsets from the death position. To keep child particles riding the parent's velocity, configure the child's velocity distribution to match, or read ParticleDeathContext.velocityX in a custom death module.",
   "symbol": "SpawnOnDeath",
   "kind": "class",
   "subsystem": "particles",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Sub-emitter: triggers a child SpawnModule on a target system at the dying particle's position. Use for explosion-on-impact, sparks at end-of-life, multi-stage VFX.",
-        "The child module receives a synthesized `dt` of 0 — it must spawn immediately rather than rely on rate accumulation. BurstSpawn works naturally; RateSpawn is the wrong fit here.",
-        "Position is the only field forwarded — child distributions decide everything else. To keep child particles riding the parent's velocity, configure the child's velocity distribution to match."
+        "Sub-emitter: triggers a child SpawnModule on a target system at the dying particle's position. Use for explosion-on-impact, sparks at end of life, multi-stage VFX.",
+        "The child module receives a synthesized `dt` of 0 - it must spawn immediately rather than rely on rate accumulation. BurstSpawn works naturally; RateSpawn is the wrong fit here.",
+        "Position is the only field taken from the dying particle - child distributions decide everything else, and their sampled positions are treated as offsets from the death position. To keep child particles riding the parent's velocity, configure the child's velocity distribution to match, or read ParticleDeathContext.velocityX in a custom death module."
       ],
       "importLine": "import { SpawnOnDeath } from '@codexo/exojs-particles'",
       "sourceLink": null
@@ -159,7 +159,7 @@
         },
         {
           "name": "onDeath",
-          "signature": "onDeath(parent: ParticleSystem, slot: number): void",
+          "signature": "onDeath(_system: ParticleSystem, death: ParticleDeathContext): void",
           "signatureTokens": [
             {
               "text": "onDeath",
@@ -170,7 +170,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "parent",
+              "text": "_system",
               "kind": "param"
             },
             {
@@ -186,7 +186,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "slot",
+              "text": "death",
               "kind": "param"
             },
             {
@@ -194,8 +194,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "ParticleDeathContext",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -212,13 +212,13 @@
           ],
           "params": [
             {
-              "name": "parent",
+              "name": "_system",
               "type": "ParticleSystem",
               "optional": false
             },
             {
-              "name": "slot",
-              "type": "number",
+              "name": "death",
+              "type": "ParticleDeathContext",
               "optional": false
             }
           ],

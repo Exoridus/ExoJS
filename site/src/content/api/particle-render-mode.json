@@ -213,7 +213,7 @@
         },
         {
           "name": "build",
-          "signature": "build(system: ParticleSystem): void",
+          "signature": "build(system: ParticleSystem, particles: ParticleBatch): void",
           "signatureTokens": [
             {
               "text": "build",
@@ -236,6 +236,22 @@
               "kind": "type"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "particles",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleBatch",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -253,10 +269,15 @@
               "name": "system",
               "type": "ParticleSystem",
               "optional": false
+            },
+            {
+              "name": "particles",
+              "type": "ParticleBatch",
+              "optional": false
             }
           ],
           "returnType": "void",
-          "description": "Fill the scratch buffer from system's current SoA state."
+          "description": "Fill the scratch buffer from the system's live particles. particles is the simulation's own channel storage, handed in rather than read off the system: a render mode is the one consumer that legitimately works in bulk, and it runs at the point in the frame where those values are the ones being drawn."
         },
         {
           "name": "destroy",

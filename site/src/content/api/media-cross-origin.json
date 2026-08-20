@@ -1,0 +1,80 @@
+{
+  "title": "MediaCrossOrigin",
+  "description": "Value for a media element's `crossorigin` attribute. `'anonymous'` is the default for URL-backed media: without it a cross-origin video is playable but unusable as a render source, because uploading it to a texture taints the pipeline. `null` omits the attribute entirely, which accepts that trade for playback-only media.",
+  "symbol": "MediaCrossOrigin",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Value for a media element's `crossorigin` attribute.",
+        "`'anonymous'` is the default for URL-backed media: without it a cross-origin video is playable but unusable as a render source, because uploading it to a texture taints the pipeline. `null` omits the attribute entirely, which accepts that trade for playback-only media."
+      ],
+      "importLine": "import { MediaCrossOrigin } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "MediaCrossOrigin",
+          "signature": "\"anonymous\" | \"use-credentials\" | null",
+          "signatureTokens": [
+            {
+              "text": "\"anonymous\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"use-credentials\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/types.ts"
+}

@@ -1,11 +1,14 @@
 import { GamepadButton } from '#input/GamepadButton';
 import { GamepadMappingFamily } from '#input/GamepadMapping';
+import {
+  createJoyConLeftGamepadMapping,
+  createJoyConRightGamepadMapping,
+  createPlayStationGamepadMapping,
+  createSteamDeckGamepadMapping,
+  createSwitchProGamepadMapping,
+  PlayStationGeneration,
+} from '#input/gamepadMappings';
 import { GamepadPromptLayouts } from '#input/GamepadPromptLayouts';
-import { JoyConLeftGamepadMapping } from '#input/JoyConLeftGamepadMapping';
-import { JoyConRightGamepadMapping } from '#input/JoyConRightGamepadMapping';
-import { PlayStationGamepadMapping, PlayStationGeneration } from '#input/PlayStationGamepadMapping';
-import { SteamDeckGamepadMapping } from '#input/SteamDeckGamepadMapping';
-import { SwitchProGamepadMapping } from '#input/SwitchProGamepadMapping';
 
 describe('GamepadPromptLayouts', () => {
   test('exposes stable control keys and base positions', () => {
@@ -76,7 +79,7 @@ describe('GamepadPromptLayouts', () => {
   });
 
   test('every paddle channel a built-in mapping writes has a label in that family', () => {
-    const mappings = [new JoyConLeftGamepadMapping(), new JoyConRightGamepadMapping(), new SteamDeckGamepadMapping()];
+    const mappings = [createJoyConLeftGamepadMapping(), createJoyConRightGamepadMapping(), createSteamDeckGamepadMapping()];
     const paddleControls = ['Paddle1', 'Paddle2', 'Paddle3', 'Paddle4'] as const;
     const channelsByControl = GamepadPromptLayouts.getControlChannelMap();
 
@@ -109,9 +112,9 @@ describe('GamepadPromptLayouts', () => {
   });
 
   test('applies a mapping-specific label on top of its family set', () => {
-    const dualShock4 = GamepadPromptLayouts.getControlLabels(new PlayStationGamepadMapping(PlayStationGeneration.PS4));
-    const dualSense = GamepadPromptLayouts.getControlLabels(new PlayStationGamepadMapping(PlayStationGeneration.PS5));
-    const playStation3 = GamepadPromptLayouts.getControlLabels(new PlayStationGamepadMapping(PlayStationGeneration.PS3));
+    const dualShock4 = GamepadPromptLayouts.getControlLabels(createPlayStationGamepadMapping(PlayStationGeneration.PS4));
+    const dualSense = GamepadPromptLayouts.getControlLabels(createPlayStationGamepadMapping(PlayStationGeneration.PS5));
+    const playStation3 = GamepadPromptLayouts.getControlLabels(createPlayStationGamepadMapping(PlayStationGeneration.PS3));
 
     expect(dualShock4.get('Select')).toBe('Share');
     expect(dualSense.get('Select')).toBe('Create');
@@ -124,8 +127,8 @@ describe('GamepadPromptLayouts', () => {
   });
 
   test('returns the family map itself for a mapping without overrides and caches merged maps', () => {
-    const switchPro = new SwitchProGamepadMapping();
-    const dualShock4 = new PlayStationGamepadMapping(PlayStationGeneration.PS4);
+    const switchPro = createSwitchProGamepadMapping();
+    const dualShock4 = createPlayStationGamepadMapping(PlayStationGeneration.PS4);
 
     expect(GamepadPromptLayouts.getControlLabels(switchPro)).toBe(GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.SwitchPro));
     expect(GamepadPromptLayouts.getControlLabels(dualShock4)).toBe(GamepadPromptLayouts.getControlLabels(dualShock4));

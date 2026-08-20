@@ -6,12 +6,12 @@
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 120,
+  "memberCount": 121,
   "counts": {
     "constructors": 1,
     "methods": 50,
     "properties": 53,
-    "events": 16
+    "events": 17
   },
   "sections": [
     {
@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, samplerOptions?: Partial<SamplerOptions>): Video",
+          "signature": "new(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, textureOptions?: Partial<TextureOptions>): Video",
           "signatureTokens": [
             {
               "text": "new",
@@ -90,7 +90,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "samplerOptions",
+              "text": "textureOptions",
               "kind": "param"
             },
             {
@@ -110,7 +110,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SamplerOptions",
+              "text": "TextureOptions",
               "kind": "type"
             },
             {
@@ -142,8 +142,8 @@
               "optional": true
             },
             {
-              "name": "samplerOptions",
-              "type": "Partial<SamplerOptions>",
+              "name": "textureOptions",
+              "type": "Partial<TextureOptions>",
               "optional": true
             }
           ],
@@ -3741,6 +3741,47 @@
       "id": "events",
       "title": "Events",
       "members": [
+        {
+          "name": "onError",
+          "signature": "onError: Signal<[error]>",
+          "signatureTokens": [
+            {
+              "text": "onError",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "error",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Dispatched when the media fails after the asset was already usable - a transfer that breaks mid-playback, or a decode error on a later frame. A failure BEFORE the asset becomes ready fails the load instead, and is reported by Loader.onError; this signal is the runtime counterpart, so one load never appears to fail twice."
+        },
         {
           "name": "onStart",
           "signature": "onStart: Signal<[]>",
