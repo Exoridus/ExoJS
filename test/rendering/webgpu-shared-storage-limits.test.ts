@@ -378,13 +378,13 @@ describe('persistent refusal falls onto a path that now fails loudly', () => {
 
       store.connectDevice(mock.device, undefined as never);
 
-      // Step 1 (NEU-S1): the per-root store cannot represent the selection, so
-      // the plan puts the root back on the streamed path.
+      // Step 1: the per-root store cannot represent the selection, so the plan
+      // puts the root back on the streamed path.
       expect(store.canRepresent(DEFAULT_ROW_CEILING + 1, DEFAULT_ROW_CEILING + 1)).toBe(false);
 
-      // Step 2 (this fix): the streamed path needs the same rows in the
-      // frame-global shared storage, against the same ceiling - and says so
-      // instead of drawing nothing behind an uncaptured validation error.
+      // Step 2: the streamed path needs the same rows in the frame-global
+      // shared storage, against the same ceiling - and says so instead of
+      // drawing nothing behind an uncaptured validation error.
       expectRefusal(() => new WebGpuTransformStorage().reserve(mock.device, DEFAULT_ROW_CEILING + 1), 'shared transform storage');
     });
   });
