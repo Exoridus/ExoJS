@@ -163,7 +163,7 @@
           ],
           "params": [],
           "returnType": "StyleChangeHint | null",
-          "description": "Take the heaviest pending hint and settle the node, folding in whatever the attached TextStyle has latched since the last pass. A style carries its own dirty flag because it is mutated in place rather than assigned, so polling it here is what makes label.style.align = … land."
+          "description": "Take the heaviest pending hint and settle the node, folding in whatever the attached TextStyle has latched since the last pass. A style carries its own dirty flag because it is mutated in place rather than assigned, so polling it here is what makes label.style.align = ... land."
         },
         {
           "name": "_markDirty",

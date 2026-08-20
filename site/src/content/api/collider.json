@@ -552,7 +552,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space polygon outward normals [x0, y0, …] (only meaningful for polygon shapes)."
+          "description": "World-space polygon outward normals [x0, y0, ...] (only meaningful for polygon shapes)."
         },
         {
           "name": "worldTransform",
@@ -618,7 +618,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space polygon vertices [x0, y0, …] (only meaningful for polygon shapes)."
+          "description": "World-space polygon vertices [x0, y0, ...] (only meaningful for polygon shapes)."
         }
       ],
       "paragraphs": [],

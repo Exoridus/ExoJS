@@ -793,7 +793,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true when the platform cancelled this pointer during this frame (system gesture, focus loss, …)."
+          "description": "true when the platform cancelled this pointer during this frame (system gesture, focus loss, ...)."
         },
         {
           "name": "currentState",
