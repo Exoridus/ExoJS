@@ -2,15 +2,17 @@ import { describe, expect, test, vi } from 'vitest';
 
 import { AssetDecoder } from '#assets/AssetDecoder';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
-import { type CanonicalAsset, canonicalAssetKey, canonicalizeSource } from '#assets/canonicalKey';
-import type { AssetConstructor } from '#assets/FactoryRegistry';
 import type { CacheStore } from '#assets/CacheStore';
 import type { CacheRequest, CacheStrategy } from '#assets/CacheStrategy';
+import { type CanonicalAsset, canonicalAssetKey, canonicalizeSource } from '#assets/canonicalKey';
+import type { AssetConstructor } from '#assets/FactoryRegistry';
 import type { Loader } from '#assets/Loader';
+import type { LoaderScope } from '#assets/LoaderScope';
 
 class TypeA {}
 
 const fakeLoader = {} as Loader;
+const fakeScope = { id: 1, kind: 'dependency' } as unknown as LoaderScope;
 
 const createCacheStoreMock = (overrides: Partial<CacheStore> = {}): CacheStore => ({
   load: vi.fn(async (): Promise<unknown | null> => null),
@@ -75,7 +77,7 @@ describe('AssetDecoder', () => {
   test('_fetchWithHandler invokes the handler with the built context and stores the result', async () => {
     const { decoder, storeResource, canonical } = createDecoder();
     const handler = vi.fn(async () => 'handler-result');
-    const context = decoder._buildHandlerContext('id:1:hero.png');
+    const context = decoder._buildHandlerContext('1|url:hero.png', fakeScope);
 
     const result = await decoder._fetchWithHandler(canonical(TypeA, 'hero.png'), { source: 'hero.png' }, handler, context);
 
@@ -89,7 +91,7 @@ describe('AssetDecoder', () => {
     const handler = vi.fn(async () => {
       throw new Error('bad payload');
     });
-    const context = decoder._buildHandlerContext('id:1:hero.png');
+    const context = decoder._buildHandlerContext('1|url:hero.png', fakeScope);
 
     await expect(decoder._fetchWithHandler(canonical(TypeA, 'hero.png'), {}, handler, context)).rejects.toThrow(
       /Failed to load "hero.png" from "hero.png": bad payload/,
@@ -100,7 +102,9 @@ describe('AssetDecoder', () => {
   test('_dispatchFetch rejects with a clear error when no bindAsset handler is registered for the type', async () => {
     const { decoder, storeResource, canonical } = createDecoder();
 
-    await expect(decoder._dispatchFetch(canonical(TypeA, 'hero.png'))).rejects.toThrow(/No asset handler registered for TypeA/);
+    await expect(decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope)).rejects.toThrow(
+      /No asset handler registered for TypeA/,
+    );
     expect(storeResource).not.toHaveBeenCalled();
   });
 
@@ -110,7 +114,7 @@ describe('AssetDecoder', () => {
 
     typeRegistry.bindAsset({ ctor: TypeA }, { load });
 
-    await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), { scale: 2 });
+    await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), { scale: 2 }, undefined, fakeScope);
 
     expect(load).toHaveBeenCalledWith({ source: 'hero.png', options: { scale: 2 } }, expect.objectContaining({ identityKey: expect.any(String) }));
     expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), { config: { source: 'hero.png', options: { scale: 2 } } });
@@ -122,7 +126,7 @@ describe('AssetDecoder', () => {
 
     typeRegistry.bindAsset({ ctor: TypeA, storageName: 'my-type-ns' }, { load: async (_config, ctx) => ctx.fetchText('hero.png') });
 
-    await decoder._dispatchFetch(canonical(TypeA, 'hero.png'));
+    await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope);
 
     expect(requests[0]?.storageName).toBe('my-type-ns');
     expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), 'ns-value');
@@ -160,10 +164,10 @@ describe('AssetDecoder', () => {
     const { strategy, requests } = createFakeStrategy(() => 'ctx-text-value');
     const { decoder, canonical } = createDecoder({ cacheStrategy: strategy });
 
-    const context = decoder._buildHandlerContext('id:1:hero.txt');
+    const context = decoder._buildHandlerContext('1|url:hero.txt', fakeScope);
 
     expect(context.loader).toBe(fakeLoader);
-    expect(context.identityKey).toBe('id:1:hero.txt');
+    expect(context.identityKey).toBe('1|url:hero.txt');
 
     const value = await context.fetchText('hero.txt');
 

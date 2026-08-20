@@ -7,6 +7,7 @@ import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
 import { type CanonicalAsset, resolveAssetUrl } from './canonicalKey';
 import type { AssetLoaderContext, Loader } from './Loader';
+import type { LoaderScope } from './LoaderScope';
 import { isAbortError } from './SharedAbort';
 
 /** Sink a decoded resource is handed to, returning the value callers should see for it. */
@@ -159,11 +160,15 @@ export class AssetDecoder {
    * belongs to. Every `fetch*` helper forwards it automatically; it is also
    * exposed on the context so a handler doing its own fetching or decoding can
    * honor it.
+   *
+   * `scope` owns whatever sub-assets this handler loads, and lives exactly as
+   * long as the asset being built.
    * @internal
    */
-  public _buildHandlerContext(identityKey: string, storageName?: string, signal?: AbortSignal): AssetLoaderContext {
+  public _buildHandlerContext(identityKey: string, scope: LoaderScope, storageName?: string, signal?: AbortSignal): AssetLoaderContext {
     const ctx: AssetLoaderContext = {
       loader: this._loader,
+      scope,
       identityKey,
       signal,
       fetchText: (source: string) => this._contextFetch<string>(source, storageName ?? '__ctx_text', r => r.text(), signal),
@@ -216,7 +221,7 @@ export class AssetDecoder {
    * handler context's `fetch*` helpers.
    * @internal
    */
-  public _dispatchFetch(asset: CanonicalAsset, options?: unknown, signal?: AbortSignal): Promise<unknown> {
+  public _dispatchFetch(asset: CanonicalAsset, options: unknown, signal: AbortSignal | undefined, scope: LoaderScope): Promise<unknown> {
     const handlerEntry = this._typeRegistry.getHandler(asset.type);
 
     if (!handlerEntry) {
@@ -229,7 +234,7 @@ export class AssetDecoder {
       Object.assign(config, options as Record<string, unknown>);
     }
 
-    const context = this._buildHandlerContext(asset.key, handlerEntry.storageName, signal);
+    const context = this._buildHandlerContext(asset.key, scope, handlerEntry.storageName, signal);
 
     return this._fetchWithHandler(asset, config, handlerEntry.load, context);
   }

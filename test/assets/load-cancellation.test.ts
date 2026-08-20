@@ -133,8 +133,8 @@ describe('asset load cancellation', () => {
   test('two claim scopes sharing one canonical fetch abort it only when both release', async () => {
     const calls = mockPendingFetch();
     const loader = createCoreLoader();
-    const scopeA = Symbol('scope-a');
-    const scopeB = Symbol('scope-b');
+    const scopeA = loader.scope('scope-a');
+    const scopeB = loader.scope('scope-b');
     const key = loader['_canonicalize'](Texture, 'same.png').key;
 
     const queueA = loader._loadClaimed(scopeA, 'same.png');

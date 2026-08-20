@@ -8,6 +8,7 @@ import { AssetRef } from './AssetRef';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { CanonicalAsset, CanonicalAssetKey } from './canonicalKey';
 import type { AssetConstructor } from './FactoryRegistry';
+import type { LoaderScope } from './LoaderScope';
 import type { SeamlessAdapter } from './seamless';
 import { isAbortError, SharedAbort } from './SharedAbort';
 import { WeakHandleSet } from './WeakHandleSet';
@@ -17,8 +18,13 @@ interface QueueEntry {
   readonly options?: unknown;
 }
 
-/** Resolves a `(type, source, options)` triple to the one canonical identity every fetch and claim is keyed by. @internal */
-export type CanonicalResolver = (type: AssetConstructor, source: string, options?: unknown) => CanonicalAsset;
+/** The `Loader` services `AssetResidency` needs but does not own. @internal */
+export interface AssetResidencyHooks {
+  /** Resolves a `(type, source, options)` triple to the one canonical identity every fetch and claim is keyed by. */
+  readonly canonicalize: (type: AssetConstructor, source: string, options?: unknown) => CanonicalAsset;
+  /** Mints the claim scope that owns whatever sub-assets one asset's own load pulls in. */
+  readonly createDependencyScope: (asset: CanonicalAsset) => LoaderScope;
+}
 
 /** The `Loader` signals `AssetResidency` dispatches on directly — owned by `Loader` (public API), referenced here for dispatch only. */
 export interface AssetResidencySignals {
@@ -100,7 +106,7 @@ export class AssetResidency {
   private readonly _typeRegistry: AssetTypeRegistry;
   private readonly _decoder: AssetDecoder;
   private readonly _signals: AssetResidencySignals;
-  private readonly _canonicalize: CanonicalResolver;
+  private readonly _hooks: AssetResidencyHooks;
 
   private readonly _resources = new Map<CanonicalAssetKey, ResidentEntry>();
   // Reverse lookup: loaded resource object → the (type, source) it was first
@@ -134,7 +140,12 @@ export class AssetResidency {
   private readonly _refs = new Map<CanonicalAssetKey, { readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
-  private readonly _claims = new Map<CanonicalAssetKey, { scopes: Set<symbol>; asset: CanonicalAsset }>();
+  private readonly _claims = new Map<CanonicalAssetKey, { scopes: Set<LoaderScope>; asset: CanonicalAsset }>();
+  // The scope that owns whatever sub-assets a key's own load pulled in. Owned by
+  // the PARENT KEY, never by whichever consumer happened to start the fetch: a
+  // deduped load serves many consumers, and the first one to release must not
+  // take a dependency the others still need with it.
+  private readonly _dependencyScopes = new Map<CanonicalAssetKey, LoaderScope>();
   private readonly _evicted = new Set<CanonicalAssetKey>();
   private readonly _handleKeys = new WeakMap<object, CanonicalAssetKey>();
   // Every handle/ref residency has EVER registered under a key — a WeakSet, so
@@ -151,18 +162,12 @@ export class AssetResidency {
   private _backgroundLoaded = 0;
   private _backgroundResolve: (() => void) | null = null;
 
-  public constructor(
-    typeRegistry: AssetTypeRegistry,
-    decoder: AssetDecoder,
-    signals: AssetResidencySignals,
-    concurrency: number,
-    canonicalize: CanonicalResolver,
-  ) {
+  public constructor(typeRegistry: AssetTypeRegistry, decoder: AssetDecoder, signals: AssetResidencySignals, concurrency: number, hooks: AssetResidencyHooks) {
     this._typeRegistry = typeRegistry;
     this._decoder = decoder;
     this._signals = signals;
     this._concurrency = concurrency;
-    this._canonicalize = canonicalize;
+    this._hooks = hooks;
   }
 
   /** Read-only, detached snapshot for diagnostics and support bundles. @internal */
@@ -278,11 +283,11 @@ export class AssetResidency {
    * re-armed handle so every dangling consumer heals in place.
    * @internal
    */
-  public _claim(asset: CanonicalAsset, claimer: symbol): void {
+  public _claim(asset: CanonicalAsset, claimer: LoaderScope): void {
     let entry = this._claims.get(asset.key);
 
     if (entry === undefined) {
-      entry = { scopes: new Set<symbol>(), asset };
+      entry = { scopes: new Set<LoaderScope>(), asset };
       this._claims.set(asset.key, entry);
     }
 
@@ -308,7 +313,7 @@ export class AssetResidency {
    * payload immediately (refcount 0).
    * @internal
    */
-  public _release(key: CanonicalAssetKey, claimer: symbol): void {
+  public _release(key: CanonicalAssetKey, claimer: LoaderScope): void {
     const entry = this._claims.get(key);
 
     if (entry === undefined) {
@@ -329,7 +334,7 @@ export class AssetResidency {
    * {@link _release} mutates `_claims`, so we must not delete during iteration.
    * @internal
    */
-  public _releaseScope(claimer: symbol): void {
+  public _releaseScope(claimer: LoaderScope): void {
     const held: CanonicalAssetKey[] = [];
 
     for (const [key, entry] of this._claims) {
@@ -394,6 +399,7 @@ export class AssetResidency {
       }
 
       this._evicted.add(key);
+      this._releaseDependencies(key);
       // A load that just settled may leave a resolved-but-not-yet-cleaned
       // in-flight entry (its `.finally` cleanup is a pending microtask). Drop it
       // so the reclaim's re-fetch starts fresh instead of deduping onto that
@@ -414,6 +420,7 @@ export class AssetResidency {
     // claim re-drives the fetch into the handles this abort leaves behind.
     else if (this._abortInFlight(key)) {
       this._evicted.add(key);
+      this._releaseDependencies(key);
     }
 
     const queued = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
@@ -455,6 +462,7 @@ export class AssetResidency {
     }
 
     this._evicted.add(asset.key);
+    this._releaseDependencies(asset.key);
     // Drop a resolved-but-not-yet-cleaned in-flight entry so the reclaim's
     // re-fetch starts fresh instead of deduping onto it — see the seamless
     // branch above for the full reasoning; it applies verbatim here.
@@ -478,7 +486,7 @@ export class AssetResidency {
    * started immediately.
    * @internal
    */
-  public _adopt(handle: object, claimer: symbol, background = false): void {
+  public _adopt(handle: object, claimer: LoaderScope, background = false): void {
     const meta = _readMeta(handle);
 
     if (meta === undefined) {
@@ -497,7 +505,7 @@ export class AssetResidency {
     const retryingFailedLeaf = leafState?.value === 'failed';
     if (leafState?.value === 'idle' || retryingFailedLeaf) leafState.begin();
 
-    const asset = this._canonicalize(ctor, meta.src, meta.opts);
+    const asset = this._hooks.canonicalize(ctor, meta.src, meta.opts);
     const key = asset.key;
 
     if (handle instanceof AssetRef) {
@@ -897,12 +905,41 @@ export class AssetResidency {
     let fetch: Promise<unknown>;
 
     try {
-      fetch = this._decoder._dispatchFetch(asset, options, abort.signal);
+      fetch = this._decoder._dispatchFetch(asset, options, abort.signal, this._dependencyScopeFor(asset));
     } catch (error: unknown) {
       fetch = Promise.reject(this._normalizeError(error));
     }
 
     return this._trackInFlight(asset, fetch, abort);
+  }
+
+  /**
+   * The scope a key's sub-asset loads claim under. One per key, reused across
+   * retries so a second attempt does not strand the first attempt's claims, and
+   * destroyed with the key itself.
+   * @internal
+   */
+  public _dependencyScopeFor(asset: CanonicalAsset): LoaderScope {
+    let scope = this._dependencyScopes.get(asset.key);
+
+    if (scope === undefined) {
+      scope = this._hooks.createDependencyScope(asset);
+      this._dependencyScopes.set(asset.key, scope);
+    }
+
+    return scope;
+  }
+
+  /** Drop a key's dependency claims. Sub-assets other owners still hold stay resident. */
+  private _releaseDependencies(key: CanonicalAssetKey): void {
+    const scope = this._dependencyScopes.get(key);
+
+    if (scope === undefined) {
+      return;
+    }
+
+    this._dependencyScopes.delete(key);
+    this._releaseScope(scope);
   }
 
   /**
@@ -993,6 +1030,10 @@ export class AssetResidency {
     }
 
     if (!cancelled) {
+      // The asset never materialized, so nothing owns whatever its handler
+      // managed to pull in before failing. A cancel is left alone: the key's own
+      // eviction path already released them.
+      this._releaseDependencies(asset.key);
       this._signals.onError.dispatch(asset.type, asset.source, err);
     }
   }
@@ -1374,6 +1415,7 @@ export class AssetResidency {
     this._claims.clear();
     this._evicted.clear();
     this._aliases.clear();
+    this._dependencyScopes.clear();
   }
 
   /**
@@ -1389,6 +1431,7 @@ export class AssetResidency {
   private _forgetKey(key: CanonicalAssetKey, liveFetch: boolean): void {
     this._claims.delete(key);
     this._evicted.delete(key);
+    this._releaseDependencies(key);
 
     if (liveFetch) {
       return;
@@ -1491,6 +1534,7 @@ export class AssetResidency {
     this._refs.clear();
     this._claims.clear();
     this._evicted.clear();
+    this._dependencyScopes.clear();
 
     this._backgroundQueue.length = 0;
     this._backgroundActive = 0;

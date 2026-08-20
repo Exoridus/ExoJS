@@ -260,6 +260,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "Loadable: type alias",
   "Loader: class",
   "LoaderOptions: interface",
+  "LoaderScope: class",
+  "LoaderScopeKind: type alias",
   "LoadingProgress: interface",
   "LoadingQueue: class",
   "LogEntry: interface",

@@ -102,9 +102,9 @@ registerAssetKind('stub' as keyof AssetDefinitions, { isValue: false, adapter: s
 test('readiness x residency: seeded random claim/release/fetch/fail sequence keeps every invariant', async () => {
   const R_KEYS = ['r0', 'r1', 'r2'];
   const L_KEYS = ['l0', 'l1', 'l2'];
-  const SCOPES = [Symbol('scope0'), Symbol('scope1'), Symbol('scope2'), Symbol('scope3')];
-
   const loader = new Loader();
+  const SCOPES = [loader.scope('scope0'), loader.scope('scope1'), loader.scope('scope2'), loader.scope('scope3')];
+
   let fetchCount = 0;
   // Handler invocations are synchronous up to their own Promise executor (verified
   // against AssetDecoder._dispatchFetch/_fetchWithHandler), so `pending` always

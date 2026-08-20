@@ -22,9 +22,8 @@ function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Lo
 }
 
 interface ResidencyInternals {
-  _unloadOne(type: unknown, alias: string): void;
+  _unloadOne(asset: unknown): void;
   unloadAll(type?: unknown): void;
-  _getAliasesForIdentity(identityKey: string): Set<string> | undefined;
 }
 
 /** The internal hard-reset path. Not public on `Loader`: it forgets every scope's
@@ -47,14 +46,14 @@ function hardUnloadAsset(loader: Loader, asset: Asset<unknown>): void {
   const { type: _type, source, ...options } = asset._config;
   const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string, options?: unknown): unknown })._canonicalize.bind(loader);
 
-  residencyOf(loader)._unloadOne(canonicalize(ctor, source, Object.keys(options).length > 0 ? options : undefined) as never);
+  residencyOf(loader)._unloadOne(canonicalize(ctor, source, Object.keys(options).length > 0 ? options : undefined));
 }
 
 /** Hard-removes the canonical asset a `(type, source)` pair resolves to. */
 function hardUnloadPath(loader: Loader, type: unknown, source: string): void {
   const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string): unknown })._canonicalize.bind(loader);
 
-  residencyOf(loader)._unloadOne(canonicalize(type, source) as never);
+  residencyOf(loader)._unloadOne(canonicalize(type, source));
 }
 
 // Declaration merges for test-only asset types
@@ -565,10 +564,10 @@ describe('Asset / Assets identity and alias semantics', () => {
     bindMockAsset(loader);
     mockFetch();
 
-    await loader.load({
-      direct: new Asset({ type: 'mockAsset', source: 'images/hero.dat' }),
-      viaDotSegments: new Asset({ type: 'mockAsset', source: './images/sub/../hero.dat' }),
-    });
+    await Promise.all([
+      loader.load(new Asset({ type: 'mockAsset', source: 'images/hero.dat' })),
+      loader.load(new Asset({ type: 'mockAsset', source: './images/sub/../hero.dat' })),
+    ]);
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(loader._peekResource(MockAssetType, 'images/hero.dat')).toBe(loader._peekResource(MockAssetType, './images/sub/../hero.dat'));
@@ -627,13 +626,15 @@ describe('Asset / Assets identity and alias semantics', () => {
       logo: { type: 'texture', source: 'logo.png' },
     });
 
-    await loader.load(container);
+    const scope = loader.scope();
+
+    await scope.load(container);
 
     expect(loader._peekResource(Texture, 'hero.png')).not.toBeNull();
     expect(loader._peekResource(Texture, 'logo.png')).not.toBeNull();
     expect((container.hero as Texture).loadState).toBe('ready');
 
-    loader.release(container);
+    scope.release(container);
 
     // Last claim released → payload evicted; the leaves heal back to 'loading'.
     expect(loader._peekResource(Texture, 'hero.png')).toBeNull();
@@ -1109,23 +1110,25 @@ describe('keyFor()', () => {
 // Coverage sweep — release() edge cases: unregistered type, never-loaded fallback
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('release() edge cases', () => {
+describe('LoaderScope.release() edge cases', () => {
   test('release(asset) is a no-op when the asset type was never registered', () => {
     const loader = new Loader({ basePath: '/' });
+    const scope = loader.scope();
     const orphan = new Asset({ type: 'mockAsset', source: 'x.dat' });
 
-    expect(() => loader.release(orphan)).not.toThrow();
+    expect(() => scope.release(orphan)).not.toThrow();
   });
 
   test('release(asset) is a no-op when the asset was never loaded, and is idempotent', () => {
     const loader = new Loader({ basePath: '/' });
+    const scope = loader.scope();
 
     loader.bindAsset<string>({ ctor: MockAssetType, typeNames: ['mockAsset'] }, { load: async request => `loaded:${request.source}` });
 
     const neverLoaded = new Asset({ type: 'mockAsset', source: 'never.dat' });
 
-    expect(() => loader.release(neverLoaded)).not.toThrow();
-    expect(() => loader.release(neverLoaded)).not.toThrow();
+    expect(() => scope.release(neverLoaded)).not.toThrow();
+    expect(() => scope.release(neverLoaded)).not.toThrow();
     expect(loader._peekResource(MockAssetType, 'never.dat')).toBeNull();
   });
 
@@ -1134,17 +1137,19 @@ describe('release() edge cases', () => {
     // thrown. A bare loader (no core bindings) never adopted the leaf, so its
     // release finds no registered key and does nothing.
     const loader = new Loader({ basePath: '/' });
+    const scope = loader.scope();
     const container = new Assets({ orphan: { type: 'texture', source: 'x.png' } });
 
-    expect(() => loader.release(container)).not.toThrow();
+    expect(() => scope.release(container)).not.toThrow();
   });
 
   test('release(assets) is a silent no-op when the container was never adopted/loaded', () => {
     // Releasing entries that were never tracked does nothing.
     const loader = createCoreLoader({ basePath: '/' });
+    const scope = loader.scope();
     const container = new Assets({ orphan: { type: 'texture', source: 'never.png' } });
 
-    expect(() => loader.release(container)).not.toThrow();
+    expect(() => scope.release(container)).not.toThrow();
     expect(loader._peekResource(Texture, 'never.png')).toBeNull();
   });
 });

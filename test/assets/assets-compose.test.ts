@@ -14,6 +14,7 @@ import { Texture } from '#rendering/texture/Texture';
 
 function createCoreLoader(): Loader {
   const loader = new Loader();
+  const owner = loader.scope('owner');
   materializeAssetBindings(loader, coreAssetBindings);
 
   return loader;
@@ -247,18 +248,19 @@ describe('composed catalogs in the loader', () => {
   it('loads and releases like an ordinary catalog, healing the input catalogs own leaves', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
+    const owner = loader.scope('owner');
     const shared = Assets.from({ boom: 'sfx/boom.ogg' });
     const local = Assets.from({ hit: 'sfx/hit.ogg' });
     const composed = Assets.compose(shared, local);
 
-    await loader.load(composed);
+    await owner.load(composed);
 
     // The composition shares its inputs' leaves, so THOSE handles heal.
     expect(shared.boom).toBe(composed.boom);
     expect(shared.boom.loadState).toBe('ready');
     expect(local.hit.audioBuffer).not.toBeNull();
 
-    loader.release(composed);
+    owner.release(composed);
 
     expect(shared.boom.audioBuffer).toBeNull();
     expect(local.hit.audioBuffer).toBeNull();
@@ -267,11 +269,12 @@ describe('composed catalogs in the loader', () => {
   it('claims each key exactly once — composition adds no ownership of its own', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
+    const owner = loader.scope('owner');
     const shared = Assets.from({ boom: 'sfx/boom.ogg' });
     const composed = Assets.compose(shared, shared);
 
-    await loader.load(composed);
-    loader.release(composed);
+    await owner.load(composed);
+    owner.release(composed);
 
     expect(shared.boom.audioBuffer).toBeNull();
   });

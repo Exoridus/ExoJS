@@ -26,6 +26,8 @@ import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
 import { type CanonicalAsset, type CanonicalAssetKey, canonicalAssetKey, canonicalizeSource } from './canonicalKey';
 import type { AssetConstructor } from './FactoryRegistry';
+import { LoadBatch } from './LoadBatch';
+import { LoaderScope } from './LoaderScope';
 import { LoadingQueue } from './LoadingQueue';
 import type { SeamlessAdapter } from './seamless';
 import { isAbortError } from './SharedAbort';
@@ -72,11 +74,24 @@ export type InferLoadedMap<M extends Record<string, CatalogEntry>> = {
  * built-in asset types.
  */
 export interface AssetLoaderContext {
-  /** The owning {@link Loader} instance. */
+  /**
+   * The owning {@link Loader} instance, for configuration and registry reads.
+   *
+   * Do NOT load sub-assets through it: anything acquired on the loader itself is
+   * held for the application's lifetime and outlives the asset being built. Use
+   * {@link scope} instead.
+   */
   readonly loader: Loader;
   /**
-   * The identity key for this load — `id:<typeId>:<discriminator>`.
-   * Useful for diagnostics; also equals the key used for in-flight dedup.
+   * The claim scope that owns whatever sub-assets this handler loads. It lives
+   * exactly as long as the asset being built: when that asset is released by its
+   * last owner, everything loaded through this scope is released with it —
+   * unless another owner still holds it independently.
+   */
+  readonly scope: LoaderScope;
+  /**
+   * The canonical key for this load. Useful for diagnostics; also the key the
+   * loader dedupes in-flight requests and claims on.
    */
   readonly identityKey: string;
   /**
@@ -260,12 +275,15 @@ export class Loader {
   }
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
-  /** App-lifetime claim scope for direct `app.loader.get/load(…)` calls. @internal */
-  private readonly _rootClaimer = Symbol('app-loader');
+  /**
+   * Application-lifetime claim scope for direct `app.loader.get/load(…)` calls.
+   * Deliberately not exposed: its claims are released only by {@link destroy},
+   * so no caller can drop an app-lifetime claim another consumer relies on.
+   */
+  private readonly _appScope = new LoaderScope(this, 'app', '(app)');
 
-  private _fgBatchActive = 0;
-  private _fgBatchLoaded = 0;
-  private _fgBatchTotal = 0;
+  /** Aggregate foreground progress across every scope. Each scope also reports its own. */
+  private readonly _batch = new LoadBatch(this);
 
   /** Dispatched after each background-queue item completes, with the running loaded/total counts. */
   public readonly onProgress = new Signal<[loaded: number, total: number]>();
@@ -325,14 +343,41 @@ export class Loader {
 
     const signals: AssetResidencySignals = { onProgress: this.onProgress, onLoaded: this.onLoaded, onError: this.onError };
 
-    this._residency = new AssetResidency(this._typeRegistry, this._decoder, signals, options.concurrency ?? 6, (type, source, assetOptions) =>
-      this._canonicalize(type, source, assetOptions),
-    );
+    this._residency = new AssetResidency(this._typeRegistry, this._decoder, signals, options.concurrency ?? 6, {
+      canonicalize: (type, source, assetOptions) => this._canonicalize(type, source, assetOptions),
+      createDependencyScope: asset => new LoaderScope(this, 'dependency', asset.source),
+    });
 
     // Bound last, once both collaborators exist: the decoder feeds what it
     // decodes back into the residency, which in turn needs the decoder to
     // dispatch fetches.
     this._decoder._bindResourceStore((asset, resource) => this._residency._storeResource(asset, resource));
+  }
+
+  /**
+   * Takes a new claim scope: an owner whose assets are freed when it is
+   * destroyed, rather than when the application ends.
+   *
+   * Every call returns an independent owner. Two scopes taken under the same
+   * name are still two owners — a name is a label for diagnostics, never a
+   * lookup key — so one consumer can never release another's claim.
+   *
+   * Assets acquired directly on the loader are claimed for the application's
+   * lifetime instead, and released only by {@link destroy}.
+   *
+   * @example
+   * ```ts
+   * const level = app.loader.scope('level-1');
+   * const hud = app.loader.scope('ui:hud');
+   *
+   * const font = level.get('fonts/ui.png');
+   * hud.get('fonts/ui.png'); // same instance, one fetch, two independent owners
+   *
+   * level.destroy(); // the font stays resident — the HUD still owns it
+   * ```
+   */
+  public scope(name?: string): LoaderScope {
+    return new LoaderScope(this, 'scope', name);
   }
 
   // -----------------------------------------------------------------------
@@ -515,7 +560,7 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
-    return this._loadClaimed(this._rootClaimer, arg0, arg1);
+    return this._loadClaimed(this._appScope, arg0, arg1);
   }
 
   /**
@@ -526,7 +571,7 @@ export class Loader {
    * frees) is observationally a no-op for existing callers.
    * @internal
    */
-  public _loadClaimed(claimer: symbol, arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
+  public _loadClaimed(claimer: LoaderScope, arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
     // 1. Single Asset<T>
     if (arg0 instanceof AssetImpl) {
       if (arg1 !== undefined) {
@@ -592,17 +637,17 @@ export class Loader {
       const canonical = this._canonicalize(ctor, path, options);
 
       this._claim(canonical, claimer);
-      this._onFgBatchStart(path, path);
+      this._onFgBatchStart(claimer, path, path);
       let notifyFn: ((success: boolean) => void) | null = null;
       const promise = this._residency._loadSingle(canonical, options).then(
         v => {
           notifyFn?.(true);
-          this._onFgBatchSettled(path, true);
+          this._onFgBatchSettled(claimer, path, true);
           return v;
         },
         e => {
           notifyFn?.(false);
-          this._onFgBatchSettled(path, false, this._settleError(e));
+          this._onFgBatchSettled(claimer, path, false, this._settleError(e));
           throw e;
         },
       );
@@ -758,7 +803,7 @@ export class Loader {
    */
   public get<T extends object>(leaf: CatalogResourceLeaf<T>): CatalogResourceLeaf<T>;
   public get(input: string | object, options?: unknown): unknown {
-    return this._getClaimed(this._rootClaimer, input, options);
+    return this._getClaimed(this._appScope, input, options);
   }
 
   /**
@@ -770,7 +815,7 @@ export class Loader {
    * handle reads `'loading'`, which `_getSeamless` alone would not re-fetch).
    * @internal
    */
-  public _getClaimed(claimer: symbol, input: string | object, options?: unknown): unknown {
+  public _getClaimed(claimer: LoaderScope, input: string | object, options?: unknown): unknown {
     // Assets<M> container — adopt every handle-hybrid leaf (fill in place, claim
     // under `claimer`) and return the leaves keyed by their record key.
     if (input instanceof AssetsImpl) {
@@ -925,46 +970,20 @@ export class Loader {
   }
 
   /**
-   * Releases the app-lifetime claim on an asset. When the released claim is the
-   * last one on that key, the payload is evicted immediately: a seamless
-   * handle's payload is dropped in place (identity preserved, `loadState` →
-   * `'loading'`) so a later {@link get} heals every dangling consumer, and a
-   * not-yet-started background entry is dropped from the queue.
+   * Backs {@link LoaderScope.release}: resolve every accepted release form to a
+   * canonical key and drop `claimer`'s claim on it.
    *
-   * Accepts the deferred handle / value-ref returned by {@link get}, an
-   * {@link Asset} descriptor, a whole {@link Assets} catalog, a catalog leaf, or
-   * the `(type, source)` pair. Releasing an unclaimed asset — a valid descriptor,
-   * catalog, or catalog leaf that was never adopted/loaded — is a no-op, and
-   * releasing twice is idempotent.
-   *
-   * The `release(handle)` form resolves the key via an internal handle → key map
-   * that is populated ONLY for adopted seamless handles and value-refs (i.e. a
-   * catalog leaf that has actually been adopted via {@link get}/{@link load}). A
-   * materialized-but-never-adopted catalog leaf is recognized by its meta stamp
-   * and stays an idempotent no-op. A handle this loader has EVER issued also
-   * stays a no-op even if its claim/key bookkeeping was separately forgotten by
-   * an internal hard reset — the fail-loud check is deliberately independent of
-   * that state, so the same handle never throws or not depending on unrelated
-   * internal teardown ordering.
-   *
-   * Anything else — a resolved non-leaf resource (one loaded with
-   * `load(Asset.type('bmFont', …))`, or unpacked by {@link loadContainer}), or an
-   * arbitrary object this loader has never seen — has no claim identity
-   * `release()` can resolve, and **throws** naming the supported forms instead of
-   * silently discarding the call. Use the `release(asset)` or `release(type, source)`
-   * form for a non-leaf resource.
-   *
-   * Only this loader's app-lifetime claim is dropped. A claim held by another
-   * scope — a scene's `scene.loader`, which releases on scene teardown — is
-   * never touched, so one owner can never free another owner's assets.
+   * The handle form resolves through an internal handle → key map populated only
+   * for adopted seamless handles and value-refs. A materialized-but-never-adopted
+   * catalog leaf is recognized by its meta stamp and stays an idempotent no-op,
+   * as does a handle this loader has EVER issued — that check is deliberately
+   * independent of current claim state, so the same object never throws or not
+   * depending on unrelated internal teardown ordering.
+   * @internal
    */
-  public release(handle: object): void;
-  public release<T>(asset: Asset<T>): void;
-  public release<M extends Record<string, CatalogEntry>>(assets: Assets<M>): void;
-  public release(type: AssetConstructor, source: string): void;
-  public release(handleOrType: object | AssetConstructor, source?: string): void {
+  public _releaseFrom(claimer: LoaderScope, handleOrType: object | AssetConstructor, source?: string): void {
     if (typeof source === 'string') {
-      this._release(this._canonicalize(handleOrType as AssetConstructor, source).key, this._rootClaimer);
+      this._release(this._canonicalize(handleOrType as AssetConstructor, source).key, claimer);
 
       return;
     }
@@ -973,14 +992,14 @@ export class Loader {
     // registered key, so its release is a silent no-op.
     if (handleOrType instanceof AssetsImpl) {
       for (const leaf of Object.values((handleOrType as AssetsImpl<Record<string, AssetInput>>).entries)) {
-        this.release(leaf as object);
+        this._releaseFrom(claimer, leaf);
       }
 
       return;
     }
 
-    // A descriptor resolves to the same `(type, source)` key the load path
-    // claimed it under (see `_createLoadingQueue`).
+    // A descriptor resolves to the same canonical key the load path claimed it
+    // under (see `_createLoadingQueue`).
     if (handleOrType instanceof AssetImpl) {
       const asset = handleOrType as Asset<unknown>;
       const ctor = this._typeRegistry.resolveTypeName(asset.type);
@@ -989,7 +1008,7 @@ export class Loader {
         const { type: _type, source: assetSource, ...rest } = asset._config;
         const options = Object.keys(rest).length > 0 ? rest : undefined;
 
-        this._release(this._canonicalize(ctor, assetSource, options).key, this._rootClaimer);
+        this._release(this._canonicalize(ctor, assetSource, options).key, claimer);
       }
 
       return;
@@ -998,18 +1017,14 @@ export class Loader {
     const key = this._residency._getHandleKey(handleOrType);
 
     if (key !== undefined) {
-      this._release(key, this._rootClaimer);
+      this._release(key, claimer);
       return;
     }
 
-    // A materialized catalog leaf (meta stamp) or a handle/ref residency has
-    // EVER issued — even one whose claim/key bookkeeping was since forgotten by
-    // an internal hard reset — has a real, just-currently-unclaimed identity:
-    // stay a no-op. This check is deliberately state-independent, so the same
-    // object never throws or not depending on unrelated internal teardown
-    // ordering that happened since it was handed out.
     if (_readMeta(handleOrType) === undefined && !this._residency._wasEverRegisteredHandle(handleOrType)) {
-      throw new Error('Loader.release(): this object has no claim identity. Release its descriptor, catalog leaf/catalog, or the (type, source) pair instead.');
+      throw new Error(
+        'LoaderScope.release(): this object has no claim identity. Release its descriptor, catalog leaf/catalog, or the (type, source) pair instead.',
+      );
     }
   }
 
@@ -1192,7 +1207,7 @@ export class Loader {
    * `load(target, { priority: LoadPriority.Background })`.
    * @internal
    */
-  public _adopt(handle: object, claimer: symbol, background = false): void {
+  public _adopt(handle: object, claimer: LoaderScope, background = false): void {
     this._residency._adopt(handle, claimer, background);
   }
 
@@ -1202,7 +1217,7 @@ export class Loader {
    * re-armed handle so every dangling consumer heals in place.
    * @internal
    */
-  public _claim(asset: CanonicalAsset, claimer: symbol): void {
+  public _claim(asset: CanonicalAsset, claimer: LoaderScope): void {
     this._residency._claim(asset, claimer);
   }
 
@@ -1211,7 +1226,7 @@ export class Loader {
    * payload immediately (refcount 0).
    * @internal
    */
-  public _release(key: CanonicalAssetKey, claimer: symbol): void {
+  public _release(key: CanonicalAssetKey, claimer: LoaderScope): void {
     this._residency._release(key, claimer);
   }
 
@@ -1222,12 +1237,12 @@ export class Loader {
    * delete during iteration.
    * @internal
    */
-  public _releaseScope(claimer: symbol): void {
+  public _releaseScope(claimer: LoaderScope): void {
     this._residency._releaseScope(claimer);
   }
 
   private _createLoadingQueue<T>(
-    claimer: symbol,
+    claimer: LoaderScope,
     items: Array<{ alias: string; asset: Asset<unknown> }>,
     buildResult: (results: Map<string, unknown>) => T,
   ): LoadingQueue<T> {
@@ -1236,7 +1251,7 @@ export class Loader {
     let notifyFn: ((success: boolean) => void) | null = null;
 
     const itemPromises = items.map(({ alias, asset }) => {
-      this._onFgBatchStart(alias, asset.source);
+      this._onFgBatchStart(claimer, alias, asset.source);
       const ctor = this._typeRegistry.resolveTypeName(asset.type);
 
       if (!ctor) {
@@ -1249,7 +1264,7 @@ export class Loader {
           },
           error => {
             notifyFn?.(false);
-            this._onFgBatchSettled(alias, false, this._settleError(error));
+            this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
             throw error;
           },
         );
@@ -1266,11 +1281,11 @@ export class Loader {
         resource => {
           results.set(alias, resource);
           notifyFn?.(true);
-          this._onFgBatchSettled(alias, true);
+          this._onFgBatchSettled(claimer, alias, true);
         },
         error => {
           notifyFn?.(false);
-          this._onFgBatchSettled(alias, false, this._settleError(error));
+          this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
           throw error;
         },
       );
@@ -1296,7 +1311,7 @@ export class Loader {
    * into the return.
    * @internal
    */
-  private _createAdoptedQueue<T>(claimer: symbol, entries: Array<[string, object]>, buildResult: (results: Map<string, unknown>) => T): LoadingQueue<T> {
+  private _createAdoptedQueue<T>(claimer: LoaderScope, entries: Array<[string, object]>, buildResult: (results: Map<string, unknown>) => T): LoadingQueue<T> {
     const results = new Map<string, unknown>();
     // Adoption registered every leaf under its residency key, so the reverse
     // lookup is the honest source for what this queue claimed — the Loader does
@@ -1306,18 +1321,18 @@ export class Loader {
 
     const itemPromises = entries.map(([alias, leaf]) => {
       const src = _readMeta(leaf)?.src ?? alias;
-      this._onFgBatchStart(alias, src);
+      this._onFgBatchStart(claimer, alias, src);
       const loaded = (leaf as { loaded: Promise<unknown> }).loaded;
 
       return loaded.then(
         value => {
           results.set(alias, value);
           notifyFn?.(true);
-          this._onFgBatchSettled(alias, true);
+          this._onFgBatchSettled(claimer, alias, true);
         },
         error => {
           notifyFn?.(false);
-          this._onFgBatchSettled(alias, false, this._settleError(error));
+          this._onFgBatchSettled(claimer, alias, false, this._settleError(error));
           throw error;
         },
       );
@@ -1337,7 +1352,7 @@ export class Loader {
    * level down — the residency aborts the in-flight fetch only once the key has
    * no claim scope left, so a sibling scene loading the same asset keeps it.
    */
-  private _cancelClaims(claimer: symbol, keys: readonly CanonicalAssetKey[]): void {
+  private _cancelClaims(claimer: LoaderScope, keys: readonly CanonicalAssetKey[]): void {
     for (const key of keys) {
       this._release(key, claimer);
     }
@@ -1347,33 +1362,19 @@ export class Loader {
   // Internal — foreground batch tracking
   // -----------------------------------------------------------------------
 
-  private _onFgBatchStart(key: string, url: string): void {
-    if (this._fgBatchActive === 0) {
-      this._fgBatchLoaded = 0;
-    }
-
-    this._fgBatchActive++;
-    this._fgBatchTotal++;
-
-    if (this._fgBatchActive === 1) {
-      this.onLoadStart.dispatch(key, url);
-    }
+  /**
+   * Report a started item to both the acquiring scope and the loader's aggregate
+   * counter, so a scope sees exactly its own work while the loader keeps
+   * reporting everything.
+   */
+  private _onFgBatchStart(claimer: LoaderScope, key: string, url: string): void {
+    claimer._batch.start(key, url);
+    this._batch.start(key, url);
   }
 
-  private _onFgBatchSettled(key: string, success: boolean, error?: Error): void {
-    if (success) {
-      this._fgBatchLoaded++;
-    } else if (error !== undefined) {
-      this.onLoadError.dispatch(key, error);
-    }
-
-    this._fgBatchActive--;
-    this.onLoadProgress.dispatch(this._fgBatchLoaded, this._fgBatchTotal, key);
-
-    if (this._fgBatchActive === 0) {
-      this._fgBatchTotal = 0;
-      this.onLoadComplete.dispatch();
-    }
+  private _onFgBatchSettled(claimer: LoaderScope, key: string, success: boolean, error?: Error): void {
+    claimer._batch.settle(key, success, error);
+    this._batch.settle(key, success, error);
   }
 
   private _normalizeError(error: unknown): Error {

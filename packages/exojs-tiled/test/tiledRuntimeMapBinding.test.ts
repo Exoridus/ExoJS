@@ -41,6 +41,7 @@ function makeContext(fixtures: Record<string, unknown>) {
 
   const context: AssetLoaderContext = {
     loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
+    scope: { load: loaderLoad } as unknown as AssetLoaderContext['scope'],
     identityKey: 'test',
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),

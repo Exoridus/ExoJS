@@ -260,11 +260,14 @@ const bmFontBinding = defineAsset({
   type: 'bmFont',
   extensions: ['fnt'],
   isValue: false,
-  create: (loader: Loader) => ({
+  create: () => ({
     async load({ source }: AssetLoadRequest, context: AssetLoaderContext): Promise<BmFont> {
       const text = await context.fetchText(source);
       const fontData = parseBmFontText(text);
-      const textures = await Promise.all(fontData.pages.map(page => loader.load(Asset.type('texture', resolveSubAssetPath(page, source)))));
+      // Page textures are claimed by this font's own dependency scope, not by
+      // whichever consumer asked for the font: a deduped font load serves many
+      // consumers, and the first to release must not take the pages with it.
+      const textures = await Promise.all(fontData.pages.map(page => context.scope.load(Asset.type('texture', resolveSubAssetPath(page, source)))));
       return new BmFont(fontData, textures);
     },
   }),

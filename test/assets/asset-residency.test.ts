@@ -4,10 +4,11 @@ import { AssetDecoder } from '#assets/AssetDecoder';
 import type { AssetResidencySignals } from '#assets/AssetResidency';
 import { AssetResidency } from '#assets/AssetResidency';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
-import { type CanonicalAsset, canonicalAssetKey, canonicalizeSource } from '#assets/canonicalKey';
 import type { CacheRequest, CacheStrategy } from '#assets/CacheStrategy';
-import type { Loader } from '#assets/Loader';
+import { type CanonicalAsset, canonicalAssetKey, canonicalizeSource } from '#assets/canonicalKey';
 import type { AssetConstructor } from '#assets/FactoryRegistry';
+import type { Loader } from '#assets/Loader';
+import { LoaderScope } from '#assets/LoaderScope';
 import type { SeamlessAdapter } from '#assets/seamless';
 
 class TypeA {}
@@ -70,7 +71,10 @@ function createResidency(overrides: { cacheStrategy?: CacheStrategy; concurrency
     decoder,
     { onProgress, onLoaded, onError } as unknown as AssetResidencySignals,
     overrides.concurrency ?? 6,
-    canonical,
+    {
+      canonicalize: canonical,
+      createDependencyScope: asset => new LoaderScope(fakeLoader, 'dependency', asset.source),
+    },
   );
 
   decoder._bindResourceStore((asset, resource) => residency._storeResource(asset, resource));
@@ -85,7 +89,7 @@ describe('AssetResidency', () => {
       const adapter = createFakeSeamlessAdapter();
       typeRegistry.registerSeamlessAdapter(TypeA, adapter);
 
-      const scope = Symbol('scope');
+      const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const handle = residency._getSeamless(canonical(TypeA, 'a.png'), adapter);
       residency._claim(canonical(TypeA, 'a.png'), scope);
 
@@ -108,7 +112,7 @@ describe('AssetResidency', () => {
       typeRegistry.registerSeamlessAdapter(TypeA, adapter);
       bindTypeA(typeRegistry);
 
-      const scope = Symbol('scope');
+      const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const key = canonical(TypeA, 'a.png').key;
       const handle = residency._getSeamless(canonical(TypeA, 'a.png'), adapter);
       residency._claim(canonical(TypeA, 'a.png'), scope);
@@ -139,7 +143,7 @@ describe('AssetResidency', () => {
       const dispose = vi.fn();
       typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source), dispose });
 
-      const scope = Symbol('scope');
+      const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const key = canonical(TypeA, 'a.json').key;
       const ref = residency._getRef(canonical(TypeA, 'a.json'));
       residency._claim(canonical(TypeA, 'a.json'), scope);
@@ -166,7 +170,7 @@ describe('AssetResidency', () => {
       const { residency, typeRegistry, canonical } = createResidency();
       typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
-      const scope = Symbol('scope');
+      const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const key = canonical(TypeA, 'a.json').key;
       residency._claim(canonical(TypeA, 'a.json'), scope);
       residency._storeResource(canonical(TypeA, 'a.json'), { hp: 3 });
@@ -179,7 +183,7 @@ describe('AssetResidency', () => {
       const { residency, typeRegistry, canonical } = createResidency({ cacheStrategy: createFakeStrategy(() => 'decoded') });
       typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
-      const scope = Symbol('scope');
+      const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const key = canonical(TypeA, 'a.json').key;
       const ref = residency._getRef(canonical(TypeA, 'a.json'));
       residency._claim(canonical(TypeA, 'a.json'), scope);
@@ -205,7 +209,7 @@ describe('AssetResidency', () => {
       const adapter = createFakeSeamlessAdapter();
       typeRegistry.registerSeamlessAdapter(TypeA, adapter);
 
-      const scope = Symbol('scope');
+      const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const keyA = canonical(TypeA, 'a.png').key;
       const keyB = canonical(TypeA, 'b.png').key;
 
@@ -248,7 +252,7 @@ describe('AssetResidency', () => {
       const adapter = createFakeSeamlessAdapter();
       typeRegistry.registerSeamlessAdapter(TypeA, adapter);
 
-      const scope = Symbol('scope');
+      const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const key = canonical(TypeA, 'a.png').key;
       residency._getSeamless(canonical(TypeA, 'a.png'), adapter);
       residency._claim(canonical(TypeA, 'a.png'), scope);
@@ -341,7 +345,7 @@ describe('AssetResidency', () => {
     test('_unloadOne removes a stored resource and forgets its claim bookkeeping', () => {
       const { residency, typeRegistry, canonical } = createResidency();
       residency._storeResource(canonical(TypeA, 'a.png'), 'value');
-      residency._claim(canonical(TypeA, 'a.png'), Symbol('scope'));
+      residency._claim(canonical(TypeA, 'a.png'), new LoaderScope(fakeLoader, 'scope'));
 
       residency._unloadOne(canonical(TypeA, 'a.png'));
 
@@ -430,7 +434,7 @@ describe('AssetResidency', () => {
   test('destroy() clears resident resources, in-flight tracking, claims, and the background queue', async () => {
     const { residency, typeRegistry, canonical } = createResidency({ concurrency: 0 });
     residency._storeResource(canonical(TypeA, 'a.png'), 'value');
-    residency._claim(canonical(TypeA, 'a.png'), Symbol('scope'));
+    residency._claim(canonical(TypeA, 'a.png'), new LoaderScope(fakeLoader, 'scope'));
     residency._enqueueBackgroundFetch(canonical(TypeA, 'queued.png'), undefined);
 
     residency.destroy();

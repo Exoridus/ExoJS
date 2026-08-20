@@ -28,8 +28,10 @@ export interface AssetLoadRequest<Options = undefined> {
 /**
  * A loader-local instance produced by {@link AssetBinding.create}; owned and destroyed
  * by the Loader. May hold state. Called once per `loader.load(...)` invocation.
- * Sub-assets loaded via `context.loader.load(...)` are owned by the Loader's cache —
- * NOT by this handler or the asset returned by `load`.
+ * Sub-assets must be loaded via `context.scope.load(...)`: that scope lives
+ * exactly as long as the asset being built, so its sub-assets are released with
+ * it unless another owner also holds them. `context.loader.load(...)` would
+ * instead claim them for the application's lifetime.
  * @advanced
  */
 export interface AssetHandler<Result = unknown, Options = undefined> {

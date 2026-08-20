@@ -2,6 +2,7 @@ import { BinaryFactory } from '#assets/factories/BinaryFactory';
 import { SubtitleFactory } from '#assets/factories/SubtitleFactory';
 import { XmlFactory } from '#assets/factories/XmlFactory';
 import type { AssetLoaderContext, Loader } from '#assets/Loader';
+import type { LoaderScope } from '#assets/LoaderScope';
 import type { AssetBinding, AssetHandler } from '#extensions/Extension';
 import { BmFont } from '#rendering/text/BmFont';
 import { type Texture } from '#rendering/texture/Texture';
@@ -54,7 +55,8 @@ function findBinding(bindings: readonly AssetBinding[], typeName: string): Asset
 function makeContext(overrides: Partial<AssetLoaderContext> = {}): AssetLoaderContext {
   return {
     loader: {} as Loader,
-    identityKey: 'id:test:key',
+    scope: { load: vi.fn(async () => ({})) } as unknown as LoaderScope,
+    identityKey: 'test:key',
     fetchText: vi.fn(async () => ''),
     fetchArrayBuffer: vi.fn(async () => new ArrayBuffer(0)),
     fetchJson: vi.fn(async () => ({})),
@@ -180,27 +182,27 @@ describe('coreAssetBindings — subtitleBinding', () => {
 });
 
 describe('coreAssetBindings — bmFontBinding', () => {
-  test('load() parses the descriptor and loads each page texture via loader.load, resolved relative to the source', async () => {
+  test('load() parses the descriptor and loads each page texture through the dependency scope, resolved relative to the source', async () => {
     const { coreAssetBindings } = await import('#assets/coreAssetBindings');
     const binding = findBinding(coreAssetBindings, 'bmFont');
     const fakeTexture = {} as Texture;
-    const loaderMock = {
-      load: vi.fn(async () => fakeTexture),
-    } as unknown as Loader;
-    const handler = binding.create(loaderMock) as AssetHandler<BmFont>;
+    const handler = binding.create({} as Loader) as AssetHandler<BmFont>;
+    const scopeLoad = vi.fn(async () => fakeTexture);
 
     const fnt = `
 common lineHeight=32 base=26
 page id=0 file="page0.png"
 chars count=0
 `;
-    const context = makeContext({ fetchText: vi.fn(async () => fnt) });
+    const context = makeContext({ fetchText: vi.fn(async () => fnt), scope: { load: scopeLoad } as unknown as LoaderScope });
 
     const font = await handler.load({ source: 'fonts/ui.fnt' }, context);
 
     expect(font).toBeInstanceOf(BmFont);
     expect(font.textures).toEqual([fakeTexture]);
-    expect(loaderMock.load).toHaveBeenCalledWith(expect.objectContaining({ _config: expect.objectContaining({ type: 'texture', source: 'fonts/page0.png' }) }));
+    // Page textures are owned by the font's own dependency scope, never by the
+    // application-lifetime loader.
+    expect(scopeLoad).toHaveBeenCalledWith(expect.objectContaining({ _config: expect.objectContaining({ type: 'texture', source: 'fonts/page0.png' }) }));
   });
 });
 

@@ -5,12 +5,13 @@ import { Assets } from '#assets/Assets';
 import { coreAssetBindings } from '#assets/coreAssetBindings';
 import { defineAsset } from '#assets/defineAsset';
 import { Loader, LoadPriority } from '#assets/Loader';
+import type { LoaderScope } from '#assets/LoaderScope';
 import { TextAsset } from '#assets/tokens';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
 // A test-only, non-leaf asset kind — no seamless adapter, `isValue: false` —
-// the exact shape `Loader.release()`'s `@remarks` calls out (a resource loaded
+// the exact shape `LoaderScope.release()` calls out (a resource loaded
 // with `load(Asset.type('bmFont', …))`): it never goes through `createLeaf`,
 // so it carries no `_assetMeta` stamp and is never adopted/registered in the
 // handle→key map either.
@@ -64,11 +65,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe('Loader.release() fail-loud contract', () => {
+describe('LoaderScope.release() fail-loud contract', () => {
   test('throws for an unsupported raw object, naming the supported forms', () => {
-    const loader = new Loader();
+    const scope = new Loader().scope();
 
-    expect(() => loader.release({ arbitrary: true } as never)).toThrow(/no claim identity/);
+    expect(() => scope.release({ arbitrary: true } as never)).toThrow(/no claim identity/);
   });
 
   test('throws for a resolved non-leaf resource, and the corrective guidance it points to actually works', async () => {
@@ -83,39 +84,43 @@ describe('Loader.release() fail-loud contract', () => {
       }),
     ]);
 
+    const scope = loader.scope();
     const asset = new Asset({ type: 'dxNonLeafAsset', source: 'thing.dat' });
-    const resource = await loader.load(asset);
+    const resource = await scope.load(asset);
 
     expect(loader.inspect()).toHaveLength(1);
-    expect(() => loader.release(resource as unknown as object)).toThrow(/no claim identity/);
+    expect(() => scope.release(resource as unknown as object)).toThrow(/no claim identity/);
     // The claim survives the throw — nothing was silently discarded.
     expect(loader.inspect()).toHaveLength(1);
 
-    // The `@remarks`-documented workaround (release the descriptor instead) works.
-    expect(() => loader.release(asset)).not.toThrow();
+    // The documented workaround (release the descriptor instead) works.
+    expect(() => scope.release(asset)).not.toThrow();
     expect(loader.inspect()).toHaveLength(0);
   });
 
   test('stays an idempotent no-op for a never-adopted VALUE catalog leaf', () => {
     const loader = new Loader();
+    const scope = loader.scope();
     const catalog = Assets.from({ note: 'note.txt' });
 
-    expect(() => loader.release(catalog.note)).not.toThrow();
-    expect(() => loader.release(catalog.note)).not.toThrow();
+    expect(() => scope.release(catalog.note)).not.toThrow();
+    expect(() => scope.release(catalog.note)).not.toThrow();
     expect(loader.inspect()).toHaveLength(0);
   });
 
   test('stays an idempotent no-op for a never-adopted RESOURCE catalog leaf', () => {
     const loader = createCoreLoader();
+    const scope = loader.scope();
     const catalog = Assets.from({ hero: 'hero.png' });
 
-    expect(() => loader.release(catalog.hero)).not.toThrow();
-    expect(() => loader.release(catalog.hero)).not.toThrow();
+    expect(() => scope.release(catalog.hero)).not.toThrow();
+    expect(() => scope.release(catalog.hero)).not.toThrow();
     expect(loader.inspect()).toHaveLength(0);
   });
 
   test('supported release identities are unchanged: descriptor, catalog, (type, source), and an adopted handle all still clear their claim', async () => {
     const loader = createCoreLoader();
+    const scope = loader.scope();
     mockFetchImage();
     vi.stubGlobal(
       'createImageBitmap',
@@ -126,29 +131,29 @@ describe('Loader.release() fail-loud contract', () => {
 
     // 1. Asset descriptor.
     const asset = new Asset({ type: 'texture', source: 'a.png' });
-    await loader.load(asset);
+    await scope.load(asset);
     expect(hasRow('a.png')).toBe(true);
-    loader.release(asset);
+    scope.release(asset);
     expect(hasRow('a.png')).toBe(false);
 
     // 2. Assets catalog.
     const catalog = new Assets({ b: { type: 'texture', source: 'b.png' } });
-    await loader.load(catalog);
+    await scope.load(catalog);
     expect(hasRow('b.png')).toBe(true);
-    loader.release(catalog);
+    scope.release(catalog);
     expect(hasRow('b.png')).toBe(false);
 
     // 3. (type, source) pair.
-    await loader.load(Asset.type('texture', 'c.png'));
+    await scope.load(Asset.type('texture', 'c.png'));
     expect(hasRow('c.png')).toBe(true);
-    loader.release(Texture, 'c.png');
+    scope.release(Texture, 'c.png');
     expect(hasRow('c.png')).toBe(false);
 
     // 4. An adopted seamless handle.
-    const handle = loader.get('d.png');
+    const handle = scope.get('d.png');
     await handle.loaded;
     expect(hasRow('d.png')).toBe(true);
-    loader.release(handle);
+    scope.release(handle);
     expect(hasRow('d.png')).toBe(false);
   });
 
@@ -160,18 +165,19 @@ describe('Loader.release() fail-loud contract', () => {
       vi.fn(async () => ({ width: 1, height: 1 })),
     );
 
-    const handle = loader.get('hero.png');
+    const scope = loader.scope();
+    const handle = scope.get('hero.png');
     await handle.loaded;
 
     // AssetResidency.unloadAll() is a deliberately-internal hard reset (NOT
-    // exposed on Loader — release()/`_releaseScope()` are the only public
+    // exposed on Loader — scope release and destroy are the only public
     // teardown verbs) that forgets claim/handle bookkeeping entirely, the same
     // way existing tests reach it via direct residency access.
     (loader as unknown as { _residency: { unloadAll(): void } })._residency.unloadAll();
 
     // The throw must depend only on whether THIS object is a real handle —
     // never on unrelated internal state that changed since it was handed out.
-    expect(() => loader.release(handle)).not.toThrow();
+    expect(() => scope.release(handle)).not.toThrow();
   });
 });
 
@@ -298,7 +304,7 @@ describe('Loader.inspect() snapshot contract', () => {
       'createImageBitmap',
       vi.fn(async () => ({ width: 1, height: 1 })),
     );
-    const sceneScope = Symbol('scene');
+    const sceneScope = loader.scope('scene');
 
     const handle = loader.get('hero.png'); // root scope
     loader.get('hero.png'); // same source → same deduped handle, same scope again (no-op)
@@ -367,14 +373,14 @@ describe('Loader.inspect() snapshot contract', () => {
     const residency = (
       loader as unknown as {
         _residency: {
-          _claims: Map<string, { scopes: Set<symbol>; asset: unknown }>;
+          _claims: Map<string, { scopes: Set<LoaderScope>; asset: unknown }>;
           _resources: Map<string, { asset: unknown; value: unknown }>;
           _backgroundQueue: Array<{ asset: unknown; options: unknown }>;
         };
       }
     )._residency;
 
-    residency._claims.set(asset.key, { scopes: new Set([Symbol('scope')]), asset });
+    residency._claims.set(asset.key, { scopes: new Set<LoaderScope>([loader.scope('scope')]), asset });
     residency._backgroundQueue.push({ asset, options: undefined });
     residency._resources.set(asset.key, { asset, value: {} });
 

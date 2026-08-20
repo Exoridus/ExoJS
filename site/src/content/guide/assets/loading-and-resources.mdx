@@ -319,14 +319,41 @@ async load() {
 
 `get()` returns before network work settles. A later load failure moves the handle/ref to `'failed'`, rejects its `.loaded` promise, and is reported through `this.app.loader.onError`; calling `get()` again retries and can heal that same source-keyed handle. By contrast, the awaitable returned by `load()` rejects at the call site on failure and reports the same `Error` through `this.app.loader.onError`. Invalid input or a missing type/handler is a synchronous configuration error for either API. A catalog entry's optional `parse` transform must be synchronous — if it returns a Promise (or anything else thenable), the ref it belongs to fails with an explicit error instead of silently awaiting it; do any asynchronous decoding inside the asset handler's load phase instead.
 
-`this.app.loader.release(...)` drops your claim on an asset; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again. It accepts a handle, an `Asset` descriptor, a whole catalog, or a `(type, source)` pair. Releasing a valid form that was never claimed — a descriptor you never loaded, a catalog leaf you never adopted — is a harmless no-op, and releasing twice is always idempotent:
+### Ownership and scopes
+
+An asset stays in memory for as long as somebody owns it. There are three kinds of owner:
+
+- **the application** — anything acquired directly on `this.app.loader` is held until the app is destroyed;
+- **a scene** — anything acquired through `this.loader` (that is, `scene.loader`) is released when the scene ends;
+- **a scope you take yourself** — `this.app.loader.scope(name?)` returns an owner you destroy when you are done with it.
+
+Several owners can hold the same asset at the same time. They share one fetch and one resident payload, and one owner letting go never invalidates another:
 
 ```ts
-this.app.loader.release(TitleAssets); // releases every leaf in the catalog
-this.app.loader.release(logo); // a single handle from get()
+const level = this.app.loader.scope('level-1');
+const hud = this.app.loader.scope('ui:hud');
+
+const font = level.get('fonts/ui.png');
+hud.get('fonts/ui.png'); // the same instance — one fetch, two independent owners
+
+level.destroy(); // the font stays loaded: the HUD still owns it
+hud.destroy(); // now the last owner is gone and the payload is freed
 ```
 
-Releasing only ever drops _your_ claim. Assets loaded through `scene.loader` belong to that scene and are released when it ends, so releasing at app level can never pull an asset out from under a scene that still needs it. The payload is evicted once the last owner lets go.
+Take a scope whenever an asset's lifetime is shorter than the application's — a level, a streamed chunk, a UI panel, a prefetch. The name is a label for `inspect()`; two scopes taken under the same name are still two independent owners.
+
+`scope.release(...)` drops that scope's claim on one asset; the object itself keeps its identity and heals back to `'loading'` if you `get()` the same source again. It accepts a handle, an `Asset` descriptor, a whole catalog, or a `(type, source)` pair. Releasing a valid form that scope never claimed is a harmless no-op, and releasing twice is always idempotent:
+
+```ts
+const title = this.app.loader.scope('title');
+const logo = title.get('ui/logo.png');
+
+title.release(TitleAssets); // releases every leaf in the catalog
+title.release(logo); // a single handle from get()
+title.destroy(); // or just drop everything this scope still holds
+```
+
+There is deliberately no way to release an application-lifetime claim: `app.loader.get(...)` means "I want this for as long as the app runs". Anything you intend to free later is acquired through a scene or a scope instead.
 
 <Callout type="pitfall" title="release() only accepts a real asset identity">
   Passing something that isn't a handle, descriptor, catalog, or `(type, source)` pair — a plain object, a resolved non-seamless resource, anything `release()`
@@ -342,8 +369,8 @@ Releasing only ever drops _your_ claim. Assets loaded through `scene.loader` bel
 </Callout>
 
 <Callout type="hint" title="Inspecting what's currently loaded">
-  `this.app.loader.inspect()` returns a frozen, sorted snapshot — one row per claimed asset, with its state, claim count, and whether it's in flight or still queued in
-  the background — for debugging or a support bundle. It's read-only: nothing you do with the returned array changes what's actually loaded.
+  `this.app.loader.inspect()` returns a frozen, sorted snapshot — one row per canonical asset, with its state, how many owners hold it, and whether it's in flight or
+  still queued in the background — for debugging or a support bundle. It's read-only: nothing you do with the returned array changes what's actually loaded.
 </Callout>
 
 ## When are resources available?

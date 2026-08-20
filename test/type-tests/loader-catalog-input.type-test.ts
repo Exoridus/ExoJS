@@ -110,7 +110,7 @@ export async function loads(): Promise<void> {
   // `get()`/`release()` take the very same catalogs — same root cause, same fix.
   const held = loader.get(bare);
   expectType<Equal<typeof held.player, CatalogResourceLeaf<Texture>>>();
-  loader.release(bare);
+  loader.scope().release(bare);
   scene.loader.get(composed);
 }
 

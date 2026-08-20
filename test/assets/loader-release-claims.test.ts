@@ -2,6 +2,7 @@ import { Asset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
 import { coreAssetBindings } from '#assets/coreAssetBindings';
 import { Loader, LoadPriority } from '#assets/Loader';
+import type { LoaderScope } from '#assets/LoaderScope';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
@@ -28,7 +29,7 @@ const mockFetchImage = (): void => {
 
 /** Introspection helpers over the private claim/handle maps. */
 interface ResidencyInternals {
-  _claims: Map<string, { scopes: Set<symbol> }>;
+  _claims: Map<string, { scopes: Set<LoaderScope> }>;
   _deferred: Map<string, unknown>;
   _refs: Map<string, unknown>;
   _unloadOne(asset: unknown): void;
@@ -50,11 +51,11 @@ function refSize(loader: Loader): number {
 function keyOf(loader: Loader, type: unknown, source: string): string {
   return (loader as unknown as { _canonicalize(t: unknown, s: string): { key: string } })._canonicalize(type, source).key;
 }
-function scopesFor(loader: Loader, type: unknown, source: string): Set<symbol> | undefined {
+function scopesFor(loader: Loader, type: unknown, source: string): Set<LoaderScope> | undefined {
   return residencyOf(loader)._claims.get(keyOf(loader, type, source))?.scopes;
 }
 
-describe('Loader.release() scope safety', () => {
+describe('LoaderScope.release() scope safety', () => {
   beforeEach(() => {
     vi.stubGlobal(
       'createImageBitmap',
@@ -68,17 +69,18 @@ describe('Loader.release() scope safety', () => {
     global.fetch = originalFetch;
   });
 
-  test('release() drops only the root claim, leaving another scope holding the payload', async () => {
+  test('release() drops only the releasing scope claim, leaving another scope holding the payload', async () => {
     const loader = createCoreLoader();
-    const sceneScope = Symbol('scene');
+    const owner = loader.scope('owner');
+    const sceneScope = loader.scope('scene');
 
-    const handle = loader.get('ship.png');
-    loader._getClaimed(sceneScope, 'ship.png');
+    const handle = owner.get('ship.png');
+    sceneScope.get('ship.png');
     await handle.loaded;
 
     expect(scopesFor(loader, Texture, 'ship.png')?.size).toBe(2);
 
-    loader.release(handle);
+    owner.release(handle);
 
     // The scene still owns it: payload resident, claim entry alive.
     expect(handle.loadState).toBe('ready');
@@ -86,24 +88,44 @@ describe('Loader.release() scope safety', () => {
     expect(scopesFor(loader, Texture, 'ship.png')?.size).toBe(1);
 
     // Only when the last owner lets go does the payload go away.
-    loader._release(keyOf(loader, Texture, 'ship.png'), sceneScope);
+    sceneScope.release(handle);
 
     expect(handle.loadState).toBe('loading');
     expect(loader._peekResource(Texture, 'ship.png')).toBeNull();
   });
 
+  test('assets acquired on the loader itself are held for the application lifetime', async () => {
+    const loader = createCoreLoader();
+    const scope = loader.scope('scene');
+
+    const handle = loader.get('ship.png');
+    scope.get('ship.png');
+    await handle.loaded;
+
+    expect(scopesFor(loader, Texture, 'ship.png')?.size).toBe(2);
+
+    // A scope can only ever drop its own claim; the application-lifetime claim
+    // has no public release at all, so no consumer can free another's assets.
+    scope.destroy();
+
+    expect(scopesFor(loader, Texture, 'ship.png')?.size).toBe(1);
+    expect(handle.loadState).toBe('ready');
+    expect(loader._peekResource(Texture, 'ship.png')).not.toBeNull();
+  });
+
   test('release(catalog) never touches a claim held by another scope', async () => {
     const loader = createCoreLoader();
-    const sceneScope = Symbol('scene');
+    const owner = loader.scope('owner');
+    const sceneScope = loader.scope('scene');
 
     const catalog = new Assets({ hero: { type: 'texture', source: 'hero.png' } });
 
-    await loader.load(catalog);
-    loader._getClaimed(sceneScope, 'hero.png');
+    await owner.load(catalog);
+    sceneScope.get('hero.png');
 
     expect(scopesFor(loader, Texture, 'hero.png')?.size).toBe(2);
 
-    loader.release(catalog);
+    owner.release(catalog);
 
     expect(scopesFor(loader, Texture, 'hero.png')?.size).toBe(1);
     expect(loader._peekResource(Texture, 'hero.png')).not.toBeNull();
@@ -111,13 +133,14 @@ describe('Loader.release() scope safety', () => {
 
   test('release(asset) resolves the same claim key the load path registered', async () => {
     const loader = createCoreLoader();
+    const owner = loader.scope('owner');
     const asset = new Asset({ type: 'texture', source: 'boss.png' });
 
-    await loader.load(asset);
+    await owner.load(asset);
 
     expect(scopesFor(loader, Texture, 'boss.png')?.size).toBe(1);
 
-    loader.release(asset);
+    owner.release(asset);
 
     // Last claim gone → key forgotten and payload evicted in place.
     expect(scopesFor(loader, Texture, 'boss.png')).toBeUndefined();
@@ -126,26 +149,47 @@ describe('Loader.release() scope safety', () => {
 
   test('release() is idempotent and a no-op for an unclaimed key', async () => {
     const loader = createCoreLoader();
-    const handle = loader.get('ship.png');
+    const owner = loader.scope('owner');
+    const handle = owner.get('ship.png');
     await handle.loaded;
 
-    loader.release(handle);
+    owner.release(handle);
 
-    expect(() => loader.release(handle)).not.toThrow();
-    expect(() => loader.release(Texture, 'never-claimed.png')).not.toThrow();
+    expect(() => owner.release(handle)).not.toThrow();
+    expect(() => owner.release(Texture, 'never-claimed.png')).not.toThrow();
+  });
+
+  test('two scopes taken under the same name are independent owners', async () => {
+    const loader = createCoreLoader();
+    const first = loader.scope('world');
+    const second = loader.scope('world');
+
+    const handle = first.get('ship.png');
+    second.get('ship.png');
+    await handle.loaded;
+
+    expect(first).not.toBe(second);
+    expect(first.id).not.toBe(second.id);
+    expect(scopesFor(loader, Texture, 'ship.png')?.size).toBe(2);
+
+    first.destroy();
+
+    expect(handle.loadState).toBe('ready');
+    expect(scopesFor(loader, Texture, 'ship.png')?.size).toBe(1);
   });
 
   test('release() on a background-queued entry drops it from the queue', async () => {
     const loader = createCoreLoader();
+    const owner = loader.scope('owner');
     loader.setConcurrency(0); // nothing drains
 
     const catalog = new Assets({ late: { type: 'texture', source: 'late.png' } });
-    loader.load(catalog, { priority: LoadPriority.Background });
+    owner.load(catalog, { priority: LoadPriority.Background });
 
     const queue = (loader as unknown as { _residency: { _backgroundQueue: unknown[] } })._residency._backgroundQueue;
     expect(queue.length).toBe(1);
 
-    loader.release(catalog);
+    owner.release(catalog);
 
     expect(queue.length).toBe(0);
   });
@@ -221,18 +265,19 @@ describe('internal hard-reset claim consistency', () => {
 
   test('a source evicts correctly again after a reset -> reload cycle', async () => {
     const loader = createCoreLoader();
+    const owner = loader.scope('owner');
 
-    const first = loader.get('ship.png');
+    const first = owner.get('ship.png');
     await first.loaded;
     residencyOf(loader).unloadAll();
     expect(claimSize(loader)).toBe(0);
 
     // Reload: a fresh claim + handle, then release must still evict in place.
-    const second = loader.get('ship.png');
+    const second = owner.get('ship.png');
     await second.loaded;
     expect(second.loadState).toBe('ready');
 
-    loader.release(second); // refcount 0 → evict in place
+    owner.release(second); // refcount 0 → evict in place
     expect(second.loadState).toBe('loading');
     expect(second.source).toBeNull();
   });
