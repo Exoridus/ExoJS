@@ -48,7 +48,10 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
+import { Geometry } from '#rendering/geometry/Geometry';
 import type { RenderNode } from '#rendering/RenderNode';
+import { Sprite } from '#rendering/sprite/Sprite';
+import { RenderTexture } from '#rendering/texture/RenderTexture';
 import type { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -522,6 +525,97 @@ describe('WebGPU Video', { timeout: 30_000 }, () => {
     } finally {
       root.destroy();
       videoSprite.destroy();
+      backend.destroy();
+    }
+  });
+});
+
+/**
+ * Video through the composition paths, where the renderer's pipeline variants
+ * differ: a stencil clip selects the depth-stencil variant, and an offscreen
+ * target selects the variant built for that target's format. Both are cached
+ * per variant, so a video that draws correctly straight to the canvas can still
+ * be wrong the first time either one is asked for.
+ */
+describe('WebGPU Video composition', { timeout: 30_000 }, () => {
+  test('a stencil clip discards the video fragments outside the shape', async ctx => {
+    const backend = await setupBackend();
+    const video = await createSolidColorVideo('#00ff00');
+    const root = new Container();
+    const clipped = new Container();
+    const videoSprite = new Video(video);
+    const clipShape = new Geometry({
+      attributes: [{ name: 'a_position', size: 2, type: 'f32', normalized: false, offset: 0 }],
+      vertexData: new Float32Array([0, 0, 48, 0, 0, 48]),
+      stride: 8,
+    });
+
+    try {
+      videoSprite.setPosition(0, 0);
+      videoSprite.width = 48;
+      videoSprite.height = 48;
+      clipped.clip = true;
+      clipped.clipShape = clipShape;
+      clipped.addChild(videoSprite);
+      root.addChild(clipped);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      // Inside the triangle (x + y << 48) the frame survives; outside it the
+      // clip discards down to the black clear.
+      expectPixelNear(readPixel(6, 6), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      clipShape.destroy();
+      videoSprite.destroy();
+      destroyVideo(video);
+      backend.destroy();
+    }
+  });
+
+  test('a video drawn into a render texture composites back onto the canvas', async ctx => {
+    const backend = await setupBackend();
+    const video = await createSolidColorVideo('#00ff00');
+    const target = new RenderTexture(32, 32);
+    const offscreenRoot = new Container();
+    const root = new Container();
+    const videoSprite = new Video(video);
+    const composited = new Sprite(target);
+
+    try {
+      videoSprite.setPosition(0, 0);
+      videoSprite.width = 32;
+      videoSprite.height = 32;
+      offscreenRoot.addChild(videoSprite);
+      composited.setPosition(16, 16);
+      root.addChild(composited);
+
+      backend.resetStats();
+      backend.setRenderTarget(target);
+      backend.clear(new Color(0, 0, 0, 0));
+      offscreenRoot.render(backend);
+      backend.flush();
+      backend.setRenderTarget(null);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(32, 32), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(4, 4), [0, 0, 0, 255]);
+    } finally {
+      root.destroy();
+      offscreenRoot.destroy();
+      videoSprite.destroy();
+      target.destroy();
+      destroyVideo(video);
       backend.destroy();
     }
   });
