@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "LFO modulation depth in milliseconds — the peak deviation added to and subtracted from delayMs by the sine LFO. Range 0..10, default 2."
+          "description": "LFO modulation depth in milliseconds - the peak deviation added to and subtracted from delayMs by the sine LFO. Range 0..10, default 2."
         },
         {
           "name": "feedback",
@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Feedback amount — fraction of the delay output fed back to the delay input. Higher values intensify the comb-filter resonance. Range 0..0.95, default 0.5."
+          "description": "Feedback amount - fraction of the delay output fed back to the delay input. Higher values intensify the comb-filter resonance. Range 0..0.95, default 0.5."
         },
         {
           "name": "rateHz",

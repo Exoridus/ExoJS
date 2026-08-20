@@ -391,7 +391,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Initial spatial position — equivalent to setting voice.position right after play."
+          "description": "Initial spatial position - equivalent to setting voice.position right after play."
         },
         {
           "name": "refDistance",

@@ -123,7 +123,7 @@
             }
           ],
           "returnType": "ResolvedTile | null",
-          "description": "Convert a sampled value (and its absolute tile coordinate) into a resolved tile, or null for an empty cell. Always runs on the main thread — a ResolvedTile references a TileSet/Texture, neither of which can cross a postMessage boundary. Must be pure and deterministic, same requirement as import('./SampledChunkSource').SampledChunkSourceOptions.mapValueToTile."
+          "description": "Convert a sampled value (and its absolute tile coordinate) into a resolved tile, or null for an empty cell. Always runs on the main thread - a ResolvedTile references a TileSet/Texture, neither of which can cross a postMessage boundary. Must be pure and deterministic, same requirement as import('./SampledChunkSource').SampledChunkSourceOptions.mapValueToTile."
         }
       ],
       "paragraphs": [],

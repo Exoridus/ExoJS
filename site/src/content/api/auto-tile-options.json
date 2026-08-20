@@ -119,7 +119,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When provided, only cells for which matchFn returns true are treated as part of the Wang group. The function receives the cell's localTileId, tilesetIndex, and tile coordinates (x, y). If omitted, group membership defaults to WangSet.isMember on the cell's localTileId (and a matching tilesetIndex). That default is *variant-stable* — every autotiled variant counts as a member — which is what makes refreshCell correct. If you supply a matchFn for use with refreshCell, it MUST likewise be variant-stable (independent of the currently-rendered variant), e.g. keyed on a separate logical-terrain grid or a tile property."
+          "description": "When provided, only cells for which matchFn returns true are treated as part of the Wang group. The function receives the cell's localTileId, tilesetIndex, and tile coordinates (x, y). If omitted, group membership defaults to WangSet.isMember on the cell's localTileId (and a matching tilesetIndex). That default is *variant-stable* - every autotiled variant counts as a member - which is what makes refreshCell correct. If you supply a matchFn for use with refreshCell, it MUST likewise be variant-stable (independent of the currently-rendered variant), e.g. keyed on a separate logical-terrain grid or a tile property."
         },
         {
           "name": "wrapBorder",

@@ -1,6 +1,6 @@
 {
   "title": "ApplicationLike",
-  "description": "Anything that resolves to a concrete Application instance type: the instance itself, its constructor, or `typeof` an already-typed instance. Scene's second generic accepts any of the three — see ApplicationOf.",
+  "description": "Anything that resolves to a concrete Application instance type: the instance itself, its constructor, or `typeof` an already-typed instance. Scene's second generic accepts any of the three - see ApplicationOf.",
   "symbol": "ApplicationLike",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Anything that resolves to a concrete Application instance type: the instance itself, its constructor, or `typeof` an already-typed instance. Scene's second generic accepts any of the three — see ApplicationOf."
+        "Anything that resolves to a concrete Application instance type: the instance itself, its constructor, or `typeof` an already-typed instance. Scene's second generic accepts any of the three - see ApplicationOf."
       ],
       "importLine": "import { ApplicationLike } from '@codexo/exojs'",
       "sourceLink": null

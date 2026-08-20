@@ -1,6 +1,6 @@
 {
   "title": "TextureFormat",
-  "description": "Every pixel format the engine names, across both the textures it renders into and the textures it uploads raw data to. Unlike the GLenum-valued enums above, these carry no GPU constant: each backend maps them to its own vocabulary (`Rgba8` becomes `rgba8unorm` on WebGPU, an internal-format/format/type triple on WebGL2). The values stay readable strings so the mapping tables and any serialized format stay legible. Not every format is valid everywhere — ColorTextureFormat and `DataTextureFormat` carve out the subset each use accepts. | Format | Channels | Bytes/px | Buffer | |---|---:|---:|---| | `R8` | 1 | 1 | `Uint8Array` | | `R32F` | 1 | 4 | `Float32Array` | | `Rgba8` | 4 | 4 | `Uint8Array` | | `Rgba16F` | 4 | 8 | — (render targets only) | | `Rgba32F` | 4 | 16 | `Float32Array` |",
+  "description": "Every pixel format the engine names, across both the textures it renders into and the textures it uploads raw data to. Unlike the GLenum-valued enums above, these carry no GPU constant: each backend maps them to its own vocabulary (`Rgba8` becomes `rgba8unorm` on WebGPU, an internal-format/format/type triple on WebGL2). The values stay readable strings so the mapping tables and any serialized format stay legible. Not every format is valid everywhere - ColorTextureFormat and `DataTextureFormat` carve out the subset each use accepts. | Format | Channels | Bytes/px | Buffer | |---|---:|---:|---| | `R8` | 1 | 1 | `Uint8Array` | | `R32F` | 1 | 4 | `Float32Array` | | `Rgba8` | 4 | 4 | `Uint8Array` | | `Rgba16F` | 4 | 8 | - (render targets only) | | `Rgba32F` | 4 | 16 | `Float32Array` |",
   "symbol": "TextureFormat",
   "kind": "enum",
   "subsystem": "rendering",
@@ -21,8 +21,8 @@
       "paragraphs": [
         "Every pixel format the engine names, across both the textures it renders into and the textures it uploads raw data to.",
         "Unlike the GLenum-valued enums above, these carry no GPU constant: each backend maps them to its own vocabulary (`Rgba8` becomes `rgba8unorm` on WebGPU, an internal-format/format/type triple on WebGL2). The values stay readable strings so the mapping tables and any serialized format stay legible.",
-        "Not every format is valid everywhere — ColorTextureFormat and `DataTextureFormat` carve out the subset each use accepts.",
-        "| Format | Channels | Bytes/px | Buffer | |---|---:|---:|---| | `R8` | 1 | 1 | `Uint8Array` | | `R32F` | 1 | 4 | `Float32Array` | | `Rgba8` | 4 | 4 | `Uint8Array` | | `Rgba16F` | 4 | 8 | — (render targets only) | | `Rgba32F` | 4 | 16 | `Float32Array` |"
+        "Not every format is valid everywhere - ColorTextureFormat and `DataTextureFormat` carve out the subset each use accepts.",
+        "| Format | Channels | Bytes/px | Buffer | |---|---:|---:|---| | `R8` | 1 | 1 | `Uint8Array` | | `R32F` | 1 | 4 | `Float32Array` | | `Rgba8` | 4 | 4 | `Uint8Array` | | `Rgba16F` | 4 | 8 | - (render targets only) | | `Rgba32F` | 4 | 16 | `Float32Array` |"
       ],
       "importLine": "import { TextureFormat } from '@codexo/exojs'",
       "sourceLink": null

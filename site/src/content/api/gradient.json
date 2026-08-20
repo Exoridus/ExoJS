@@ -1,6 +1,6 @@
 {
   "title": "Gradient",
-  "description": "CPU-rasterized gradient base. A Color-like paint value (not a Drawable): it owns a normalized list of color stops plus subclass geometry and supports the value-object contract — Gradient.clone, Gradient.copy, and Gradient.equals. Stops are cloned on the way in, clamped to `0..1`, and kept sorted by offset. Convert a gradient into a sampleable DataTexture with Gradient.toTexture; wrap that texture in a `Sprite`/`Mesh` to draw it.",
+  "description": "CPU-rasterized gradient base. A Color-like paint value (not a Drawable): it owns a normalized list of color stops plus subclass geometry and supports the value-object contract - Gradient.clone, Gradient.copy, and Gradient.equals. Stops are cloned on the way in, clamped to `0..1`, and kept sorted by offset. Convert a gradient into a sampleable DataTexture with Gradient.toTexture; wrap that texture in a `Sprite`/`Mesh` to draw it.",
   "symbol": "Gradient",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "CPU-rasterized gradient base. A Color-like paint value (not a Drawable): it owns a normalized list of color stops plus subclass geometry and supports the value-object contract — Gradient.clone, Gradient.copy, and Gradient.equals. Stops are cloned on the way in, clamped to `0..1`, and kept sorted by offset.",
+        "CPU-rasterized gradient base. A Color-like paint value (not a Drawable): it owns a normalized list of color stops plus subclass geometry and supports the value-object contract - Gradient.clone, Gradient.copy, and Gradient.equals. Stops are cloned on the way in, clamped to `0..1`, and kept sorted by offset.",
         "Convert a gradient into a sampleable DataTexture with Gradient.toTexture; wrap that texture in a `Sprite`/`Mesh` to draw it."
       ],
       "importLine": "import { Gradient } from '@codexo/exojs'",

@@ -1,6 +1,6 @@
 {
   "title": "XmlFactory",
-  "description": "AssetFactory implementation that loads XML files and produces a parsed Document via the browser's built-in DOMParser. Throws if the response body is not well-formed XML. Use the returned `Document` directly with standard DOM APIs — `doc.querySelector`, `doc.getElementsByTagName`, etc. — or pass it to a format-specific parser (e.g. for Tiled TMX, BMFont, or TexturePacker XML atlas files).",
+  "description": "AssetFactory implementation that loads XML files and produces a parsed Document via the browser's built-in DOMParser. Throws if the response body is not well-formed XML. Use the returned `Document` directly with standard DOM APIs - `doc.querySelector`, `doc.getElementsByTagName`, etc. - or pass it to a format-specific parser (e.g. for Tiled TMX, BMFont, or TexturePacker XML atlas files).",
   "symbol": "XmlFactory",
   "kind": "class",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "AssetFactory implementation that loads XML files and produces a parsed Document via the browser's built-in DOMParser.",
-        "Throws if the response body is not well-formed XML. Use the returned `Document` directly with standard DOM APIs — `doc.querySelector`, `doc.getElementsByTagName`, etc. — or pass it to a format-specific parser (e.g. for Tiled TMX, BMFont, or TexturePacker XML atlas files)."
+        "Throws if the response body is not well-formed XML. Use the returned `Document` directly with standard DOM APIs - `doc.querySelector`, `doc.getElementsByTagName`, etc. - or pass it to a format-specific parser (e.g. for Tiled TMX, BMFont, or TexturePacker XML atlas files)."
       ],
       "importLine": "import { XmlFactory } from '@codexo/exojs'",
       "sourceLink": null

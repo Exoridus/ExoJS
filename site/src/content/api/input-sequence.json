@@ -1,6 +1,6 @@
 {
   "title": "InputSequence",
-  "description": "An ordered list of SequenceAction pattern steps. Each entry is a single InputChannel (a one-channel step), a nested InputChord (several channels required together for that one step), or a nested InputAlternation (several alternatives, any one of which satisfies that one step) — the array-form equivalent of a `'>'`-separated, `'+'`-joined, `'|'`-alternated string pattern such as `'Down>Down+Right>Right'` or `'A+B|C>D'`.",
+  "description": "An ordered list of SequenceAction pattern steps. Each entry is a single InputChannel (a one-channel step), a nested InputChord (several channels required together for that one step), or a nested InputAlternation (several alternatives, any one of which satisfies that one step) - the array-form equivalent of a `'>'`-separated, `'+'`-joined, `'|'`-alternated string pattern such as `'Down>Down+Right>Right'` or `'A+B|C>D'`.",
   "symbol": "InputSequence",
   "kind": "type",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "An ordered list of SequenceAction pattern steps. Each entry is a single InputChannel (a one-channel step), a nested InputChord (several channels required together for that one step), or a nested InputAlternation (several alternatives, any one of which satisfies that one step) — the array-form equivalent of a `'>'`-separated, `'+'`-joined, `'|'`-alternated string pattern such as `'Down>Down+Right>Right'` or `'A+B|C>D'`."
+        "An ordered list of SequenceAction pattern steps. Each entry is a single InputChannel (a one-channel step), a nested InputChord (several channels required together for that one step), or a nested InputAlternation (several alternatives, any one of which satisfies that one step) - the array-form equivalent of a `'>'`-separated, `'+'`-joined, `'|'`-alternated string pattern such as `'Down>Down+Right>Right'` or `'A+B|C>D'`."
       ],
       "importLine": "import { InputSequence } from '@codexo/exojs'",
       "sourceLink": null

@@ -73,7 +73,7 @@
             }
           ],
           "returnType": "Extension",
-          "description": "Create a Particles extension with custom configuration. Returns an application-local descriptor — safe to pass to one Application only. For shared use, prefer particlesExtension."
+          "description": "Create a Particles extension with custom configuration. Returns an application-local descriptor - safe to pass to one Application only. For shared use, prefer particlesExtension."
         },
         {
           "name": "wgslFieldLayout",

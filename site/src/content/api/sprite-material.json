@@ -112,7 +112,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used — renderers recompile on next draw — but typical usage is to drop the reference."
+          "description": "Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used - renderers recompile on next draw - but typical usage is to drop the reference."
         },
         {
           "name": "setTexture",

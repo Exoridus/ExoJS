@@ -129,7 +129,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Subclass hook — called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input)."
+          "description": "Subclass hook - called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input)."
         },
         {
           "name": "destroy",
@@ -188,7 +188,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Attack time in milliseconds — how quickly the ducker engages. Default 30."
+          "description": "Attack time in milliseconds - how quickly the ducker engages. Default 30."
         },
         {
           "name": "inputNode",
@@ -305,7 +305,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Release time in milliseconds — how quickly the ducker disengages. Default 300."
+          "description": "Release time in milliseconds - how quickly the ducker disengages. Default 300."
         },
         {
           "name": "threshold",

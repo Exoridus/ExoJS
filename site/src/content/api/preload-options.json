@@ -1,6 +1,6 @@
 {
   "title": "PreloadOptions",
-  "description": "Options passed to SceneDirector.preload. Unlike ChangeSceneOptions, there is no `transition`/`suspendCurrent` — preloading never touches the active scope or visibly transitions anything.",
+  "description": "Options passed to SceneDirector.preload. Unlike ChangeSceneOptions, there is no `transition`/`suspendCurrent` - preloading never touches the active scope or visibly transitions anything.",
   "symbol": "PreloadOptions",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options passed to SceneDirector.preload. Unlike ChangeSceneOptions, there is no `transition`/`suspendCurrent` — preloading never touches the active scope or visibly transitions anything."
+        "Options passed to SceneDirector.preload. Unlike ChangeSceneOptions, there is no `transition`/`suspendCurrent` - preloading never touches the active scope or visibly transitions anything."
       ],
       "importLine": "import { PreloadOptions } from '@codexo/exojs'",
       "sourceLink": null

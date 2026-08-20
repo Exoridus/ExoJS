@@ -1,6 +1,6 @@
 {
   "title": "Bounds",
-  "description": "Mutable axis-aligned bounding box accumulator. Starts as the empty bounds (`-Infinity..Infinity` reversed) and grows monotonically as points or rectangles are merged in via Bounds.addCoords and Bounds.addRect. Used during scene-graph traversal to accumulate a subtree's combined extent for culling and hit-testing. The Bounds.getRect accessor lazily folds the current min/max into a shared Rectangle — copy the result if you need to retain it across further accumulation.",
+  "description": "Mutable axis-aligned bounding box accumulator. Starts as the empty bounds (`-Infinity..Infinity` reversed) and grows monotonically as points or rectangles are merged in via Bounds.addCoords and Bounds.addRect. Used during scene-graph traversal to accumulate a subtree's combined extent for culling and hit-testing. The Bounds.getRect accessor lazily folds the current min/max into a shared Rectangle - copy the result if you need to retain it across further accumulation.",
   "symbol": "Bounds",
   "kind": "class",
   "subsystem": "core",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Mutable axis-aligned bounding box accumulator. Starts as the empty bounds (`-Infinity..Infinity` reversed) and grows monotonically as points or rectangles are merged in via Bounds.addCoords and Bounds.addRect. Used during scene-graph traversal to accumulate a subtree's combined extent for culling and hit-testing.",
-        "The Bounds.getRect accessor lazily folds the current min/max into a shared Rectangle — copy the result if you need to retain it across further accumulation."
+        "The Bounds.getRect accessor lazily folds the current min/max into a shared Rectangle - copy the result if you need to retain it across further accumulation."
       ],
       "importLine": "import { Bounds } from '@codexo/exojs'",
       "sourceLink": null
@@ -205,7 +205,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Expand the bounds to include rectangle. When transform is provided the rectangle's corners are transformed into the bounds' coordinate space first (via Rectangle.temp — does not mutate rectangle)."
+          "description": "Expand the bounds to include rectangle. When transform is provided the rectangle's corners are transformed into the bounds' coordinate space first (via Rectangle.temp - does not mutate rectangle)."
         },
         {
           "name": "destroy",
@@ -263,7 +263,7 @@
           ],
           "params": [],
           "returnType": "Rectangle",
-          "description": "Materialize the accumulated min/max as a Rectangle. Returns the same instance across calls — copy if you need to retain it past the next mutation."
+          "description": "Materialize the accumulated min/max as a Rectangle. Returns the same instance across calls - copy if you need to retain it past the next mutation."
         },
         {
           "name": "reset",

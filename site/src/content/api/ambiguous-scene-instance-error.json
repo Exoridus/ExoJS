@@ -1,6 +1,6 @@
 {
   "title": "AmbiguousSceneInstanceError",
-  "description": "Thrown when `unload(Target)` is called with `options.instance` omitted while more than one activation (active, retained, and/or preloaded) exists for `Target` — there is no priority order; the caller must specify which one via `{ instance: 'active' | 'retained' | 'preloaded' }`, or `{ instance: 'all' }` to discard every one.",
+  "description": "Thrown when `unload(Target)` is called with `options.instance` omitted while more than one activation (active, retained, and/or preloaded) exists for `Target` - there is no priority order; the caller must specify which one via `{ instance: 'active' | 'retained' | 'preloaded' }`, or `{ instance: 'all' }` to discard every one.",
   "symbol": "AmbiguousSceneInstanceError",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Thrown when `unload(Target)` is called with `options.instance` omitted while more than one activation (active, retained, and/or preloaded) exists for `Target` — there is no priority order; the caller must specify which one via `{ instance: 'active' | 'retained' | 'preloaded' }`, or `{ instance: 'all' }` to discard every one."
+        "Thrown when `unload(Target)` is called with `options.instance` omitted while more than one activation (active, retained, and/or preloaded) exists for `Target` - there is no priority order; the caller must specify which one via `{ instance: 'active' | 'retained' | 'preloaded' }`, or `{ instance: 'all' }` to discard every one."
       ],
       "importLine": "import { AmbiguousSceneInstanceError } from '@codexo/exojs'",
       "sourceLink": null

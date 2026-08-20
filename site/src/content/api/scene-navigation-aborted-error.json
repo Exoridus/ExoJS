@@ -1,6 +1,6 @@
 {
   "title": "SceneNavigationAbortedError",
-  "description": "Thrown to reject a `change()`/`restore()`/`unload()` call whose transition session was still in flight when the Application frame loop stopped (a fatal frame error, or `stop()`/`destroy()` called mid-transition) — the session cannot progress without frame callbacks, so the navigation is aborted rather than left to hang forever. Any claimed preload/retained entry is restored, not discarded.",
+  "description": "Thrown to reject a `change()`/`restore()`/`unload()` call whose transition session was still in flight when the Application frame loop stopped (a fatal frame error, or `stop()`/`destroy()` called mid-transition) - the session cannot progress without frame callbacks, so the navigation is aborted rather than left to hang forever. Any claimed preload/retained entry is restored, not discarded.",
   "symbol": "SceneNavigationAbortedError",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Thrown to reject a `change()`/`restore()`/`unload()` call whose transition session was still in flight when the Application frame loop stopped (a fatal frame error, or `stop()`/`destroy()` called mid-transition) — the session cannot progress without frame callbacks, so the navigation is aborted rather than left to hang forever. Any claimed preload/retained entry is restored, not discarded."
+        "Thrown to reject a `change()`/`restore()`/`unload()` call whose transition session was still in flight when the Application frame loop stopped (a fatal frame error, or `stop()`/`destroy()` called mid-transition) - the session cannot progress without frame callbacks, so the navigation is aborted rather than left to hang forever. Any claimed preload/retained entry is restored, not discarded."
       ],
       "importLine": "import { SceneNavigationAbortedError } from '@codexo/exojs'",
       "sourceLink": null

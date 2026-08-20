@@ -105,7 +105,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Non-null only when outgoingFrame: 'snapshot' was requested and an outgoing scene existed. The same texture for the entire session — never reallocated mid-session. Borrowed — do not retain or destroy it."
+          "description": "Non-null only when outgoingFrame: 'snapshot' was requested and an outgoing scene existed. The same texture for the entire session - never reallocated mid-session. Borrowed - do not retain or destroy it."
         }
       ],
       "paragraphs": [],

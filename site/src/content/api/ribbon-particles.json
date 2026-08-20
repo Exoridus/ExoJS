@@ -1,6 +1,6 @@
 {
   "title": "RibbonParticles",
-  "description": "A connected triangle strip through the system's particles: one ribbon per system, drawn as a single non-instanced draw. Every particle contributes two vertices, offset either side of the path running through its neighbours, so the whole live range becomes one continuous band — the shape a sword arc, a projectile streak or a smoke plume wants, where a quad-per-particle would show as a dotted line. Layout of the per-vertex buffer build fills (20 bytes, 3 attributes): ``` a_position f32x2 (offset 0, 8 bytes) strip vertex (system-local) a_texcoord f32x2 (offset 8, 8 bytes) u along the strip, v across it a_color u8x4 (offset 16, 4 bytes) RGBA tint, normalised ``` **No ribbon-specific styling parameters.** Half-width comes from the particle's `scaleX` and the tint from its `color`, so the existing update modules already produce the expected look: `ScaleOverLifetime` tapers the tail, `ColorOverLifetime` gradients along the streak, and `AlphaFadeOverLifetime` fades it out. RibbonParticlesOptions.width only sets the base the scale multiplies. **The strip is built on the CPU**, so this mode is not GPU-eligible and a system using it stays on the CPU simulation path (observable through `ParticleSystem.gpuMode`). That is what guarantees the builder reads valid positions in emission order: CPU-mode slots are dense and compaction copies survivors forward stably, which is exactly the ordering a connected strip needs.",
+  "description": "A connected triangle strip through the system's particles: one ribbon per system, drawn as a single non-instanced draw. Every particle contributes two vertices, offset either side of the path running through its neighbours, so the whole live range becomes one continuous band - the shape a sword arc, a projectile streak or a smoke plume wants, where a quad-per-particle would show as a dotted line. Layout of the per-vertex buffer build fills (20 bytes, 3 attributes): ``` a_position f32x2 (offset 0, 8 bytes) strip vertex (system-local) a_texcoord f32x2 (offset 8, 8 bytes) u along the strip, v across it a_color u8x4 (offset 16, 4 bytes) RGBA tint, normalised ``` **No ribbon-specific styling parameters.** Half-width comes from the particle's `scaleX` and the tint from its `color`, so the existing update modules already produce the expected look: `ScaleOverLifetime` tapers the tail, `ColorOverLifetime` gradients along the streak, and `AlphaFadeOverLifetime` fades it out. RibbonParticlesOptions.width only sets the base the scale multiplies. **The strip is built on the CPU**, so this mode is not GPU-eligible and a system using it stays on the CPU simulation path (observable through `ParticleSystem.gpuMode`). That is what guarantees the builder reads valid positions in emission order: CPU-mode slots are dense and compaction copies survivors forward stably, which is exactly the ordering a connected strip needs.",
   "symbol": "RibbonParticles",
   "kind": "class",
   "subsystem": "particles",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A connected triangle strip through the system's particles: one ribbon per system, drawn as a single non-instanced draw.",
-        "Every particle contributes two vertices, offset either side of the path running through its neighbours, so the whole live range becomes one continuous band — the shape a sword arc, a projectile streak or a smoke plume wants, where a quad-per-particle would show as a dotted line.",
+        "Every particle contributes two vertices, offset either side of the path running through its neighbours, so the whole live range becomes one continuous band - the shape a sword arc, a projectile streak or a smoke plume wants, where a quad-per-particle would show as a dotted line.",
         "Layout of the per-vertex buffer build fills (20 bytes, 3 attributes):",
         "``` a_position f32x2 (offset 0, 8 bytes) strip vertex (system-local) a_texcoord f32x2 (offset 8, 8 bytes) u along the strip, v across it a_color u8x4 (offset 16, 4 bytes) RGBA tint, normalised ```",
         "**No ribbon-specific styling parameters.** Half-width comes from the particle's `scaleX` and the tint from its `color`, so the existing update modules already produce the expected look: `ScaleOverLifetime` tapers the tail, `ColorOverLifetime` gradients along the streak, and `AlphaFadeOverLifetime` fades it out. RibbonParticlesOptions.width only sets the base the scale multiplies.",
@@ -355,7 +355,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "A strip has no fixed vertex count — the draw covers whatever build emitted this frame. Non-indexed by construction: the strip's own vertex order is its topology, and an index list would pin the draw to a fixed index count."
+          "description": "A strip has no fixed vertex count - the draw covers whatever build emitted this frame. Non-indexed by construction: the strip's own vertex order is its topology, and an index list would pin the draw to a fixed index count."
         },
         {
           "name": "floatsPerVertex",
@@ -397,7 +397,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether this mode can run while the system is in GPU compute mode. Mirrors UpdateModule.wgsl(): a mode that cannot forces the whole system onto the CPU path, silently and observably via ParticleSystem.gpuMode. A GPU-eligible mode's layout must match what the compute pipeline emits into gpuState.instanceBuffer — the shared 40-byte per-instance layout (instanceAttributes). QuadParticles and MeshParticles both declare exactly that layout and differ only in the shape they expand it into, which is why both are eligible without the compute shader knowing either."
+          "description": "Whether this mode can run while the system is in GPU compute mode. Mirrors UpdateModule.wgsl(): a mode that cannot forces the whole system onto the CPU path, silently and observably via ParticleSystem.gpuMode. A GPU-eligible mode's layout must match what the compute pipeline emits into gpuState.instanceBuffer - the shared 40-byte per-instance layout (instanceAttributes). QuadParticles and MeshParticles both declare exactly that layout and differ only in the shape they expand it into, which is why both are eligible without the compute shader knowing either."
         },
         {
           "name": "instanced",
@@ -447,7 +447,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fixed per-vertex geometry this mode instances, or null when it derives its vertices in the shader from the vertex index — which is what QuadParticles and RibbonParticles do. When set, it supplies the topology, index list and index count for the draw in place of dataLayout's, and the executors bind its vertexData as a second vertex buffer stepping per vertex beside the per-instance one. Only meaningful on an instanced mode: without instancing both buffers would step per vertex and no draw is expressible. Attribute names must not collide with dataLayout's, since both sets bind into the same shader. Mutating the geometry is picked up on the next draw through its version, so invalidate() after an in-place edit is enough to reach the GPU."
+          "description": "Fixed per-vertex geometry this mode instances, or null when it derives its vertices in the shader from the vertex index - which is what QuadParticles and RibbonParticles do. When set, it supplies the topology, index list and index count for the draw in place of dataLayout's, and the executors bind its vertexData as a second vertex buffer stepping per vertex beside the per-instance one. Only meaningful on an instanced mode: without instancing both buffers would step per vertex and no draw is expressible. Attribute names must not collide with dataLayout's, since both sets bind into the same shader. Mutating the geometry is picked up on the next draw through its version, so invalidate() after an in-place edit is enough to reach the GPU."
         },
         {
           "name": "count",

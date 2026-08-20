@@ -1,6 +1,6 @@
 {
   "title": "SceneTransition",
-  "description": "Reusable, immutable transition definition — construct once, use across arbitrarily many navigations (even concurrently, across multiple `Application`s). All per-navigation mutable state lives on the SceneTransitionSession a call to SceneTransition.beginSession produces, never on the definition itself.",
+  "description": "Reusable, immutable transition definition - construct once, use across arbitrarily many navigations (even concurrently, across multiple `Application`s). All per-navigation mutable state lives on the SceneTransitionSession a call to SceneTransition.beginSession produces, never on the definition itself.",
   "symbol": "SceneTransition",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Reusable, immutable transition definition — construct once, use across arbitrarily many navigations (even concurrently, across multiple `Application`s). All per-navigation mutable state lives on the SceneTransitionSession a call to SceneTransition.beginSession produces, never on the definition itself."
+        "Reusable, immutable transition definition - construct once, use across arbitrarily many navigations (even concurrently, across multiple `Application`s). All per-navigation mutable state lives on the SceneTransitionSession a call to SceneTransition.beginSession produces, never on the definition itself."
       ],
       "importLine": "import { SceneTransition } from '@codexo/exojs'",
       "sourceLink": null
@@ -111,7 +111,7 @@
             }
           ],
           "returnType": "SceneTransitionSession",
-          "description": "Called by the Director — do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
+          "description": "Called by the Director - do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
         },
         {
           "name": "createSession",

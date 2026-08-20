@@ -1,6 +1,6 @@
 {
   "title": "InteractionScope",
-  "description": "Handle returned by SceneInteraction.scope. While active, pointer hit-testing and Tab traversal are confined to the scoped root's subtree. Call InteractionScope.release (or InteractionScope.destroy, an alias) to end the scope — nested scopes restore whichever scope was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently.",
+  "description": "Handle returned by SceneInteraction.scope. While active, pointer hit-testing and Tab traversal are confined to the scoped root's subtree. Call InteractionScope.release (or InteractionScope.destroy, an alias) to end the scope - nested scopes restore whichever scope was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently.",
   "symbol": "InteractionScope",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Handle returned by SceneInteraction.scope. While active, pointer hit-testing and Tab traversal are confined to the scoped root's subtree. Call InteractionScope.release (or InteractionScope.destroy, an alias) to end the scope — nested scopes restore whichever scope was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently."
+        "Handle returned by SceneInteraction.scope. While active, pointer hit-testing and Tab traversal are confined to the scoped root's subtree. Call InteractionScope.release (or InteractionScope.destroy, an alias) to end the scope - nested scopes restore whichever scope was active before this one, regardless of release order. Idempotent; also released automatically when the owning scene ends permanently."
       ],
       "importLine": "import { InteractionScope } from '@codexo/exojs'",
       "sourceLink": null

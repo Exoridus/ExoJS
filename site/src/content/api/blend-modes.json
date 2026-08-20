@@ -1,6 +1,6 @@
 {
   "title": "BlendModes",
-  "description": "Compositing blend modes applied when drawing a Drawable over the current render target. Modes 0–4 are implemented as fixed-function GPU blend equations (no texture capture required). Modes 5–17 use a backdrop-aware compositor: the content is first rendered off-screen, then composited over the captured backdrop via a W3C-compliant blend shader. Use isAdvancedBlendMode to test whether a mode requires the compositor path.",
+  "description": "Compositing blend modes applied when drawing a Drawable over the current render target. Modes 0-4 are implemented as fixed-function GPU blend equations (no texture capture required). Modes 5-17 use a backdrop-aware compositor: the content is first rendered off-screen, then composited over the captured backdrop via a W3C-compliant blend shader. Use isAdvancedBlendMode to test whether a mode requires the compositor path.",
   "symbol": "BlendModes",
   "kind": "enum",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Compositing blend modes applied when drawing a Drawable over the current render target.",
-        "Modes 0–4 are implemented as fixed-function GPU blend equations (no texture capture required). Modes 5–17 use a backdrop-aware compositor: the content is first rendered off-screen, then composited over the captured backdrop via a W3C-compliant blend shader. Use isAdvancedBlendMode to test whether a mode requires the compositor path."
+        "Modes 0-4 are implemented as fixed-function GPU blend equations (no texture capture required). Modes 5-17 use a backdrop-aware compositor: the content is first rendered off-screen, then composited over the captured backdrop via a W3C-compliant blend shader. Use isAdvancedBlendMode to test whether a mode requires the compositor path."
       ],
       "importLine": "import { BlendModes } from '@codexo/exojs'",
       "sourceLink": null

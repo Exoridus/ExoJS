@@ -132,7 +132,7 @@
           ],
           "params": [],
           "returnType": "Vector",
-          "description": "Convert to a Cartesian Vector. Returns Vector.temp — do not store the reference across calls."
+          "description": "Convert to a Cartesian Vector. Returns Vector.temp - do not store the reference across calls."
         },
         {
           "name": "fromVector",

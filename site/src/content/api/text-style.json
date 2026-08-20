@@ -1,6 +1,6 @@
 {
   "title": "TextStyle",
-  "description": "Describes how a Text node renders its string. Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` — only updates `Mesh.tint`, no atlas work - `'layout'` — rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` — atlas lookup + full mesh rebuild Call consumeDirty at the start of each frame to get the accumulated hint and clear the flag.",
+  "description": "Describes how a Text node renders its string. Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` - only updates `Mesh.tint`, no atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild Call consumeDirty at the start of each frame to get the accumulated hint and clear the flag.",
   "symbol": "TextStyle",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Describes how a Text node renders its string.",
-        "Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` — only updates `Mesh.tint`, no atlas work - `'layout'` — rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` — atlas lookup + full mesh rebuild",
+        "Every setter marks the style dirty with a StyleChangeHint so that the owning node can batch-rebuild efficiently on the next frame: - `'tint'` - only updates `Mesh.tint`, no atlas work - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs - `'font'` - atlas lookup + full mesh rebuild",
         "Call consumeDirty at the start of each frame to get the accumulated hint and clear the flag."
       ],
       "importLine": "import { TextStyle } from '@codexo/exojs'",
@@ -490,7 +490,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Outline color — used by BitmapText/SDF rendering as a shader uniform."
+          "description": "Outline color - used by BitmapText/SDF rendering as a shader uniform."
         },
         {
           "name": "outlineWidth",

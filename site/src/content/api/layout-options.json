@@ -1,6 +1,6 @@
 {
   "title": "LayoutOptions",
-  "description": "Controls text flow and overflow — separate from TextStyle which describes visual appearance. Pass to Text or layoutText.",
+  "description": "Controls text flow and overflow - separate from TextStyle which describes visual appearance. Pass to Text or layoutText.",
   "symbol": "LayoutOptions",
   "kind": "interface",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Controls text flow and overflow — separate from TextStyle which describes visual appearance. Pass to Text or layoutText."
+        "Controls text flow and overflow - separate from TextStyle which describes visual appearance. Pass to Text or layoutText."
       ],
       "importLine": "import { LayoutOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -84,7 +84,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Text direction. Defaults to 'ltr'. 'rtl' reverses each line's glyphs visually after wrapping, which is correct for uniformly right-to-left text. Full bidi (mixed LTR/RTL runs), Arabic contextual shaping, and direction-relative alignment are not implemented — align stays literal in both directions."
+          "description": "Text direction. Defaults to 'ltr'. 'rtl' reverses each line's glyphs visually after wrapping, which is correct for uniformly right-to-left text. Full bidi (mixed LTR/RTL runs), Arabic contextual shaping, and direction-relative alignment are not implemented - align stays literal in both directions."
         },
         {
           "name": "letterSpacing",
@@ -134,7 +134,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Vertical boundary in pixels. Only whole lines that fit within it are kept. Has no effect on its own — pair it with an overflow policy."
+          "description": "Vertical boundary in pixels. Only whole lines that fit within it are kept. Has no effect on its own - pair it with an overflow policy."
         },
         {
           "name": "maxWidth",
@@ -200,7 +200,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "What to do with lines that do not fit maxHeight. Defaults to 'visible'. - 'visible' — Keep every line; maxHeight is ignored. - 'clip' — Drop the lines that do not fit. - 'ellipsis' — Drop them and mark the last visible line with …, shortening it so it still fits maxWidth when one is set."
+          "description": "What to do with lines that do not fit maxHeight. Defaults to 'visible'. - 'visible' - Keep every line; maxHeight is ignored. - 'clip' - Drop the lines that do not fit. - 'ellipsis' - Drop them and mark the last visible line with …, shortening it so it still fits maxWidth when one is set."
         },
         {
           "name": "whiteSpace",
@@ -241,7 +241,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whitespace handling mode: - 'normal' — Consecutive spaces collapse to one; \\n becomes a space (standard wrap). - 'pre' — Spaces and newlines preserved verbatim. - 'pre-line' — Spaces collapse; \\n preserved (default when no explicit mode). Defaults to 'pre-line' (current historical behaviour)."
+          "description": "Whitespace handling mode: - 'normal' - Consecutive spaces collapse to one; \\n becomes a space (standard wrap). - 'pre' - Spaces and newlines preserved verbatim. - 'pre-line' - Spaces collapse; \\n preserved (default when no explicit mode). Defaults to 'pre-line' (current historical behaviour)."
         }
       ],
       "paragraphs": [],

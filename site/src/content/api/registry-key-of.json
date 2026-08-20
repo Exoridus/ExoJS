@@ -1,6 +1,6 @@
 {
   "title": "RegistryKeyOf",
-  "description": "Every string key registered in a `SceneRegistryShape` — the type of a valid `change()`/`restore()` key-based navigation target.",
+  "description": "Every string key registered in a `SceneRegistryShape` - the type of a valid `change()`/`restore()` key-based navigation target.",
   "symbol": "RegistryKeyOf",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Every string key registered in a `SceneRegistryShape` — the type of a valid `change()`/`restore()` key-based navigation target."
+        "Every string key registered in a `SceneRegistryShape` - the type of a valid `change()`/`restore()` key-based navigation target."
       ],
       "importLine": "import { RegistryKeyOf } from '@codexo/exojs'",
       "sourceLink": null

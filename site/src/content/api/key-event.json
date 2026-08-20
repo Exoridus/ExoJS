@@ -1,6 +1,6 @@
 {
   "title": "KeyEvent",
-  "description": "Envelope dispatched by `app.interaction` to the focused RenderNode for keyboard input, then bubbled up its entire parent chain — same DOM-style shape as InteractionEvent: `target` stays pinned to the focused node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself focusable. A handler may call KeyEvent.stopPropagation to halt the bubble early, e.g. a panel listening for `Escape` from any of its focused descendants without each one needing its own handler. `channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`). A handler may call KeyEvent.preventDefault to suppress ExoJS's own built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself. It affects engine behaviour only — the browser's own default was already decided synchronously when the platform event arrived, long before this envelope was dispatched.",
+  "description": "Envelope dispatched by `app.interaction` to the focused RenderNode for keyboard input, then bubbled up its entire parent chain - same DOM-style shape as InteractionEvent: `target` stays pinned to the focused node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself focusable. A handler may call KeyEvent.stopPropagation to halt the bubble early, e.g. a panel listening for `Escape` from any of its focused descendants without each one needing its own handler. `channel` is the input channel of the key - compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`). A handler may call KeyEvent.preventDefault to suppress ExoJS's own built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself. It affects engine behaviour only - the browser's own default was already decided synchronously when the platform event arrived, long before this envelope was dispatched.",
   "symbol": "KeyEvent",
   "kind": "class",
   "subsystem": "input",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Envelope dispatched by `app.interaction` to the focused RenderNode for keyboard input, then bubbled up its entire parent chain — same DOM-style shape as InteractionEvent: `target` stays pinned to the focused node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself focusable. A handler may call KeyEvent.stopPropagation to halt the bubble early, e.g. a panel listening for `Escape` from any of its focused descendants without each one needing its own handler.",
-        "`channel` is the input channel of the key — compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`).",
-        "A handler may call KeyEvent.preventDefault to suppress ExoJS's own built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself. It affects engine behaviour only — the browser's own default was already decided synchronously when the platform event arrived, long before this envelope was dispatched."
+        "Envelope dispatched by `app.interaction` to the focused RenderNode for keyboard input, then bubbled up its entire parent chain - same DOM-style shape as InteractionEvent: `target` stays pinned to the focused node while `currentTarget` advances to each ancestor, whether or not that ancestor is itself focusable. A handler may call KeyEvent.stopPropagation to halt the bubble early, e.g. a panel listening for `Escape` from any of its focused descendants without each one needing its own handler.",
+        "`channel` is the input channel of the key - compare it with the `Keyboard` constants (e.g. `event.channel === Keyboard.Enter`).",
+        "A handler may call KeyEvent.preventDefault to suppress ExoJS's own built-in handling for this key (currently `Tab` focus traversal), letting the focused widget consume the key itself. It affects engine behaviour only - the browser's own default was already decided synchronously when the platform event arrived, long before this envelope was dispatched."
       ],
       "importLine": "import { KeyEvent } from '@codexo/exojs'",
       "sourceLink": null
@@ -214,7 +214,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Input channel of the key — compare with the Keyboard.* channel constants."
+          "description": "Input channel of the key - compare with the Keyboard.* channel constants."
         },
         {
           "name": "currentTarget",

@@ -1,6 +1,6 @@
 {
   "title": "SceneTransitionContext",
-  "description": "Immutable, read-only description of the navigation a SceneTransition is being asked to run for — passed to SceneTransition.getRequirements and into the SceneTransitionEnvironment handed to SceneTransition.beginSession. Never mutates over a session's lifetime; construct a fresh one per navigation.",
+  "description": "Immutable, read-only description of the navigation a SceneTransition is being asked to run for - passed to SceneTransition.getRequirements and into the SceneTransitionEnvironment handed to SceneTransition.beginSession. Never mutates over a session's lifetime; construct a fresh one per navigation.",
   "symbol": "SceneTransitionContext",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Immutable, read-only description of the navigation a SceneTransition is being asked to run for — passed to SceneTransition.getRequirements and into the SceneTransitionEnvironment handed to SceneTransition.beginSession. Never mutates over a session's lifetime; construct a fresh one per navigation."
+        "Immutable, read-only description of the navigation a SceneTransition is being asked to run for - passed to SceneTransition.getRequirements and into the SceneTransitionEnvironment handed to SceneTransition.beginSession. Never mutates over a session's lifetime; construct a fresh one per navigation."
       ],
       "importLine": "import { SceneTransitionContext } from '@codexo/exojs'",
       "sourceLink": null

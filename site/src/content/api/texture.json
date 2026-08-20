@@ -740,7 +740,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true once destroy has run — a destroyed texture must not be bound."
+          "description": "true once destroy has run - a destroyed texture must not be bound."
         },
         {
           "name": "error",
@@ -865,7 +865,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Promise that settles with this texture once its payload has loaded — resolved immediately for 'ready' textures, rejected with the load error for 'failed' ones. Re-materialized when a failed load is retried, so read it fresh from this getter rather than caching it across load cycles."
+          "description": "Promise that settles with this texture once its payload has loaded - resolved immediately for 'ready' textures, rejected with the load error for 'failed' ones. Re-materialized when a failed load is retried, so read it fresh from this getter rather than caching it across load cycles."
         },
         {
           "name": "loadState",
@@ -1138,7 +1138,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Shared 8×8 magenta/black checkerboard shown in place of assets that failed to load — a visible error beats an invisible hole, in production too. Lazily created; every access returns the same instance."
+          "description": "Shared 8×8 magenta/black checkerboard shown in place of assets that failed to load - a visible error beats an invisible hole, in production too. Lazily created; every access returns the same instance."
         },
         {
           "name": "white",

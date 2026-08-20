@@ -1,6 +1,6 @@
 {
   "title": "NetworkOnlyStrategy",
-  "description": "CacheStrategy that always fetches from the network and never reads from or writes to any CacheStore. Useful for assets that must always be fresh (e.g. live configuration files) or for environments where persistent storage is unavailable. The `stores` argument is accepted but intentionally ignored. A failing network leg rejects with an AssetNetworkError carrying the URL, the HTTP status (when one arrived) and the original rejection as `cause`; a cancelled load still rejects with the platform `AbortError`. Returns the fully constructed resource — callers do not need to call `request.factory.create` again.",
+  "description": "CacheStrategy that always fetches from the network and never reads from or writes to any CacheStore. Useful for assets that must always be fresh (e.g. live configuration files) or for environments where persistent storage is unavailable. The `stores` argument is accepted but intentionally ignored. A failing network leg rejects with an AssetNetworkError carrying the URL, the HTTP status (when one arrived) and the original rejection as `cause`; a cancelled load still rejects with the platform `AbortError`. Returns the fully constructed resource - callers do not need to call `request.factory.create` again.",
   "symbol": "NetworkOnlyStrategy",
   "kind": "class",
   "subsystem": "assets",
@@ -22,7 +22,7 @@
         "CacheStrategy that always fetches from the network and never reads from or writes to any CacheStore.",
         "Useful for assets that must always be fresh (e.g. live configuration files) or for environments where persistent storage is unavailable. The `stores` argument is accepted but intentionally ignored.",
         "A failing network leg rejects with an AssetNetworkError carrying the URL, the HTTP status (when one arrived) and the original rejection as `cause`; a cancelled load still rejects with the platform `AbortError`.",
-        "Returns the fully constructed resource — callers do not need to call `request.factory.create` again."
+        "Returns the fully constructed resource - callers do not need to call `request.factory.create` again."
       ],
       "importLine": "import { NetworkOnlyStrategy } from '@codexo/exojs'",
       "sourceLink": null

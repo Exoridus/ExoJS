@@ -1,6 +1,6 @@
 {
   "title": "TiledWangColorData",
-  "description": "One color (terrain) entry within a wangset's `colors` array. `tile` is the representative tile local id for this color (–1 if unset). `probability` is the relative spawn weight used by Tiled's random fill.",
+  "description": "One color (terrain) entry within a wangset's `colors` array. `tile` is the representative tile local id for this color (-1 if unset). `probability` is the relative spawn weight used by Tiled's random fill.",
   "symbol": "TiledWangColorData",
   "kind": "interface",
   "subsystem": "tiled",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "One color (terrain) entry within a wangset's `colors` array.",
-        "`tile` is the representative tile local id for this color (–1 if unset). `probability` is the relative spawn weight used by Tiled's random fill."
+        "`tile` is the representative tile local id for this color (-1 if unset). `probability` is the relative spawn weight used by Tiled's random fill."
       ],
       "importLine": "import { TiledWangColorData } from '@codexo/exojs-tiled'",
       "sourceLink": null

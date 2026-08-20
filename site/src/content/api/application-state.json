@@ -1,6 +1,6 @@
 {
   "title": "ApplicationState",
-  "description": "Lifecycle state of an Application, in the same vocabulary SceneState uses for a scene. | State | Meaning | |---|---| | `Stopped` | Constructed, or halted again — no frame loop, still reusable | | `Loading` | Application.start is running: backend, scene navigation | | `Running` | Frame loop live | | `Halting` | Application.stop or Application.destroy is taking the loop down | | `Destroying` | Application.destroy's asynchronous teardown is in flight | | `Destroyed` | Teardown finished — the instance is permanently unusable | `Destroying` and `Destroyed` are distinct because teardown is asynchronous: `destroy()` returns a Promise, and everything between that call and its fulfilment is `Destroying`. Both are terminal in the sense that Application.start rejects from either.",
+  "description": "Lifecycle state of an Application, in the same vocabulary SceneState uses for a scene. | State | Meaning | |---|---| | `Stopped` | Constructed, or halted again - no frame loop, still reusable | | `Loading` | Application.start is running: backend, scene navigation | | `Running` | Frame loop live | | `Halting` | Application.stop or Application.destroy is taking the loop down | | `Destroying` | Application.destroy's asynchronous teardown is in flight | | `Destroyed` | Teardown finished - the instance is permanently unusable | `Destroying` and `Destroyed` are distinct because teardown is asynchronous: `destroy()` returns a Promise, and everything between that call and its fulfilment is `Destroying`. Both are terminal in the sense that Application.start rejects from either.",
   "symbol": "ApplicationState",
   "kind": "enum",
   "subsystem": "core",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Lifecycle state of an Application, in the same vocabulary SceneState uses for a scene.",
-        "| State | Meaning | |---|---| | `Stopped` | Constructed, or halted again — no frame loop, still reusable | | `Loading` | Application.start is running: backend, scene navigation | | `Running` | Frame loop live | | `Halting` | Application.stop or Application.destroy is taking the loop down | | `Destroying` | Application.destroy's asynchronous teardown is in flight | | `Destroyed` | Teardown finished — the instance is permanently unusable |",
+        "| State | Meaning | |---|---| | `Stopped` | Constructed, or halted again - no frame loop, still reusable | | `Loading` | Application.start is running: backend, scene navigation | | `Running` | Frame loop live | | `Halting` | Application.stop or Application.destroy is taking the loop down | | `Destroying` | Application.destroy's asynchronous teardown is in flight | | `Destroyed` | Teardown finished - the instance is permanently unusable |",
         "`Destroying` and `Destroyed` are distinct because teardown is asynchronous: `destroy()` returns a Promise, and everything between that call and its fulfilment is `Destroying`. Both are terminal in the sense that Application.start rejects from either."
       ],
       "importLine": "import { ApplicationState } from '@codexo/exojs'",

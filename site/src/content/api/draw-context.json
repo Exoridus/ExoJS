@@ -1,6 +1,6 @@
 {
   "title": "DrawContext",
-  "description": "The shared rendering verbs that act on the active render target. Implemented by the frame-level RenderingContext (active target = the canvas by default) and the pass-scoped `PassContext` (active target = the pass target). Every verb operates on the *active* target and never resets the active view, so it is safe inside a pass redirect. Use backend only for raw draws or GPU state — never to switch target/view/clear, which would bypass the coordinator's clear-vs-load handling.",
+  "description": "The shared rendering verbs that act on the active render target. Implemented by the frame-level RenderingContext (active target = the canvas by default) and the pass-scoped `PassContext` (active target = the pass target). Every verb operates on the *active* target and never resets the active view, so it is safe inside a pass redirect. Use backend only for raw draws or GPU state - never to switch target/view/clear, which would bypass the coordinator's clear-vs-load handling.",
   "symbol": "DrawContext",
   "kind": "interface",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "The shared rendering verbs that act on the active render target. Implemented by the frame-level RenderingContext (active target = the canvas by default) and the pass-scoped `PassContext` (active target = the pass target).",
-        "Every verb operates on the *active* target and never resets the active view, so it is safe inside a pass redirect. Use backend only for raw draws or GPU state — never to switch target/view/clear, which would bypass the coordinator's clear-vs-load handling."
+        "Every verb operates on the *active* target and never resets the active view, so it is safe inside a pass redirect. Use backend only for raw draws or GPU state - never to switch target/view/clear, which would bypass the coordinator's clear-vs-load handling."
       ],
       "importLine": "import { DrawContext } from '@codexo/exojs'",
       "sourceLink": null
@@ -409,7 +409,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Raw backend — draws/state only; do NOT switch target/view/clear here."
+          "description": "Raw backend - draws/state only; do NOT switch target/view/clear here."
         }
       ],
       "paragraphs": [],

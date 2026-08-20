@@ -214,7 +214,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Subscribe to the moment this target (or any subclass — including RenderTexture) is destroyed. Backends use this to release GPU-side resources (framebuffer + attached texture) tied to the target. Listeners fire exactly once."
+          "description": "Subscribe to the moment this target (or any subclass - including RenderTexture) is destroyed. Backends use this to release GPU-side resources (framebuffer + attached texture) tied to the target. Listeners fire exactly once."
         },
         {
           "name": "destroy",
@@ -880,7 +880,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Point this target at view, or back at its own default view when passed null. The view is caller-owned — neither this call nor destroy releases it."
+          "description": "Point this target at view, or back at its own default view when passed null. The view is caller-owned - neither this call nor destroy releases it."
         },
         {
           "name": "setWrapMode",
@@ -1057,7 +1057,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true once destroy has run. A destroyed target must not be rendered into — the backend throws rather than drawing into released GPU state."
+          "description": "true once destroy has run. A destroyed target must not be rendered into - the backend throws rather than drawing into released GPU state."
         },
         {
           "name": "flipY",

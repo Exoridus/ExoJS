@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The underlying failure — the TypeError a failed fetch rejects with, or anything a custom transport threw. Passed through as Error.cause. Absent for an HTTP error status, where the response itself is the failure."
+          "description": "The underlying failure - the TypeError a failed fetch rejects with, or anything a custom transport threw. Passed through as Error.cause. Absent for an HTTP error status, where the response itself is the failure."
         },
         {
           "name": "message",
@@ -97,7 +97,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "HTTP status code of the response, when one arrived. Explicitly undefined is accepted — a request that never produced a response has none."
+          "description": "HTTP status code of the response, when one arrived. Explicitly undefined is accepted - a request that never produced a response has none."
         },
         {
           "name": "statusText",

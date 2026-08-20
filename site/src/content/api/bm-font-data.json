@@ -129,7 +129,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Kerning pairs — key \"${first},${second}\", value = pixel adjustment. Negative values pull glyphs together; positive push them apart."
+          "description": "Kerning pairs - key \"${first},${second}\", value = pixel adjustment. Negative values pull glyphs together; positive push them apart."
         },
         {
           "name": "lineHeight",

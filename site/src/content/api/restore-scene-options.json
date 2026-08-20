@@ -1,6 +1,6 @@
 {
   "title": "RestoreSceneOptions",
-  "description": "Options for SceneDirector.restore. No `data` field — a restored scope reuses whatever activation data it was originally prepared with; `load()`/`init()` never run again for it.",
+  "description": "Options for SceneDirector.restore. No `data` field - a restored scope reuses whatever activation data it was originally prepared with; `load()`/`init()` never run again for it.",
   "symbol": "RestoreSceneOptions",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for SceneDirector.restore. No `data` field — a restored scope reuses whatever activation data it was originally prepared with; `load()`/`init()` never run again for it."
+        "Options for SceneDirector.restore. No `data` field - a restored scope reuses whatever activation data it was originally prepared with; `load()`/`init()` never run again for it."
       ],
       "importLine": "import { RestoreSceneOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Suspend the currently active scene (if any) instead of ending it permanently — mirrors ChangeSceneOptions.suspendCurrent."
+          "description": "Suspend the currently active scene (if any) instead of ending it permanently - mirrors ChangeSceneOptions.suspendCurrent."
         },
         {
           "name": "transition",
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Transition to drive this restore through — mirrors ChangeSceneOptions.transition; see its doc comment for the full guarantee."
+          "description": "Transition to drive this restore through - mirrors ChangeSceneOptions.transition; see its doc comment for the full guarantee."
         }
       ],
       "paragraphs": [],

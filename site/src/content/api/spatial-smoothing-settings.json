@@ -47,7 +47,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Doppler pitch-shift strength multiplier. 0 (default) disables Doppler entirely — even when velocity data is available on a voice or the listener, no playbackRate modulation is applied unless this is set above zero. 1 is physically scaled (relative to speedOfSound); many games deliberately exaggerate beyond 1 for player feedback."
+          "description": "Doppler pitch-shift strength multiplier. 0 (default) disables Doppler entirely - even when velocity data is available on a voice or the listener, no playbackRate modulation is applied unless this is set above zero. 1 is physically scaled (relative to speedOfSound); many games deliberately exaggerate beyond 1 for player feedback."
         },
         {
           "name": "panningModel",
@@ -89,7 +89,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Time constant (seconds) passed to setTargetAtTime when ramping a moving position toward its target. 0 (or negative) disables ramping — positions snap each frame. Default DEFAULT_SPATIAL_SMOOTHING (20 ms)."
+          "description": "Time constant (seconds) passed to setTargetAtTime when ramping a moving position toward its target. 0 (or negative) disables ramping - positions snap each frame. Default DEFAULT_SPATIAL_SMOOTHING (20 ms)."
         },
         {
           "name": "speedOfSound",
@@ -110,7 +110,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Reference speed (world units per second) used to scale the Doppler effect. World units have no fixed physical scale across different games (pixels, meters, tiles), so this is a tunable, not a physical constant — pick a value where your game's typical emitter/listener speeds produce a noticeable but not extreme shift."
+          "description": "Reference speed (world units per second) used to scale the Doppler effect. World units have no fixed physical scale across different games (pixels, meters, tiles), so this is a tunable, not a physical constant - pick a value where your game's typical emitter/listener speeds produce a noticeable but not extreme shift."
         },
         {
           "name": "teleportThreshold",
@@ -131,7 +131,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Position jump (world units) treated as a teleport: the param snaps with setValueAtTime instead of ramping. Default DEFAULT_TELEPORT_THRESHOLD. Measured on the **source-to-listener offset**, not on either absolute position — voices are panned relative to their own application's AudioListener, which is virtual. Practically: warping the listener is a teleport for every spatial voice at once (each snaps its own panner), and a source that warps *together with* the listener does not cross the threshold at all, because its offset never changed."
+          "description": "Position jump (world units) treated as a teleport: the param snaps with setValueAtTime instead of ramping. Default DEFAULT_TELEPORT_THRESHOLD. Measured on the **source-to-listener offset**, not on either absolute position - voices are panned relative to their own application's AudioListener, which is virtual. Practically: warping the listener is a teleport for every spatial voice at once (each snaps its own panner), and a source that warps *together with* the listener does not cross the threshold at all, because its offset never changed."
         }
       ],
       "paragraphs": [],

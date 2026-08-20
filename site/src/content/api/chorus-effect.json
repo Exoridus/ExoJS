@@ -228,7 +228,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "LFO oscillation rate in Hz. Typical chorus range is 0.1–5 Hz; 5–15 Hz produces a vibrato effect. Default 1.5."
+          "description": "LFO oscillation rate in Hz. Typical chorus range is 0.1-5 Hz; 5-15 Hz produces a vibrato effect. Default 1.5."
         },
         {
           "name": "ready",

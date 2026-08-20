@@ -1,6 +1,6 @@
 {
   "title": "SceneTransitionPhaseRequirements",
-  "description": "Per-phase render-resource requirements for one phase (`enter` or `exit`) of a PhasedSceneTransition. Same shape as SceneTransitionRequirements — kept as a distinct type because a phase declares its *own* requirements, which the Director then merges with the other phase's via mergeSceneTransitionRequirements to produce the session-wide SceneTransitionRequirements.",
+  "description": "Per-phase render-resource requirements for one phase (`enter` or `exit`) of a PhasedSceneTransition. Same shape as SceneTransitionRequirements - kept as a distinct type because a phase declares its *own* requirements, which the Director then merges with the other phase's via mergeSceneTransitionRequirements to produce the session-wide SceneTransitionRequirements.",
   "symbol": "SceneTransitionPhaseRequirements",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Per-phase render-resource requirements for one phase (`enter` or `exit`) of a PhasedSceneTransition. Same shape as SceneTransitionRequirements — kept as a distinct type because a phase declares its *own* requirements, which the Director then merges with the other phase's via mergeSceneTransitionRequirements to produce the session-wide SceneTransitionRequirements."
+        "Per-phase render-resource requirements for one phase (`enter` or `exit`) of a PhasedSceneTransition. Same shape as SceneTransitionRequirements - kept as a distinct type because a phase declares its *own* requirements, which the Director then merges with the other phase's via mergeSceneTransitionRequirements to produce the session-wide SceneTransitionRequirements."
       ],
       "importLine": "import { SceneTransitionPhaseRequirements } from '@codexo/exojs'",
       "sourceLink": null

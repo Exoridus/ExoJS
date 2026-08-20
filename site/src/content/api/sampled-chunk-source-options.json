@@ -191,7 +191,7 @@
             }
           ],
           "returnType": "number",
-          "description": "Sample a scalar value at a tile coordinate. Called once per tile within each requested chunk. Must be a pure, deterministic function of (tx, ty) — import('./ChunkStreamer').ChunkStreamer regenerates a chunk from scratch via this source whenever it's revisited after eviction, so a non-deterministic sampler would make previously-visited terrain silently change underneath the player."
+          "description": "Sample a scalar value at a tile coordinate. Called once per tile within each requested chunk. Must be a pure, deterministic function of (tx, ty) - import('./ChunkStreamer').ChunkStreamer regenerates a chunk from scratch via this source whenever it's revisited after eviction, so a non-deterministic sampler would make previously-visited terrain silently change underneath the player."
         }
       ],
       "paragraphs": [],

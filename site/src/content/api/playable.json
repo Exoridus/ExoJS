@@ -1,6 +1,6 @@
 {
   "title": "Playable",
-  "description": "Implemented by audio assets (Sound, AudioStream, AudioGenerator) to support manager-driven playback via AudioManager.play. Assets are **data descriptors** — they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `_createVoice`; the manager is injected at play time, so assets never reach for a global. `_createVoice` is a low-level hook meant for asset implementations; consumers should call `audioManager.play(asset)` instead of invoking it directly.",
+  "description": "Implemented by audio assets (Sound, AudioStream, AudioGenerator) to support manager-driven playback via AudioManager.play. Assets are **data descriptors** - they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `_createVoice`; the manager is injected at play time, so assets never reach for a global. `_createVoice` is a low-level hook meant for asset implementations; consumers should call `audioManager.play(asset)` instead of invoking it directly.",
   "symbol": "Playable",
   "kind": "interface",
   "subsystem": "audio",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Implemented by audio assets (Sound, AudioStream, AudioGenerator) to support manager-driven playback via AudioManager.play.",
-        "Assets are **data descriptors** — they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `_createVoice`; the manager is injected at play time, so assets never reach for a global.",
+        "Assets are **data descriptors** - they hold the audio data and default playback parameters. The playback machinery lives in the Voice returned by `_createVoice`; the manager is injected at play time, so assets never reach for a global.",
         "`_createVoice` is a low-level hook meant for asset implementations; consumers should call `audioManager.play(asset)` instead of invoking it directly."
       ],
       "importLine": "import { Playable } from '@codexo/exojs'",

@@ -1,6 +1,6 @@
 {
   "title": "LoaderOptions",
-  "description": "Construction options for Loader. `basePath` is prepended to relative asset paths at fetch time. `cache` accepts one or more CacheStore instances. `cacheStrategy` picks the policy used to consult them — defaults to CacheFirstStrategy (check stores → network → write back). `concurrency` caps the number of simultaneous background-queue fetches (default `6`).",
+  "description": "Construction options for Loader. `basePath` is prepended to relative asset paths at fetch time. `cache` accepts one or more CacheStore instances. `cacheStrategy` picks the policy used to consult them - defaults to CacheFirstStrategy (check stores → network → write back). `concurrency` caps the number of simultaneous background-queue fetches (default `6`).",
   "symbol": "LoaderOptions",
   "kind": "interface",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Construction options for Loader.",
-        "`basePath` is prepended to relative asset paths at fetch time. `cache` accepts one or more CacheStore instances. `cacheStrategy` picks the policy used to consult them — defaults to CacheFirstStrategy (check stores → network → write back). `concurrency` caps the number of simultaneous background-queue fetches (default `6`)."
+        "`basePath` is prepended to relative asset paths at fetch time. `cache` accepts one or more CacheStore instances. `cacheStrategy` picks the policy used to consult them - defaults to CacheFirstStrategy (check stores → network → write back). `concurrency` caps the number of simultaneous background-queue fetches (default `6`)."
       ],
       "importLine": "import { LoaderOptions } from '@codexo/exojs'",
       "sourceLink": null

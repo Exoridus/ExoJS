@@ -1,6 +1,6 @@
 {
   "title": "PointerState",
-  "description": "High-level lifecycle state of a Pointer. Distinct from PointerStateFlag, which is a bitfield of the per-frame events a pointer saw. This is the single state the pointer is *in*, and it is only ever compared by identity — hence string values, which read as themselves in a debugger.",
+  "description": "High-level lifecycle state of a Pointer. Distinct from PointerStateFlag, which is a bitfield of the per-frame events a pointer saw. This is the single state the pointer is *in*, and it is only ever compared by identity - hence string values, which read as themselves in a debugger.",
   "symbol": "PointerState",
   "kind": "enum",
   "subsystem": "input",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "High-level lifecycle state of a Pointer.",
-        "Distinct from PointerStateFlag, which is a bitfield of the per-frame events a pointer saw. This is the single state the pointer is *in*, and it is only ever compared by identity — hence string values, which read as themselves in a debugger."
+        "Distinct from PointerStateFlag, which is a bitfield of the per-frame events a pointer saw. This is the single state the pointer is *in*, and it is only ever compared by identity - hence string values, which read as themselves in a debugger."
       ],
       "importLine": "import { PointerState } from '@codexo/exojs'",
       "sourceLink": null

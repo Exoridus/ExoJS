@@ -1,6 +1,6 @@
 {
   "title": "SceneAvailability",
-  "description": "When a scene-scoped registration stays live relative to the owning scene's pause flag. Shared by every scene facility that accepts a `when` option — SceneAudio, SceneInputs and SceneTweens — so one policy vocabulary covers voices, bindings and tweens alike. Pause is orthogonal to SceneState: these values only discriminate within `Active`, which is the only state where the pause flag applies. A suspended or preparing scope dispatches nothing regardless of the policy chosen here. | Value | while running | while paused | |---|---:|---:| | `Active` | yes | no | | `Paused` | no | yes | | `Always` | yes | yes | `Paused` is what pause menus are built from: input bindings and tweens that exist *only* while the scene is frozen.",
+  "description": "When a scene-scoped registration stays live relative to the owning scene's pause flag. Shared by every scene facility that accepts a `when` option - SceneAudio, SceneInputs and SceneTweens - so one policy vocabulary covers voices, bindings and tweens alike. Pause is orthogonal to SceneState: these values only discriminate within `Active`, which is the only state where the pause flag applies. A suspended or preparing scope dispatches nothing regardless of the policy chosen here. | Value | while running | while paused | |---|---:|---:| | `Active` | yes | no | | `Paused` | no | yes | | `Always` | yes | yes | `Paused` is what pause menus are built from: input bindings and tweens that exist *only* while the scene is frozen.",
   "symbol": "SceneAvailability",
   "kind": "enum",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "When a scene-scoped registration stays live relative to the owning scene's pause flag. Shared by every scene facility that accepts a `when` option — SceneAudio, SceneInputs and SceneTweens — so one policy vocabulary covers voices, bindings and tweens alike.",
+        "When a scene-scoped registration stays live relative to the owning scene's pause flag. Shared by every scene facility that accepts a `when` option - SceneAudio, SceneInputs and SceneTweens - so one policy vocabulary covers voices, bindings and tweens alike.",
         "Pause is orthogonal to SceneState: these values only discriminate within `Active`, which is the only state where the pause flag applies. A suspended or preparing scope dispatches nothing regardless of the policy chosen here.",
         "| Value | while running | while paused | |---|---:|---:| | `Active` | yes | no | | `Paused` | no | yes | | `Always` | yes | yes |",
         "`Paused` is what pause menus are built from: input bindings and tweens that exist *only* while the scene is frozen."

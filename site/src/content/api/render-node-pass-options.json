@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Optional debug label for the inspector / logging. Default: the constructor name. Display only — not an identity."
+          "description": "Optional debug label for the inspector / logging. Default: the constructor name. Display only - not an identity."
         },
         {
           "name": "target",

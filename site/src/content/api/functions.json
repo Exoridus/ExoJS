@@ -563,7 +563,7 @@
             }
           ],
           "returnType": "Promise<void>",
-          "description": "Cross-fade from one playing Voice to another over durationMs. Ramps to up to toVolume and from down to silence. By default from is stopped when the fade finishes; pass stopAfter: false to keep it alive. Both voices must already be playing — start the incoming voice (typically at volume 0) before calling: ts const next = app.audio.play(track, { volume: 0 }); await crossFade(current, next, 1000);  Returns a Promise that resolves once durationMs elapses."
+          "description": "Cross-fade from one playing Voice to another over durationMs. Ramps to up to toVolume and from down to silence. By default from is stopped when the fade finishes; pass stopAfter: false to keep it alive. Both voices must already be playing - start the incoming voice (typically at volume 0) before calling: ts const next = app.audio.play(track, { volume: 0 }); await crossFade(current, next, 1000);  Returns a Promise that resolves once durationMs elapses."
         },
         {
           "name": "decodeAudioData",
@@ -622,7 +622,7 @@
             }
           ],
           "returnType": "Promise<AudioBuffer>",
-          "description": "Decode raw audio bytes into an AudioBuffer using the shared OfflineAudioContext. The context's sample rate matches the live AudioContext when one exists, else defaults to 44.1 kHz — decoding never forces a live context into existence. Note: on some older mobile WebKit versions decodeAudioData requires a running (live) context — decoding may fail with a browser-level error rather than an ExoJS-shaped error in those environments."
+          "description": "Decode raw audio bytes into an AudioBuffer using the shared OfflineAudioContext. The context's sample rate matches the live AudioContext when one exists, else defaults to 44.1 kHz - decoding never forces a live context into existence. Note: on some older mobile WebKit versions decodeAudioData requires a running (live) context - decoding may fail with a browser-level error rather than an ExoJS-shaped error in those environments."
         },
         {
           "name": "defineAsset",
@@ -709,7 +709,7 @@
             }
           ],
           "returnType": "AssetBinding<Result, Options>",
-          "description": "Declare a built-in asset type in one place. For a **leaf-capable** type — one with a SeamlessAdapter (resource) or isValue: true (value) — this registers its placeholder strategy and suffix→type inference GLOBALLY at import time, so a loader-free Assets.from resolves it before any Application exists. A **non-leaf** resource type (isValue: false and no adapter — e.g. bmFont, font) has no placeholder strategy, so it is deliberately NOT registered globally: its bare path cannot be inferred and must be declared via Asset.type(...) or an explicit config. Its extensions still travel on the returned binding for the per-Loader map. The returned AssetBinding flows through the unchanged materializeAssetBindings path exactly like any extension package's binding — defineAsset adds no second per-loader registration channel."
+          "description": "Declare a built-in asset type in one place. For a **leaf-capable** type - one with a SeamlessAdapter (resource) or isValue: true (value) - this registers its placeholder strategy and suffix→type inference GLOBALLY at import time, so a loader-free Assets.from resolves it before any Application exists. A **non-leaf** resource type (isValue: false and no adapter - e.g. bmFont, font) has no placeholder strategy, so it is deliberately NOT registered globally: its bare path cannot be inferred and must be declared via Asset.type(...) or an explicit config. Its extensions still travel on the returned binding for the per-Loader map. The returned AssetBinding flows through the unchanged materializeAssetBindings path exactly like any extension package's binding - defineAsset adds no second per-loader registration channel."
         },
         {
           "name": "formatShaderError",
@@ -835,7 +835,7 @@
           ],
           "params": [],
           "returnType": "OfflineAudioContext",
-          "description": "Return the shared singleton OfflineAudioContext used for audio decoding. Its sample rate matches the live AudioContext when one already exists, otherwise a 44.1 kHz default is used. Never creates a live AudioContext — decoding before the first user gesture must not spawn a suspended context (AU2); buffers resample transparently on playback if the rates differ."
+          "description": "Return the shared singleton OfflineAudioContext used for audio decoding. Its sample rate matches the live AudioContext when one already exists, otherwise a 44.1 kHz default is used. Never creates a live AudioContext - decoding before the first user gesture must not spawn a suspended context (AU2); buffers resample transparently on playback if the rates differ."
         },
         {
           "name": "inputChannelFromToken",
@@ -1073,7 +1073,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Returns true for blend modes that require the backdrop-aware compositor (shader-side blend + GPU texture copy). Modes 0–4 use fixed-function blending and return false. Modes 5–17 return true."
+          "description": "Returns true for blend modes that require the backdrop-aware compositor (shader-side blend + GPU texture copy). Modes 0-4 use fixed-function blending and return false. Modes 5-17 return true."
         },
         {
           "name": "isAudioContextReady",
@@ -1204,7 +1204,7 @@
             }
           ],
           "returnType": "Keyboard | undefined",
-          "description": "Resolve a KeyboardEvent.code to its Keyboard channel, or undefined for a key ExoJS does not track (media and IME/language keys, and the empty code a soft keyboard reports). This is the single seam between the platform's physical-key identity and the engine's channel model — see Keyboard for what \"physical\" means here and why keyCode is never used. For a modifier this returns the SIDE-SPECIFIC channel ('ShiftLeft' → Keyboard.ShiftLeft), never the aggregate — InputManager writes the aggregate channel alongside it on every keydown/keyup. Useful in a rebinding UI that has a raw DOM event rather than an engine channel; InputManager.onKeyDown already reports the resolved channel."
+          "description": "Resolve a KeyboardEvent.code to its Keyboard channel, or undefined for a key ExoJS does not track (media and IME/language keys, and the empty code a soft keyboard reports). This is the single seam between the platform's physical-key identity and the engine's channel model - see Keyboard for what \"physical\" means here and why keyCode is never used. For a modifier this returns the SIDE-SPECIFIC channel ('ShiftLeft' → Keyboard.ShiftLeft), never the aggregate - InputManager writes the aggregate channel alongside it on every keydown/keyup. Useful in a rebinding UI that has a raw DOM event rather than an engine channel; InputManager.onKeyDown already reports the resolved channel."
         },
         {
           "name": "lerp",
@@ -1394,7 +1394,7 @@
             }
           ],
           "returnType": "Promise<void>",
-          "description": "Registers an AudioWorkletProcessor (defined by source) with the given AudioContext under processorName. Idempotent: subsequent calls with the same context+name return immediately. Concurrent calls (race-condition protection) share a single in-flight registration promise. Source is bundled at build time as a JavaScript string and turned into a Blob URL at runtime — no separate worklet asset file is shipped."
+          "description": "Registers an AudioWorkletProcessor (defined by source) with the given AudioContext under processorName. Idempotent: subsequent calls with the same context+name return immediately. Concurrent calls (race-condition protection) share a single in-flight registration promise. Source is bundled at build time as a JavaScript string and turned into a Blob URL at runtime - no separate worklet asset file is shipped."
         },
         {
           "name": "registerSerializer",
@@ -1673,7 +1673,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "GLSL ES 3.00 form of the instanced-batch contract. Insert it directly after the #version 300 es directive of a custom material's **vertex** shader; it declares no precision qualifier, relying on the vertex stage's default highp for floats. Declares the engine-supplied inputs (a_position, a_texcoord, a_color, a_nodeIndex) and uniforms, and exposes two helpers: - vec2 exoInstanceClipPosition(vec2 localPosition, uint nodeIndex) — maps a local-space vertex of the current instance to clip space, including pixel snapping. Returns clip space rather than world space because snapping is defined in device pixels and needs the projection, group matrix and viewport together. - vec4 exoInstanceTint(uint nodeIndex) — the instance's tint, to be passed through to the fragment stage. Unused declarations are stripped at link time; a batch shader that ignores texcoords or vertex colors needs no further ceremony. The #exo-include comment the constant carries is expanded by the engine when it compiles the shader — it is what keeps the buffers' texel addressing internal, so leave it in place."
+          "description": "GLSL ES 3.00 form of the instanced-batch contract. Insert it directly after the #version 300 es directive of a custom material's **vertex** shader; it declares no precision qualifier, relying on the vertex stage's default highp for floats. Declares the engine-supplied inputs (a_position, a_texcoord, a_color, a_nodeIndex) and uniforms, and exposes two helpers: - vec2 exoInstanceClipPosition(vec2 localPosition, uint nodeIndex) - maps a local-space vertex of the current instance to clip space, including pixel snapping. Returns clip space rather than world space because snapping is defined in device pixels and needs the projection, group matrix and viewport together. - vec4 exoInstanceTint(uint nodeIndex) - the instance's tint, to be passed through to the fragment stage. Unused declarations are stripped at link time; a batch shader that ignores texcoords or vertex colors needs no further ceremony. The #exo-include comment the constant carries is expanded by the engine when it compiles the shader - it is what keeps the buffers' texel addressing internal, so leave it in place."
         },
         {
           "name": "INSTANCE_TRANSFORM_WGSL",
@@ -1694,7 +1694,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "WGSL form of the instanced-batch contract, for the WebGPU backend. Insert it at the top of a custom material's shader source. Declares the engine-owned @group(0) bindings and exposes the same two helpers as INSTANCE_TRANSFORM_GLSL. Because WGSL has no global vertex inputs, both take the node index explicitly — which is also why the GLSL helpers take it as a parameter, so a material's two shader bodies read alike: - exoInstanceClipPosition(localPosition: vec2<f32>, nodeIndex: u32) -> vec2<f32> - exoInstanceTint(nodeIndex: u32) -> vec4<f32> The vertex entry point must take @location(6) nodeIndex: u32 in its input struct; @location(0..2) carry position, texcoord and color as in the GLSL form."
+          "description": "WGSL form of the instanced-batch contract, for the WebGPU backend. Insert it at the top of a custom material's shader source. Declares the engine-owned @group(0) bindings and exposes the same two helpers as INSTANCE_TRANSFORM_GLSL. Because WGSL has no global vertex inputs, both take the node index explicitly - which is also why the GLSL helpers take it as a parameter, so a material's two shader bodies read alike: - exoInstanceClipPosition(localPosition: vec2<f32>, nodeIndex: u32) -> vec2<f32> - exoInstanceTint(nodeIndex: u32) -> vec4<f32> The vertex entry point must take @location(6) nodeIndex: u32 in its input struct; @location(0..2) carry position, texcoord and color as in the GLSL form."
         },
         {
           "name": "logger",

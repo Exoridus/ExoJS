@@ -1,6 +1,6 @@
 {
   "title": "CrossFadeSceneTransition",
-  "description": "Continuous blend between the outgoing scene (frozen as a snapshot at session start) and the incoming scene (rendered live to a pooled texture), with no \"exit half\"/\"enter half\" seam — `placement: 'scene'`, `outgoingFrame: 'snapshot'`, `currentFrame: 'texture'`. A full `SceneTransition`, not phase-split.",
+  "description": "Continuous blend between the outgoing scene (frozen as a snapshot at session start) and the incoming scene (rendered live to a pooled texture), with no \"exit half\"/\"enter half\" seam - `placement: 'scene'`, `outgoingFrame: 'snapshot'`, `currentFrame: 'texture'`. A full `SceneTransition`, not phase-split.",
   "symbol": "CrossFadeSceneTransition",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Continuous blend between the outgoing scene (frozen as a snapshot at session start) and the incoming scene (rendered live to a pooled texture), with no \"exit half\"/\"enter half\" seam — `placement: 'scene'`, `outgoingFrame: 'snapshot'`, `currentFrame: 'texture'`. A full `SceneTransition`, not phase-split."
+        "Continuous blend between the outgoing scene (frozen as a snapshot at session start) and the incoming scene (rendered live to a pooled texture), with no \"exit half\"/\"enter half\" seam - `placement: 'scene'`, `outgoingFrame: 'snapshot'`, `currentFrame: 'texture'`. A full `SceneTransition`, not phase-split."
       ],
       "importLine": "import { CrossFadeSceneTransition } from '@codexo/exojs'",
       "sourceLink": null
@@ -129,7 +129,7 @@
             }
           ],
           "returnType": "SceneTransitionSession",
-          "description": "Called by the Director — do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
+          "description": "Called by the Director - do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
         },
         {
           "name": "createSession",

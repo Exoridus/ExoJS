@@ -1,6 +1,6 @@
 {
   "title": "AudioGenerator",
-  "description": "Procedural tone generator — produces audio from an `OscillatorNode` without any decoded asset. Good for prototyping, game-jam SFX, retro bleeps, and synth-style tones. `AudioGenerator` is a **data descriptor**: it holds the current synth settings (`frequency`, `type`, `detune`, `envelope`) and default playback parameters. Each `AudioManager.play(generator, options)` snapshots those settings into a fresh AudioGeneratorVoice and returns it. For per-note playback, set `generator.frequency` (or use AudioGenerator.setNote) before playing: ```ts generator.setNote(69); // A4 const voice = app.audio.play(generator); // ...later voice.frequency = 880; // retune the live voice voice.stop(); // triggers the envelope release, if any ``` Routes through the manager's `sound` bus by default.",
+  "description": "Procedural tone generator - produces audio from an `OscillatorNode` without any decoded asset. Good for prototyping, game-jam SFX, retro bleeps, and synth-style tones. `AudioGenerator` is a **data descriptor**: it holds the current synth settings (`frequency`, `type`, `detune`, `envelope`) and default playback parameters. Each `AudioManager.play(generator, options)` snapshots those settings into a fresh AudioGeneratorVoice and returns it. For per-note playback, set `generator.frequency` (or use AudioGenerator.setNote) before playing: ```ts generator.setNote(69); // A4 const voice = app.audio.play(generator); // ...later voice.frequency = 880; // retune the live voice voice.stop(); // triggers the envelope release, if any ``` Routes through the manager's `sound` bus by default.",
   "symbol": "AudioGenerator",
   "kind": "class",
   "subsystem": "audio",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Procedural tone generator — produces audio from an `OscillatorNode` without any decoded asset. Good for prototyping, game-jam SFX, retro bleeps, and synth-style tones.",
+        "Procedural tone generator - produces audio from an `OscillatorNode` without any decoded asset. Good for prototyping, game-jam SFX, retro bleeps, and synth-style tones.",
         "`AudioGenerator` is a **data descriptor**: it holds the current synth settings (`frequency`, `type`, `detune`, `envelope`) and default playback parameters. Each `AudioManager.play(generator, options)` snapshots those settings into a fresh AudioGeneratorVoice and returns it. For per-note playback, set `generator.frequency` (or use AudioGenerator.setNote) before playing:",
         "```ts generator.setNote(69); // A4 const voice = app.audio.play(generator); // ...later voice.frequency = 880; // retune the live voice voice.stop(); // triggers the envelope release, if any ```",
         "Routes through the manager's `sound` bus by default."
@@ -153,7 +153,7 @@
             }
           ],
           "returnType": "Voice",
-          "description": "Implements Playable. Called by AudioManager.play. Snapshots the current synth settings into a new AudioGeneratorVoice. Returns an already-ended NoopVoice when the AudioContext is still locked by the autoplay policy — oscillators are ephemeral and cannot be deferred."
+          "description": "Implements Playable. Called by AudioManager.play. Snapshots the current synth settings into a new AudioGeneratorVoice. Returns an already-ended NoopVoice when the AudioContext is still locked by the autoplay policy - oscillators are ephemeral and cannot be deferred."
         },
         {
           "name": "destroy",

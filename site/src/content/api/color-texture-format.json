@@ -1,6 +1,6 @@
 {
   "title": "ColorTextureFormat",
-  "description": "Color attachment format for an offscreen RenderTexture — the TextureFormat subset that can be rendered into. The float formats require `EXT_color_buffer_float` to be *rendered into* (WebGL2). Allocating one on a context without the extension throws at render-target preparation. Float render targets default to `nearest` sampling; linear filtering additionally requires `OES_texture_float_linear`.",
+  "description": "Color attachment format for an offscreen RenderTexture - the TextureFormat subset that can be rendered into. The float formats require `EXT_color_buffer_float` to be *rendered into* (WebGL2). Allocating one on a context without the extension throws at render-target preparation. Float render targets default to `nearest` sampling; linear filtering additionally requires `OES_texture_float_linear`.",
   "symbol": "ColorTextureFormat",
   "kind": "type",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Color attachment format for an offscreen RenderTexture — the TextureFormat subset that can be rendered into.",
+        "Color attachment format for an offscreen RenderTexture - the TextureFormat subset that can be rendered into.",
         "The float formats require `EXT_color_buffer_float` to be *rendered into* (WebGL2). Allocating one on a context without the extension throws at render-target preparation. Float render targets default to `nearest` sampling; linear filtering additionally requires `OES_texture_float_linear`."
       ],
       "importLine": "import { ColorTextureFormat } from '@codexo/exojs'",

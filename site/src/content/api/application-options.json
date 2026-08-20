@@ -49,7 +49,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Clear the canvas to ApplicationOptions.clearColor at the start of every frame, before the scene draws. Default true — a scene's draw() therefore paints onto a fresh frame and needs no clear of its own. Set false for pipelines that own the whole frame themselves: feedback / trail effects that deliberately keep the previous frame, or a custom renderer that issues its own clear as part of its first pass. Nothing else changes — Application.clearColor is still the colour a manual context.clear(app.clearColor) would use."
+          "description": "Clear the canvas to ApplicationOptions.clearColor at the start of every frame, before the scene draws. Default true - a scene's draw() therefore paints onto a fresh frame and needs no clear of its own. Set false for pipelines that own the whole frame themselves: feedback / trail effects that deliberately keep the previous frame, or a custom renderer that issues its own clear as part of its first pass. Nothing else changes - Application.clearColor is still the colour a manual context.clear(app.clearColor) would use."
         },
         {
           "name": "backend",
@@ -161,7 +161,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Extension selection — the only way an Application is equipped. undefined or [] → Core only. [a, b, …] → Core plus exactly these. There is no global registry to fall back on: what an application can do is decided here, at its construction, and nowhere else. That is what lets two Applications in one process hold different extension sets — an editor next to its runtime preview, two canvases with different renderers, a test that must not see what a neighbouring test installed. ts import { tilemapExtension } from '@codexo/exojs-tilemap'; const app = new Application({ extensions: [tilemapExtension] });  Materialised once at construction."
+          "description": "Extension selection - the only way an Application is equipped. undefined or [] → Core only. [a, b, …] → Core plus exactly these. There is no global registry to fall back on: what an application can do is decided here, at its construction, and nowhere else. That is what lets two Applications in one process hold different extension sets - an editor next to its runtime preview, two canvases with different renderers, a test that must not see what a neighbouring test installed. ts import { tilemapExtension } from '@codexo/exojs-tilemap'; const app = new Application({ extensions: [tilemapExtension] });  Materialised once at construction."
         },
         {
           "name": "fixedTimeStep",
@@ -286,7 +286,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Host seam the application runs on — surface focus and geometry, cursor, touch-action, pointer capture, gamepad polling, document visibility, frame scheduling, and input-event delivery. Defaults to a BrowserPlatform bound to the application's canvas. Pass your own to host the engine somewhere other than a plain DOM canvas, or to drive input and the frame loop from a test without monkey-patching globals. An injected adapter is *not* destroyed by Application.destroy — it stays yours to dispose."
+          "description": "Host seam the application runs on - surface focus and geometry, cursor, touch-action, pointer capture, gamepad polling, document visibility, frame scheduling, and input-event delivery. Defaults to a BrowserPlatform bound to the application's canvas. Pass your own to host the engine somewhere other than a plain DOM canvas, or to drive input and the frame loop from a test without monkey-patching globals. An injected adapter is *not* destroyed by Application.destroy - it stays yours to dispose."
         },
         {
           "name": "rendering",
@@ -336,7 +336,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Registry of navigable Scene constructors, keyed by a name used for diagnostics (shown in UnregisteredSceneError messages and duplicate-registration errors) and for key-based navigation. Each value is either a bare Scene subclass constructor, or a { scene, transition? } descriptor pairing one with a target-bound default transition, consulted by SceneDirector.change/ SceneDirector.restore whenever navigation targets this constructor without its own call-site transition option — see SceneRegistration. Required for any Application.start / SceneDirector.change call that targets a constructor — unregistered targets reject in development builds. Validated once at construction: every value must resolve to a Scene subclass constructor (checked without instantiating it), and no constructor may appear under more than one key."
+          "description": "Registry of navigable Scene constructors, keyed by a name used for diagnostics (shown in UnregisteredSceneError messages and duplicate-registration errors) and for key-based navigation. Each value is either a bare Scene subclass constructor, or a { scene, transition? } descriptor pairing one with a target-bound default transition, consulted by SceneDirector.change/ SceneDirector.restore whenever navigation targets this constructor without its own call-site transition option - see SceneRegistration. Required for any Application.start / SceneDirector.change call that targets a constructor - unregistered targets reject in development builds. Validated once at construction: every value must resolve to a Scene subclass constructor (checked without instantiating it), and no constructor may appear under more than one key."
         },
         {
           "name": "seed",

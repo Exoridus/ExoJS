@@ -1,6 +1,6 @@
 {
   "title": "Shape",
-  "description": "Immutable local-space collision geometry. A `Shape` carries no transform — a Collider positions it in a body. Shapes also expose the area-based mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive mass and rotational inertia from a density; these are computed once at construction and frozen. `unitInertia` is the second moment of area about the shape's own centroid (∫ r² dA). Multiplying by density yields the rotational inertia contribution of the shape about its centroid.",
+  "description": "Immutable local-space collision geometry. A `Shape` carries no transform - a Collider positions it in a body. Shapes also expose the area-based mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive mass and rotational inertia from a density; these are computed once at construction and frozen. `unitInertia` is the second moment of area about the shape's own centroid (∫ r² dA). Multiplying by density yields the rotational inertia contribution of the shape about its centroid.",
   "symbol": "Shape",
   "kind": "class",
   "subsystem": "physics",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Immutable local-space collision geometry. A `Shape` carries no transform — a Collider positions it in a body. Shapes also expose the area-based mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive mass and rotational inertia from a density; these are computed once at construction and frozen.",
+        "Immutable local-space collision geometry. A `Shape` carries no transform - a Collider positions it in a body. Shapes also expose the area-based mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive mass and rotational inertia from a density; these are computed once at construction and frozen.",
         "`unitInertia` is the second moment of area about the shape's own centroid (∫ r² dA). Multiplying by density yields the rotational inertia contribution of the shape about its centroid."
       ],
       "importLine": "import { Shape } from '@codexo/exojs-physics'",

@@ -1076,7 +1076,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true when the body is asleep — skipped by the integrator and solver until woken."
+          "description": "true when the body is asleep - skipped by the integrator and solver until woken."
         },
         {
           "name": "position",

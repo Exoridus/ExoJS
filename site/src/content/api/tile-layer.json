@@ -1,6 +1,6 @@
 {
   "title": "TileLayer",
-  "description": "A generic, format-independent tile layer with chunk-first storage. Tile data is stored in fixed-size TileChunks indexed by signed chunk coordinates. For finite maps, only chunks that intersect the layer bounds exist. **Mutation must go through the layer's public APIs only.** `setTileAt` / `clearTileAt` validate coordinates, tileset references, and increment revision counters only when the stored value actually changes. Direct chunk mutation is not supported — the layer owns chunk storage and exposes only a ReadonlyTileChunk view. The layer is NOT a SceneNode — that integration lives in import('./TileLayerNode').TileLayerNode.",
+  "description": "A generic, format-independent tile layer with chunk-first storage. Tile data is stored in fixed-size TileChunks indexed by signed chunk coordinates. For finite maps, only chunks that intersect the layer bounds exist. **Mutation must go through the layer's public APIs only.** `setTileAt` / `clearTileAt` validate coordinates, tileset references, and increment revision counters only when the stored value actually changes. Direct chunk mutation is not supported - the layer owns chunk storage and exposes only a ReadonlyTileChunk view. The layer is NOT a SceneNode - that integration lives in import('./TileLayerNode').TileLayerNode.",
   "symbol": "TileLayer",
   "kind": "class",
   "subsystem": "tilemap",
@@ -21,8 +21,8 @@
       "paragraphs": [
         "A generic, format-independent tile layer with chunk-first storage.",
         "Tile data is stored in fixed-size TileChunks indexed by signed chunk coordinates. For finite maps, only chunks that intersect the layer bounds exist.",
-        "**Mutation must go through the layer's public APIs only.** `setTileAt` / `clearTileAt` validate coordinates, tileset references, and increment revision counters only when the stored value actually changes. Direct chunk mutation is not supported — the layer owns chunk storage and exposes only a ReadonlyTileChunk view.",
-        "The layer is NOT a SceneNode — that integration lives in import('./TileLayerNode').TileLayerNode."
+        "**Mutation must go through the layer's public APIs only.** `setTileAt` / `clearTileAt` validate coordinates, tileset references, and increment revision counters only when the stored value actually changes. Direct chunk mutation is not supported - the layer owns chunk storage and exposes only a ReadonlyTileChunk view.",
+        "The layer is NOT a SceneNode - that integration lives in import('./TileLayerNode').TileLayerNode."
       ],
       "importLine": "import { TileLayer } from '@codexo/exojs-tilemap'",
       "sourceLink": null
@@ -818,7 +818,7 @@
           ],
           "params": [],
           "returnType": "IterableIterator<ReadonlyTileChunk>",
-          "description": "Iterate over all loaded chunks in deterministic (cy, cx) ascending order. Returns readonly chunk views — callers cannot mutate storage."
+          "description": "Iterate over all loaded chunks in deterministic (cy, cx) ascending order. Returns readonly chunk views - callers cannot mutate storage."
         },
         {
           "name": "pixelToTile",

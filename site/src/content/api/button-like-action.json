@@ -320,7 +320,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true on the frame the AGGREGATE value crossed above the action's own threshold. Bound sources are replayed in the true order their channels changed, batch by whole batch (see ChannelEventBatch's doc comment — every channel a single real-world event wrote together is applied before the aggregate is evaluated even once), so a value that crosses the threshold twice within one frame (0.4 → 0.7 → 0.4 at threshold 0.5) sets both pressed and released on that same frame, while a source that never actually reaches the threshold (0 → 0.1 → 0 at threshold 0.5) sets neither. A second, alternative source tapping while a first stays continuously active never manufactures an edge either, because the aggregate itself never drops below threshold."
+          "description": "true on the frame the AGGREGATE value crossed above the action's own threshold. Bound sources are replayed in the true order their channels changed, batch by whole batch (see ChannelEventBatch's doc comment - every channel a single real-world event wrote together is applied before the aggregate is evaluated even once), so a value that crosses the threshold twice within one frame (0.4 → 0.7 → 0.4 at threshold 0.5) sets both pressed and released on that same frame, while a source that never actually reaches the threshold (0 → 0.1 → 0 at threshold 0.5) sets neither. A second, alternative source tapping while a first stays continuously active never manufactures an edge either, because the aggregate itself never drops below threshold."
         },
         {
           "name": "released",
@@ -362,7 +362,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Aggregate source value this frame, in 0..1. Reads 0 on a frame where the source was pressed and released again between two frame boundaries — check pressed for that case rather than the value."
+          "description": "Aggregate source value this frame, in 0..1. Reads 0 on a frame where the source was pressed and released again between two frame boundaries - check pressed for that case rather than the value."
         }
       ],
       "paragraphs": [],

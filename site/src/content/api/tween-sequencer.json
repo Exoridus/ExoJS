@@ -1,6 +1,6 @@
 {
   "title": "TweenSequencer",
-  "description": "Composes multiple Tween instances into a multi-stage animation. Each stage added via TweenSequencer.then plays after the previous one finishes. Within a single stage, multiple tweens run simultaneously (parallel); the stage advances when **all** of them complete. Delay stages inserted via TweenSequencer.wait create a timed pause between stages without needing a dummy tween. The sequencer integrates with TweenManager via TweenManager.addTicker so it is driven automatically each frame. It can also be used stand-alone by calling TweenSequencer.update manually — in that mode the sequencer also advances its child tweens.",
+  "description": "Composes multiple Tween instances into a multi-stage animation. Each stage added via TweenSequencer.then plays after the previous one finishes. Within a single stage, multiple tweens run simultaneously (parallel); the stage advances when **all** of them complete. Delay stages inserted via TweenSequencer.wait create a timed pause between stages without needing a dummy tween. The sequencer integrates with TweenManager via TweenManager.addTicker so it is driven automatically each frame. It can also be used stand-alone by calling TweenSequencer.update manually - in that mode the sequencer also advances its child tweens.",
   "symbol": "TweenSequencer",
   "kind": "class",
   "subsystem": "animation",
@@ -22,7 +22,7 @@
         "Composes multiple Tween instances into a multi-stage animation.",
         "Each stage added via TweenSequencer.then plays after the previous one finishes. Within a single stage, multiple tweens run simultaneously (parallel); the stage advances when **all** of them complete.",
         "Delay stages inserted via TweenSequencer.wait create a timed pause between stages without needing a dummy tween.",
-        "The sequencer integrates with TweenManager via TweenManager.addTicker so it is driven automatically each frame. It can also be used stand-alone by calling TweenSequencer.update manually — in that mode the sequencer also advances its child tweens."
+        "The sequencer integrates with TweenManager via TweenManager.addTicker so it is driven automatically each frame. It can also be used stand-alone by calling TweenSequencer.update manually - in that mode the sequencer also advances its child tweens."
       ],
       "importLine": "import { TweenSequencer } from '@codexo/exojs'",
       "sourceLink": null

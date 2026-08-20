@@ -1,6 +1,6 @@
 {
   "title": "Segment",
-  "description": "Mutable line segment defined by start and end Vectors. Unlike Line this type does not implement ShapeLike — it is a lightweight value type used in path and swept-collision utilities. `Segment.temp` is a shared scratch instance.",
+  "description": "Mutable line segment defined by start and end Vectors. Unlike Line this type does not implement ShapeLike - it is a lightweight value type used in path and swept-collision utilities. `Segment.temp` is a shared scratch instance.",
   "symbol": "Segment",
   "kind": "class",
   "subsystem": "math",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Mutable line segment defined by start and end Vectors. Unlike Line this type does not implement ShapeLike — it is a lightweight value type used in path and swept-collision utilities.",
+        "Mutable line segment defined by start and end Vectors. Unlike Line this type does not implement ShapeLike - it is a lightweight value type used in path and swept-collision utilities.",
         "`Segment.temp` is a shared scratch instance."
       ],
       "importLine": "import { Segment } from '@codexo/exojs'",

@@ -1,6 +1,6 @@
 {
   "title": "TileSet",
-  "description": "A resolved tileset: a uniform grid of tiles within a texture atlas. Does **not** own its texture — the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter. Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata.",
+  "description": "A resolved tileset: a uniform grid of tiles within a texture atlas. Does **not** own its texture - the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter. Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata.",
   "symbol": "TileSet",
   "kind": "class",
   "subsystem": "tilemap",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A resolved tileset: a uniform grid of tiles within a texture atlas.",
-        "Does **not** own its texture — the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter.",
+        "Does **not** own its texture - the Loader or application code retains texture ownership. Tileset dimensions are validated at construction and frozen thereafter.",
         "Multiple tilesets are supported per TileMap; each carries its own tile dimensions, spacing, and optional per-tile metadata."
       ],
       "importLine": "import { TileSet } from '@codexo/exojs-tilemap'",
@@ -405,7 +405,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Visual drawing offset X in pixels (Tiled tileoffset). Applied by the tile-layer geometry builder and by the tile-collision helpers — i.e. wherever this package places a tile on a grid. It is **not** folded into a TileObject's x/y: object layers are data-only, so code that draws a tile object itself has to add this offset the way a tile layer would."
+          "description": "Visual drawing offset X in pixels (Tiled tileoffset). Applied by the tile-layer geometry builder and by the tile-collision helpers - i.e. wherever this package places a tile on a grid. It is **not** folded into a TileObject's x/y: object layers are data-only, so code that draws a tile object itself has to add this offset the way a tile layer would."
         },
         {
           "name": "offsetY",
@@ -426,7 +426,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Visual drawing offset Y in pixels (Tiled tileoffset) — see offsetX for where it applies."
+          "description": "Visual drawing offset Y in pixels (Tiled tileoffset) - see offsetX for where it applies."
         },
         {
           "name": "rows",
@@ -489,7 +489,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Atlas texture region — Loader-owned, never destroyed by the tileset."
+          "description": "Atlas texture region - Loader-owned, never destroyed by the tileset."
         },
         {
           "name": "tileCount",

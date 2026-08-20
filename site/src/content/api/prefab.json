@@ -1,6 +1,6 @@
 {
   "title": "Prefab",
-  "description": "A reusable, data-driven template captured from a configured scene-graph subtree. Capture once with Prefab.from; stamp out independent copies with instantiate as many times as needed — no re-serialization per instance. A prefab holds the same **data, not behaviour** a scene serializer captures (structure, transforms, visuals, asset references). Re-attach behaviour (signal handlers, systems) in code after instantiate. ```ts const coin = Prefab.from(buildCoin(), loader); for (let i = 0; i < 10; i++) { const node = coin.instantiate(loader); node.setPosition(i * 32, 0); scene.addChild(node); } ```",
+  "description": "A reusable, data-driven template captured from a configured scene-graph subtree. Capture once with Prefab.from; stamp out independent copies with instantiate as many times as needed - no re-serialization per instance. A prefab holds the same **data, not behaviour** a scene serializer captures (structure, transforms, visuals, asset references). Re-attach behaviour (signal handlers, systems) in code after instantiate. ```ts const coin = Prefab.from(buildCoin(), loader); for (let i = 0; i < 10; i++) { const node = coin.instantiate(loader); node.setPosition(i * 32, 0); scene.addChild(node); } ```",
   "symbol": "Prefab",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A reusable, data-driven template captured from a configured scene-graph subtree. Capture once with Prefab.from; stamp out independent copies with instantiate as many times as needed — no re-serialization per instance.",
+        "A reusable, data-driven template captured from a configured scene-graph subtree. Capture once with Prefab.from; stamp out independent copies with instantiate as many times as needed - no re-serialization per instance.",
         "A prefab holds the same **data, not behaviour** a scene serializer captures (structure, transforms, visuals, asset references). Re-attach behaviour (signal handlers, systems) in code after instantiate.",
         "```ts const coin = Prefab.from(buildCoin(), loader); for (let i = 0; i < 10; i++) { const node = coin.instantiate(loader); node.setPosition(i * 32, 0); scene.addChild(node); } ```"
       ],
@@ -137,7 +137,7 @@
           ],
           "params": [],
           "returnType": "SerializedPrefab",
-          "description": "The prefab as a versioned, JSON-serialisable document — the standard JSON.stringify(prefab) hook. Treat the returned object as read-only; the root is the live internal descriptor, not a copy."
+          "description": "The prefab as a versioned, JSON-serialisable document - the standard JSON.stringify(prefab) hook. Treat the returned object as read-only; the root is the live internal descriptor, not a copy."
         },
         {
           "name": "from",
@@ -285,7 +285,7 @@
             }
           ],
           "returnType": "Prefab",
-          "description": "Build a prefab from a previously serialized document — e.g. one produced by toJSON and persisted to disk or fetched over the network. Like Scene.deserialize this is an untrusted boundary, so the parameter is unknown: the document's version frame and root node are validated here. Throws when the document is not an object, carries a version newer than this build supports, or has no valid root."
+          "description": "Build a prefab from a previously serialized document - e.g. one produced by toJSON and persisted to disk or fetched over the network. Like Scene.deserialize this is an untrusted boundary, so the parameter is unknown: the document's version frame and root node are validated here. Throws when the document is not an object, carries a version newer than this build supports, or has no valid root."
         }
       ],
       "paragraphs": [],

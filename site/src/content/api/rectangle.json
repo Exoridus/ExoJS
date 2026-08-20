@@ -1,6 +1,6 @@
 {
   "title": "Rectangle",
-  "description": "Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and dimensions `(width, height)`. Implements ShapeLike with full SAT collision response for rectangles and polygons, and specialised algorithms for circle and ellipse intersections. `Rectangle.temp` is a shared scratch instance. Edge normals are lazily computed and cached; they are invalidated when position or size mutates. Position and size are reactive components, so EVERY mutation — the accessors here, `set`/`copy`, and a write one level down such as `rect.size.width = 5` — funnels through a single internal notification. Pass `onChange` to be told about all of them: an owner that hands out its live rectangle uses it to run whatever invalidation a direct write implies — a camera's viewport rectangle bumps the camera's update counter this way. clone deliberately does not carry the callback over — a copy is a value, not a second owner. See ReadonlyRectangle for the read-only view engine APIs hand out when they return a live internal rectangle.",
+  "description": "Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and dimensions `(width, height)`. Implements ShapeLike with full SAT collision response for rectangles and polygons, and specialised algorithms for circle and ellipse intersections. `Rectangle.temp` is a shared scratch instance. Edge normals are lazily computed and cached; they are invalidated when position or size mutates. Position and size are reactive components, so EVERY mutation - the accessors here, `set`/`copy`, and a write one level down such as `rect.size.width = 5` - funnels through a single internal notification. Pass `onChange` to be told about all of them: an owner that hands out its live rectangle uses it to run whatever invalidation a direct write implies - a camera's viewport rectangle bumps the camera's update counter this way. clone deliberately does not carry the callback over - a copy is a value, not a second owner. See ReadonlyRectangle for the read-only view engine APIs hand out when they return a live internal rectangle.",
   "symbol": "Rectangle",
   "kind": "class",
   "subsystem": "math",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and dimensions `(width, height)`. Implements ShapeLike with full SAT collision response for rectangles and polygons, and specialised algorithms for circle and ellipse intersections.",
         "`Rectangle.temp` is a shared scratch instance. Edge normals are lazily computed and cached; they are invalidated when position or size mutates.",
-        "Position and size are reactive components, so EVERY mutation — the accessors here, `set`/`copy`, and a write one level down such as `rect.size.width = 5` — funnels through a single internal notification. Pass `onChange` to be told about all of them: an owner that hands out its live rectangle uses it to run whatever invalidation a direct write implies — a camera's viewport rectangle bumps the camera's update counter this way. clone deliberately does not carry the callback over — a copy is a value, not a second owner.",
+        "Position and size are reactive components, so EVERY mutation - the accessors here, `set`/`copy`, and a write one level down such as `rect.size.width = 5` - funnels through a single internal notification. Pass `onChange` to be told about all of them: an owner that hands out its live rectangle uses it to run whatever invalidation a direct write implies - a camera's viewport rectangle bumps the camera's update counter this way. clone deliberately does not carry the callback over - a copy is a value, not a second owner.",
         "See ReadonlyRectangle for the read-only view engine APIs hand out when they return a live internal rectangle."
       ],
       "importLine": "import { Rectangle } from '@codexo/exojs'",
@@ -570,7 +570,7 @@
             }
           ],
           "returnType": "Rectangle",
-          "description": "The axis-aligned bounding box of this object. Pass out to write into a rectangle you own — every implementer honours it, so this form is always safe to retain and never allocates. Without out, the ShapeLike shapes return a **fresh** rectangle, while a node or view that maintains a cached box (see SceneNode.getBounds) returns that cached instance, which the next invalidation overwrites."
+          "description": "The axis-aligned bounding box of this object. Pass out to write into a rectangle you own - every implementer honours it, so this form is always safe to retain and never allocates. Without out, the ShapeLike shapes return a **fresh** rectangle, while a node or view that maintains a cached box (see SceneNode.getBounds) returns that cached instance, which the next invalidation overwrites."
         },
         {
           "name": "getNormals",

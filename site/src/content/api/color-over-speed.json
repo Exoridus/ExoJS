@@ -1,6 +1,6 @@
 {
   "title": "ColorOverSpeed",
-  "description": "Per-frame, per-particle color sampler driven by velocity magnitude rather than lifetime ratio. Each live particle's tint is set to the gradient evaluated at `clamp((|velocity| - minSpeed) / (maxSpeed - minSpeed), 0, 1)`. Use cases: heat-mapping (slow=blue, fast=red), velocity-tinted trails, speed-gated highlights. GPU-eligible: gradient uploaded as a 256-tap 1D RGBA8 texture, sampled with linear filtering. Replaces the full color word — pair with a separate AlphaFadeOverLifetime after this module if you want to keep alpha controlled by lifetime.",
+  "description": "Per-frame, per-particle color sampler driven by velocity magnitude rather than lifetime ratio. Each live particle's tint is set to the gradient evaluated at `clamp((|velocity| - minSpeed) / (maxSpeed - minSpeed), 0, 1)`. Use cases: heat-mapping (slow=blue, fast=red), velocity-tinted trails, speed-gated highlights. GPU-eligible: gradient uploaded as a 256-tap 1D RGBA8 texture, sampled with linear filtering. Replaces the full color word - pair with a separate AlphaFadeOverLifetime after this module if you want to keep alpha controlled by lifetime.",
   "symbol": "ColorOverSpeed",
   "kind": "class",
   "subsystem": "particles",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Per-frame, per-particle color sampler driven by velocity magnitude rather than lifetime ratio. Each live particle's tint is set to the gradient evaluated at `clamp((|velocity| - minSpeed) / (maxSpeed - minSpeed), 0, 1)`.",
         "Use cases: heat-mapping (slow=blue, fast=red), velocity-tinted trails, speed-gated highlights.",
-        "GPU-eligible: gradient uploaded as a 256-tap 1D RGBA8 texture, sampled with linear filtering. Replaces the full color word — pair with a separate AlphaFadeOverLifetime after this module if you want to keep alpha controlled by lifetime."
+        "GPU-eligible: gradient uploaded as a 256-tap 1D RGBA8 texture, sampled with linear filtering. Replaces the full color word - pair with a separate AlphaFadeOverLifetime after this module if you want to keep alpha controlled by lifetime."
       ],
       "importLine": "import { ColorOverSpeed } from '@codexo/exojs-particles'",
       "sourceLink": null

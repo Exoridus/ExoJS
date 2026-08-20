@@ -1,6 +1,6 @@
 {
   "title": "TiledTilesetResources",
-  "description": "Loader-resolved resources for a TiledTileset: the absolute image URL(s) and the Texture instance(s) loaded for them. All textures are owned by the `Loader` cache — a TiledTileset never destroys them.",
+  "description": "Loader-resolved resources for a TiledTileset: the absolute image URL(s) and the Texture instance(s) loaded for them. All textures are owned by the `Loader` cache - a TiledTileset never destroys them.",
   "symbol": "TiledTilesetResources",
   "kind": "interface",
   "subsystem": "tiled",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Loader-resolved resources for a TiledTileset: the absolute image URL(s) and the Texture instance(s) loaded for them. All textures are owned by the `Loader` cache — a TiledTileset never destroys them."
+        "Loader-resolved resources for a TiledTileset: the absolute image URL(s) and the Texture instance(s) loaded for them. All textures are owned by the `Loader` cache - a TiledTileset never destroys them."
       ],
       "importLine": "import { TiledTilesetResources } from '@codexo/exojs-tiled'",
       "sourceLink": null

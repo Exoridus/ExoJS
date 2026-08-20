@@ -1,6 +1,6 @@
 {
   "title": "Gamepad",
-  "description": "One of four stable gamepad slots. Lives for the entire `Application` lifetime even when no physical pad is attached — a \"mailbox\" that physical hardware moves into and out of. Subscribe to onConnect / onDisconnect for hardware lifecycle, onButtonDown / onButtonUp / onAxisChange for granular per-event notifications, or call onTrigger / onActive / onStart / onStop to register stateful InputBindings pinned to this slot. Listeners survive disconnect/reconnect cycles — a binding registered when the slot was empty will automatically activate when a pad connects.",
+  "description": "One of four stable gamepad slots. Lives for the entire `Application` lifetime even when no physical pad is attached - a \"mailbox\" that physical hardware moves into and out of. Subscribe to onConnect / onDisconnect for hardware lifecycle, onButtonDown / onButtonUp / onAxisChange for granular per-event notifications, or call onTrigger / onActive / onStart / onStop to register stateful InputBindings pinned to this slot. Listeners survive disconnect/reconnect cycles - a binding registered when the slot was empty will automatically activate when a pad connects.",
   "symbol": "Gamepad",
   "kind": "class",
   "subsystem": "input",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One of four stable gamepad slots. Lives for the entire `Application` lifetime even when no physical pad is attached — a \"mailbox\" that physical hardware moves into and out of.",
+        "One of four stable gamepad slots. Lives for the entire `Application` lifetime even when no physical pad is attached - a \"mailbox\" that physical hardware moves into and out of.",
         "Subscribe to onConnect / onDisconnect for hardware lifecycle, onButtonDown / onButtonUp / onAxisChange for granular per-event notifications, or call onTrigger / onActive / onStart / onStop to register stateful InputBindings pinned to this slot.",
-        "Listeners survive disconnect/reconnect cycles — a binding registered when the slot was empty will automatically activate when a pad connects."
+        "Listeners survive disconnect/reconnect cycles - a binding registered when the slot was empty will automatically activate when a pad connects."
       ],
       "importLine": "import { Gamepad } from '@codexo/exojs'",
       "sourceLink": null
@@ -268,7 +268,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Returns true when this pad's mapping declares the requested channel. Use to gate listener registration on optional hardware (e.g. Joy-Con solo lacks a right stick — pad.hasChannel(GamepadAxis.RightStickX) returns false)."
+          "description": "Returns true when this pad's mapping declares the requested channel. Use to gate listener registration on optional hardware (e.g. Joy-Con solo lacks a right stick - pad.hasChannel(GamepadAxis.RightStickX) returns false)."
         },
         {
           "name": "onActive",
@@ -405,7 +405,7 @@
             }
           ],
           "returnType": "InputBinding",
-          "description": "Register a callback fired every frame while any of channels is active. Receives the channel value (0..1 for buttons, -1..1 for bipolar axes). The callback is optional: with none, this just creates a binding, which is the idiomatic way to poll a stick or trigger per frame — read InputBinding.active / InputBinding.value in your own update() instead of tracking held-state in a callback."
+          "description": "Register a callback fired every frame while any of channels is active. Receives the channel value (0..1 for buttons, -1..1 for bipolar axes). The callback is optional: with none, this just creates a binding, which is the idiomatic way to poll a stick or trigger per frame - read InputBinding.active / InputBinding.value in your own update() instead of tracking held-state in a callback."
         },
         {
           "name": "onStart",
@@ -1035,7 +1035,7 @@
             }
           ],
           "returnType": "number",
-          "description": "Static counterpart to Gamepad.resolveChannelOffset — resolves an absolute channel-buffer offset for a given slot index without requiring a Gamepad instance."
+          "description": "Static counterpart to Gamepad.resolveChannelOffset - resolves an absolute channel-buffer offset for a given slot index without requiring a Gamepad instance."
         }
       ],
       "paragraphs": [],

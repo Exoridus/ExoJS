@@ -1,6 +1,6 @@
 {
   "title": "CaptureOptions",
-  "description": "Options for RenderingContext.capture — allocates a new RenderTexture.",
+  "description": "Options for RenderingContext.capture - allocates a new RenderTexture.",
   "symbol": "CaptureOptions",
   "kind": "interface",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for RenderingContext.capture — allocates a new RenderTexture."
+        "Options for RenderingContext.capture - allocates a new RenderTexture."
       ],
       "importLine": "import { CaptureOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Color attachment format for the allocated target. Defaults to 'rgba8'. Float formats require EXT_color_buffer_float — check RenderingContext.supportsColorFormat first."
+          "description": "Color attachment format for the allocated target. Defaults to 'rgba8'. Float formats require EXT_color_buffer_float - check RenderingContext.supportsColorFormat first."
         },
         {
           "name": "height",

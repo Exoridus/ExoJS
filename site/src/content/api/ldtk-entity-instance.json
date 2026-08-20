@@ -167,7 +167,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Pixel position [x, y] of the entity's pivot-adjusted anchor — NOT the top-left corner. Combine with __pivot to recover the bounding box's top-left corner: topLeftX = px[0] - width * __pivot[0]."
+          "description": "Pixel position [x, y] of the entity's pivot-adjusted anchor - NOT the top-left corner. Combine with __pivot to recover the bounding box's top-left corner: topLeftX = px[0] - width * __pivot[0]."
         },
         {
           "name": "width",

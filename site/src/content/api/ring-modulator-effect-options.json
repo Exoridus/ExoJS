@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Carrier oscillator frequency in Hz. Range 0..20000, default 440. Lower frequencies (1–60 Hz) produce tremolo-like pulsing; mid-range values (100–1000 Hz) give the characteristic robotic ring-mod sound; high values shift sidebands above the audible fundamental."
+          "description": "Carrier oscillator frequency in Hz. Range 0..20000, default 440. Lower frequencies (1-60 Hz) produce tremolo-like pulsing; mid-range values (100-1000 Hz) give the characteristic robotic ring-mod sound; high values shift sidebands above the audible fundamental."
         },
         {
           "name": "waveform",

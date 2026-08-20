@@ -1,6 +1,6 @@
 {
   "title": "Json",
-  "description": "Dispatch token for generic JSON loading. `loader.load(Asset.type('json', 'config.json'))` returns `Promise<unknown>`. Narrow via generic: `loader.load(Asset.type<Config>('json', 'config.json'))`. Handles all JSON shapes — objects, arrays, scalars.",
+  "description": "Dispatch token for generic JSON loading. `loader.load(Asset.type('json', 'config.json'))` returns `Promise<unknown>`. Narrow via generic: `loader.load(Asset.type<Config>('json', 'config.json'))`. Handles all JSON shapes - objects, arrays, scalars.",
   "symbol": "Json",
   "kind": "class",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Dispatch token for generic JSON loading.",
-        "`loader.load(Asset.type('json', 'config.json'))` returns `Promise<unknown>`. Narrow via generic: `loader.load(Asset.type<Config>('json', 'config.json'))`. Handles all JSON shapes — objects, arrays, scalars."
+        "`loader.load(Asset.type('json', 'config.json'))` returns `Promise<unknown>`. Narrow via generic: `loader.load(Asset.type<Config>('json', 'config.json'))`. Handles all JSON shapes - objects, arrays, scalars."
       ],
       "importLine": "import { Json } from '@codexo/exojs'",
       "sourceLink": null

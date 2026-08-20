@@ -1,6 +1,6 @@
 {
   "title": "AudioInputOptions",
-  "description": "Options for AudioInput.open — forwarded to `getUserMedia` audio constraints.",
+  "description": "Options for AudioInput.open - forwarded to `getUserMedia` audio constraints.",
   "symbol": "AudioInputOptions",
   "kind": "interface",
   "subsystem": "audio",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for AudioInput.open — forwarded to `getUserMedia` audio constraints."
+        "Options for AudioInput.open - forwarded to `getUserMedia` audio constraints."
       ],
       "importLine": "import { AudioInputOptions } from '@codexo/exojs'",
       "sourceLink": null

@@ -1,6 +1,6 @@
 {
   "title": "SlideSceneTransition",
-  "description": "Directional slide transition — covers menu/inventory/page-style navigation. Three modes: - `'push'` (default): the outgoing scene exits toward `direction` while the incoming scene enters from the opposite edge. Phase-split at the commit boundary (not a full `SceneTransition`), so there is a brief single-frame gap at the exact commit instant where neither scene is on-screen. - `'reveal'`: only the outgoing scene animates, sliding away toward `direction` to reveal the (already-committed) incoming scene underneath. - `'cover'`: only the incoming scene animates, sliding in from the opposite edge over a frozen snapshot of the (already-gone) outgoing scene.",
+  "description": "Directional slide transition - covers menu/inventory/page-style navigation. Three modes: - `'push'` (default): the outgoing scene exits toward `direction` while the incoming scene enters from the opposite edge. Phase-split at the commit boundary (not a full `SceneTransition`), so there is a brief single-frame gap at the exact commit instant where neither scene is on-screen. - `'reveal'`: only the outgoing scene animates, sliding away toward `direction` to reveal the (already-committed) incoming scene underneath. - `'cover'`: only the incoming scene animates, sliding in from the opposite edge over a frozen snapshot of the (already-gone) outgoing scene.",
   "symbol": "SlideSceneTransition",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Directional slide transition — covers menu/inventory/page-style navigation. Three modes: - `'push'` (default): the outgoing scene exits toward `direction` while the incoming scene enters from the opposite edge. Phase-split at the commit boundary (not a full `SceneTransition`), so there is a brief single-frame gap at the exact commit instant where neither scene is on-screen. - `'reveal'`: only the outgoing scene animates, sliding away toward `direction` to reveal the (already-committed) incoming scene underneath. - `'cover'`: only the incoming scene animates, sliding in from the opposite edge over a frozen snapshot of the (already-gone) outgoing scene."
+        "Directional slide transition - covers menu/inventory/page-style navigation. Three modes: - `'push'` (default): the outgoing scene exits toward `direction` while the incoming scene enters from the opposite edge. Phase-split at the commit boundary (not a full `SceneTransition`), so there is a brief single-frame gap at the exact commit instant where neither scene is on-screen. - `'reveal'`: only the outgoing scene animates, sliding away toward `direction` to reveal the (already-committed) incoming scene underneath. - `'cover'`: only the incoming scene animates, sliding in from the opposite edge over a frozen snapshot of the (already-gone) outgoing scene."
       ],
       "importLine": "import { SlideSceneTransition } from '@codexo/exojs'",
       "sourceLink": null
@@ -129,7 +129,7 @@
             }
           ],
           "returnType": "SceneTransitionSession",
-          "description": "Called by the Director — do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
+          "description": "Called by the Director - do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
         },
         {
           "name": "createPhaseState",
@@ -158,7 +158,7 @@
           ],
           "params": [],
           "returnType": "SlidePhaseState",
-          "description": "Allocate this navigation's session-scoped mutable scratch state (reused Sprite/Matrix/Color/etc — anything enter()/exit() mutates per draw). Called once per session, never shared across navigations or with the definition instance itself, which must stay fully immutable so it can be reused (even concurrently) across arbitrarily many navigations. Default: no scratch state needed (void)."
+          "description": "Allocate this navigation's session-scoped mutable scratch state (reused Sprite/Matrix/Color/etc - anything enter()/exit() mutates per draw). Called once per session, never shared across navigations or with the definition instance itself, which must stay fully immutable so it can be reused (even concurrently) across arbitrarily many navigations. Default: no scratch state needed (void)."
         },
         {
           "name": "createSession",
@@ -273,7 +273,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Draw one frame of the enter phase. No-op by default — override for a visible enter effect."
+          "description": "Draw one frame of the enter phase. No-op by default - override for a visible enter effect."
         },
         {
           "name": "exit",
@@ -341,7 +341,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Draw one frame of the exit phase. No-op by default — override for a visible exit effect."
+          "description": "Draw one frame of the exit phase. No-op by default - override for a visible exit effect."
         },
         {
           "name": "getPhaseRequirements",
@@ -540,7 +540,7 @@
             }
           ],
           "returnType": "SceneTransitionPhaseRequirements",
-          "description": "Director entry point — mirrors SceneTransition.beginSession/ createSession(): the Director (and, for { enter, exit } composition, a sibling PhasedSceneTransition instance's own session driver) calls this directly on a phase instance it doesn't own the hierarchy of, which the protected PhasedSceneTransition.getPhaseRequirements authoring hook cannot support on its own. Authors implement getPhaseRequirements(); nothing else calls it directly."
+          "description": "Director entry point - mirrors SceneTransition.beginSession/ createSession(): the Director (and, for { enter, exit } composition, a sibling PhasedSceneTransition instance's own session driver) calls this directly on a phase instance it doesn't own the hierarchy of, which the protected PhasedSceneTransition.getPhaseRequirements authoring hook cannot support on its own. Authors implement getPhaseRequirements(); nothing else calls it directly."
         },
         {
           "name": "runPhase",
@@ -637,7 +637,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Session-driver entry point for rendering one frame of phase — mirrors PhasedSceneTransition.getRequirementsForPhase exactly: PhasedSceneTransitionSession (and, for { enter, exit } composition, a *different* PhasedSceneTransition instance's session) is not a subclass of this class and cannot call the protected PhasedSceneTransition.enter/PhasedSceneTransition.exit hooks directly. Authors override enter()/exit(); nothing else calls them directly."
+          "description": "Session-driver entry point for rendering one frame of phase - mirrors PhasedSceneTransition.getRequirementsForPhase exactly: PhasedSceneTransitionSession (and, for { enter, exit } composition, a *different* PhasedSceneTransition instance's session) is not a subclass of this class and cannot call the protected PhasedSceneTransition.enter/PhasedSceneTransition.exit hooks directly. Authors override enter()/exit(); nothing else calls them directly."
         }
       ],
       "paragraphs": [],

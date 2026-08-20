@@ -1,6 +1,6 @@
 {
   "title": "PhasedSceneTransition",
-  "description": "Single-class `enter()`/`exit()` authoring layer over the full SceneTransition contract — covers the common case (fade, slide, wipe, a custom flash) with no need to hand-manage timing, easing, or session lifecycle. Subclasses implement PhasedSceneTransition.getPhaseRequirements and override PhasedSceneTransition.enter/PhasedSceneTransition.exit — `createSession()` is implemented once, here, and never needs overriding for this common case.",
+  "description": "Single-class `enter()`/`exit()` authoring layer over the full SceneTransition contract - covers the common case (fade, slide, wipe, a custom flash) with no need to hand-manage timing, easing, or session lifecycle. Subclasses implement PhasedSceneTransition.getPhaseRequirements and override PhasedSceneTransition.enter/PhasedSceneTransition.exit - `createSession()` is implemented once, here, and never needs overriding for this common case.",
   "symbol": "PhasedSceneTransition",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Single-class `enter()`/`exit()` authoring layer over the full SceneTransition contract — covers the common case (fade, slide, wipe, a custom flash) with no need to hand-manage timing, easing, or session lifecycle. Subclasses implement PhasedSceneTransition.getPhaseRequirements and override PhasedSceneTransition.enter/PhasedSceneTransition.exit — `createSession()` is implemented once, here, and never needs overriding for this common case."
+        "Single-class `enter()`/`exit()` authoring layer over the full SceneTransition contract - covers the common case (fade, slide, wipe, a custom flash) with no need to hand-manage timing, easing, or session lifecycle. Subclasses implement PhasedSceneTransition.getPhaseRequirements and override PhasedSceneTransition.enter/PhasedSceneTransition.exit - `createSession()` is implemented once, here, and never needs overriding for this common case."
       ],
       "importLine": "import { PhasedSceneTransition } from '@codexo/exojs'",
       "sourceLink": null
@@ -85,7 +85,7 @@
             }
           ],
           "returnType": "PhasedSceneTransition<PhaseState>",
-          "description": "Public — an abstract class with a protected constructor is still not directly instantiable (that's what abstract already does), but a *protected* constructor is inherited: a concrete subclass that declares no constructor of its own (the common case — e.g. a FlashTransition with only enter()/exit()) would inherit it and become uninstantiable from outside the module. Public keeps every minimal subclass usable with zero boilerplate."
+          "description": "Public - an abstract class with a protected constructor is still not directly instantiable (that's what abstract already does), but a *protected* constructor is inherited: a concrete subclass that declares no constructor of its own (the common case - e.g. a FlashTransition with only enter()/exit()) would inherit it and become uninstantiable from outside the module. Public keeps every minimal subclass usable with zero boilerplate."
         }
       ],
       "paragraphs": [],
@@ -141,7 +141,7 @@
             }
           ],
           "returnType": "SceneTransitionSession",
-          "description": "Called by the Director — do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
+          "description": "Called by the Director - do not call directly. Dispatches to SceneTransition.createSession, which is protected so it does not clutter a beginner's view of a transition subclass while still being callable from Director code that does not share this class's hierarchy."
         },
         {
           "name": "createPhaseState",
@@ -170,7 +170,7 @@
           ],
           "params": [],
           "returnType": "PhaseState",
-          "description": "Allocate this navigation's session-scoped mutable scratch state (reused Sprite/Matrix/Color/etc — anything enter()/exit() mutates per draw). Called once per session, never shared across navigations or with the definition instance itself, which must stay fully immutable so it can be reused (even concurrently) across arbitrarily many navigations. Default: no scratch state needed (void)."
+          "description": "Allocate this navigation's session-scoped mutable scratch state (reused Sprite/Matrix/Color/etc - anything enter()/exit() mutates per draw). Called once per session, never shared across navigations or with the definition instance itself, which must stay fully immutable so it can be reused (even concurrently) across arbitrarily many navigations. Default: no scratch state needed (void)."
         },
         {
           "name": "createSession",
@@ -285,7 +285,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Draw one frame of the enter phase. No-op by default — override for a visible enter effect."
+          "description": "Draw one frame of the enter phase. No-op by default - override for a visible enter effect."
         },
         {
           "name": "exit",
@@ -353,7 +353,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Draw one frame of the exit phase. No-op by default — override for a visible exit effect."
+          "description": "Draw one frame of the exit phase. No-op by default - override for a visible exit effect."
         },
         {
           "name": "getPhaseRequirements",
@@ -552,7 +552,7 @@
             }
           ],
           "returnType": "SceneTransitionPhaseRequirements",
-          "description": "Director entry point — mirrors SceneTransition.beginSession/ createSession(): the Director (and, for { enter, exit } composition, a sibling PhasedSceneTransition instance's own session driver) calls this directly on a phase instance it doesn't own the hierarchy of, which the protected PhasedSceneTransition.getPhaseRequirements authoring hook cannot support on its own. Authors implement getPhaseRequirements(); nothing else calls it directly."
+          "description": "Director entry point - mirrors SceneTransition.beginSession/ createSession(): the Director (and, for { enter, exit } composition, a sibling PhasedSceneTransition instance's own session driver) calls this directly on a phase instance it doesn't own the hierarchy of, which the protected PhasedSceneTransition.getPhaseRequirements authoring hook cannot support on its own. Authors implement getPhaseRequirements(); nothing else calls it directly."
         },
         {
           "name": "runPhase",
@@ -649,7 +649,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Session-driver entry point for rendering one frame of phase — mirrors PhasedSceneTransition.getRequirementsForPhase exactly: PhasedSceneTransitionSession (and, for { enter, exit } composition, a *different* PhasedSceneTransition instance's session) is not a subclass of this class and cannot call the protected PhasedSceneTransition.enter/PhasedSceneTransition.exit hooks directly. Authors override enter()/exit(); nothing else calls them directly."
+          "description": "Session-driver entry point for rendering one frame of phase - mirrors PhasedSceneTransition.getRequirementsForPhase exactly: PhasedSceneTransitionSession (and, for { enter, exit } composition, a *different* PhasedSceneTransition instance's session) is not a subclass of this class and cannot call the protected PhasedSceneTransition.enter/PhasedSceneTransition.exit hooks directly. Authors override enter()/exit(); nothing else calls them directly."
         }
       ],
       "paragraphs": [],

@@ -179,7 +179,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Detection trust level: - 'provisional' — an early, low-latency beat emitted before the tempo grid is fully settled. Good for visual reactivity (a \"blink\"); may be revised. - 'locked' — the tempo grid is settled and trustworthy. Safe for sync-critical use. Each stable segment yields exactly one provisional→locked transition."
+          "description": "Detection trust level: - 'provisional' - an early, low-latency beat emitted before the tempo grid is fully settled. Good for visual reactivity (a \"blink\"); may be revised. - 'locked' - the tempo grid is settled and trustworthy. Safe for sync-critical use. Each stable segment yields exactly one provisional→locked transition."
         },
         {
           "name": "tempo",

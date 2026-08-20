@@ -47,7 +47,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Index buffer: 6 indices × quadCount. Uint32 — a single node's own glyph count can exceed 16384 quads."
+          "description": "Index buffer: 6 indices × quadCount. Uint32 - a single node's own glyph count can exceed 16384 quads."
         },
         {
           "name": "pageIndex",

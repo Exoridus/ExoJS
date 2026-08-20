@@ -270,7 +270,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "File suffixes that map to this type. Feeds the per-loader map and — for a leaf-capable type — global bare-path inference."
+          "description": "File suffixes that map to this type. Feeds the per-loader map and - for a leaf-capable type - global bare-path inference."
         },
         {
           "name": "isValue",

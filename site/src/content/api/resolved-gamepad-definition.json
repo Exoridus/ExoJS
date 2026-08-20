@@ -1,6 +1,6 @@
 {
   "title": "ResolvedGamepadDefinition",
-  "description": "The fully resolved product of running a GamepadDefinition against a connected gamepad — bundles the original descriptor, the resolved display name, and the chosen GamepadMapping together for use by Gamepad.",
+  "description": "The fully resolved product of running a GamepadDefinition against a connected gamepad - bundles the original descriptor, the resolved display name, and the chosen GamepadMapping together for use by Gamepad.",
   "symbol": "ResolvedGamepadDefinition",
   "kind": "interface",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The fully resolved product of running a GamepadDefinition against a connected gamepad — bundles the original descriptor, the resolved display name, and the chosen GamepadMapping together for use by Gamepad."
+        "The fully resolved product of running a GamepadDefinition against a connected gamepad - bundles the original descriptor, the resolved display name, and the chosen GamepadMapping together for use by Gamepad."
       ],
       "importLine": "import { ResolvedGamepadDefinition } from '@codexo/exojs'",
       "sourceLink": null

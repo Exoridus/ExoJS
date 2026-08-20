@@ -501,7 +501,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Layer width in tiles. Omit together with height for an unbounded layer — chunk storage then accepts any signed chunk coordinate instead of being clamped to a fixed grid."
+          "description": "Layer width in tiles. Omit together with height for an unbounded layer - chunk storage then accepts any signed chunk coordinate instead of being clamped to a fixed grid."
         }
       ],
       "paragraphs": [],

@@ -192,7 +192,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds — i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
+          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds - i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
         },
         {
           "name": "destroy",
@@ -221,7 +221,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release this node's pooled state (transform, bounds, flags) and unlink it from its parent. The unlink comes first and is what makes a bare destroy() safe. A node left in its parent's child list bumps no revision, so every cache keyed on that revision — a Container's retained draw slots, a RetainedContainer's recorded GPU instruction set — would keep replaying the dead node's last captured frame. Removing it stamps the parent structure-dirty, which drops those captures, and runs the node's regular detach cleanup (bounds cascade, interaction/focus deregistration, stage clearing) while this node's own state is still intact. Container.removeChild is a no-op for a node it does not hold, so the already-correct removeChild()-then-destroy() order costs nothing more than the null check here. The destroyed flag is raised before the unlink so detach-time observers (e.g. focus, which suppresses onBlur on a destroyed node) see a node that is going away rather than one merely being reparented."
+          "description": "Release this node's pooled state (transform, bounds, flags) and unlink it from its parent. The unlink comes first and is what makes a bare destroy() safe. A node left in its parent's child list bumps no revision, so every cache keyed on that revision - a Container's retained draw slots, a RetainedContainer's recorded GPU instruction set - would keep replaying the dead node's last captured frame. Removing it stamps the parent structure-dirty, which drops those captures, and runs the node's regular detach cleanup (bounds cascade, interaction/focus deregistration, stage clearing) while this node's own state is still intact. Container.removeChild is a no-op for a node it does not hold, so the already-correct removeChild()-then-destroy() order costs nothing more than the null check here. The destroyed flag is raised before the unlink so detach-time observers (e.g. focus, which suppresses onBlur on a destroyed node) see a node that is going away rather than one merely being reparented."
         },
         {
           "name": "getBounds",
@@ -272,7 +272,7 @@
             }
           ],
           "returnType": "Rectangle",
-          "description": "Axis-aligned bounding box of this node in its GLOBAL-transform space. That is world space for ordinary nodes, but GROUP-LOCAL space for nodes inside an engaged RetainedContainer transform group (the group matrix is applied on the GPU, not here) — this is deliberate and matches the rendering convention. For a true world-space extent of such a node, lift this rect by the group's getWorldTransform matrix. Pass out to receive a copy you own. Without it the return value is this node's **cached** rectangle, rebuilt in place whenever the transform or the local extent changes — retaining it across frames hands you a value that silently moves. The cache is why the no-arg form does not allocate: this runs per node per frame for culling and hit-testing."
+          "description": "Axis-aligned bounding box of this node in its GLOBAL-transform space. That is world space for ordinary nodes, but GROUP-LOCAL space for nodes inside an engaged RetainedContainer transform group (the group matrix is applied on the GPU, not here) - this is deliberate and matches the rendering convention. For a true world-space extent of such a node, lift this rect by the group's getWorldTransform matrix. Pass out to receive a copy you own. Without it the return value is this node's **cached** rectangle, rebuilt in place whenever the transform or the local extent changes - retaining it across frames hands you a value that silently moves. The cache is why the no-arg form does not allocate: this runs per node per frame for culling and hit-testing."
         },
         {
           "name": "getGlobalTransform",
@@ -330,7 +330,7 @@
           ],
           "params": [],
           "returnType": "ReadonlyRectangle",
-          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle — reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through _setLocalBounds, which writes and invalidates in one step."
+          "description": "This node's untransformed extent in its own local coordinate space. Returns the LIVE internal rectangle, not a copy: it is read on hot paths (updateBounds re-reads it on every transform-dirty recompute, i.e. potentially every frame for a moving node), so copying it here would add a per-frame allocation. It is therefore typed as a ReadonlyRectangle - reads are unchanged, writes are rejected at compile time. Writing to it directly would skip the bounds/content invalidation the engine needs, leaving culling, hit-testing and retained render fragments on a stale extent. A custom Drawable that owns its own size sets it through _setLocalBounds, which writes and invalidates in one step."
         },
         {
           "name": "getNormals",
@@ -421,7 +421,7 @@
           ],
           "params": [],
           "returnType": "Matrix",
-          "description": "The node's TRUE world-space transform, composed through every transform-group boundary (RetainedContainer) in the ancestor chain. getGlobalTransform deliberately stops at the nearest engaged boundary (descendants resolve group-RELATIVE transforms; the renderer multiplies the group matrix back in on the GPU), so it is the right space for rendering but the wrong one for spatial queries. Use THIS accessor whenever a real world position/orientation is needed — picking, spatial audio, physics, world-space math against nodes outside the group. Without any engaged boundary ancestor it returns the exact getGlobalTransform matrix (same instance, no extra work). With one, it lazily caches groupLocal × groupWorld and revalidates on read via version/stamp compares — including runtime space flips such as RetainedContainer's deep-barrier sub-branch escape."
+          "description": "The node's TRUE world-space transform, composed through every transform-group boundary (RetainedContainer) in the ancestor chain. getGlobalTransform deliberately stops at the nearest engaged boundary (descendants resolve group-RELATIVE transforms; the renderer multiplies the group matrix back in on the GPU), so it is the right space for rendering but the wrong one for spatial queries. Use THIS accessor whenever a real world position/orientation is needed - picking, spatial audio, physics, world-space math against nodes outside the group. Without any engaged boundary ancestor it returns the exact getGlobalTransform matrix (same instance, no extra work). With one, it lazily caches groupLocal × groupWorld and revalidates on read via version/stamp compares - including runtime space flips such as RetainedContainer's deep-barrier sub-branch escape."
         },
         {
           "name": "intersectsWith",

@@ -1,6 +1,6 @@
 {
   "title": "SceneTransitionSession",
-  "description": "One navigation's worth of mutable transition state — created fresh per navigation by SceneTransition.beginSession, driven by the Director until SceneTransitionSession.done, then destroyed. Never reused across navigations.",
+  "description": "One navigation's worth of mutable transition state - created fresh per navigation by SceneTransition.beginSession, driven by the Director until SceneTransitionSession.done, then destroyed. Never reused across navigations.",
   "symbol": "SceneTransitionSession",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One navigation's worth of mutable transition state — created fresh per navigation by SceneTransition.beginSession, driven by the Director until SceneTransitionSession.done, then destroyed. Never reused across navigations."
+        "One navigation's worth of mutable transition state - created fresh per navigation by SceneTransition.beginSession, driven by the Director until SceneTransitionSession.done, then destroyed. Never reused across navigations."
       ],
       "importLine": "import { SceneTransitionSession } from '@codexo/exojs'",
       "sourceLink": null

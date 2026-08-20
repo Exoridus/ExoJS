@@ -1,6 +1,6 @@
 {
   "title": "Flags",
-  "description": "Type-safe bitfield utility for managing sets of numeric enum flags. `T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer. Pass the enum TYPE as `T`, not `typeof MyEnum` — the reverse mapping of a numeric enum object carries string values and does not satisfy the constraint. Rest-argument methods (push, remove, has) allocate an array per call. On hot paths use the mask forms (addMask, removeMask, hasMask, popMask) with a pre-combined mask instead.",
+  "description": "Type-safe bitfield utility for managing sets of numeric enum flags. `T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer. Pass the enum TYPE as `T`, not `typeof MyEnum` - the reverse mapping of a numeric enum object carries string values and does not satisfy the constraint. Rest-argument methods (push, remove, has) allocate an array per call. On hot paths use the mask forms (addMask, removeMask, hasMask, popMask) with a pre-combined mask instead.",
   "symbol": "Flags",
   "kind": "class",
   "subsystem": "math",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Type-safe bitfield utility for managing sets of numeric enum flags.",
         "`T` should be a numeric const-enum or a type whose values are `number`. Internally stores the combined flags as a single 32-bit integer.",
-        "Pass the enum TYPE as `T`, not `typeof MyEnum` — the reverse mapping of a numeric enum object carries string values and does not satisfy the constraint.",
+        "Pass the enum TYPE as `T`, not `typeof MyEnum` - the reverse mapping of a numeric enum object carries string values and does not satisfy the constraint.",
         "Rest-argument methods (push, remove, has) allocate an array per call. On hot paths use the mask forms (addMask, removeMask, hasMask, popMask) with a pre-combined mask instead."
       ],
       "importLine": "import { Flags } from '@codexo/exojs'",
@@ -257,7 +257,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Return true when **any** of the supplied flags are currently set (bitwise OR test). Allocates a rest array and a closure per call — use hasMask on hot paths."
+          "description": "Return true when **any** of the supplied flags are currently set (bitwise OR test). Allocates a rest array and a closure per call - use hasMask on hot paths."
         },
         {
           "name": "hasMask",
@@ -449,7 +449,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Set one or more flags (bitwise OR). Mutates in place and returns this for chaining. Allocates a rest array per call — use addMask on hot paths."
+          "description": "Set one or more flags (bitwise OR). Mutates in place and returns this for chaining. Allocates a rest array per call - use addMask on hot paths."
         },
         {
           "name": "remove",
@@ -500,7 +500,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Clear one or more flags (bitwise AND NOT). Mutates in place and returns this for chaining. Allocates a rest array per call — use removeMask on hot paths."
+          "description": "Clear one or more flags (bitwise AND NOT). Mutates in place and returns this for chaining. Allocates a rest array per call - use removeMask on hot paths."
         },
         {
           "name": "removeMask",

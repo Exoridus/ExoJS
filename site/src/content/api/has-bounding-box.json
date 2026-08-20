@@ -77,7 +77,7 @@
             }
           ],
           "returnType": "Rectangle",
-          "description": "The axis-aligned bounding box of this object. Pass out to write into a rectangle you own — every implementer honours it, so this form is always safe to retain and never allocates. Without out, the ShapeLike shapes return a **fresh** rectangle, while a node or view that maintains a cached box (see SceneNode.getBounds) returns that cached instance, which the next invalidation overwrites."
+          "description": "The axis-aligned bounding box of this object. Pass out to write into a rectangle you own - every implementer honours it, so this form is always safe to retain and never allocates. Without out, the ShapeLike shapes return a **fresh** rectangle, while a node or view that maintains a cached box (see SceneNode.getBounds) returns that cached instance, which the next invalidation overwrites."
         }
       ],
       "paragraphs": [],

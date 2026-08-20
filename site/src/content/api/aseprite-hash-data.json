@@ -1,6 +1,6 @@
 {
   "title": "AsepriteHashData",
-  "description": "Aseprite JSON export in hash mode — frames is an object keyed by frame name.",
+  "description": "Aseprite JSON export in hash mode - frames is an object keyed by frame name.",
   "symbol": "AsepriteHashData",
   "kind": "interface",
   "subsystem": "aseprite",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Aseprite JSON export in hash mode — frames is an object keyed by frame name."
+        "Aseprite JSON export in hash mode - frames is an object keyed by frame name."
       ],
       "importLine": "import { AsepriteHashData } from '@codexo/exojs-aseprite'",
       "sourceLink": null

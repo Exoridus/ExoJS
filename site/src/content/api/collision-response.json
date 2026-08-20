@@ -47,7 +47,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Penetration depth — the minimum distance to move the shapes apart."
+          "description": "Penetration depth - the minimum distance to move the shapes apart."
         },
         {
           "name": "projectionN",

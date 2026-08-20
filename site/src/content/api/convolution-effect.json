@@ -1,6 +1,6 @@
 {
   "title": "ConvolutionEffect",
-  "description": "Convolution effect that convolves the input signal with a user-supplied impulse response (IR). Unlike ReverbEffect, which generates a procedural noise-based IR, `ConvolutionEffect` accepts a *real* decoded IR — enabling convolution reverb from acoustic-space captures, cabinet/speaker simulations, telephone/pipe character filtering, and any other linear time-invariant transformation. Pass the IR as an `AudioBuffer` (typically decoded via `AudioContext.decodeAudioData`) or as a `Sound` (its `audioBuffer` is used). Omitting the IR leaves `convolver.buffer` as `null`, making the wet path silent and the effect act as a passthrough until setImpulse is called — safe to add to a bus before an IR is available. Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → convolver → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet × gain`.",
+  "description": "Convolution effect that convolves the input signal with a user-supplied impulse response (IR). Unlike ReverbEffect, which generates a procedural noise-based IR, `ConvolutionEffect` accepts a *real* decoded IR - enabling convolution reverb from acoustic-space captures, cabinet/speaker simulations, telephone/pipe character filtering, and any other linear time-invariant transformation. Pass the IR as an `AudioBuffer` (typically decoded via `AudioContext.decodeAudioData`) or as a `Sound` (its `audioBuffer` is used). Omitting the IR leaves `convolver.buffer` as `null`, making the wet path silent and the effect act as a passthrough until setImpulse is called - safe to add to a bus before an IR is available. Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → convolver → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet × gain`.",
   "symbol": "ConvolutionEffect",
   "kind": "class",
   "subsystem": "audio",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Convolution effect that convolves the input signal with a user-supplied impulse response (IR). Unlike ReverbEffect, which generates a procedural noise-based IR, `ConvolutionEffect` accepts a *real* decoded IR — enabling convolution reverb from acoustic-space captures, cabinet/speaker simulations, telephone/pipe character filtering, and any other linear time-invariant transformation.",
-        "Pass the IR as an `AudioBuffer` (typically decoded via `AudioContext.decodeAudioData`) or as a `Sound` (its `audioBuffer` is used). Omitting the IR leaves `convolver.buffer` as `null`, making the wet path silent and the effect act as a passthrough until setImpulse is called — safe to add to a bus before an IR is available.",
+        "Convolution effect that convolves the input signal with a user-supplied impulse response (IR). Unlike ReverbEffect, which generates a procedural noise-based IR, `ConvolutionEffect` accepts a *real* decoded IR - enabling convolution reverb from acoustic-space captures, cabinet/speaker simulations, telephone/pipe character filtering, and any other linear time-invariant transformation.",
+        "Pass the IR as an `AudioBuffer` (typically decoded via `AudioContext.decodeAudioData`) or as a `Sound` (its `audioBuffer` is used). Omitting the IR leaves `convolver.buffer` as `null`, making the wet path silent and the effect act as a passthrough until setImpulse is called - safe to add to a bus before an IR is available.",
         "Node graph: ``` input(GainNode) → dryGain → output(GainNode) input → convolver → wetGain → output ``` Gains: `dryGain.gain = 1 - wet`; `wetGain.gain = wet × gain`."
       ],
       "importLine": "import { ConvolutionEffect } from '@codexo/exojs-audio-fx'",
@@ -176,7 +176,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Set or replace the impulse response. Accepts a decoded AudioBuffer, a Sound (its audioBuffer is used), or null to clear the IR (wet path goes silent). Safe to call before the audio context is ready — the impulse is stored and applied once nodes are created. **Web Audio note:** normalize is written to the convolver *before* buffer is assigned, as required by the spec for the value to take effect."
+          "description": "Set or replace the impulse response. Accepts a decoded AudioBuffer, a Sound (its audioBuffer is used), or null to clear the IR (wet path goes silent). Safe to call before the audio context is ready - the impulse is stored and applied once nodes are created. **Web Audio note:** normalize is written to the convolver *before* buffer is assigned, as required by the spec for the value to take effect."
         }
       ],
       "paragraphs": [],

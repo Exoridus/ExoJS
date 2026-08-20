@@ -111,7 +111,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Full-gain cone half-angle in degrees. Default 360 (omnidirectional — no cone)."
+          "description": "Full-gain cone half-angle in degrees. Default 360 (omnidirectional - no cone)."
         },
         {
           "name": "coneOuterAngle",
@@ -216,7 +216,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Facing direction for cone attenuation, in degrees — same convention as SceneNode.rotation (0° = local +X / \"east\", clockwise-positive on a Y-down screen). Has no audible effect unless coneInnerAngle/ coneOuterAngle are narrowed below 360°. Default 0."
+          "description": "Facing direction for cone attenuation, in degrees - same convention as SceneNode.rotation (0° = local +X / \"east\", clockwise-positive on a Y-down screen). Has no audible effect unless coneInnerAngle/ coneOuterAngle are narrowed below 360°. Default 0."
         },
         {
           "name": "panningModel",
@@ -345,7 +345,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space velocity of the source (world units/second), or null. Feeds the Doppler calculation (app.audio.spatial.dopplerFactor) — has no other effect. Explicit; when null and follow(node) is active, velocity is auto-derived each frame from the tracked node's position delta instead."
+          "description": "World-space velocity of the source (world units/second), or null. Feeds the Doppler calculation (app.audio.spatial.dopplerFactor) - has no other effect. Explicit; when null and follow(node) is active, velocity is auto-derived each frame from the tracked node's position delta instead."
         }
       ],
       "paragraphs": [],

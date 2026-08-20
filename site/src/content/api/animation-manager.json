@@ -1,6 +1,6 @@
 {
   "title": "AnimationManager",
-  "description": "Owns and advances the AnimatedSprites whose frame playback is currently running, driving them once per frame from Application.update — the SystemMethods.preUpdate phase, at SystemOrder.CoreAnimation. Registration is automatic and requires no user wiring: an AnimatedSprite registers itself here as soon as it is both *playing* and *attached* to a scene tree owned by an Application, and deregisters on `stop()`/`pause()`, on clip completion, on detach from the tree, and on `destroy()`. A sprite that is never attached to a tree (e.g. one drawn immediate-mode via `context.render(sprite)`) is never registered, and must be ticked by hand with AnimatedSprite.update — which stays public exactly for that case. Update iteration uses a snapshot so `onFrame`/`onComplete` handlers may freely play, stop, add or destroy sprites during the same frame without corrupting the loop.",
+  "description": "Owns and advances the AnimatedSprites whose frame playback is currently running, driving them once per frame from Application.update - the SystemMethods.preUpdate phase, at SystemOrder.CoreAnimation. Registration is automatic and requires no user wiring: an AnimatedSprite registers itself here as soon as it is both *playing* and *attached* to a scene tree owned by an Application, and deregisters on `stop()`/`pause()`, on clip completion, on detach from the tree, and on `destroy()`. A sprite that is never attached to a tree (e.g. one drawn immediate-mode via `context.render(sprite)`) is never registered, and must be ticked by hand with AnimatedSprite.update - which stays public exactly for that case. Update iteration uses a snapshot so `onFrame`/`onComplete` handlers may freely play, stop, add or destroy sprites during the same frame without corrupting the loop.",
   "symbol": "AnimationManager",
   "kind": "class",
   "subsystem": "animation",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Owns and advances the AnimatedSprites whose frame playback is currently running, driving them once per frame from Application.update — the SystemMethods.preUpdate phase, at SystemOrder.CoreAnimation.",
-        "Registration is automatic and requires no user wiring: an AnimatedSprite registers itself here as soon as it is both *playing* and *attached* to a scene tree owned by an Application, and deregisters on `stop()`/`pause()`, on clip completion, on detach from the tree, and on `destroy()`. A sprite that is never attached to a tree (e.g. one drawn immediate-mode via `context.render(sprite)`) is never registered, and must be ticked by hand with AnimatedSprite.update — which stays public exactly for that case.",
+        "Owns and advances the AnimatedSprites whose frame playback is currently running, driving them once per frame from Application.update - the SystemMethods.preUpdate phase, at SystemOrder.CoreAnimation.",
+        "Registration is automatic and requires no user wiring: an AnimatedSprite registers itself here as soon as it is both *playing* and *attached* to a scene tree owned by an Application, and deregisters on `stop()`/`pause()`, on clip completion, on detach from the tree, and on `destroy()`. A sprite that is never attached to a tree (e.g. one drawn immediate-mode via `context.render(sprite)`) is never registered, and must be ticked by hand with AnimatedSprite.update - which stays public exactly for that case.",
         "Update iteration uses a snapshot so `onFrame`/`onComplete` handlers may freely play, stop, add or destroy sprites during the same frame without corrupting the loop."
       ],
       "importLine": "import { AnimationManager } from '@codexo/exojs'",
@@ -142,7 +142,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Deregister every sprite immediately. Playback state is left as-is — the sprites are simply no longer advanced by this manager."
+          "description": "Deregister every sprite immediately. Playback state is left as-is - the sprites are simply no longer advanced by this manager."
         },
         {
           "name": "destroy",
