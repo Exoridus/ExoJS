@@ -23,9 +23,9 @@ export const tiledSourceBinding = defineAsset<TiledMap, TiledLoadOptions>({
   type: 'tiledSource',
   create() {
     return {
-      getIdentityKey(req) {
+      getIdentityDiscriminator(req) {
         const o = resolveTiledOptions(req.options);
-        return `${req.source}|${o.format}`;
+        return o.format;
       },
       async load(req, ctx) {
         return loadTiledMap(req.source, ctx);

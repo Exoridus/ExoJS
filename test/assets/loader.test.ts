@@ -34,31 +34,27 @@ function residencyOf(loader: Loader): ResidencyInternals {
 }
 
 /**
- * Hard-removes an asset and every alias sharing its identity — the internal
- * reset behaviour that `Loader.unload(asset)` used to expose publicly. Kept as a
- * test helper so the identity/alias bookkeeping stays covered now that no public
- * verb reaches it.
+ * Hard-removes one canonical asset — the internal reset behaviour that
+ * `Loader.unload(asset)` used to expose publicly. Kept as a test helper so the
+ * bookkeeping stays covered now that no public verb reaches it.
  */
 function hardUnloadAsset(loader: Loader, asset: Asset<unknown>): void {
-  const registry = (
-    loader as unknown as { _typeRegistry: { resolveTypeName(name: string): unknown; _resolveAssetIdentityKey(type: unknown, asset: Asset<unknown>): string } }
-  )._typeRegistry;
+  const registry = (loader as unknown as { _typeRegistry: { resolveTypeName(name: string): unknown } })._typeRegistry;
   const ctor = registry.resolveTypeName(asset.type);
 
   if (!ctor) return;
 
-  const residency = residencyOf(loader);
-  const aliases = residency._getAliasesForIdentity(registry._resolveAssetIdentityKey(ctor, asset));
+  const { type: _type, source, ...options } = asset._config;
+  const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string, options?: unknown): unknown })._canonicalize.bind(loader);
 
-  if (aliases && aliases.size > 0) {
-    for (const alias of [...aliases]) {
-      residency._unloadOne(ctor, alias);
-    }
+  residencyOf(loader)._unloadOne(canonicalize(ctor, source, Object.keys(options).length > 0 ? options : undefined) as never);
+}
 
-    return;
-  }
+/** Hard-removes the canonical asset a `(type, source)` pair resolves to. */
+function hardUnloadPath(loader: Loader, type: unknown, source: string): void {
+  const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string): unknown })._canonicalize.bind(loader);
 
-  residency._unloadOne(ctor, asset.source);
+  residencyOf(loader)._unloadOne(canonicalize(type, source) as never);
 }
 
 // Declaration merges for test-only asset types
@@ -265,7 +261,7 @@ describe('Loader', () => {
     await loader.load('b.txt');
 
     expect(loader._peekResource(TextAsset, 'a.txt')).not.toBeNull();
-    residencyOf(loader)._unloadOne(TextAsset, 'a.txt');
+    hardUnloadPath(loader, TextAsset, 'a.txt');
     expect(loader._peekResource(TextAsset, 'a.txt')).toBeNull();
     expect(loader._peekResource(TextAsset, 'b.txt')).not.toBeNull();
 
@@ -310,7 +306,7 @@ describe('Loader', () => {
     const result = await loader.load('cached.txt');
 
     expect(result).toBe('resource:cached-source');
-    expect(cacheStore.load).toHaveBeenCalledWith('text', 'cached.txt');
+    expect(cacheStore.load).toHaveBeenCalledWith('text', '/cached.txt');
     expect(cacheStore.save).not.toHaveBeenCalled();
     expect(cacheStore.delete).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
@@ -326,9 +322,9 @@ describe('Loader', () => {
     const result = await loader.load('miss.txt');
 
     expect(result).toBe('resource:fresh-source');
-    expect(cacheStore.load).toHaveBeenCalledWith('text', 'miss.txt');
+    expect(cacheStore.load).toHaveBeenCalledWith('text', '/miss.txt');
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(cacheStore.save).toHaveBeenCalledWith('text', 'miss.txt', 'fresh-source');
+    expect(cacheStore.save).toHaveBeenCalledWith('text', '/miss.txt', 'fresh-source');
   });
 
   // The corrupt-cache-entry delete+retry mechanism itself (a cached value that
@@ -365,7 +361,7 @@ describe('Loader', () => {
 
     const loadPromise = loader.load('inflight.txt');
 
-    residencyOf(loader)._unloadOne(TextAsset, 'inflight.txt');
+    hardUnloadPath(loader, TextAsset, 'inflight.txt');
 
     deferredFetch.resolve({
       ok: true,
@@ -545,7 +541,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     );
   }
 
-  test('same Asset under two aliases shares a single network fetch', async () => {
+  test('one Asset named twice shares a single network fetch and one resident entry', async () => {
     const loader = new Loader({ basePath: '/' });
 
     bindMockAsset(loader);
@@ -556,22 +552,27 @@ describe('Asset / Assets identity and alias semantics', () => {
     await loader.load({ heroA: hero, heroB: hero });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(loader._peekResource(MockAssetType, 'heroA')).not.toBeNull();
-    expect(loader._peekResource(MockAssetType, 'heroB')).not.toBeNull();
+    // Record keys are NAMES, not identities: both resolve to the one canonical
+    // asset, which is resident under its own source.
+    expect(loader._peekResource(MockAssetType, 'images/hero.dat')).not.toBeNull();
+    expect(loader._peekResource(MockAssetType, 'heroA')).toBeNull();
+    expect(loader.inspect()).toHaveLength(1);
   });
 
-  test('both aliases resolve to the same stored resource after multi-alias load', async () => {
+  test('two spellings of one source resolve to the same resident resource', async () => {
     const loader = new Loader({ basePath: '/' });
 
     bindMockAsset(loader);
     mockFetch();
 
-    const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
+    await loader.load({
+      direct: new Asset({ type: 'mockAsset', source: 'images/hero.dat' }),
+      viaDotSegments: new Asset({ type: 'mockAsset', source: './images/sub/../hero.dat' }),
+    });
 
-    await loader.load({ heroA: hero, heroB: hero });
-
-    expect(loader._peekResource(MockAssetType, 'heroA')).toBe(loader._peekResource(MockAssetType, 'heroB'));
-    expect(loader._peekResource(MockAssetType, 'heroA')).not.toBeNull();
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+    expect(loader._peekResource(MockAssetType, 'images/hero.dat')).toBe(loader._peekResource(MockAssetType, './images/sub/../hero.dat'));
+    expect(loader._peekResource(MockAssetType, 'images/hero.dat')).not.toBeNull();
   });
 
   test('internal reset removes an asset loaded by source-as-alias (single Asset load)', async () => {
@@ -591,7 +592,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     expect(loader._peekResource(MockAssetType, 'images/hero.dat')).toBeNull();
   });
 
-  test('internal reset removes all aliases after keyed-map load', async () => {
+  test('internal reset removes the one canonical entry a keyed-map load produced', async () => {
     const loader = new Loader({ basePath: '/' });
 
     bindMockAsset(loader);
@@ -601,13 +602,12 @@ describe('Asset / Assets identity and alias semantics', () => {
 
     await loader.load({ heroA: hero, heroB: hero });
 
-    expect(loader._peekResource(MockAssetType, 'heroA')).not.toBeNull();
-    expect(loader._peekResource(MockAssetType, 'heroB')).not.toBeNull();
+    expect(loader._peekResource(MockAssetType, 'images/hero.dat')).not.toBeNull();
 
     hardUnloadAsset(loader, hero);
 
-    expect(loader._peekResource(MockAssetType, 'heroA')).toBeNull();
-    expect(loader._peekResource(MockAssetType, 'heroB')).toBeNull();
+    expect(loader._peekResource(MockAssetType, 'images/hero.dat')).toBeNull();
+    expect(loader.inspect()).toHaveLength(0);
   });
 
   test('release(assets) releases every leaf claim, evicting the adopted resources', async () => {
@@ -643,7 +643,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     vi.unstubAllGlobals();
   });
 
-  test('aliases are cleared from tracking when the underlying asset is reset', async () => {
+  test('a reset key reloads cleanly and leaves no stale bookkeeping behind', async () => {
     const loader = new Loader({ basePath: '/' });
 
     bindMockAsset(loader);
@@ -655,11 +655,12 @@ describe('Asset / Assets identity and alias semantics', () => {
 
     hardUnloadAsset(loader, hero);
 
-    // Re-load under a single alias — should work cleanly after the reset
+    expect(loader._peekResource(MockAssetType, 'hero.dat')).toBeNull();
+
     await loader.load({ a: hero });
 
-    expect(loader._peekResource(MockAssetType, 'a')).not.toBeNull();
-    expect(loader._peekResource(MockAssetType, 'b')).toBeNull();
+    expect(loader._peekResource(MockAssetType, 'hero.dat')).not.toBeNull();
+    expect(loader.inspect()).toHaveLength(1);
   });
 });
 
@@ -720,7 +721,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     );
 
     await loader.load(new Asset({ type: 'richAsset', source: 'a.json', format: 'x' }));
-    expect(capturedKey).toMatch(/^id:\d+:/);
+    expect(capturedKey).toMatch(/^\d+\|url:\/a\.json$/);
   });
 
   test('context.fetchText fetches and returns text', async () => {
@@ -785,14 +786,14 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     expect(Number(result)).toBeGreaterThan(0);
   });
 
-  test('getIdentityKey separates assets with same source but different format', async () => {
+  test('getIdentityDiscriminator separates assets with same source but different format', async () => {
     const loader = new Loader({ basePath: '/' });
     const loadOrder: string[] = [];
 
     loader.bindAsset<string, { format: string }>(
       { ctor: RichAsset, typeNames: ['richAsset'] },
       {
-        getIdentityKey: request => `${request.source}:${request.options?.format}`,
+        getIdentityDiscriminator: request => `${request.source}:${request.options?.format}`,
         load: async request => {
           loadOrder.push(request.options!.format);
           return `result:${request.options!.format}`;
@@ -812,7 +813,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     expect(loadOrder).toContain('tiled-json');
   });
 
-  test('without getIdentityKey, same source deduplicates in-flight calls', async () => {
+  test('without getIdentityDiscriminator, same source deduplicates in-flight calls', async () => {
     let callCount = 0;
     const loader = new Loader({ basePath: '/' });
 
@@ -875,7 +876,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     );
   }
 
-  test('context.fetchText saves to __ctx_text store with source as key', async () => {
+  test('context.fetchText saves to __ctx_text store under the resolved URL', async () => {
     mockFetch('hello');
     const { store, saves } = makeMockStore();
     const loader = new Loader({ basePath: '/', cache: store });
@@ -884,10 +885,10 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
 
-    expect(saves).toContainEqual({ storageName: '__ctx_text', key: 'file.txt' });
+    expect(saves).toContainEqual({ storageName: '__ctx_text', key: '/file.txt' });
   });
 
-  test('context.fetchJson saves to __ctx_json store with source as key', async () => {
+  test('context.fetchJson saves to __ctx_json store under the resolved URL', async () => {
     mockFetch('{"n":1}');
     const { store, saves } = makeMockStore();
     const loader = new Loader({ basePath: '/', cache: store });
@@ -904,10 +905,10 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 
     await loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }));
 
-    expect(saves).toContainEqual({ storageName: '__ctx_json', key: 'data.json' });
+    expect(saves).toContainEqual({ storageName: '__ctx_json', key: '/data.json' });
   });
 
-  test('context.fetchArrayBuffer saves to __ctx_binary store with source as key', async () => {
+  test('context.fetchArrayBuffer saves to __ctx_binary store under the resolved URL', async () => {
     mockFetch('bytes');
     const { store, saves } = makeMockStore();
     const loader = new Loader({ basePath: '/', cache: store });
@@ -924,7 +925,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 
     await loader.load(new Asset({ type: 'richAsset', source: 'data.bin', format: 'bin' }));
 
-    expect(saves).toContainEqual({ storageName: '__ctx_binary', key: 'data.bin' });
+    expect(saves).toContainEqual({ storageName: '__ctx_binary', key: '/data.bin' });
   });
 
   test('context.fetchText serves from store cache on second call (no network)', async () => {
@@ -957,16 +958,16 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
   });
 });
 
-describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regression)', () => {
+describe('identity discrimination — one source, several resource identities', () => {
   class RichAsset {}
 
-  test('unload(asset) removes only aliases for the matching getIdentityKey identity', async () => {
+  test('an identity-relevant option splits one source into independent canonical assets', async () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string, { format: string }>(
       { ctor: RichAsset, typeNames: ['richAsset'] },
       {
-        getIdentityKey: request => `${request.source}:${request.options?.format}`,
+        getIdentityDiscriminator: request => `${request.source}:${request.options?.format}`,
         load: async request => `result:${request.options!.format}`,
       },
     );
@@ -978,18 +979,17 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     const ctor = loader['_typeRegistry']['resolveTypeName']('richAsset')!;
 
-    expect(loader._peekResource(ctor, 'tmxA')).not.toBeNull();
-    expect(loader._peekResource(ctor, 'tmxB')).not.toBeNull();
-    expect(loader._peekResource(ctor, 'rpgA')).not.toBeNull();
+    // One source, two identity-relevant formats: two canonical assets, not two aliases.
+    expect(loader._peekResource(ctor, 'map.dat', { format: 'tmx' })).toBe('result:tmx');
+    expect(loader._peekResource(ctor, 'map.dat', { format: 'rpg-maker' })).toBe('result:rpg-maker');
 
     hardUnloadAsset(loader, tmxMap);
 
-    expect(loader._peekResource(ctor, 'tmxA')).toBeNull();
-    expect(loader._peekResource(ctor, 'tmxB')).toBeNull();
-    expect(loader._peekResource(ctor, 'rpgA')).not.toBeNull(); // unaffected — different identity
+    expect(loader._peekResource(ctor, 'map.dat', { format: 'tmx' })).toBeNull();
+    expect(loader._peekResource(ctor, 'map.dat', { format: 'rpg-maker' })).not.toBeNull(); // unaffected — different identity
   });
 
-  test('internal reset without getIdentityKey still removes all source-based aliases', async () => {
+  test('without a discriminator, one source is one canonical asset however many names point at it', async () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async request => `result:${request.source}` });
@@ -1000,22 +1000,21 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     const ctor = loader['_typeRegistry']['resolveTypeName']('richAsset')!;
 
-    expect(loader._peekResource(ctor, 'a')).not.toBeNull();
-    expect(loader._peekResource(ctor, 'b')).not.toBeNull();
+    expect(loader._peekResource(ctor, 'shared.dat')).not.toBeNull();
+    expect(loader.inspect()).toHaveLength(1);
 
     hardUnloadAsset(loader, asset);
 
-    expect(loader._peekResource(ctor, 'a')).toBeNull();
-    expect(loader._peekResource(ctor, 'b')).toBeNull();
+    expect(loader._peekResource(ctor, 'shared.dat')).toBeNull();
   });
 
-  test('internal reset with getIdentityKey does not affect a different format identity', async () => {
+  test('resetting one identity leaves a sibling identity of the same source untouched', async () => {
     const loader = new Loader({ basePath: '/' });
 
     loader.bindAsset<string, { format: string }>(
       { ctor: RichAsset, typeNames: ['richAsset'] },
       {
-        getIdentityKey: request => `${request.source}:${request.options?.format}`,
+        getIdentityDiscriminator: request => `${request.source}:${request.options?.format}`,
         load: async request => `result:${request.options!.format}`,
       },
     );
@@ -1029,8 +1028,8 @@ describe('unload(asset) + getIdentityKey — identity discrimination (Fix 2 regr
 
     hardUnloadAsset(loader, rpgMap);
 
-    expect(loader._peekResource(ctor, 'tmxA')).not.toBeNull(); // untouched
-    expect(loader._peekResource(ctor, 'rpgA')).toBeNull();
+    expect(loader._peekResource(ctor, 'map.dat', { format: 'tmx' })).not.toBeNull(); // untouched
+    expect(loader._peekResource(ctor, 'map.dat', { format: 'rpg-maker' })).toBeNull();
   });
 });
 
@@ -1341,14 +1340,14 @@ describe('bindAsset() — direct handler binding', () => {
     expect(() => loader.load('thing.bnd' as never)).toThrow('no type registered');
   });
 
-  test('getIdentityKey is forwarded and deduplicates in-flight loads', async () => {
+  test('getIdentityDiscriminator is forwarded and deduplicates in-flight loads', async () => {
     const loader = new Loader({ basePath: '/' });
     let calls = 0;
 
     loader.bindAsset<BoundAsset, { scale: number }>(
       { ctor: BoundAsset, typeNames: ['boundAsset'] },
       {
-        getIdentityKey: request => `${request.source}:${request.options?.scale ?? 1}`,
+        getIdentityDiscriminator: request => `${request.source}:${request.options?.scale ?? 1}`,
         load: async request => {
           calls++;
           return new BoundAsset(request.source);
@@ -1624,8 +1623,8 @@ describe('Loader constructor — cache option as an array of stores', () => {
 
     await loader.load('demo.txt');
 
-    expect(storeA.load).toHaveBeenCalledWith('text', 'demo.txt');
-    expect(storeB.load).toHaveBeenCalledWith('text', 'demo.txt');
+    expect(storeA.load).toHaveBeenCalledWith('text', '/demo.txt');
+    expect(storeB.load).toHaveBeenCalledWith('text', '/demo.txt');
   });
 });
 
@@ -1691,7 +1690,7 @@ describe('load({ alias: config }) — plain object values are auto-wrapped in an
 
     await loader.load({ hero: { type: 'mockAsset', source: 'hero.dat' } });
 
-    expect(loader._peekResource(MockAssetType, 'hero')).not.toBeNull();
+    expect(loader._peekResource(MockAssetType, 'hero.dat')).not.toBeNull();
   });
 });
 

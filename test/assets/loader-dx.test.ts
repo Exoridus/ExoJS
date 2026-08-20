@@ -360,23 +360,23 @@ describe('Loader.inspect() snapshot contract', () => {
     // through the background queue's own dequeue/boost bookkeeping — must not
     // leave a settled row also claiming to still be queued.
     const loader = new Loader();
+    class FakeType {}
+
+    const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string): { key: string } })._canonicalize.bind(loader);
+    const asset = canonicalize(FakeType, 'bundled.bin');
     const residency = (
       loader as unknown as {
         _residency: {
-          _claims: Map<string, { scopes: Set<symbol>; type: unknown; source: string }>;
-          _resources: Map<unknown, Map<string, unknown>>;
-          _backgroundQueue: Array<{ type: unknown; alias: string; path: string; options: unknown }>;
-          _typeRegistry: { _key(type: unknown, source: string): string };
+          _claims: Map<string, { scopes: Set<symbol>; asset: unknown }>;
+          _resources: Map<string, { asset: unknown; value: unknown }>;
+          _backgroundQueue: Array<{ asset: unknown; options: unknown }>;
         };
       }
     )._residency;
 
-    class FakeType {}
-    const key = residency._typeRegistry._key(FakeType, 'bundled.bin');
-
-    residency._claims.set(key, { scopes: new Set([Symbol('scope')]), type: FakeType, source: 'bundled.bin' });
-    residency._backgroundQueue.push({ type: FakeType, alias: 'bundled.bin', path: 'bundled.bin', options: undefined });
-    residency._resources.set(FakeType, new Map([['bundled.bin', {}]]));
+    residency._claims.set(asset.key, { scopes: new Set([Symbol('scope')]), asset });
+    residency._backgroundQueue.push({ asset, options: undefined });
+    residency._resources.set(asset.key, { asset, value: {} });
 
     const row = loader.inspect().find(r => r.source === 'bundled.bin');
 

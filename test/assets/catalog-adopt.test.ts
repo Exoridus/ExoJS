@@ -101,7 +101,9 @@ function togglableJsonFetch(payload: unknown): { readonly fetchMock: ReturnType<
 
 /** Alias-keyed background-queue probe (mirrors load-background-option.test.ts). */
 const isQueued = (loader: Loader, alias: string): boolean =>
-  (loader as unknown as { _residency: { _backgroundQueue: Array<{ alias: string }> } })._residency._backgroundQueue.some(e => e.alias === alias);
+  (loader as unknown as { _residency: { _backgroundQueue: Array<{ asset: { source: string } }> } })._residency._backgroundQueue.some(
+    e => e.asset.source === alias,
+  );
 
 describe('Loader._adopt', () => {
   beforeEach(() => {
@@ -241,7 +243,7 @@ describe('Loader._adopt', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
-  test('duplicate source in flight with a genuinely conflicting FETCH option (mimeType) warns once; sampler differences do not', async () => {
+  test('duplicate source with a differing identity-relevant option (mimeType) yields two independent assets', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const warnSpy = vi.spyOn(logger, 'warn');
@@ -254,9 +256,16 @@ describe('Loader._adopt', () => {
 
     await Promise.all([a.loaded, b.loaded]);
 
-    // Different mimeType for one source cannot share a decode → the first call wins, second warns.
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    expect(warnSpy.mock.calls[0]?.[0]).toContain('first call');
+    // mimeType decides how the bytes are decoded, so the two requests are two
+    // resources: each gets its own canonical key, fetch and residency row —
+    // where the old alias-keyed model silently handed the second the first's
+    // decode and warned about it.
+    expect(loader['_canonicalize'](Texture, 'x.png', { mimeType: 'image/png' }).key).not.toBe(
+      loader['_canonicalize'](Texture, 'x.png', { mimeType: 'image/webp' }).key,
+    );
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+    expect(loader.inspect()).toHaveLength(2);
+    expect(warnSpy).not.toHaveBeenCalled();
 
     warnSpy.mockRestore();
   });
@@ -293,7 +302,7 @@ describe('Loader._adopt', () => {
     // silently couldn't resolve the key and the claim leaked. release(handle)
     // always targets the app-lifetime root claimer (same scope loader.get()
     // claimed under above), so it must now actually drop that scope.
-    const key = loader['_typeRegistry']['_key'](Texture, 'x.png');
+    const key = loader['_canonicalize'](Texture, 'x.png').key;
     expect(loader['_residency']['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(true);
 
     loader.release(leaf);
@@ -348,7 +357,7 @@ describe('Loader._adopt', () => {
     expect(leaf.value).toEqual({ hp: 3 });
 
     // Bug: release(handle) couldn't resolve the key for this branch either.
-    const key = loader['_typeRegistry']['_key'](Json, 'cfg.json');
+    const key = loader['_canonicalize'](Json, 'cfg.json').key;
     expect(loader['_residency']['_claims'].get(key)?.scopes.has(loader['_rootClaimer'])).toBe(true);
 
     loader.release(leaf);
@@ -547,7 +556,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     loader._adopt(leaf, original);
     await expect(leaf.loaded).rejects.toThrow();
 
-    const key = loader['_typeRegistry']['_key'](Texture, 'owned.png');
+    const key = loader['_canonicalize'](Texture, 'owned.png').key;
     const claims = (): Set<symbol> | undefined => loader['_residency']['_claims'].get(key)?.scopes;
 
     expect(claims()?.has(original)).toBe(true);
@@ -809,7 +818,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     loader._adopt(leaf, original);
     await expect(leaf.loaded).rejects.toThrow();
 
-    const key = loader['_typeRegistry']['_key'](Json, 'owned.json');
+    const key = loader['_canonicalize'](Json, 'owned.json').key;
     const claims = (): Set<symbol> | undefined => loader['_residency']['_claims'].get(key)?.scopes;
 
     expect(claims()?.has(original)).toBe(true);
@@ -858,7 +867,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     // comment), so this reaches into internals to set up the precondition
     // rather than exercising a real eviction API that does not exist.
     leaf._fail(new Error('later failure'));
-    (loader as unknown as { _residency: { _resources: Map<unknown, Map<string, unknown>> } })._residency._resources.get(Json)?.delete('stale.json');
+    (loader as unknown as { _residency: { _resources: Map<string, unknown> } })._residency._resources.delete(loader['_canonicalize'](Json, 'stale.json').key);
 
     expect(leaf.loadState).toBe('failed');
     expect(() => leaf.value).toThrow("'failed'"); // gated by state, as expected

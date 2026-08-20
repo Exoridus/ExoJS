@@ -42,7 +42,9 @@ const mockFetchJson = (payload: unknown): ReturnType<typeof vi.fn> => {
 
 /** Alias-keyed queue probe — avoids coupling the assertions to token identity. */
 const isQueued = (loader: Loader, alias: string): boolean =>
-  (loader as unknown as { _residency: { _backgroundQueue: Array<{ alias: string }> } })._residency._backgroundQueue.some(e => e.alias === alias);
+  (loader as unknown as { _residency: { _backgroundQueue: Array<{ asset: { source: string } }> } })._residency._backgroundQueue.some(
+    e => e.asset.source === alias,
+  );
 
 describe('load(target, { priority: LoadPriority.Background })', () => {
   beforeEach(() => {

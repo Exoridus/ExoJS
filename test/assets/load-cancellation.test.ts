@@ -130,22 +130,28 @@ describe('asset load cancellation', () => {
     await expect(queueB).rejects.toMatchObject({ name: 'AbortError' });
   });
 
-  test('two aliases sharing one identity-deduped fetch abort only when both release', async () => {
+  test('two claim scopes sharing one canonical fetch abort it only when both release', async () => {
     const calls = mockPendingFetch();
     const loader = createCoreLoader();
+    const scopeA = Symbol('scope-a');
+    const scopeB = Symbol('scope-b');
+    const key = loader['_canonicalize'](Texture, 'same.png').key;
 
-    const queue = loader.load({ a: 'same.png', b: 'same.png' } as never);
+    const queueA = loader._loadClaimed(scopeA, 'same.png');
+    const queueB = loader._loadClaimed(scopeB, 'same.png');
     await flush();
 
+    // Two names, two owners, one canonical asset — and therefore one request.
     expect(calls).toHaveLength(1);
 
-    loader.release(Texture, 'a');
+    loader._release(key, scopeA);
     expect(calls[0]?.signal?.aborted).toBe(false);
 
-    loader.release(Texture, 'b');
+    loader._release(key, scopeB);
     expect(calls[0]?.signal?.aborted).toBe(true);
 
-    await expect(queue).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(queueA).rejects.toMatchObject({ name: 'AbortError' });
+    await expect(queueB).rejects.toMatchObject({ name: 'AbortError' });
   });
 
   test('SceneLoader.destroy() aborts its scope outstanding loads', async () => {

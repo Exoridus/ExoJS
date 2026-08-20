@@ -122,9 +122,9 @@ describe('refcount / claims', () => {
     const loader = createCoreLoader({ concurrency: 1 });
     loader.load(Assets.from({ a: 'a.ogg', b: 'b.ogg', c: 'c.ogg' }), { priority: LoadPriority.Background });
 
-    expect(loader['_residency']['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(true); // still queued behind the cap
+    expect(loader['_residency']['_isQueuedInBackground'](loader['_canonicalize'](Sound, 'c.ogg').key)).toBe(true); // still queued behind the cap
     loader.release(Sound, 'c.ogg');
-    expect(loader['_residency']['_isQueuedInBackground'](Sound, 'c.ogg')).toBe(false); // dropped at refcount 0
+    expect(loader['_residency']['_isQueuedInBackground'](loader['_canonicalize'](Sound, 'c.ogg').key)).toBe(false); // dropped at refcount 0
   });
 
   test('two distinct claim scopes keep the payload until both release', async () => {
@@ -136,16 +136,16 @@ describe('refcount / claims', () => {
     loader._getClaimed(scopeB, Asset.type('sound', 'boom.ogg'));
     await handle.loaded;
 
-    loader._release(loader['_typeRegistry']['_key'](Sound, 'boom.ogg'), scopeA);
+    loader._release(loader['_canonicalize'](Sound, 'boom.ogg').key, scopeA);
     expect(handle.audioBuffer).not.toBeNull(); // B still holds it
-    loader._release(loader['_typeRegistry']['_key'](Sound, 'boom.ogg'), scopeB);
+    loader._release(loader['_canonicalize'](Sound, 'boom.ogg').key, scopeB);
     expect(handle.audioBuffer).toBeNull(); // both gone → evicted
   });
 
   test('release while the fetch is still in flight frees the handle on arrival (§4.7)', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const key = loader['_typeRegistry']['_key'](Sound, 'boom.ogg');
+    const key = loader['_canonicalize'](Sound, 'boom.ogg').key;
 
     const handle = loader.get('boom.ogg');
     // Fetch is in flight: the handle is still deferred, not yet in _resources.
@@ -167,18 +167,18 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).toBeNull();
     expect(handle.loadState).toBe('loading');
     // Identity held: the handle is re-registered as a deferred, evicted placeholder.
-    expect(loader['_residency']['_resources'].get(Sound as never)?.has('boom.ogg')).toBe(false);
+    expect(loader['_residency']['_resources'].has(loader['_canonicalize'](Sound, 'boom.ogg').key)).toBe(false);
     expect(loader['_residency']['_deferred'].has(key)).toBe(true);
   });
 
   test('a concurrent load in the reclaim window does not overwrite the healed handle (identity race)', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
-    const key = loader['_typeRegistry']['_key'](Sound, 'boom.ogg');
+    const key = loader['_canonicalize'](Sound, 'boom.ogg').key;
 
     const handle = loader.get('boom.ogg');
     await handle.loaded;
-    expect(loader['_residency']['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
+    expect(loader['_residency']['_resources'].get(loader['_canonicalize'](Sound, 'boom.ogg').key)?.value).toBe(handle);
 
     // Evict: drops the stale in-flight entry (whose .finally is still pending).
     loader.release(handle);
@@ -199,7 +199,7 @@ describe('refcount / claims', () => {
     await concurrent;
 
     // Identity preserved: still the handle, not a raw donor Sound.
-    expect(loader['_residency']['_resources'].get(Sound as never)?.get('boom.ogg')).toBe(handle);
+    expect(loader['_residency']['_resources'].get(loader['_canonicalize'](Sound, 'boom.ogg').key)?.value).toBe(handle);
     expect(handle.audioBuffer).not.toBeNull();
   });
 

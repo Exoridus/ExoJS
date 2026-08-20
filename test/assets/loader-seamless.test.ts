@@ -176,7 +176,7 @@ describe('Loader seamless get (Texture)', () => {
     expect(calls).toBe(2);
   });
 
-  test('conflicting FETCH options (mimeType) warn once and the first call wins', async () => {
+  test('an identity-relevant option (mimeType) splits one source into independent handles, silently', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const warnings: string[] = [];
@@ -185,17 +185,19 @@ describe('Loader seamless get (Texture)', () => {
     });
 
     try {
-      const handle = loader.get('ship.png', { mimeType: 'image/png' });
+      const png = loader.get('ship.png', { mimeType: 'image/png' });
+      const webp = loader.get('ship.png', { mimeType: 'image/webp' });
 
-      // A different mimeType for one source cannot share the source-keyed decode.
-      loader.get('ship.png', { mimeType: 'image/webp' });
-      loader.get('ship.png', { mimeType: 'image/webp' });
+      // mimeType decides the decode, so these are two resources — not one
+      // resource with a losing second opinion about how to read it.
+      expect(webp).not.toBe(png);
+      // The same identity-relevant option resolves back to the same handle.
+      expect(loader.get('ship.png', { mimeType: 'image/webp' })).toBe(webp);
+      expect(warnings).toHaveLength(0);
 
-      expect(warnings).toHaveLength(1);
-      expect(warnings[0]).toContain('first call');
-
-      await handle.loaded;
-      expect(handle.loadState).toBe('ready');
+      await Promise.all([png.loaded, webp.loaded]);
+      expect(png.loadState).toBe('ready');
+      expect(webp.loadState).toBe('ready');
     } finally {
       removeSink();
     }
@@ -277,7 +279,7 @@ describe('Loader seamless get (Texture)', () => {
 
     // The hard reset path is internal-only: it forgets every scope's claim, so
     // it is deliberately not reachable through the public surface.
-    (loader as unknown as { _residency: { _unloadOne(type: unknown, alias: string): void } })._residency._unloadOne(Texture, 'ship.png');
+    (loader as unknown as { _residency: { _unloadOne(asset: unknown): void } })._residency._unloadOne(loader['_canonicalize'](Texture, 'ship.png'));
 
     await expect(handle.loaded).rejects.toThrow('unloaded while');
     expect(handle.loadState).toBe('failed');

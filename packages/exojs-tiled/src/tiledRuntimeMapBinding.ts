@@ -30,9 +30,9 @@ export const tiledRuntimeMapBinding = defineAsset<TileMap, TiledLoadOptions>({
   extensions: ['tmj'],
   create() {
     return {
-      getIdentityKey(req) {
+      getIdentityDiscriminator(req) {
         const o = resolveTiledOptions(req.options);
-        return `${req.source}|${o.format}`;
+        return o.format;
       },
       async load(req, ctx) {
         const tiledMap = await ctx.loader.load(Asset.type('tiledSource', req.source, req.options));

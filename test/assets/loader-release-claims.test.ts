@@ -31,7 +31,7 @@ interface ResidencyInternals {
   _claims: Map<string, { scopes: Set<symbol> }>;
   _deferred: Map<string, unknown>;
   _refs: Map<string, unknown>;
-  _unloadOne(type: unknown, alias: string): void;
+  _unloadOne(asset: unknown): void;
   unloadAll(type?: unknown): void;
 }
 
@@ -48,7 +48,7 @@ function refSize(loader: Loader): number {
   return residencyOf(loader)._refs.size;
 }
 function keyOf(loader: Loader, type: unknown, source: string): string {
-  return (loader as unknown as { _typeRegistry: { _key(t: unknown, s: string): string } })._typeRegistry._key(type, source);
+  return (loader as unknown as { _canonicalize(t: unknown, s: string): { key: string } })._canonicalize(type, source).key;
 }
 function scopesFor(loader: Loader, type: unknown, source: string): Set<symbol> | undefined {
   return residencyOf(loader)._claims.get(keyOf(loader, type, source))?.scopes;
@@ -173,7 +173,7 @@ describe('internal hard-reset claim consistency', () => {
     const key = keyOf(loader, Texture, 'ship.png');
     expect(residencyOf(loader)._claims.has(key)).toBe(true);
 
-    residencyOf(loader)._unloadOne(Texture, 'ship.png');
+    residencyOf(loader)._unloadOne((loader as unknown as { _canonicalize(t: unknown, s: string): unknown })._canonicalize(Texture, 'ship.png'));
 
     // Resource is gone AND the stale claim was cleared (previously it leaked,
     // holding refcount > 0 forever).

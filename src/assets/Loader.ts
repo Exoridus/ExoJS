@@ -24,6 +24,7 @@ import { AssetTypeRegistry, type HandlerEntry } from './AssetTypeRegistry';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
+import { type CanonicalAsset, type CanonicalAssetKey, canonicalAssetKey, canonicalizeSource } from './canonicalKey';
 import type { AssetConstructor } from './FactoryRegistry';
 import { LoadingQueue } from './LoadingQueue';
 import type { SeamlessAdapter } from './seamless';
@@ -241,6 +242,23 @@ export class Loader {
     return { type, source: input, ctor };
   }
 
+  /**
+   * Resolve a request to its one canonical identity. Called once per entry
+   * point, always before a fetch can start, so no later layer can derive a
+   * second identity for the same resource.
+   *
+   * The locator is resolved against the base path in force at this moment: a
+   * `basePath` change does not retroactively re-key assets already resident
+   * under their old locator.
+   * @internal
+   */
+  public _canonicalize(type: AssetConstructor, source: string, options?: unknown): CanonicalAsset {
+    const locator = canonicalizeSource(this._decoder.basePath, source);
+    const discriminator = this._typeRegistry._identityDiscriminator(type, source, options);
+
+    return { key: canonicalAssetKey(this._typeRegistry._getTypeId(type), locator, discriminator), locator, type, source };
+  }
+
   // ── Refcount / claims ───────────────────────────────────────────────────────
   /** App-lifetime claim scope for direct `app.loader.get/load(…)` calls. @internal */
   private readonly _rootClaimer = Symbol('app-loader');
@@ -307,12 +325,14 @@ export class Loader {
 
     const signals: AssetResidencySignals = { onProgress: this.onProgress, onLoaded: this.onLoaded, onError: this.onError };
 
-    this._residency = new AssetResidency(this._typeRegistry, this._decoder, signals, options.concurrency ?? 6);
+    this._residency = new AssetResidency(this._typeRegistry, this._decoder, signals, options.concurrency ?? 6, (type, source, assetOptions) =>
+      this._canonicalize(type, source, assetOptions),
+    );
 
     // Bound last, once both collaborators exist: the decoder feeds what it
     // decodes back into the residency, which in turn needs the decoder to
     // dispatch fetches.
-    this._decoder._bindResourceStore((type, alias, resource) => this._residency._storeResource(type, alias, resource));
+    this._decoder._bindResourceStore((asset, resource) => this._residency._storeResource(asset, resource));
   }
 
   // -----------------------------------------------------------------------
@@ -398,7 +418,7 @@ export class Loader {
         const start = dataStart + entry.offset;
         const slice = buffer.slice(start, start + entry.length);
 
-        return this._decoder._injectSource(type, entry.alias, slice, entry.options);
+        return this._decoder._injectSource(this._canonicalize(type, entry.alias, entry.options), slice, entry.options);
       }),
     );
   }
@@ -569,12 +589,12 @@ export class Loader {
       // The font type requires a family option — infer it from the filename when not provided
       const options: unknown = type === 'font' ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
 
-      const key = this._typeRegistry._key(ctor, path);
+      const canonical = this._canonicalize(ctor, path, options);
 
-      this._claim(key, ctor, path, claimer);
+      this._claim(canonical, claimer);
       this._onFgBatchStart(path, path);
       let notifyFn: ((success: boolean) => void) | null = null;
-      const promise = this._residency._loadSingle(ctor, path, options).then(
+      const promise = this._residency._loadSingle(canonical, options).then(
         v => {
           notifyFn?.(true);
           this._onFgBatchSettled(path, true);
@@ -586,7 +606,7 @@ export class Loader {
           throw e;
         },
       );
-      const queue = new LoadingQueue(promise, 1, () => this._cancelClaims(claimer, [key]));
+      const queue = new LoadingQueue(promise, 1, () => this._cancelClaims(claimer, [canonical.key]));
       notifyFn = queue._notifyItem.bind(queue);
       return queue;
     }
@@ -813,17 +833,18 @@ export class Loader {
     const { type, source: path, ctor } = this._resolveBarePath(input);
 
     const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
+    const canonical = this._canonicalize(ctor, path, options);
 
     if (adapter !== undefined) {
-      const handle = this._residency._getSeamless(ctor, adapter, path, options);
-      this._claim(this._typeRegistry._key(ctor, path), ctor, path, claimer);
+      const handle = this._residency._getSeamless(canonical, adapter, options);
+      this._claim(canonical, claimer);
 
       return handle;
     }
 
     if (getAssetKind(type)?.isValue === true) {
-      const ref = this._residency._getRef(ctor, path, options);
-      this._claim(this._typeRegistry._key(ctor, path), ctor, path, claimer);
+      const ref = this._residency._getRef(canonical, options);
+      this._claim(canonical, claimer);
 
       return ref;
     }
@@ -872,9 +893,10 @@ export class Loader {
   public peek(input: string | object): unknown {
     let ctor: AssetConstructor;
     let source: string;
+    let options: unknown;
 
     if (input instanceof AssetImpl) {
-      const { type, source: src } = input._config;
+      const { type, source: src, ...rest } = input._config;
       const resolved = this._typeRegistry.resolveTypeName(type) ?? this._valueTokenForKind(type);
 
       if (resolved === undefined) {
@@ -883,6 +905,9 @@ export class Loader {
 
       ctor = resolved;
       source = src;
+      // Identity-relevant options are part of the canonical key, so a descriptor
+      // carrying them must peek the key it would actually load.
+      options = Object.keys(rest).length > 0 ? rest : undefined;
     } else if (typeof input === 'string') {
       const resolved = this._resolveBarePath(input);
 
@@ -894,7 +919,9 @@ export class Loader {
       );
     }
 
-    return this._residency._hasStored(ctor, source) ? (this._residency._peekResource(ctor, source) ?? undefined) : undefined;
+    const { key } = this._canonicalize(ctor, source, options);
+
+    return this._residency._hasStored(key) ? (this._residency._peekResource(key) ?? undefined) : undefined;
   }
 
   /**
@@ -937,7 +964,7 @@ export class Loader {
   public release(type: AssetConstructor, source: string): void;
   public release(handleOrType: object | AssetConstructor, source?: string): void {
     if (typeof source === 'string') {
-      this._release(this._typeRegistry._key(handleOrType as AssetConstructor, source), this._rootClaimer);
+      this._release(this._canonicalize(handleOrType as AssetConstructor, source).key, this._rootClaimer);
 
       return;
     }
@@ -959,7 +986,10 @@ export class Loader {
       const ctor = this._typeRegistry.resolveTypeName(asset.type);
 
       if (ctor) {
-        this._release(this._typeRegistry._key(ctor, asset._config.source), this._rootClaimer);
+        const { type: _type, source: assetSource, ...rest } = asset._config;
+        const options = Object.keys(rest).length > 0 ? rest : undefined;
+
+        this._release(this._canonicalize(ctor, assetSource, options).key, this._rootClaimer);
       }
 
       return;
@@ -1015,13 +1045,17 @@ export class Loader {
   }
 
   /**
-   * Non-throwing in-memory lookup: the resource stored under `(type, source)`,
-   * or `null` if none is held. Reads the store directly (no fetch, no seamless
-   * placeholder). Backs scene deserialization, which resolves an asset
-   * reference to a pre-loaded resource. @internal
+   * Non-throwing in-memory lookup: the resource stored for the canonical asset
+   * `(type, source, options)` resolves to, or `null` if none is held. Reads the
+   * store directly (no fetch, no seamless placeholder). Backs scene
+   * deserialization, which resolves an asset reference to a pre-loaded resource.
+   *
+   * `options` matter only for a type whose handler declares an identity
+   * discriminator; omitting them then addresses a different canonical key.
+   * @internal
    */
-  public _peekResource(type: AssetConstructor, source: string): unknown {
-    return this._residency._peekResource(type, source);
+  public _peekResource(type: AssetConstructor, source: string, options?: unknown): unknown {
+    return this._residency._peekResource(this._canonicalize(type, source, options).key);
   }
 
   // -----------------------------------------------------------------------
@@ -1065,8 +1099,9 @@ export class Loader {
    * higher-precedence decision and may coexist with the binding default.
    *
    * `Result` and `Options` are inferred from the binding's `AssetBinding<Result, Options>`
-   * contract. A declarative handler's optional `getIdentityKey` is forwarded into
-   * the internal {@link HandlerEntry} so it participates in in-flight deduplication.
+   * contract. A declarative handler's optional `getIdentityDiscriminator` is
+   * forwarded into the internal {@link HandlerEntry} so it participates in the
+   * canonical key.
    * @internal
    */
   public bindAsset<Result = unknown, Options = undefined>(
@@ -1167,8 +1202,8 @@ export class Loader {
    * re-armed handle so every dangling consumer heals in place.
    * @internal
    */
-  public _claim(key: string, type: AssetConstructor, source: string, claimer: symbol): void {
-    this._residency._claim(key, type, source, claimer);
+  public _claim(asset: CanonicalAsset, claimer: symbol): void {
+    this._residency._claim(asset, claimer);
   }
 
   /**
@@ -1176,7 +1211,7 @@ export class Loader {
    * payload immediately (refcount 0).
    * @internal
    */
-  public _release(key: string, claimer: symbol): void {
+  public _release(key: CanonicalAssetKey, claimer: symbol): void {
     this._residency._release(key, claimer);
   }
 
@@ -1220,12 +1255,14 @@ export class Loader {
         );
       }
 
-      const key = this._typeRegistry._key(ctor, alias);
+      const { type: _type, source: assetSource, ...rest } = asset._config;
+      const options = Object.keys(rest).length > 0 ? rest : undefined;
+      const canonical = this._canonicalize(ctor, assetSource, options);
 
-      claimedKeys.push(key);
-      this._claim(key, ctor, alias, claimer);
+      claimedKeys.push(canonical.key);
+      this._claim(canonical, claimer);
 
-      return this._residency._loadSingleAsset(ctor, alias, asset).then(
+      return this._residency._loadSingle(canonical, options).then(
         resource => {
           results.set(alias, resource);
           notifyFn?.(true);
@@ -1300,7 +1337,7 @@ export class Loader {
    * level down — the residency aborts the in-flight fetch only once the key has
    * no claim scope left, so a sibling scene loading the same asset keeps it.
    */
-  private _cancelClaims(claimer: symbol, keys: readonly string[]): void {
+  private _cancelClaims(claimer: symbol, keys: readonly CanonicalAssetKey[]): void {
     for (const key of keys) {
       this._release(key, claimer);
     }

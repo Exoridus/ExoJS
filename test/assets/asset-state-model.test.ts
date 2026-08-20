@@ -187,7 +187,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
           const model = ch1.get(pick.key)!;
           const wasReady = model.ready;
 
-          loader._release(loader['_typeRegistry']['_key'](StubHandle, pick.key), SCOPES[pick.scopeIdx]!);
+          loader._release(loader['_canonicalize'](StubHandle, pick.key).key, SCOPES[pick.scopeIdx]!);
           model.claims.delete(pick.scopeIdx);
 
           if (model.claims.size === 0 && wasReady) {

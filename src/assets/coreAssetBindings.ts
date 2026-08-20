@@ -40,11 +40,37 @@ interface FactoryLike<Source, T> {
   destroy(): void;
 }
 
+/**
+ * The option keys a core factory bakes irreversibly into the resource it
+ * produces, and which therefore identify a distinct resource rather than a
+ * distinct consumer of one.
+ *
+ * Everything absent from this list is deliberately NOT identity: sampler state
+ * and placeholder sizing belong to the individual handle, and playback settings
+ * stay mutable on the produced stream, so folding either in would fetch and
+ * decode the same bytes twice.
+ */
+function identityDiscriminatorFor(keys: readonly string[]): (request: AssetLoadRequest) => string {
+  return ({ options }: AssetLoadRequest): string => {
+    if (typeof options !== 'object') {
+      return '';
+    }
+
+    const record = options as Record<string, unknown>;
+
+    return keys
+      .filter(key => record[key] !== undefined)
+      .map(key => `${key}=${String(record[key])}`)
+      .join(',');
+  };
+}
+
 /** Create an AssetHandler backed by a factory that uses fetchArrayBuffer. */
-function binaryFactoryHandler<T>(makeFactory: () => FactoryLike<ArrayBuffer, T>): (loader: Loader) => AssetHandler {
+function binaryFactoryHandler<T>(makeFactory: () => FactoryLike<ArrayBuffer, T>, identityOptions: readonly string[] = []): (loader: Loader) => AssetHandler {
   return () => {
     const factory = makeFactory();
     return {
+      ...(identityOptions.length > 0 && { getIdentityDiscriminator: identityDiscriminatorFor(identityOptions) }),
       async load({ source, options }: AssetLoadRequest, context: AssetLoaderContext): Promise<T> {
         const raw = await context.fetchArrayBuffer(source);
         return factory.create(raw, options);
@@ -116,7 +142,7 @@ const textureBinding = defineAsset({
   type: 'texture',
   extensions: ['png', 'jpg', 'jpeg', 'webp', 'avif', 'gif'],
   seamless: textureSeamlessAdapter,
-  create: binaryFactoryHandler(() => new TextureFactory()),
+  create: binaryFactoryHandler(() => new TextureFactory(), ['mimeType']),
 });
 
 const soundBinding = defineAsset({
@@ -124,7 +150,7 @@ const soundBinding = defineAsset({
   type: 'sound',
   extensions: ['ogg', 'mp3', 'wav', 'm4a', 'aac'],
   seamless: soundSeamlessAdapter,
-  create: binaryFactoryHandler(() => new SoundFactory()),
+  create: binaryFactoryHandler(() => new SoundFactory(), ['mimeType']),
 });
 
 // music/video/svg/font/image/bmFont are non-leaf resource types: no placeholder
@@ -134,14 +160,14 @@ const musicBinding = defineAsset({
   ctor: AudioStream,
   type: 'music',
   isValue: false,
-  create: binaryFactoryHandler(() => new MusicFactory()),
+  create: binaryFactoryHandler(() => new MusicFactory(), ['mimeType']),
 });
 
 const videoBinding = defineAsset({
   ctor: Video,
   type: 'video',
   isValue: false,
-  create: binaryFactoryHandler(() => new VideoFactory()),
+  create: binaryFactoryHandler(() => new VideoFactory(), ['mimeType']),
 });
 
 const jsonBinding = defineAsset({
@@ -254,7 +280,7 @@ if (typeof FontFace !== 'undefined') {
       type: 'font',
       extensions: ['woff', 'woff2', 'ttf', 'otf'],
       isValue: false,
-      create: binaryFactoryHandler(() => new FontFactory()),
+      create: binaryFactoryHandler(() => new FontFactory(), ['family']),
     }),
   );
 }
@@ -265,7 +291,7 @@ if (typeof HTMLImageElement !== 'undefined') {
       ctor: ImageAsset,
       type: 'image',
       isValue: false,
-      create: binaryFactoryHandler(() => new ImageFactory()),
+      create: binaryFactoryHandler(() => new ImageFactory(), ['mimeType']),
     }),
   );
 }

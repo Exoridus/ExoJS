@@ -69,7 +69,7 @@ describe('SceneLoader catalog adopt', () => {
     await assets.ship.loaded;
     expect(assets.ship.loadState).toBe('ready');
 
-    const key = loader['_typeRegistry']['_key'](Texture, 'ship.png');
+    const key = loader['_canonicalize'](Texture, 'ship.png').key;
     expect(loader['_residency']['_claims'].get(key)?.scopes.size).toBe(1);
 
     sceneLoader.destroy();
@@ -88,7 +88,7 @@ describe('SceneLoader catalog adopt', () => {
     expect(assets.ship.loadState).toBe('ready');
     expect(assets.ship).toBeInstanceOf(Texture);
 
-    const key = loader['_typeRegistry']['_key'](Texture, 'ship.png');
+    const key = loader['_canonicalize'](Texture, 'ship.png').key;
     expect(loader['_residency']['_claims'].get(key)?.scopes.size).toBe(1);
 
     sceneLoader.destroy();
@@ -108,7 +108,7 @@ describe('SceneLoader catalog adopt', () => {
     expect(result).toBe(assets.ship); // resource leaf resolves to the healed handle itself
     expect(assets.ship.loadState).toBe('ready');
 
-    const key = loader['_typeRegistry']['_key'](Texture, 'ship.png');
+    const key = loader['_canonicalize'](Texture, 'ship.png').key;
     expect(loader['_residency']['_claims'].get(key)?.scopes.size).toBe(1);
 
     sceneLoader.destroy();

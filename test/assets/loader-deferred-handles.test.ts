@@ -37,7 +37,7 @@ function evictedHas(loader: Loader, key: string): boolean {
   return (loader as unknown as { _residency: { _evicted: Set<string> } })._residency._evicted.has(key);
 }
 function keyOf(loader: Loader, source: string): string {
-  return (loader as unknown as { _typeRegistry: { _key(t: unknown, s: string): string } })._typeRegistry._key(Texture, source);
+  return (loader as unknown as { _canonicalize(t: unknown, s: string): { key: string } })._canonicalize(Texture, source).key;
 }
 
 /**
