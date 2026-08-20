@@ -171,6 +171,7 @@ export class AssetDecoder {
       scope,
       identityKey,
       signal,
+      resolveUrl: (source: string) => this._resolveUrl(source),
       fetchText: (source: string) => this._contextFetch<string>(source, storageName ?? '__ctx_text', r => r.text(), signal),
       fetchArrayBuffer: (source: string) => this._contextFetch<ArrayBuffer>(source, storageName ?? '__ctx_binary', r => r.arrayBuffer(), signal),
       fetchJson: <T = unknown>(source: string) => this._contextFetch<T>(source, storageName ?? '__ctx_json', r => r.json() as Promise<T>, signal),

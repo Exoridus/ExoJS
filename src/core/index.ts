@@ -94,6 +94,7 @@ export type {
   Cloneable,
   Destroyable,
   HasBoundingBox,
+  MediaCrossOrigin,
   Mutable,
   PlaybackOptions,
   StreamingLoadEvent,

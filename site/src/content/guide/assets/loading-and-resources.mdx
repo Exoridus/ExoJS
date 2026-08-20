@@ -394,6 +394,36 @@ There is deliberately no way to release an application-lifetime claim: `app.load
   promise) before you use it.
 </Callout>
 
+### Streaming media
+
+`music` and `video` assets are streamed by the browser: the loader hands the media element the resolved URL and lets it pull the file in as it plays. Nothing is buffered into memory up front, which is what makes a long track or a full-screen video affordable.
+
+```ts
+async load() {
+    const intro = await this.loader.load(Asset.type('video', 'video/intro.mp4'));
+    const theme = await this.loader.load(Asset.type('music', 'audio/theme.ogg'));
+}
+```
+
+A streamed asset is **ready when it can start playing**, not when it has fully arrived — the load resolves on the element's `canplay` event. Two consequences are worth internalising:
+
+- Progress for a streamed asset is per asset, not per byte. The loader cannot know how much of a browser-owned transfer has landed, and it does not pretend to.
+- A failure *before* readiness fails the load and is reported through `loader.onError`. A failure *after* readiness — the connection dropping mid-playback — is a runtime media error and is reported by `video.onError` / `stream.onError` instead, so one load never appears to fail twice.
+
+Streamed elements get `crossOrigin: 'anonymous'` by default. This matters for video: a cross-origin element without it plays, but cannot be uploaded as a texture. Pass `crossOrigin: null` for playback-only media on a host that sends no CORS headers, accepting that it cannot be rendered.
+
+Ask for the complete bytes when you want ExoJS to own them:
+
+```ts
+async load() {
+    const intro = await this.loader.load(Asset.type('video', 'video/intro.mp4', { download: true }));
+}
+```
+
+`download: true` fetches the whole file through the loader's cache pipeline before building the element. That is what makes it cacheable and available offline, gives real byte progress, and it is always what a container (`.exoa`) entry does — container bytes are already owned by the application. The trade is that nothing plays until everything has arrived.
+
+Whichever transport an asset arrives through, it is the same canonical asset: a source loaded over the network and the same source unpacked from a container resolve to one identity and one resident resource, never two.
+
 <Callout type="hint" title="Inspecting what's currently loaded">
   `this.app.loader.inspect()` returns a frozen, sorted snapshot — one row per canonical asset, with its state, how many owners hold it, and whether it's in flight or
   still queued in the background — for debugging or a support bundle. It's read-only: nothing you do with the returned array changes what's actually loaded.

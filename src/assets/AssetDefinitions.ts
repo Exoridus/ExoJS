@@ -1,7 +1,7 @@
 import type { AudioStream } from '#audio/AudioStream';
 import type { AudioSpriteClip } from '#audio/Sound';
 import type { Sound } from '#audio/Sound';
-import type { PlaybackOptions, StreamingLoadEvent } from '#core/types';
+import type { MediaCrossOrigin, PlaybackOptions, StreamingLoadEvent } from '#core/types';
 import type { BmFont } from '#rendering/text/BmFont';
 import type { Texture } from '#rendering/texture/Texture';
 import type { TextureOptions } from '#rendering/texture/TextureOptions';
@@ -30,7 +30,15 @@ export interface AssetDefinitions {
   };
   music: {
     resource: AudioStream;
-    config: { source: string; mimeType?: string; loadEvent?: StreamingLoadEvent; playbackOptions?: Partial<PlaybackOptions>; stallTimeout?: number };
+    config: {
+      source: string;
+      mimeType?: string;
+      download?: boolean;
+      crossOrigin?: MediaCrossOrigin;
+      loadEvent?: StreamingLoadEvent;
+      playbackOptions?: Partial<PlaybackOptions>;
+      stallTimeout?: number;
+    };
   };
   json: { resource: unknown; config: { source: string } };
   image: { resource: HTMLImageElement; config: { source: string; mimeType?: string } };
@@ -39,6 +47,8 @@ export interface AssetDefinitions {
     config: {
       source: string;
       mimeType?: string;
+      download?: boolean;
+      crossOrigin?: MediaCrossOrigin;
       loadEvent?: StreamingLoadEvent;
       playbackOptions?: Partial<PlaybackOptions>;
       textureOptions?: Partial<TextureOptions>;

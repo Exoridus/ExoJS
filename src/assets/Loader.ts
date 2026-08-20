@@ -105,6 +105,13 @@ export interface AssetLoaderContext {
    * without a cancellation channel.
    */
   readonly signal?: AbortSignal | undefined;
+  /**
+   * The URL `source` resolves to, base path applied. The same resolution the
+   * loader's own fetches and canonical identity use, so a handler that hands a
+   * URL to a browser primitive - a media element, an image, a worker - can never
+   * address a different resource than the one it was asked to load.
+   */
+  resolveUrl(source: string): string;
   /** Fetches `source` as UTF-8 text, routing through the loader's cache/IDB. */
   fetchText(source: string): Promise<string>;
   /** Fetches `source` as an `ArrayBuffer`, routing through the loader's cache/IDB. */
@@ -486,14 +493,20 @@ export class Loader {
       this._claim(asset, claimer);
     }
 
-    await Promise.all(
-      resolved.map(({ entry, asset }) => {
+    // An entry whose canonical asset is already resident (or on its way from the
+    // network) is claimed above and nothing more: unpacking it again would build
+    // a second payload for one identity, and for a resource that owns a device
+    // or a media element the loser would never be released.
+    const pending = resolved
+      .filter(({ asset }) => !this._residency._isMaterializing(asset.key))
+      .map(({ entry, asset }) => {
         const start = dataStart + entry.offset;
         const slice = buffer.slice(start, start + entry.length);
 
         return this._decoder._injectSource(asset, slice, entry.options);
-      }),
-    );
+      });
+
+    await Promise.all(pending);
   }
 
   // -----------------------------------------------------------------------

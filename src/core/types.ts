@@ -120,6 +120,17 @@ export interface HasBoundingBox {
  * `HTMLMediaElement` ready-state events the streaming asset factories
  * ({@link MusicFactory}, {@link VideoFactory}) accept as the load-completion
  * signal. Pick the earliest event that meets your latency requirement;
- * `'canplaythrough'` is the safest default.
+ * `'canplay'` is the default - the media can start playing, which for streamed
+ * media deliberately does not mean it has fully arrived.
  */
 export type StreamingLoadEvent = 'loadedmetadata' | 'loadeddata' | 'canplay' | 'canplaythrough';
+
+/**
+ * Value for a media element's `crossorigin` attribute.
+ *
+ * `'anonymous'` is the default for URL-backed media: without it a cross-origin
+ * video is playable but unusable as a render source, because uploading it to a
+ * texture taints the pipeline. `null` omits the attribute entirely, which
+ * accepts that trade for playback-only media.
+ */
+export type MediaCrossOrigin = 'anonymous' | 'use-credentials' | null;

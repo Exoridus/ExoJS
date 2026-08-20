@@ -17,6 +17,48 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **`music` and `video` assets actually stream.** Both types downloaded the
+  complete file into an `ArrayBuffer`, wrapped it in a blob and only then handed
+  it to the media element, so "streaming" described the decode and nothing else -
+  a long video cost its full size in memory before a single frame played. A
+  URL-backed `music`/`video` asset now hands the resolved URL to the element and
+  lets the browser own the transport.
+
+  ```ts
+  const intro = await loader.load(Asset.type('video', 'video/intro.mp4'));
+  const packed = await loader.load(Asset.type('video', 'video/logo.mp4', { download: true }));
+  ```
+
+  The contract that comes with it:
+
+  - **Readiness is `canplay`** for both transports (it was `canplaythrough`), and
+    a streamed asset being ready means it can start playing, not that it has
+    fully arrived.
+  - **`download: true`** fetches the complete bytes through the loader's
+    cache pipeline first - cacheable, available offline, real byte progress, and
+    what container (`.exoa`) entries always do. Streamed media reports asset-level
+    progress only: the loader cannot see inside a browser-owned transfer and does
+    not invent a percentage for one.
+  - **A failure before readiness fails the load** and is reported by
+    `Loader.onError`, as before. **A failure after readiness** - a transfer that
+    breaks mid-playback - now reaches the new `Video.onError` / `AudioStream.onError`
+    signals instead, so one load can never appear to fail twice.
+  - **Streamed media defaults to `crossOrigin: 'anonymous'`**, set before the
+    source. Without it a cross-origin video plays but cannot be uploaded as a
+    texture. Pass `crossOrigin: null` for playback-only media, or
+    `'use-credentials'` where the host requires it.
+  - **Releasing the last claim detaches the element** (pause, drop source,
+    reload), ending playback and the transfer rather than leaving a released
+    video streaming in the background. Cancelling a load in flight does the same
+    and rejects with an `AbortError`.
+  - **A container entry never rebuilds a resident asset.** Unpacking an entry
+    whose canonical asset is already resident (or already being fetched) now
+    claims it and stops there, instead of storing a second payload under one
+    identity.
+
+  `AssetLoaderContext` gained `resolveUrl(source)` for custom handlers that need
+  to hand a URL to a browser primitive rather than fetch it themselves.
+
 - **Asset ownership is explicit and safe for several consumers at once.**
   `Loader.createScope(options?)` returns a `LoaderScope` — an owner with `get`,
   `load`, `release` and `destroy` whose lifetime you decide. Several scopes can

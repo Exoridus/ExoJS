@@ -58,11 +58,11 @@ describe('MusicFactory', () => {
     expect(result).toBe(AUDIO_HEADER);
   });
 
-  test('create() resolves with an AudioStream once the default "canplaythrough" event fires', async () => {
+  test('create() resolves with an AudioStream once the default "canplay" event fires', async () => {
     const factory = new MusicFactory();
 
     const promise = factory.create(AUDIO_HEADER);
-    lastAudio().dispatchEvent(new Event('canplaythrough'));
+    lastAudio().dispatchEvent(new Event('canplay'));
 
     const stream = await promise;
 
@@ -83,7 +83,7 @@ describe('MusicFactory', () => {
     const factory = new MusicFactory();
 
     const promise = factory.create(AUDIO_HEADER, { playbackOptions: { volume: 0.4, loop: true } });
-    lastAudio().dispatchEvent(new Event('canplaythrough'));
+    lastAudio().dispatchEvent(new Event('canplay'));
 
     const stream = await promise;
 
@@ -162,7 +162,7 @@ describe('MusicFactory', () => {
     const promise = factory.create(AUDIO_HEADER, { stallTimeout: 50 });
     const audio = lastAudio();
 
-    audio.dispatchEvent(new Event('canplaythrough'));
+    audio.dispatchEvent(new Event('canplay'));
     await expect(promise).resolves.toBeInstanceOf(AudioStream);
 
     // Should be a no-op — asserted indirectly by not throwing/hanging.
@@ -177,7 +177,7 @@ describe('MusicFactory', () => {
     const audio = lastAudio();
 
     audio.dispatchEvent(new Event('error'));
-    audio.dispatchEvent(new Event('canplaythrough'));
+    audio.dispatchEvent(new Event('canplay'));
 
     await expect(promise).rejects.toThrow('Error loading audio source.');
   });
@@ -186,7 +186,7 @@ describe('MusicFactory', () => {
     const factory = new MusicFactory();
 
     const promise = factory.create(AUDIO_HEADER);
-    lastAudio().dispatchEvent(new Event('canplaythrough'));
+    lastAudio().dispatchEvent(new Event('canplay'));
     await promise;
 
     expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
@@ -198,7 +198,7 @@ describe('MusicFactory', () => {
     const promise = factory.create(AUDIO_HEADER);
     const audio = lastAudio();
     const pauseSpy = vi.spyOn(audio, 'pause');
-    audio.dispatchEvent(new Event('canplaythrough'));
+    audio.dispatchEvent(new Event('canplay'));
     await promise;
 
     factory.destroy();

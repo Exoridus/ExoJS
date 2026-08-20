@@ -1,16 +1,16 @@
 {
-  "title": "VideoFactoryOptions",
-  "description": "Construction options for VideoFactory.create and VideoFactory.createFromUrl.",
-  "symbol": "VideoFactoryOptions",
+  "title": "MediaLoadOptions",
+  "description": "Options shared by the streaming media factories.",
+  "symbol": "MediaLoadOptions",
   "kind": "interface",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Construction options for VideoFactory.create and VideoFactory.createFromUrl."
+        "Options shared by the streaming media factories."
       ],
-      "importLine": "import { VideoFactoryOptions } from '@codexo/exojs'",
+      "importLine": "import { MediaLoadOptions } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -104,68 +104,6 @@
           "description": "The media event that marks the asset ready. Defaults to 'canplay': playback can start, which for streamed media deliberately does not mean the resource has fully arrived. 'loadedmetadata' resolves earlier (duration and dimensions only, nothing playable yet), 'canplaythrough' waits for the browser to predict uninterrupted playback."
         },
         {
-          "name": "mimeType",
-          "signature": "mimeType?: string",
-          "signatureTokens": [
-            {
-              "text": "mimeType",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "MIME type for the video blob. Inferred from magic bytes when omitted, and unused by streamed media, whose type comes from the response."
-        },
-        {
-          "name": "playbackOptions",
-          "signature": "playbackOptions?: Partial<PlaybackOptions>",
-          "signatureTokens": [
-            {
-              "text": "playbackOptions",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Partial",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PlaybackOptions",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Initial playback settings forwarded to the Video instance."
-        },
-        {
           "name": "stallTimeout",
           "signature": "stallTimeout?: number",
           "signatureTokens": [
@@ -189,43 +127,6 @@
           "params": [],
           "returnType": null,
           "description": "Milliseconds to wait after a stalled event before failing the load. When omitted a stalled load waits indefinitely. Each further stalled event restarts the timer."
-        },
-        {
-          "name": "textureOptions",
-          "signature": "textureOptions?: Partial<TextureOptions>",
-          "signatureTokens": [
-            {
-              "text": "textureOptions",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Partial",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TextureOptions",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Sampling and upload state forwarded to the Video instance's texture."
         }
       ],
       "paragraphs": [],
@@ -239,11 +140,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/factories/VideoFactory.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/VideoFactory.ts"
+        "label": "src/assets/factories/mediaSource.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/mediaSource.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/factories/VideoFactory.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/VideoFactory.ts"
+  "sourcePath": "src/assets/factories/mediaSource.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/mediaSource.ts"
 }

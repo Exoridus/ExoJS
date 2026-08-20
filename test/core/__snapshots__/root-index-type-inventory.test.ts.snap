@@ -282,6 +282,8 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "MaterialOptions: interface",
   "MathUtils: variable",
   "Matrix: class",
+  "MediaCrossOrigin: type alias",
+  "MediaLoadOptions: interface",
   "MemoryStore: class",
   "Mesh: class",
   "MeshBuilder: variable",

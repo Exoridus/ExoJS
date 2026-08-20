@@ -1,15 +1,15 @@
 {
   "title": "VideoFactory",
-  "description": "AssetFactory implementation that loads video files (MP4, WebM, OGG, and other browser-supported container formats) and produces a Video instance suitable for use as a dynamic texture source in the rendering pipeline. Video data is buffered via a `<video>` element rather than decoded up-front. The `'stalled'` event is intentionally not treated as an error because it fires transiently during normal buffering on slow connections. All `<video>` elements are paused and detached when VideoFactory.destroy is called.",
+  "description": "AssetFactory implementation that loads video files (MP4, WebM, OGG, and other browser-supported container formats) and produces a Video instance suitable for use as a dynamic texture source in the rendering pipeline. A URL-backed asset hands the resolved URL to the element and lets the browser stream it, which is what keeps a long video off the heap. create takes the complete bytes instead - the path used by `download: true` and by container entries - and wraps them in a blob. Streamed video defaults to `crossOrigin: 'anonymous'`, because a cross-origin element without it plays but cannot be uploaded as a texture. The `<video>` elements this factory created are paused and detached when the asset is released, and again when VideoFactory.destroy runs.",
   "symbol": "VideoFactory",
   "kind": "class",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 9,
   "counts": {
     "constructors": 1,
-    "methods": 5,
+    "methods": 7,
     "properties": 1,
     "events": 0
   },
@@ -20,7 +20,9 @@
       "members": [],
       "paragraphs": [
         "AssetFactory implementation that loads video files (MP4, WebM, OGG, and other browser-supported container formats) and produces a Video instance suitable for use as a dynamic texture source in the rendering pipeline.",
-        "Video data is buffered via a `<video>` element rather than decoded up-front. The `'stalled'` event is intentionally not treated as an error because it fires transiently during normal buffering on slow connections. All `<video>` elements are paused and detached when VideoFactory.destroy is called."
+        "A URL-backed asset hands the resolved URL to the element and lets the browser stream it, which is what keeps a long video off the heap. create takes the complete bytes instead - the path used by `download: true` and by container entries - and wraps them in a blob.",
+        "Streamed video defaults to `crossOrigin: 'anonymous'`, because a cross-origin element without it plays but cannot be uploaded as a texture.",
+        "The `<video>` elements this factory created are paused and detached when the asset is released, and again when VideoFactory.destroy runs."
       ],
       "importLine": "import { VideoFactory } from '@codexo/exojs'",
       "sourceLink": null
@@ -148,6 +150,111 @@
           "description": "Wraps video bytes in a <video> element and resolves with a Video instance once the configured loadEvent fires. Rejects if the element emits error, abort, or emptied before the load event is received."
         },
         {
+          "name": "createFromUrl",
+          "signature": "createFromUrl(url: string, options: VideoFactoryOptions, signal?: AbortSignal): Promise<Video>",
+          "signatureTokens": [
+            {
+              "text": "createFromUrl",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "url",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VideoFactoryOptions",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "signal",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Video",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "url",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "VideoFactoryOptions",
+              "optional": false
+            },
+            {
+              "name": "signal",
+              "type": "AbortSignal",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<Video>",
+          "description": "Streams the media at url through a <video> element and resolves with a Video once the configured loadEvent fires. The resource is ready to play, not fully downloaded: the browser continues transferring during playback, and a failure after this point is reported by Video.onError rather than by this promise."
+        },
+        {
           "name": "createObjectUrl",
           "signature": "createObjectUrl(blob: Blob): string",
           "signatureTokens": [
@@ -222,6 +329,53 @@
           "params": [],
           "returnType": "void",
           "description": "Pauses and resets all <video> elements created by this factory to release media resources, then delegates to the base AbstractAssetFactory.destroy to revoke any object URLs."
+        },
+        {
+          "name": "dispose",
+          "signature": "dispose(resource: Video): void",
+          "signatureTokens": [
+            {
+              "text": "dispose",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resource",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Video",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "resource",
+              "type": "Video",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Ends playback and the transfer behind a released video."
         },
         {
           "name": "process",

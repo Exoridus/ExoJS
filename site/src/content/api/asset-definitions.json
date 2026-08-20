@@ -549,7 +549,7 @@
         },
         {
           "name": "music",
-          "signature": "music: { config: { loadEvent?: StreamingLoadEvent; mimeType?: string; playbackOptions?: Partial<PlaybackOptions>; source: string; stallTimeout?: number }; resource: AudioStream }",
+          "signature": "music: { config: { crossOrigin?: MediaCrossOrigin; download?: boolean; loadEvent?: StreamingLoadEvent; mimeType?: string; playbackOptions?: Partial<PlaybackOptions>; source: string; stallTimeout?: number }; resource: AudioStream }",
           "signatureTokens": [
             {
               "text": "music",
@@ -573,6 +573,46 @@
             },
             {
               "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "crossOrigin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MediaCrossOrigin",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "download",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
               "kind": "punctuation"
             },
             {
@@ -1255,7 +1295,7 @@
         },
         {
           "name": "video",
-          "signature": "video: { config: { loadEvent?: StreamingLoadEvent; mimeType?: string; playbackOptions?: Partial<PlaybackOptions>; source: string; stallTimeout?: number; textureOptions?: Partial<TextureOptions> }; resource: Video }",
+          "signature": "video: { config: { crossOrigin?: MediaCrossOrigin; download?: boolean; loadEvent?: StreamingLoadEvent; mimeType?: string; playbackOptions?: Partial<PlaybackOptions>; source: string; stallTimeout?: number; textureOptions?: Partial<TextureOptions> }; resource: Video }",
           "signatureTokens": [
             {
               "text": "video",
@@ -1279,6 +1319,46 @@
             },
             {
               "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "crossOrigin",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MediaCrossOrigin",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "download",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
               "kind": "punctuation"
             },
             {

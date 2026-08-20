@@ -1,5 +1,6 @@
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from '#audio/audio-context';
 import type { AudioBus } from '#audio/AudioBus';
+import { mediaErrorMessage } from '#core/mediaError';
 import { Signal } from '#core/Signal';
 import type { PlaybackOptions } from '#core/types';
 import { Rectangle } from '#math/Rectangle';
@@ -34,6 +35,15 @@ type FrameCallbackVideoElement = HTMLVideoElement &
 export class Video extends Sprite {
   public readonly onStart = new Signal();
   public readonly onStop = new Signal();
+  /**
+   * Dispatched when the media fails after the asset was already usable - a
+   * transfer that breaks mid-playback, or a decode error on a later frame.
+   *
+   * A failure BEFORE the asset becomes ready fails the load instead, and is
+   * reported by `Loader.onError`; this signal is the runtime counterpart, so
+   * one load never appears to fail twice.
+   */
+  public readonly onError = new Signal<[error: Error]>();
 
   private readonly _videoElement: HTMLVideoElement;
   private readonly _duration: number;
@@ -50,6 +60,7 @@ export class Video extends Sprite {
   private readonly _onResizeHandler: () => void;
   private readonly _onVideoFrameHandler: (now: number, metadata: unknown) => void;
   private readonly _onTimeUpdateHandler: () => void;
+  private readonly _onErrorHandler: () => void;
   private readonly _onAudioContextReady = (ctx: AudioContext): void => {
     onAudioContextReady.remove(this._onAudioContextReady);
     this.setupWithAudioContext(ctx);
@@ -70,6 +81,7 @@ export class Video extends Sprite {
     this._onResizeHandler = this._onVideoMetadataUpdated.bind(this);
     this._onVideoFrameHandler = this._onVideoFrame.bind(this);
     this._onTimeUpdateHandler = this._onTimeUpdate.bind(this);
+    this._onErrorHandler = this._onMediaError.bind(this);
 
     if (this._videoElement.videoWidth === 0 || this._videoElement.videoHeight === 0) {
       this._videoElement.addEventListener('loadedmetadata', this._onMetadataHandler);
@@ -77,6 +89,7 @@ export class Video extends Sprite {
     }
 
     this._videoElement.addEventListener('timeupdate', this._onTimeUpdateHandler);
+    this._videoElement.addEventListener('error', this._onErrorHandler);
 
     if (playbackOptions) {
       this.applyOptions(playbackOptions);
@@ -389,6 +402,7 @@ export class Video extends Sprite {
     this._videoElement.removeEventListener('loadedmetadata', this._onMetadataHandler);
     this._videoElement.removeEventListener('resize', this._onResizeHandler);
     this._videoElement.removeEventListener('timeupdate', this._onTimeUpdateHandler);
+    this._videoElement.removeEventListener('error', this._onErrorHandler);
     this._cancelVideoFrameCallback();
 
     onAudioContextReady.remove(this._onAudioContextReady);
@@ -401,6 +415,11 @@ export class Video extends Sprite {
 
     this.onStart.destroy();
     this.onStop.destroy();
+    this.onError.destroy();
+  }
+
+  private _onMediaError(): void {
+    this.onError.dispatch(new Error(mediaErrorMessage(this._videoElement, 'Video playback failed.')));
   }
 
   private _onVideoMetadataUpdated(): void {

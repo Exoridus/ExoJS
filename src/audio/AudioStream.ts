@@ -1,3 +1,5 @@
+import { mediaErrorMessage } from '#core/mediaError';
+import { Signal } from '#core/Signal';
 import type { PlaybackOptions } from '#core/types';
 import { clamp } from '#math/utils';
 
@@ -26,6 +28,16 @@ import { seedVoiceFromPlayOptions } from './spatial-options';
  * pre-decoded `AudioBuffer` storage and pooled overlapping playback.
  */
 export class AudioStream implements Playable {
+  /**
+   * Dispatched when the media fails after the asset was already usable - a
+   * transfer that breaks mid-playback, or a decode error further into the file.
+   *
+   * A failure BEFORE the asset becomes ready fails the load instead, and is
+   * reported by `Loader.onError`; this signal is the runtime counterpart, so
+   * one load never appears to fail twice.
+   */
+  public readonly onError = new Signal<[error: Error]>();
+
   private readonly _audioElement: HTMLMediaElement;
 
   /** Default volume applied to new voices. Range [0, 1]. */
@@ -40,9 +52,13 @@ export class AudioStream implements Playable {
   private _sourceNode: MediaElementAudioSourceNode | null = null;
   private _activeVoice: AudioStreamVoice | null = null;
   private _destroyed = false;
+  private readonly _onErrorHandler = (): void => {
+    this.onError.dispatch(new Error(mediaErrorMessage(this._audioElement, 'Audio playback failed.')));
+  };
 
   public constructor(audioElement: HTMLAudioElement, options?: Partial<PlaybackOptions>) {
     this._audioElement = audioElement;
+    this._audioElement.addEventListener('error', this._onErrorHandler);
     this.volume = clamp(options?.volume ?? 1, 0, 1);
     this.loop = options?.loop ?? false;
     this.playbackRate = clamp(options?.playbackRate ?? 1, 0.1, 20);
@@ -140,6 +156,7 @@ export class AudioStream implements Playable {
   public destroy(): void {
     if (this._destroyed) return;
     this._destroyed = true;
+    this._audioElement.removeEventListener('error', this._onErrorHandler);
     if (this._activeVoice !== null) {
       this._activeVoice.stop();
       this._activeVoice = null;
@@ -148,5 +165,6 @@ export class AudioStream implements Playable {
       this._sourceNode.disconnect();
       this._sourceNode = null;
     }
+    this.onError.destroy();
   }
 }

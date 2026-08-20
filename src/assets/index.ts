@@ -55,6 +55,7 @@ export { FontFactory } from '#assets/factories/FontFactory';
 export type { DecodedImage, ImageFactoryOptions } from '#assets/factories/ImageFactory';
 export { ImageFactory } from '#assets/factories/ImageFactory';
 export { JsonFactory } from '#assets/factories/JsonFactory';
+export type { MediaLoadOptions } from '#assets/factories/mediaSource';
 export type { MusicFactoryOptions } from '#assets/factories/MusicFactory';
 export { MusicFactory } from '#assets/factories/MusicFactory';
 export type { SoundFactoryOptions } from '#assets/factories/SoundFactory';

@@ -1,7 +1,7 @@
 {
-  "title": "StreamingLoadEvent",
-  "description": "`HTMLMediaElement` ready-state events the streaming asset factories (MusicFactory, VideoFactory) accept as the load-completion signal. Pick the earliest event that meets your latency requirement; `'canplay'` is the default - the media can start playing, which for streamed media deliberately does not mean it has fully arrived.",
-  "symbol": "StreamingLoadEvent",
+  "title": "MediaCrossOrigin",
+  "description": "Value for a media element's `crossorigin` attribute. `'anonymous'` is the default for URL-backed media: without it a cross-origin video is playable but unusable as a render source, because uploading it to a texture taints the pipeline. `null` omits the attribute entirely, which accepts that trade for playback-only media.",
+  "symbol": "MediaCrossOrigin",
   "kind": "type",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
@@ -19,9 +19,10 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "`HTMLMediaElement` ready-state events the streaming asset factories (MusicFactory, VideoFactory) accept as the load-completion signal. Pick the earliest event that meets your latency requirement; `'canplay'` is the default - the media can start playing, which for streamed media deliberately does not mean it has fully arrived."
+        "Value for a media element's `crossorigin` attribute.",
+        "`'anonymous'` is the default for URL-backed media: without it a cross-origin video is playable but unusable as a render source, because uploading it to a texture taints the pipeline. `null` omits the attribute entirely, which accepts that trade for playback-only media."
       ],
-      "importLine": "import { StreamingLoadEvent } from '@codexo/exojs'",
+      "importLine": "import { MediaCrossOrigin } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +30,11 @@
       "title": "Definition",
       "members": [
         {
-          "name": "StreamingLoadEvent",
-          "signature": "\"canplay\" | \"canplaythrough\" | \"loadeddata\" | \"loadedmetadata\"",
+          "name": "MediaCrossOrigin",
+          "signature": "\"anonymous\" | \"use-credentials\" | null",
           "signatureTokens": [
             {
-              "text": "\"canplay\"",
+              "text": "\"anonymous\"",
               "kind": "keyword"
             },
             {
@@ -41,7 +42,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"canplaythrough\"",
+              "text": "\"use-credentials\"",
               "kind": "keyword"
             },
             {
@@ -49,15 +50,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"loadeddata\"",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "\"loadedmetadata\"",
+              "text": "null",
               "kind": "keyword"
             }
           ],

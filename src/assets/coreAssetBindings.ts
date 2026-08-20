@@ -3,6 +3,7 @@ import { parseBmFontText } from '#assets/factories/BmFontFactory';
 import { CsvFactory } from '#assets/factories/CsvFactory';
 import { FontFactory } from '#assets/factories/FontFactory';
 import { ImageFactory } from '#assets/factories/ImageFactory';
+import type { MediaLoadOptions } from '#assets/factories/mediaSource';
 import { MusicFactory } from '#assets/factories/MusicFactory';
 import { SoundFactory } from '#assets/factories/SoundFactory';
 import { SubtitleFactory } from '#assets/factories/SubtitleFactory';
@@ -40,6 +41,11 @@ interface FactoryLike<Source, T> {
   destroy(): void;
 }
 
+/** A factory that can also build its resource straight from a URL, letting the browser stream it. */
+interface MediaFactoryLike<T> extends FactoryLike<ArrayBuffer, T> {
+  createFromUrl(url: string, options?: unknown, signal?: AbortSignal): Promise<T>;
+}
+
 /**
  * The option keys a core factory bakes irreversibly into the resource it
  * produces, and which therefore identify a distinct resource rather than a
@@ -74,6 +80,41 @@ function binaryFactoryHandler<T>(makeFactory: () => FactoryLike<ArrayBuffer, T>,
       async load({ source, options }: AssetLoadRequest, context: AssetLoaderContext): Promise<T> {
         const raw = await context.fetchArrayBuffer(source);
         return factory.create(raw, options);
+      },
+      createFromBytes(bytes: ArrayBuffer, options?: unknown): Promise<T> {
+        return factory.create(bytes, options);
+      },
+      dispose(resource: unknown): void {
+        factory.dispose?.(resource as T);
+      },
+      destroy() {
+        factory.destroy();
+      },
+    };
+  };
+}
+
+/**
+ * Create an AssetHandler for a streaming media factory.
+ *
+ * A URL-backed load hands the resolved URL to the media element so the browser
+ * owns the transport; `download: true` and container bytes take the complete-
+ * bytes path instead. Which transport a key ends up with is decided by the load
+ * that materializes it: the transport is a property of how an asset was
+ * acquired, not of its identity, so a second consumer asking for the same source
+ * joins the resident resource rather than building a second one.
+ */
+function mediaFactoryHandler<T>(makeFactory: () => MediaFactoryLike<T>, identityOptions: readonly string[] = []): (loader: Loader) => AssetHandler {
+  return () => {
+    const factory = makeFactory();
+    return {
+      ...(identityOptions.length > 0 && { getIdentityDiscriminator: identityDiscriminatorFor(identityOptions) }),
+      async load({ source, options }: AssetLoadRequest, context: AssetLoaderContext): Promise<T> {
+        if ((options as MediaLoadOptions | undefined)?.download === true) {
+          return factory.create(await context.fetchArrayBuffer(source), options);
+        }
+
+        return factory.createFromUrl(context.resolveUrl(source), options, context.signal);
       },
       createFromBytes(bytes: ArrayBuffer, options?: unknown): Promise<T> {
         return factory.create(bytes, options);
@@ -160,14 +201,14 @@ const musicBinding = defineAsset({
   ctor: AudioStream,
   type: 'music',
   isValue: false,
-  create: binaryFactoryHandler(() => new MusicFactory(), ['mimeType']),
+  create: mediaFactoryHandler(() => new MusicFactory(), ['mimeType']),
 });
 
 const videoBinding = defineAsset({
   ctor: Video,
   type: 'video',
   isValue: false,
-  create: binaryFactoryHandler(() => new VideoFactory(), ['mimeType']),
+  create: mediaFactoryHandler(() => new VideoFactory(), ['mimeType']),
 });
 
 const jsonBinding = defineAsset({

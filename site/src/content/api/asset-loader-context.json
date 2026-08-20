@@ -6,10 +6,10 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
-    "methods": 3,
+    "methods": 4,
     "properties": 4,
     "events": 0
   },
@@ -205,6 +205,53 @@
           ],
           "returnType": "Promise<string>",
           "description": "Fetches source as UTF-8 text, routing through the loader's cache/IDB."
+        },
+        {
+          "name": "resolveUrl",
+          "signature": "resolveUrl(source: string): string",
+          "signatureTokens": [
+            {
+              "text": "resolveUrl",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "The URL source resolves to, base path applied. The same resolution the loader's own fetches and canonical identity use, so a handler that hands a URL to a browser primitive - a media element, an image, a worker - can never address a different resource than the one it was asked to load."
         }
       ],
       "paragraphs": [],

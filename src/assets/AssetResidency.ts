@@ -1524,6 +1524,16 @@ export class AssetResidency {
   }
 
   /**
+   * True if `key` already has a payload or has one on the way, so a second
+   * producer for the same canonical asset (a container unpacking an entry that
+   * was also loaded over the network) must not build a competing one.
+   * @internal
+   */
+  public _isMaterializing(key: CanonicalAssetKey): boolean {
+    return this._resources.has(key) || this._inFlight.has(key);
+  }
+
+  /**
    * Reverse lookup: given a loaded resource object, the asset type and source
    * key it was first loaded under, or `null`. Backs `Loader.keyFor`.
    * @internal
