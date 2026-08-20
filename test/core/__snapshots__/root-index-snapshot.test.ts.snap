@@ -161,7 +161,6 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "RetainedSceneConflictError",
   "RetainedSceneNotFoundError",
   "SERIALIZATION_VERSION",
-  "Sampler",
   "ScaleModes",
   "Scene",
   "SceneAvailability",

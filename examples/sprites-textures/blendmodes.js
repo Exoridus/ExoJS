@@ -42,9 +42,9 @@ class BlendmodesScene extends Scene {
     async load() {
         const app = this.app;
         const { width, height } = app;
-        const samplerOptions = { scaleMode: ScaleModes.Nearest };
-        await this.loader.load(Asset.type('texture', ALPHA_RINGS, { samplerOptions }));
-        await this.loader.load(Asset.type('texture', assets.demo.textures.shipA, { samplerOptions }));
+        const textureOptions = { scaleMode: ScaleModes.Nearest };
+        await this.loader.load(Asset.type('texture', ALPHA_RINGS, { textureOptions }));
+        await this.loader.load(Asset.type('texture', assets.demo.textures.shipA, { textureOptions }));
         const backgroundTexture = this.loader.get(ALPHA_RINGS);
         const shipTexture = this.loader.get(assets.demo.textures.shipA);
         this.background = new Sprite(backgroundTexture);
