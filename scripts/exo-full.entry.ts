@@ -54,7 +54,7 @@ export * from '@codexo/exojs-physics';
 export * from '@codexo/exojs-aseprite';
 
 // ── Tiled ─────────────────────────────────────────────────────────────────────
-// Unique value exports only - tilemap runtime classes (TileMap, TileSet, …)
+// Unique value exports only - tilemap runtime classes (TileMap, TileSet, ...)
 // are already exported from exojs-tilemap above. Note: TiledMap / TiledLayer /
 // TiledObjectLayer are the *parsed source model* classes (distinct from the
 // runtime TileMap / TileLayer / ObjectLayer from tilemap).

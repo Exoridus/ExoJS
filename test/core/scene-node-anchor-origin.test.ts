@@ -159,9 +159,9 @@ describe('AnimatedSprite anchors against the untrimmed source canvas', () => {
       sprite.update(0.1);
 
       expect(sprite.currentFrame).toBe(frame);
-      // The per-frame offset moved the local rectangle …
+      // The per-frame offset moved the local rectangle ...
       expect(sprite.getLocalBounds().x).not.toBe(0);
-      // … but the pivot did not move with it.
+      // ... but the pivot did not move with it.
       expect(sprite.origin.x).toBe(expectedX);
       expect(sprite.origin.y).toBe(expectedY);
     }

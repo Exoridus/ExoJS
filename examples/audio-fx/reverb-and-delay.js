@@ -1,4 +1,4 @@
-// Auto-generated from reverb-and-delay.ts — edit the .ts source, not this file.
+// Auto-generated from reverb-and-delay.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';

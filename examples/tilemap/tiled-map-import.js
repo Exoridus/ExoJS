@@ -1,4 +1,4 @@
-// Auto-generated from tiled-map-import.ts — edit the .ts source, not this file.
+// Auto-generated from tiled-map-import.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene } from '@codexo/exojs';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
 import { ObjectKind } from '@codexo/exojs-tilemap';

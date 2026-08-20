@@ -4,7 +4,7 @@
  * A dirty region spanning the full texture width is already contiguous and
  * tightly packed in the row-major buffer, so packing it into the per-texture
  * scratch is a pure memcpy that changes none of the bytes GL reads. WebGL2's
- * `texSubImage2D(…, srcData, srcOffset)` overload takes the band straight out
+ * `texSubImage2D(..., srcData, srcOffset)` overload takes the band straight out
  * of the texture buffer at an element offset, which removes that copy entirely
  * - and with it the reason to grow a scratch buffer for the shape every
  * ring-buffer style upload takes (transform/tint rows, scrolling

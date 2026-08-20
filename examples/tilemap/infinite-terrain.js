@@ -1,4 +1,4 @@
-// Auto-generated from infinite-terrain.ts — edit the .ts source, not this file.
+// Auto-generated from infinite-terrain.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, Keyboard, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
 import { ChunkStreamer, createSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';

@@ -12,7 +12,7 @@ import { resolveKindByPath } from './extensionKindRegistry';
 /**
  * The handle-hybrid a catalog leaf materializes as, delegating to
  * {@link InferCatalogLeaf}: a resource type's leaf IS the placeholder resource
- * (`Texture`, `Sound`, …) that heals in place, while a value type's leaf is a
+ * (`Texture`, `Sound`, ...) that heals in place, while a value type's leaf is a
  * deferred `AssetRef`. A bare path string is classified by its file suffix.
  */
 type InferLeaf<I extends CatalogEntry> = InferCatalogLeaf<I>;

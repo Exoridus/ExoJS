@@ -42,6 +42,6 @@ export function resolveLdtkUrl(ref: string, base: string): string {
 
   // A root-relative base must produce a root-relative result again - dropping
   // the leading slash would make the browser re-resolve the reference against
-  // the document base URL (e.g. `/site/assets/x.png` → `/site/site/assets/…`).
+  // the document base URL (e.g. `/site/assets/x.png` → `/site/site/assets/...`).
   return base.startsWith('/') ? `/${relative}` : relative;
 }

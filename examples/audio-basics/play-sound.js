@@ -1,4 +1,4 @@
-// Auto-generated from play-sound.ts — edit the .ts source, not this file.
+// Auto-generated from play-sound.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Text } from '@codexo/exojs';
 // A small pool of different UI sounds so repeated taps stay interesting.
 const SOUND_KEYS = ['uiClick', 'uiConfirm', 'uiBong', 'impactLight', 'impactHeavy'];

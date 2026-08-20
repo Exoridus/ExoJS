@@ -20,7 +20,7 @@ import { describe, expectTypeOf, it } from 'vitest';
 const EntityType = { Spawn: 'spawn', Trigger: 'trigger', Pickup: 'pickup' } as const;
 
 // A type alias, not an interface: only aliases get the implicit index
-// signature that satisfies the `ObjectSchema` (`Record<string, …>`) constraint.
+// signature that satisfies the `ObjectSchema` (`Record<string, ...>`) constraint.
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 type LevelObjects = {
   [EntityType.Spawn]: { team: 'red' | 'blue' };
@@ -90,7 +90,7 @@ describe('ObjectLayer typed accessors (schema is opt-in)', () => {
 describe('default (un-schematised) ObjectLayer preserves untyped behaviour', () => {
   it('byType yields loose TileProperties when no schema is supplied', () => {
     const layer = new ObjectLayer({ id: 1 });
-    // Any string is an acceptable type key on the default schema …
+    // Any string is an acceptable type key on the default schema ...
     type AnyObj = ReturnType<typeof layer.byType<'whatever'>>[number];
     expectTypeOf<AnyObj['properties']>().toEqualTypeOf<TileProperties>();
   });

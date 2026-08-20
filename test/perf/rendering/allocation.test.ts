@@ -23,7 +23,7 @@ import { createWebGl2Harness } from './harness';
  * MEDIAN of {@link WINDOWS} independent sampling windows (each its own fresh
  * harness + profiler session) and asserts the median against the budget
  * {@link budgetBytesFor} derives from the documented baseline. The median is
- * immune to the occasional high outlier - see the `windows=[…]` log line, where
+ * immune to the occasional high outlier - see the `windows=[...]` log line, where
  * one window routinely lands several percent high while the median sits within
  * ~1% run to run.
  *

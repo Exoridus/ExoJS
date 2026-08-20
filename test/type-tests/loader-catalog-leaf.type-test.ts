@@ -86,7 +86,7 @@ const config: AssetRef<unknown> = bag.config;
 const atlas: SpriteAtlas = bag.atlas;
 const metrics: AssetRef<AtlasMetrics> = bag.metrics;
 
-// …and it is exactly the branded leaf, not the bare resource.
+// ...and it is exactly the branded leaf, not the bare resource.
 expectType<Equal<typeof bag.player, CatalogResourceLeaf<Texture>>>();
 expectType<Equal<typeof bag.jump, CatalogResourceLeaf<Sound>>>();
 expectType<Equal<typeof bag.config, CatalogValueLeaf<unknown>>>();
@@ -124,13 +124,13 @@ export async function leafLoads(): Promise<void> {
   expectType<Equal<ReturnType<typeof getConfig>, CatalogValueLeaf<unknown>>>();
   expectType<Equal<ReturnType<typeof getMetrics>, CatalogValueLeaf<AtlasMetrics>>>();
 
-  // A branded `get()` result stays ordinarily usable…
+  // A branded `get()` result stays ordinarily usable...
   const gotTexture: Texture = loader.get(bag.player);
   const gotSound: Sound = loader.get(bag.jump);
   const gotMetrics: AssetRef<AtlasMetrics> = loader.get(bag.metrics);
   void [gotTexture, gotSound, gotMetrics];
 
-  // …and round-trips back into a single-leaf `load()` with exact inference.
+  // ...and round-trips back into a single-leaf `load()` with exact inference.
   const roundTripTexture = loader.load(loader.get(bag.player));
   expectType<Equal<typeof roundTripTexture, LoadingQueue<Texture>>>();
 
@@ -268,7 +268,7 @@ declare const fontFace: FontFace;
 export function negatives(): void {
   // @ts-expect-error - a raw resource carries no `_assetMeta` stamp.
   loader.load(rawTexture);
-  // @ts-expect-error - …and `get` rejects it for the same reason.
+  // @ts-expect-error - ...and `get` rejects it for the same reason.
   loader.get(rawTexture);
   // @ts-expect-error - raw Sound is not a leaf either.
   loader.load(rawSound);
@@ -311,7 +311,7 @@ export function barePathStaysUnbranded(): void {
 
   // @ts-expect-error - an unstamped bare-path handle is not a single leaf.
   loader.load(bareTexture);
-  // @ts-expect-error - …nor is the bare-path AssetRef.
+  // @ts-expect-error - ...nor is the bare-path AssetRef.
   loader.load(bareRef);
   // @ts-expect-error - inline form, same contract.
   loader.load(loader.get('player.png'));

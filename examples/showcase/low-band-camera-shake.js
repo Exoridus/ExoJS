@@ -1,4 +1,4 @@
-// Auto-generated from low-band-camera-shake.ts — edit the .ts source, not this file.
+// Auto-generated from low-band-camera-shake.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Sprite, Text, View } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';

@@ -347,7 +347,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
 
       if (app !== null) {
         // `removeView: false` - keep the shared `#stage` canvas in the DOM for
-        // the next cell; `destroy(true, …)` would detach it and every later cell
+        // the next cell; `destroy(true, ...)` would detach it and every later cell
         // would fail with "#stage not found".
         app.destroy({ removeView: false }, { children: true, texture: true });
         app = null;

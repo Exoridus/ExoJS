@@ -72,7 +72,7 @@ export function createExtensionBuildOptions(opts) {
       minify: false,
       // Same fix as the core build: preserveModules emits `sources` one
       // directory level too high, escaping the package; re-anchor every
-      // `src/…` source to its real location relative to its map file.
+      // `src/...` source to its real location relative to its map file.
       sourcemapPathTransform: (relativeSourcePath, sourcemapPath) => {
         const match = /^(?:\.\.[\\/])+(src[\\/].*)$/.exec(relativeSourcePath);
         if (!match) return relativeSourcePath;

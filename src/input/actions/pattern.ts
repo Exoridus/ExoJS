@@ -386,7 +386,7 @@ type OrPatternError<Binding, Error> = [Error] extends [never] ? Binding : Error;
  * LITERAL. A valid pattern types as itself, an invalid one as the message
  * explaining why - so `new ChordAction('Ctrl+Sv')` fails to compile with
  * `Argument of type '"Ctrl+Sv"' is not assignable to parameter of type
- * '"ChordAction: unknown keyboard token \"Sv\" …"'`.
+ * '"ChordAction: unknown keyboard token \"Sv\" ..."'`.
  *
  * A plain `string` (a pattern read from a config file, built at runtime, or
  * handed over from JavaScript) bails out and passes through untouched: only

@@ -1,4 +1,4 @@
-// Auto-generated from convolution-rooms.ts — edit the .ts source, not this file.
+// Auto-generated from convolution-rooms.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';

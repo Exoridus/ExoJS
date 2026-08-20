@@ -1,4 +1,4 @@
-// Auto-generated from tiled-infinite-map.ts — edit the .ts source, not this file.
+// Auto-generated from tiled-infinite-map.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Keyboard, Scene, View } from '@codexo/exojs';
 import { tiledExtension } from '@codexo/exojs-tiled';
 import { ChunkStreamer, TileMapNode } from '@codexo/exojs-tilemap';

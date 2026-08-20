@@ -109,7 +109,7 @@ export class ContactGraph {
     }
 
     // Pairs that left the broad phase entirely while touching → fire end. forEach
-    // + thisArg is the allocation-free iteration (for…of allocates an entry tuple
+    // + thisArg is the allocation-free iteration (for...of allocates an entry tuple
     // per record each step); the thisArg binds `this`, so unbound-method is a
     // false positive here.
     // eslint-disable-next-line @typescript-eslint/unbound-method -- the thisArg above binds it

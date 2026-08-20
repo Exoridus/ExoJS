@@ -5,7 +5,7 @@
  * tightly packed block, so the backend either lifts the dirty sub-region out of
  * the row-major texture buffer, or - when the region spans the full width and
  * its rows are therefore already contiguous - hands GL the texture buffer
- * itself plus an element offset via the `(…, srcData, srcOffset)` overload.
+ * itself plus an element offset via the `(..., srcData, srcOffset)` overload.
  * Both shapes must land the same texels at the same origin, and both are silent
  * corruption when they are wrong: nothing throws, the texture simply shows the
  * wrong pixels.
@@ -104,7 +104,7 @@ describe('WebGL2 uploads a partial DataTexture region', () => {
       renderWebGl2Once(backend, root, Color.black);
 
       // 20 rgba8 texels = 80 channels per row, past the width at which the
-      // packing loop switches from element-wise copying to `set(subarray(…))`.
+      // packing loop switches from element-wise copying to `set(subarray(...))`.
       // The narrow case above stays on the element-wise side, so the two tests
       // together cover both branches of that switch.
       paintRect(texture, 4, 6, 20, 5, BLUE);

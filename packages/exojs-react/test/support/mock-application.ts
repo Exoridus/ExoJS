@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 
 // Values mirrored from the real `ApplicationState` enum. They are injected by
-// each test file's `vi.mock('@codexo/exojs', …)` factory via
+// each test file's `vi.mock('@codexo/exojs', ...)` factory via
 // `configureApplicationState(actual.ApplicationState)` so the mock never
 // hard-codes the enum's members (and can't drift from the real engine).
 const state = { stopped: 'stopped', running: 'running', loading: 'loading' };
@@ -53,7 +53,7 @@ interface MockApplicationOptions {
 /**
  * Minimal `Signal`-alike (add/remove/dispatch/count) for `MockApplication.onError`.
  * Deliberately NOT the real `Signal` from `@codexo/exojs` - this module is
- * dynamically imported from inside the `vi.mock('@codexo/exojs', …)` factory
+ * dynamically imported from inside the `vi.mock('@codexo/exojs', ...)` factory
  * (see `configureApplicationState` above for the same reasoning), so a
  * top-level `import { Signal } from '@codexo/exojs'` here would re-enter the
  * still-resolving mock factory and deadlock the module loader.

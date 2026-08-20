@@ -135,7 +135,7 @@ type JournalEntry = PointerJournalEntry | ContextMenuJournalEntry | GestureJourn
  * {@link onStart} / {@link onStop} factory methods (or via
  * {@link Gamepad.onTrigger}-style methods on individual pads), or
  * subscribe to the signal-style notifications
- * (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …).
+ * (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, ...).
  *
  * Driven each frame by {@link Application.update}'s internal prepare stage
  * (first, ahead of interaction/audio/tweens/rendering); constructed

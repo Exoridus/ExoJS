@@ -134,7 +134,7 @@ const toApiKind = (kind: ReflectionKind): ApiKind => {
     if (isInterface(kind)) return 'interface';
     if (isEnum(kind)) return 'enum';
     if (isFunction(kind)) return 'function';
-    // An object-literal `const` (MathUtils, Collision, …) documents like a
+    // An object-literal `const` (MathUtils, Collision, ...) documents like a
     // namespace: a bag of function/value members.
     if (isVariable(kind)) return 'namespace';
     return 'type';
@@ -438,7 +438,7 @@ const renderClassMembers = (reflection: any): ReflectionBody => {
 const EMPTY_COUNTS: ApiCounts = { constructors: 0, methods: 0, properties: 0, events: 0 };
 
 /**
- * Sections for an object-literal `const` (MathUtils, Collision, …): its
+ * Sections for an object-literal `const` (MathUtils, Collision, ...): its
  * function members render as Methods, its value members as Properties.
  */
 const buildObjectSections = (declaration: any): ReflectionBody => {
@@ -679,7 +679,7 @@ const isNamespace = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Na
  * Collect top-level namespace reflections (flattening the single- vs
  * multi-entry-point shapes like collectSymbols). Several engine symbols are a
  * class merged with a same-named namespace holding channel/id constants
- * (GamepadButton.South, Pointer.X, …); those constants are merged onto the
+ * (GamepadButton.South, Pointer.X, ...); those constants are merged onto the
  * class page rather than emitted as a separate page.
  */
 const collectNamespaces = (project: any): any[] => {
@@ -778,7 +778,7 @@ const convertEntryPoints = async (entryPoints: ReadonlyArray<string>, tsconfig: 
         entryPoints: entryPoints.map(entry => toPosix(path.resolve(repoRoot, entry))),
         tsconfig: toPosix(path.resolve(repoRoot, tsconfig)),
         // Pin the source-path base to the repo root so every package reports
-        // repo-relative file names (packages/<pkg>/src/…). Without this TypeDoc
+        // repo-relative file names (packages/<pkg>/src/...). Without this TypeDoc
         // infers a per-package base for packages that pull in no core *source*
         // files (e.g. physics), yielding package-relative paths that miss the
         // sourceMarker filter and break source links.
@@ -811,7 +811,7 @@ const build = async (): Promise<void> => {
         if (emitReflection(reflection, usedSlugs, { mergeNamespace: coreNamespaces.get(reflection.name) })) coreCount += 1;
     }
 
-    // Free functions, object-literal namespaces (MathUtils, …) and simple
+    // Free functions, object-literal namespaces (MathUtils, ...) and simple
     // constants. Names that clash with a documented class/interface/type are a
     // merge partner already handled above, so they are skipped here.
     const coreExtras = collectExtras(coreProject).filter((e: any) => !coreNames.has(e.name));

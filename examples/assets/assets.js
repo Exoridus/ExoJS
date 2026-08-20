@@ -1,4 +1,4 @@
-// Auto-generated from assets.ts — edit the .ts source, not this file.
+// Auto-generated from assets.ts - edit the .ts source, not this file.
 /**
  * Canonical hierarchical asset catalog for ExoJS examples and playground.
  *

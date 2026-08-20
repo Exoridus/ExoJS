@@ -71,7 +71,7 @@ describe('Color — channel saturation', () => {
   });
 });
 
-// toRgba() must preserve RGB at every alpha. The old `this._a && …` guard
+// toRgba() must preserve RGB at every alpha. The old `this._a && ...` guard
 // collapsed any fully-transparent color to 0, so transparent red == transparent
 // black - which loses hue when alpha is animated 0 -> 1 or the packed value is
 // unpacked downstream.

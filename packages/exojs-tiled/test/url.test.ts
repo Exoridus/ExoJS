@@ -48,7 +48,7 @@ describe('resolveTiledUrl', () => {
   it('keeps a root-relative base root-relative (deployment under a sub-path)', () => {
     // Regression: this used to return 'site/assets/maps/tiles.png' (leading
     // slash dropped), which the browser then re-resolved against the document
-    // base URL - producing /site/site/assets/… 404s in the playground.
+    // base URL - producing /site/site/assets/... 404s in the playground.
     expect(resolveTiledUrl('tiles.png', '/site/assets/maps/level.tmj')).toBe('/site/assets/maps/tiles.png');
     expect(resolveTiledUrl('../shared/tiles.png', '/site/assets/maps/level.tmj')).toBe('/site/assets/shared/tiles.png');
   });

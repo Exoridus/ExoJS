@@ -36,7 +36,7 @@ interface PhaserRenderOptions {
  *
  * Graph (withFeedbackDelay = true):
  *   oscillator → inputGain → dryGain → outputGain → destination
- *                inputGain → allpass[0] → … → allpass[N-1] → wetGain → outputGain
+ *                inputGain → allpass[0] → ... → allpass[N-1] → wetGain → outputGain
  *                             ↑                     │
  *                             └── feedbackDelay ◄── feedbackGain ◄──┘
  */

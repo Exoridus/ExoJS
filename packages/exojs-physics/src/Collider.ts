@@ -140,12 +140,12 @@ export class Collider {
     return this._worldCenter;
   }
 
-  /** World-space polygon vertices `[x0, y0, …]` (only meaningful for polygon shapes). */
+  /** World-space polygon vertices `[x0, y0, ...]` (only meaningful for polygon shapes). */
   public get worldVertices(): readonly number[] {
     return this._worldVertices;
   }
 
-  /** World-space polygon outward normals `[x0, y0, …]` (only meaningful for polygon shapes). */
+  /** World-space polygon outward normals `[x0, y0, ...]` (only meaningful for polygon shapes). */
   public get worldNormals(): readonly number[] {
     return this._worldNormals;
   }

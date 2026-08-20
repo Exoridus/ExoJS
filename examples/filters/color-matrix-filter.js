@@ -1,4 +1,4 @@
-// Auto-generated from color-matrix-filter.ts — edit the .ts source, not this file.
+// Auto-generated from color-matrix-filter.ts - edit the .ts source, not this file.
 import { Application, Color, ColorMatrixFilter, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A full-hue ramp shows every preset on every colour at once.

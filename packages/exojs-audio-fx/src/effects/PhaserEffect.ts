@@ -58,7 +58,7 @@ interface PhaserEffectSetup {
  * ```
  * inputGain ┬── dryGain ───────────────────────────────────────┐
  *           │                                                   ├── outputGain
- *           └── allpass[0] ─► … ─► allpass[N-1] ── wetGain ───┘
+ *           └── allpass[0] ─► ... ─► allpass[N-1] ── wetGain ───┘
  *                 ▲                      │
  *                 └── feedbackDelay ◄── feedbackGain ◄─────────┘
  *
@@ -302,7 +302,7 @@ export class PhaserEffect extends AudioEffect {
     inputGain.connect(dryGain);
     dryGain.connect(outputGain);
 
-    // Wet path: inputGain → allpass[0] → … → allpass[N-1] → wetGain → outputGain
+    // Wet path: inputGain → allpass[0] → ... → allpass[N-1] → wetGain → outputGain
     inputGain.connect(allpassFilters[0]!);
     for (let i = 0; i < allpassFilters.length - 1; i++) {
       allpassFilters[i]!.connect(allpassFilters[i + 1]!);

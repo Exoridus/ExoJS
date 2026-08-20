@@ -275,7 +275,7 @@ export default defineConfig([
       '@typescript-eslint/naming-convention': [
         'error',
         {
-          // const namespace objects (MathUtils, Perf, Collision, …) are PascalCase
+          // const namespace objects (MathUtils, Perf, Collision, ...) are PascalCase
           // by convention; const constants may be UPPER_CASE - both alongside camelCase.
           selector: 'variable',
           modifiers: ['const'],
@@ -901,7 +901,7 @@ export default defineConfig([
       ],
       // Disabled for site/src to match the engine: `strict-boolean-expressions`
       // is turned off across every practical src/ directory (core, input, math,
-      // rendering, audio, assets, …). The site's URL/version/runtime helpers
+      // rendering, audio, assets, ...). The site's URL/version/runtime helpers
       // are the same class of nullable-string code, so holding only site code to
       // it would be an inconsistent double standard.
       '@typescript-eslint/strict-boolean-expressions': 'off',
@@ -1086,7 +1086,7 @@ export default defineConfig([
   },
 
   // ObjectLayer exposes `ObjectKind`, a PascalCase `as const` enum-like value
-  // object whose members (Rectangle, Polygon, …) are PascalCase by convention
+  // object whose members (Rectangle, Polygon, ...) are PascalCase by convention
   // and whose string values are the Tiled wire format. This matches how the
   // core engine declares enum-like constants; the package naming policy is
   // relaxed here just for this file.
@@ -1272,7 +1272,7 @@ export default defineConfig([
     },
   },
 
-  // `Map.forEach` is the allocation-free way to walk a Map: `for…of` builds a
+  // `Map.forEach` is the allocation-free way to walk a Map: `for...of` builds a
   // fresh iterator on every step, which these two per-frame paths cannot
   // afford. Deleting the current entry mid-`forEach` is well-defined and both
   // files rely on it. Scoped to the two files that actually run per frame
@@ -1296,7 +1296,7 @@ export default defineConfig([
   },
 
   // LDtk marks its runtime-computed fields with a `__` prefix (`__identifier`,
-  // `__type`, …). These types mirror an external file format verbatim, so the
+  // `__type`, ...). These types mirror an external file format verbatim, so the
   // prefix is data, not a naming choice we get to make.
   {
     files: ['packages/exojs-ldtk/src/**/*.ts'],
@@ -1329,7 +1329,7 @@ export default defineConfig([
     },
   },
 
-  // The input channel constants (`Pointer.X`, `GamepadButton.South`, …) are
+  // The input channel constants (`Pointer.X`, `GamepadButton.South`, ...) are
   // exposed as namespaces on purpose: it is the public spelling of the whole
   // input API, and these three files are the only namespaces in the engine.
   {
@@ -1453,10 +1453,10 @@ export default defineConfig([
       'vitest/no-disabled-tests': 'warn',
       // False positives in this suite, kept off:
       //  - expect-expect: assertions run through shared helpers (mountControls,
-      //    renderText, …) the rule cannot see (148 hits).
+      //    renderText, ...) the rule cannot see (148 hits).
       //  - no-conditional-expect / no-standalone-expect: browser tests use
       //    `if (!device) return` skip guards and assert via helpers.
-      //  - valid-title: parametrised `test(name, …)` over a case array.
+      //  - valid-title: parametrised `test(name, ...)` over a case array.
       'vitest/expect-expect': 'off',
       'vitest/no-conditional-expect': 'off',
       'vitest/no-standalone-expect': 'off',

@@ -112,7 +112,7 @@ function resolveTaggedFrames(frameArray: AsepriteFrameData[], indices: number[])
  *
  * `AsepriteSheet.parse(data, texture)` converts the raw JSON document into:
  * - A {@link Spritesheet} whose frames correspond to the Aseprite frame array
- *   (keyed by zero-based index string: `"0"`, `"1"`, …).
+ *   (keyed by zero-based index string: `"0"`, `"1"`, ...).
  * - A `clips` map of {@link AnimatedSpriteClipDefinition} entries built from
  *   `meta.frameTags`, one per named tag.
  * - The `slices` and `layers` metadata maps, carried through verbatim.
@@ -195,7 +195,7 @@ export class AsepriteSheet {
    * engine's forward-only {@link AnimatedSprite} playback. The tag's
    * `repeat` field maps directly onto {@link AnimatedSpriteClipDefinition.repeat}:
    * absent means the clip loops indefinitely (`repeat: -1`); a numeric
-   * string (`"1"`, `"2"`, …) means it plays exactly that many full cycles
+   * string (`"1"`, `"2"`, ...) means it plays exactly that many full cycles
    * before stopping.
    *
    * Each clip's `frameDurations` carries the real per-frame `duration` from

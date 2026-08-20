@@ -292,7 +292,7 @@ describe('BitmapText', () => {
     const quads = text.pageQuads;
     expect(quads.length).toBeGreaterThanOrEqual(1);
 
-    // Gather unique Y values from the first vertex of each quad (y at index 1, 9, …)
+    // Gather unique Y values from the first vertex of each quad (y at index 1, 9, ...)
     const vertices = quads[0].vertices;
     const yValues = new Set<number>();
     for (let i = 1; i < vertices.length; i += 8) yValues.add(vertices[i]);

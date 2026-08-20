@@ -45,7 +45,7 @@ export interface FocusHooks {
  * Replaces the former process-global active-manager singleton: each Application
  * owns its own stage, so multiple Applications coexist on one page without
  * cross-talk (a node always routes to *its* app's services). The interface is
- * intentionally a bundle so additional app-scoped services (UI/focus, …) can be
+ * intentionally a bundle so additional app-scoped services (UI/focus, ...) can be
  * added without rewiring node ownership.
  */
 export interface Stage {

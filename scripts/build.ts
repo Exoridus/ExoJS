@@ -58,9 +58,9 @@ const extensionSourcePlugin: Plugin = {
 };
 
 // The preserveModules tree emits `sources` one directory level too high
-// (`../../../../src/…` escapes the repo), so consumers (e.g. Vite serving the
+// (`../../../../src/...` escapes the repo), so consumers (e.g. Vite serving the
 // site) warn about missing source files on every module. Re-anchor every
-// `src/…` source to its real location relative to its map file.
+// `src/...` source to its real location relative to its map file.
 const ESCAPED_SOURCE = /^(?:\.\.[\\/])+(src[\\/].*)$/;
 function sourcemapPathTransform(relativeSourcePath: string, sourcemapPath: string): string {
   const match = ESCAPED_SOURCE.exec(relativeSourcePath);

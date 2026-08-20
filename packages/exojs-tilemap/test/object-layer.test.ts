@@ -245,7 +245,7 @@ describe('ObjectLayer query() value-matching for structured TilePropertyValue ki
 });
 
 // A type alias, not an interface: only aliases get the implicit index
-// signature that satisfies the `ObjectSchema` (`Record<string, …>`) constraint.
+// signature that satisfies the `ObjectSchema` (`Record<string, ...>`) constraint.
 // eslint-disable-next-line @typescript-eslint/consistent-type-definitions
 type LevelObjects = {
   spawn: { team: 'red' | 'blue' };

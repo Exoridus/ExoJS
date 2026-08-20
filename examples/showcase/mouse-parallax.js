@@ -1,4 +1,4 @@
-// Auto-generated from mouse-parallax.ts — edit the .ts source, not this file.
+// Auto-generated from mouse-parallax.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const scales = [0.03, 0.06, 0.1];

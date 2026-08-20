@@ -6,7 +6,7 @@
  *
  * ```
  * magic "EXOA" (4B) │ version u32 LE │ indexLength u32 LE │ index (JSON, UTF-8)
- * data: concatenated asset bytes [slice0][slice1]…[sliceN]
+ * data: concatenated asset bytes [slice0][slice1]...[sliceN]
  * ```
  *
  * The index is a small JSON table of contents read once - zero-copy matters only

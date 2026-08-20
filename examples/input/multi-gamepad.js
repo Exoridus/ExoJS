@@ -1,4 +1,4 @@
-// Auto-generated from multi-gamepad.ts — edit the .ts source, not this file.
+// Auto-generated from multi-gamepad.ts - edit the .ts source, not this file.
 import { Application, Color, GamepadAxis, Scene, Sprite, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150, 180, 255), new Color(255, 230, 140)];

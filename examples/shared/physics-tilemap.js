@@ -1,4 +1,4 @@
-// Auto-generated from physics-tilemap.ts — edit the .ts source, not this file.
+// Auto-generated from physics-tilemap.ts - edit the .ts source, not this file.
 // Shared example recipe: build static physics colliders from a Tiled object
 // layer, or from a tile layer's per-tile collision geometry.
 //

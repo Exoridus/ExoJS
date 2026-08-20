@@ -1,4 +1,4 @@
-// Auto-generated from vocoder.ts — edit the .ts source, not this file.
+// Auto-generated from vocoder.ts - edit the .ts source, not this file.
 import { Application, Asset, AudioBus, AudioGenerator, Color, Scene, Text } from '@codexo/exojs';
 import { VocoderEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';

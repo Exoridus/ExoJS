@@ -23,7 +23,7 @@
  * Usage:
  *   pnpm create:package <name>                       # library (only mode)
  *   pnpm create:package <name> --dep tilemap         # runtime workspace dep
- *   pnpm create:package <name> --description "…"      # manifest description
+ *   pnpm create:package <name> --description "..."      # manifest description
  *   pnpm create:package <name> --no-offline-smoke    # exclude from offline smoke
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';

@@ -304,7 +304,7 @@ export class PhysicsWorld implements BodyOwner {
   /**
    * Add a body to the world: allocates the body and its collider ids, registers
    * the colliders, computes the mass model and tracks the body for stepping.
-   * Construct the body freely first (`new PhysicsBody({ … })`), then add it.
+   * Construct the body freely first (`new PhysicsBody({ ... })`), then add it.
    * Safe to call inside an event callback - the body push is deferred to the end
    * of the step, exactly like collider registration. Returns the body.
    *
@@ -393,7 +393,7 @@ export class PhysicsWorld implements BodyOwner {
   }
 
   /**
-   * Add a constraint joint. Construct it first (`new DistanceJoint({ … })`),
+   * Add a constraint joint. Construct it first (`new DistanceJoint({ ... })`),
    * then add it. Wakes both bodies; safe inside a callback (registration is
    * deferred). Returns the joint.
    */

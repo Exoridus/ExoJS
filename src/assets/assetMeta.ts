@@ -30,7 +30,7 @@ export interface CatalogLeafBrand<T> {
 
 /**
  * A resource type's catalog leaf: the heal-in-place placeholder resource itself
- * (`Texture`, `Sound`, …), branded. Stays assignable to the bare resource, so
+ * (`Texture`, `Sound`, ...), branded. Stays assignable to the bare resource, so
  * `const texture: Texture = bag.player` keeps working.
  * @internal
  */

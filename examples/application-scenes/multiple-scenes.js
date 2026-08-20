@@ -1,4 +1,4 @@
-// Auto-generated from multiple-scenes.ts — edit the .ts source, not this file.
+// Auto-generated from multiple-scenes.ts - edit the .ts source, not this file.
 import { Application, Color, Keyboard, Scene, Text } from '@codexo/exojs';
 class MenuScene extends Scene {
     label;

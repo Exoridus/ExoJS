@@ -1,4 +1,4 @@
-// Auto-generated from gpu-particles.ts — edit the .ts source, not this file.
+// Auto-generated from gpu-particles.ts - edit the .ts source, not this file.
 import { Application, Color, RenderBackendType, Scene, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';

@@ -1,4 +1,4 @@
-// Auto-generated from bitmap-text-basic.ts — edit the .ts source, not this file.
+// Auto-generated from bitmap-text-basic.ts - edit the .ts source, not this file.
 import { Application, Asset, BitmapText, Color, Scene } from '@codexo/exojs';
 class BitmapTextBasicScene extends Scene {
     font;

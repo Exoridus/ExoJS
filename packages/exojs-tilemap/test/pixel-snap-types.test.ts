@@ -47,14 +47,14 @@ describe('PixelSnapMode type contracts', () => {
     const mapNode = {} as TileMapNode;
     const layerNode = {} as TileLayerNode;
 
-    // Valid enum members compile on every carrier …
+    // Valid enum members compile on every carrier ...
     sprite.pixelSnapMode = PixelSnapMode.None;
     drawable.pixelSnapMode = PixelSnapMode.Position;
     view.pixelSnapMode = PixelSnapMode.Position;
     mapNode.pixelSnapMode = PixelSnapMode.Geometry;
     layerNode.pixelSnapMode = PixelSnapMode.Geometry;
 
-    // … invalid ones do not.
+    // ... invalid ones do not.
     // @ts-expect-error - the legacy 'none' string is not a PixelSnapMode
     sprite.pixelSnapMode = 'none';
     // @ts-expect-error - the legacy 'geometry' string is not a PixelSnapMode

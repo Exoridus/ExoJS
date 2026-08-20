@@ -1,4 +1,4 @@
-// Auto-generated from tween-with-yoyo.ts — edit the .ts source, not this file.
+// Auto-generated from tween-with-yoyo.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 class TweenWithYoyoScene extends Scene {
     sprite;

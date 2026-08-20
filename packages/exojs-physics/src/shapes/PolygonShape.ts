@@ -10,7 +10,7 @@ const weldEpsilon = 1e-4;
  * outward edge normals are precomputed. Construction throws on any non-convex,
  * degenerate, or under-specified input - there is no silent repair.
  *
- * Vertices and normals are exposed as flat `[x0, y0, x1, y1, …]` arrays to keep
+ * Vertices and normals are exposed as flat `[x0, y0, x1, y1, ...]` arrays to keep
  * the narrow phase allocation-free; both are frozen.
  */
 export class PolygonShape extends Shape {

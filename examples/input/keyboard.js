@@ -1,4 +1,4 @@
-// Auto-generated from keyboard.ts — edit the .ts source, not this file.
+// Auto-generated from keyboard.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Two ways to read the keyboard, shown side by side:

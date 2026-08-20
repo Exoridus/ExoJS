@@ -206,8 +206,8 @@ export const startViteServer = async (options: StartViteServerOptions): Promise<
     //
     // The nearest package.json to the adapter files is `@codexo/exojs-bench`'s -
     // which deliberately does NOT redefine `#*` (Node forbids an `imports` target
-    // escaping the package with `../`). A single alias maps every `#…` specifier
-    // straight to `<repo>/src/…`, reproducing the root map's pure `#* → ./src/*`
+    // escaping the package with `../`). A single alias maps every `#...` specifier
+    // straight to `<repo>/src/...`, reproducing the root map's pure `#* → ./src/*`
     // wildcard exactly. Engine modules imported through it still resolve their OWN
     // internal `#*` imports via the root package.json map + `@codexo/exojs-source`
     // condition below, so the engine graph is measured exactly as it ships.

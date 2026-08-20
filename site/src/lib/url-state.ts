@@ -63,7 +63,7 @@ export function readUrlState(): UrlState {
 
 // Write version and/or example to the hash.  Partial updates are supported:
 // passing only `version` preserves the current example, and vice-versa.
-// Any legacy query-string params (?v=…&ex=…) are cleared on write.
+// Any legacy query-string params (?v=...&ex=...) are cleared on write.
 export function writeUrlState(state: Partial<UrlState>, options: WriteUrlOptions = {}): void {
     const current = readUrlState();
 

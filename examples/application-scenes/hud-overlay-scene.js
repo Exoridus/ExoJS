@@ -1,4 +1,4 @@
-// Auto-generated from hud-overlay-scene.ts — edit the .ts source, not this file.
+// Auto-generated from hud-overlay-scene.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Label, ProgressBar, Scene } from '@codexo/exojs';
 /**
  * A screen-fixed HUD on `scene.ui` sits above the world automatically - no

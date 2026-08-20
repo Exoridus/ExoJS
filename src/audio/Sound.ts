@@ -503,7 +503,7 @@ export class Sound implements Playable {
   public _createVoice(manager: AudioManager, options: SoundPlayOptions): Voice {
     const bus = options.bus ?? manager.sound;
 
-    // A suspended context's `currentTime` stands still, so `source.start(0, …)`
+    // A suspended context's `currentTime` stands still, so `source.start(0, ...)`
     // - which `SoundVoice` issues from its own constructor - pins every voice
     // started before the unlock gesture to the same instant, and the whole
     // backlog then fires at once. A buffer sound cannot be deferred honestly:

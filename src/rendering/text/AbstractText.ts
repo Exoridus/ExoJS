@@ -226,7 +226,7 @@ export abstract class AbstractText extends Drawable {
    * Take the heaviest pending hint and settle the node, folding in whatever
    * the attached {@link TextStyle} has latched since the last pass. A style
    * carries its own dirty flag because it is mutated in place rather than
-   * assigned, so polling it here is what makes `label.style.align = …` land.
+   * assigned, so polling it here is what makes `label.style.align = ...` land.
    */
   protected _consumePendingHint(): StyleChangeHint | null {
     const own = this._pendingHint;

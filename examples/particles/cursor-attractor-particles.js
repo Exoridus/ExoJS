@@ -1,4 +1,4 @@
-// Auto-generated from cursor-attractor-particles.ts — edit the .ts source, not this file.
+// Auto-generated from cursor-attractor-particles.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, AttractToPoint, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn, RepelFromPoint, } from '@codexo/exojs-particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';

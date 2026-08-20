@@ -1,4 +1,4 @@
-// Auto-generated from custom-render-pass.ts — edit the .ts source, not this file.
+// Auto-generated from custom-render-pass.ts - edit the .ts source, not this file.
 import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite } from '@codexo/exojs';
 class CustomRenderPassScene extends Scene {
     back;

@@ -1,4 +1,4 @@
-// Auto-generated from tiled-map-physics-actor.ts — edit the .ts source, not this file.
+// Auto-generated from tiled-map-physics-actor.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Spritesheet, SystemOrder, TextureRegion, Vector } from '@codexo/exojs';
 import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';

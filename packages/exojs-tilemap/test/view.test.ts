@@ -409,7 +409,7 @@ describe('TileMapView ownership & destruction', () => {
 
     view.destroy();
 
-    // The view and its generated nodes are gone …
+    // The view and its generated nodes are gone ...
     expect(view.destroyed).toBe(true);
     expect(view.layers).toHaveLength(0);
     expect(view.bands).toHaveLength(0);
@@ -418,13 +418,13 @@ describe('TileMapView ownership & destruction', () => {
     expect(backgroundNode.children).toHaveLength(0);
     expect(roofNode.chunkNodes).toHaveLength(0);
 
-    // … the bands are detached from the application parent …
+    // ... the bands are detached from the application parent ...
     expect(worldRoot.children).toHaveLength(1);
     expect(worldRoot.children[0]).toBe(actors);
     expect(worldRoot.children).not.toContain(groundBand);
     expect(worldRoot.children).not.toContain(roofBand);
 
-    // … and application actors are untouched.
+    // ... and application actors are untouched.
     expect(actors.parent).toBe(worldRoot);
     expect(hero.parent).toBe(actors);
 
@@ -1387,11 +1387,11 @@ describe('TileMapBand visibility & opacity', () => {
 
     band.visible = false;
 
-    // Hiding the band never writes through to the runtime layers …
+    // Hiding the band never writes through to the runtime layers ...
     expect(map.getTileLayerById(1)!.visible).toBe(true);
     expect(map.getTileLayerById(2)!.visible).toBe(true);
 
-    // … and layer visibility never feeds back into the band.
+    // ... and layer visibility never feeds back into the band.
     band.visible = true;
     map.getTileLayerById(1)!.visible = false;
 

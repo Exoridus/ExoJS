@@ -1,4 +1,4 @@
-// Auto-generated from asset-browser.ts — edit the .ts source, not this file.
+// Auto-generated from asset-browser.ts - edit the .ts source, not this file.
 import { Asset } from '@codexo/exojs';
 import { Application, Color, Graphics, Scene, Sprite, Spritesheet, Text, Texture, } from '@codexo/exojs';
 // Dynamic category accessor: maps a category key to the correct sub-object

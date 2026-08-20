@@ -224,8 +224,8 @@ describe('ImageLayerNode repeat coverage', () => {
 
     // nodeX        = 5
     // localViewMin = -300 - 5 = -305
-    // startLocal   = floor(-305/48)*48 = floor(-6.3541…)*48 = -7*48 = -336
-    // periods      = ceil((-305 + 220 - (-336))/48) = ceil(251/48) = ceil(5.229…) = 6
+    // startLocal   = floor(-305/48)*48 = floor(-6.3541...)*48 = -7*48 = -336
+    // periods      = ceil((-305 + 220 - (-336))/48) = ceil(251/48) = ceil(5.229...) = 6
     // child.x = -336, child.width = 6*48 = 288
     const sprite = spriteOf(node);
     expect(sprite.x).toBe(-336);

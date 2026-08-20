@@ -1,4 +1,4 @@
-// Auto-generated from texture-loader.ts — edit the .ts source, not this file.
+// Auto-generated from texture-loader.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
 class TextureLoaderScene extends Scene {
     sprites;

@@ -1,4 +1,4 @@
-// Auto-generated from key-rebinding.ts — edit the .ts source, not this file.
+// Auto-generated from key-rebinding.ts - edit the .ts source, not this file.
 import { ActionMap, Application, BindingProfile, ButtonAction, Color, Graphics, inputToken, Keyboard, Scene, } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // A binding is persisted as a stable lowercase token ("keyboard.space"), never

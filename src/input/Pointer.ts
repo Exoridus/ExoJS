@@ -27,7 +27,7 @@ const slot = (s: number, field: 0 | 1 | 2): PointerChannel => pointerCh(s * poin
 /**
  * Identifies which platform phase a {@link PointerPhaseEntry} records. Also
  * used as a bitmask by the frame accessors ({@link Pointer.pressed},
- * {@link Pointer.moved}, {@link Pointer.released}, …), which only ask "did
+ * {@link Pointer.moved}, {@link Pointer.released}, ...), which only ask "did
  * this happen at all this frame" - order doesn't matter for that question,
  * only for dispatch (see {@link Pointer._phaseList}).
  *
@@ -303,7 +303,7 @@ export class Pointer {
     return this._framePhases.some(phase => phase.flag === PointerStateFlag.Up);
   }
 
-  /** `true` when the platform cancelled this pointer during this frame (system gesture, focus loss, …). */
+  /** `true` when the platform cancelled this pointer during this frame (system gesture, focus loss, ...). */
   public get cancelled(): boolean {
     return this._framePhases.some(phase => phase.flag === PointerStateFlag.Cancel);
   }
@@ -587,7 +587,7 @@ export class Pointer {
 
 /**
  * Channel-identifier constants merged onto the `Pointer` class. The
- * un-prefixed members (Active, X, Y, …) address slot 0 (the primary
+ * un-prefixed members (Active, X, Y, ...) address slot 0 (the primary
  * pointer). For multi-touch access use `Pointer.Slot{N}Active /
  * Slot{N}X / Slot{N}Y`.
  */

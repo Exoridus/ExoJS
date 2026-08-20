@@ -188,7 +188,7 @@ export const startViteServer = async (version: string): Promise<ViteDevServer> =
  * matrix has run at least one cell: this
  * function must not be called before the engine's own `init()` has created
  * `#stage`'s WebGL2 context, because `HTMLCanvasElement.getContext` freezes
- * context-creation attributes (antialias, stencil, …) on the FIRST call and
+ * context-creation attributes (antialias, stencil, ...) on the FIRST call and
  * ignores the attribute dictionary on every subsequent call - calling it here
  * before the engine's own `getContext('webgl2', { ...options, stencil: true })`
  * (see `WebGl2Backend.ts`) would silently give the engine a mismatched
@@ -591,7 +591,7 @@ interface CdpProfile {
  * Shorten a profiler URL to something readable: the Vite dev server serves
  * engine source from the repo root, so `http://127.0.0.1:PORT/@fs/<repo-root>/src/x.ts`
  * and `/src/x.ts` both collapse to `src/x.ts`; a pre-bundled competitor keeps
- * its `node_modules/.vite/deps/…` identity, which is exactly what distinguishes
+ * its `node_modules/.vite/deps/...` identity, which is exactly what distinguishes
  * "time inside Pixi" from "time inside the engine".
  */
 const shortenProfileUrl = (url: string): string => {

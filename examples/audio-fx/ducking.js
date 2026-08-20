@@ -1,4 +1,4 @@
-// Auto-generated from ducking.ts — edit the .ts source, not this file.
+// Auto-generated from ducking.ts - edit the .ts source, not this file.
 import { Application, Asset, AudioBus, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, DuckingEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';

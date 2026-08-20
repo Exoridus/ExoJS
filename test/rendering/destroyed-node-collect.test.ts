@@ -201,8 +201,8 @@ const parseSource = (rel: string): ts.SourceFile => ts.createSourceFile(rel, rea
 
 /**
  * Whether `node` sits inside anything `__DEV__` can switch off - an
- * `if (__DEV__)` branch, a `__DEV__ && …` short-circuit, or a `__DEV__ ? …`
- * conditional. A neighbouring `if (__DEV__) logger.warn(…)` statement is
+ * `if (__DEV__)` branch, a `__DEV__ && ...` short-circuit, or a `__DEV__ ? ...`
+ * conditional. A neighbouring `if (__DEV__) logger.warn(...)` statement is
  * correctly *not* a gate, which is why this walks the AST instead of nearby
  * source lines.
  */
@@ -281,7 +281,7 @@ describe('destroyed-but-attached node: production parity', () => {
     expect(guards.length).toBeGreaterThan(0);
 
     for (const guard of guards) {
-      // The condition itself must not carry `__DEV__ && …`, and the guard must
+      // The condition itself must not carry `__DEV__ && ...`, and the guard must
       // not be nested inside a dev-only branch. Either form would strip the
       // skip from production and leave a destroyed node rendering its last
       // visual state.

@@ -1,4 +1,4 @@
-// Auto-generated from multi-texture-stress.ts — edit the .ts source, not this file.
+// Auto-generated from multi-texture-stress.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 const GRID_COLUMNS = 50;
 const GRID_ROWS = 22;

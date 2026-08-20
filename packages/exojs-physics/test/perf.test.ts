@@ -102,7 +102,7 @@ describe('physics dynamics performance', () => {
     // ~0.8 MB - the absolute byte gate is meaningless) and slows the 200-iteration
     // sampling run past the test timeout. The sharp gate runs in the normal
     // `pnpm test` run + `verify:ci`. (Detection: istanbul prefixes every function
-    // with a `cov_…()` prologue; globalThis.__coverage__ is not yet populated at
+    // with a `cov_...()` prologue; globalThis.__coverage__ is not yet populated at
     // test time. The render-perf gate needs no guard - its src resolves via
     // #*-subpath imports istanbul leaves alone.)
     if (world.step.toString().includes('cov_')) {

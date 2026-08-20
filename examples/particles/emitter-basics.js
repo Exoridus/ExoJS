@@ -1,4 +1,4 @@
-// Auto-generated from emitter-basics.ts — edit the .ts source, not this file.
+// Auto-generated from emitter-basics.ts - edit the .ts source, not this file.
 import { Application, Color, Scene } from '@codexo/exojs';
 import { ApplyForce, ColorGradient, ColorOverLifetime, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';

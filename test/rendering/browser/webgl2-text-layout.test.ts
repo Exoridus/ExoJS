@@ -212,9 +212,9 @@ describe('Text layout WebGL2 browser', () => {
       second = new Text('WMQ', { fillColor: Color.white, fontSize: 30 });
       render(backend, second);
 
-      // The new glyphs went up as a partial sub-region (not a full re-alloc)…
+      // The new glyphs went up as a partial sub-region (not a full re-alloc)...
       expect(texSubImage2DSpy).toHaveBeenCalled();
-      // …with tight row packing, so the misaligned R8 rows upload intact.
+      // ...with tight row packing, so the misaligned R8 rows upload intact.
       expect(pixelStoreiSpy).toHaveBeenCalledWith(gl.UNPACK_ALIGNMENT, 1);
     } finally {
       vi.restoreAllMocks();

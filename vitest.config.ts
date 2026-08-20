@@ -457,7 +457,7 @@ export default defineConfig({
       // `headless: false` is load-bearing, not a leftover: Firefox exposes
       // `navigator.gpu` either way, but `requestAdapter()` resolves to `null`
       // headless no matter which prefs are set (`dom.webgpu.enabled`,
-      // `gfx.webgpu.force-enabled`, …). A window is the only configuration in
+      // `gfx.webgpu.force-enabled`, ...). A window is the only configuration in
       // which Firefox has a WebGPU adapter at all - so this lane needs a real
       // display, which is why CI cannot run it and the matrix takes its Firefox
       // rows from local runs instead.

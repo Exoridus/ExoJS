@@ -1,4 +1,4 @@
-// Auto-generated from custom-fragment-shader.ts — edit the .ts source, not this file.
+// Auto-generated from custom-fragment-shader.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const HUE_RAMP = assets.technical.color.hueRamp;

@@ -111,7 +111,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
   const originalAudioContext = globalThis.AudioContext;
   const originalOfflineAudioContext = globalThis.OfflineAudioContext;
 
-  /** A minimal AudioContext double supporting `addEventListener('statechange', …)` and a real resume(). */
+  /** A minimal AudioContext double supporting `addEventListener('statechange', ...)` and a real resume(). */
   class UnlockableAudioContext {
     public state: AudioContextState;
     public currentTime = 0;

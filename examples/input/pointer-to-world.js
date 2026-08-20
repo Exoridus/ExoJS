@@ -1,4 +1,4 @@
-// Auto-generated from pointer-to-world.ts — edit the .ts source, not this file.
+// Auto-generated from pointer-to-world.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, View } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // The camera continuously pans (a slow figure-eight) and breathes its zoom, so

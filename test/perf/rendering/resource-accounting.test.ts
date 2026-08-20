@@ -56,11 +56,11 @@ describe('GPU resource accounting (RenderStats)', () => {
         expect(stats.downloadBytes).toBe(0);
         expect(stats.downloadCount).toBe(0);
 
-        // The first resetStats() clears the per-frame accumulators…
+        // The first resetStats() clears the per-frame accumulators...
         harness.backend.resetStats();
         expect(harness.backend.stats.textureUploadBytes).toBe(0);
         expect(harness.backend.stats.bufferUploadBytes).toBe(0);
-        // …but preserves the running VRAM total booked at connect.
+        // ...but preserves the running VRAM total booked at connect.
         expect(harness.backend.stats.gpuMemoryBytes).toBeGreaterThanOrEqual(0);
       } finally {
         harness.destroy();
@@ -91,7 +91,7 @@ describe('GPU resource accounting (RenderStats)', () => {
         // size; the transform texture for a 4-row buffer adds at most a few
         // hundred bytes, so the delta is the content sum plus that tiny term.
         expect(delta).toBeGreaterThanOrEqual(textureCount * rgba8Bytes(size));
-        // …and the content textures clearly dominate (delta is not e.g. 2× the sum).
+        // ...and the content textures clearly dominate (delta is not e.g. 2× the sum).
         expect(delta).toBeLessThan(textureCount * rgba8Bytes(size) + rgba8Bytes(size));
       } finally {
         harness.destroy();
@@ -303,11 +303,11 @@ describe('GPU resource accounting (RenderStats)', () => {
         measureFrame(harness, root);
         measureFrame(harness, root);
 
-        // VRAM (a running total) is unchanged across idempotent frames…
+        // VRAM (a running total) is unchanged across idempotent frames...
         expect(harness.backend.stats.gpuMemoryBytes).toBe(vramAtSteadyState);
-        // …the first frame uploaded the content texture…
+        // ...the first frame uploaded the content texture...
         expect(uploadedFirst).toBeGreaterThan(0);
-        // …and the per-frame upload accumulator has dropped back to zero.
+        // ...and the per-frame upload accumulator has dropped back to zero.
         expect(harness.backend.stats.textureUploadBytes).toBe(0);
       } finally {
         harness.destroy();

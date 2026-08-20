@@ -12,7 +12,7 @@ import { Texture } from '#rendering/texture/Texture';
 
 // A test-only, non-leaf asset kind - no seamless adapter, `isValue: false` -
 // the exact shape `LoaderScope.release()` calls out (a resource loaded
-// with `load(Asset.type('bmFont', …))`): it never goes through `createLeaf`,
+// with `load(Asset.type('bmFont', ...))`): it never goes through `createLeaf`,
 // so it carries no `_assetMeta` stamp and is never adopted/registered in the
 // handle→key map either.
 declare module '#assets/AssetDefinitions' {

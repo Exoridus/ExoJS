@@ -562,7 +562,7 @@ export class SceneNode implements Collidable, ObservableVectorOwner {
    * This is the only supported way to resize a node from outside
    * {@link getLocalBounds}; the rectangle itself is handed out read-only so the
    * invalidation cannot be forgotten. Built-in drawables (Sprite, Text,
-   * BitmapText, Mesh, …) and custom ones alike go through here.
+   * BitmapText, Mesh, ...) and custom ones alike go through here.
    * @internal
    */
   public _setLocalBounds(x: number, y: number, width: number, height: number): this {

@@ -114,7 +114,7 @@ export class SmoothedAudioParam {
    */
   public write(param: AudioParam, value: number, now: number, settings: SpatialSmoothingSettings): void {
     // Reject NaN/±Infinity outright - never scheduled on the live AudioParam
-    // (a real browser throws on `setTargetAtTime(NaN, …)`) and never recorded
+    // (a real browser throws on `setTargetAtTime(NaN, ...)`) and never recorded
     // as `_last`, so an invalid tick can't poison every subsequent write.
     if (!Number.isFinite(value)) return;
 
@@ -144,7 +144,7 @@ export class SmoothedAudioParam {
  * Floor applied to the elapsed time between two velocity samples (seconds).
  * Guards {@link deriveVelocity} against a divide-by-zero (or a near-infinite
  * velocity spike) when two samples land on the same `AudioContext.currentTime`
- * - which is not just a test artifact: an explicit `voice.position = …`
+ * - which is not just a test artifact: an explicit `voice.position = ...`
  * write immediately followed by `AudioManager.update()`'s per-frame tick can
  * genuinely both land inside the same audio-render quantum, before
  * `currentTime` has advanced at all.

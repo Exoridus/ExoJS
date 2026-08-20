@@ -78,7 +78,7 @@ function copyPoint(target: Vector | null, value: Vector | { x: number; y: number
  * {@link Spatializable} writes and replays them onto the real voice once
  * {@link PendingVoice._flush} runs at activation; `stop()` before flush
  * cancels playback entirely - the real voice is never created. Narrower than a
- * real `Voice`: capability mixins (`Pausable`, `Seekable`, …) are unavailable
+ * real `Voice`: capability mixins (`Pausable`, `Seekable`, ...) are unavailable
  * until flush, and reading `bus` before flush returns `undefined` (despite the
  * type) unless an explicit `options.bus` override was given - the manager's
  * default bus isn't resolvable until the real voice exists. A documented

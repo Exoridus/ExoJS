@@ -1,4 +1,4 @@
-// Auto-generated from typewriter-text.ts — edit the .ts source, not this file.
+// Auto-generated from typewriter-text.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Text } from '@codexo/exojs';
 const message = 'ExoJS gives you explicit rendering control with a compact scene and asset workflow.';
 class TypewriterTextScene extends Scene {

@@ -258,7 +258,7 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
   /**
    * Extension selection - the only way an Application is equipped.
    *
-   * `undefined` or `[]` → Core only. `[a, b, …]` → Core plus exactly these.
+   * `undefined` or `[]` → Core only. `[a, b, ...]` → Core plus exactly these.
    *
    * There is no global registry to fall back on: what an application can do is
    * decided here, at its construction, and nowhere else. That is what lets two

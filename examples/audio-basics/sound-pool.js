@@ -1,4 +1,4 @@
-// Auto-generated from sound-pool.ts — edit the .ts source, not this file.
+// Auto-generated from sound-pool.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const POOL_SIZE = 12;

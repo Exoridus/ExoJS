@@ -7,7 +7,7 @@
  * the test never ran anywhere while the run stayed green - the WeakRef
  * reclamation specs (no `--expose-gc`) and the production-stripping checks (no
  * `dist/` in the unit lane) both sat that way for their whole lifetime. A
- * dynamic `ctx.skip('WebGPU device lost mid-test - …')` inside a test body is
+ * dynamic `ctx.skip('WebGPU device lost mid-test - ...')` inside a test body is
  * the same class of blind spot, just runtime instead of `runIf` - it counts
  * here exactly like a statically-skipped test.
  *

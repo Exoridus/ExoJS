@@ -58,7 +58,7 @@ const devToken = /(?<![a-zA-Z0-9_$])__DEV__(?![a-zA-Z0-9_$])/;
 /** Parses `rel` into a TypeScript AST with parent pointers, for the structural checks below. */
 const parseSource = (rel: string): ts.SourceFile => ts.createSourceFile(rel, readSource(rel), ts.ScriptTarget.ES2022, true);
 
-/** Every call to a `requireSynchronous…` guard. AST-based, so comments and strings never count. */
+/** Every call to a `requireSynchronous...` guard. AST-based, so comments and strings never count. */
 const guardCallSites = (source: ts.SourceFile): ts.CallExpression[] => {
   const calls: ts.CallExpression[] = [];
 
@@ -77,8 +77,8 @@ const guardCallSites = (source: ts.SourceFile): ts.CallExpression[] => {
 
 /**
  * Whether `node` sits inside anything `__DEV__` can switch off - an
- * `if (__DEV__)` branch, a `__DEV__ && …` short-circuit, or a `__DEV__ ? …`
- * conditional. A neighbouring `if (__DEV__) Perf.mark(…)` statement is
+ * `if (__DEV__)` branch, a `__DEV__ && ...` short-circuit, or a `__DEV__ ? ...`
+ * conditional. A neighbouring `if (__DEV__) Perf.mark(...)` statement is
  * correctly *not* a gate, which is why this walks the AST instead of nearby
  * source lines.
  */

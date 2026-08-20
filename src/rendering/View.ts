@@ -188,7 +188,7 @@ export class View implements ObservableVectorOwner {
    * The normalized (0..1) viewport rectangle this camera renders into.
    *
    * Returns the LIVE rectangle, and writing to it directly - `view.viewport.x =
-   * 0.5`, `view.viewport.set(…)`, `view.viewport.size.width = …` - is a
+   * 0.5`, `view.viewport.set(...)`, `view.viewport.size.width = ...` - is a
    * supported way to move the viewport: the rectangle reports every mutation
    * back here, so {@link updateId} advances exactly as it does for
    * {@link setViewport}. Backends key their "may I keep the open pass" decision

@@ -1,4 +1,4 @@
-// Auto-generated from boss-intro-cinematic.ts — edit the .ts source, not this file.
+// Auto-generated from boss-intro-cinematic.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Keyboard, Scene, Sprite, Text, View } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const titleText = 'VOID EMPEROR';

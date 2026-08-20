@@ -1,4 +1,4 @@
-// Auto-generated from z-ordering.ts — edit the .ts source, not this file.
+// Auto-generated from z-ordering.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
 class ZOrderingScene extends Scene {
     group;

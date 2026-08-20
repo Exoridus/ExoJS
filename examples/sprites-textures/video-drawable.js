@@ -1,4 +1,4 @@
-// Auto-generated from video-drawable.ts — edit the .ts source, not this file.
+// Auto-generated from video-drawable.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Every video in the asset catalog, switchable at runtime with the number

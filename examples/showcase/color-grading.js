@@ -1,4 +1,4 @@
-// Auto-generated from color-grading.ts — edit the .ts source, not this file.
+// Auto-generated from color-grading.ts - edit the .ts source, not this file.
 import { Application, Color, Keyboard, LutFilter, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const LUT_SIZE = 17;

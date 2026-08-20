@@ -64,7 +64,7 @@ export interface AllocationArchetype {
    * ~6 KB/frame while cold and ~21 once settled - which is exactly why it is
    * measured after the transient rather than through it.
    *
-   * Heavy scenes (`moving`, `mesh`, `filtered`, `blend/… alternating`) are
+   * Heavy scenes (`moving`, `mesh`, `filtered`, `blend/... alternating`) are
    * already stationary at the default to within ±0.6%, and raising their
    * warm-up would cost minutes for no gain.
    */

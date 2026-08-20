@@ -1,4 +1,4 @@
-// Auto-generated from picture-in-picture.ts — edit the .ts source, not this file.
+// Auto-generated from picture-in-picture.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Sprite, View } from '@codexo/exojs';
 class PictureInPictureScene extends Scene {
     mainView;

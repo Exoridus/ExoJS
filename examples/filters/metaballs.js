@@ -1,4 +1,4 @@
-// Auto-generated from metaballs.ts — edit the .ts source, not this file.
+// Auto-generated from metaballs.ts - edit the .ts source, not this file.
 import { Application, BlurFilter, Color, Graphics, Scene, ShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Threshold pass: render solid cyan where the (blurred) red field is dense

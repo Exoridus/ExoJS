@@ -1,4 +1,4 @@
-// Auto-generated from text-glitch.ts — edit the .ts source, not this file.
+// Auto-generated from text-glitch.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, ShaderFilter, Text } from '@codexo/exojs';
 const glsl = `#version 300 es
 precision mediump float;

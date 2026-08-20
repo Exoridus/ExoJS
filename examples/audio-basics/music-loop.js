@@ -1,4 +1,4 @@
-// Auto-generated from music-loop.ts — edit the .ts source, not this file.
+// Auto-generated from music-loop.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 class MusicLoopScene extends Scene {

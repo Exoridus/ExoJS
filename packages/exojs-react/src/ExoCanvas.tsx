@@ -42,7 +42,7 @@ export interface ExoCanvasProps extends HTMLAttributes<HTMLDivElement> {
  * `position: relative`, absolutely-positioned `children` (HUD overlays,
  * {@link import('./Scenes').Scenes}) sit over the canvas out of the box.
  *
- * Layout props (`style`, `className`, …) apply to the **wrapper**; size it to
+ * Layout props (`style`, `className`, ...) apply to the **wrapper**; size it to
  * size the canvas in `'fill'`/`'letterbox'` modes. Use {@link canvasProps} to
  * style the canvas itself. For full control with no wrapper element, use the
  * headless {@link useExoApplication} hook directly.

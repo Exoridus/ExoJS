@@ -1,4 +1,4 @@
-// Auto-generated from rectangles-collision.ts — edit the .ts source, not this file.
+// Auto-generated from rectangles-collision.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const CLEAR_TINT = new Color(120, 200, 255);

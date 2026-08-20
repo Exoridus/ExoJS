@@ -1,4 +1,4 @@
-// Auto-generated from particle-stress.ts — edit the .ts source, not this file.
+// Auto-generated from particle-stress.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Texture } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, Constant, Curve, particlesExtension, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, UpdateModule, VectorRange, } from '@codexo/exojs-particles';
 class TintCycle extends UpdateModule {

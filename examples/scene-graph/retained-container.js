@@ -1,4 +1,4 @@
-// Auto-generated from retained-container.ts — edit the .ts source, not this file.
+// Auto-generated from retained-container.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Rectangle, RetainedContainer, Scene, Sprite, Texture } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A decor field far larger than the viewport: thousands of sprites that are

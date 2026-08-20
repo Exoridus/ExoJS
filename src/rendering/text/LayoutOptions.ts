@@ -15,7 +15,7 @@ export interface LayoutOptions {
    *
    * - `'visible'`  - Keep every line; `maxHeight` is ignored.
    * - `'clip'`     - Drop the lines that do not fit.
-   * - `'ellipsis'` - Drop them and mark the last visible line with `…`,
+   * - `'ellipsis'` - Drop them and mark the last visible line with `...`,
    *   shortening it so it still fits `maxWidth` when one is set.
    */
   overflow?: 'visible' | 'clip' | 'ellipsis';

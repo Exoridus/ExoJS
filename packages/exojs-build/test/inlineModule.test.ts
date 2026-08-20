@@ -53,7 +53,7 @@ const runInScope = (source: string): Record<string, unknown> => {
   return scope;
 };
 
-/** Recovers the bundled source string from the `export default "…"` the plugin emits. */
+/** Recovers the bundled source string from the `export default "..."` the plugin emits. */
 const sourceFromModule = (moduleCode: string): string => {
   const match = /^export default (.*);\n?$/s.exec(moduleCode);
 

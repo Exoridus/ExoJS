@@ -19,7 +19,7 @@ type PendingOp = 'add' | 'remove';
  *
  * `Args` is the tuple of arguments passed to listeners - type-checked end to
  * end so a `new Signal<[number, string]>()` enforces both `dispatch(1, 'x')`
- * and the listener signature `(n: number, s: string) => …`.
+ * and the listener signature `(n: number, s: string) => ...`.
  *
  * Handlers are stored as direct function references (no wrapper objects).
  * `dispatch` tracks re-entrancy with a depth counter instead of a snapshot

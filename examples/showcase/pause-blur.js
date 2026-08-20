@@ -1,4 +1,4 @@
-// Auto-generated from pause-blur.ts — edit the .ts source, not this file.
+// Auto-generated from pause-blur.ts - edit the .ts source, not this file.
 import { Application, BlurFilter, Color, Keyboard, Label, Panel, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const PAUSE_BLUR_RADIUS = 6;

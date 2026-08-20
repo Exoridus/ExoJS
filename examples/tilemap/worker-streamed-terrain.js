@@ -1,4 +1,4 @@
-// Auto-generated from worker-streamed-terrain.ts — edit the .ts source, not this file.
+// Auto-generated from worker-streamed-terrain.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, Keyboard, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
 import { ChunkStreamer, createSampledChunkSource, createWorkerSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';

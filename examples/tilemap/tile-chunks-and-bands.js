@@ -1,4 +1,4 @@
-// Auto-generated from tile-chunks-and-bands.ts — edit the .ts source, not this file.
+// Auto-generated from tile-chunks-and-bands.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, Keyboard, PixelSnapMode, Rectangle, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';

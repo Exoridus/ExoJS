@@ -1,4 +1,4 @@
-// Auto-generated from mesh-triangle.ts — edit the .ts source, not this file.
+// Auto-generated from mesh-triangle.ts - edit the .ts source, not this file.
 import { Application, Color, Mesh, Scene } from '@codexo/exojs';
 class MeshTriangleScene extends Scene {
     triangle;

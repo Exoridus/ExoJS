@@ -1,4 +1,4 @@
-// Auto-generated from crossfade-tracks.ts — edit the .ts source, not this file.
+// Auto-generated from crossfade-tracks.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, crossFade, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const PEAK = 0.7;

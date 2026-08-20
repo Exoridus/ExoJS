@@ -1,4 +1,4 @@
-// Auto-generated from water-mirror.ts — edit the .ts source, not this file.
+// Auto-generated from water-mirror.ts - edit the .ts source, not this file.
 import { Application, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor;

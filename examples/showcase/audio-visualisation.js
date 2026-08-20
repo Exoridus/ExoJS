@@ -1,4 +1,4 @@
-// Auto-generated from audio-visualisation.ts — edit the .ts source, not this file.
+// Auto-generated from audio-visualisation.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';

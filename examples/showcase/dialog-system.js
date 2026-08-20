@@ -1,4 +1,4 @@
-// Auto-generated from dialog-system.ts — edit the .ts source, not this file.
+// Auto-generated from dialog-system.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const lines = [

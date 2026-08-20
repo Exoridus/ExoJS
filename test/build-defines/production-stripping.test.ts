@@ -215,7 +215,7 @@ describe.runIf(hasProductionBuild || mustHaveProductionBuild)('production build 
   });
 
   it('strips the __DEV__-gated assert/assertDefined bodies to no-ops', () => {
-    // `__DEV__` → `false` turns every `if (false && …) throw …` into dead code,
+    // `__DEV__` → `false` turns every `if (false && ...) throw ...` into dead code,
     // so Rollup's DCE empties the helper bodies. assert/assertDefined become
     // no-ops with no runtime cost - independent of the consumer's minifier.
     // This is the call-site-agnostic guarantee for the modular tree. Their

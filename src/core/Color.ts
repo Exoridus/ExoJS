@@ -12,7 +12,7 @@ const toChannel = (value: number): number => clamp(value, 0, 255) | 0;
  * alpha clamped to 0..1) - values outside the range no longer wrap around.
  *
  * The class predefines every CSS named color as a static readonly instance
- * (`Color.aliceBlue`, `Color.cornflowerBlue`, …). These shared instances are
+ * (`Color.aliceBlue`, `Color.cornflowerBlue`, ...). These shared instances are
  * intentionally shared - do not mutate them; clone first if you need to
  * customize a starting color.
  *

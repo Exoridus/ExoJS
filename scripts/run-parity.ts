@@ -13,7 +13,7 @@
  * `VAR=value cmd` is not portable to the Windows shells this repo is developed
  * on, and a wrapper avoids taking a dependency purely to prefix a variable.
  *
- * Usage:  tsx scripts/run-parity.ts <vitest args…>
+ * Usage:  tsx scripts/run-parity.ts <vitest args...>
  */
 import { spawnSync } from 'node:child_process';
 

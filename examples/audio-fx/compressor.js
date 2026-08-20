@@ -1,4 +1,4 @@
-// Auto-generated from compressor.ts — edit the .ts source, not this file.
+// Auto-generated from compressor.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { CompressorEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';

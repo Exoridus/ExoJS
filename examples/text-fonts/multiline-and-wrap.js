@@ -1,4 +1,4 @@
-// Auto-generated from multiline-and-wrap.ts — edit the .ts source, not this file.
+// Auto-generated from multiline-and-wrap.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Text } from '@codexo/exojs';
 const paragraph = 'ExoJS text layout can render multiline content with configurable wrapping behavior and style.';
 const longToken = 'ExoJStextlayoutrendersaverylongunbrokentokenwithoutanyspacestobreakon';

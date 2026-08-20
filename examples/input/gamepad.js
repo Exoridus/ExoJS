@@ -1,4 +1,4 @@
-// Auto-generated from gamepad.ts — edit the .ts source, not this file.
+// Auto-generated from gamepad.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, GamepadAxis, GamepadButton, lerp, Scene, Spritesheet, Vector } from '@codexo/exojs';
 class GamepadScene extends Scene {
     activePad = null;

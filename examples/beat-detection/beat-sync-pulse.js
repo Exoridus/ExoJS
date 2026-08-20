@@ -1,4 +1,4 @@
-// Auto-generated from beat-sync-pulse.ts — edit the .ts source, not this file.
+// Auto-generated from beat-sync-pulse.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Sprite, Text, Vector } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';

@@ -188,7 +188,7 @@ export interface InteractionHarness {
   readonly scene: Scene;
   readonly input: InputManager;
   readonly interaction: InteractionManager;
-  /** Enqueue a synthetic pointer event, mirroring a real `platform.onSurfaceEvent('pointer*', …)` delivery. */
+  /** Enqueue a synthetic pointer event, mirroring a real `platform.onSurfaceEvent('pointer*', ...)` delivery. */
   firePointer(type: FakePointerEventType, init: FakePointerInit): void;
   /** Drain the queued platform events through the real InputManager → InteractionManager pipeline, exactly as one `Application` frame does. */
   flush(): void;

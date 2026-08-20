@@ -26,7 +26,7 @@ type Expect<T extends true> = T;
 
 /**
  * Assertion as an EXPRESSION rather than a local type alias: the engine's strict
- * profile enables `noUnusedLocals`, under which a `type _X = Expect<…>` inside a
+ * profile enables `noUnusedLocals`, under which a `type _X = Expect<...>` inside a
  * function body is an error.
  */
 declare function expectType<_T extends true>(): void;

@@ -208,9 +208,9 @@ describe('WebGL2 texture bind cache', () => {
     harness.reset();
 
     harness.backend.setActiveTextureUnit(1).bindRawTexture(raw);
-    // Repeating the raw bind is skipped …
+    // Repeating the raw bind is skipped ...
     harness.backend.bindRawTexture(raw);
-    // … but the managed texture has to take unit 1 back.
+    // ... but the managed texture has to take unit 1 back.
     harness.backend.bindTexture(texture, 1);
 
     expect(harness.binds).toHaveLength(2);

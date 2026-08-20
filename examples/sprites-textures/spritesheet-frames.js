@@ -1,4 +1,4 @@
-// Auto-generated from spritesheet-frames.ts — edit the .ts source, not this file.
+// Auto-generated from spritesheet-frames.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Spritesheet } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const CHARACTERS = ['beige', 'green', 'pink', 'purple', 'yellow'];

@@ -214,7 +214,7 @@ export class Loader {
   // without a binding installed, and the wider union is extensible by
   // declaration merging (a package's `isValue: true` type has no built-in
   // token, and requiring one here would break any build that sees the
-  // augmentation). The `Record<CoreValueAssetKind, …>` stays compile-checked to
+  // augmentation). The `Record<CoreValueAssetKind, ...>` stays compile-checked to
   // cover exactly the core value types (vtt + srt share the SubtitleAsset
   // token). @internal
   private readonly _valueTokenByKind: Readonly<Record<CoreValueAssetKind, AssetConstructor>> = {
@@ -283,7 +283,7 @@ export class Loader {
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
   /**
-   * Application-lifetime claim scope for direct `app.loader.get/load(…)` calls.
+   * Application-lifetime claim scope for direct `app.loader.get/load(...)` calls.
    * Deliberately not exposed: its claims are released only by {@link destroy},
    * so no caller can drop an app-lifetime claim another consumer relies on.
    */
@@ -412,7 +412,7 @@ export class Loader {
   /**
    * Registers an extension→type override for bare-path resolution, scoped to
    * **this Loader instance only**: it applies to bare paths passed to this
-   * loader's `get(…)` / `load(…)`, and takes precedence over both the type
+   * loader's `get(...)` / `load(...)`, and takes precedence over both the type
    * declared by the `bindAsset` binding that claimed the suffix and the global
    * `defineAsset` default.
    *
@@ -456,7 +456,7 @@ export class Loader {
    *
    * Each entry's asset type must support byte-source construction
    * ({@link AssetHandler.createFromBytes}); the factory-backed core types
-   * (textures, audio, JSON, text, binary, …) do. Throws on a malformed
+   * (textures, audio, JSON, text, binary, ...) do. Throws on a malformed
    * container, an unsupported format version, an unknown type, or a type that
    * cannot be built from bytes.
    *
@@ -589,7 +589,7 @@ export class Loader {
    * ```
    */
   // The `[KindByPath<S>] extends [never]` tuple guard is deliberate: the
-  // distributive `never extends …` is vacuously TRUE, which would wrongly
+  // distributive `never extends ...` is vacuously TRUE, which would wrongly
   // ACCEPT paths whose suffix is unregistered.
   //
   // Single-arg only: per-asset options go through `Asset.type(type, src, opts)`,
@@ -742,7 +742,7 @@ export class Loader {
 
   /**
    * Sets the maximum number of simultaneous background-queue fetches.
-   * Takes effect on the next {@link awaitBackground} call or `load(…, { background })`.
+   * Takes effect on the next {@link awaitBackground} call or `load(..., { background })`.
    */
   public setConcurrency(n: number): this {
     this._residency.setConcurrency(n);
@@ -780,7 +780,7 @@ export class Loader {
    * {@link registerType} override, then the binding-declared type, then the
    * global `defineAsset` default. A
    * resource suffix yields its heal-in-place handle; a value suffix (`json`,
-   * `txt`, `csv`, …) yields a stable {@link AssetRef}. Only leaf-capable
+   * `txt`, `csv`, ...) yields a stable {@link AssetRef}. Only leaf-capable
    * suffixes are accepted at compile time (`ExtensionKindMap`); dynamic strings
    * resolving to an unregistered suffix or a non-leaf type throw with guidance.
    * The same source always yields the same instance - also across
@@ -817,11 +817,11 @@ export class Loader {
    * `load(Asset.type(...))`.
    *
    * The return type follows the {@link ValueAsset} brand (as {@link InferCatalogLeaf}
-   * does): a value-type descriptor (`Asset.type<T>('json', …)`) returns
+   * does): a value-type descriptor (`Asset.type<T>('json', ...)`) returns
    * `AssetRef<T>` - even for an object payload - while a resource-type descriptor
    * returns the resource itself, so the type always matches the runtime value.
    * Both come back BRANDED, mirroring the `_assetMeta` stamp `createLeaf` applies,
-   * so the returned leaf can be fed straight back into a single-leaf `load(…)`.
+   * so the returned leaf can be fed straight back into a single-leaf `load(...)`.
    *
    * Unlike bare-path `get('x.png')`, this form is **not instance-deduped by
    * source**: each call builds a fresh leaf, so repeated `get(Asset.type(type, sameSrc))`

@@ -67,7 +67,7 @@ const containerWithSizedChild = (): Container => {
 
 // THE TABLE. One row per public member that changes visual output. Adding a
 // mutator to SceneNode/RenderNode/Drawable/Container - OR to a Drawable
-// SUBCLASS (Sprite/NineSliceSprite/Mesh/Text/…, see `subclassCases` below) -
+// SUBCLASS (Sprite/NineSliceSprite/Mesh/Text/..., see `subclassCases` below) -
 // without a row here is a review error; a row whose bump assertion fails is an
 // engine bug.
 const cases: readonly MutatorCase[] = [

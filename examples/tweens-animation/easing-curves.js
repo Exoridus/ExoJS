@@ -1,4 +1,4 @@
-// Auto-generated from easing-curves.ts — edit the .ts source, not this file.
+// Auto-generated from easing-curves.ts - edit the .ts source, not this file.
 import { Application, Color, Ease, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Every built-in Ease function, in source order.

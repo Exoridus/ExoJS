@@ -1,4 +1,4 @@
-// Auto-generated from action-mapping.ts — edit the .ts source, not this file.
+// Auto-generated from action-mapping.ts - edit the .ts source, not this file.
 import { Application, Color, GamepadAxis, GamepadButton, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // The lesson: bind several *physical* inputs to a few *named actions*, then read

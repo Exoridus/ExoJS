@@ -1,4 +1,4 @@
-// Auto-generated from sprite-follows-body.ts — edit the .ts source, not this file.
+// Auto-generated from sprite-follows-body.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Sprite, Spritesheet, SystemOrder, Vector } from '@codexo/exojs';
 import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';

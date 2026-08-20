@@ -357,11 +357,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
         // Concurrency guard, combining TWO checks - neither subsumes the
         // other:
-        //   • The generation term catches an abort routed through
+        //   - The generation term catches an abort routed through
         //     `_abortInFlightNavigation` (the only caller that bumps
         //     `_navigationGeneration`), including a direct (non-transitioned)
         //     commit that previously had no abort checkpoint at all.
-        //   • The session-identity term catches a session that self-terminated
+        //   - The session-identity term catches a session that self-terminated
         //     DURING this async prepare window WITHOUT going through
         //     `_abortInFlightNavigation` - i.e. `session.update()`/`render()`
         //     threw, or the session reported `done` before commit. Those paths

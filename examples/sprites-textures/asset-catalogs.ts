@@ -75,7 +75,7 @@ class AssetCatalogsScene extends Scene {
         // #endregion guide:catalog-parallel
 
         // #region guide:non-leaf-load
-        // Non-leaf types (`music`, `video`, `bmFont`, `font`, …) have no
+        // Non-leaf types (`music`, `video`, `bmFont`, `font`, ...) have no
         // bare-path form and no placeholder to hand back, even for a literal
         // path - they are always loaded by reference and awaited.
         this.theme = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));

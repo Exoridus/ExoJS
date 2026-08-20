@@ -1,4 +1,4 @@
-// Auto-generated from render-pipeline.ts — edit the .ts source, not this file.
+// Auto-generated from render-pipeline.ts - edit the .ts source, not this file.
 import { Application, BlurFilter, CallbackRenderPass, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 // A composable frame, configured once: the world renders off-screen, a blur step turns it into its
 // blurred version, a composite step draws that to the screen, and a nested UI pipeline overlays a HUD.

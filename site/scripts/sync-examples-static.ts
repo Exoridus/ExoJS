@@ -73,7 +73,7 @@ const run = (): void => {
 
     // Generate assets/catalog.js - the resolved runtime catalog imported by the
     // controlled example runtimes to populate the `assets` global. Paths are
-    // resolved relative to preview.html (i.e. 'assets/demo/…', 'assets/technical/…')
+    // resolved relative to preview.html (i.e. 'assets/demo/...', 'assets/technical/...')
     // so no basePath is needed in loaders.
     const resolved = resolveAssetCatalog(rawAssets, 'assets/');
     const resolvedAssets = resolveAssetCatalog(assets as unknown as Record<string, unknown>, 'assets/');

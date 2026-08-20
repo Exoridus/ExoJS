@@ -1,7 +1,7 @@
 import { LoadState, type LoadStateValue } from '#core/LoadState';
 
 /**
- * Deferred handle for value assets (parsed JSON, text, CSV rows, …), returned
+ * Deferred handle for value assets (parsed JSON, text, CSV rows, ...), returned
  * by `loader.get(Asset.type('json', src))` / a bare value path and friends. Values cannot heal in place the way
  * resource handles do, so the REF is the stable identity: {@link value} throws
  * until `'ready'`, {@link loaded} resolves with the value itself, and a failed

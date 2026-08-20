@@ -6,7 +6,7 @@
 import { createShaderPlugin, createWorkerPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 
 /**
- * Conditions that activate each package's package-private `@codexo/…-source`
+ * Conditions that activate each package's package-private `@codexo/...-source`
  * imports condition so `#*` resolves to ./src during tests, plus the standard
  * conditions that keep normal dependency resolution intact (browser-first).
  */

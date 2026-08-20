@@ -1,4 +1,4 @@
-// Auto-generated from custom-wgsl-module.ts — edit the .ts source, not this file.
+// Auto-generated from custom-wgsl-module.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Vector } from '@codexo/exojs';
 import { Constant, particlesExtension, ParticleSystem, RateSpawn, UpdateModule, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';

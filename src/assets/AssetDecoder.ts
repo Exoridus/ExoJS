@@ -188,8 +188,8 @@ export class AssetDecoder {
    * `context.fetchArrayBuffer` / `context.fetchJson`, which route through
    * the loader's cache strategy.
    *
-   * A cancellation rejection is rethrown unwrapped: the "Failed to load … from
-   * …" envelope would hide the `AbortError` name the residency dispatches on to
+   * A cancellation rejection is rethrown unwrapped: the "Failed to load ... from
+   * ..." envelope would hide the `AbortError` name the residency dispatches on to
    * tell a deliberate cancel apart from a genuine load failure.
    * @internal
    */

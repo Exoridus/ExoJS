@@ -1,4 +1,4 @@
-// Auto-generated from catalog.ts — edit the .ts source, not this file.
+// Auto-generated from catalog.ts - edit the .ts source, not this file.
 export const rawAssets = {
     textures: {
         particleFlame: 'demo/textures/particle-flame.png',

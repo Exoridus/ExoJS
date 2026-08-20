@@ -1,4 +1,4 @@
-// Auto-generated from chromatic-aberration.ts — edit the .ts source, not this file.
+// Auto-generated from chromatic-aberration.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A dense checkerboard makes the per-channel RGB split read clearly along edges.

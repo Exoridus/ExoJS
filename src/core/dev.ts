@@ -12,11 +12,11 @@
 //
 //   1. Trivial value/property checks - the comparisons and template-literal
 //      messages are simple enough that the production cost is negligible.
-//      → No guard needed; the inline `if (__DEV__ && …)` in the function
+//      → No guard needed; the inline `if (__DEV__ && ...)` in the function
 //        body is sufficient.
 //
 //   2. Nontrivial string formatting or allocations - the callsite wraps the
-//      call in an explicit `if (__DEV__) { … }` block so the arguments are
+//      call in an explicit `if (__DEV__) { ... }` block so the arguments are
 //      never evaluated in production.
 //
 //   3. Side-effecting validation - callsites that mutate state must always

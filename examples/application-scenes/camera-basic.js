@@ -1,4 +1,4 @@
-// Auto-generated from camera-basic.ts — edit the .ts source, not this file.
+// Auto-generated from camera-basic.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
 class CameraBasicScene extends Scene {
     bunny;

@@ -17,7 +17,7 @@ class SvgDrawableScene extends Scene {
         // the SVG is vector, so it stays crisp at any rasterised resolution.
         //
         // The cast below works around a pre-existing overload-resolution gap:
-        // every value-asset dispatch token (Json/TextAsset/SvgAsset/…) is an
+        // every value-asset dispatch token (Json/TextAsset/SvgAsset/...) is an
         // empty marker class, so they're structurally identical to `load()`'s
         // `typeof Json` overload - which is declared first and wins, typing
         // the result as `unknown` instead of `HTMLImageElement`. See the

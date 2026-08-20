@@ -18,12 +18,12 @@ import { expectPixelNear } from './_pixels';
 // The browser project rewrites `.vert`/`.frag` imports to empty strings, so the
 // default engine shaders the backend compiles on connect must be mocked with
 // valid sources. The mesh sources keep the REAL pinned attribute locations
-// (0/1/2) so the shared VAO matches the custom material's `layout(location=…)`.
+// (0/1/2) so the shared VAO matches the custom material's `layout(location=...)`.
 // Every default renderer is connected on backend.initialize() and extracts its
 // declared attributes, so each default shader needs valid sources with the
 // exact attributes its renderer expects. The mesh sources keep the REAL pinned
 // attribute locations (0/1/2) so the shared VAO matches the custom material's
-// `layout(location=…)`; the sprite/particle/text sources mirror the engine's
+// `layout(location=...)`; the sprite/particle/text sources mirror the engine's
 // real attribute interfaces but are otherwise inert (never drawn here).
 
 const canvasSize = 64;

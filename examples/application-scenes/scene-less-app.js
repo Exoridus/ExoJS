@@ -1,4 +1,4 @@
-// Auto-generated from scene-less-app.ts — edit the .ts source, not this file.
+// Auto-generated from scene-less-app.ts - edit the .ts source, not this file.
 import { Application, Color, Sprite } from '@codexo/exojs';
 // A scene-less Application: no Scene is ever registered or started. All
 // frame work happens through a single app-level system - useful for utility

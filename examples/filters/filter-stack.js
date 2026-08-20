@@ -1,4 +1,4 @@
-// Auto-generated from filter-stack.ts — edit the .ts source, not this file.
+// Auto-generated from filter-stack.ts - edit the .ts source, not this file.
 import { Application, BlurFilter, Color, ColorMatrixFilter, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;

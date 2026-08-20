@@ -22,7 +22,7 @@ describe('resolveSubAssetPath', () => {
   it('keeps a root-absolute source root-absolute (deployment under a sub-path)', () => {
     // Regression: this used to return 'site/assets/demo/fonts/page-0.png'
     // (leading slash dropped), which the browser re-resolved against the
-    // document base URL - /site/site/assets/… 404s for every BmFont page in
+    // document base URL - /site/site/assets/... 404s for every BmFont page in
     // the playground.
     expect(resolveSubAssetPath('page-0.png', '/site/assets/demo/fonts/x.fnt')).toBe('/site/assets/demo/fonts/page-0.png');
   });

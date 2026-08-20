@@ -1,4 +1,4 @@
-// Auto-generated from damage-flash.ts — edit the .ts source, not this file.
+// Auto-generated from damage-flash.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Signal, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 class DamageFlashScene extends Scene {

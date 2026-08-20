@@ -1,4 +1,4 @@
-// Auto-generated from effect-chains.ts — edit the .ts source, not this file.
+// Auto-generated from effect-chains.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, HighpassFilter, Keyboard, LowpassFilter, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, AutoWahEffect, BitCrusherEffect, ChorusEffect, CompressorEffect, ConvolutionEffect, DistortionEffect, EqualizerEffect, FlangerEffect, GranularEffect, LimiterEffect, PhaserEffect, PingPongDelayEffect, PitchShiftEffect, ReverbEffect, RingModulatorEffect, TremoloEffect, } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';

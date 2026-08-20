@@ -107,9 +107,9 @@ describe('defineAsset', () => {
       create: noopHandler,
     });
 
-    // The binding still carries its extension for the per-loader materialize path…
+    // The binding still carries its extension for the per-loader materialize path...
     expect(binding.extensions).toEqual(['fnt']);
-    // …but the GLOBAL kind/extension registries stay untouched: a non-leaf kind
+    // ...but the GLOBAL kind/extension registries stay untouched: a non-leaf kind
     // has no placeholder strategy, so bare-path inference must not resolve it.
     expect(getAssetKind('bmFont')).toBeUndefined();
     expect(resolveKindByPath('font.fnt')).toBeUndefined();

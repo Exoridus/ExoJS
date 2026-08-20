@@ -623,7 +623,7 @@ export class Container extends RenderNode {
       this._bounds.addRect(localBounds, this.getGlobalTransform());
     }
 
-    // Indexed rather than `for…of`: this runs once per container per frame from
+    // Indexed rather than `for...of`: this runs once per container per frame from
     // the cull walk, and V8 does not scalar-replace the array iterator here -
     // the iterator result objects show up as the single largest steady-state
     // allocation of a scene whose transforms are dirty every frame.

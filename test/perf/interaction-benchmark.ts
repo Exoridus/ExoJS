@@ -147,7 +147,7 @@ const results: BenchmarkResult[] = [];
 // Scenario 3 - Drag-move: one draggable node, a real press + 50
 // pointermoves-past-threshold per iteration, driven through the actual
 // gesture-recognizer + drag state machine (InteractionManager._advanceDragOnMove),
-// not a hand-simulated `position.x = …` write.
+// not a hand-simulated `position.x = ...` write.
 // ---------------------------------------------------------------------------
 
 {

@@ -1,4 +1,4 @@
-// Auto-generated from backend-comparison.ts — edit the .ts source, not this file.
+// Auto-generated from backend-comparison.ts - edit the .ts source, not this file.
 import { Application, Color, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 const options = {

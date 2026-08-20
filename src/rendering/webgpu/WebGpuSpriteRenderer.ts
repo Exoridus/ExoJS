@@ -1674,7 +1674,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       cache.set(fallbackTexture, entries);
     }
 
-    // Indexed rather than `for…of`: this loop runs once per draw, and V8 does
+    // Indexed rather than `for...of`: this loop runs once per draw, and V8 does
     // not scalar-replace the array iterator here (measured - see the WebGPU
     // allocation audit).
     for (let entryIndex = 0; entryIndex < entries.length; entryIndex++) {

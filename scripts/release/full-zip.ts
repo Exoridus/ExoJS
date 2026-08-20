@@ -178,7 +178,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
 
 /**
  * Compresses the assembled tree into a `.zip` (tree contents at the archive
- * root: `npm/`, `vendor/`, `site/`, …). On Windows uses .NET `ZipFile` via
+ * root: `npm/`, `vendor/`, `site/`, ...). On Windows uses .NET `ZipFile` via
  * `pwsh` (fast + reliable for large trees, unlike `Compress-Archive`); on POSIX
  * uses `zip -r`.
  */

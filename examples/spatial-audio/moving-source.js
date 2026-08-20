@@ -1,4 +1,4 @@
-// Auto-generated from moving-source.ts — edit the .ts source, not this file.
+// Auto-generated from moving-source.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Orbit + attenuation tuned to the wide canvas so the readout reflects what you

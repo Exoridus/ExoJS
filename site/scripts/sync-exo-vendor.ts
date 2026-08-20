@@ -277,7 +277,7 @@ const rewriteSubpathImports = (esmDir: string, dtsRelFiles: ReadonlyArray<string
         }
     }
 
-    // Only flag `#` in import position - not GLSL `"#version …"` strings, hex
+    // Only flag `#` in import position - not GLSL `"#version ..."` strings, hex
     // colours like `'#6495ed'`, or `//# sourceMappingURL` comments.
     const leakRe = /(?:\bfrom\s*|\bimport\s*\(\s*)['"]#[^'"]+['"]/;
     const leaked = dtsRelFiles.filter(rel => leakRe.test(fs.readFileSync(path.resolve(esmDir, rel), 'utf8')));
@@ -405,7 +405,7 @@ const syncVendor = (): void => {
         if (!fs.existsSync(pkgDist)) {
             // Hard error on purpose. This used to warn-and-skip, which shipped a
             // playground where every extension example failed at runtime with
-            // "Cannot find module '@codexo/exojs-…'" - and nobody saw the warning.
+            // "Cannot find module '@codexo/exojs-...'" - and nobody saw the warning.
             throw new Error(
                 `[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist}. ` +
                     `Build the extension packages first: pnpm --filter "@codexo/exojs-*" build`

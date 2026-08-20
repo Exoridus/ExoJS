@@ -1,4 +1,4 @@
-// Auto-generated from basic-text.ts — edit the .ts source, not this file.
+// Auto-generated from basic-text.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Text, Time } from '@codexo/exojs';
 class BasicTextScene extends Scene {
     time;

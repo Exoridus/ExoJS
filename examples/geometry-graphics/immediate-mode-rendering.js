@@ -1,4 +1,4 @@
-// Auto-generated from immediate-mode-rendering.ts — edit the .ts source, not this file.
+// Auto-generated from immediate-mode-rendering.ts - edit the .ts source, not this file.
 import { Application, Color, Geometry, Matrix, RenderBatch, Scene } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Number of instances drawn in the batched field. The whole field is one

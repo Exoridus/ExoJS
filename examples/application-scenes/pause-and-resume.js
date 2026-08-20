@@ -1,4 +1,4 @@
-// Auto-generated from pause-and-resume.ts — edit the .ts source, not this file.
+// Auto-generated from pause-and-resume.ts - edit the .ts source, not this file.
 import { Application, Color, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
 class PauseResumeScene extends Scene {
     sprite;

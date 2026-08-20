@@ -1,4 +1,4 @@
-// Auto-generated from mini-map.ts — edit the .ts source, not this file.
+// Auto-generated from mini-map.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, View } from '@codexo/exojs';
 class MiniMapScene extends Scene {
     worldContainer;

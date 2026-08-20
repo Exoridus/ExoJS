@@ -7,7 +7,7 @@ import { type ExoApplicationOptions, useExoApplication, type UseExoApplicationRe
 import { MockApplication } from './support/mock-application';
 
 // Replace ONLY the GPU-bound `Application`; every pure export (Color, Scene,
-// ApplicationState, …) stays real via `importActual`. The mock module is
+// ApplicationState, ...) stays real via `importActual`. The mock module is
 // imported INSIDE the factory because `vi.mock` is hoisted above the file's
 // imports, so top-level bindings are not yet initialised when it runs.
 vi.mock('@codexo/exojs', async importActual => {

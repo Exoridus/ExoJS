@@ -193,7 +193,7 @@ export type ResourceForKind<K extends keyof AssetDefinitions> = AssetDefinitions
  *
  * The brand is what the loader's single-leaf overloads match on - it mirrors the
  * runtime `_assetMeta` stamp `createLeaf` applies, so a raw `new Texture()` (or
- * an `AudioStream`, a `BmFont`, …) is correctly rejected where a materialized
+ * an `AudioStream`, a `BmFont`, ...) is correctly rejected where a materialized
  * leaf is required.
  *
  * Deliberately NOT the type of a bare-path `loader.get(path)` result (that is
@@ -234,7 +234,7 @@ export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
  * The leaf type a {@link CatalogEntry} materializes as - always BRANDED (see
  * {@link LeafForKind}), because every one of these is produced by `createLeaf`
  * and therefore carries the runtime `_assetMeta` stamp. A {@link ValueAsset}
- * brand (from `Asset.type<T>('json', …)`) classifies as `AssetRef<T>` FIRST,
+ * brand (from `Asset.type<T>('json', ...)`) classifies as `AssetRef<T>` FIRST,
  * before the `T extends object` heuristic that (only) the unbranded legacy
  * `Asset.type(...)` descriptors still rely on.
  */

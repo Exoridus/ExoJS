@@ -1,4 +1,4 @@
-// Auto-generated from trail-feedback.ts — edit the .ts source, not this file.
+// Auto-generated from trail-feedback.ts - edit the .ts source, not this file.
 import { Application, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 class TrailFeedbackScene extends Scene {
     // Two render targets, ping-ponged each frame. Reading from and writing to

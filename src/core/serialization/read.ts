@@ -82,7 +82,7 @@ export function asObject(value: unknown): Data | null {
  * Narrow an already-extracted value to a {@link SerializedNode} (an object
  * carrying a string `type` tag), or `null`. Guards the recursive child descent
  * so a `children` array containing non-objects is skipped rather than crashing
- * with `Cannot read 'type' of …`.
+ * with `Cannot read 'type' of ...`.
  */
 export function asSerializedNode(value: unknown): SerializedNode | null {
   return typeof value === 'object' && value !== null && typeof (value as Data).type === 'string' ? (value as SerializedNode) : null;

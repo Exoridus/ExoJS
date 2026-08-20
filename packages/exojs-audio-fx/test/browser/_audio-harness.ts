@@ -9,7 +9,7 @@
 export const SAMPLE_RATE = 48000;
 
 interface RenderOptions {
-  /** Worklet source string (the `…WorkletSource` export). */
+  /** Worklet source string (the `...WorkletSource` export). */
   source: string;
   /** Processor name registered via `registerProcessor()` in the source. */
   processorName: string;

@@ -1,4 +1,4 @@
-// Auto-generated from crt-scanlines.ts — edit the .ts source, not this file.
+// Auto-generated from crt-scanlines.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A regular pixel grid makes the scanline darkening and barrel warp obvious.

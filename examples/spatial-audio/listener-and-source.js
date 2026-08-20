@@ -1,4 +1,4 @@
-// Auto-generated from listener-and-source.ts — edit the .ts source, not this file.
+// Auto-generated from listener-and-source.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Spatial parameters tuned to the canvas so attenuation is visible across the

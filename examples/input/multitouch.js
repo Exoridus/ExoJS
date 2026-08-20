@@ -1,4 +1,4 @@
-// Auto-generated from multitouch.ts — edit the .ts source, not this file.
+// Auto-generated from multitouch.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const MAX_TOUCHES = 10;

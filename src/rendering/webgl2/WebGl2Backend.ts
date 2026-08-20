@@ -205,7 +205,7 @@ const renderTargetTextureSyncUnit = 17;
 
 /**
  * Row length (in channels) from which packing a rectangular texture region
- * switches from a plain element loop to `set(subarray(…))`.
+ * switches from a plain element loop to `set(subarray(...))`.
  *
  * `set` copies natively but needs a view per row, and below roughly this length
  * the call overhead outweighs the copy: measured per pack, 8x8 rows 74 ns
@@ -1753,7 +1753,7 @@ export class WebGl2Backend implements RenderBackend {
       return false;
     }
 
-    // Indexed rather than `for…of`: the inner texture-state loop next to it is
+    // Indexed rather than `for...of`: the inner texture-state loop next to it is
     // already indexed for the same reason - every retained set is validated
     // once per frame, and the array iterator's per-step result object is the
     // kind of steady-state garbage a fully retained frame must not produce.
@@ -2511,7 +2511,7 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * Return the packing scratch for `state`, at least `length` elements long
    * (grown on demand, never shrunk, kind-matched to `source`). It is NOT
-   * narrowed to `length`: the caller passes it to the `(…, srcData, srcOffset)`
+   * narrowed to `length`: the caller passes it to the `(..., srcData, srcOffset)`
    * overload, which reads exactly the rectangle's worth of elements from the
    * offset - so a longer buffer uploads the same bytes as an exact-length view
    * would, without allocating one per pack. Reusing this buffer across every
@@ -2628,7 +2628,7 @@ export class WebGl2Backend implements RenderBackend {
         // A region is already contiguous and tightly packed in the row-major
         // buffer when it spans full rows, and equally when it is a single row
         // (however narrow - one row never straddles a gap). Both let the
-        // `(…, srcData, srcOffset)` overload read straight out of the texture
+        // `(..., srcData, srcOffset)` overload read straight out of the texture
         // buffer at an element offset, with nothing to pack. Between them they
         // cover every shape the engine's own uploads take: full-width bands
         // (ring-buffer style writes, a whole transform store) and single-row

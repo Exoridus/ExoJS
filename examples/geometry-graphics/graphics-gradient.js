@@ -1,4 +1,4 @@
-// Auto-generated from graphics-gradient.ts — edit the .ts source, not this file.
+// Auto-generated from graphics-gradient.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, LinearGradient, RadialGradient, Scene } from '@codexo/exojs';
 class GraphicsGradientScene extends Scene {
     sceneRoot;

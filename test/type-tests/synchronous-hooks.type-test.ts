@@ -52,7 +52,7 @@ class ExplicitSyncScene extends Scene {
 void ExplicitSyncScene;
 
 // Only thenables are banned - the engine's fluent `update(delta): this`
-// convention (Application, SceneDirector, AnimatedSprite, ParticleSystem, …)
+// convention (Application, SceneDirector, AnimatedSprite, ParticleSystem, ...)
 // must keep compiling, so a non-thenable return stays legal.
 class FluentScene extends Scene {
   public override update(_delta: Time): this {

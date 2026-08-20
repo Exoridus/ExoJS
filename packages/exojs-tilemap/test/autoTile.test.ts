@@ -290,12 +290,12 @@ describe('WangSet — membership', () => {
       tilesetIndex: 0,
     });
 
-    // blobMap values are members…
+    // blobMap values are members...
     expect(wangSet.isMember(10)).toBe(true);
     expect(wangSet.isMember(11)).toBe(true);
-    // …explicit members too…
+    // ...explicit members too...
     expect(wangSet.isMember(99)).toBe(true);
-    // …and unrelated ids are not.
+    // ...and unrelated ids are not.
     expect(wangSet.isMember(0)).toBe(false);
     expect(wangSet.members.has(10)).toBe(true);
   });

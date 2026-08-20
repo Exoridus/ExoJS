@@ -1,4 +1,4 @@
-// Auto-generated from ldtk-world-import.ts — edit the .ts source, not this file.
+// Auto-generated from ldtk-world-import.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, Graphics, Scene, Text } from '@codexo/exojs';
 import { getLdtkIntGridValueAt, ldtkExtension } from '@codexo/exojs-ldtk';
 import { TileMapNode } from '@codexo/exojs-tilemap';

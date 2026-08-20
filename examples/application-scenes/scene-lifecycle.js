@@ -1,4 +1,4 @@
-// Auto-generated from scene-lifecycle.ts — edit the .ts source, not this file.
+// Auto-generated from scene-lifecycle.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Text, Time, Timer } from '@codexo/exojs';
 // The scene lifecycle hooks, in the order the engine calls them:
 //   - `async load()`   - one-shot async setup, called once before `init()`.

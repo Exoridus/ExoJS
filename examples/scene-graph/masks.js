@@ -1,4 +1,4 @@
-// Auto-generated from masks.ts — edit the .ts source, not this file.
+// Auto-generated from masks.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Rectangle, Scene, Sprite } from '@codexo/exojs';
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 class MasksScene extends Scene {

@@ -1,4 +1,4 @@
-// Auto-generated from sprite-basics.ts — edit the .ts source, not this file.
+// Auto-generated from sprite-basics.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 class SpriteBasicsScene extends Scene {

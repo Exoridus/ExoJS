@@ -1,4 +1,4 @@
-// Auto-generated from audio-reactive-particles.ts — edit the .ts source, not this file.
+// Auto-generated from audio-reactive-particles.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Text, Vector } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn, } from '@codexo/exojs-particles';

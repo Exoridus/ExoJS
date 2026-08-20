@@ -246,7 +246,7 @@ export class RetainedInstructionSet {
       return false;
     }
 
-    // Indexed rather than `for…of`: every retained group is validated once per
+    // Indexed rather than `for...of`: every retained group is validated once per
     // frame, so the array iterator's result objects are per-instruction garbage
     // on the hottest steady-state path there is.
     for (let i = 0; i < this._instructions.length; i++) {
