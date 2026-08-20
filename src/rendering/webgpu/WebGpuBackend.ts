@@ -1589,7 +1589,16 @@ export class WebGpuBackend implements RenderBackend {
         // happens after this collect-time validation): recorded UV words are
         // normalized against the record-time texture size, so any size change
         // - pending or materialized - must force a recapture.
-        if (state === undefined || state.view !== payload.recordedViews[i] || state.width !== texture.width || state.height !== texture.height) {
+        // The orientation check is the same argument one axis further: the
+        // recorded UV words carry the flipY swap baked in, so a texture that
+        // flips afterwards replays upside down while view and size still match.
+        if (
+          state === undefined ||
+          state.view !== payload.recordedViews[i] ||
+          state.width !== texture.width ||
+          state.height !== texture.height ||
+          (texture instanceof Texture && texture.flipY) !== payload.recordedFlipY[i]
+        ) {
           set.invalidate();
 
           return false;
@@ -1655,6 +1664,7 @@ export class WebGpuBackend implements RenderBackend {
 
     const textureList: Array<Texture | RenderTexture> = [];
     const recordedViews: GPUTextureView[] = [];
+    const recordedFlipY: boolean[] = [];
 
     for (let i = 0; i < slotCount; i++) {
       const texture = textures[i];
@@ -1667,6 +1677,7 @@ export class WebGpuBackend implements RenderBackend {
       // The flush that stages this batch just resolved every slot's binding,
       // so the managed state exists and this is a pure cache read.
       recordedViews.push(this._getTextureState(texture).view);
+      recordedFlipY.push(texture instanceof Texture && texture.flipY);
     }
 
     const payload: WebGpuRetainedBatchPayload = {
@@ -1681,6 +1692,7 @@ export class WebGpuBackend implements RenderBackend {
       batchIndexInBundle: owner.staged.length,
       textures: textureList,
       recordedViews,
+      recordedFlipY,
       rendererData,
     };
     // Generation is stamped at capture end (post-growth, official plan-layer

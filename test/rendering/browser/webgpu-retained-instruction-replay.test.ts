@@ -470,4 +470,65 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
       backend.destroy();
     }
   });
+
+  test('cell 7 — a texture flipping vertically invalidates the recording instead of replaying stale UVs', async ctx => {
+    const backend = await setupBackend();
+    const source = document.createElement('canvas');
+
+    source.width = 8;
+    source.height = 8;
+
+    const sourceCtx = source.getContext('2d')!;
+
+    // Vertically asymmetric on purpose: a solid texture reads identically
+    // flipped and could not catch a stale-orientation replay.
+    sourceCtx.fillStyle = '#00ff00';
+    sourceCtx.fillRect(0, 0, 8, 4);
+    sourceCtx.fillStyle = '#0000ff';
+    sourceCtx.fillRect(0, 4, 8, 4);
+
+    const texture = new Texture(source);
+    const root = new Container();
+    const group = new RetainedContainer();
+    const sprite = new Sprite(texture);
+
+    try {
+      group.addChild(sprite);
+      root.addChild(group);
+
+      for (let frame = 0; frame < 3; frame++) {
+        if (!(await renderScene(ctx, backend, root))) {
+          return;
+        }
+      }
+
+      let readPixel = readWebGpuPixels(backend, canvasSize);
+
+      expectPixelNear(readPixel(4, 1), [0, 255, 0, 255]);
+      expectPixelNear(readPixel(4, 6), [0, 0, 255, 255]);
+
+      // Orientation-only change: the pixels, the size and the managed view all
+      // stay as recorded, and no node revision bumps. The vertical swap lives
+      // in the recorded UV words alone, so only backend-side validation can
+      // notice - exactly the gap the dimension check does not cover.
+      texture.flipY = true;
+
+      for (let frame = 0; frame < 2; frame++) {
+        if (!(await renderScene(ctx, backend, root))) {
+          return;
+        }
+
+        readPixel = readWebGpuPixels(backend, canvasSize);
+
+        expectPixelNear(readPixel(4, 1), [0, 0, 255, 255]);
+        expectPixelNear(readPixel(4, 6), [0, 255, 0, 255]);
+      }
+
+      expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
+    } finally {
+      root.destroy();
+      texture.destroy();
+      backend.destroy();
+    }
+  });
 });

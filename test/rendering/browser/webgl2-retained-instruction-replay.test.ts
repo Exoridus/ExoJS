@@ -457,4 +457,57 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       backend.destroy();
     }
   });
+  test('cell 8 - a texture flipping vertically invalidates the recording instead of replaying stale UVs', async () => {
+    const backend = await createBackend();
+    const src = document.createElement('canvas');
+
+    src.width = 16;
+    src.height = 16;
+
+    const ctx = src.getContext('2d')!;
+
+    // Vertically asymmetric on purpose: a solid texture reads identically
+    // flipped and could not catch a stale-orientation replay.
+    ctx.fillStyle = '#00ff00';
+    ctx.fillRect(0, 0, 16, 8);
+    ctx.fillStyle = '#0000ff';
+    ctx.fillRect(0, 8, 16, 8);
+
+    const tex = new Texture(src);
+    const root = new Container();
+    const group = new RetainedContainer();
+    const sprite = new Sprite(tex);
+
+    group.addChild(sprite);
+    group.setPosition(8, 24);
+    root.addChild(group);
+
+    try {
+      render(backend, root); // F1 capture
+      render(backend, root); // F2 record
+      render(backend, root); // F3 splice
+
+      expectPixelNear(readWebGl2Pixel(backend, 16, 28), [0, 255, 0, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 36), [0, 0, 255, 255]);
+
+      // Orientation-only change: pixels, size and texture identity all stay as
+      // recorded and no node revision bumps, so only backend-side validation
+      // can catch that the recorded UV words carry the old vertical order.
+      tex.flipY = true;
+
+      render(backend, root); // validation must reject -> live fallback + re-record
+
+      expectPixelNear(readWebGl2Pixel(backend, 16, 28), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 36), [0, 255, 0, 255]);
+
+      render(backend, root); // the fresh recording replays
+
+      expectPixelNear(readWebGl2Pixel(backend, 16, 28), [0, 0, 255, 255]);
+      expectPixelNear(readWebGl2Pixel(backend, 16, 36), [0, 255, 0, 255]);
+    } finally {
+      root.destroy();
+      tex.destroy();
+      backend.destroy();
+    }
+  });
 });
