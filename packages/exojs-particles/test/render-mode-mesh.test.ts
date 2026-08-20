@@ -31,15 +31,15 @@ const makeUntexturedTriangle = (): Geometry =>
 
 const spawnParticles = (system: ParticleSystem, count: number): void => {
   for (let i = 0; i < count; i++) {
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.posX[slot] = i * 10;
-    system.posY[slot] = i * 20;
-    system.scaleX[slot] = 1 + i;
-    system.scaleY[slot] = 2 + i;
-    system.rotations[slot] = i * 15;
-    system.color[slot] = 0xff00ff00 + i;
-    system.lifetime[slot] = 5;
+    system._storage.posX[slot] = i * 10;
+    system._storage.posY[slot] = i * 20;
+    system._storage.scaleX[slot] = 1 + i;
+    system._storage.scaleY[slot] = 2 + i;
+    system._storage.rotations[slot] = i * 15;
+    system._storage.color[slot] = 0xff00ff00 + i;
+    system._storage.lifetime[slot] = 5;
   }
 };
 
@@ -82,7 +82,7 @@ describe('MeshParticles', () => {
     const mode = new MeshParticles({ geometry: makeTriangle() });
 
     spawnParticles(system, 3);
-    mode.build(system);
+    mode.build(system, system._storage);
 
     expect(mode.count).toBe(3);
     expect(mode.data.byteLength).toBeGreaterThanOrEqual(3 * 40);
@@ -100,8 +100,8 @@ describe('MeshParticles', () => {
     const quad = new QuadParticles();
 
     spawnParticles(system, 4);
-    mesh.build(system);
-    quad.build(system);
+    mesh.build(system, system._storage);
+    quad.build(system, system._storage);
 
     expect(mesh.count).toBe(quad.count);
     // Byte-for-byte equality is what keeps this mode GPU-eligible: the compute
@@ -112,7 +112,9 @@ describe('MeshParticles', () => {
   it('reports zero instances for an empty system', () => {
     const mode = new MeshParticles({ geometry: makeTriangle() });
 
-    mode.build(new ParticleSystem({ capacity: 8 }));
+    const empty = new ParticleSystem({ capacity: 8 });
+
+    mode.build(empty, empty._storage);
 
     expect(mode.count).toBe(0);
   });
@@ -157,7 +159,7 @@ describe('MeshParticles', () => {
 
     (mesh.vertexData as Float32Array)[0] = 32;
     mesh.invalidate();
-    mode.build(system);
+    mode.build(system, system._storage);
 
     expect((mode.vertexGeometry.vertexData as Float32Array)[0]).toBe(32);
     // A bumped version is what tells the executors to re-upload the buffer.

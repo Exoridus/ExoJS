@@ -1,4 +1,4 @@
-﻿import type { ParticleSystem } from "#ParticleSystem";
+﻿import type { ParticleBatch } from "#ParticleStorage";
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
@@ -21,8 +21,9 @@ export class Drag extends UpdateModule {
     this.drag = drag;
   }
 
-  public override apply(system: ParticleSystem, dt: number): void {
-    const { velX, velY, liveCount } = system;
+  public override apply(particles: ParticleBatch, dt: number): void {
+    const { x: velX, y: velY } = particles.velocity;
+    const liveCount = particles.count;
     const factor = 1 - this.drag * dt;
 
     for (let i = 0; i < liveCount; i++) {

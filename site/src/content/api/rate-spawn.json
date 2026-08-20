@@ -87,7 +87,7 @@
       "members": [
         {
           "name": "apply",
-          "signature": "apply(system: ParticleSystem, dt: number): void",
+          "signature": "apply(emitter: ParticleEmitter, dt: number): void",
           "signatureTokens": [
             {
               "text": "apply",
@@ -98,7 +98,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "system",
+              "text": "emitter",
               "kind": "param"
             },
             {
@@ -106,7 +106,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ParticleSystem",
+              "text": "ParticleEmitter",
               "kind": "type"
             },
             {
@@ -140,8 +140,8 @@
           ],
           "params": [
             {
-              "name": "system",
-              "type": "ParticleSystem",
+              "name": "emitter",
+              "type": "ParticleEmitter",
               "optional": false
             },
             {

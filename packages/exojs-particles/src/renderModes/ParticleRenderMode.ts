@@ -1,5 +1,6 @@
 import type { Geometry, Material } from '@codexo/exojs';
 
+import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
 
 import type { ParticleBufferLayout } from './ParticleBufferLayout';
@@ -103,8 +104,15 @@ export abstract class ParticleRenderMode {
     return this._data;
   }
 
-  /** Fill the scratch buffer from `system`'s current SoA state. */
-  public abstract build(system: ParticleSystem): void;
+  /**
+   * Fill the scratch buffer from the system's live particles.
+   *
+   * `particles` is the simulation's own channel storage, handed in rather than
+   * read off the system: a render mode is the one consumer that legitimately
+   * works in bulk, and it runs at the point in the frame where those values are
+   * the ones being drawn.
+   */
+  public abstract build(system: ParticleSystem, particles: ParticleBatch): void;
 
   /** Optional cleanup, called from `ParticleSystem.destroy`. */
   public destroy(): void {}

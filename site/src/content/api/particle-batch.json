@@ -1,0 +1,297 @@
+{
+  "title": "ParticleBatch",
+  "description": "The live particles of one system, addressed by semantic channel. This is the bulk surface an UpdateModule and a ParticleRenderMode operate on. Channels are named for what they mean; how they are packed - one array per component today, something else tomorrow - is the simulation's business and may change. A loop reads the channel it needs once and then indexes plain typed arrays, so naming costs nothing per particle. Indices `[0, count)` are the range worth visiting. A batch can contain dead slots, so a loop that must not touch them checks isAlive; a purely arithmetic pass over dead slots is harmless and can skip the check.",
+  "symbol": "ParticleBatch",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 10,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 9,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The live particles of one system, addressed by semantic channel.",
+        "This is the bulk surface an UpdateModule and a ParticleRenderMode operate on. Channels are named for what they mean; how they are packed - one array per component today, something else tomorrow - is the simulation's business and may change. A loop reads the channel it needs once and then indexes plain typed arrays, so naming costs nothing per particle.",
+        "Indices `[0, count)` are the range worth visiting. A batch can contain dead slots, so a loop that must not touch them checks isAlive; a purely arithmetic pass over dead slots is harmless and can skip the check."
+      ],
+      "importLine": "import { ParticleBatch } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "isAlive",
+          "signature": "isAlive(index: number): boolean",
+          "signatureTokens": [
+            {
+              "text": "isAlive",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "index",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "index",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether the slot at index currently holds a live particle."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "capacity",
+          "signature": "capacity: number",
+          "signatureTokens": [
+            {
+              "text": "capacity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fixed number of slots this system can ever hold."
+        },
+        {
+          "name": "color",
+          "signature": "color: Uint32Array",
+          "signatureTokens": [
+            {
+              "text": "color",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint32Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Packed 0xAABBGGRR tint, one entry per slot."
+        },
+        {
+          "name": "count",
+          "signature": "count: number",
+          "signatureTokens": [
+            {
+              "text": "count",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Upper bound of the range that can hold live particles."
+        },
+        {
+          "name": "frame",
+          "signature": "frame: Uint16Array",
+          "signatureTokens": [
+            {
+              "text": "frame",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint16Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Atlas frame selector, one entry per slot. Anything that is not a declared frame index shows frame 0."
+        },
+        {
+          "name": "position",
+          "signature": "position: ParticleVectorChannel",
+          "signatureTokens": [
+            {
+              "text": "position",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleVectorChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: ParticleRotationChannel",
+          "signatureTokens": [
+            {
+              "text": "rotation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleRotationChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "scale",
+          "signature": "scale: ParticleVectorChannel",
+          "signatureTokens": [
+            {
+              "text": "scale",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleVectorChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "timing",
+          "signature": "timing: ParticleTimingChannel",
+          "signatureTokens": [
+            {
+              "text": "timing",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleTimingChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "velocity",
+          "signature": "velocity: ParticleVectorChannel",
+          "signatureTokens": [
+            {
+              "text": "velocity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleVectorChannel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/ParticleStorage.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/ParticleStorage.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/ParticleStorage.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/ParticleStorage.ts"
+}

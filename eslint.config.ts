@@ -1164,9 +1164,12 @@ export default defineConfig([
     },
   },
 
-  // Particle system class — combined overload is a public API decision.
+  // Particle system class - combined overload is a public API decision. The
+  // channel storage next to it indexes capacity-sized typed arrays by a slot
+  // the simulation itself handed out, so the bounds are an invariant rather
+  // than something to re-check per particle.
   {
-    files: ['packages/exojs-particles/src/ParticleSystem.ts'],
+    files: ['packages/exojs-particles/src/ParticleSystem.ts', 'packages/exojs-particles/src/ParticleStorage.ts'],
     rules: {
       '@typescript-eslint/unified-signatures': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',

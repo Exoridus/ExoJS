@@ -1,5 +1,6 @@
 import type { GeometryAttribute } from '@codexo/exojs';
 
+import type { ParticleBatch } from '#ParticleStorage';
 import type { ParticleSystem } from '#ParticleSystem';
 
 /** Bytes one particle occupies in the interleaved per-instance buffer. */
@@ -37,7 +38,7 @@ export const instanceAttributes: readonly GeometryAttribute[] = [
 
 /**
  * Fills the interleaved per-instance buffer shared by the instanced render
- * modes — one 40-byte record per live particle, in {@link instanceAttributes}
+ * modes - one 40-byte record per live particle, in {@link instanceAttributes}
  * order.
  *
  * A class rather than a free function because the frame-UV table it resolves
@@ -53,14 +54,17 @@ export class ParticleInstanceWriter {
   private _uvMaxsScratch = new Float32Array(2);
 
   /**
-   * Pack `system`'s live particles into the two views over one buffer, which
-   * must already hold `system.liveCount * instanceStrideBytes` bytes. Returns
-   * the number of instances written — dead slots in a GPU-mode system's live
-   * range are skipped, so that can be below `liveCount`.
+   * Pack the live particles into the two views over one buffer, which must
+   * already hold `particles.count * instanceStrideBytes` bytes. Returns the
+   * number of instances written - dead slots in a GPU-mode system's live range
+   * are skipped, so that can be below the count.
    */
-  public write(system: ParticleSystem, f32: Float32Array, u32: Uint32Array): number {
-    const limit = system.liveCount;
-    const { posX, posY, scaleX, scaleY, rotations, color, textureIndex, alive } = system;
+  public write(system: ParticleSystem, particles: ParticleBatch, f32: Float32Array, u32: Uint32Array): number {
+    const limit = particles.count;
+    const { x: posX, y: posY } = particles.position;
+    const { x: scaleX, y: scaleY } = particles.scale;
+    const { angle: rotations } = particles.rotation;
+    const { color, frame: textureIndex } = particles;
 
     // Pre-compute frame UVs from system.frames + texture; falls back
     // to the system.textureFrame when no atlas is declared.
@@ -76,7 +80,7 @@ export class ParticleInstanceWriter {
     for (let i = 0; i < limit; i++) {
       // Skip dead slots in GPU-mode systems where the live range can
       // contain holes.
-      if (alive[i] === 0) {
+      if (!particles.isAlive(i)) {
         continue;
       }
 

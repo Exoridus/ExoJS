@@ -2,7 +2,7 @@
  * WebGPU particle single-pass browser tests.
  *
  * `WebGpuParticleRenderer` used to open a coordinator pass, record one draw call
- * into it and end (submit) it again — per draw call. It had to: every particle
+ * into it and end (submit) it again - per draw call. It had to: every particle
  * system rewrote the mode's shared vertex buffer and the system uniform buffer
  * from offset 0, and `queue.writeBuffer` is ordered against the submit rather
  * than against the individual draws inside it, so leaving the pass open would
@@ -20,7 +20,7 @@
  * a cell at the clear colour (uniform ring aliased, so every system draws at the
  * last one's position), and fails here rather than passing as a win.
  *
- * The last describe covers the other half of that contract — the one hazard
+ * The last describe covers the other half of that contract - the one hazard
  * appending CANNOT cover, so the renderer has to end the pass after all.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -62,7 +62,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 
   wireCoreRenderers(backend);
   await backend.initialize();
-  // The particle renderer is not part of the core renderer bindings — the
+  // The particle renderer is not part of the core renderer bindings - the
   // `@codexo/exojs-particles` package materialises it itself via its Extension
   // descriptor, and these tests build a bare backend without an Application.
   const { renderers } = particlesExtension;
@@ -155,24 +155,18 @@ const particleColors: readonly RgbaTuple[] = [
  * A one-particle system tinted `color` and placed at (`x`, `y`). The particle
  * itself sits at the system's local origin, so its screen position comes from
  * the system transform (the per-draw UNIFORM slot) while its colour comes from
- * the built instance record (the per-draw VERTEX sub-range) — one probe
+ * the built instance record (the per-draw VERTEX sub-range) - one probe
  * therefore covers both cursors.
  *
- * Deterministic by construction: spawn modules are bypassed and the SoA slot is
- * written directly, and `update()` is never called, so `elapsed` stays at 0 and
+ * Deterministic by construction: spawn modules are bypassed and one particle is
+ * emitted at its defaults, and `update()` is never called, so nothing ages and
  * the particle cannot expire.
  */
 const createTintedSystem = (texture: Texture, color: RgbaTuple, x: number, y: number): ParticleSystem => {
   const system = new ParticleSystem(texture, { capacity: 4 });
-  const slot = system.spawn();
+  const particle = system.emit()!;
 
-  system.posX[slot] = 0;
-  system.posY[slot] = 0;
-  system.scaleX[slot] = 1;
-  system.scaleY[slot] = 1;
-  system.rotations[slot] = 0;
-  system.color[slot] = new Color(color[0], color[1], color[2]).toRgba();
-  system.lifetime[slot] = 1;
+  particle.color = new Color(color[0], color[1], color[2]).toRgba();
   system.setPosition(x, y);
 
   return system;
@@ -183,7 +177,7 @@ describe('WebGPU particle single-pass frame', () => {
     const backend = await setupBackend();
     // Each alternation switches the active renderer, so this frame contains N
     // separate particle flushes. All systems run the SHARED default render mode,
-    // whose vertex buffer the renderer caches against the mode's material — so
+    // whose vertex buffer the renderer caches against the mode's material - so
     // they all append into one buffer, which is exactly the aliasing this
     // guards.
     const alternations = particleColors.length;
@@ -268,7 +262,7 @@ describe('WebGPU particle single-pass frame', () => {
   test('a GPU-compute system alternating with a CPU one still costs ONE pass and ONE submit', async ctx => {
     const backend = await setupBackend();
     // The compute simulation runs from the system's OWN encoder and submit, in
-    // `update()` — a compute pass, never nested in the render pass — and writes
+    // `update()` - a compute pass, never nested in the render pass - and writes
     // an instance buffer owned by that one system. So it neither shares a cursor
     // with the CPU path nor forces a render-pass boundary here; the only thing
     // the render side does differently is bind that buffer at offset 0. This
@@ -303,20 +297,15 @@ describe('WebGPU particle single-pass frame', () => {
     try {
       gpuSystem.addUpdateModule(new ApplyForce(0, 0));
 
-      const slot = gpuSystem.spawn();
+      const particle = gpuSystem.emit()!;
 
-      gpuSystem.posX[slot] = 0;
-      gpuSystem.posY[slot] = 0;
-      gpuSystem.scaleX[slot] = 1;
-      gpuSystem.scaleY[slot] = 1;
-      gpuSystem.rotations[slot] = 0;
-      gpuSystem.color[slot] = new Color(particleColors[0]![0], particleColors[0]![1], particleColors[0]![2]).toRgba();
-      gpuSystem.lifetime[slot] = 100;
+      particle.color = new Color(particleColors[0]![0], particleColors[0]![1], particleColors[0]![2]).toRgba();
+      particle.lifetime = 100;
       gpuSystem.setPosition(15, 40);
 
       // The system tears its GPU state down the first time it sees a backend it
       // has not been collected against, so the first frame is always the CPU
-      // path. Render once to bind the backend, then update — that update is the
+      // path. Render once to bind the backend, then update - that update is the
       // one that compiles the compute pipeline.
       if (!(await renderGuarded(ctx, backend, renderFrame))) {
         return;
@@ -358,7 +347,7 @@ describe('WebGPU particle viewport invalidation', () => {
   test('a viewport moved between two particle flushes does NOT let the second draw render through the first viewport', async ctx => {
     const backend = await setupBackend();
     const texture = createSolidTexture('#ffffff', 8);
-    // ONE camera object for the whole frame — the viewport moves by mutating it
+    // ONE camera object for the whole frame - the viewport moves by mutating it
     // in place. A `setView` to a different View would end the pass on its own
     // and prove nothing about the renderer's guard.
     const view = new View(canvasSize / 2, canvasSize / 2, canvasSize, canvasSize);
@@ -396,7 +385,7 @@ describe('WebGPU particle viewport invalidation', () => {
       // particle draw.
       second.render(backend);
       // The move lands with the second draw queued but not yet recorded, and
-      // with no other renderer left to flush after it — so nothing except the
+      // with no other renderer left to flush after it - so nothing except the
       // particle renderer's own guard can end the pass here.
       view.viewport.set(0.5, 0, 0.5, 1);
       backend.flush();

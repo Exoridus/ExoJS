@@ -1,16 +1,16 @@
 {
-  "title": "BurstSpawnConfig",
-  "description": "Spawn configuration for BurstSpawn: the burst schedule plus the shared per-property fields.",
-  "symbol": "BurstSpawnConfig",
+  "title": "ParticleSpawnFields",
+  "description": "Per-property spawn configuration shared by the built-in spawners. Every entry is a Distribution sampled once per emitted particle. Omitting an entry leaves that property at its spawn default: origin, no velocity, unit scale, no rotation, opaque white, frame 0, one second of life.",
+  "symbol": "ParticleSpawnFields",
   "kind": "interface",
   "subsystem": "particles",
   "importPath": "@codexo/exojs-particles",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 8,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 10,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -19,9 +19,10 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Spawn configuration for BurstSpawn: the burst schedule plus the shared per-property fields."
+        "Per-property spawn configuration shared by the built-in spawners.",
+        "Every entry is a Distribution sampled once per emitted particle. Omitting an entry leaves that property at its spawn default: origin, no velocity, unit scale, no rotation, opaque white, frame 0, one second of life."
       ],
-      "importLine": "import { BurstSpawnConfig } from '@codexo/exojs-particles'",
+      "importLine": "import { ParticleSpawnFields } from '@codexo/exojs-particles'",
       "sourceLink": null
     },
     {
@@ -64,31 +65,6 @@
           "params": [],
           "returnType": null,
           "description": "Total lifetime in seconds. Drives expiry."
-        },
-        {
-          "name": "loop",
-          "signature": "loop?: boolean",
-          "signatureTokens": [
-            {
-              "text": "loop",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Whether to repeat the schedule from t=0 once exhausted. Default false."
         },
         {
           "name": "position",
@@ -239,39 +215,6 @@
           "description": ""
         },
         {
-          "name": "schedule",
-          "signature": "schedule: readonly BurstSchedule[]",
-          "signatureTokens": [
-            {
-              "text": "schedule",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "readonly",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "BurstSchedule",
-              "kind": "type"
-            },
-            {
-              "text": "[]",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
           "name": "textureIndex",
           "signature": "textureIndex?: Distribution<number>",
           "signatureTokens": [
@@ -394,11 +337,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-particles/src/modules/BurstSpawn.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/BurstSpawn.ts"
+        "label": "packages/exojs-particles/src/modules/spawnFields.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/spawnFields.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-particles/src/modules/BurstSpawn.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/BurstSpawn.ts"
+  "sourcePath": "packages/exojs-particles/src/modules/spawnFields.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/modules/spawnFields.ts"
 }

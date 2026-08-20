@@ -16,7 +16,7 @@ import Callout from '../../../components/Callout.astro';
 > npm install @codexo/exojs @codexo/exojs-particles
 > ```
 
-The mental model: you register modules that describe how particles *spawn*, what they *do over their lifetime*, and what happens when they *die*. The system calls those modules each frame against its internal arrays. You never write a per-particle `update` loop.
+The mental model: you register modules that describe how particles *spawn*, what they *do over their lifetime*, and what happens when they *die*. The system calls those modules each frame against its channel storage. You never write a per-particle `update` loop.
 
 ## Setup
 
@@ -188,6 +188,33 @@ system.addDeathModule(new SpawnOnDeath(
 
 `SpawnOnDeath` forwards the dying particle's position to the child system's spawn, so each child burst appears at the parent's death location.
 
+A custom death module receives that same information as a `ParticleDeathContext` — position, velocity, rotation, scale, colour and timing at the moment of death:
+
+```ts
+import { DeathModule, type ParticleDeathContext, type ParticleSystem } from '@codexo/exojs-particles';
+
+class SplashOnDeath extends DeathModule {
+    private readonly ripples: ParticleSystem;
+
+    constructor(ripples: ParticleSystem) {
+        super();
+        this.ripples = ripples;
+    }
+
+    override onDeath(_system: ParticleSystem, death: ParticleDeathContext): void {
+        const ripple = this.ripples.emit();
+
+        if (ripple) {
+            ripple.position.set(death.x, death.y);
+            ripple.velocity.set(death.velocityX * 0.25, death.velocityY * 0.25);
+            ripple.lifetime = 0.6;
+        }
+    }
+}
+```
+
+The context is a snapshot, not a view into the system: it is the same on both backends, stays valid for the whole callback, and carries no slot index because the slot may already hold a different particle by the time the callback runs. Delivery is exactly once per expired particle, but not necessarily in the frame it expired — a GPU-simulated death arrives with its readback, typically one frame later.
+
 ## Per-frame loop
 
 `ParticleSystem` is a `Drawable` — it renders itself when you call `context.render(system)` in `draw`. Call `system.update(delta)` in your scene's `update`:
@@ -211,30 +238,50 @@ class ParticleScene extends Scene {
 
 The update loop runs spawn modules, advances particle state (velocity integration, elapsed time), runs update modules, compacts dead particles, and — in GPU mode — uploads dirty slots and dispatches the compute shader. `render()` draws the system as a single instanced draw call, regardless of particle count.
 
-## SoA channels (direct access)
+## Channels and manual emission
 
-For manual spawning or custom logic, the system exposes its internal arrays as public `readonly` references:
+Particles are addressed by named channel, never by raw slot. A module receives the channels it needs and indexes them itself:
+
+```ts
+import { type ParticleBatch, UpdateModule } from '@codexo/exojs-particles';
+
+class Sway extends UpdateModule {
+    override apply(particles: ParticleBatch, dt: number): void {
+        const { x: velX } = particles.velocity;
+        const { elapsed } = particles.timing;
+
+        for (let i = 0; i < particles.count; i++) {
+            velX[i] += Math.sin(elapsed[i] * 8) * 250 * dt;
+        }
+    }
+}
+```
+
+The channels are `position`, `velocity`, `scale` (each `.x` / `.y`), `rotation` (`.angle` / `.speed`), `timing` (`.elapsed` / `.lifetime`), `color` (packed `0xAABBGGRR`) and `frame`. Each is the simulation's own storage, so writing moves the particle. Indices `[0, particles.count)` are the range worth visiting; `particles.isAlive(i)` skips the holes a GPU-mode system can leave behind.
+
+To emit a particle yourself, ask the system for one:
 
 ```ts
 import { ParticleSystem } from '@codexo/exojs-particles';
 
 declare const system: ParticleSystem;
-const i = 0;
 
-system.posX[i]         // X position of particle i
-system.posY[i]         // Y position
-system.velX[i]         // X velocity
-system.velY[i]         // Y velocity
-system.scaleX[i]       // X scale factor
-system.scaleY[i]       // Y scale factor
-system.rotations[i]    // rotation in radians
-system.rotationSpeeds[i] // rotation speed in rad/s
-system.color[i]        // packed 0xAABBGGRR uint32
-system.elapsed[i]      // seconds since spawn
-system.lifetime[i]     // total lifetime; -1 sentinel = dead in GPU mode
+const particle = system.emit();
+
+if (particle) {
+    particle.position.set(120, 40);
+    particle.velocity.set(0, -80);
+    particle.lifetime = 2;
+}
 ```
 
-Mutate these arrays directly if you need per-particle logic that doesn't fit a module. `system.spawn()` allocates one slot and returns its index (or -1 at capacity). `system.clearParticles()` resets to zero alive. `system.aliveCount` reports how many particles are currently active. `system.gpuMode` reports whether the GPU composite shader path is active.
+`emit()` returns `null` at capacity. Every field starts at its default — origin, no velocity, unit scale, no rotation, opaque white, frame 0, one second of life — so you write only what you vary. The returned writer is a cursor onto the emitted particle: the next `emit()` rebinds it, so fill it before emitting again.
+
+`system.clearParticles()` resets the system to zero live particles, `system.liveCount` is the range that can hold them, `system.aliveCount` counts the live ones, and `system.gpuMode` reports whether the compute path is active.
+
+<Callout type="pitfall" title="There is no read-back of a running simulation">
+  Channel values are true where the simulation runs. On the GPU path only the compute shader advances them, so outside an update module or a render mode the CPU copy still holds the spawn values. That is why emission, not mutation, is the supported way in — and why a death module receives a snapshot rather than a slot.
+</Callout>
 
 ## GPU auto-routing
 

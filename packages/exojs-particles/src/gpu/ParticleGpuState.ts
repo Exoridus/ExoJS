@@ -311,35 +311,36 @@ export class ParticleGpuState {
   public uploadDirty(system: ParticleSystem, slots: Iterable<number>): void {
     const scratch2 = this._dirtyScratchVec2;
     const scratch1 = this._dirtyScratchU32;
+    const storage = system._storage;
 
     for (const slot of slots) {
       const byteOffset2 = slot * 8;
       const byteOffset1 = slot * 4;
 
-      scratch2[0] = system.posX[slot]!;
-      scratch2[1] = system.posY[slot]!;
+      scratch2[0] = storage.posX[slot]!;
+      scratch2[1] = storage.posY[slot]!;
       this._positions.write(scratch2, byteOffset2);
 
-      scratch2[0] = system.velX[slot]!;
-      scratch2[1] = system.velY[slot]!;
+      scratch2[0] = storage.velX[slot]!;
+      scratch2[1] = storage.velY[slot]!;
       this._velocities.write(scratch2, byteOffset2);
 
-      scratch2[0] = system.scaleX[slot]!;
-      scratch2[1] = system.scaleY[slot]!;
+      scratch2[0] = storage.scaleX[slot]!;
+      scratch2[1] = storage.scaleY[slot]!;
       this._scales.write(scratch2, byteOffset2);
 
-      scratch2[0] = system.rotations[slot]!;
-      scratch2[1] = system.rotationSpeeds[slot]!;
+      scratch2[0] = storage.rotations[slot]!;
+      scratch2[1] = storage.rotationSpeeds[slot]!;
       this._rotInfo.write(scratch2, byteOffset2);
 
-      scratch2[0] = system.elapsed[slot]!;
-      scratch2[1] = system.lifetime[slot]!;
+      scratch2[0] = storage.elapsed[slot]!;
+      scratch2[1] = storage.lifetime[slot]!;
       this._timing.write(scratch2, byteOffset2);
 
-      scratch1[0] = system.color[slot]!;
+      scratch1[0] = storage.color[slot]!;
       this._color.write(scratch1, byteOffset1);
 
-      scratch1[0] = system.textureIndex[slot]!;
+      scratch1[0] = storage.frame[slot]!;
       this._textureIndex.write(scratch1, byteOffset1);
     }
   }

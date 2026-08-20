@@ -1,4 +1,4 @@
-﻿import type { ParticleSystem } from "#ParticleSystem";
+﻿import type { ParticleBatch } from "#ParticleStorage";
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
@@ -21,8 +21,9 @@ export class RotateOverLifetime extends UpdateModule {
     this.angularAcceleration = angularAcceleration;
   }
 
-  public override apply(system: ParticleSystem, dt: number): void {
-    const { rotationSpeeds, liveCount } = system;
+  public override apply(particles: ParticleBatch, dt: number): void {
+    const { speed: rotationSpeeds } = particles.rotation;
+    const liveCount = particles.count;
     const delta = this.angularAcceleration * dt;
 
     for (let i = 0; i < liveCount; i++) {

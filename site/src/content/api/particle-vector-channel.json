@@ -1,0 +1,93 @@
+{
+  "title": "ParticleVectorChannel",
+  "description": "A two-component particle channel, one array per component. The arrays are the simulation's own storage rather than a copy: writing `position.x[i]` moves particle `i`. Their length is the system's capacity, so only indices below ParticleBatch.count carry meaning.",
+  "symbol": "ParticleVectorChannel",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A two-component particle channel, one array per component.",
+        "The arrays are the simulation's own storage rather than a copy: writing `position.x[i]` moves particle `i`. Their length is the system's capacity, so only indices below ParticleBatch.count carry meaning."
+      ],
+      "importLine": "import { ParticleVectorChannel } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "x",
+          "signature": "x: Float32Array",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "y",
+          "signature": "y: Float32Array",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Float32Array",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/ParticleStorage.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/ParticleStorage.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/ParticleStorage.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/ParticleStorage.ts"
+}

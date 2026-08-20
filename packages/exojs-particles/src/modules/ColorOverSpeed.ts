@@ -3,7 +3,7 @@
 import { Color } from '@codexo/exojs';
 
 import type { ColorGradient } from "#distributions/ColorGradient";
-import type { ParticleSystem } from "#ParticleSystem";
+import type { ParticleBatch } from "#ParticleStorage";
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
@@ -35,8 +35,10 @@ export class ColorOverSpeed extends UpdateModule {
     this.maxSpeed = maxSpeed;
   }
 
-  public override apply(system: ParticleSystem, _dt: number): void {
-    const { velX, velY, color, liveCount } = system;
+  public override apply(particles: ParticleBatch, _dt: number): void {
+    const { x: velX, y: velY } = particles.velocity;
+    const color = particles.color;
+    const liveCount = particles.count;
     const gradient = this.gradient;
     const min = this.minSpeed;
     const span = Math.max(1e-5, this.maxSpeed - this.minSpeed);

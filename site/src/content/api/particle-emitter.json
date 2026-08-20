@@ -1,0 +1,88 @@
+{
+  "title": "ParticleEmitter",
+  "description": "The emitting face of a particle system: the only supported way to bring particles into existence. Emission is the one per-particle write that is true on every backend, because spawn values always originate on the CPU and are uploaded from there.",
+  "symbol": "ParticleEmitter",
+  "kind": "interface",
+  "subsystem": "particles",
+  "importPath": "@codexo/exojs-particles",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The emitting face of a particle system: the only supported way to bring particles into existence.",
+        "Emission is the one per-particle write that is true on every backend, because spawn values always originate on the CPU and are uploaded from there."
+      ],
+      "importLine": "import { ParticleEmitter } from '@codexo/exojs-particles'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "emit",
+          "signature": "emit(): ParticleWriter | null",
+          "signatureTokens": [
+            {
+              "text": "emit",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ParticleWriter",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "ParticleWriter | null",
+          "description": "Emits one particle at its default values, or returns null when the system is at capacity."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-particles/src/ParticleStorage.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/ParticleStorage.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-particles/src/ParticleStorage.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-particles/src/ParticleStorage.ts"
+}

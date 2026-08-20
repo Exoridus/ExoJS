@@ -40,11 +40,11 @@ describe('ParticleSystem SoA storage', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 1024 });
 
     expect(system.capacity).toBe(1024);
-    expect(system.posX.length).toBe(1024);
-    expect(system.posY.length).toBe(1024);
-    expect(system.velX.length).toBe(1024);
-    expect(system.color.length).toBe(1024);
-    expect(system.lifetime.length).toBe(1024);
+    expect(system._storage.posX.length).toBe(1024);
+    expect(system._storage.posY.length).toBe(1024);
+    expect(system._storage.velX.length).toBe(1024);
+    expect(system._storage.color.length).toBe(1024);
+    expect(system._storage.lifetime.length).toBe(1024);
     expect(system.liveCount).toBe(0);
   });
 
@@ -59,10 +59,10 @@ describe('ParticleSystem SoA storage', () => {
   test('spawn returns sequential slots up to capacity', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 3 });
 
-    expect(system.spawn()).toBe(0);
-    expect(system.spawn()).toBe(1);
-    expect(system.spawn()).toBe(2);
-    expect(system.spawn()).toBe(-1);
+    expect(system._spawnSlot()).toBe(0);
+    expect(system._spawnSlot()).toBe(1);
+    expect(system._spawnSlot()).toBe(2);
+    expect(system._spawnSlot()).toBe(-1);
     expect(system.liveCount).toBe(3);
   });
 
@@ -70,9 +70,9 @@ describe('ParticleSystem SoA storage', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 8 });
 
     for (let i = 0; i < 4; i++) {
-      const slot = system.spawn();
-      system.lifetime[slot] = i % 2 === 0 ? 10 : 0.05; // alternate
-      system.posX[slot] = i;
+      const slot = system._spawnSlot();
+      system._storage.lifetime[slot] = i % 2 === 0 ? 10 : 0.05; // alternate
+      system._storage.posX[slot] = i;
     }
 
     // After 0.1s, the short-lived particles (lifetime 0.05) expire.
@@ -80,24 +80,24 @@ describe('ParticleSystem SoA storage', () => {
 
     expect(system.liveCount).toBe(2);
     // Surviving slots should be the long-lived ones (i=0 and i=2).
-    const xs = [system.posX[0], system.posX[1]].sort();
+    const xs = [system._storage.posX[0], system._storage.posX[1]].sort();
     expect(xs).toEqual([0, 2]);
   });
 
   test('integration advances position by velocity * dt', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.posX[slot] = 100;
-    system.velX[slot] = 50;
-    system.posY[slot] = 200;
-    system.velY[slot] = -30;
+    system._storage.lifetime[slot] = 10;
+    system._storage.posX[slot] = 100;
+    system._storage.velX[slot] = 50;
+    system._storage.posY[slot] = 200;
+    system._storage.velY[slot] = -30;
 
     system.update(tick(0.5));
 
-    expect(system.posX[slot]).toBeCloseTo(125);
-    expect(system.posY[slot]).toBeCloseTo(185);
+    expect(system._storage.posX[slot]).toBeCloseTo(125);
+    expect(system._storage.posY[slot]).toBeCloseTo(185);
   });
 });
 
@@ -311,7 +311,7 @@ describe('SpawnModule', () => {
     expect(system.liveCount).toBeGreaterThan(0);
 
     for (let i = 0; i < system.liveCount; i++) {
-      expect(system.lifetime[i]).toBe(1);
+      expect(system._storage.lifetime[i]).toBe(1);
     }
   });
 
@@ -351,12 +351,12 @@ describe('SpawnModule', () => {
 
     for (let i = 0; i < system.liveCount; i++) {
       // position integrated by 0.1s of 100x/-200y velocity.
-      expect(system.posX[i]).toBeCloseTo(10);
-      expect(system.posY[i]).toBeCloseTo(-20);
-      expect(system.velX[i]).toBeCloseTo(100);
-      expect(system.scaleX[i]).toBeCloseTo(2);
+      expect(system._storage.posX[i]).toBeCloseTo(10);
+      expect(system._storage.posY[i]).toBeCloseTo(-20);
+      expect(system._storage.velX[i]).toBeCloseTo(100);
+      expect(system._storage.scaleX[i]).toBeCloseTo(2);
       // rotation = rotationSpeed * dt = 45 * 0.1 = 4.5
-      expect(system.rotations[i]).toBeCloseTo(4.5);
+      expect(system._storage.rotations[i]).toBeCloseTo(4.5);
     }
   });
 
@@ -380,7 +380,7 @@ describe('SpawnModule', () => {
     expect(system.liveCount).toBe(3);
 
     for (let i = 0; i < system.liveCount; i++) {
-      expect(system.lifetime[i]).toBe(1);
+      expect(system._storage.lifetime[i]).toBe(1);
     }
   });
 
@@ -454,37 +454,37 @@ describe('SpawnModule', () => {
 describe('UpdateModule', () => {
   test('ApplyForce accumulates velocity', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.velX[slot] = 0;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.velX[slot] = 0;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(new ApplyForce(0, 100));
 
     system.update(tick(0.5));
 
-    expect(system.velY[slot]).toBeCloseTo(50);
+    expect(system._storage.velY[slot]).toBeCloseTo(50);
   });
 
   test('Drag damps velocity', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.velX[slot] = 100;
+    system._storage.lifetime[slot] = 10;
+    system._storage.velX[slot] = 100;
     system.addUpdateModule(new Drag(0.5));
 
     system.update(tick(1));
 
     // (1 - 0.5*1) = 0.5 → velX 100 * 0.5 = 50
-    expect(system.velX[slot]).toBeCloseTo(50);
+    expect(system._storage.velX[slot]).toBeCloseTo(50);
   });
 
   test('ColorOverLifetime samples gradient', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 1;
+    system._storage.lifetime[slot] = 1;
     system.addUpdateModule(
       new ColorOverLifetime(
         new ColorGradient([
@@ -498,7 +498,7 @@ describe('UpdateModule', () => {
 
     // After 0.5s of 1s lifetime, t≈0.5, so color near grey.
     // RGBA u32 layout is 0xAABBGGRR — extract low byte for red.
-    const rgba = system.color[slot];
+    const rgba = system._storage.color[slot];
     const r = rgba & 0xff;
 
     expect(r).toBeGreaterThan(100);
@@ -507,9 +507,9 @@ describe('UpdateModule', () => {
 
   test('ScaleOverLifetime applies curve to both axes', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 1;
+    system._storage.lifetime[slot] = 1;
     system.addUpdateModule(
       new ScaleOverLifetime(
         new Curve([
@@ -521,30 +521,30 @@ describe('UpdateModule', () => {
 
     system.update(tick(0.25));
 
-    expect(system.scaleX[slot]).toBeCloseTo(0.75, 1);
-    expect(system.scaleY[slot]).toBeCloseTo(0.75, 1);
+    expect(system._storage.scaleX[slot]).toBeCloseTo(0.75, 1);
+    expect(system._storage.scaleY[slot]).toBeCloseTo(0.75, 1);
   });
 
   test('RotateOverLifetime accumulates rotation speed', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.rotationSpeeds[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.rotationSpeeds[slot] = 0;
     system.addUpdateModule(new RotateOverLifetime(360));
 
     system.update(tick(1));
 
-    expect(system.rotationSpeeds[slot]).toBeCloseTo(360);
+    expect(system._storage.rotationSpeeds[slot]).toBeCloseTo(360);
   });
 
   test('AlphaFadeOverLifetime fades alpha while preserving RGB', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 1;
+    system._storage.lifetime[slot] = 1;
     // RGBA u32: 0xAABBGGRR — set RGB to mid-grey, alpha to 0xff.
-    system.color[slot] = 0xff808080;
+    system._storage.color[slot] = 0xff808080;
     system.addUpdateModule(
       new AlphaFadeOverLifetime(
         new Curve([
@@ -556,7 +556,7 @@ describe('UpdateModule', () => {
 
     system.update(tick(0.5));
 
-    const rgba = system.color[slot];
+    const rgba = system._storage.color[slot];
     const r = rgba & 0xff;
     const g = (rgba >>> 8) & 0xff;
     const b = (rgba >>> 16) & 0xff;
@@ -572,15 +572,15 @@ describe('UpdateModule', () => {
 
   test('AlphaFadeOverLifetime defaults to a 1 → 0 linear fade when no curve is given', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 1;
-    system.color[slot] = 0xff808080;
+    system._storage.lifetime[slot] = 1;
+    system._storage.color[slot] = 0xff808080;
     system.addUpdateModule(new AlphaFadeOverLifetime());
 
     system.update(tick(0.5));
 
-    const rgba = system.color[slot];
+    const rgba = system._storage.color[slot];
     const r = rgba & 0xff;
     const g = (rgba >>> 8) & 0xff;
     const b = (rgba >>> 16) & 0xff;
@@ -595,11 +595,11 @@ describe('UpdateModule', () => {
 
   test('VelocityOverLifetime scales velocity by curve ratio', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 1;
-    system.velX[slot] = 100;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 1;
+    system._storage.velX[slot] = 100;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(
       new VelocityOverLifetime(
         new Curve([
@@ -613,17 +613,17 @@ describe('UpdateModule', () => {
       system.update(tick(0.1));
     }
 
-    expect(Math.abs(system.velX[slot])).toBeLessThan(80);
-    expect(Math.abs(system.velX[slot])).toBeGreaterThan(20);
+    expect(Math.abs(system._storage.velX[slot])).toBeLessThan(80);
+    expect(Math.abs(system._storage.velX[slot])).toBeGreaterThan(20);
   });
 
   test('VelocityOverLifetime treats an exact-zero curve sample as a near-zero sentinel', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 1;
-    system.velX[slot] = 100;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 1;
+    system._storage.velX[slot] = 100;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(
       new VelocityOverLifetime(
         new Curve([
@@ -638,24 +638,24 @@ describe('UpdateModule', () => {
     // (which would divide-by-zero on a later frame) but a tiny sentinel.
     system.update(tick(1));
 
-    expect(system.velX[slot]).toBeCloseTo(0);
+    expect(system._storage.velX[slot]).toBeCloseTo(0);
   });
 
   test('AttractToPoint pulls particle toward target', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.posX[slot] = 0;
-    system.posY[slot] = 0;
-    system.velX[slot] = 0;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.posX[slot] = 0;
+    system._storage.posY[slot] = 0;
+    system._storage.velX[slot] = 0;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(new AttractToPoint(100, 0, 50));
 
     system.update(tick(1));
 
-    expect(system.velX[slot]).toBeGreaterThan(0);
-    expect(Math.abs(system.velY[slot])).toBeLessThan(0.001);
+    expect(system._storage.velX[slot]).toBeGreaterThan(0);
+    expect(Math.abs(system._storage.velY[slot])).toBeLessThan(0.001);
   });
 
   test('AttractToPoint falloff softens the pull inside the falloff radius', () => {
@@ -663,134 +663,134 @@ describe('UpdateModule', () => {
 
     // Unsoftened (falloff=0, the default): full strength regardless of distance.
     const unsoftened = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const unsoftenedSlot = unsoftened.spawn();
+    const unsoftenedSlot = unsoftened._spawnSlot();
 
-    unsoftened.lifetime[unsoftenedSlot] = 10;
-    unsoftened.posX[unsoftenedSlot] = 90;
-    unsoftened.posY[unsoftenedSlot] = 0;
+    unsoftened._storage.lifetime[unsoftenedSlot] = 10;
+    unsoftened._storage.posX[unsoftenedSlot] = 90;
+    unsoftened._storage.posY[unsoftenedSlot] = 0;
     unsoftened.addUpdateModule(new AttractToPoint(100, 0, strength));
 
     // Softened: particle is at dist=10 from the target, inside falloff=50,
     // so k = min(1, dist / falloff) = 0.2 scales the acceleration down.
     const softened = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const softenedSlot = softened.spawn();
+    const softenedSlot = softened._spawnSlot();
 
-    softened.lifetime[softenedSlot] = 10;
-    softened.posX[softenedSlot] = 90;
-    softened.posY[softenedSlot] = 0;
+    softened._storage.lifetime[softenedSlot] = 10;
+    softened._storage.posX[softenedSlot] = 90;
+    softened._storage.posY[softenedSlot] = 0;
     softened.addUpdateModule(new AttractToPoint(100, 0, strength, 50));
 
     unsoftened.update(tick(1));
     softened.update(tick(1));
 
-    expect(unsoftened.velX[unsoftenedSlot]).toBeCloseTo(1000);
-    expect(softened.velX[softenedSlot]).toBeCloseTo(200);
-    expect(softened.velX[softenedSlot]).toBeLessThan(unsoftened.velX[unsoftenedSlot]);
+    expect(unsoftened._storage.velX[unsoftenedSlot]).toBeCloseTo(1000);
+    expect(softened._storage.velX[softenedSlot]).toBeCloseTo(200);
+    expect(softened._storage.velX[softenedSlot]).toBeLessThan(unsoftened._storage.velX[unsoftenedSlot]);
   });
 
   test('AttractToPoint ignores a particle sitting exactly on the target (avoids a divide-by-zero)', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.posX[slot] = 100;
-    system.posY[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.posX[slot] = 100;
+    system._storage.posY[slot] = 0;
     // Zero velocity so integration doesn't move the particle off the exact
     // target position before the module runs.
-    system.velX[slot] = 0;
-    system.velY[slot] = 0;
+    system._storage.velX[slot] = 0;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(new AttractToPoint(100, 0, 1000));
 
     system.update(tick(1));
 
     // dist === 0 < epsilon guard — the module must skip this particle
     // entirely rather than dividing by zero (which would produce NaN/Infinity).
-    expect(system.velX[slot]).toBe(0);
-    expect(system.velY[slot]).toBe(0);
+    expect(system._storage.velX[slot]).toBe(0);
+    expect(system._storage.velY[slot]).toBe(0);
   });
 
   test('RepelFromPoint ignores a particle sitting exactly on the source (avoids a divide-by-zero)', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.posX[slot] = 0;
-    system.posY[slot] = 0;
-    system.velX[slot] = 0;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.posX[slot] = 0;
+    system._storage.posY[slot] = 0;
+    system._storage.velX[slot] = 0;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(new RepelFromPoint(0, 0, 500));
 
     system.update(tick(1));
 
-    expect(system.velX[slot]).toBe(0);
-    expect(system.velY[slot]).toBe(0);
+    expect(system._storage.velX[slot]).toBe(0);
+    expect(system._storage.velY[slot]).toBe(0);
   });
 
   test('RepelFromPoint softens the push with a linear falloff inside the radius', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.posX[slot] = 10;
-    system.posY[slot] = 0;
-    system.velX[slot] = 0;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.posX[slot] = 10;
+    system._storage.posY[slot] = 0;
+    system._storage.velX[slot] = 0;
+    system._storage.velY[slot] = 0;
     // dist=10, radius=50 (in range) -> falloff = 1 - 10/50 = 0.8
     // a = strength * falloff * dt / dist = 1000 * 0.8 * 1 / 10 = 80
     system.addUpdateModule(new RepelFromPoint(0, 0, 1000, 50));
 
     system.update(tick(1));
 
-    expect(system.velX[slot]).toBeCloseTo(800);
+    expect(system._storage.velX[slot]).toBeCloseTo(800);
   });
 
   test('RepelFromPoint pushes particle away from source', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.posX[slot] = 10;
-    system.posY[slot] = 0;
-    system.velX[slot] = 0;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.posX[slot] = 10;
+    system._storage.posY[slot] = 0;
+    system._storage.velX[slot] = 0;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(new RepelFromPoint(0, 0, 50));
 
     system.update(tick(1));
 
-    expect(system.velX[slot]).toBeGreaterThan(0);
+    expect(system._storage.velX[slot]).toBeGreaterThan(0);
   });
 
   test('RepelFromPoint respects radius cutoff', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.posX[slot] = 1000;
-    system.posY[slot] = 0;
-    system.velX[slot] = 0;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.posX[slot] = 1000;
+    system._storage.posY[slot] = 0;
+    system._storage.velX[slot] = 0;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(new RepelFromPoint(0, 0, 50, 100));
 
     system.update(tick(1));
 
-    expect(system.velX[slot]).toBe(0);
+    expect(system._storage.velX[slot]).toBe(0);
   });
 
   test('OrbitalForce produces tangential velocity', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.posX[slot] = 100;
-    system.posY[slot] = 0;
-    system.velX[slot] = 0;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.posX[slot] = 100;
+    system._storage.posY[slot] = 0;
+    system._storage.velX[slot] = 0;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(new OrbitalForce(0, 0, 1));
 
     system.update(tick(0.1));
 
-    expect(system.velY[slot]).toBeGreaterThan(0);
-    expect(Math.abs(system.velX[slot])).toBeLessThan(0.001);
+    expect(system._storage.velY[slot]).toBeGreaterThan(0);
+    expect(Math.abs(system._storage.velX[slot])).toBeLessThan(0.001);
   });
 
   test('Turbulence defaults frequency and timeScale when omitted', () => {
@@ -802,28 +802,28 @@ describe('UpdateModule', () => {
 
   test('Turbulence perturbs particle velocity', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.posX[slot] = 250;
-    system.posY[slot] = 130;
-    system.velX[slot] = 0;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.posX[slot] = 250;
+    system._storage.posY[slot] = 130;
+    system._storage.velX[slot] = 0;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(new Turbulence(100, 0.05, 1));
 
     system.update(tick(0.1));
 
-    const speed = Math.hypot(system.velX[slot], system.velY[slot]);
+    const speed = Math.hypot(system._storage.velX[slot], system._storage.velY[slot]);
     expect(speed).toBeGreaterThan(0);
   });
 
   test('ColorOverSpeed samples gradient by velocity magnitude', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
-    const slot = system.spawn();
+    const slot = system._spawnSlot();
 
-    system.lifetime[slot] = 10;
-    system.velX[slot] = 50;
-    system.velY[slot] = 0;
+    system._storage.lifetime[slot] = 10;
+    system._storage.velX[slot] = 50;
+    system._storage.velY[slot] = 0;
     system.addUpdateModule(
       new ColorOverSpeed(
         new ColorGradient([
@@ -837,7 +837,7 @@ describe('UpdateModule', () => {
 
     system.update(tick(0.01));
 
-    const rgba = system.color[slot];
+    const rgba = system._storage.color[slot];
     const r = rgba & 0xff;
 
     expect(r).toBeGreaterThan(80);
@@ -859,10 +859,10 @@ describe('DeathModule', () => {
     const parent = new ParticleSystem(makeTexture(), { capacity: 4 });
     const child = new ParticleSystem(makeTexture(), { capacity: 16 });
 
-    const parentSlot = parent.spawn();
-    parent.lifetime[parentSlot] = 0.05;
-    parent.posX[parentSlot] = 250;
-    parent.posY[parentSlot] = 100;
+    const parentSlot = parent._spawnSlot();
+    parent._storage.lifetime[parentSlot] = 0.05;
+    parent._storage.posX[parentSlot] = 250;
+    parent._storage.posY[parentSlot] = 100;
 
     const burst = new BurstSpawn({
       schedule: [{ time: 0, count: 3 }],
@@ -877,8 +877,60 @@ describe('DeathModule', () => {
     expect(child.liveCount).toBe(3);
 
     for (let i = 0; i < child.liveCount; i++) {
-      expect(child.posX[i]).toBeCloseTo(250);
-      expect(child.posY[i]).toBeCloseTo(100);
+      expect(child._storage.posX[i]).toBeCloseTo(250);
+      expect(child._storage.posY[i]).toBeCloseTo(100);
     }
+  });
+});
+
+describe('emit()', () => {
+  test('fills a particle with the spawn defaults', () => {
+    const system = new ParticleSystem({ capacity: 4 });
+    const particle = system.emit()!;
+
+    expect(particle.position.x).toBe(0);
+    expect(particle.scale.x).toBe(1);
+    expect(particle.scale.y).toBe(1);
+    expect(particle.rotation).toBe(0);
+    expect(particle.color).toBe(0xffffffff);
+    expect(particle.lifetime).toBe(1);
+    expect(particle.frame).toBe(0);
+    expect(system.liveCount).toBe(1);
+  });
+
+  test('returns null at capacity', () => {
+    const system = new ParticleSystem({ capacity: 1 });
+
+    expect(system.emit()).not.toBeNull();
+    expect(system.emit()).toBeNull();
+  });
+
+  test('a recycled slot never inherits the previous particle values', () => {
+    const system = new ParticleSystem({ capacity: 1 });
+    const first = system.emit()!;
+
+    first.position.set(40, 50);
+    first.color = 0xff0000ff;
+    first.lifetime = 0.01;
+
+    system.update(Time.zero.clone().set(20));
+    expect(system.liveCount).toBe(0);
+
+    const second = system.emit()!;
+
+    expect(second.position.x).toBe(0);
+    expect(second.position.y).toBe(0);
+    expect(second.color).toBe(0xffffffff);
+    expect(second.lifetime).toBe(1);
+  });
+
+  test('a writer kept past the next emit refuses to write in development builds', () => {
+    const system = new ParticleSystem({ capacity: 4 });
+    const stale = system.emit()!;
+
+    system.emit();
+
+    expect(() => stale.position.set(1, 2)).toThrow(/earlier emit/);
+    expect(() => (stale.lifetime = 5)).toThrow(/earlier emit/);
   });
 });

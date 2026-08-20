@@ -165,8 +165,8 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     system.addUpdateModule(new ApplyForce(0, 100));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
 
     system.update(tick(0.1));
 
@@ -183,10 +183,10 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     system.addUpdateModule(new Drag(0.5));
     system.addUpdateModule(new RotateOverLifetime(360));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
-    system.scaleX[slot] = 1;
-    system.scaleY[slot] = 1;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
+    system._storage.scaleX[slot] = 1;
+    system._storage.scaleY[slot] = 1;
 
     expect(system.gpuMode).toBe(false);
     system.update(tick(0.016));
@@ -218,8 +218,8 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     system.addUpdateModule(new ApplyForce(0, 100));
     system.addUpdateModule(new CpuOnly());
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
 
     system.update(tick(0.016));
 
@@ -248,8 +248,8 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
       ),
     );
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
 
     system.update(tick(0.016));
 
@@ -263,8 +263,8 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
 
     system.addUpdateModule(new ApplyForce(0, 100));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
 
     system.update(tick(0.016));
 
@@ -282,7 +282,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 64, device: env.device });
 
     system.addUpdateModule(new ApplyForce(0, 100));
-    system.spawn();
+    system._spawnSlot();
     system.update(tick(0.016));
 
     expect(() => system.addUpdateModule(new Drag(0.5))).toThrow(/after the system has been compiled/);
@@ -293,7 +293,7 @@ describe('ParticleSystem GPU mode — auto-routing', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 64, device: env.device });
 
     system.addUpdateModule(new ApplyForce(0, 100));
-    system.spawn();
+    system._spawnSlot();
     system.update(tick(0.016));
 
     const buffersBefore = env.buffers.length;
@@ -326,20 +326,20 @@ describe('ParticleSystem alive-flag in GPU mode', () => {
     system.update(tick(0));
     expect(system.gpuMode).toBe(true);
 
-    const a = system.spawn();
-    const b = system.spawn();
-    const c = system.spawn();
+    const a = system._spawnSlot();
+    const b = system._spawnSlot();
+    const c = system._spawnSlot();
 
     expect(a).toBe(0);
     expect(b).toBe(1);
     expect(c).toBe(2);
 
-    system.alive[b] = 0;
-    const d = system.spawn();
+    system._storage.alive[b] = 0;
+    const d = system._spawnSlot();
     expect(d).toBe(3);
 
-    system.alive[3] = 0;
-    const e = system.spawn();
+    system._storage.alive[3] = 0;
+    const e = system._spawnSlot();
     expect([1, 3].includes(e)).toBe(true);
   });
 
@@ -349,13 +349,13 @@ describe('ParticleSystem alive-flag in GPU mode', () => {
 
     system.addUpdateModule(new ApplyForce(0, 0));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 0.05;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 0.05;
 
     system.update(tick(0.1));
 
-    expect(system.alive[slot]).toBe(0);
-    expect(system.lifetime[slot]).toBe(-1);
+    expect(system._storage.alive[slot]).toBe(0);
+    expect(system._storage.lifetime[slot]).toBe(-1);
     expect(system.aliveCount).toBe(0);
   });
 });
@@ -416,8 +416,8 @@ describe('ParticleSystem render-inject backend detection', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4 });
     system.addUpdateModule(new ApplyForce(0, 0));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
     expect(system.gpuMode).toBe(false);
 
@@ -455,8 +455,8 @@ describe('ParticleSystem._collect backend-change detection', () => {
     system._collect(builderA);
     expect(system.gpuState).toBeNull();
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
     expect(system.gpuMode).toBe(true);
 
@@ -493,14 +493,14 @@ describe('ParticleSystem._compile pre-existing dead slots', () => {
 
     // Two slots spawned in dense CPU fashion before any update() call (the
     // system is still in CPU mode at this point — _compile() hasn't run).
-    const a = system.spawn();
-    const b = system.spawn();
+    const a = system._spawnSlot();
+    const b = system._spawnSlot();
 
-    system.lifetime[a] = 10;
-    system.lifetime[b] = 10;
+    system._storage.lifetime[a] = 10;
+    system._storage.lifetime[b] = 10;
     // Kill slot b directly, bypassing recycling — it's still within
     // [0, liveCount) when _compile() runs on the first update().
-    system.alive[b] = 0;
+    system._storage.alive[b] = 0;
 
     system.addUpdateModule(new ApplyForce(0, 0));
     system.update(tick(0.016));
@@ -539,23 +539,23 @@ describe('ParticleSystem._spawnGpu wrap-around search', () => {
     expect(system.gpuMode).toBe(true);
 
     // Fill all 4 slots — the round-robin hint wraps back to 0.
-    const a = system.spawn();
-    const b = system.spawn();
-    const c = system.spawn();
-    const d = system.spawn();
+    const a = system._spawnSlot();
+    const b = system._spawnSlot();
+    const c = system._spawnSlot();
+    const d = system._spawnSlot();
 
     expect([a, b, c, d]).toEqual([0, 1, 2, 3]);
 
     // Free slot 2 — found by the forward-scan first loop, hint becomes 3.
-    system.alive[2] = 0;
-    expect(system.spawn()).toBe(2);
+    system._storage.alive[2] = 0;
+    expect(system._spawnSlot()).toBe(2);
 
     // Free slot 1 (but leave slot 0 alive). The forward-scan loop
     // (hint(3)..capacity-1) finds nothing since slot 3 is still alive, so
     // the wrap-around loop (0..hint) must run: it skips over still-alive
     // slot 0 before finding dead slot 1.
-    system.alive[1] = 0;
-    expect(system.spawn()).toBe(1);
+    system._storage.alive[1] = 0;
+    expect(system._spawnSlot()).toBe(1);
   });
 
   test('returns -1 once every slot is alive and no gap exists to wrap into', () => {
@@ -566,9 +566,9 @@ describe('ParticleSystem._spawnGpu wrap-around search', () => {
     system.update(tick(0));
     expect(system.gpuMode).toBe(true);
 
-    expect(system.spawn()).toBe(0);
-    expect(system.spawn()).toBe(1);
-    expect(system.spawn()).toBe(-1);
+    expect(system._spawnSlot()).toBe(0);
+    expect(system._spawnSlot()).toBe(1);
+    expect(system._spawnSlot()).toBe(-1);
   });
 });
 
@@ -589,23 +589,23 @@ describe('ParticleSystem._updateGpu dead-slot skipping', () => {
 
     system.addUpdateModule(new ApplyForce(0, 0));
 
-    const a = system.spawn();
-    const b = system.spawn();
+    const a = system._spawnSlot();
+    const b = system._spawnSlot();
 
-    system.lifetime[a] = 10;
-    system.lifetime[b] = 10;
+    system._storage.lifetime[a] = 10;
+    system._storage.lifetime[b] = 10;
     system.update(tick(0));
     expect(system.gpuMode).toBe(true);
 
     // Kill b directly — not via natural expiry — while it's still within
     // [0, liveCount).
-    system.alive[b] = 0;
+    system._storage.alive[b] = 0;
     system.update(tick(0.1));
 
-    expect(system.elapsed[a]).toBeCloseTo(0.1);
+    expect(system._storage.elapsed[a]).toBeCloseTo(0.1);
     // b was skipped by the `if (alive[i] === 0) continue;` guard, so its
     // elapsed time is untouched.
-    expect(system.elapsed[b]).toBe(0);
+    expect(system._storage.elapsed[b]).toBe(0);
   });
 });
 
@@ -628,8 +628,8 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
     parent.addUpdateModule(new ApplyForce(0, 0));
     parent.addDeathModule(new SpawnOnDeath(child, new BurstSpawn({ schedule: [{ time: 0, count: 1 }], lifetime: new Constant(5) })));
 
-    const slot = parent.spawn();
-    parent.lifetime[slot] = 0.05;
+    const slot = parent._spawnSlot();
+    parent._storage.lifetime[slot] = 0.05;
 
     parent.update(tick(0));
     expect(parent.gpuMode).toBe(true);
@@ -637,8 +637,8 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
     // elapsed (integrated in _updateGpu) reaches 0.1 >= lifetime 0.05 -> natural expiry.
     parent.update(tick(0.1));
 
-    expect(parent.alive[slot]).toBe(0);
-    expect(parent.lifetime[slot]).toBe(-1);
+    expect(parent._storage.alive[slot]).toBe(0);
+    expect(parent._storage.lifetime[slot]).toBe(-1);
     expect(child.liveCount).toBe(1);
   });
 });
@@ -703,8 +703,8 @@ describe('ParticleGpuState direct construction', () => {
       ),
     );
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
 
     expect(system.gpuMode).toBe(true);
@@ -743,8 +743,8 @@ describe('ParticleGpuState frame-UV packing (_writeFrames)', () => {
     const system = new ParticleSystem(tex, frames, { capacity: 4, device: env.device });
 
     system.addUpdateModule(new ApplyForce(0, 0));
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
 
     expect(system.gpuMode).toBe(true);
@@ -771,8 +771,8 @@ describe('ParticleGpuState frame-UV packing (_writeFrames)', () => {
     const system = new ParticleSystem(tex, frames, { capacity: 4, device: env.device });
 
     system.addUpdateModule(new ApplyForce(0, 0));
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
 
     const view = readFramesUniforms(env);
@@ -789,8 +789,8 @@ describe('ParticleGpuState frame-UV packing (_writeFrames)', () => {
     const system = new ParticleSystem(tex, { capacity: 4, device: env.device });
 
     system.addUpdateModule(new ApplyForce(0, 0));
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
 
     const view = readFramesUniforms(env);
@@ -821,16 +821,16 @@ describe('Out-of-range textureIndex', () => {
 
     system.addUpdateModule(new ApplyForce(0, 0));
 
-    const inRange = system.spawn();
-    const outOfRange = system.spawn();
-    const neverSet = system.spawn();
+    const inRange = system._spawnSlot();
+    const outOfRange = system._spawnSlot();
+    const neverSet = system._spawnSlot();
 
     for (const slot of [inRange, outOfRange, neverSet]) {
-      system.lifetime[slot] = 10;
+      system._storage.lifetime[slot] = 10;
     }
 
-    system.textureIndex[inRange] = 1;
-    system.textureIndex[outOfRange] = 7;
+    system._storage.frame[inRange] = 1;
+    system._storage.frame[outOfRange] = 7;
     // `neverSet` keeps the zero-initialised default.
 
     system.update(tick(0.016));
@@ -847,7 +847,7 @@ describe('Out-of-range textureIndex', () => {
     // CPU side: the same three particles packed through the render mode.
     const mode = new QuadParticles();
 
-    mode.build(system);
+    mode.build(system, system._storage);
 
     const floats = new Float32Array(mode.data);
     const uvMinU = (instance: number): number => floats[instance * 10 + 6]!;
@@ -884,8 +884,8 @@ describe('ParticleGpuState prelude deduplication', () => {
     system.addUpdateModule(new Turbulence(50));
     system.addUpdateModule(new Turbulence(30));
 
-    const slot = system.spawn();
-    system.lifetime[slot] = 10;
+    const slot = system._spawnSlot();
+    system._storage.lifetime[slot] = 10;
     system.update(tick(0.016));
 
     expect(system.gpuMode).toBe(true);
@@ -944,15 +944,15 @@ describe('SpawnOnDeath into a GPU-mode target system', () => {
     target.update(tick(0));
 
     for (let i = 0; i < capacity; i++) {
-      const slot = target.spawn();
+      const slot = target._spawnSlot();
 
-      target.lifetime[slot] = 10;
+      target._storage.lifetime[slot] = 10;
     }
 
     // Mirror what the GPU death path leaves behind: a dead slot below the
     // live-range high-water mark.
-    target.alive[hole] = 0;
-    target.lifetime[hole] = -1;
+    target._storage.alive[hole] = 0;
+    target._storage.lifetime[hole] = -1;
 
     return target;
   };
@@ -963,39 +963,39 @@ describe('SpawnOnDeath into a GPU-mode target system', () => {
 
     expect(target.gpuMode).toBe(true);
 
-    const parentSlot = parent.spawn();
+    const parentSlot = parent._spawnSlot();
 
-    parent.posX[parentSlot] = 100;
-    parent.posY[parentSlot] = 50;
+    parent._storage.posX[parentSlot] = 100;
+    parent._storage.posY[parentSlot] = 50;
 
     const death = new SpawnOnDeath(target, new BurstSpawn({ schedule: [{ time: 0, count: 1 }], lifetime: new Constant(5) }));
     const liveCountBefore = target.liveCount;
 
-    death.onDeath(parent, parentSlot);
+    death.onDeath(parent, parent._storage.snapshot(parentSlot));
 
     // The spawn refilled the hole, so liveCount is unchanged — the signal the
     // old count-diff heuristic relied on never fires here.
     expect(target.liveCount).toBe(liveCountBefore);
-    expect(target.alive[1]).toBe(1);
-    expect(target.posX[1]).toBe(100);
-    expect(target.posY[1]).toBe(50);
+    expect(target._storage.alive[1]).toBe(1);
+    expect(target._storage.posX[1]).toBe(100);
+    expect(target._storage.posY[1]).toBe(50);
   });
 
   test('CPU-mode targets still receive the dying particle position', () => {
     const target = new ParticleSystem(makeTexture(), { capacity: 4 });
     const parent = new ParticleSystem(makeTexture(), { capacity: 4 });
 
-    const parentSlot = parent.spawn();
+    const parentSlot = parent._spawnSlot();
 
-    parent.posX[parentSlot] = -20;
-    parent.posY[parentSlot] = 7;
+    parent._storage.posX[parentSlot] = -20;
+    parent._storage.posY[parentSlot] = 7;
 
     const death = new SpawnOnDeath(target, new BurstSpawn({ schedule: [{ time: 0, count: 1 }], lifetime: new Constant(5) }));
 
-    death.onDeath(parent, parentSlot);
+    death.onDeath(parent, parent._storage.snapshot(parentSlot));
 
     expect(target.liveCount).toBe(1);
-    expect(target.posX[0]).toBe(-20);
-    expect(target.posY[0]).toBe(7);
+    expect(target._storage.posX[0]).toBe(-20);
+    expect(target._storage.posY[0]).toBe(7);
   });
 });

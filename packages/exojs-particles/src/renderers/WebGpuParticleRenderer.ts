@@ -353,7 +353,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     let appendBytes = 0;
 
     if (gpuState === null) {
-      mode.build(system);
+      mode.build(system, system._storage);
       drawCount = mode.count;
       // At least one stride, so a zero-element build still leaves the cursor on
       // the 4-byte boundary `setVertexBuffer` and `writeBuffer` require.

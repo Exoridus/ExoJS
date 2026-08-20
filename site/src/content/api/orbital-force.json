@@ -131,7 +131,7 @@
       "members": [
         {
           "name": "apply",
-          "signature": "apply(system: ParticleSystem, dt: number): void",
+          "signature": "apply(particles: ParticleBatch, dt: number): void",
           "signatureTokens": [
             {
               "text": "apply",
@@ -142,7 +142,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "system",
+              "text": "particles",
               "kind": "param"
             },
             {
@@ -150,7 +150,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ParticleSystem",
+              "text": "ParticleBatch",
               "kind": "type"
             },
             {
@@ -184,8 +184,8 @@
           ],
           "params": [
             {
-              "name": "system",
-              "type": "ParticleSystem",
+              "name": "particles",
+              "type": "ParticleBatch",
               "optional": false
             },
             {
@@ -195,7 +195,7 @@
             }
           ],
           "returnType": "void",
-          "description": ""
+          "description": "Mutates the live particles for one frame. Runs only on the CPU path: a system whose modules are all GPU-eligible executes wgsl bodies inside its compute shader instead, and never calls this."
         },
         {
           "name": "destroy",

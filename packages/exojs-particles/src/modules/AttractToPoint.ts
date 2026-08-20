@@ -1,4 +1,4 @@
-﻿import type { ParticleSystem } from "#ParticleSystem";
+﻿import type { ParticleBatch } from "#ParticleStorage";
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
@@ -31,8 +31,10 @@ export class AttractToPoint extends UpdateModule {
     this.falloff = falloff;
   }
 
-  public override apply(system: ParticleSystem, dt: number): void {
-    const { posX, posY, velX, velY, liveCount } = system;
+  public override apply(particles: ParticleBatch, dt: number): void {
+    const { x: posX, y: posY } = particles.position;
+    const { x: velX, y: velY } = particles.velocity;
+    const liveCount = particles.count;
     const { x, y, strength, falloff } = this;
 
     for (let i = 0; i < liveCount; i++) {

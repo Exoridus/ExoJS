@@ -8,9 +8,10 @@ class TintCycle extends UpdateModule {
         super();
         this.palette = palette;
     }
-    apply(system) {
-        const { color, liveCount, elapsed } = system;
-        for (let i = 0; i < liveCount; i++) {
+    apply(particles) {
+        const { color } = particles;
+        const { elapsed } = particles.timing;
+        for (let i = 0; i < particles.count; i++) {
             if (elapsed[i] === 0) {
                 color[i] = this.palette[this.next++ % this.palette.length].toRgba();
             }

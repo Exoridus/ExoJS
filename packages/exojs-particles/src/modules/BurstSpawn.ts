@@ -1,9 +1,9 @@
 ﻿import { Color } from '@codexo/exojs';
 import { Vector } from '@codexo/exojs';
 
-import type { Distribution } from "#distributions/Distribution";
-import type { ParticleSystem } from "#ParticleSystem";
+import type { ParticleEmitter } from "#ParticleStorage";
 
+import { fillParticle, type ParticleSpawnFields } from './spawnFields';
 import { SpawnModule } from './SpawnModule';
 
 /**
@@ -15,22 +15,11 @@ export interface BurstSchedule {
   count: number;
 }
 
-/**
- * Per-property spawn configuration for {@link BurstSpawn}. Same fields as
- * {@link RateSpawnConfig} except no rate — the schedule drives counts.
- */
-export interface BurstSpawnConfig {
+/** Spawn configuration for {@link BurstSpawn}: the burst schedule plus the shared per-property fields. */
+export interface BurstSpawnConfig extends ParticleSpawnFields {
   schedule: readonly BurstSchedule[];
   /** Whether to repeat the schedule from t=0 once exhausted. Default `false`. */
   loop?: boolean;
-  lifetime?: Distribution<number>;
-  position?: Distribution<Vector>;
-  velocity?: Distribution<Vector>;
-  scale?: Distribution<Vector>;
-  rotation?: Distribution<number>;
-  rotationSpeed?: Distribution<number>;
-  tint?: Distribution<Color>;
-  textureIndex?: Distribution<number>;
 }
 
 /**
@@ -57,7 +46,7 @@ export class BurstSpawn extends SpawnModule {
     this.config = config;
   }
 
-  public override apply(system: ParticleSystem, dt: number): void {
+  public override apply(emitter: ParticleEmitter, dt: number): void {
     const cfg = this.config;
     const schedule = cfg.schedule;
 
@@ -70,7 +59,7 @@ export class BurstSpawn extends SpawnModule {
     let next = schedule[this._nextIndex];
 
     while (next !== undefined && this._elapsed >= next.time) {
-      this._spawnBurst(system, next.count);
+      this._spawnBurst(emitter, next.count);
       this._nextIndex++;
       next = schedule[this._nextIndex];
     }
@@ -89,51 +78,15 @@ export class BurstSpawn extends SpawnModule {
     return this;
   }
 
-  private _spawnBurst(system: ParticleSystem, count: number): void {
-    const cfg = this.config;
-    const v = this._vec;
-    const c = this._color;
-
+  private _spawnBurst(emitter: ParticleEmitter, count: number): void {
     for (let i = 0; i < count; i++) {
-      const slot = system.spawn();
+      const particle = emitter.emit();
 
-      if (slot < 0) {
+      if (particle === null) {
         return;
       }
 
-      system.lifetime[slot] = cfg.lifetime ? cfg.lifetime.sample() : 1;
-
-      if (cfg.position) {
-        cfg.position.sample(v);
-        system.posX[slot] = v.x;
-        system.posY[slot] = v.y;
-      } else {
-        system.posX[slot] = 0;
-        system.posY[slot] = 0;
-      }
-
-      if (cfg.velocity) {
-        cfg.velocity.sample(v);
-        system.velX[slot] = v.x;
-        system.velY[slot] = v.y;
-      } else {
-        system.velX[slot] = 0;
-        system.velY[slot] = 0;
-      }
-
-      if (cfg.scale) {
-        cfg.scale.sample(v);
-        system.scaleX[slot] = v.x;
-        system.scaleY[slot] = v.y;
-      } else {
-        system.scaleX[slot] = 1;
-        system.scaleY[slot] = 1;
-      }
-
-      system.rotations[slot] = cfg.rotation ? cfg.rotation.sample() : 0;
-      system.rotationSpeeds[slot] = cfg.rotationSpeed ? cfg.rotationSpeed.sample() : 0;
-      system.color[slot] = cfg.tint ? cfg.tint.sample(c).toRgba() : 0xffffffff;
-      system.textureIndex[slot] = cfg.textureIndex ? cfg.textureIndex.sample() | 0 : 0;
+      fillParticle(particle, this.config, this._vec, this._color);
     }
   }
 }
