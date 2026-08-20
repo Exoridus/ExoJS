@@ -108,7 +108,6 @@ describe('GamepadMapping', () => {
 
     expect(mapping.hasChannel(GamepadAxis.Touchpad2Y)).toBe(false);
   });
-
 });
 
 describe('the standard dual-analog layout', () => {

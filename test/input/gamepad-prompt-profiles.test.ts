@@ -1,6 +1,13 @@
 import { GamepadButton } from '#input/GamepadButton';
 import { GamepadMappingFamily } from '#input/GamepadMapping';
-import { createJoyConLeftGamepadMapping, createJoyConRightGamepadMapping, createPlayStationGamepadMapping, createSteamDeckGamepadMapping, createSwitchProGamepadMapping,PlayStationGeneration } from '#input/gamepadMappings';
+import {
+  createJoyConLeftGamepadMapping,
+  createJoyConRightGamepadMapping,
+  createPlayStationGamepadMapping,
+  createSteamDeckGamepadMapping,
+  createSwitchProGamepadMapping,
+  PlayStationGeneration,
+} from '#input/gamepadMappings';
 import { GamepadPromptLayouts } from '#input/GamepadPromptLayouts';
 
 describe('GamepadPromptLayouts', () => {

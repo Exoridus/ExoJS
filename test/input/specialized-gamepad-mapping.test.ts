@@ -2,7 +2,17 @@ import { Gamepad } from '#input/Gamepad';
 import { GamepadButton } from '#input/GamepadButton';
 import { parseGamepadDescriptor, resolveGamepadDefinition } from '#input/GamepadDefinitions';
 import { GamepadMappingFamily, GamepadMappingLayout } from '#input/GamepadMapping';
-import { createArcadeStickGamepadMapping, createJoyConLeftGamepadMapping, createJoyConRightGamepadMapping, createPlayStationGamepadMapping, createStandardGamepadMapping, createSteamControllerGamepadMapping, createSteamDeckGamepadMapping, createSwitchProGamepadMapping, createXboxGamepadMapping } from '#input/gamepadMappings';
+import {
+  createArcadeStickGamepadMapping,
+  createJoyConLeftGamepadMapping,
+  createJoyConRightGamepadMapping,
+  createPlayStationGamepadMapping,
+  createStandardGamepadMapping,
+  createSteamControllerGamepadMapping,
+  createSteamDeckGamepadMapping,
+  createSwitchProGamepadMapping,
+  createXboxGamepadMapping,
+} from '#input/gamepadMappings';
 import { GamepadPromptLayouts } from '#input/GamepadPromptLayouts';
 import { ChannelSize } from '#input/types';
 

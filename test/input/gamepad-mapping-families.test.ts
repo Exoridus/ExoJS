@@ -1,7 +1,16 @@
 import { GamepadAxis } from '#input/GamepadAxis';
 import { GamepadButton } from '#input/GamepadButton';
 import { GamepadMappingFamily } from '#input/GamepadMapping';
-import { createJoyConLeftGamepadMapping, createJoyConRightGamepadMapping, createPlayStationGamepadMapping, createStandardGamepadMapping, createSteamControllerGamepadMapping, createSwitchProGamepadMapping, createXboxGamepadMapping,PlayStationGeneration } from '#input/gamepadMappings';
+import {
+  createJoyConLeftGamepadMapping,
+  createJoyConRightGamepadMapping,
+  createPlayStationGamepadMapping,
+  createStandardGamepadMapping,
+  createSteamControllerGamepadMapping,
+  createSwitchProGamepadMapping,
+  createXboxGamepadMapping,
+  PlayStationGeneration,
+} from '#input/gamepadMappings';
 
 describe('trivial device-family mappings', () => {
   test('SteamControllerGamepadMapping inherits the generic dual-analog layout under its own family tag', () => {

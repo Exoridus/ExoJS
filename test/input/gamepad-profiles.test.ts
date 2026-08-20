@@ -192,9 +192,7 @@ describe('GamepadDefinitions', () => {
 
   test('a {mapping} resolve() result without a name prefers definition name, then descriptor.name, then descriptor.label', () => {
     const namedDescriptor = parseGamepadDescriptor(createGamepad('My Custom Pad'));
-    const withDefinitionName = resolveGamepadDefinition(namedDescriptor, [
-      { name: 'Def Name', resolve: () => ({ mapping: createStandardGamepadMapping() }) },
-    ]);
+    const withDefinitionName = resolveGamepadDefinition(namedDescriptor, [{ name: 'Def Name', resolve: () => ({ mapping: createStandardGamepadMapping() }) }]);
     expect(withDefinitionName.name).toBe('Def Name');
 
     const withDescriptorName = resolveGamepadDefinition(namedDescriptor, [{ resolve: () => ({ mapping: createStandardGamepadMapping() }) }]);

@@ -2,7 +2,7 @@ import type { Application } from '#core/Application';
 import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneState } from '#core/SceneState';
 import type { Destroyable } from '#core/types';
-import type { ActionMap, ActionRecord } from '#input/actions/ActionMap';
+import type { ActionMap, ActionRecord, AnyActionMap } from '#input/actions/ActionMap';
 import type { InputScope } from '#input/actions/InputScope';
 import { ScopeLevel } from '#input/actions/ScopeLevel';
 import type { ActionSample } from '#input/actions/types';
@@ -254,7 +254,7 @@ export class SceneInputs implements Destroyable {
   }
 
   /** Stop updating `map`. Called by {@link ActionMap.detach}. @internal */
-  public _detachActionMap(map: ActionMap): void {
+  public _detachActionMap(map: AnyActionMap): void {
     if (this._base.delete(map)) {
       return;
     }

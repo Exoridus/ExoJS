@@ -1,6 +1,6 @@
 export type { GamepadSlot } from './ActionBase';
 export { ActionBase } from './ActionBase';
-export type { Action, ActionMapOptions, ActionRecord, BindingConflict, BindingOf } from './ActionMap';
+export type { Action, ActionBinding, ActionMapOptions, ActionRecord, AnyActionMap, BindingConflict } from './ActionMap';
 export { ActionMap } from './ActionMap';
 export type { AxisBinding, AxisCompositeBinding } from './AxisAction';
 export { AxisAction } from './AxisAction';

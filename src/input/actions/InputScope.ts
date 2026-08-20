@@ -1,4 +1,4 @@
-import type { ActionMap, ActionRecord } from './ActionMap';
+import type { AnyActionMap } from './ActionMap';
 
 /**
  * One input context: the action maps that are in charge while it is the
@@ -31,16 +31,16 @@ import type { ActionMap, ActionRecord } from './ActionMap';
  * ```
  */
 export class InputScope {
-  private readonly _maps: ActionMap[] = [];
+  private readonly _maps: AnyActionMap[] = [];
 
-  public constructor(maps?: ActionMap | readonly ActionMap[]) {
+  public constructor(maps?: AnyActionMap | readonly AnyActionMap[]) {
     if (maps === undefined) {
       return;
     }
 
     // `Array.isArray` widens a `readonly T[] | T` narrowing to `any[]`;
     // annotating restores the element type for the loop below.
-    const list: readonly ActionMap[] = Array.isArray(maps) ? maps : [maps];
+    const list: readonly AnyActionMap[] = Array.isArray(maps) ? maps : [maps];
 
     for (const map of list) {
       this.add(map);
@@ -48,7 +48,7 @@ export class InputScope {
   }
 
   /** The maps in this scope, in the order they were added. */
-  public get maps(): readonly ActionMap[] {
+  public get maps(): readonly AnyActionMap[] {
     return this._maps;
   }
 
@@ -61,7 +61,7 @@ export class InputScope {
    *
    * @throws {Error} If `map` already belongs to a different scope.
    */
-  public add<T extends ActionRecord>(map: ActionMap<T>): this {
+  public add(map: AnyActionMap): this {
     const scope = scopeByMap.get(map);
 
     if (scope === this) {
@@ -79,7 +79,7 @@ export class InputScope {
   }
 
   /** Take `map` out of this scope. A map that is not in it is ignored. */
-  public remove<T extends ActionRecord>(map: ActionMap<T>): this {
+  public remove(map: AnyActionMap): this {
     const index = this._maps.indexOf(map);
 
     if (index !== -1) {
@@ -107,4 +107,4 @@ export class InputScope {
  * unaware of the scope layer: a map is perfectly usable without one, and the
  * only thing the map itself must guarantee is single ownership of its actions.
  */
-const scopeByMap = new WeakMap<ActionMap, InputScope>();
+const scopeByMap = new WeakMap<AnyActionMap, InputScope>();

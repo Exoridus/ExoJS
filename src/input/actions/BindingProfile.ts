@@ -102,7 +102,7 @@ export class BindingProfile {
     const profile = new BindingProfile();
 
     for (const [action, binding] of Object.entries(overrides)) {
-      if (binding === null || typeof binding !== 'object' || typeof (binding).kind !== 'string' || !('binding' in binding)) {
+      if (binding === null || typeof binding !== 'object' || typeof binding.kind !== 'string' || !('binding' in binding)) {
         throw new Error(`BindingProfile: the override for "${action}" is not a { kind, binding } pair.`);
       }
 

@@ -1,4 +1,4 @@
-import type { ActionMap } from './ActionMap';
+import type { AnyActionMap } from './ActionMap';
 import type { ActionSample, ChannelEvent, ChannelEventBatch } from './types';
 
 /**
@@ -33,7 +33,7 @@ export interface ScopeLevelOwner {
  * @internal
  */
 export class ScopeLevel {
-  private readonly _maps = new Set<ActionMap>();
+  private readonly _maps = new Set<AnyActionMap>();
   private readonly _mask = new Set<number>();
   private _values: Float32Array | null = null;
   private _batches: ChannelEventBatch[] = [];
@@ -49,15 +49,15 @@ export class ScopeLevel {
    */
   private _maskKnown = false;
 
-  public get maps(): ReadonlySet<ActionMap> {
+  public get maps(): ReadonlySet<AnyActionMap> {
     return this._maps;
   }
 
-  public add(map: ActionMap): void {
+  public add(map: AnyActionMap): void {
     this._maps.add(map);
   }
 
-  public delete(map: ActionMap): boolean {
+  public delete(map: AnyActionMap): boolean {
     return this._maps.delete(map);
   }
 

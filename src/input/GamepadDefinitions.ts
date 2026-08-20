@@ -341,7 +341,10 @@ const exactDeviceDefinitions: GamepadDefinition[] = [
     '1532:1007',
     '1532:100a',
   ]),
-  createStaticGamepadDefinition('Razer Raiju Ultimate Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), ['1532:1004', '1532:1009']),
+  createStaticGamepadDefinition('Razer Raiju Ultimate Controller', () => createPlayStationGamepadMapping(PlayStationGeneration.PS4), [
+    '1532:1004',
+    '1532:1009',
+  ]),
   createStaticGamepadDefinition('Razer Raion Controller', () => createArcadeStickGamepadMapping(), '1532:1100'),
 ];
 

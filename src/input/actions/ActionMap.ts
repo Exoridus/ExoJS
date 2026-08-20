@@ -3,21 +3,32 @@ import type { InputToken } from '#input/InputToken';
 
 import type { ActionBase, GamepadSlot } from './ActionBase';
 import { tokensFromChannels } from './ActionBase';
-import type { AxisAction } from './AxisAction';
+import type { AxisAction, AxisBinding } from './AxisAction';
 import type { BindingProfile } from './BindingProfile';
-import type { ButtonAction } from './ButtonAction';
-import type { ChordAction } from './ChordAction';
-import type { SequenceAction } from './SequenceAction';
+import type { ButtonAction, ButtonBinding } from './ButtonAction';
+import type { ChordAction, ChordBinding } from './ChordAction';
+import type { SequenceAction, SequenceBinding } from './SequenceAction';
 import type { SerializedActionBinding } from './serialization';
-import type { ActionSample } from './types';
+import type { ActionSample, OneOrMany } from './types';
 import { ActionOwnership } from './types';
-import type { VectorAction } from './VectorAction';
+import type { VectorAction, VectorBinding } from './VectorAction';
 
 /** Any action kind an {@link ActionMap} can hold. */
 export type Action = ButtonAction | AxisAction | VectorAction | ChordAction | SequenceAction;
 
-/** The binding descriptor type `A` is rebound with — the second argument of {@link ActionMap.rebind}. */
-export type BindingOf<A> = A extends ActionBase<infer Binding> ? Binding : never;
+/**
+ * Any binding descriptor an action can be rebound with — the second argument of
+ * {@link ActionMap.rebind}.
+ *
+ * Deliberately the union of every kind's descriptor rather than a conditional
+ * type resolved from the action being rebound. A conditional over the map's own
+ * type parameter, however written, stops TypeScript inferring that parameter at
+ * every OTHER `ActionMap<T>` site — `scene.inputs.attach(map)` included — so the
+ * precision would be paid for by breaking inference for every caller. The
+ * ACTION NAME is still checked against the map's declared actions, and a
+ * mismatched binding shape is rejected at runtime by the action itself.
+ */
+export type ActionBinding = ButtonBinding | OneOrMany<AxisBinding> | OneOrMany<VectorBinding> | ChordBinding | SequenceBinding;
 
 /** The shape an {@link ActionMap} is built from. */
 export type ActionRecord = Readonly<Record<string, Action>>;
@@ -230,7 +241,7 @@ class ActionMapBase<T extends ActionRecord> {
    *
    * @throws {Error} If no action is declared under `name`.
    */
-  public rebind<K extends keyof T & string>(name: K, binding: BindingOf<T[K]> | null): void {
+  public rebind<K extends keyof T & string>(name: K, binding: ActionBinding | null): void {
     const action = this._byName.get(name);
 
     if (action === undefined) {
@@ -558,3 +569,14 @@ export const ActionMap = ActionMapBase as unknown as ActionMapConstructor;
 
 /** A constructed action map together with its actions. */
 export type ActionMap<T extends ActionRecord = ActionRecord> = ActionMapBase<T> & Readonly<T>;
+
+/**
+ * Any action map, whatever actions it declares — the type a collection of maps
+ * (an {@link InputScope}, a scope stack) is written against.
+ *
+ * {@link ActionMap} itself cannot serve that role: its default type argument
+ * carries `Readonly<Record<string, Action>>`, and a map declared with concrete
+ * action names has no index signature to satisfy it. This alias names the map
+ * WITHOUT its merged action members, which every concrete map does satisfy.
+ */
+export type AnyActionMap = ActionMapBase<ActionRecord>;

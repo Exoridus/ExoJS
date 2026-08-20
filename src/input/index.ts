@@ -7,7 +7,6 @@ export type { GamepadButtonOptions } from './GamepadButton';
 export { GamepadButton } from './GamepadButton';
 export type { BrowserGamepad, GamepadDefinition, GamepadDefinitionResult, GamepadDescriptor, ResolvedGamepadDefinition } from './GamepadDefinitions';
 export * from './GamepadMapping';
-export * from './GamepadPromptLayouts';
 export type { StandardGamepadMappingOptions } from './gamepadMappings';
 export {
   createArcadeStickGamepadMapping,
@@ -21,6 +20,7 @@ export {
   createXboxGamepadMapping,
   PlayStationGeneration,
 } from './gamepadMappings';
+export * from './GamepadPromptLayouts';
 export * from './InputBinding';
 export type { ActionScopeHost, GamepadSlotStrategy } from './InputManager';
 export { InputManager } from './InputManager';
