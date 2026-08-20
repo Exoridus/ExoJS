@@ -1379,7 +1379,7 @@ describe('bindAsset() — direct handler binding', () => {
       },
     );
 
-    const container = encodeContainer([{ alias: 'x', type: 'boundAsset', bytes: new TextEncoder().encode('hi') }]);
+    const container = encodeContainer([{ source: 'x.dat', type: 'boundAsset', bytes: new TextEncoder().encode('hi') }]);
 
     global.fetch = vi.fn(
       async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
@@ -1387,7 +1387,7 @@ describe('bindAsset() — direct handler binding', () => {
 
     await loader.loadContainer('pack.exoa');
 
-    expect((loader._peekResource(BoundAsset, 'x') as BoundAsset).value).toBe('hi');
+    expect((loader._peekResource(BoundAsset, 'x.dat') as BoundAsset).value).toBe('hi');
   });
 
   test('throws on a duplicate extension within the same bindAsset() call', () => {
@@ -1455,22 +1455,22 @@ describe('loadContainer()', () => {
 
   test('loads N assets from one container in a single request', async () => {
     const container = encodeContainer([
-      { alias: 'level', type: 'json', bytes: new TextEncoder().encode('{"score":42}') },
-      { alias: 'readme', type: 'text', bytes: new TextEncoder().encode('hello world') },
-      { alias: 'blob', type: 'binary', bytes: new Uint8Array([1, 2, 3, 4]) },
+      { source: 'data/level.json', type: 'json', bytes: new TextEncoder().encode('{"score":42}') },
+      { source: 'docs/readme.txt', type: 'text', bytes: new TextEncoder().encode('hello world') },
+      { source: 'data/blob.bin', type: 'binary', bytes: new Uint8Array([1, 2, 3, 4]) },
     ]);
     mockContainerFetch(container);
 
     const loader = createCoreLoaderLocal();
     await loader.loadContainer('assets/pack.exoa');
 
-    expect(loader.get(Asset.type('json', 'level')).value).toEqual({ score: 42 });
-    expect(loader.get(Asset.type('text', 'readme')).value).toBe('hello world');
-    expect(new Uint8Array(loader.get(Asset.type('binary', 'blob')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
+    expect(loader.get(Asset.type('json', 'data/level.json')).value).toEqual({ score: 42 });
+    expect(loader.get(Asset.type('text', 'docs/readme.txt')).value).toBe('hello world');
+    expect(new Uint8Array(loader.get(Asset.type('binary', 'data/blob.bin')).value)).toEqual(new Uint8Array([1, 2, 3, 4]));
   });
 
   test('throws on an unknown asset type and stores nothing', async () => {
-    const container = encodeContainer([{ alias: 'x', type: 'nonsense', bytes: new TextEncoder().encode('x') }]);
+    const container = encodeContainer([{ source: 'x.dat', type: 'nonsense', bytes: new TextEncoder().encode('x') }]);
     mockContainerFetch(container);
 
     const loader = createCoreLoaderLocal();
@@ -1484,7 +1484,7 @@ describe('loadContainer()', () => {
 
     loader.bindAsset<BareAsset>({ ctor: BareAsset, typeNames: ['bare'] }, { load: async () => new BareAsset() });
 
-    const container = encodeContainer([{ alias: 'x', type: 'bare', bytes: new Uint8Array([1]) }]);
+    const container = encodeContainer([{ source: 'x.dat', type: 'bare', bytes: new Uint8Array([1]) }]);
     mockContainerFetch(container);
 
     await expect(loader.loadContainer('pack.exoa')).rejects.toThrow(/cannot be built from container bytes/);

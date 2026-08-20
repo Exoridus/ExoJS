@@ -430,20 +430,39 @@ export class Loader {
 
   /**
    * Load every asset packed into a binary container (`.exoa`) in a **single
-   * request**. A container is one file with an embedded index: its bytes are
-   * fetched once (and cached
-   * cross-session like any asset), then each slice is unpacked through its
-   * type's handler and stored under the entry's alias — retrievable with
-   * {@link get} exactly as if it had been loaded individually.
+   * request**, and return the scope that owns them.
+   *
+   * A container is one file with an embedded index: its bytes are fetched once
+   * (and cached cross-session like any asset), then each slice is unpacked
+   * through its type's handler and stored under the entry's own logical source.
+   * A container is therefore a transport, not a second naming system — an entry
+   * resolves to exactly the same asset identity as a network load of that
+   * source, so both can hold it and the payload is fetched and decoded once.
+   *
+   * The returned scope holds one ordinary claim per entry. Destroying it frees
+   * only the entries no other owner still holds, so unpacking a container can
+   * never pull an asset out from under a scene that also uses it. Use
+   * {@link LoaderScope.loadContainer} to claim the entries under an existing
+   * scope instead.
    *
    * Each entry's asset type must support byte-source construction
    * ({@link AssetHandler.createFromBytes}); the factory-backed core types
    * (textures, audio, JSON, text, binary, …) do. Throws on a malformed
-   * container, an unknown type, or a type that cannot be built from bytes.
+   * container, an unsupported format version, an unknown type, or a type that
+   * cannot be built from bytes.
    *
    * @param url Path to the container file, resolved against the loader base path.
    */
-  public async loadContainer(url: string): Promise<void> {
+  public async loadContainer(url: string): Promise<LoaderScope> {
+    const scope = new LoaderScope(this, 'container', `container:${url}`);
+
+    await this._loadContainerInto(scope, url);
+
+    return scope;
+  }
+
+  /** Backs {@link loadContainer} and {@link LoaderScope.loadContainer}: unpack `url` and claim every entry under `claimer`. @internal */
+  public async _loadContainerInto(claimer: LoaderScope, url: string): Promise<void> {
     const buffer = await this._decoder._contextFetch<ArrayBuffer>(url, '__ctx_binary', response => response.arrayBuffer());
     const { entries, dataStart } = parseContainer(buffer);
 
@@ -455,15 +474,22 @@ export class Loader {
         throw new Error(`Container "${url}" references unknown asset type "${entry.type}".`);
       }
 
-      return { entry, type };
+      return { entry, asset: this._canonicalize(type, entry.source, entry.options) };
     });
 
+    // Claim before unpacking: an entry that is already resident (loaded over the
+    // network earlier) is kept alive by this claim even though nothing stores it
+    // again, and an entry nobody claims would otherwise be freed on arrival.
+    for (const { asset } of resolved) {
+      this._claim(asset, claimer);
+    }
+
     await Promise.all(
-      resolved.map(({ entry, type }) => {
+      resolved.map(({ entry, asset }) => {
         const start = dataStart + entry.offset;
         const slice = buffer.slice(start, start + entry.length);
 
-        return this._decoder._injectSource(this._canonicalize(type, entry.alias, entry.options), slice, entry.options);
+        return this._decoder._injectSource(asset, slice, entry.options);
       }),
     );
   }

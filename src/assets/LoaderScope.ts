@@ -105,6 +105,17 @@ export class LoaderScope implements Destroyable {
   }
 
   /**
+   * Unpacks an asset container (`.exoa`) and claims every entry under THIS
+   * scope, so the container's assets share this scope's lifetime rather than
+   * getting one of their own.
+   *
+   * See {@link Loader.loadContainer} for the format and identity contract.
+   */
+  public loadContainer(url: string): Promise<void> {
+    return this._loader._loadContainerInto(this, url);
+  }
+
+  /**
    * Drops this scope's claim on one asset. The payload is freed only when no
    * other scope still holds it; a scope can never release another owner's claim.
    *
