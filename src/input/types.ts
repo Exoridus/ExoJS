@@ -45,7 +45,7 @@ export function resolveGamepadSlotChannel(channel: number, slot: 0 | 1 | 2 | 3):
  * channel came from. Channels outside the gamepad category pass through
  * unchanged.
  *
- * Serialization and conflict reporting both need this — a binding names a
+ * Serialization and conflict reporting both need this - a binding names a
  * control, never the runtime pad slot it happens to be read from.
  */
 export function slotZeroGamepadChannel(channel: number): number {

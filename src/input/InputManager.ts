@@ -25,7 +25,7 @@ import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize, resolveGamepa
 const gamepadSlots = 4;
 
 /**
- * A per-frame consumer that owns an ordered set of action maps of its own —
+ * A per-frame consumer that owns an ordered set of action maps of its own -
  * currently a {@link SceneInputs} and its input scope stack. @internal
  */
 export interface ActionScopeHost {
@@ -512,7 +512,7 @@ export class InputManager {
   }
 
   /**
-   * Add a scope host — a {@link SceneInputs} — to the per-frame update set.
+   * Add a scope host - a {@link SceneInputs} - to the per-frame update set.
    *
    * A host drives its own maps rather than registering each of them here,
    * because a scope stack has to update its levels in priority order and mask

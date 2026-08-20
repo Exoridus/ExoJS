@@ -22,7 +22,7 @@ export interface SerializedVectorEntry {
 }
 
 /**
- * One action's binding in its persistable form — the shape a
+ * One action's binding in its persistable form - the shape a
  * {@link BindingProfile} stores and a save file round-trips.
  *
  * Chord and sequence bindings are stored NORMALIZED (alternatives of channel
@@ -33,7 +33,7 @@ export interface SerializedVectorEntry {
  *
  * `kind` is validated against the live action when a profile is applied. A
  * stored binding whose kind no longer matches is rejected rather than
- * partially applied — an action that changed from a button into an axis
+ * partially applied - an action that changed from a button into an axis
  * between builds is a developer-side break, not something to guess at.
  */
 export type SerializedActionBinding =

@@ -43,7 +43,7 @@ export enum GamepadMappingLayout {
  * One device layout, as data.
  *
  * This is the whole definition of a controller as far as the engine is
- * concerned — no subclassing is involved, and a custom device is described by
+ * concerned - no subclassing is involved, and a custom device is described by
  * writing one of these rather than by extending anything.
  */
 export interface GamepadMappingData {
@@ -59,7 +59,7 @@ export interface GamepadMappingData {
    * Prompt labels that differ from this device's family default.
    *
    * A family spans several product generations whose buttons are not all named
-   * the same — the PlayStation `Select` button reads "Select" on a PS3 pad,
+   * the same - the PlayStation `Select` button reads "Select" on a PS3 pad,
    * "Share" on a DualShock 4 and "Create" on a DualSense, yet all three share
    * one family. List only the controls that differ.
    */
@@ -89,7 +89,7 @@ export class GamepadMapping {
   /** Ordered list of axes, indexed by the Gamepad API axis index. */
   public readonly axes: readonly GamepadAxis[];
 
-  /** Device-specific prompt labels — see {@link GamepadMappingData.promptLabels}. */
+  /** Device-specific prompt labels - see {@link GamepadMappingData.promptLabels}. */
   public readonly promptLabels: ReadonlyMap<GamepadPromptControl, string> | undefined;
 
   public constructor(data: GamepadMappingData) {
@@ -103,7 +103,7 @@ export class GamepadMapping {
   /**
    * Returns `true` when this mapping declares at least one button or axis
    * control that writes to `channel`. Use to detect device-specific
-   * capabilities at runtime — e.g. before binding an input to a
+   * capabilities at runtime - e.g. before binding an input to a
    * right-stick channel that may not exist on a single Joy-Con.
    *
    * @example

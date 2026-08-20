@@ -131,7 +131,7 @@ export class SceneInputs implements Destroyable {
   }
 
   /**
-   * Take `scope` — or the topmost one when omitted — off the stack and detach
+   * Take `scope` - or the topmost one when omitted - off the stack and detach
    * its maps. Returns the removed scope, or `null` when it was not on the
    * stack.
    *
@@ -227,7 +227,7 @@ export class SceneInputs implements Destroyable {
   /**
    * Register with the one input clock, once, as soon as there is anything to
    * sample. A facade that only creates `on*` bindings never reaches the clock
-   * at all — those are driven by the manager's own binding list.
+   * at all - those are driven by the manager's own binding list.
    */
   private _track(): void {
     if (this._tracked || this._suspended || (this._base.maps.size === 0 && this._scopes.length === 0)) {

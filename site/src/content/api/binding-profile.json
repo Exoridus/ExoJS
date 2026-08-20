@@ -1,6 +1,6 @@
 {
   "title": "BindingProfile",
-  "description": "A player's rebindings, as the persistable delta against the developer's defaults. A profile stores ONLY the actions a player actually changed. That is the whole point of keeping it separate from the defaults: a full snapshot taken today would freeze every action a game gains tomorrow at whatever binding it had — or lacked — when the save was written, so adding a new action with a new default would silently do nothing for returning players. A profile holds no reference to any live action or map. Apply it with ActionMap.applyProfile, which validates it against the map's actual actions and applies it as one transaction.",
+  "description": "A player's rebindings, as the persistable delta against the developer's defaults. A profile stores ONLY the actions a player actually changed. That is the whole point of keeping it separate from the defaults: a full snapshot taken today would freeze every action a game gains tomorrow at whatever binding it had - or lacked - when the save was written, so adding a new action with a new default would silently do nothing for returning players. A profile holds no reference to any live action or map. Apply it with ActionMap.applyProfile, which validates it against the map's actual actions and applies it as one transaction.",
   "symbol": "BindingProfile",
   "kind": "class",
   "subsystem": "input",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A player's rebindings, as the persistable delta against the developer's defaults.",
-        "A profile stores ONLY the actions a player actually changed. That is the whole point of keeping it separate from the defaults: a full snapshot taken today would freeze every action a game gains tomorrow at whatever binding it had — or lacked — when the save was written, so adding a new action with a new default would silently do nothing for returning players.",
+        "A profile stores ONLY the actions a player actually changed. That is the whole point of keeping it separate from the defaults: a full snapshot taken today would freeze every action a game gains tomorrow at whatever binding it had - or lacked - when the save was written, so adding a new action with a new default would silently do nothing for returning players.",
         "A profile holds no reference to any live action or map. Apply it with ActionMap.applyProfile, which validates it against the map's actual actions and applies it as one transaction."
       ],
       "importLine": "import { BindingProfile } from '@codexo/exojs'",
@@ -294,7 +294,7 @@
           ],
           "params": [],
           "returnType": "BindingProfileData",
-          "description": "Snapshot suitable for JSON.stringify. Contains tokens only — no gamepad slots, no device indices."
+          "description": "Snapshot suitable for JSON.stringify. Contains tokens only - no gamepad slots, no device indices."
         },
         {
           "name": "fromJSON",

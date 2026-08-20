@@ -1,6 +1,6 @@
 {
   "title": "AnyActionMap",
-  "description": "Any action map, whatever actions it declares — the type a collection of maps (an InputScope, a scope stack) is written against. ActionMap itself cannot serve that role: its default type argument carries `Readonly<Record<string, Action>>`, and a map declared with concrete action names has no index signature to satisfy it. This alias names the map WITHOUT its merged action members, which every concrete map does satisfy.",
+  "description": "Any action map, whatever actions it declares - the type a collection of maps (an InputScope, a scope stack) is written against. ActionMap itself cannot serve that role: its default type argument carries `Readonly<Record<string, Action>>`, and a map declared with concrete action names has no index signature to satisfy it. This alias names the map WITHOUT its merged action members, which every concrete map does satisfy.",
   "symbol": "AnyActionMap",
   "kind": "type",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Any action map, whatever actions it declares — the type a collection of maps (an InputScope, a scope stack) is written against.",
+        "Any action map, whatever actions it declares - the type a collection of maps (an InputScope, a scope stack) is written against.",
         "ActionMap itself cannot serve that role: its default type argument carries `Readonly<Record<string, Action>>`, and a map declared with concrete action names has no index signature to satisfy it. This alias names the map WITHOUT its merged action members, which every concrete map does satisfy."
       ],
       "importLine": "import { AnyActionMap } from '@codexo/exojs'",

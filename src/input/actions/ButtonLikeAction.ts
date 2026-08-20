@@ -3,7 +3,7 @@ import type { ActionSample } from './types';
 
 /**
  * Shared mechanism behind every action that reduces a set of bound channels
- * to a single on/off `active`/`pressed`/`released` (plus `value`) triad —
+ * to a single on/off `active`/`pressed`/`released` (plus `value`) triad -
  * {@link ButtonAction} (strongest of a set of alternative sources) and
  * {@link ChordAction} (weakest of a set of required members). A subclass
  * supplies only {@link _aggregate} and its own {@link ActionBase._resolve};
@@ -13,7 +13,7 @@ import type { ActionSample } from './types';
 export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
   protected readonly _threshold: number;
   /**
-   * Last known value of each bound channel, in `_channels` order — the replay
+   * Last known value of each bound channel, in `_channels` order - the replay
    * baseline `_update` advances. Reallocated by {@link _allocateValues} on
    * every rebind, since a new binding may bind a different number of channels.
    */
@@ -176,7 +176,7 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
   }
 
   /**
-   * Clear all state, as if no source had ever been touched — used when an
+   * Clear all state, as if no source had ever been touched - used when an
    * owner stops feeding this action (a scene suspend), after a rebind, and by
    * the owning {@link ActionMap} to force a fresh baseline on a legitimate
    * ownership handoff, since the new owner's channel buffer is unrelated to

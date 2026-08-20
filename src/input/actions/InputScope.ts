@@ -5,8 +5,8 @@ import type { AnyActionMap } from './ActionMap';
  * topmost scope on a {@link SceneInputs} stack.
  *
  * A scope claims exactly the controls its maps currently bind. While it is
- * pushed, no scope below it — and no map attached outside the stack with
- * `scene.inputs.attach` — observes those controls at all, through neither live
+ * pushed, no scope below it - and no map attached outside the stack with
+ * `scene.inputs.attach` - observes those controls at all, through neither live
  * values nor this frame's event history. Controls nothing in the scope binds
  * fall through untouched, so a pause menu that binds only Escape and the D-pad
  * leaves the gameplay below it fully playable if that is what the game wants.
@@ -14,7 +14,7 @@ import type { AnyActionMap } from './ActionMap';
  * Maps within one scope are peers: they never mask each other, and two of them
  * binding the same control both see it.
  *
- * A scope groups MAPS, not actions. There is deliberately no `addAction` — an
+ * A scope groups MAPS, not actions. There is deliberately no `addAction` - an
  * action belongs to exactly one map for its lifetime, and a lone hotkey is a
  * one-action map rather than a second ownership path.
  *
@@ -55,7 +55,7 @@ export class InputScope {
   /**
    * Put `map` in this scope. A map already in it is not added twice.
    *
-   * A map may only be in one scope at a time — it is sampled once per frame by
+   * A map may only be in one scope at a time - it is sampled once per frame by
    * whichever level it sits on, and being on two levels would both double-sample
    * it and make its claim ambiguous.
    *

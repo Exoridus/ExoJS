@@ -19,7 +19,7 @@ import { Keyboard, PointerButton } from './types';
  * players.
  *
  * Keyboard tokens are the kebab-cased `KeyboardEvent.code` of the physical
- * key, so `keyboard.key-w` is the key an AZERTY keyboard prints "Z" on — the
+ * key, so `keyboard.key-w` is the key an AZERTY keyboard prints "Z" on - the
  * same layout-independent identity {@link Keyboard} itself uses. The four
  * aggregate modifier channels have no `code` of their own and take the
  * unsided name (`keyboard.shift`).
@@ -146,7 +146,7 @@ const channelsByToken = new Map<InputToken, InputChannel>([
   ['keyboard.numpad-decimal', Keyboard.NumPadDecimal],
   ['keyboard.numpad-enter', Keyboard.NumPadEnter],
   ['keyboard.numpad-equal', Keyboard.NumPadEqual],
-  // Aggregate modifier channels. No `KeyboardEvent.code` addresses these —
+  // Aggregate modifier channels. No `KeyboardEvent.code` addresses these -
   // they are written by `InputManager` alongside whichever side was pressed.
   ['keyboard.shift', Keyboard.Shift],
   ['keyboard.control', Keyboard.Control],
@@ -290,7 +290,7 @@ const tokensByChannel = ((): ReadonlyMap<number, InputToken> => {
 /**
  * Canonical {@link InputToken} for `channel`.
  *
- * @throws {Error} If `channel` is not one of the engine's named controls —
+ * @throws {Error} If `channel` is not one of the engine's named controls -
  * a raw offset into a reserved or custom-mapping channel slot has no stable
  * public name and therefore cannot be persisted.
  */

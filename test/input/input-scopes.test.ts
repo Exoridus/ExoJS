@@ -21,7 +21,7 @@ interface Harness {
   set(channel: number, value: number): void;
   /** One tick of the input clock: close nothing, just let every host sample. */
   frame(): void;
-  /** Close the frame — clears the batch log and bumps the frame id. */
+  /** Close the frame - clears the batch log and bumps the frame id. */
   next(): void;
 }
 
@@ -209,7 +209,7 @@ describe('scope stack priority', () => {
     expect(h.inputs.popScope(scope)).toBe(scope);
     h.frame();
 
-    // The key never came up, so the gameplay action reads it as held — but the
+    // The key never came up, so the gameplay action reads it as held - but the
     // press edge happened while the menu owned it and must not resurface.
     expect(gameplay.jump.active).toBe(true);
     expect(gameplay.jump.pressed).toBe(false);

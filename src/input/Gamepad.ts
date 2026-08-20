@@ -154,8 +154,8 @@ export class Gamepad {
   }
 
   /**
-   * Name this device prints on `control` — "A" on an Xbox pad, "Cross" on a
-   * PlayStation one, "B" on a Switch one — or `undefined` when the slot is
+   * Name this device prints on `control` - "A" on an Xbox pad, "Cross" on a
+   * PlayStation one, "B" on a Switch one - or `undefined` when the slot is
    * empty or this family does not label that control.
    *
    * Resolved against the connected pad's own mapping, so a generation that

@@ -20,7 +20,7 @@ function loadProfile() {
         }
     }
     catch {
-        // Unavailable storage, or a profile written by an older build — either
+        // Unavailable storage, or a profile written by an older build - either
         // way, fall through to the developer defaults.
     }
     return new BindingProfile();

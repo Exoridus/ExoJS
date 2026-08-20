@@ -1,6 +1,6 @@
 {
   "title": "ButtonLikeAction",
-  "description": "Shared mechanism behind every action that reduces a set of bound channels to a single on/off `active`/`pressed`/`released` (plus `value`) triad — ButtonAction (strongest of a set of alternative sources) and ChordAction (weakest of a set of required members). A subclass supplies only _aggregate and its own ActionBase._resolve; this base owns the batch-replay update loop, initial-baseline seeding, and reset.",
+  "description": "Shared mechanism behind every action that reduces a set of bound channels to a single on/off `active`/`pressed`/`released` (plus `value`) triad - ButtonAction (strongest of a set of alternative sources) and ChordAction (weakest of a set of required members). A subclass supplies only _aggregate and its own ActionBase._resolve; this base owns the batch-replay update loop, initial-baseline seeding, and reset.",
   "symbol": "ButtonLikeAction",
   "kind": "class",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Shared mechanism behind every action that reduces a set of bound channels to a single on/off `active`/`pressed`/`released` (plus `value`) triad — ButtonAction (strongest of a set of alternative sources) and ChordAction (weakest of a set of required members). A subclass supplies only _aggregate and its own ActionBase._resolve; this base owns the batch-replay update loop, initial-baseline seeding, and reset."
+        "Shared mechanism behind every action that reduces a set of bound channels to a single on/off `active`/`pressed`/`released` (plus `value`) triad - ButtonAction (strongest of a set of alternative sources) and ChordAction (weakest of a set of required members). A subclass supplies only _aggregate and its own ActionBase._resolve; this base owns the batch-replay update loop, initial-baseline seeding, and reset."
       ],
       "importLine": "import { ButtonLikeAction } from '@codexo/exojs'",
       "sourceLink": null
@@ -203,7 +203,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Which action kind this is — the discriminant a serialized binding is validated against."
+          "description": "Which action kind this is - the discriminant a serialized binding is validated against."
         },
         {
           "name": "active",
@@ -278,7 +278,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Absolute channel indices this action reads right now. Reflects the effective binding and the owning map's gamepad slot, and is what an InputScope claims on this action's behalf. The array is replaced, not mutated, on every rebind — do not retain it across one."
+          "description": "Absolute channel indices this action reads right now. Reflects the effective binding and the owning map's gamepad slot, and is what an InputScope claims on this action's behalf. The array is replaced, not mutated, on every rebind - do not retain it across one."
         },
         {
           "name": "defaultBinding",
@@ -299,7 +299,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The binding this action was constructed with — what a null rebind restores."
+          "description": "The binding this action was constructed with - what a null rebind restores."
         },
         {
           "name": "pressed",

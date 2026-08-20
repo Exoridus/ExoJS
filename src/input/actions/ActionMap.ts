@@ -17,13 +17,13 @@ import type { VectorAction, VectorBinding } from './VectorAction';
 export type Action = ButtonAction | AxisAction | VectorAction | ChordAction | SequenceAction;
 
 /**
- * Any binding descriptor an action can be rebound with — the second argument of
+ * Any binding descriptor an action can be rebound with - the second argument of
  * {@link ActionMap.rebind}.
  *
  * Deliberately the union of every kind's descriptor rather than a conditional
  * type resolved from the action being rebound. A conditional over the map's own
  * type parameter, however written, stops TypeScript inferring that parameter at
- * every OTHER `ActionMap<T>` site — `scene.inputs.attach(map)` included — so the
+ * every OTHER `ActionMap<T>` site - `scene.inputs.attach(map)` included - so the
  * precision would be paid for by breaking inference for every caller. The
  * ACTION NAME is still checked against the map's declared actions, and a
  * mismatched binding shape is rejected at runtime by the action itself.
@@ -258,7 +258,7 @@ class ActionMapBase<T extends ActionRecord> {
    * Every override is resolved and validated BEFORE any of them is applied, so
    * a profile with one bad entry leaves the map untouched instead of
    * half-rebound. Actions the profile does not mention fall back to their
-   * declared default — which is what lets a build add a new action without an
+   * declared default - which is what lets a build add a new action without an
    * older save file freezing it.
    *
    * @throws {Error} If an override names an action this map does not declare,
@@ -356,7 +356,7 @@ class ActionMapBase<T extends ActionRecord> {
    * throws out of the caller's own resolve step before anything is mutated,
    * and the actions never become observable in a half-rebound state. Re-arming
    * afterwards is what keeps a source held across the change from reading as a
-   * fresh press — every action was just reset, so without a fresh snapshot they
+   * fresh press - every action was just reset, so without a fresh snapshot they
    * would seed from zero and manufacture an edge on the next real batch.
    */
   private _applyAtomically(changes: ReadonlyArray<readonly [Action, unknown]>): void {
@@ -516,7 +516,7 @@ class ActionMapBase<T extends ActionRecord> {
 }
 
 /**
- * Names an action cannot be declared under — the constructor assigns every
+ * Names an action cannot be declared under - the constructor assigns every
  * action directly onto the instance (`Object.assign(this, actions)`), so an
  * action named after one of these would silently overwrite it (`actions`
  * collapsing from the internal array to a single Action being the most
@@ -524,9 +524,9 @@ class ActionMapBase<T extends ActionRecord> {
  * just the colliding one) instead of throwing anywhere near the mistake.
  *
  * `Object.getOwnPropertyNames(ActionMapBase.prototype)` covers everything
- * declared as a prototype member — `constructor`, `attached`, `names`,
+ * declared as a prototype member - `constructor`, `attached`, `names`,
  * `gamepad`, `entries`, `get`, `rebind`, `applyProfile`, `serializeBindings`,
- * `conflicts`, `detach`, `_attach`, `_armBaseline`, `_update`, `_reset` — but
+ * `conflicts`, `detach`, `_attach`, `_armBaseline`, `_update`, `_reset` - but
  * class FIELDS (`_actions`, `_byName`, `_gamepad`, `_owner`, `_ownership`,
  * `_availability`, `_wasAvailable`) are
  * assigned per-instance in the constructor, never on the prototype, so
@@ -571,7 +571,7 @@ export const ActionMap = ActionMapBase as unknown as ActionMapConstructor;
 export type ActionMap<T extends ActionRecord = ActionRecord> = ActionMapBase<T> & Readonly<T>;
 
 /**
- * Any action map, whatever actions it declares — the type a collection of maps
+ * Any action map, whatever actions it declares - the type a collection of maps
  * (an {@link InputScope}, a scope stack) is written against.
  *
  * {@link ActionMap} itself cannot serve that role: its default type argument

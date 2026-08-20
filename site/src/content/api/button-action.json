@@ -191,7 +191,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Which action kind this is — the discriminant a serialized binding is validated against."
+          "description": "Which action kind this is - the discriminant a serialized binding is validated against."
         },
         {
           "name": "active",
@@ -266,7 +266,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Absolute channel indices this action reads right now. Reflects the effective binding and the owning map's gamepad slot, and is what an InputScope claims on this action's behalf. The array is replaced, not mutated, on every rebind — do not retain it across one."
+          "description": "Absolute channel indices this action reads right now. Reflects the effective binding and the owning map's gamepad slot, and is what an InputScope claims on this action's behalf. The array is replaced, not mutated, on every rebind - do not retain it across one."
         },
         {
           "name": "defaultBinding",
@@ -287,7 +287,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The binding this action was constructed with — what a null rebind restores."
+          "description": "The binding this action was constructed with - what a null rebind restores."
         },
         {
           "name": "pressed",

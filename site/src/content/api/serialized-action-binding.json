@@ -1,6 +1,6 @@
 {
   "title": "SerializedActionBinding",
-  "description": "One action's binding in its persistable form — the shape a BindingProfile stores and a save file round-trips. Chord and sequence bindings are stored NORMALIZED (alternatives of channel groups, and steps of those) rather than as the `'Control+S|Meta+S'` shorthand a developer may have written the default with: the shorthand resolves only `Keyboard` names, so a player who rebinds a chord onto a gamepad button could not be expressed in it. `kind` is validated against the live action when a profile is applied. A stored binding whose kind no longer matches is rejected rather than partially applied — an action that changed from a button into an axis between builds is a developer-side break, not something to guess at.",
+  "description": "One action's binding in its persistable form - the shape a BindingProfile stores and a save file round-trips. Chord and sequence bindings are stored NORMALIZED (alternatives of channel groups, and steps of those) rather than as the `'Control+S|Meta+S'` shorthand a developer may have written the default with: the shorthand resolves only `Keyboard` names, so a player who rebinds a chord onto a gamepad button could not be expressed in it. `kind` is validated against the live action when a profile is applied. A stored binding whose kind no longer matches is rejected rather than partially applied - an action that changed from a button into an axis between builds is a developer-side break, not something to guess at.",
   "symbol": "SerializedActionBinding",
   "kind": "type",
   "subsystem": "input",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One action's binding in its persistable form — the shape a BindingProfile stores and a save file round-trips.",
+        "One action's binding in its persistable form - the shape a BindingProfile stores and a save file round-trips.",
         "Chord and sequence bindings are stored NORMALIZED (alternatives of channel groups, and steps of those) rather than as the `'Control+S|Meta+S'` shorthand a developer may have written the default with: the shorthand resolves only `Keyboard` names, so a player who rebinds a chord onto a gamepad button could not be expressed in it.",
-        "`kind` is validated against the live action when a profile is applied. A stored binding whose kind no longer matches is rejected rather than partially applied — an action that changed from a button into an axis between builds is a developer-side break, not something to guess at."
+        "`kind` is validated against the live action when a profile is applied. A stored binding whose kind no longer matches is rejected rather than partially applied - an action that changed from a button into an axis between builds is a developer-side break, not something to guess at."
       ],
       "importLine": "import { SerializedActionBinding } from '@codexo/exojs'",
       "sourceLink": null

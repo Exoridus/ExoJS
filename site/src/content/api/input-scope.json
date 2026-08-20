@@ -1,6 +1,6 @@
 {
   "title": "InputScope",
-  "description": "One input context: the action maps that are in charge while it is the topmost scope on a SceneInputs stack. A scope claims exactly the controls its maps currently bind. While it is pushed, no scope below it — and no map attached outside the stack with `scene.inputs.attach` — observes those controls at all, through neither live values nor this frame's event history. Controls nothing in the scope binds fall through untouched, so a pause menu that binds only Escape and the D-pad leaves the gameplay below it fully playable if that is what the game wants. Maps within one scope are peers: they never mask each other, and two of them binding the same control both see it. A scope groups MAPS, not actions. There is deliberately no `addAction` — an action belongs to exactly one map for its lifetime, and a lone hotkey is a one-action map rather than a second ownership path.",
+  "description": "One input context: the action maps that are in charge while it is the topmost scope on a SceneInputs stack. A scope claims exactly the controls its maps currently bind. While it is pushed, no scope below it - and no map attached outside the stack with `scene.inputs.attach` - observes those controls at all, through neither live values nor this frame's event history. Controls nothing in the scope binds fall through untouched, so a pause menu that binds only Escape and the D-pad leaves the gameplay below it fully playable if that is what the game wants. Maps within one scope are peers: they never mask each other, and two of them binding the same control both see it. A scope groups MAPS, not actions. There is deliberately no `addAction` - an action belongs to exactly one map for its lifetime, and a lone hotkey is a one-action map rather than a second ownership path.",
   "symbol": "InputScope",
   "kind": "class",
   "subsystem": "input",
@@ -20,9 +20,9 @@
       "members": [],
       "paragraphs": [
         "One input context: the action maps that are in charge while it is the topmost scope on a SceneInputs stack.",
-        "A scope claims exactly the controls its maps currently bind. While it is pushed, no scope below it — and no map attached outside the stack with `scene.inputs.attach` — observes those controls at all, through neither live values nor this frame's event history. Controls nothing in the scope binds fall through untouched, so a pause menu that binds only Escape and the D-pad leaves the gameplay below it fully playable if that is what the game wants.",
+        "A scope claims exactly the controls its maps currently bind. While it is pushed, no scope below it - and no map attached outside the stack with `scene.inputs.attach` - observes those controls at all, through neither live values nor this frame's event history. Controls nothing in the scope binds fall through untouched, so a pause menu that binds only Escape and the D-pad leaves the gameplay below it fully playable if that is what the game wants.",
         "Maps within one scope are peers: they never mask each other, and two of them binding the same control both see it.",
-        "A scope groups MAPS, not actions. There is deliberately no `addAction` — an action belongs to exactly one map for its lifetime, and a lone hotkey is a one-action map rather than a second ownership path."
+        "A scope groups MAPS, not actions. There is deliberately no `addAction` - an action belongs to exactly one map for its lifetime, and a lone hotkey is a one-action map rather than a second ownership path."
       ],
       "importLine": "import { InputScope } from '@codexo/exojs'",
       "sourceLink": null
@@ -156,7 +156,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Put map in this scope. A map already in it is not added twice. A map may only be in one scope at a time — it is sampled once per frame by whichever level it sits on, and being on two levels would both double-sample it and make its claim ambiguous."
+          "description": "Put map in this scope. A map already in it is not added twice. A map may only be in one scope at a time - it is sampled once per frame by whichever level it sits on, and being on two levels would both double-sample it and make its claim ambiguous."
         },
         {
           "name": "remove",

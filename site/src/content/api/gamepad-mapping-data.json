@@ -1,6 +1,6 @@
 {
   "title": "GamepadMappingData",
-  "description": "One device layout, as data. This is the whole definition of a controller as far as the engine is concerned — no subclassing is involved, and a custom device is described by writing one of these rather than by extending anything.",
+  "description": "One device layout, as data. This is the whole definition of a controller as far as the engine is concerned - no subclassing is involved, and a custom device is described by writing one of these rather than by extending anything.",
   "symbol": "GamepadMappingData",
   "kind": "interface",
   "subsystem": "input",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "One device layout, as data.",
-        "This is the whole definition of a controller as far as the engine is concerned — no subclassing is involved, and a custom device is described by writing one of these rather than by extending anything."
+        "This is the whole definition of a controller as far as the engine is concerned - no subclassing is involved, and a custom device is described by writing one of these rather than by extending anything."
       ],
       "importLine": "import { GamepadMappingData } from '@codexo/exojs'",
       "sourceLink": null
@@ -184,7 +184,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Prompt labels that differ from this device's family default. A family spans several product generations whose buttons are not all named the same — the PlayStation Select button reads \"Select\" on a PS3 pad, \"Share\" on a DualShock 4 and \"Create\" on a DualSense, yet all three share one family. List only the controls that differ."
+          "description": "Prompt labels that differ from this device's family default. A family spans several product generations whose buttons are not all named the same - the PlayStation Select button reads \"Select\" on a PS3 pad, \"Share\" on a DualShock 4 and \"Create\" on a DualSense, yet all three share one family. List only the controls that differ."
         }
       ],
       "paragraphs": [],

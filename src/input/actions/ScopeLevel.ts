@@ -2,7 +2,7 @@ import type { AnyActionMap } from './ActionMap';
 import type { ActionSample, ChannelEvent, ChannelEventBatch } from './types';
 
 /**
- * Owner side of a scope level — the two facts a level needs to re-baseline the
+ * Owner side of a scope level - the two facts a level needs to re-baseline the
  * maps on it when its mask changes. @internal
  */
 export interface ScopeLevelOwner {
@@ -18,7 +18,7 @@ export interface ScopeLevelOwner {
  * Masking has to cover `batches` as well as `values`. An action reconstructs
  * its `pressed`/`released` edges by replaying this frame's batch log, so a
  * level that only zeroed the live values would still hand a lower action the
- * full press-and-release history of a control a higher scope owns — the exact
+ * full press-and-release history of a control a higher scope owns - the exact
  * leak the scope stack exists to prevent.
  *
  * The derived sample object is reused across frames so its identity stays
@@ -44,7 +44,7 @@ export class ScopeLevel {
    *
    * The first one is not a CHANGE: the maps on this level were armed when they
    * were attached, moments earlier, and re-arming them here would swallow
-   * whatever happened in between — a key pressed in the same frame a scope was
+   * whatever happened in between - a key pressed in the same frame a scope was
    * pushed would never reach the level it belongs to.
    */
   private _maskKnown = false;
@@ -78,7 +78,7 @@ export class ScopeLevel {
   }
 
   /**
-   * Re-arm every map on this level against the masked channel state — the
+   * Re-arm every map on this level against the masked channel state - the
    * suspend/resume and push/pop path, where the maps must resume from the true
    * current state without replaying anything that happened while they were not
    * watching.

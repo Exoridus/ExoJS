@@ -1,6 +1,6 @@
 {
   "title": "ActionBinding",
-  "description": "Any binding descriptor an action can be rebound with — the second argument of ActionMap.rebind. Deliberately the union of every kind's descriptor rather than a conditional type resolved from the action being rebound. A conditional over the map's own type parameter, however written, stops TypeScript inferring that parameter at every OTHER `ActionMap<T>` site — `scene.inputs.attach(map)` included — so the precision would be paid for by breaking inference for every caller. The ACTION NAME is still checked against the map's declared actions, and a mismatched binding shape is rejected at runtime by the action itself.",
+  "description": "Any binding descriptor an action can be rebound with - the second argument of ActionMap.rebind. Deliberately the union of every kind's descriptor rather than a conditional type resolved from the action being rebound. A conditional over the map's own type parameter, however written, stops TypeScript inferring that parameter at every OTHER `ActionMap<T>` site - `scene.inputs.attach(map)` included - so the precision would be paid for by breaking inference for every caller. The ACTION NAME is still checked against the map's declared actions, and a mismatched binding shape is rejected at runtime by the action itself.",
   "symbol": "ActionBinding",
   "kind": "type",
   "subsystem": "input",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Any binding descriptor an action can be rebound with — the second argument of ActionMap.rebind.",
-        "Deliberately the union of every kind's descriptor rather than a conditional type resolved from the action being rebound. A conditional over the map's own type parameter, however written, stops TypeScript inferring that parameter at every OTHER `ActionMap<T>` site — `scene.inputs.attach(map)` included — so the precision would be paid for by breaking inference for every caller. The ACTION NAME is still checked against the map's declared actions, and a mismatched binding shape is rejected at runtime by the action itself."
+        "Any binding descriptor an action can be rebound with - the second argument of ActionMap.rebind.",
+        "Deliberately the union of every kind's descriptor rather than a conditional type resolved from the action being rebound. A conditional over the map's own type parameter, however written, stops TypeScript inferring that parameter at every OTHER `ActionMap<T>` site - `scene.inputs.attach(map)` included - so the precision would be paid for by breaking inference for every caller. The ACTION NAME is still checked against the map's declared actions, and a mismatched binding shape is rejected at runtime by the action itself."
       ],
       "importLine": "import { ActionBinding } from '@codexo/exojs'",
       "sourceLink": null

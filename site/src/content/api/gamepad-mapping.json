@@ -138,7 +138,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Returns true when this mapping declares at least one button or axis control that writes to channel. Use to detect device-specific capabilities at runtime — e.g. before binding an input to a right-stick channel that may not exist on a single Joy-Con."
+          "description": "Returns true when this mapping declares at least one button or axis control that writes to channel. Use to detect device-specific capabilities at runtime - e.g. before binding an input to a right-stick channel that may not exist on a single Joy-Con."
         }
       ],
       "paragraphs": [],
@@ -304,7 +304,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Device-specific prompt labels — see GamepadMappingData.promptLabels."
+          "description": "Device-specific prompt labels - see GamepadMappingData.promptLabels."
         }
       ],
       "paragraphs": [],

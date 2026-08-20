@@ -385,7 +385,7 @@ describe('SceneInputs — destroy()', () => {
 describe('SceneInputs action maps', () => {
   const createMapStub = (): { app: Application; frame: (sample: ActionSample) => void; resyncSample: ActionSample; inputs: SceneInputs } => {
     const hosts = new Set<ActionScopeHost>();
-    // The sample `SceneInputs.resume` re-seeds its maps from — zeroed by
+    // The sample `SceneInputs.resume` re-seeds its maps from - zeroed by
     // default, so a test that only cares about registration need not know
     // resume re-seeds at all, while one that cares can preload it.
     const resyncSample = createEmptySample();
@@ -485,7 +485,7 @@ describe('SceneInputs action maps', () => {
     inputs.suspend(); // reset while suspended — the key is still physically held
     expect(map.jump.active).toBe(false);
 
-    // The key was never released — resume() sees it still held through the
+    // The key was never released - resume() sees it still held through the
     // manager's live sample (mirrored here by resyncSample).
     resyncSample.values[Keyboard.Space] = 1;
     inputs.resume();
@@ -581,7 +581,7 @@ describe('SceneInputs action maps — availability policy (when)', () => {
   /**
    * Same shape as `createMapStub()` above, plus mutable `state`/`paused`/
    * `transitionGateOpen` controls and a `snapshot` a test can preload before
-   * a resync/re-attach — the real-world "channel is still physically held"
+   * a resync/re-attach - the real-world "channel is still physically held"
    * truth `_snapshotActionChannels` would report.
    */
   const createAvailabilityStub = (): AvailabilityStub => {

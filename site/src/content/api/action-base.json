@@ -1,6 +1,6 @@
 {
   "title": "ActionBase",
-  "description": "Shared contract of every action kind. An action owns a BINDING DESCRIPTOR (what the developer declared, or what a player later rebound it to) and, separately, the absolute channel indices that descriptor currently resolves to. The two are kept apart because the descriptor is stable and serializable while the channels depend on runtime context: which gamepad slot the owning ActionMap was given. An action never resolves a gamepad slot on its own. The owning map drives _rebind, which is also how a rebind or a profile application reaches an action — so the map can apply a whole set of changes and re-arm every action's baseline in one transaction rather than leaving intermediate states visible.",
+  "description": "Shared contract of every action kind. An action owns a BINDING DESCRIPTOR (what the developer declared, or what a player later rebound it to) and, separately, the absolute channel indices that descriptor currently resolves to. The two are kept apart because the descriptor is stable and serializable while the channels depend on runtime context: which gamepad slot the owning ActionMap was given. An action never resolves a gamepad slot on its own. The owning map drives _rebind, which is also how a rebind or a profile application reaches an action - so the map can apply a whole set of changes and re-arm every action's baseline in one transaction rather than leaving intermediate states visible.",
   "symbol": "ActionBase",
   "kind": "class",
   "subsystem": "input",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Shared contract of every action kind.",
         "An action owns a BINDING DESCRIPTOR (what the developer declared, or what a player later rebound it to) and, separately, the absolute channel indices that descriptor currently resolves to. The two are kept apart because the descriptor is stable and serializable while the channels depend on runtime context: which gamepad slot the owning ActionMap was given.",
-        "An action never resolves a gamepad slot on its own. The owning map drives _rebind, which is also how a rebind or a profile application reaches an action — so the map can apply a whole set of changes and re-arm every action's baseline in one transaction rather than leaving intermediate states visible."
+        "An action never resolves a gamepad slot on its own. The owning map drives _rebind, which is also how a rebind or a profile application reaches an action - so the map can apply a whole set of changes and re-arm every action's baseline in one transaction rather than leaving intermediate states visible."
       ],
       "importLine": "import { ActionBase } from '@codexo/exojs'",
       "sourceLink": null
@@ -155,7 +155,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Which action kind this is — the discriminant a serialized binding is validated against."
+          "description": "Which action kind this is - the discriminant a serialized binding is validated against."
         },
         {
           "name": "binding",
@@ -209,7 +209,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Absolute channel indices this action reads right now. Reflects the effective binding and the owning map's gamepad slot, and is what an InputScope claims on this action's behalf. The array is replaced, not mutated, on every rebind — do not retain it across one."
+          "description": "Absolute channel indices this action reads right now. Reflects the effective binding and the owning map's gamepad slot, and is what an InputScope claims on this action's behalf. The array is replaced, not mutated, on every rebind - do not retain it across one."
         },
         {
           "name": "defaultBinding",
@@ -230,7 +230,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The binding this action was constructed with — what a null rebind restores."
+          "description": "The binding this action was constructed with - what a null rebind restores."
         }
       ],
       "paragraphs": [],

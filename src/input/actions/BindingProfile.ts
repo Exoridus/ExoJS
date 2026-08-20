@@ -15,7 +15,7 @@ const currentVersion = 1;
  * A profile stores ONLY the actions a player actually changed. That is the
  * whole point of keeping it separate from the defaults: a full snapshot taken
  * today would freeze every action a game gains tomorrow at whatever binding it
- * had — or lacked — when the save was written, so adding a new action with a
+ * had - or lacked - when the save was written, so adding a new action with a
  * new default would silently do nothing for returning players.
  *
  * A profile holds no reference to any live action or map. Apply it with
@@ -68,7 +68,7 @@ export class BindingProfile {
     return this;
   }
 
-  /** Snapshot suitable for `JSON.stringify`. Contains tokens only — no gamepad slots, no device indices. */
+  /** Snapshot suitable for `JSON.stringify`. Contains tokens only - no gamepad slots, no device indices. */
   public toJSON(): BindingProfileData {
     return { version: currentVersion, overrides: Object.fromEntries(this._overrides) };
   }

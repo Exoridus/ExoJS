@@ -37,7 +37,7 @@ function loadProfile(): BindingProfile {
             return BindingProfile.fromJSON(JSON.parse(raw));
         }
     } catch {
-        // Unavailable storage, or a profile written by an older build — either
+        // Unavailable storage, or a profile written by an older build - either
         // way, fall through to the developer defaults.
     }
 

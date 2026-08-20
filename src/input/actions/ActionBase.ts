@@ -16,11 +16,11 @@ export type GamepadSlot = 0 | 1 | 2 | 3;
  * Resolve `token` to the slot-0 channel it names.
  *
  * The result is a BINDING descriptor value, so it is deliberately not rebased
- * onto a pad slot — that happens later, in the owning map's resolve pass, and
+ * onto a pad slot - that happens later, in the owning map's resolve pass, and
  * doing it twice would land on the wrong device.
  *
  * @throws {Error} If no control carries `token`. Deserialization never falls
- * back to a nearby control — see {@link inputChannelFromToken}.
+ * back to a nearby control - see {@link inputChannelFromToken}.
  */
 export function channelFromToken(token: string): InputChannel {
   const channel = inputChannelFromToken(token);
@@ -69,12 +69,12 @@ export function tokensFromChannels(channels: readonly number[]): readonly InputT
  *
  * An action never resolves a gamepad slot on its own. The owning map drives
  * {@link _rebind}, which is also how a rebind or a profile application reaches
- * an action — so the map can apply a whole set of changes and re-arm every
+ * an action - so the map can apply a whole set of changes and re-arm every
  * action's baseline in one transaction rather than leaving intermediate states
  * visible.
  */
 export abstract class ActionBase<Binding> {
-  /** Which action kind this is — the discriminant a serialized binding is validated against. */
+  /** Which action kind this is - the discriminant a serialized binding is validated against. */
   public abstract readonly kind: ActionKind;
 
   /** Absolute channel indices this action currently reads, after slot resolution. */
@@ -89,7 +89,7 @@ export abstract class ActionBase<Binding> {
     this._binding = binding;
   }
 
-  /** The binding this action was constructed with — what a `null` rebind restores. */
+  /** The binding this action was constructed with - what a `null` rebind restores. */
   public get defaultBinding(): Binding {
     return this._defaultBinding;
   }
@@ -104,7 +104,7 @@ export abstract class ActionBase<Binding> {
    *
    * Reflects the effective binding and the owning map's gamepad slot, and is
    * what an {@link InputScope} claims on this action's behalf. The array is
-   * replaced, not mutated, on every rebind — do not retain it across one.
+   * replaced, not mutated, on every rebind - do not retain it across one.
    */
   public get channels(): readonly number[] {
     return this._channels;

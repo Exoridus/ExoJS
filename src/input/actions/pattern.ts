@@ -124,7 +124,7 @@ function parseStepText(stepText: string, stepIndex: number, chord: boolean, owne
  * equivalents) to a {@link NormalizedStep}: one entry per alternative, each
  * checked for an empty or duplicate channel. A
  * step whose array entries are a mix of bare channels and nested arrays is
- * rejected — that shape can only ever be a copy/paste mistake, since neither
+ * rejected - that shape can only ever be a copy/paste mistake, since neither
  * a chord nor an alternation is expressed that way.
  */
 function normalizeStep(step: InputChannel | InputChord | InputAlternation, stepIndex: number, chord: boolean, owner: PatternOwner): NormalizedStep {
@@ -170,14 +170,14 @@ function normalizeStep(step: InputChannel | InputChord | InputAlternation, stepI
  * Parse and validate a string or array pattern into raw, slot-0 channel steps.
  * Rebasing onto a pad slot happens later, in the owning {@link ActionMap}.
  * Shared by {@link ChordAction} (always exactly one resulting
- * step — enforced by its own constructor after this returns) and
+ * step - enforced by its own constructor after this returns) and
  * {@link SequenceAction} (one or more). `owner` names the calling action kind
- * so every thrown message reads naturally for that caller — a `ChordAction`
+ * so every thrown message reads naturally for that caller - a `ChordAction`
  * has no user-facing notion of "step N", only "the chord".
  *
  * Precedence, loosest to tightest: `'>'` separates sequence steps, `'|'`
  * separates alternatives within one step, `'+'` joins channels required
- * simultaneously within one alternative — `'A+B|C>D'` is "(A and B) or C,
+ * simultaneously within one alternative - `'A+B|C>D'` is "(A and B) or C,
  * then D".
  */
 export function normalizeSequence(input: string | InputSequence, owner: PatternOwner): readonly NormalizedStep[] {

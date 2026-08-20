@@ -9,7 +9,7 @@ import type { GamepadPromptControl } from './GamepadPromptLayouts';
  *
  * The standard layout ends at index 16 (the Meta/Guide button). Browsers expose
  * exactly ONE device-specific slot beyond it, at index 17, and what sits there
- * depends on the device — Share on an Xbox Series pad, Capture on a Switch Pro,
+ * depends on the device - Share on an Xbox Series pad, Capture on a Switch Pro,
  * the touchpad click on a DualShock 4 / DualSense. This baseline therefore
  * declares nothing at 17; a device adds its own entry.
  */
@@ -140,7 +140,7 @@ export const createXboxGamepadMapping = (): GamepadMapping =>
  * Console generation a PlayStation mapping targets.
  *
  * The three generations share one button layout but not one set of button
- * names, and only the two newer ones have a touchpad — so the generation
+ * names, and only the two newer ones have a touchpad - so the generation
  * decides both the prompt labels and whether index 17 exists.
  */
 export enum PlayStationGeneration {
@@ -164,14 +164,14 @@ const playStationLabelOverrides = new Map<PlayStationGeneration, ReadonlyMap<Gam
 ]);
 
 /**
- * Sony PlayStation controllers — DualShock 3, DualShock 4 and DualSense
+ * Sony PlayStation controllers - DualShock 3, DualShock 4 and DualSense
  * (PS3 / PS4 / PS5) over USB or Bluetooth.
  *
  * On PS4 and PS5 pads index 17 is the touchpad **click**
  * (`DUALSHOCK_BUTTON_TOUCHPAD == DUAL_SENSE_BUTTON_TOUCHPAD == 17`); a PS3 pad
  * has no touchpad and stops at the standard index 16. Select/Share/Create sits
  * on the standard Select slot (index 8) on all three, so it needs no entry of
- * its own — it is only printed differently, which is what the per-generation
+ * its own - it is only printed differently, which is what the per-generation
  * prompt labels carry.
  *
  * Touchpad *coordinates* are not available: browsers model the touchpad as a
@@ -210,8 +210,8 @@ export const createSwitchProGamepadMapping = (): GamepadMapping =>
 /**
  * Valve Steam Controller (`28de:1102`, `28de:1142`).
  *
- * The device is recognised by family — a game that ships Steam artwork gets to
- * pick it — but its LAYOUT is the generic standard one and is **not verified**
+ * The device is recognised by family - a game that ships Steam artwork gets to
+ * pick it - but its LAYOUT is the generic standard one and is **not verified**
  * for this device. Chromium lists both product IDs in `gamepad_id_list.cc` as
  * `kXInputTypeNone` and normalises neither, so a raw Steam Controller may well
  * report a different index order than the standard layout assumed here; no
@@ -240,7 +240,7 @@ export const createArcadeStickGamepadMapping = (): GamepadMapping =>
 
 /**
  * Valve Steam Deck (and the new Valve Controller via vendor fallback) when its
- * raw HID gamepad is exposed directly to the browser — i.e. when Steam Input is
+ * raw HID gamepad is exposed directly to the browser - i.e. when Steam Input is
  * *not* intercepting the device. With Steam Input intercepting, the device
  * appears as `28de:11ff` "Steam Virtual Gamepad" with a standard W3C layout
  * instead.
@@ -309,12 +309,12 @@ export const createSteamDeckGamepadMapping = (): GamepadMapping =>
 /**
  * Nintendo Joy-Con (L) held horizontally as a solo controller.
  *
- * Declares only channels that physically exist on the device — one stick
+ * Declares only channels that physically exist on the device - one stick
  * (surfaced through the LeftStick channels so gamepad-agnostic code that binds
  * "the stick" works regardless of which half is held), four face buttons, the L
  * and ZL outer shoulders, the SL/SR rail buttons, Minus, Capture, and the
  * stick-click. Right-stick channels, Plus/Home, Touchpad and auxiliary axes are
- * intentionally absent — use `Gamepad.hasChannel` before binding anything that
+ * intentionally absent - use `Gamepad.hasChannel` before binding anything that
  * may not exist on every family.
  *
  * The SL/SR rail buttons take paddle channels rather than the standard shoulder
@@ -357,7 +357,7 @@ export const createJoyConLeftGamepadMapping = (): GamepadMapping =>
 /**
  * Nintendo Joy-Con (R) held horizontally as a solo controller.
  *
- * Mirrors {@link createJoyConLeftGamepadMapping} — see it for why the lone stick
+ * Mirrors {@link createJoyConLeftGamepadMapping} - see it for why the lone stick
  * takes the LeftStick channels and why the SL/SR rail buttons take paddle
  * channels. Following SDL, this half takes the two right-hand slots: SR is
  * `SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1` (`Paddle2`) and SL is `RIGHT_PADDLE2`
