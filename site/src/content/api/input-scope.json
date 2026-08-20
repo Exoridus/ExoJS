@@ -1,0 +1,269 @@
+{
+  "title": "InputScope",
+  "description": "One input context: the action maps that are in charge while it is the topmost scope on a SceneInputs stack. A scope claims exactly the controls its maps currently bind. While it is pushed, no scope below it — and no map attached outside the stack with `scene.inputs.attach` — observes those controls at all, through neither live values nor this frame's event history. Controls nothing in the scope binds fall through untouched, so a pause menu that binds only Escape and the D-pad leaves the gameplay below it fully playable if that is what the game wants. Maps within one scope are peers: they never mask each other, and two of them binding the same control both see it. A scope groups MAPS, not actions. There is deliberately no `addAction` — an action belongs to exactly one map for its lifetime, and a lone hotkey is a one-action map rather than a second ownership path.",
+  "symbol": "InputScope",
+  "kind": "class",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One input context: the action maps that are in charge while it is the topmost scope on a SceneInputs stack.",
+        "A scope claims exactly the controls its maps currently bind. While it is pushed, no scope below it — and no map attached outside the stack with `scene.inputs.attach` — observes those controls at all, through neither live values nor this frame's event history. Controls nothing in the scope binds fall through untouched, so a pause menu that binds only Escape and the D-pad leaves the gameplay below it fully playable if that is what the game wants.",
+        "Maps within one scope are peers: they never mask each other, and two of them binding the same control both see it.",
+        "A scope groups MAPS, not actions. There is deliberately no `addAction` — an action belongs to exactly one map for its lifetime, and a lone hotkey is a one-action map rather than a second ownership path."
+      ],
+      "importLine": "import { InputScope } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(maps?: AnyActionMap | readonly AnyActionMap[]): InputScope",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "maps",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyActionMap",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyActionMap",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputScope",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "maps",
+              "type": "AnyActionMap | readonly AnyActionMap[]",
+              "optional": true
+            }
+          ],
+          "returnType": "InputScope",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "add",
+          "signature": "add(map: AnyActionMap): this",
+          "signatureTokens": [
+            {
+              "text": "add",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "map",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyActionMap",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "map",
+              "type": "AnyActionMap",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Put map in this scope. A map already in it is not added twice. A map may only be in one scope at a time — it is sampled once per frame by whichever level it sits on, and being on two levels would both double-sample it and make its claim ambiguous."
+        },
+        {
+          "name": "remove",
+          "signature": "remove(map: AnyActionMap): this",
+          "signatureTokens": [
+            {
+              "text": "remove",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "map",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyActionMap",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "this",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "map",
+              "type": "AnyActionMap",
+              "optional": false
+            }
+          ],
+          "returnType": "this",
+          "description": "Take map out of this scope. A map that is not in it is ignored."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "maps",
+          "signature": "maps: readonly AnyActionMap[]",
+          "signatureTokens": [
+            {
+              "text": "maps",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyActionMap",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The maps in this scope, in the order they were added."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/InputScope.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/InputScope.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/InputScope.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/InputScope.ts"
+}

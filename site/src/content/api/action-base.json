@@ -1,16 +1,16 @@
 {
-  "title": "VectorAction",
-  "description": "A named two-dimensional input, fed by a stick, by four direction buttons, or by several such bindings at once. Each alternative binding is evaluated as a whole vector and the longest one wins, so x never comes from the keyboard while y comes from the pad. The result is clamped to unit length rather than normalized: a digital diagonal is no faster than a cardinal direction, while analog input below full deflection keeps its magnitude.",
-  "symbol": "VectorAction",
+  "title": "ActionBase",
+  "description": "Shared contract of every action kind. An action owns a BINDING DESCRIPTOR (what the developer declared, or what a player later rebound it to) and, separately, the absolute channel indices that descriptor currently resolves to. The two are kept apart because the descriptor is stable and serializable while the channels depend on runtime context: which gamepad slot the owning ActionMap was given. An action never resolves a gamepad slot on its own. The owning map drives _rebind, which is also how a rebind or a profile application reaches an action — so the map can apply a whole set of changes and re-arm every action's baseline in one transaction rather than leaving intermediate states visible.",
+  "symbol": "ActionBase",
   "kind": "class",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 6,
   "counts": {
     "constructors": 1,
     "methods": 1,
-    "properties": 6,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -19,10 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A named two-dimensional input, fed by a stick, by four direction buttons, or by several such bindings at once.",
-        "Each alternative binding is evaluated as a whole vector and the longest one wins, so x never comes from the keyboard while y comes from the pad. The result is clamped to unit length rather than normalized: a digital diagonal is no faster than a cardinal direction, while analog input below full deflection keeps its magnitude."
+        "Shared contract of every action kind.",
+        "An action owns a BINDING DESCRIPTOR (what the developer declared, or what a player later rebound it to) and, separately, the absolute channel indices that descriptor currently resolves to. The two are kept apart because the descriptor is stable and serializable while the channels depend on runtime context: which gamepad slot the owning ActionMap was given.",
+        "An action never resolves a gamepad slot on its own. The owning map drives _rebind, which is also how a rebind or a profile application reaches an action — so the map can apply a whole set of changes and re-arm every action's baseline in one transaction rather than leaving intermediate states visible."
       ],
-      "importLine": "import { VectorAction } from '@codexo/exojs'",
+      "importLine": "import { ActionBase } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -31,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(binding: OneOrMany<VectorBinding>, options: ActionOptions): VectorAction",
+          "signature": "new(binding: Binding): ActionBase<Binding>",
           "signatureTokens": [
             {
               "text": "new",
@@ -50,35 +51,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "OneOrMany",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "VectorBinding",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ActionOptions",
+              "text": "Binding",
               "kind": "type"
             },
             {
@@ -90,23 +63,30 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorAction",
+              "text": "ActionBase",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Binding",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [
             {
               "name": "binding",
-              "type": "OneOrMany<VectorBinding>",
-              "optional": false
-            },
-            {
-              "name": "options",
-              "type": "ActionOptions",
+              "type": "Binding",
               "optional": false
             }
           ],
-          "returnType": "VectorAction",
+          "returnType": "ActionBase<Binding>",
           "description": ""
         }
       ],
@@ -158,7 +138,7 @@
       "members": [
         {
           "name": "kind",
-          "signature": "kind: \"vector\"",
+          "signature": "kind: ActionKind",
           "signatureTokens": [
             {
               "text": "kind",
@@ -169,55 +149,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"vector\"",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Which action kind this is — the discriminant a serialized binding is validated against."
-        },
-        {
-          "name": "value",
-          "signature": "value: Vector",
-          "signatureTokens": [
-            {
-              "text": "value",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Vector",
+              "text": "ActionKind",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Current vector. The same instance every frame — copy it if you need to retain a value."
-        },
-        {
-          "name": "active",
-          "signature": "active: boolean",
-          "signatureTokens": [
-            {
-              "text": "active",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "true while the vector's length exceeds the action's threshold."
+          "description": "Which action kind this is — the discriminant a serialized binding is validated against."
         },
         {
           "name": "binding",
@@ -306,11 +244,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/input/actions/VectorAction.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/VectorAction.ts"
+        "label": "src/input/actions/ActionBase.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionBase.ts"
       }
     }
   ],
-  "sourcePath": "src/input/actions/VectorAction.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/VectorAction.ts"
+  "sourcePath": "src/input/actions/ActionBase.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionBase.ts"
 }

@@ -1,15 +1,15 @@
 {
   "title": "GamepadMapping",
-  "description": "Abstract translation layer between the browser's raw Gamepad API indices and ExoJS-canonical channel buffers. Each concrete subclass encodes one device family's button/axis layout as ordered arrays of GamepadButton / GamepadAxis instances. The engine selects the appropriate mapping when a gamepad connects and uses it to route raw values to the correct input channels every frame.",
+  "description": "Translation layer between the browser's raw Gamepad API indices and ExoJS-canonical input channels. The engine selects one when a gamepad connects (see `GamepadDefinition`) and uses it to route raw values to the correct channels every frame. Construct one from GamepadMappingData to describe a device the built-in definitions do not cover.",
   "symbol": "GamepadMapping",
   "kind": "class",
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 7,
   "counts": {
     "constructors": 1,
-    "methods": 2,
+    "methods": 1,
     "properties": 5,
     "events": 0
   },
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Abstract translation layer between the browser's raw Gamepad API indices and ExoJS-canonical channel buffers.",
-        "Each concrete subclass encodes one device family's button/axis layout as ordered arrays of GamepadButton / GamepadAxis instances. The engine selects the appropriate mapping when a gamepad connects and uses it to route raw values to the correct input channels every frame."
+        "Translation layer between the browser's raw Gamepad API indices and ExoJS-canonical input channels.",
+        "The engine selects one when a gamepad connects (see `GamepadDefinition`) and uses it to route raw values to the correct channels every frame. Construct one from GamepadMappingData to describe a device the built-in definitions do not cover."
       ],
       "importLine": "import { GamepadMapping } from '@codexo/exojs'",
       "sourceLink": null
@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(buttons: readonly GamepadButton[], axes: readonly GamepadAxis[], promptLabels?: ReadonlyMap<GamepadPromptControl, string>): GamepadMapping",
+          "signature": "new(data: GamepadMappingData): GamepadMapping",
           "signatureTokens": [
             {
               "text": "new",
@@ -42,7 +42,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "buttons",
+              "text": "data",
               "kind": "param"
             },
             {
@@ -50,88 +50,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "readonly",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "GamepadButton",
+              "text": "GamepadMappingData",
               "kind": "type"
-            },
-            {
-              "text": "[]",
-              "kind": "punctuation"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "axes",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "readonly",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "GamepadAxis",
-              "kind": "type"
-            },
-            {
-              "text": "[]",
-              "kind": "punctuation"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "promptLabels",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "ReadonlyMap",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "GamepadPromptControl",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -148,19 +68,9 @@
           ],
           "params": [
             {
-              "name": "buttons",
-              "type": "readonly GamepadButton[]",
+              "name": "data",
+              "type": "GamepadMappingData",
               "optional": false
-            },
-            {
-              "name": "axes",
-              "type": "readonly GamepadAxis[]",
-              "optional": false
-            },
-            {
-              "name": "promptLabels",
-              "type": "ReadonlyMap<GamepadPromptControl, string>",
-              "optional": true
             }
           ],
           "returnType": "GamepadMapping",
@@ -175,35 +85,6 @@
       "id": "methods",
       "title": "Methods",
       "members": [
-        {
-          "name": "destroy",
-          "signature": "destroy(): void",
-          "signatureTokens": [
-            {
-              "text": "destroy",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": "Releases all button and axis control references held by this mapping. Call when the associated gamepad disconnects to allow garbage collection."
-        },
         {
           "name": "hasChannel",
           "signature": "hasChannel(channel: GamepadAxisChannel | GamepadButtonChannel): boolean",
@@ -374,19 +255,15 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Index space this mapping's button and axis indices are written against. Defaults to GamepadMappingLayout.Standard. A mapping that encodes raw HID report order must declare GamepadMappingLayout.Raw, so resolveGamepadDefinition can discard it when the browser reports the same device as already standard-normalised."
+          "description": "Index space this mapping's button and axis indices are written against."
         },
         {
           "name": "promptLabels",
-          "signature": "promptLabels?: ReadonlyMap<GamepadPromptControl, string>",
+          "signature": "promptLabels: ReadonlyMap<GamepadPromptControl, string> | undefined",
           "signatureTokens": [
             {
               "text": "promptLabels",
               "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -415,11 +292,19 @@
             {
               "text": ">",
               "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Device-specific prompt labels, applied on top of the family label set by GamepadPromptLayouts.getControlLabels. A GamepadMappingFamily spans several product generations whose buttons are not all named the same — the PlayStation Select button reads \"Select\" on a PS3 pad, \"Share\" on a DualShock 4 and \"Create\" on a DualSense, yet all three share one family. Declare only the controls that differ from the family default here; undefined means the family set already labels this device correctly."
+          "description": "Device-specific prompt labels — see GamepadMappingData.promptLabels."
         }
       ],
       "paragraphs": [],

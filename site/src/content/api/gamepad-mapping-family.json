@@ -1,6 +1,6 @@
 {
   "title": "GamepadMappingFamily",
-  "description": "Discriminant tag identifying which device family a GamepadMapping belongs to. Used to select the correct mapping at runtime when a gamepad connects.",
+  "description": "Device family a GamepadMapping belongs to. The value a game keys its own button-glyph or controller-artwork set on: `icons[gamepad.family]`. Two devices share a family when a player would recognise them as the same kind of controller, not merely when their button layout matches.",
   "symbol": "GamepadMappingFamily",
   "kind": "enum",
   "subsystem": "input",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Discriminant tag identifying which device family a GamepadMapping belongs to. Used to select the correct mapping at runtime when a gamepad connects."
+        "Device family a GamepadMapping belongs to.",
+        "The value a game keys its own button-glyph or controller-artwork set on: `icons[gamepad.family]`. Two devices share a family when a player would recognise them as the same kind of controller, not merely when their button layout matches."
       ],
       "importLine": "import { GamepadMappingFamily } from '@codexo/exojs'",
       "sourceLink": null

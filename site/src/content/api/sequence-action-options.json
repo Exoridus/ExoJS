@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -28,55 +28,6 @@
       "id": "properties",
       "title": "Properties",
       "members": [
-        {
-          "name": "gamepadSlot",
-          "signature": "gamepadSlot?: 0 | 1 | 2 | 3",
-          "signatureTokens": [
-            {
-              "text": "gamepadSlot",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "0",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "1",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "2",
-              "kind": "keyword"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "3",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Resolve gamepad channels against this slot (0..3) instead of the primary pad. Non-gamepad channels are unaffected."
-        },
         {
           "name": "maxGap",
           "signature": "maxGap?: number",

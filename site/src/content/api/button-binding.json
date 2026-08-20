@@ -1,0 +1,75 @@
+{
+  "title": "ButtonBinding",
+  "description": "Sources a ButtonAction accepts: one channel, or several interchangeable ones.",
+  "symbol": "ButtonBinding",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Sources a ButtonAction accepts: one channel, or several interchangeable ones."
+      ],
+      "importLine": "import { ButtonBinding } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ButtonBinding",
+          "signature": "OneOrMany<InputChannel>",
+          "signatureTokens": [
+            {
+              "text": "OneOrMany",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "InputChannel",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/ButtonAction.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ButtonAction.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/ButtonAction.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ButtonAction.ts"
+}

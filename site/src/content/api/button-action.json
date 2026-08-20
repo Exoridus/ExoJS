@@ -6,11 +6,11 @@
   "subsystem": "input",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
-    "methods": 0,
-    "properties": 4,
+    "methods": 2,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(binding: OneOrMany<InputChannel>, options: ActionOptions): ButtonAction",
+          "signature": "new(binding: ButtonBinding, options: ActionOptions): ButtonAction",
           "signatureTokens": [
             {
               "text": "new",
@@ -49,20 +49,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "OneOrMany",
+              "text": "ButtonBinding",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "InputChannel",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -96,7 +84,7 @@
           "params": [
             {
               "name": "binding",
-              "type": "OneOrMany<InputChannel>",
+              "type": "ButtonBinding",
               "optional": false
             },
             {
@@ -114,9 +102,97 @@
       "sourceLink": null
     },
     {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "_allocateValues",
+          "signature": "_allocateValues(): void",
+          "signatureTokens": [
+            {
+              "text": "_allocateValues",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Size _values to the current channel list. Called from every _resolve."
+        },
+        {
+          "name": "serialize",
+          "signature": "serialize(): SerializedActionBinding",
+          "signatureTokens": [
+            {
+              "text": "serialize",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SerializedActionBinding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "SerializedActionBinding",
+          "description": "This action's effective binding in persistable form."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "kind",
+          "signature": "kind: \"button\"",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"button\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which action kind this is — the discriminant a serialized binding is validated against."
+        },
         {
           "name": "active",
           "signature": "active: boolean",
@@ -137,6 +213,81 @@
           "params": [],
           "returnType": null,
           "description": "true while the aggregate value exceeds the action's threshold."
+        },
+        {
+          "name": "binding",
+          "signature": "binding: Binding",
+          "signatureTokens": [
+            {
+              "text": "binding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Binding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The binding currently in effect: the default, or whatever last replaced it."
+        },
+        {
+          "name": "channels",
+          "signature": "channels: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "channels",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Absolute channel indices this action reads right now. Reflects the effective binding and the owning map's gamepad slot, and is what an InputScope claims on this action's behalf. The array is replaced, not mutated, on every rebind — do not retain it across one."
+        },
+        {
+          "name": "defaultBinding",
+          "signature": "defaultBinding: Binding",
+          "signatureTokens": [
+            {
+              "text": "defaultBinding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Binding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The binding this action was constructed with — what a null rebind restores."
         },
         {
           "name": "pressed",

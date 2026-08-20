@@ -22,7 +22,7 @@ export {
 } from './gamepadMappings';
 export * from './GamepadPromptLayouts';
 export * from './InputBinding';
-export type { ActionScopeHost, GamepadSlotStrategy } from './InputManager';
+export type { GamepadSlotStrategy } from './InputManager';
 export { InputManager } from './InputManager';
 export type { InputToken } from './InputToken';
 export { inputChannelFromToken, inputToken } from './InputToken';

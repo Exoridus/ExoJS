@@ -1,0 +1,76 @@
+{
+  "title": "AnyActionMap",
+  "description": "Any action map, whatever actions it declares — the type a collection of maps (an InputScope, a scope stack) is written against. ActionMap itself cannot serve that role: its default type argument carries `Readonly<Record<string, Action>>`, and a map declared with concrete action names has no index signature to satisfy it. This alias names the map WITHOUT its merged action members, which every concrete map does satisfy.",
+  "symbol": "AnyActionMap",
+  "kind": "type",
+  "subsystem": "input",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Any action map, whatever actions it declares — the type a collection of maps (an InputScope, a scope stack) is written against.",
+        "ActionMap itself cannot serve that role: its default type argument carries `Readonly<Record<string, Action>>`, and a map declared with concrete action names has no index signature to satisfy it. This alias names the map WITHOUT its merged action members, which every concrete map does satisfy."
+      ],
+      "importLine": "import { AnyActionMap } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AnyActionMap",
+          "signature": "ActionMapBase<ActionRecord>",
+          "signatureTokens": [
+            {
+              "text": "ActionMapBase",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ActionRecord",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/input/actions/ActionMap.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/input/actions/ActionMap.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/input/actions/ActionMap.ts"
+}

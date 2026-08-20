@@ -205,6 +205,98 @@ init() {
 
 Binding to a channel the pad doesn't declare is harmless — the listener simply never fires — but `hasChannel()` lets you offer alternative controls or skip setup entirely.
 
+## Local multiplayer: one map per pad
+
+An action binds the semantic control — `GamepadButton.South`, not "player 2's
+South". Which physical pad it reads from is the owning `ActionMap`'s runtime
+context:
+
+```ts
+import { ActionMap, ButtonAction, GamepadAxis, GamepadButton, Scene, VectorAction } from '@codexo/exojs';
+
+const createPlayerActions = () => ({
+    jump: new ButtonAction(GamepadButton.South),
+    move: new VectorAction({ x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY }),
+});
+
+class VersusScene extends Scene {
+    init() {
+        const p1 = new ActionMap(createPlayerActions(), { gamepad: this.inputs.getGamepad(0) });
+        const p2 = new ActionMap(createPlayerActions(), { gamepad: this.inputs.getGamepad(1) });
+
+        this.inputs.attach(p1);
+        this.inputs.attach(p2);
+    }
+}
+```
+
+The two maps are completely independent, and neither binding mentions a slot —
+which is exactly why both players can share one saved control scheme. A pad is
+runtime context, never part of a binding and never serialized.
+
+Keyboard and gamepad multiplayer works the same way, with one map per player:
+one built from `Keyboard` channels and one given a `gamepad`. ExoJS deliberately
+derives no player identity of its own — "keyboard plus pad 0" means whatever your
+game decides it means.
+
+<Callout type="note" title="Slots are runtime, not identity">
+`Gamepad.slot` is stable for the application's lifetime, which makes it a good
+runtime handle — but it says nothing about which human is holding the device, so
+it never reaches a save file. Persist your own player-to-slot assignment if you
+need one.
+</Callout>
+
+## Device family and button prompts
+
+Gameplay binds `GamepadButton.South` regardless of hardware. A prompt UI needs
+the opposite: what does THIS device print on that button, and which icon set
+should it draw?
+
+```ts
+import type { Gamepad, GamepadMappingFamily } from '@codexo/exojs';
+
+declare const pad: Gamepad;
+declare const icons: Partial<Record<GamepadMappingFamily, string>>;
+
+const iconSet = pad.family === null ? 'keyboard' : icons[pad.family];
+const label = pad.getLabel('ButtonSouth'); // "A" on Xbox, "Cross" on PlayStation, "B" on Switch
+```
+
+`family` is the value to key your own artwork on — Xbox, PlayStation, Switch Pro,
+Joy-Con (left and right separately), Steam Controller, Steam Deck, arcade stick,
+or the generic dual-analog fallback. `getLabel` resolves against the connected
+device rather than only its family, so a DualShock 4 reports `Share` and a
+DualSense `Create` for the same `Select` control.
+
+ExoJS ships no glyph assets. Choosing and drawing the artwork stays yours;
+`family` and `getLabel` are what make that choice a one-liner.
+
+## Describing an unrecognised device
+
+A mapping is data: a family, an index space, and the buttons and axes that
+device reports. Describe a controller the built-in definitions do not cover by
+writing one and registering a `GamepadDefinition` for it — no subclassing is
+involved.
+
+```ts
+import { GamepadAxis, GamepadButton, GamepadMapping, GamepadMappingFamily } from '@codexo/exojs';
+
+const dancePad = new GamepadMapping({
+    family: GamepadMappingFamily.GenericDualAnalog,
+    buttons: [
+        new GamepadButton(0, GamepadButton.DPadUp),
+        new GamepadButton(1, GamepadButton.DPadDown),
+        new GamepadButton(2, GamepadButton.DPadLeft),
+        new GamepadButton(3, GamepadButton.DPadRight),
+    ],
+    axes: [],
+});
+```
+
+Pass `layout: GamepadMappingLayout.Raw` when the indices follow the device's raw
+HID report order rather than the W3C standard layout; a raw mapping is discarded
+automatically if the browser turns out to normalise that device after all.
+
 ## Vibration
 
 The Web Gamepad API exposes dual-rumble actuators on most modern controllers. Check support and trigger effects:

@@ -1,6 +1,6 @@
 {
   "title": "GamepadMappingLayout",
-  "description": "Which index space a GamepadMapping's button and axis indices live in. Almost every mapping is written against the W3C \"standard\" layout the browser normalises known devices into. A `Raw` mapping instead encodes a device's unnormalised HID report order, which is only correct while the browser leaves that device unnormalised — see SteamDeckGamepadMapping, the one built-in mapping in that category.",
+  "description": "Which index space a GamepadMapping's button and axis indices live in. Almost every mapping is written against the W3C \"standard\" layout the browser normalises known devices into. A `Raw` mapping instead encodes a device's unnormalised HID report order, which is only correct while the browser leaves that device unnormalised.",
   "symbol": "GamepadMappingLayout",
   "kind": "enum",
   "subsystem": "input",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Which index space a GamepadMapping's button and axis indices live in.",
-        "Almost every mapping is written against the W3C \"standard\" layout the browser normalises known devices into. A `Raw` mapping instead encodes a device's unnormalised HID report order, which is only correct while the browser leaves that device unnormalised — see SteamDeckGamepadMapping, the one built-in mapping in that category."
+        "Almost every mapping is written against the W3C \"standard\" layout the browser normalises known devices into. A `Raw` mapping instead encodes a device's unnormalised HID report order, which is only correct while the browser leaves that device unnormalised."
       ],
       "importLine": "import { GamepadMappingLayout } from '@codexo/exojs'",
       "sourceLink": null
