@@ -73,7 +73,7 @@ class ListenerAndSourceScene extends Scene {
         // A Sound played while audio is still locked is a no-op: a suspended
         // AudioContext's clock stands still, so nothing can be scheduled
         // honestly. Start the loop from the unlock gesture instead. Subscribing
-        // is safe even if audio unlocked earlier — onUnlock replays.
+        // is safe even if audio unlocked earlier - onUnlock replays.
         // play() returns the narrow Voice interface; Sound voices are spatializable.
         app.audio.onUnlock.add(() => {
             this.voice = app.audio.play(this.sound, {
@@ -108,7 +108,7 @@ class ListenerAndSourceScene extends Scene {
         // Listener.
         this.graphics.fillColor = new Color(120, 255, 160);
         this.graphics.drawCircle(this.listener.x, this.listener.y, 14);
-        // Source — brightness tracks attenuation so volume reads visually too.
+        // Source - brightness tracks attenuation so volume reads visually too.
         const glow = Math.floor(80 + volume * 175);
         this.graphics.fillColor = new Color(glow, Math.floor(80 + volume * 60), Math.floor(80 + volume * 60));
         this.graphics.drawCircle(source.x, source.y, SOURCE_RADIUS);

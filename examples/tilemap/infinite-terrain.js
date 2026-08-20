@@ -5,7 +5,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // An infinite, procedurally generated world: the TileLayer has NO width/height
 // (unbounded), and a ChunkStreamer keeps only the chunks near the camera
 // resident. Terrain comes from a deterministic value-noise fBm sampler fed
-// through createSampledChunkSource — same seed, same world, every visit.
+// through createSampledChunkSource - same seed, same world, every visit.
 const TILE = 64;
 const FEATURE_SIZE = 28;
 const MOVE_SPEED = 420;
@@ -46,7 +46,7 @@ function fbm(seed, x, y) {
     return value;
 }
 // Biome mapping (elevation-style bands; localTileId values are solid
-// full-square terrain-center tiles read off mapPack_tilesheet.png — 17
+// full-square terrain-center tiles read off mapPack_tilesheet.png - 17
 // columns, index = row * 17 + column).
 const TILE_DEEP_WATER = 203; // patterned blue  (row 11, col 16)
 const TILE_WATER = 186; // plain light blue (row 10, col 16)
@@ -90,7 +90,7 @@ class InfiniteTerrainScene extends Scene {
             tileCount: 204,
             columns: 17,
         });
-        // No width/height: the layer (and map) are unbounded — chunks exist
+        // No width/height: the layer (and map) are unbounded - chunks exist
         // only where something writes them.
         this.terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset] });
         const map = new TileMap({ name: 'infinite-world', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.terrain] });
@@ -103,7 +103,7 @@ class InfiniteTerrainScene extends Scene {
         actorLayer.addChild(this.explorer);
         this.worldRoot = new Container();
         this.worldRoot.addChild(this.mapView.band('terrain'), actorLayer);
-        // Camera follows the explorer — no setBounds: an unbounded map has no
+        // Camera follows the explorer - no setBounds: an unbounded map has no
         // edges to clamp the camera to.
         const { width, height } = app;
         this.camera = new View(this.explorer.x, this.explorer.y, width, height);

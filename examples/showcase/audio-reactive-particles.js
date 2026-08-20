@@ -32,7 +32,7 @@ class AudioReactiveParticlesScene extends Scene {
         this.ps.setPosition(width / 2, height / 2);
         // The rate (density) and the cone speed range (spread) are mutated every
         // frame from live audio energy. Starting both near zero means a silent
-        // track emits (almost) nothing — the field is genuinely data-driven, not
+        // track emits (almost) nothing - the field is genuinely data-driven, not
         // a timed fountain dressed up as "reactive".
         this.rate = new Constant(0);
         this.cone = ConeDirection.omni(20, 40);
@@ -62,7 +62,7 @@ class AudioReactiveParticlesScene extends Scene {
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 64);
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — play() returns the Voice now.
+        // gesture, then starts automatically - play() returns the Voice now.
         this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update(_delta) {

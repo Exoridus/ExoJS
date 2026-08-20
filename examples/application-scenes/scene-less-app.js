@@ -1,7 +1,7 @@
 // Auto-generated from scene-less-app.ts — edit the .ts source, not this file.
 import { Application, Color, Sprite } from '@codexo/exojs';
 // A scene-less Application: no Scene is ever registered or started. All
-// frame work happens through a single app-level system — useful for utility
+// frame work happens through a single app-level system - useful for utility
 // apps, splash/loading screens, or anything that doesn't need scene
 // lifecycle, retention, or navigation. Assets load the same way without a
 // Scene: `app.loader` in place of `this.loader`.

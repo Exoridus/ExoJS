@@ -5,7 +5,7 @@
 // This module is the integration seam between two intentionally decoupled
 // packages: `@codexo/exojs-tilemap` (data-only object layers) and
 // `@codexo/exojs-physics` (the simulation world). Neither package depends on
-// the other — tilemap never imports physics, physics never imports tilemap
+// the other - tilemap never imports physics, physics never imports tilemap
 // (this is a deliberate architectural decision, not an oversight). The
 // glue therefore lives here, in example/app land, where depending on both is
 // legitimate. Copy it into your own project and adapt as needed; it is a
@@ -21,9 +21,9 @@
 //   - Point / Polyline / Tile           (no closed area → skipped)
 //
 // `buildCollidersFromTileLayer` does the same for the per-tile collision shapes
-// authored on tileset tiles. The hard part — walking the tile grid, applying
+// authored on tileset tiles. The hard part - walking the tile grid, applying
 // tile transforms and layer offsets, and merging adjacent whole-cell boxes into
-// as few rectangles as possible — lives in `@codexo/exojs-tilemap`'s
+// as few rectangles as possible - lives in `@codexo/exojs-tilemap`'s
 // `buildTileCollisionGeometry`; all that is left here is the same short
 // geometry → shape loop.
 //
@@ -72,13 +72,13 @@ export function buildCollidersFromObjectLayer(world, layer, options = {}) {
     return built;
 }
 /**
- * Build static colliders from a tile layer's per-tile collision shapes — the
+ * Build static colliders from a tile layer's per-tile collision shapes - the
  * `objectgroup` Tiled lets you draw on a tileset tile.
  *
  * All the geometry work is done by `buildTileCollisionGeometry` in
  * `@codexo/exojs-tilemap`: it walks the tile grid, applies each tile's
  * flip/rotation transform plus the tileset and layer pixel offsets, and merges
- * adjacent whole-cell boxes into as few rectangles as it can — so a solid
+ * adjacent whole-cell boxes into as few rectangles as it can - so a solid
  * region becomes a handful of wide bodies instead of one body per tile. This
  * function only turns that geometry into bodies, with the same kind → shape
  * mapping as {@link buildCollidersFromObjectLayer}.
@@ -115,7 +115,7 @@ export function buildCollidersFromTileLayer(world, layer, options = {}) {
     };
     for (const rect of geometry.rects) {
         // A merged rectangle is axis-aligned by construction, so the body needs
-        // no angle — just the box centred on the run.
+        // no angle - just the box centred on the run.
         add({
             shape: new BoxShape(rect.width, rect.height),
             x: rect.x + rect.width / 2,
@@ -148,7 +148,7 @@ function shapeForGeometry(geometry, label) {
             return { shape: new BoxShape(geometry.width, geometry.height), x: centre.x, y: centre.y, angle };
         }
         case ObjectKind.Ellipse: {
-            // No native ellipse collider — approximate with a circle whose radius
+            // No native ellipse collider - approximate with a circle whose radius
             // is the larger semi-axis (a conservative, fully-covering bound).
             const radius = Math.max(geometry.width, geometry.height) / 2;
             if (radius <= 0) {
@@ -170,7 +170,7 @@ function shapeForGeometry(geometry, label) {
                 return { shape, x: geometry.x, y: geometry.y, angle };
             }
             catch (error) {
-                // PolygonShape throws on non-convex / degenerate input — there is
+                // PolygonShape throws on non-convex / degenerate input - there is
                 // no automatic convex decomposition. Skip and let the author know.
                 warn(`physics-tilemap: skipped non-convex/degenerate polygon "${label}": ${describeError(error)}`);
                 return null;

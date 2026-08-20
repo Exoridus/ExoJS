@@ -20,7 +20,7 @@ class CustomRenderPassScene extends Scene {
             .setScale(2.2)
             .setTint(new Color(255, 180, 120));
         this.between = new Graphics();
-        // A callback pass slots procedural geometry between two scene nodes — same frame order
+        // A callback pass slots procedural geometry between two scene nodes - same frame order
         // as the imperative version, now a named, inspectable step.
         this.pipeline = new RenderPipeline()
             .addPass(new RenderNodePass(this.back, { clear: Color.black }))

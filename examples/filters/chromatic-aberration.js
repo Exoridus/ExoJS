@@ -34,7 +34,7 @@ class ChromaticAberrationScene extends Scene {
         this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } });
         this.sprite = new Sprite(this.loader.get(CHECKER)).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
         this.sprite.filters = [this.filter];
-        // The HUD must exist before applyIntensity() runs — it calls hud.setStatus().
+        // The HUD must exist before applyIntensity() runs - it calls hud.setStatus().
         this.hud = mountControls({
             title: 'Chromatic Aberration',
             controls: [{ keys: 'Intensity', action: 'split the R / B channels apart' }],

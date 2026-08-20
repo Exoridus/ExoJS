@@ -10,7 +10,7 @@ const GameAssets = Assets.from({
 /**
  * One progress bar for everything the loader is doing, then a hand-over to the
  * game scene. Nothing is awaited in `load()`: the bar is driven by the loader's
- * own signals, which see every `load(...)` call from every scene and system —
+ * own signals, which see every `load(...)` call from every scene and system -
  * not just this scene's.
  */
 class BootScene extends Scene {
@@ -52,14 +52,14 @@ class BootScene extends Scene {
         app.loader.onLoadProgress.add(this.onLoadProgress);
         app.loader.onLoadError.add(this.onLoadError);
         app.loader.onLoadComplete.add(this.onLoadComplete);
-        // Trigger loads from anywhere — the signals above see all of them. The
+        // Trigger loads from anywhere - the signals above see all of them. The
         // claim goes on the application loader so the assets outlive this scene.
         app.loader.load(GameAssets);
     }
     // #endregion guide:boot-signals
     // #region guide:boot-unsubscribe
     unload() {
-        // `this.app` is still valid here — `unload()` runs before the scene is
+        // `this.app` is still valid here - `unload()` runs before the scene is
         // detached, so the listeners can still be removed from the very loader
         // they were added to.
         const app = this.app;
@@ -68,11 +68,11 @@ class BootScene extends Scene {
         app.loader.onLoadError.remove(this.onLoadError);
         app.loader.onLoadComplete.remove(this.onLoadComplete);
     }
-    /** Leaves for the game — but only while this scene is still the one on screen. */
+    /** Leaves for the game - but only while this scene is still the one on screen. */
     enterGame() {
         // Check `attached` first: it never throws, unlike `state`, which does
         // once the scene has been fully detached. `Active` is the only state
-        // allowed to navigate — suspended, unloading, or detached must not.
+        // allowed to navigate - suspended, unloading, or detached must not.
         if (!this.attached || this.state !== SceneState.Active) {
             return;
         }

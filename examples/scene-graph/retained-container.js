@@ -2,7 +2,7 @@
 import { Application, Color, Container, Rectangle, RetainedContainer, Scene, Sprite, Texture } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A decor field far larger than the viewport: thousands of sprites that are
-// authored ONCE and never mutated again — the exact shape the retained tier is
+// authored ONCE and never mutated again - the exact shape the retained tier is
 // built for. Only the group as a whole ever moves (the "camera" pan below).
 const FIELD_COLUMNS = 96;
 const FIELD_ROWS = 60;
@@ -54,7 +54,7 @@ class RetainedContainerScene extends Scene {
         const { width, height } = app;
         // Pan the whole field along a slow Lissajous path, like a camera drifting
         // over a static world. For a RetainedContainer this is ONE group-matrix
-        // update per frame — the retained fragment is untouched, so no descendant
+        // update per frame - the retained fragment is untouched, so no descendant
         // transform is recomputed and no child is re-collected. A plain Container
         // still walks all FIELD_COUNT children every frame to place them.
         const panX = width / 2 + Math.cos(this.elapsed * 0.35) * 140;
@@ -77,7 +77,7 @@ class RetainedContainerScene extends Scene {
      */
     buildField(retained) {
         // The ONLY line that opts into the retained tier. There is no runtime
-        // toggle on the instance itself — the tier is chosen at construction.
+        // toggle on the instance itself - the tier is chosen at construction.
         const group = retained ? new RetainedContainer() : new Container();
         const frames = [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64), new Rectangle(0, 64, 64, 64), new Rectangle(64, 64, 64, 64)];
         const palette = [Color.white, Color.skyBlue, Color.gold, Color.mediumSpringGreen, Color.hotPink, Color.mediumPurple];

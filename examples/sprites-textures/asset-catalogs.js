@@ -22,7 +22,7 @@ const LevelAssets = Assets.compose(SharedAssets, LevelLocalAssets);
 // #endregion guide:catalog-compose
 // #region guide:catalog-extend
 // `extend` derives a catalog: listed keys are re-declared deliberately, unknown
-// ones are added. The base is never mutated — `LevelLocalAssets.ground` keeps
+// ones are added. The base is never mutated - `LevelLocalAssets.ground` keeps
 // pointing at its own texture.
 const NightAssets = Assets.extend(LevelLocalAssets, {
     ground: 'image/particle-light.png', // deliberate override
@@ -57,7 +57,7 @@ class AssetCatalogsScene extends Scene {
         });
         // #endregion guide:queue-progress
         // #region guide:catalog-parallel
-        // Independent catalogs get independent queues — start both, await both.
+        // Independent catalogs get independent queues - start both, await both.
         // The result tuple keeps each catalog's shape.
         const [day, night] = await Promise.all([loading, this.loader.load(NightAssets)]);
         this.dayGround = day.ground;
@@ -66,13 +66,13 @@ class AssetCatalogsScene extends Scene {
         // #region guide:non-leaf-load
         // Non-leaf types (`music`, `video`, `bmFont`, `font`, …) have no
         // bare-path form and no placeholder to hand back, even for a literal
-        // path — they are always loaded by reference and awaited.
+        // path - they are always loaded by reference and awaited.
         this.theme = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
         // #endregion guide:non-leaf-load
         // #region guide:catalog-failure
         // Awaiting a catalog rejects if any leaf fails. Every leaf still carries
         // its own status, so the scene can name the one that broke and keep
-        // running — a failed seamless handle renders a visible "missing" texture.
+        // running - a failed seamless handle renders a visible "missing" texture.
         try {
             await this.loader.load(SharedAssets);
         }
@@ -87,11 +87,11 @@ class AssetCatalogsScene extends Scene {
         const app = this.app;
         const { width, height } = app;
         // A catalog's properties are the same objects that existed before the
-        // load — now populated. There is no separate `get()` step.
+        // load - now populated. There is no separate `get()` step.
         this.logo = new Sprite(LevelAssets.logo);
         this.ship = new Sprite(LevelAssets.ship);
         this.ground = new Sprite(LevelAssets.ground);
-        // A value entry resolves to an AssetRef — read `.value` once `.ready`.
+        // A value entry resolves to an AssetRef - read `.value` once `.ready`.
         this.frameCount = Object.keys(LevelAssets.atlas.value.frames).length;
         this.logo.setAnchor(0.5).setPosition(width * 0.25, height * 0.55).setScale(0.9);
         this.ship.setAnchor(0.5).setPosition(width * 0.5, height * 0.55);
@@ -127,7 +127,7 @@ class AssetCatalogsScene extends Scene {
     async useVariant(variant) {
         const app = this.app;
         // The path is computed rather than a literal, so its type cannot be
-        // inferred from the extension — name it with `Asset.type(...)`.
+        // inferred from the extension - name it with `Asset.type(...)`.
         const texture = await app.loader.load(Asset.type('texture', `image/${variant}.png`));
         this.ground.setTexture(texture);
     }

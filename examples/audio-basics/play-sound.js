@@ -9,9 +9,9 @@ class PlaySoundScene extends Scene {
     init() {
         const app = this.app;
         const { width, height } = app;
-        // Keep example SFX comfortable — full volume is jarring in the docs.
+        // Keep example SFX comfortable - full volume is jarring in the docs.
         app.audio.sound.volume = 0.5;
-        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // Path-only get() infers Sound from the .ogg extension - sidesteps a
         // compile-time overload ambiguity between Sound and the Json token form
         // when passing the Sound token explicitly.
         this.sounds = SOUND_KEYS.map(key => this.loader.get(assets.demo.audio[key]));

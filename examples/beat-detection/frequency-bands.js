@@ -5,7 +5,7 @@ import { mountControls } from '@examples/runtime';
 // Eight perceptual frequency bands spanning the audible range, from the lowest
 // rumble to the airy top end. The FFT bins are linearly spaced over 0..nyquist,
 // so bucketing them onto log-spaced edges gives each band an equal share of the
-// frequency *octaves* — the way the ear hears it — instead of cramming the bass
+// frequency *octaves* - the way the ear hears it - instead of cramming the bass
 // into two bins and the treble into hundreds.
 const BAND_LABELS = ['Sub-bass', 'Bass', 'Low-mid', 'Mid', 'Upper-mid', 'Presence', 'Treble', 'Brilliance'];
 const BAND_COUNT = BAND_LABELS.length;
@@ -31,7 +31,7 @@ class FrequencyBandsScene extends Scene {
     tapPrompt;
     async load() {
         const app = this.app;
-        // AudioStream has no seamless adapter — await it explicitly.
+        // AudioStream has no seamless adapter - await it explicitly.
         const track = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
         this.music = track;
         this.analyser = new AudioAnalyser({ fftSize: 2048, smoothingTimeConstant: 0.75 });

@@ -42,7 +42,7 @@ class FalloffCurvesScene extends Scene {
         this.listener = { x: width / 2, y: height / 2 };
         app.audio.listener.target = this.listener;
         // Each derived Sound below reads .audioBuffer synchronously, so the
-        // shared source must be fully decoded first — await load() instead of
+        // shared source must be fully decoded first - await load() instead of
         // the deferred get() (whose placeholder audioBuffer is null until fill).
         const source = await this.loader.load(Asset.type('sound', 'audio/impact-light.ogg'));
         this.sounds = this.sources.map(() => new Sound(source.audioBuffer));
@@ -70,7 +70,7 @@ class FalloffCurvesScene extends Scene {
         // A Sound played while audio is still locked is a no-op: a suspended
         // AudioContext's clock stands still, so nothing can be scheduled
         // honestly. Start the loops from the unlock gesture instead.
-        // Subscribing is safe even if audio unlocked earlier — onUnlock replays.
+        // Subscribing is safe even if audio unlocked earlier - onUnlock replays.
         app.audio.onUnlock.add(() => {
             for (let i = 0; i < this.sounds.length; i++) {
                 const { model, x, y } = this.sources[i];

@@ -71,7 +71,7 @@ class AudioVisualisationScene extends Scene {
             this.hud.setStatus(this.musicVoice.paused ? 'Paused' : 'Playing…');
         });
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — play() returns the Voice now.
+        // gesture, then starts automatically - play() returns the Voice now.
         this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     draw(context) {

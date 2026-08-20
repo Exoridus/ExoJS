@@ -20,7 +20,7 @@ class ReverbAndDelayScene extends Scene {
         const { width, height } = app;
         // A large click pad centred on the canvas.
         this.pad = { x: width / 2 - 240, y: height * 0.36, w: 480, h: 160 };
-        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // Path-only get() infers Sound from the .ogg extension - sidesteps a
         // compile-time overload ambiguity between Sound and the Json token form
         // when passing the Sound token explicitly.
         this.sound = this.loader.get('audio/impact-light.ogg');

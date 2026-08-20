@@ -8,7 +8,7 @@ import { mountControls } from '@examples/runtime';
  * `apply()` loop and a GPU `wgsl()` body. The particle system auto-selects:
  * WebGPU backend ⇒ the WGSL body runs in the compute shader (no CPU readback);
  * any other backend (incl. WebGL2) ⇒ the `apply()` loop runs on the CPU. Both
- * paths compute the same motion — the on-screen readout reveals which one is live.
+ * paths compute the same motion - the on-screen readout reveals which one is live.
  */
 class SwayModule extends UpdateModule {
     amplitude;
@@ -61,7 +61,7 @@ class CustomWgslModuleScene extends Scene {
             title: 'Custom WGSL Module',
             controls: [{ keys: 'Auto', action: 'CPU on WebGL2 · GPU on WebGPU' }],
             // GPU vs CPU routing is decided on the first update() once the
-            // backend is known — show "detecting" until then.
+            // backend is known - show "detecting" until then.
             status: 'Compute path: detecting…',
             hint: 'The SwayModule supplies both a CPU apply() and a GPU wgsl() body; the system picks one.',
         });

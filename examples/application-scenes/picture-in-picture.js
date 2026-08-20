@@ -13,7 +13,7 @@ class PictureInPictureScene extends Scene {
         this.mainView = new View(0, 0, width, height);
         this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
         // Zoom < 1 zooms OUT (a larger visible world area maps into the same
-        // small viewport) — a minimap needs to show more of the scene than the
+        // small viewport) - a minimap needs to show more of the scene than the
         // main view, not less, so the tracked sprite reads as a small icon.
         this.pipView.setZoom(0.4);
         this.sprite.setAnchor(0.5).setPosition(-280, 0);

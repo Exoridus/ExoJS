@@ -23,7 +23,7 @@ class MultitouchScene extends Scene {
     init() {
         const app = this.app;
         this.graphics = new Graphics();
-        // Reusable label pool — one Text per possible touch, repositioned each frame.
+        // Reusable label pool - one Text per possible touch, repositioned each frame.
         for (let i = 0; i < MAX_TOUCHES; i++) {
             this.labels.push(new Text('', { fillColor: Color.white, fontSize: 16 }).setAnchor(0.5));
         }

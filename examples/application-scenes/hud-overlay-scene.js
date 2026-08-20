@@ -1,7 +1,7 @@
 // Auto-generated from hud-overlay-scene.ts — edit the .ts source, not this file.
 import { Application, Color, Graphics, Label, ProgressBar, Scene } from '@codexo/exojs';
 /**
- * A screen-fixed HUD on `scene.ui` sits above the world automatically — no
+ * A screen-fixed HUD on `scene.ui` sits above the world automatically - no
  * separate overlay scene or stack. The world (a spinning arc) is drawn from
  * `scene.root`; the HUD (a label + a live health bar) lives on `scene.ui` and
  * is auto-rendered on top.
