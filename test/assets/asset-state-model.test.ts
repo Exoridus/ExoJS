@@ -213,7 +213,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
           const entry = pending.get(key)!;
           pending.delete(key);
           // Claim state at the moment of arrival - NOT at claim time - is what
-          // decides free-on-arrival (§4.7): a release can land between issuing
+          // decides free-on-arrival: a release can land between issuing
           // and settling this exact fetch.
           const claimedAtArrival = model.claims.size > 0;
           const donor = new StubHandle();

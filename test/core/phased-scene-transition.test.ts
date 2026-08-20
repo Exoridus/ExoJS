@@ -201,7 +201,7 @@ class TexturePhase extends RecordingPhase {
 }
 
 describe('composePhasedSceneTransition', () => {
-  test("merges the two instances' own requirements via getRequirementsForPhase (§3.9.1)", () => {
+  test("merges the two instances' own requirements via getRequirementsForPhase", () => {
     const exitPhase = new DirectPhase({ duration: 10 });
     const enterPhase = new TexturePhase({ duration: 10 });
     const composed = composePhasedSceneTransition(exitPhase, enterPhase);
@@ -270,7 +270,7 @@ describe('mergeSceneTransitionRequirements', () => {
     expect(mergeSceneTransitionRequirements(a, b)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
   });
 
-  test('direct exit + texture enter promotes to texture (identity-composite promotion, §3.9.1)', () => {
+  test('direct exit + texture enter promotes to texture (identity-composite promotion)', () => {
     const exit: SceneTransitionPhaseRequirements = { outgoingFrame: 'none', currentFrame: 'direct' };
     const enter: SceneTransitionPhaseRequirements = { outgoingFrame: 'none', currentFrame: 'texture' };
 

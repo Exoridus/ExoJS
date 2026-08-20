@@ -1,5 +1,5 @@
-// Type contract for `Assets.group()` spread into `Assets.from` (asset-system v2
-// §6). Compiled by `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
+// Type contract for `Assets.group()` spread into `Assets.from`. Compiled by
+// `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
 
 import { Assets, type Texture } from '@codexo/exojs';
 

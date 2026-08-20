@@ -9,7 +9,7 @@ import type { SpatialIndex } from '../query/SpatialIndex';
  * in the frontend so they work over any backend. In the MVP the only backend is
  * {@link NativePhysicsBackend}. This boundary is intentionally **not** a public,
  * stable contract - promoting it (or adding a Rapier backend) is a deliberate
- * later decision (spec 00 §11), so it lives outside the published surface.
+ * later decision, so it lives outside the published surface.
  */
 export interface PhysicsBackend {
   /** The persistent contact set, source of the begin/end/sensor events. */

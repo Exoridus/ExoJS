@@ -149,7 +149,7 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).toBeNull(); // both gone → evicted
   });
 
-  test('release while the fetch is still in flight frees the handle on arrival (§4.7)', async () => {
+  test('release while the fetch is still in flight frees the handle on arrival', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
@@ -168,7 +168,7 @@ describe('refcount / claims', () => {
     // !== undefined) - it must NOT re-arm or drop the in-flight fetch.
     owner.release(handle);
 
-    // §4.7 free-on-arrival: the running fetch completes and settles the captured
+    // Free-on-arrival: the running fetch completes and settles the captured
     // .loaded (the asset WAS fully there), but because refcount is 0 the payload
     // is freed immediately on arrival.
     await captured;
@@ -212,7 +212,7 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).not.toBeNull();
   });
 
-  test('in-flight arrival at refcount 0 frees immediately but .loaded still resolves (§4.7)', async () => {
+  test('in-flight arrival at refcount 0 frees immediately but .loaded still resolves', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
@@ -224,9 +224,9 @@ describe('refcount / claims', () => {
 
     owner.release(handle); // refcount 0 while the fetch is still in flight
 
-    // The captured promise resolves (the asset WAS fully fetched)…
+    // The captured promise resolves (the asset WAS fully fetched)...
     await expect(captured).resolves.toBe(handle);
-    // …but the payload was freed on arrival because nothing claims it.
+    // ...but the payload was freed on arrival because nothing claims it.
     expect(handle.audioBuffer).toBeNull();
     expect(handle.loadState).toBe('loading');
   });

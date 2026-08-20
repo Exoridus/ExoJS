@@ -45,7 +45,7 @@ export interface ProbeSceneSpec {
 /**
  * The probe's scenes, in run order.
  *
- * Deliberately small (§2 of the brief). `baseline` isolates the DPR difference
+ * Deliberately small. `baseline` isolates the DPR difference
  * of the MAIN surface with no effect involved; the three effect scenes each
  * create exactly one class of internal target; `overdraw` is the only fill-rate
  * ladder, kept because fill rate is the axis DPR actually multiplies and no
@@ -282,7 +282,7 @@ export interface ProbeResult {
    * put a fabricated fact into a measurement record.
    */
   readonly deviceLabel: string;
-  /** Free-text note the tester typed (thermal state, orientation, …). */
+  /** Free-text note the tester typed (thermal state, orientation, ...). */
   readonly testerNote: string;
   /** The host's own `window.devicePixelRatio`. */
   readonly devicePixelRatio: number;

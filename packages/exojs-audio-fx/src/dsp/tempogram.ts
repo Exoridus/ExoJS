@@ -14,7 +14,7 @@
  * Octave disambiguation (the core fix)
  * ------------------------------------
  * The ACF of a periodic onset train peaks at the beat lag `p` AND at every sub-harmonic
- * lag `2p, 3p, …` (every other beat also correlates). A naive "biggest peak" or additive
+ * lag `2p, 3p, ...` (every other beat also correlates). A naive "biggest peak" or additive
  * harmonic-comb picker therefore drifts down to the lowest in-range sub-harmonic. Three
  * mechanisms cooperate here to lock the true fundamental instead:
  *
@@ -25,9 +25,9 @@
  *      (`f`, `f/2`, `f/3` → lags `p, 2p, 3p`) MINUS a penalty for energy at its
  *      SUPER-harmonics (`2f`, `3f` → lags `p/2, p/3`). A true fundamental has no
  *      super-harmonic energy, so it keeps its full comb; a sub-harmonic candidate is
- *      demoted because its super-harmonic (the real beat) is strong. This realises the
- *      plan's stated goal - "metrical support reinforces the fundamental rather than a
- *      lone sub-harmonic peak" - over the `{f/2, f, 2f, 3f}` family.  [scoreTempoHypotheses]
+ *      demoted because its super-harmonic (the real beat) is strong. Metrical support
+ *      therefore reinforces the fundamental rather than a lone sub-harmonic peak, over
+ *      the `{f/2, f, 2f, 3f}` family.  [scoreTempoHypotheses]
  *
  *      The super-harmonic penalty is SUBDIVISION-AWARE: a candidate `kf` (k = 2, 3) only
  *      demotes `f` when `kf` could itself be the beat, i.e. `kf` lies within the tempo
@@ -50,7 +50,7 @@ export interface TempoCandidateResult {
   lag: number;
 }
 
-/** Tuning knobs for tempo-candidate scoring. Internal constants for now (see plan §4.5). */
+/** Tuning knobs for tempo-candidate scoring. Internal constants for now. */
 export interface TempoScoringOptions {
   /** Lowest BPM accepted as a candidate. */
   minBpm?: number;
@@ -261,7 +261,7 @@ export function tempoPrior(bpm: number, mu = defaultPriorMu, sigma = defaultPrio
  * super-harmonic (the real beat), so it is demoted; the true fundamental has no
  * super-harmonic energy and keeps its full comb.
  *
- * The penalty is gated to be SUBDIVISION-AWARE (see module header §2): a super-harmonic
+ * The penalty is gated to be SUBDIVISION-AWARE: a super-harmonic
  * `kf` only counts against `f` when `kf` is itself a plausible beat (`kf ≤ maxBpm`). Energy
  * at a super-harmonic above the tempo band is a subdivision (e.g. hats on 8th-notes over a
  * 180 BPM kick), not a competing fundamental, and must not demote the true beat. Returns

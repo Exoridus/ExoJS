@@ -1,4 +1,4 @@
-// The object-based `parse` form (asset-system v2 delta §4/§5): a value config
+// The object-based `parse` form: a value config
 // with `parse` classifies as `AssetRef<R>` (R = parse's return type) in a
 // catalog, and the resolved map from `load(catalog)` unwraps to R. Compiled by
 // `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.

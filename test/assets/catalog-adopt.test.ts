@@ -162,7 +162,7 @@ describe('Loader._adopt', () => {
     warnSpy.mockRestore();
   });
 
-  test('duplicate source, two distinct handles adopted while in flight: BOTH heal from ONE fetch, no warn (§7 multi-handle fill)', async () => {
+  test('duplicate source, two distinct handles adopted while in flight: BOTH heal from ONE fetch, no warn (multi-handle fill)', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
@@ -182,7 +182,7 @@ describe('Loader._adopt', () => {
     expect(a.width).toBe(4);
     expect(b.width).toBe(4);
     expect(global.fetch).toHaveBeenCalledTimes(1); // ONE decode shared across both handles
-    // Same (default) sampler on both → the former §7 hang-warn must NOT fire.
+    // Same (default) sampler on both, so the duplicate-source hang warning must NOT fire.
     expect(warnSpy).not.toHaveBeenCalled();
 
     warnSpy.mockRestore();
@@ -913,7 +913,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(leaf.loadState).toBe('loading');
     expect(() => leaf.value).toThrow("'loading'"); // still gated by state either way…
 
-    // …but the INTERNAL value must actually be cleared too, not merely hidden
+    // ...but the INTERNAL value must actually be cleared too, not merely hidden
     // behind the state guard: re-arming through the generic `LoadState.begin()`
     // alone (bypassing `AssetRef._begin()`) would leave the stale `{hp:42}`
     // sitting in `_value`/`_hasValue` behind that gate.
@@ -1047,9 +1047,8 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1); // one network fetch for the shared source
   });
 
-  // §7 fix: a single catalog with two fields pointing at the same source
-  // produces two DIFFERENT leaves for the same key. The first leaf registers
-  // and starts the fetch; the second distinct leaf is added to the key's
+  // A single catalog with two fields pointing at the same source produces two
+  // DIFFERENT leaves for the same key. The first leaf registers and starts the fetch; the second distinct leaf is added to the key's
   // in-flight handle set, so ONE decode heals BOTH leaves in place - no hang,
   // no warn (same sampler).
   test('duplicate source within one catalog: both leaves heal from ONE fetch (no hang, no warn)', async () => {

@@ -19,7 +19,7 @@ export type ProbeBackendRequest = 'auto' | 'webgl2' | 'webgpu';
 /** Frames rendered before the measured window opens, for every cell alike. */
 export const WARMUP_FRAMES = 40;
 
-/** Default length of a cell's measured window, in milliseconds (§7 of the brief: 5-10s). */
+/** Default length of a cell's measured window, in milliseconds; the useful range is 5-10 s. */
 export const DEFAULT_MEASURE_MS = 6_000;
 
 /** Length of the optional single-cell sustained run. */
@@ -384,8 +384,8 @@ export interface VisualPreview {
 /**
  * Render one scene continuously so the tester can LOOK at it.
  *
- * Never used for timing, and never running while a cell is measured - §6 of the
- * brief: one variant on screen at a time, or the measurement pays for both.
+ * Never used for timing, and never running while a cell is measured: one variant
+ * on screen at a time, or the measurement pays for both.
  */
 export const startVisualPreview = async (options: {
   scene: ProbeSceneId;

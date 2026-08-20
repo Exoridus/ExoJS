@@ -98,7 +98,7 @@ describe('AssetRef value assets', () => {
   });
 });
 
-describe('bare-path get()/load() for value kinds (§4.2/§4.4)', () => {
+describe('bare-path get()/load() for value kinds', () => {
   afterEach(() => {
     global.fetch = originalFetch;
   });

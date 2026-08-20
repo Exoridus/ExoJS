@@ -2,12 +2,12 @@
  * The incremental transform-row patch is O(k moved rows), not O(n group
  * size).
  *
- * The dynamic-heavy motivation (design §1) measured exojs at ~117 ms vs Pixi's
- * ~9 ms under 7.5 % churn, because the engine rebuilt collect -> pack ->
- * transform-upload over ALL nodes every frame even though only a few moved. The
- * design attribution is explicit: 100 % of the cost is CPU-side in `render`
- * (collect+transform+pack), `flush` ~0. So the fix's core property - upload work
- * proportional to the number of MOVED rows, independent of group size - is a
+ * The dynamic-heavy workload measured exojs at ~117 ms vs Pixi's ~9 ms under
+ * 7.5 % churn, because the engine rebuilt collect -> pack -> transform-upload
+ * over ALL nodes every frame even though only a few moved. All of that cost is
+ * CPU-side in `render` (collect+transform+pack), with `flush` ~0. So the core
+ * property - upload work proportional to the number of MOVED rows, independent
+ * of group size - is a
  * CPU-pipeline property that this GPU-free Node harness measures exactly and
  * deterministically (the recording fake context turns the GPU draw into a
  * no-op; every expensive staging step still runs for real).

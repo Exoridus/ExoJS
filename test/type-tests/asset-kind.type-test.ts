@@ -1,5 +1,5 @@
-// Type contract for the `Asset.type()` descriptor builder (asset-system v2
-// delta §3). Compiled by `tsconfig.type-tests.json` (strict:false example
+// Type contract for the `Asset.type()` descriptor builder.
+// Compiled by `tsconfig.type-tests.json` (strict:false example
 // project) via `pnpm typecheck:type-tests`, NOT collected by vitest (no
 // `.test.ts` suffix). This is the hard type-level guarantee that `Asset.type`
 // is a strongly typed builder, not a `string`-keyed helper - without it,

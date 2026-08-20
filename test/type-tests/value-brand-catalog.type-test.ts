@@ -1,4 +1,4 @@
-// The value-brand fix (asset-system v2 delta §4): `Asset.type<Config>('json', …)`
+// The value-brand contract: `Asset.type<Config>('json', ...)`
 // must classify as `AssetRef<Config>` inside a catalog (not `Config`), and the
 // resolved map from `load(catalog)` unwraps it back to `Config`. Compiled by
 // `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
@@ -51,11 +51,11 @@ function getShip() {
 type _GetConfigIsRef = Expect<Equal<ReturnType<typeof getConfig>, CatalogValueLeaf<Config>>>;
 type _GetShipIsTexture = Expect<Equal<ReturnType<typeof getShip>, CatalogResourceLeaf<Texture>>>;
 
-// The brand rides ON the payload type, so ordinary annotations keep compiling…
+// The brand rides ON the payload type, so ordinary annotations keep compiling...
 const configRef: AssetRef<Config> = getConfig();
 const shipTexture: Texture = getShip();
 
-// …and the leaf goes straight back into a single-leaf `load()`.
+// ...and the leaf goes straight back into a single-leaf `load()`.
 function loadGotConfig() {
   return loader.load(getConfig());
 }

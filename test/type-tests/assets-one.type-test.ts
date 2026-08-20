@@ -1,5 +1,5 @@
 // Type contract for `Assets.one()` - a single leaf whose type matches the same
-// descriptor-set inference as a catalog field (asset-system v2 §5). Compiled by
+// descriptor-set inference as a catalog field. Compiled by
 // `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
 
 import { Asset, AssetRef, Assets, type Texture } from '@codexo/exojs';
