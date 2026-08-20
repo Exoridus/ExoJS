@@ -17,7 +17,13 @@ import type { ParticleSystem } from "#ParticleSystem";
  * Delivery is exactly once per expired particle, but not necessarily in the
  * frame the particle expired: a GPU-simulated death arrives as soon as its
  * readback lands, typically the next frame. Deaths from one readback are
- * delivered in slot order.
+ * delivered in slot order, and readbacks in the order they were submitted.
+ *
+ * Exactly-once holds while the deaths waiting on a readback fit the system's
+ * capacity. Beyond that the excess is dropped rather than stalling the frame
+ * loop, and a development build reports it once per system. Reaching that point
+ * takes a device that falls many frames behind while slots are recycled and die
+ * again, so a system sized for its emission rate does not see it.
  *
  * Implementation pattern:
  *

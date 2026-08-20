@@ -215,7 +215,7 @@ class SplashOnDeath extends DeathModule {
 }
 ```
 
-The context is a snapshot, not a view into the system: it is the same on both backends, stays valid for the whole callback, and carries no slot index because the slot may already hold a different particle by the time the callback runs. Delivery is exactly once per expired particle, but not necessarily in the frame it expired — a GPU-simulated death arrives with its readback, typically one frame later. Readbacks overlap, so frames that each report deaths do not queue behind one another; when the device falls far enough behind, deaths wait on the GPU and arrive with a later batch, still in the order they happened.
+The context is a snapshot, not a view into the system: it is the same on both backends, stays valid for the whole callback, and carries no slot index because the slot may already hold a different particle by the time the callback runs. Delivery is exactly once per expired particle, but not necessarily in the frame it expired — a GPU-simulated death arrives with its readback, typically one frame later. Readbacks overlap, so frames that each report deaths do not queue behind one another; when the device falls far enough behind, deaths wait on the GPU and arrive with a later batch, still in the order they happened. Exactly-once holds while those waiting deaths fit the system's capacity; past that the excess is dropped instead of stalling the frame, and a development build warns once per system.
 
 ## Per-frame loop
 

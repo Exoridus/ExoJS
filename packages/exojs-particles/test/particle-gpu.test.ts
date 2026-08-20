@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import { Color, Rectangle, Texture, Time } from '@codexo/exojs';
+import { Color, logger, Rectangle, Texture, Time } from '@codexo/exojs';
 import type { RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
 import { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
 import type { MockInstance } from 'vitest';
@@ -931,6 +931,69 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
     await flushDeathReadback();
 
     expect(seen).toEqual([10, 20]);
+  });
+
+  test('a death backlog past capacity is dropped rather than stalling, and reported once', async () => {
+    const env = makeMockDevice();
+    const maps = holdDeathMaps(env);
+    const capacity = 2;
+    const system = new ParticleSystem(makeTexture(), { capacity, device: env.device });
+    const warnings: string[] = [];
+
+    logger._resetOnce();
+
+    const removeSink = logger.addSink(entry => {
+      warnings.push(entry.message);
+    });
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.addDeathModule(
+      new (class extends DeathModule {
+        public override onDeath(): void {
+          // The delivery itself is covered elsewhere; this test is about the bound.
+        }
+      })(),
+    );
+
+    const emitDying = (): void => {
+      const particle = system.emit();
+
+      if (particle) particle.lifetime = 0.02;
+    };
+
+    try {
+      emitDying();
+      system.update(tick(0));
+
+      // One particle expires per step and the slot is refilled right after, so
+      // the backlog grows past capacity once the staging ring is occupied.
+      for (let step = 0; step < 6; step++) {
+        system.update(tick(0.02));
+        emitDying();
+      }
+
+      expect(env.copies).toHaveLength(3);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toContain('more than');
+
+      // A second overflow on the same system stays quiet.
+      system.update(tick(0.02));
+      emitDying();
+
+      expect(warnings).toHaveLength(1);
+
+      // The simulation keeps running, and the copy never claims more than the
+      // death buffer holds.
+      maps.release();
+      await flushDeathReadback();
+      system.update(tick(0.02));
+
+      expect(env.copies).toHaveLength(4);
+      expect(env.copies.at(-1)!.size).toBe(capacity * 40);
+    } finally {
+      removeSink();
+      logger._resetOnce();
+    }
   });
 
   test('a system without death modules neither allocates nor reads a death buffer', () => {

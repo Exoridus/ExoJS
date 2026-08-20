@@ -3,6 +3,7 @@
 import type { Time } from '@codexo/exojs';
 import { Rectangle } from '@codexo/exojs';
 import { Drawable } from '@codexo/exojs';
+import { logger } from '@codexo/exojs';
 import { Spritesheet } from '@codexo/exojs';
 import { Texture } from '@codexo/exojs';
 import type { RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
@@ -225,6 +226,9 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
   /** Total entries across `_pendingDeathLifetimes`, which is what the dispatch reports. */
   private _pendingDeathCount = 0;
+
+  /** Whether this system has already reported that its death backlog overflowed. */
+  private _deathOverflowReported = false;
   /**
    * Slots handed out by `spawn()` while a recording window is open, or `null`
    * when nothing is recording. Lets callers identify freshly spawned particles
@@ -957,6 +961,16 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     if (this._gpuDirtySlots.size > 0) {
       this._gpuState!.uploadDirty(this, this._gpuDirtySlots);
       this._gpuDirtySlots.clear();
+    }
+
+    if (__DEV__ && this._pendingDeathCount > storage.capacity && !this._deathOverflowReported) {
+      this._deathOverflowReported = true;
+      logger.warn(
+        `ParticleSystem: the device held back ${this._pendingDeathCount} unreported deaths, more than the system's capacity of ${storage.capacity}. ` +
+          'The excess is dropped: those particles expire without a death callback. Deaths queue on the device while readbacks are in flight, ' +
+          'so this means either the death callbacks are outpacing the readback or the system recycles slots faster than it can report them.',
+        { source: 'particles' },
+      );
     }
 
     // Dispatch over the pre-trim range: a slot that expired at the tail still

@@ -108,6 +108,11 @@ export class ParticleGpuState {
    * Death records the compute shader appended, plus the atomic append counter
    * in its first four bytes. Allocated only while the system has death modules,
    * so a system without them pays neither the memory nor the copy.
+   *
+   * Detecting a death and reporting one have separate lifetimes, and the path
+   * between them has four stages: the shader appends here; records the copy has
+   * not taken yet stay here as a device-side backlog; a copy moves a batch into
+   * a staging slot; and the mapped batches are handed on in submission order.
    */
   private _deathBuffer: WebGpuStorageBuffer | null = null;
   private readonly _deathCounterReset = new Uint32Array(1);
@@ -120,6 +125,8 @@ export class ParticleGpuState {
    * frame loop runs at; a fourth death batch waits on the device instead.
    */
   private readonly _deathStaging: DeathStagingSlot[] = [];
+
+  /** Copies submitted into a staging slot, oldest first, awaiting delivery. */
   private readonly _stagedDeaths: StagedDeathBatch[] = [];
 
   /**

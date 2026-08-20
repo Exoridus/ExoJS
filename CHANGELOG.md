@@ -61,8 +61,11 @@ release and includes intentional breaking changes; see **Changed** and
   each report deaths do not wait on one another, and neither the frame loop nor
   the simulation ever blocks on a mapping. Deaths reported while every staging
   slot is still in flight stay on the device and travel with the next batch;
-  batches are delivered in the order they were submitted. A system without death
-  modules allocates no death buffer and reads nothing back.
+  batches are delivered in the order they were submitted. Exactly-once holds
+  while that backlog fits the system's capacity - past it the excess is dropped
+  rather than stalling the frame loop, and a development build reports it once
+  per system. A system without death modules allocates no death buffer and reads
+  nothing back.
 
 - **Particle modules can be changed while particles are in flight.**
   `addUpdateModule` threw after the first `update()` and `clearUpdateModules`
