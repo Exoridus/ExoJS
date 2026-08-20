@@ -5,7 +5,7 @@
 // production builds, and by Vite's `define` in tests). Under the `#`
 // subpath-imports model some engine modules resolve through
 // `package.json#imports` and can be pre-bundled by esbuild's optimizer, which
-// does NOT apply Vite's `define` — leaving bare references that throw
+// does NOT apply Vite's `define` - leaving bare references that throw
 // `ReferenceError` in the browser runtime. Installing them as real globals
 // makes the bare reference resolve regardless of how the module was bundled.
 // Harmless where `define` already replaced them with literal values.

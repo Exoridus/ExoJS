@@ -11,7 +11,7 @@ import { TILE_TRANSFORM_IDENTITY, unpackTile } from '../src/types';
 
 /**
  * `createSampledChunkSource` resolves synchronously, but `ChunkSource.getChunk`
- * is declared as possibly async and possibly empty — narrow it here so the
+ * is declared as possibly async and possibly empty - narrow it here so the
  * assertions below read the payload directly.
  */
 function syncChunk(payload: ChunkPayload | null | Promise<ChunkPayload | null>): ChunkPayload {

@@ -20,7 +20,7 @@ export { isAsepriteArrayData } from './AsepriteData';
 export { asepriteExtension } from './asepriteExtension';
 export { AsepriteSheet } from './AsepriteSheet';
 
-// ── Module augmentation — typed load calls ────────────────────────────────────
+// ── Module augmentation - typed load calls ────────────────────────────────────
 import type { AsepriteSheet } from './AsepriteSheet';
 
 declare module '@codexo/exojs' {

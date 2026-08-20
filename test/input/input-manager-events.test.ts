@@ -97,7 +97,7 @@ const createNativeGamepad = (id: string, index = 0, buttonValues: number[] = [],
   }) as unknown as BrowserGamepad;
 
 // `InputManager.update()` unconditionally polls `navigator.getGamepads()`,
-// which jsdom does not implement at all (not merely empty — the property is
+// which jsdom does not implement at all (not merely empty - the property is
 // undefined). Stub it to an empty snapshot for every test in this file;
 // `withMockedGetGamepads` below layers a per-test snapshot on top for the
 // gamepad-specific tests and restores this default afterwards.
@@ -236,7 +236,7 @@ describe('InputManager — keyboard', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Space', repeat: true }));
     im.preUpdate(0 as never);
 
-    // The key is still held — only the extra down dispatches are suppressed.
+    // The key is still held - only the extra down dispatches are suppressed.
     expect(onKeyDown).toHaveBeenCalledTimes(1);
     expect(ch(im, Keyboard.Space)).toBe(1);
 
@@ -506,7 +506,7 @@ describe('InputManager — mouse wheel', () => {
   test('wheel event while focused writes the offset, dispatches onMouseWheel, then resets to zero', () => {
     const { im, canvas } = createInputManager();
     // The payload is two plain numbers, so `mock.calls` stays valid after the
-    // internal accumulator is reset — that is the point of not handing out a
+    // internal accumulator is reset - that is the point of not handing out a
     // reused Vector here.
     const seen: Array<{ x: number; y: number }> = [];
     const onWheel = vi.fn((deltaX: number, deltaY: number) => {
@@ -577,7 +577,7 @@ describe('InputManager — mouse wheel', () => {
     im.preUpdate(0 as never);
 
     // Only one flush per frame, carrying the SUM of all three events, not
-    // just the last one — and the line-mode event converted to its
+    // just the last one - and the line-mode event converted to its
     // pixel-equivalent (16px/line) before being summed in.
     expect(onWheel).toHaveBeenCalledTimes(1);
     expect(seen).toEqual([{ x: 5 + 16 + 3, y: 2 - 16 + 4 }]);
@@ -743,7 +743,7 @@ describe('InputManager — pointer signal lifecycle', () => {
 
     expect(im.getPrimaryPointerPosition()).toBeNull();
 
-    // Its slot must be reusable immediately — a lingering cancelled pointer
+    // Its slot must be reusable immediately - a lingering cancelled pointer
     // would otherwise permanently hold it hostage.
     fire(canvas, 'pointerover', { pointerId: 2, pointerType: 'touch', clientX: 20, clientY: 20, isPrimary: true });
     expect(ch(im, Pointer.Slot0Active)).toBe(1);
@@ -765,7 +765,7 @@ describe('InputManager — pointer signal lifecycle', () => {
     im.onPointerLeave.add(onLeave);
     im.onPointerEnter.add(onEnter);
 
-    // Leave, then re-enter with the SAME pointerId — both before update() has
+    // Leave, then re-enter with the SAME pointerId - both before update() has
     // had any chance to dispatch or retire the leave. A naive rebuild would
     // construct a brand-new Pointer here, overwriting the map entry out from
     // under the one still holding the undispatched Leave phase: the Leave
@@ -776,7 +776,7 @@ describe('InputManager — pointer signal lifecycle', () => {
 
     expect(onLeave).toHaveBeenCalledTimes(1);
     expect(onEnter).toHaveBeenCalledTimes(1);
-    // The SAME Pointer object carried both phases — re-entry reused it rather
+    // The SAME Pointer object carried both phases - re-entry reused it rather
     // than silently replacing it.
     expect(pointers.get(1)).toBe(beforeReentry);
     // Re-entering left this pointer's final state non-terminal, so it must
@@ -825,10 +825,10 @@ describe('InputManager — pointer signal lifecycle', () => {
     expect(ch(im, Pointer.Slot0Active)).toBe(1);
 
     // Two leaves in a row without an intervening update(): the pointer is
-    // still present in the internal map and its slot is still reserved —
+    // still present in the internal map and its slot is still reserved -
     // both are only released together once update() dispatches the Leave
     // phase and _finishInteractionFrame() actually retires it (see
-    // InputManager._retirePointer's doc comment) — so the handler runs
+    // InputManager._retirePointer's doc comment) - so the handler runs
     // twice, but retirement must only happen once.
     expect(() => {
       fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'touch', clientX: 1, clientY: 1, isPrimary: true });
@@ -837,7 +837,7 @@ describe('InputManager — pointer signal lifecycle', () => {
       im._finishInteractionFrame();
     }).not.toThrow();
 
-    // A newly arriving pointer must land in slot 0, not some slot beyond it —
+    // A newly arriving pointer must land in slot 0, not some slot beyond it -
     // proving the free-list wasn't corrupted by the redundant release.
     fire(canvas, 'pointerover', { pointerId: 2, pointerType: 'touch', clientX: 2, clientY: 2, isPrimary: false });
     expect(ch(im, Pointer.Slot0Active)).toBe(1);
@@ -1129,7 +1129,7 @@ describe('InputManager — gamepad edge cases', () => {
       im.preUpdate(0 as never);
       expect(onConnected).toHaveBeenCalledTimes(4);
 
-      // A 5th physical pad connects (browser index 4) — no free slot remains.
+      // A 5th physical pad connects (browser index 4) - no free slot remains.
       setSnapshot([
         createNativeGamepad('Vendor: 045e Product: 0b13', 0),
         createNativeGamepad('Vendor: 054c Product: 0ce6', 1),

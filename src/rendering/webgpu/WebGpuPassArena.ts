@@ -14,11 +14,11 @@ import type { WebGpuActiveRenderPass } from './WebGpuPassCoordinator';
  * data. The cursor resets whenever a new pass begins (tracked by the identity of
  * the coordinator's active pass), and capacity only grows.
  *
- * The arena is agnostic about what it stages — instance attributes, vertices or
+ * The arena is agnostic about what it stages - instance attributes, vertices or
  * indices all work, as long as the caller keeps its own stride bookkeeping.
  *
  * Growth reallocates the underlying buffer, which must not orphan draws already
- * recorded into the open pass — the caller is responsible for ending (submitting)
+ * recorded into the open pass - the caller is responsible for ending (submitting)
  * the pass before {@link grow} whenever {@link cursor} is non-zero.
  */
 export class WebGpuPassArena {
@@ -56,7 +56,7 @@ export class WebGpuPassArena {
   }
 
   /**
-   * Whether this arena is currently appending into `pass` — i.e. its cursor
+   * Whether this arena is currently appending into `pass` - i.e. its cursor
    * reflects bytes handed out for that exact open pass. Lets a renderer safely
    * consult {@link cursor} before it re-syncs (the cursor can otherwise be stale
    * after a boundary ended the pass without the arena being reset yet).

@@ -1,5 +1,5 @@
 /**
- * Render-fail surface (S3 diagnostics, minimal slice) — contracts 1, 2 and 8:
+ * Render-fail surface (S3 diagnostics, minimal slice) - contracts 1, 2 and 8:
  *
  *  1. WebGL2 shader compile failure → RenderError with code 'shader-compile',
  *     message containing the shader label (or "shader"), detail containing the

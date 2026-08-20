@@ -145,7 +145,7 @@ describe('LdtkMap.getLevelByName', () => {
       const map = new LdtkMap('', data, [a1, a2, b1]);
 
       // Regression guard: root `data.levels` is empty in the multi-world
-      // shape — a naive `data.levels.findIndex(...)` lookup would silently
+      // shape - a naive `data.levels.findIndex(...)` lookup would silently
       // fail to find any of these.
       expect(data.levels).toHaveLength(0);
       expect(map.getLevelByName('A1')).toBe(a1);
@@ -175,7 +175,7 @@ describe('LdtkMap.destroy', () => {
   });
 
   it('forwards destroy() to each level again on a repeat call (delegates idempotence to TileMap)', () => {
-    // LdtkMap.destroy does not guard itself — it simply forwards to each level,
+    // LdtkMap.destroy does not guard itself - it simply forwards to each level,
     // relying on TileMap.destroy being idempotent. Characterize that forwarding.
     const a = makeFakeTileMap();
     const map = new LdtkMap('', makeData(['A']), [a]);

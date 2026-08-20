@@ -302,7 +302,7 @@ describe('joints', () => {
     advance(world, 1);
     expect(body.x).toBeGreaterThan(40); // converged near the target
 
-    // Move the target — the body follows.
+    // Move the target - the body follows.
     joint.target = { x: 50, y: 60 };
     advance(world, 1);
     expect(body.y).toBeGreaterThan(45);
@@ -389,7 +389,7 @@ describe('joints', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     // Bob starts well above the anchor and falls toward it under gravity; the strut
-    // (minLength only — maxLength defaults to Infinity) stops it at minLength instead
+    // (minLength only - maxLength defaults to Infinity) stops it at minLength instead
     // of letting it crush through to the anchor.
     const bob = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: -300 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
 
@@ -408,7 +408,7 @@ describe('joints', () => {
     const a = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
     const b = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(16, 16) }] }));
 
-    // Both anchors default to their body's position — identical points, so the
+    // Both anchors default to their body's position - identical points, so the
     // connecting axis has zero length at the first _prepare().
     world.addJoint(new DistanceJoint({ bodyA: a, bodyB: b, length: 50 }));
 
@@ -440,7 +440,7 @@ describe('joints', () => {
   });
 
   it('a zero-length axis in a prismatic joint is rejected at construction', () => {
-    // A (0,0) axis cannot be normalized into a direction — silently creating a
+    // A (0,0) axis cannot be normalized into a direction - silently creating a
     // joint that constrains nothing would let the body free-fall.
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
     const anchor = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
@@ -519,7 +519,7 @@ describe('joints', () => {
     advance(world, 1);
 
     // A soft weld is compliant under load (it can sag/rotate noticeably, unlike the
-    // rigid weld above) but still bounded — not flung away or blown up to NaN/Inf.
+    // rigid weld above) but still bounded - not flung away or blown up to NaN/Inf.
     expect(Number.isFinite(box.x)).toBe(true);
     expect(Number.isFinite(box.y)).toBe(true);
     expect(Number.isFinite(box.angle)).toBe(true);
@@ -568,7 +568,7 @@ describe('joints', () => {
     const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
 
-    // A soft suspension (hertz>0) actually allows axis travel — with hertz=0 (rigid)
+    // A soft suspension (hertz>0) actually allows axis travel - with hertz=0 (rigid)
     // the axial "spring" alone holds the translation near 0, so the limit would never
     // see a violation to push back from.
     world.addJoint(

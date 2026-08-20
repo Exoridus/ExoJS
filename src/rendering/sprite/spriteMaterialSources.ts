@@ -1,7 +1,7 @@
 /**
  * Canonical engine vertex stage for the custom {@link SpriteMaterial} path.
  *
- * @internal — not part of the public package surface. A custom `SpriteMaterial`
+ * @internal - not part of the public package surface. A custom `SpriteMaterial`
  * customizes the **fragment** stage only; the vertex stage (quad-corner
  * expansion, affine transform, UV unpacking) is owned by the renderer and stays
  * instancing-critical. The sprite renderers consume these constants directly:
@@ -122,7 +122,7 @@ export const spriteMaterialPrologueGlsl = buildSpriteMaterialSlotGlsl(spriteMate
  * The prologue cannot simply be prepended: a GLSL ES 3.00 fragment starts with
  * its own `#version` directive, which must be the first token in the unit.
  * The insertion point is therefore after the run of leading directives and
- * `precision` statements (plus blank lines and line comments) — after the
+ * `precision` statements (plus blank lines and line comments) - after the
  * author's defaults, and still before any declaration, which is where
  * `#extension` requires to sit.
  * @internal
@@ -161,8 +161,8 @@ export const composeSpriteMaterialFragmentGlsl = (fragment: string, prologue: st
  * from: the `VertexOutput` a sprite fragment consumes, the boundary snap, and
  * `spriteVertexCore`, which turns one record plus a corner id into that output.
  *
- * Every WGSL sprite path shares this text — the streamed default path, the
- * custom-material path, and the persistent-indexed path — because the three
+ * Every WGSL sprite path shares this text - the streamed default path, the
+ * custom-material path, and the persistent-indexed path - because the three
  * differ only in whether the record arrives as vertex attributes, as a row of
  * the shared frame storage, or as a row of a root's persistent slot store. The
  * geometry, the snapping and the tint resolve are the SAME contract in all
@@ -170,8 +170,8 @@ export const composeSpriteMaterialFragmentGlsl = (fragment: string, prologue: st
  *
  * Reads the module-scope `projection` uniform rather than taking it as an
  * argument, so a path may extend `ProjectionUniforms` with fields of its own
- * (see `buildPersistentSpriteShaderSource`) as long as the three this needs —
- * `matrix`, `group`, `viewport` — keep their meaning.
+ * (see `buildPersistentSpriteShaderSource`) as long as the three this needs -
+ * `matrix`, `group`, `viewport` - keep their meaning.
  * @internal
  */
 export const spriteVertexCoreWgsl: string = spriteVertexCoreWgslModule;
@@ -198,7 +198,7 @@ export const spriteFragmentMainWgsl: string = spriteFragmentMainWgslModule;
  * custom `@fragment` consumes, the group(0) projection uniform + shared
  * transform storage buffers, and the `vertexMain` entry point.
  *
- * Not fed to `createShaderModule` on its own — {@link spriteMaterialPrologueWgsl}
+ * Not fed to `createShaderModule` on its own - {@link spriteMaterialPrologueWgsl}
  * pairs it with the group(1) base-texture slot table.
  * @internal
  */

@@ -9,7 +9,7 @@ import type { Texture } from '#rendering/texture/Texture';
 const makeTexture = (w = 64, h = 64): Texture => ({ width: w, height: h, flipY: false, updateSource: () => undefined }) as unknown as Texture;
 
 // ---------------------------------------------------------------------------
-// Public API — Drawable.pixelSnapMode
+// Public API - Drawable.pixelSnapMode
 // ---------------------------------------------------------------------------
 
 describe('Drawable.pixelSnapMode — public API', () => {
@@ -50,7 +50,7 @@ describe('Drawable.pixelSnapMode — public API', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Logical / render separation — snapping never mutates logical state
+// Logical / render separation - snapping never mutates logical state
 // ---------------------------------------------------------------------------
 
 describe('logical / render separation', () => {

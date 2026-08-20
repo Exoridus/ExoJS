@@ -85,7 +85,7 @@ const groupScope = (entries: DrawScopeEntry[]): GroupScope => ({
 // Faithfully mirrors WebGl2Backend: `_prepareRenderGroupUpload` packs the whole
 // group through the production `drawCommandUsesSharedTransform` predicate, and a
 // flush (mirroring `bindTransformBufferTexture`) commits a snapshot and records
-// exactly one upload — but only when the snapshot changed. The real GL texture
+// exactly one upload - but only when the snapshot changed. The real GL texture
 // commit needs a GL context; the upload accounting it performs does not, so the
 // counter invariants are reproduced 1:1 here without a browser.
 // ---------------------------------------------------------------------------
@@ -141,8 +141,8 @@ class Webgl2UploadModel {
 // ---------------------------------------------------------------------------
 // WebGPU upload-boundary model.
 //
-// Uses the real WebGpuTransformStorage with a minimal mock device — the same
-// fake-device pattern as the reserve test — so the production
+// Uses the real WebGpuTransformStorage with a minimal mock device - the same
+// fake-device pattern as the reserve test - so the production
 // `getBuffer` → `commitSnapshot` → `recordUpload` path runs unchanged.
 // ---------------------------------------------------------------------------
 
@@ -315,7 +315,7 @@ describe('transform buffer group upload count (WebGL2 path)', () => {
 
     // The flush still commits the frame's snapshot once (the per-frame floor of
     // `max(1, minCount)` rows); the upload pushes that floor, not the opt-out
-    // count — opt-out rows are never part of the shared buffer.
+    // count - opt-out rows are never part of the shared buffer.
     model.flush();
 
     expect(model.buffer.uploadCount).toBe(1);

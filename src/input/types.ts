@@ -1,7 +1,7 @@
 /**
  * Slot-count constants for the unified channels buffer. The buffer is split
  * into three categories (`Keyboard`, `Pointers`, `Gamepads`) of 256 slots
- * each — `Category`. `Gamepad` is the per-device sub-allocation inside the
+ * each - `Category`. `Gamepad` is the per-device sub-allocation inside the
  * `Gamepads` category (4 devices × 64 channels each).
  */
 export enum ChannelSize {
@@ -80,7 +80,7 @@ export enum PointerButton {
  * A key is identified by the Web platform's layout-independent
  * `KeyboardEvent.code` (see {@link keyboardChannelFromCode}), not by the
  * layout-dependent `keyCode`: {@link Keyboard.A} is the key at the QWERTY "A"
- * position on every layout — the one an AZERTY keyboard prints "Q" on — so
+ * position on every layout - the one an AZERTY keyboard prints "Q" on - so
  * WASD-style bindings stay in the same place under the player's hand
  * regardless of the player's layout.
  *
@@ -90,13 +90,13 @@ export enum PointerButton {
  * {@link Keyboard.Colon} the key it prints "ö" on. Use DOM text input for
  * anything that needs the typed character, dead keys, or IME composition.
  *
- * The values are opaque channel indices inside the keyboard category — do not
+ * The values are opaque channel indices inside the keyboard category - do not
  * assume they equal any `keyCode`.
  *
  * Each modifier has both a side-specific channel (`ShiftLeft`, `ShiftRight`,
  * `ControlLeft`, `ControlRight`, `AltLeft`, `AltRight`, `MetaLeft`,
  * `MetaRight`) and an aggregate one (`Shift`, `Control`, `Alt`, `Meta`) that
- * is active whenever either side is held — the aggregate is what a game
+ * is active whenever either side is held - the aggregate is what a game
  * binding wants ("was Control held", regardless of which hand), while the
  * side-specific channels exist for a key-press visualizer or a rebinding UI
  * that needs to tell the two physical keys apart. Releasing one side while

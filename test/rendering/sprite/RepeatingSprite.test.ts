@@ -222,7 +222,7 @@ describe('RepeatingSprite — constructor validation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Setter validation — size
+// Setter validation - size
 // ---------------------------------------------------------------------------
 
 describe('RepeatingSprite — setter validation (size)', () => {
@@ -296,7 +296,7 @@ describe('RepeatingSprite — setter validation (size)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Setter validation — modes / fits
+// Setter validation - modes / fits
 // ---------------------------------------------------------------------------
 
 describe('RepeatingSprite — setter validation (modes/fits)', () => {
@@ -346,7 +346,7 @@ describe('RepeatingSprite — setter validation (modes/fits)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Setter validation — offset
+// Setter validation - offset
 // ---------------------------------------------------------------------------
 
 describe('RepeatingSprite — setter validation (offset)', () => {
@@ -393,7 +393,7 @@ describe('RepeatingSprite — setter validation (offset)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Dirty flag behavior — geometry path
+// Dirty flag behavior - geometry path
 // ---------------------------------------------------------------------------
 
 describe('RepeatingSprite — dirty flag (geometry path)', () => {
@@ -504,7 +504,7 @@ describe('RepeatingSprite — dirty flag (geometry path)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// No-op setters — geometry path
+// No-op setters - geometry path
 // ---------------------------------------------------------------------------
 
 describe('RepeatingSprite — no-op setters (geometry path)', () => {
@@ -588,7 +588,7 @@ describe('RepeatingSprite — no-op setters (geometry path)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Shader path — offset does NOT trigger geometry rebuild
+// Shader path - offset does NOT trigger geometry rebuild
 // ---------------------------------------------------------------------------
 
 describe('RepeatingSprite — shader path offset behavior', () => {
@@ -609,7 +609,7 @@ describe('RepeatingSprite — shader path offset behavior', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Lazy geometry build — geometry path
+// Lazy geometry build - geometry path
 // ---------------------------------------------------------------------------
 
 describe('RepeatingSprite — lazy geometry (geometry path)', () => {
@@ -658,7 +658,7 @@ describe('RepeatingSprite — lazy geometry (geometry path)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Shader path — quads is always empty
+// Shader path - quads is always empty
 // ---------------------------------------------------------------------------
 
 describe('RepeatingSprite — quads on shader path', () => {

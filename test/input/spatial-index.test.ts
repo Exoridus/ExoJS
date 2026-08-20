@@ -14,7 +14,7 @@ import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 
 // ---------------------------------------------------------------------------
-// TestSprite — overrides both contains() and getBounds() for spatial-index tests
+// TestSprite - overrides both contains() and getBounds() for spatial-index tests
 // ---------------------------------------------------------------------------
 
 class TestSprite extends Drawable {
@@ -346,7 +346,7 @@ describe('Quadtree — remove', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. InteractionManager — persistent spatial index lifecycle
+// 2. InteractionManager - persistent spatial index lifecycle
 // ---------------------------------------------------------------------------
 
 describe('InteractionManager — lazy-init: quadtree null with no interactive nodes', () => {
@@ -587,7 +587,7 @@ describe('InteractionManager — spatial index: transform mutation reflected at 
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     flushInteractions(im);
 
-    // After move, (25,25) is outside bounds — handler must not fire.
+    // After move, (25,25) is outside bounds - handler must not fire.
     expect(handler).not.toHaveBeenCalled();
 
     im.destroy();

@@ -62,7 +62,7 @@ export type LdtkFieldPointValue = Omit<TilePropertyPoint, 'kind'>;
 /**
  * Raw `__value` shape for an `EntityRef`-typed field: the referenced
  * entity's own iid plus LDtk's navigation context (owning layer/level/world).
- * Maps to {@link import('@codexo/exojs-tilemap').TilePropertyObjectRef} —
+ * Maps to {@link import('@codexo/exojs-tilemap').TilePropertyObjectRef} -
  * `entityIid` becomes `id`.
  */
 export interface LdtkFieldEntityRefValue {
@@ -121,7 +121,7 @@ export interface LdtkEntityInstance {
   /** Alias of `__identifier`, mirrors the entity definition type. */
   readonly __type: string;
   /**
-   * Pixel position `[x, y]` of the entity's pivot-adjusted anchor — NOT the
+   * Pixel position `[x, y]` of the entity's pivot-adjusted anchor - NOT the
    * top-left corner. Combine with {@link __pivot} to recover the bounding
    * box's top-left corner: `topLeftX = px[0] - width * __pivot[0]`.
    */
@@ -232,7 +232,7 @@ export type LdtkWorldLayout = 'Free' | 'GridVania' | 'LinearHorizontal' | 'Linea
  * when the project has "Multi-Worlds" enabled in its advanced settings).
  * Each world owns its own {@link levels}; `defs` (tilesets/layers/entity
  * definitions) is declared once at the document root and shared by every
- * world rather than duplicated per-world — see {@link LdtkData.defs}.
+ * world rather than duplicated per-world - see {@link LdtkData.defs}.
  */
 export interface LdtkWorldData {
   /** Human-readable world identifier (unique within the project). */
@@ -295,7 +295,7 @@ export interface LdtkLayerDef {
   readonly pxOffsetY?: number;
   /**
    * Parallax horizontal factor, in `[-1, 1]`. `0` (the default) means "no
-   * parallax" — the layer scrolls at normal camera speed, same as every
+   * parallax" - the layer scrolls at normal camera speed, same as every
    * other layer. See {@link import('./ldtkToTileMap').ldtkToTileMap} for how
    * this is carried onto the runtime layer's `parallaxX`.
    */
@@ -331,7 +331,7 @@ export interface LdtkData {
   /**
    * Levels not organised into worlds. Always populated for pre-multi-world
    * documents; kept EMPTY (per the LDtk spec's backward-compatibility rule)
-   * when {@link worlds} is used instead — read levels via `worlds[].levels`
+   * when {@link worlds} is used instead - read levels via `worlds[].levels`
    * in that case, or use {@link import('./ldtkLevelEntries').getLdtkLevelEntries}
    * (or simply {@link import('./LdtkMap').LdtkMap.levels} /
    * {@link import('./LdtkMap').LdtkMap.getLevelByName}) to get "all levels,
@@ -342,7 +342,7 @@ export interface LdtkData {
    * Worlds, present and non-empty only when the project has "Multi-Worlds"
    * enabled in its advanced settings. Absent or empty for the (overwhelmingly
    * common) single-world case, in which levels live directly in the root
-   * {@link levels} array instead. `defs` is NOT duplicated per-world — it
+   * {@link levels} array instead. `defs` is NOT duplicated per-world - it
    * stays declared once at the document root regardless of this field.
    */
   readonly worlds?: readonly LdtkWorldData[];

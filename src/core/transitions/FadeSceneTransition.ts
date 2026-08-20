@@ -14,7 +14,7 @@ export interface FadeSceneTransitionOptions extends PhasedSceneTransitionOptions
   readonly color?: Color;
 }
 
-/** Per-session scratch state for {@link FadeSceneTransition} — never shared with the (immutable, reusable-across-navigations) definition instance. */
+/** Per-session scratch state for {@link FadeSceneTransition} - never shared with the (immutable, reusable-across-navigations) definition instance. */
 interface FadePhaseState {
   readonly quad: QuadGeometry;
   readonly transform: Matrix;
@@ -23,7 +23,7 @@ interface FadePhaseState {
 
 /**
  * Fade to a color, switch scenes, fade back in. `placement: 'screen'`,
- * `currentFrame: 'direct'`, `outgoingFrame: 'none'` — the live surface
+ * `currentFrame: 'direct'`, `outgoingFrame: 'none'` - the live surface
  * renders straight to the screen with no extra texture pass; `render()`
  * only draws the overlay on top. The universal default transition.
  * @stable
@@ -57,7 +57,7 @@ export class FadeSceneTransition extends PhasedSceneTransition<FadePhaseState> {
     this._draw(context, state);
   }
 
-  /** Draw a full-screen quad tinted with {@link color} at `alpha = 1 - presence` — shared by both `enter()` and `exit()`, which are symmetric. */
+  /** Draw a full-screen quad tinted with {@link color} at `alpha = 1 - presence` - shared by both `enter()` and `exit()`, which are symmetric. */
   private _draw(context: SceneTransitionPhaseContext, state: FadePhaseState): void {
     const bounds = context.rendering.screenView.getBounds();
     const width = bounds.right - bounds.left;

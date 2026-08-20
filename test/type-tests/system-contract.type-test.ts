@@ -44,7 +44,7 @@ const multiPhase: System = {
 };
 void multiPhase;
 
-// `destroy` is optional — accepted both without it (every literal above) and with it.
+// `destroy` is optional - accepted both without it (every literal above) and with it.
 const withDestroy: System = {
   update(_delta) {
     // noop
@@ -64,9 +64,9 @@ const withOrder: System = {
 };
 void withOrder;
 
-// a class instance is accepted, including through SystemRegistry.add — and
+// a class instance is accepted, including through SystemRegistry.add - and
 // `destroy()` is not required on the class either. `System` is a union (via
-// `RequireAtLeastOne`), so a class cannot `implements` it directly — this
+// `RequireAtLeastOne`), so a class cannot `implements` it directly - this
 // checks the structural assignment instead, which is what `add()` relies on.
 class MySystem {
   public update(_delta: Time): void {
@@ -82,14 +82,14 @@ const registered = registry.add(new MySystem());
 void registered;
 
 // an object with no phase method is rejected.
-// @ts-expect-error — at least one of fixedUpdate/update/draw is required.
+// @ts-expect-error - at least one of fixedUpdate/update/draw is required.
 const noPhase: System = {
   order: 0,
 };
 void noPhase;
 
 // object-literal `this` typing is preserved when passed through `add()`'s
-// generic inference — the returned value keeps the extra `count` property
+// generic inference - the returned value keeps the extra `count` property
 // rather than being widened to the bare `System` interface (`satisfies
 // System` would trigger excess-property checking against `count` here since
 // `System` has no index signature, so inference through `add()` is the

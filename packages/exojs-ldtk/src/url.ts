@@ -3,7 +3,7 @@
 // path relative to the file that contains it; ExoJS asset sources are themselves
 // often relative (resolved against an asset root configured outside the Loader),
 // so plain `new URL(ref, base)` cannot be used directly when `base` has no
-// scheme — it throws `Invalid URL`. Mirrors the Tiled adapter's `resolveTiledUrl`.
+// scheme - it throws `Invalid URL`. Mirrors the Tiled adapter's `resolveTiledUrl`.
 
 /** Matches references that are already absolute and must not be re-resolved: scheme:, protocol-relative `//`, root-relative `/`, and data/blob URLs. */
 const ABSOLUTE_REF = /^(?:[a-z][a-z\d+.-]*:|\/\/|\/)/i;
@@ -40,7 +40,7 @@ export function resolveLdtkUrl(ref: string, base: string): string {
   const resolved = new URL(ref, SYNTHETIC_ORIGIN + base.replace(/^\/+/, ''));
   const relative = resolved.href.slice(SYNTHETIC_ORIGIN.length);
 
-  // A root-relative base must produce a root-relative result again — dropping
+  // A root-relative base must produce a root-relative result again - dropping
   // the leading slash would make the browser re-resolve the reference against
   // the document base URL (e.g. `/site/assets/x.png` → `/site/site/assets/…`).
   return base.startsWith('/') ? `/${relative}` : relative;

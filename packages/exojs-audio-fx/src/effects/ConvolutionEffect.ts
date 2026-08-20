@@ -58,7 +58,7 @@ interface ConvolutionEffectSetup {
 /**
  * Convolution effect that convolves the input signal with a user-supplied
  * impulse response (IR). Unlike {@link ReverbEffect}, which generates a
- * procedural noise-based IR, `ConvolutionEffect` accepts a *real* decoded IR —
+ * procedural noise-based IR, `ConvolutionEffect` accepts a *real* decoded IR -
  * enabling convolution reverb from acoustic-space captures, cabinet/speaker
  * simulations, telephone/pipe character filtering, and any other linear
  * time-invariant transformation.
@@ -67,7 +67,7 @@ interface ConvolutionEffectSetup {
  * `AudioContext.decodeAudioData`) or as a `Sound` (its `audioBuffer` is used).
  * Omitting the IR leaves `convolver.buffer` as `null`, making the wet path
  * silent and the effect act as a passthrough until {@link setImpulse} is
- * called — safe to add to a bus before an IR is available.
+ * called - safe to add to a bus before an IR is available.
  *
  * Node graph:
  * ```
@@ -191,7 +191,7 @@ export class ConvolutionEffect extends AudioEffect {
   /**
    * Set or replace the impulse response. Accepts a decoded `AudioBuffer`, a
    * `Sound` (its `audioBuffer` is used), or `null` to clear the IR (wet path
-   * goes silent). Safe to call before the audio context is ready — the impulse
+   * goes silent). Safe to call before the audio context is ready - the impulse
    * is stored and applied once nodes are created.
    *
    * **Web Audio note:** `normalize` is written to the convolver *before*
@@ -215,7 +215,7 @@ export class ConvolutionEffect extends AudioEffect {
     }
 
     // A `ConvolverNode` rejects any buffer that is not already at the
-    // context's sample rate — unlike an `AudioBufferSourceNode`, which
+    // context's sample rate - unlike an `AudioBufferSourceNode`, which
     // resamples as it plays. Assets decoded before a live context exists land
     // at the default rate, so an IR routinely needs a conversion pass first.
     // The wet path keeps the previous IR until the new one is converted.
@@ -283,7 +283,7 @@ export class ConvolutionEffect extends AudioEffect {
     this._setup = { inputGain, outputGain, convolver, dryGain, wetGain };
 
     // Now that a context exists, route any IR supplied earlier through the
-    // same path as a runtime change — including the resample it may need.
+    // same path as a runtime change - including the resample it may need.
     if (this._pendingImpulse !== null) {
       const pending = this._pendingImpulse;
       this._pendingImpulse = null;

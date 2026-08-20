@@ -6,7 +6,7 @@ import { getPreciseTime } from './utils';
  * Reads from {@link performance.now} via `getPreciseTime`. Use
  * {@link Clock.start}, {@link Clock.stop}, {@link Clock.reset}, and
  * {@link Clock.restart} to control the running state; read elapsed time via
- * {@link Clock.elapsedTime} (the {@link Time} instance is shared — copy it
+ * {@link Clock.elapsedTime} (the {@link Time} instance is shared - copy it
  * if you need to keep a snapshot).
  *
  * Use {@link Timer} for a clock with a fixed limit and `expired` flag.
@@ -32,7 +32,7 @@ export class Clock {
    * Total accumulated time since the last {@link Clock.reset}. While the
    * clock is running, the value advances on every read by folding in the
    * delta since the previous read; while stopped, the value is fixed at
-   * the stop point. Returns the same {@link Time} instance — read the
+   * the stop point. Returns the same {@link Time} instance - read the
    * scalar fields if you need an unchanging snapshot.
    */
   public get elapsedTime(): Time {

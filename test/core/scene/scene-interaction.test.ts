@@ -215,7 +215,7 @@ describe('SceneInteraction.scope()', () => {
 
     scopeA.release(); // out-of-order: A is at the bottom, B and C are above it
 
-    // Exactly one targeted popScope call for A's own token — InteractionManager
+    // Exactly one targeted popScope call for A's own token - InteractionManager
     // finds and splices that entry itself, wherever it sits; B and C, still
     // active, are never popped or re-pushed to make room for it.
     expect(app.interaction.popScope).toHaveBeenCalledTimes(1);

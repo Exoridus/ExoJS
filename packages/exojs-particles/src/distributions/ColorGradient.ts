@@ -17,8 +17,8 @@ const compareT = (a: ColorGradientKey, b: ColorGradientKey): number => a.t - b.t
  * is cached so monotonically advancing `t` is O(1) amortised.
  *
  * Two output paths:
- * - {@link evaluate} — writes into a `Color` instance (own scratch by default).
- * - {@link evaluateRgba} — returns the packed `0xAABBGGRR` u32 directly,
+ * - {@link evaluate} - writes into a `Color` instance (own scratch by default).
+ * - {@link evaluateRgba} - returns the packed `0xAABBGGRR` u32 directly,
  *   skipping the Color object. Use this in tight per-particle inner loops
  *   that write into a `Uint32Array` instance buffer.
  *

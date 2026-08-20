@@ -108,7 +108,7 @@ describe('fft', () => {
         real[i] = Math.sin((2 * Math.PI * k * i) / n);
         imag[i] = 0;
       }
-      // Apply bit-reversal + butterfly only (no Hann window) — we can do
+      // Apply bit-reversal + butterfly only (no Hann window) - we can do
       // this by calling fft() and accepting that Hann will reshape peak
       // but it should still be near bin k
       fft(real, imag);

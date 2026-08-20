@@ -113,7 +113,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
   let fetchCount = 0;
   // Handler invocations are synchronous up to their own Promise executor (verified
   // against AssetDecoder._dispatchFetch/_fetchWithHandler), so `pending` always
-  // reflects the current in-flight set immediately after a triggering call —
+  // reflects the current in-flight set immediately after a triggering call -
   // no `await` needed between issuing a fetch and observing it here.
   const pending = new Map<string, { resolve: (h: StubHandle) => void; reject: (e: Error) => void }>();
 
@@ -173,7 +173,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
         const model = ch1.get(key)!;
 
         if (model.handle === null) {
-          // A freshly-minted catalog-style leaf is idle until adopted — exercise
+          // A freshly-minted catalog-style leaf is idle until adopted - exercise
           // that state explicitly before it ever gets claimed.
           const leaf = createLeaf('stub' as keyof AssetDefinitions, key) as StubHandle;
           expect(leaf.loadState).toBe('idle');
@@ -212,7 +212,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
           const model = ch1.get(key)!;
           const entry = pending.get(key)!;
           pending.delete(key);
-          // Claim state at the moment of arrival — NOT at claim time — is what
+          // Claim state at the moment of arrival - NOT at claim time - is what
           // decides free-on-arrival (§4.7): a release can land between issuing
           // and settling this exact fetch.
           const claimedAtArrival = model.claims.size > 0;
@@ -252,7 +252,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
       }
 
       case 4: {
-        // load() an "l" key — must dedup against an already-stored or
+        // load() an "l" key - must dedup against an already-stored or
         // already-in-flight fetch, regardless of how many times it's called.
         const key = L_KEYS[Math.floor(random() * L_KEYS.length)]!;
         const model = ch2.get(key)!;
@@ -269,7 +269,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
       }
 
       case 5: {
-        // Settle a pending "l" fetch successfully — must land in the store.
+        // Settle a pending "l" fetch successfully - must land in the store.
         const key = pickPendingKey(L_KEYS);
         if (key !== null) {
           const model = ch2.get(key)!;
@@ -286,7 +286,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
       }
 
       case 6: {
-        // Settle a pending "l" fetch as a failure — must heal on the next load().
+        // Settle a pending "l" fetch as a failure - must heal on the next load().
         const key = pickPendingKey(L_KEYS);
         if (key !== null) {
           const model = ch2.get(key)!;

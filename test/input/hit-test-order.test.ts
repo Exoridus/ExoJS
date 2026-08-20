@@ -113,7 +113,7 @@ const overlapping = (): TestSprite => {
   return sprite;
 };
 
-/** Minimal `RenderBackend` for collect-only use — no draw ever actually runs. */
+/** Minimal `RenderBackend` for collect-only use - no draw ever actually runs. */
 const createBuildBackend = (): { backend: RenderBackend; destroy: () => void } => {
   const target = new RenderTarget(320, 200, true);
 
@@ -126,7 +126,7 @@ const createBuildBackend = (): { backend: RenderBackend; destroy: () => void } =
 /**
  * Build and optimize an actual render plan for `root` and return the LAST
  * (i.e. visually topmost, for a set of overlapping opaque quads) direct-child
- * draw's node — the same thing the renderer paints on top. A `Container` root
+ * draw's node - the same thing the renderer paints on top. A `Container` root
  * collects as a single wrapping Group entry, so the draws under test live in
  * that nested scope, not the pass root itself.
  */
@@ -372,7 +372,7 @@ describe('scoped hit-testing', () => {
 // Paint-order cache regression coverage: the renderer's actual draw order,
 // the indexed (spatial-tree) hit-test path, and the scoped/recursive
 // (`_hitTestNode` walking `Container._childrenInPaintOrder()`) hit-test path
-// must all agree on which overlapping node is topmost — they now all read
+// must all agree on which overlapping node is topmost - they now all read
 // the SAME cached ordering instead of three independent sorts.
 describe('renderer / hit-test agreement', () => {
   it('the renderer, the indexed hit-test path, and the scoped hit-test path all pick the same topmost sibling', () => {
@@ -385,7 +385,7 @@ describe('renderer / hit-test agreement', () => {
     const middle = overlapping();
     const above = overlapping();
 
-    // Document order deliberately scrambled relative to paint order — only
+    // Document order deliberately scrambled relative to paint order - only
     // zIndex may decide who paints (and gets picked) on top.
     middle.zIndex = 5;
     above.zIndex = 10;

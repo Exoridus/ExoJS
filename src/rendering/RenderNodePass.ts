@@ -23,12 +23,12 @@ export interface RenderNodePassOptions extends RenderPassOptions {
 }
 
 /**
- * Renders a scene subtree (a {@link RenderNode}) as one pass — into the active target, or off-screen when
+ * Renders a scene subtree (a {@link RenderNode}) as one pass - into the active target, or off-screen when
  * `options.target` is set. The most common pass: world, HUD overlay, an off-screen scene capture.
  *
  * `view`/`target`/`clear` are fixed at construction; only `enabled`/`label` are mutable. The off-screen redirect is
  * built once and reused every frame (no per-frame allocation). The node and any caller `target` are NOT owned by
- * this pass — `destroy()` never frees them.
+ * this pass - `destroy()` never frees them.
  * @advanced
  */
 export class RenderNodePass extends RenderPass {

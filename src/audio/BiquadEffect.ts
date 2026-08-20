@@ -9,14 +9,14 @@ export interface BiquadEffectOptions {
   frequency?: number;
   /** Quality factor (resonance / bandwidth). Default 1. */
   resonance?: number;
-  /** Gain in dB — only used by `peaking`, `lowshelf`, `highshelf`. Default 0. */
+  /** Gain in dB - only used by `peaking`, `lowshelf`, `highshelf`. Default 0. */
   gain?: number;
   /** Fine frequency offset in cents. Default 0. */
   detune?: number;
 }
 
 /**
- * Native biquad filter effect backed by a single `BiquadFilterNode` — the most
+ * Native biquad filter effect backed by a single `BiquadFilterNode` - the most
  * common audio-shaping need, covering `lowpass` / `highpass` / `bandpass` /
  * `notch` / `peaking` / `lowshelf` / `highshelf` / `allpass` via one `type`
  * parameter. Insert it on an {@link AudioBus} (`bus.addEffect`) or a
@@ -91,7 +91,7 @@ export class BiquadEffect extends AudioEffect {
     if (this._node) this._node.Q.setTargetAtTime(value, this._node.context.currentTime, 0.01);
   }
 
-  /** Gain in dB — applies to `peaking`, `lowshelf`, and `highshelf` types. */
+  /** Gain in dB - applies to `peaking`, `lowshelf`, and `highshelf` types. */
   public get gain(): number {
     return this._gain;
   }

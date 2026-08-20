@@ -18,7 +18,7 @@ export interface SweptHit {
 }
 
 // ---------------------------------------------------------------------------
-// sweepRectangle — AABB vs AABB slab method
+// sweepRectangle - AABB vs AABB slab method
 // ---------------------------------------------------------------------------
 
 /**
@@ -55,7 +55,7 @@ export function sweepRectangle(moving: Rectangle, deltaX: number, deltaY: number
     tEntryX = (tarMaxX - movMinX) / deltaX;
     tExitX = (tarMinX - movMaxX) / deltaX;
   } else if (movMaxX <= tarMinX || movMinX >= tarMaxX) {
-    // No movement on X and no static overlap — can never collide
+    // No movement on X and no static overlap - can never collide
     return null;
   }
 
@@ -70,7 +70,7 @@ export function sweepRectangle(moving: Rectangle, deltaX: number, deltaY: number
     tEntryY = (tarMaxY - movMinY) / deltaY;
     tExitY = (tarMinY - movMaxY) / deltaY;
   } else if (movMaxY <= tarMinY || movMinY >= tarMaxY) {
-    // No movement on Y and no static overlap — can never collide
+    // No movement on Y and no static overlap - can never collide
     return null;
   }
 
@@ -92,7 +92,7 @@ export function sweepRectangle(moving: Rectangle, deltaX: number, deltaY: number
   let normalY = 0;
 
   if (tEntry <= 0) {
-    // Already overlapping — pick the axis with least penetration
+    // Already overlapping - pick the axis with least penetration
     const overlapX = Math.min(movMaxX - tarMinX, tarMaxX - movMinX);
     const overlapY = Math.min(movMaxY - tarMinY, tarMaxY - movMinY);
 
@@ -113,7 +113,7 @@ export function sweepRectangle(moving: Rectangle, deltaX: number, deltaY: number
 }
 
 // ---------------------------------------------------------------------------
-// sweepCircleVsRectangle — full Minkowski rounded-rectangle formulation
+// sweepCircleVsRectangle - full Minkowski rounded-rectangle formulation
 // ---------------------------------------------------------------------------
 
 /**
@@ -125,9 +125,9 @@ export function sweepRectangle(moving: Rectangle, deltaX: number, deltaY: number
  * arcs of radius `r` at each corner.  The circle centre is tested against each
  * boundary region separately:
  *
- * - **Flat face** — slab entry time (exact); only valid when the circle centre
+ * - **Flat face** - slab entry time (exact); only valid when the circle centre
  *   lands within the face's extent at impact (not a corner arc region).
- * - **Corner arc** — quadratic equation `|centre(t) − corner|² = r²` (exact).
+ * - **Corner arc** - quadratic equation `|centre(t) − corner|² = r²` (exact).
  *
  * The earliest valid hit across all eight tests is returned. This eliminates
  * the corner over-collision produced by the simpler expanded-AABB approach.
@@ -158,7 +158,7 @@ export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, delta
       return { t: 0, x: cx, y: cy, normalX: initDx / dist, normalY: initDy / dist };
     }
 
-    // Centre inside rect — push along axis with least penetration
+    // Centre inside rect - push along axis with least penetration
     const exitLeft = cx - left;
     const exitRight = right - cx;
     const exitTop = cy - top;
@@ -185,7 +185,7 @@ export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, delta
     }
   };
 
-  // Flat face tests — circle centre must reach the expanded face plane
+  // Flat face tests - circle centre must reach the expanded face plane
   // and land within the face's extent (not a corner arc region).
   if (deltaX !== 0) {
     const tL = (left - r - cx) / deltaX;
@@ -213,7 +213,7 @@ export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, delta
     }
   }
 
-  // Corner arc tests — solve |(cx + dx·t, cy + dy·t) − corner|² = r²
+  // Corner arc tests - solve |(cx + dx·t, cy + dy·t) − corner|² = r²
   // for each of the four rect corners (quadratic in t).
   const a = deltaX * deltaX + deltaY * deltaY;
   const cornerXs = [left, right, left, right];
@@ -247,7 +247,7 @@ export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, delta
 }
 
 // ---------------------------------------------------------------------------
-// sweepCircleVsCircle — quadratic equation
+// sweepCircleVsCircle - quadratic equation
 // ---------------------------------------------------------------------------
 
 /**
@@ -305,7 +305,7 @@ export function sweepCircleVsCircle(moving: CircleLike, deltaX: number, deltaY: 
 }
 
 // ---------------------------------------------------------------------------
-// Batch helpers — sweep a shape against multiple targets
+// Batch helpers - sweep a shape against multiple targets
 // ---------------------------------------------------------------------------
 
 /**
@@ -387,7 +387,7 @@ export function sweepCircleAgainst(moving: CircleLike, deltaX: number, deltaY: n
 }
 
 // ---------------------------------------------------------------------------
-// substepSweep — generic fallback iterator
+// substepSweep - generic fallback iterator
 // ---------------------------------------------------------------------------
 
 /**
@@ -395,7 +395,7 @@ export function sweepCircleAgainst(moving: CircleLike, deltaX: number, deltaY: n
  * vector so the caller can run their own discrete intersection check at each
  * step.  Useful for arbitrary shape pairs that lack a closed-form swept test.
  *
- * `maxStepSize` controls the step granularity — smaller values produce more
+ * `maxStepSize` controls the step granularity - smaller values produce more
  * accurate detection but more iterations.  Use the smallest dimension of the
  * smaller collider as a sensible default.
  *

@@ -6,7 +6,7 @@ import type { BaseCellResult } from '../shared/result';
  * Kept deliberately small (review-note "don't overdo the physics implementation"):
  * a settling box stack, a field of bouncing dynamic bodies, and a mixed
  * static-geometry + dynamic-bodies scene. These cover the three cost regimes an
- * ExoJS user cares about when deciding stay-native vs. attach an adapter —
+ * ExoJS user cares about when deciding stay-native vs. attach an adapter -
  * resting-contact solving, wide broad-phase + many active contacts, and a mix.
  */
 export type PhysicsArchetypeId = 'box-stack' | 'many-dynamic' | 'mixed-static-dynamic';
@@ -44,7 +44,7 @@ export interface PhysicsCellSpec {
   readonly timedSteps: number;
 }
 
-/** Structural counters gathered for a single physics cell — the CPU-domain analogue of draw calls. */
+/** Structural counters gathered for a single physics cell - the CPU-domain analogue of draw calls. */
 export interface PhysicsStructuralCounters {
   /** Live body count in the world (static + dynamic). */
   readonly bodyCount: number;
@@ -68,7 +68,7 @@ export interface PhysicsCellResult extends BaseCellResult<PhysicsCellSpec> {
 
 /**
  * Neutral contract a physics engine arm implements so the harness can drive it
- * identically across arms — the CPU-domain counterpart of the rendering
+ * identically across arms - the CPU-domain counterpart of the rendering
  * {@link '../rendering/EngineAdapter'.EngineAdapter}.
  *
  * The native `@codexo/exojs-physics` arm is the only implementation today; the

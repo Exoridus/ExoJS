@@ -104,7 +104,7 @@ const ONSET_RING_SIZE = 16; // recent onsets retained for the PLL's nearestOnset
 // a single noisy onset can never yank the grid. Exactly one beat is emitted per predicted
 // beat (the old snap double-advanced and timestamped a beat an IBI ahead). The first beat is
 // bootstrapped to a real recent onset, never an arbitrary settling boundary. The gains are
-// INTERNAL constants (API decision: not public). Tempo selection is untouched —
+// INTERNAL constants (API decision: not public). Tempo selection is untouched -
 // the PLL only refines phase/period locally around the ACF-chosen tempo.
 const PLL_PHASE_GAIN = 0.25; // fraction of phase error applied as a phase nudge per beat
 const PLL_TEMPO_GAIN = 0.03; // fraction of phase error folded into the period per beat
@@ -118,7 +118,7 @@ const PLL_BOOTSTRAP_MAX_AGE_IBI = 2; // bootstrap anchors to the newest onset wi
 // ---- DJ-drift dual-window tracking ----
 // The tracked tempo normally follows the long STABLE window (octave-safe, steady). When the
 // short FAST window consistently reports a DIFFERENT, non-octave tempo over several ACF hops,
-// the grid follows it — a genuine DJ drift, not noise. A single noisy hop can never move the
+// the grid follows it - a genuine DJ drift, not noise. A single noisy hop can never move the
 // grid (the persistence streak below), and octave-scale disagreements are left to the stable
 // hysteresis (they are metrical ambiguity, owned by the octave guards there).
 const DRIFT_MIN_FRAC = 0.012; // fast must differ from the grid by > this to count as drift (~1.2%)
@@ -129,19 +129,19 @@ const DRIFT_CONFIRM_HOPS = 3; // consecutive confirming ACF hops required before
 // ---- Provisional vs locked beats ----
 // Beats are emitted as soon as the early ACF finds ANY in-range tempo (gated at _minEmitHops,
 // derived from minSettlingMs ≈ 400 ms instead of waiting the full slowest-tempo window), tagged
-// status:'provisional' — this drives the low-latency "blink" visual reactivity. A beat is only
+// status:'provisional' - this drives the low-latency "blink" visual reactivity. A beat is only
 // PROMOTED to status:'locked' once the evidence matches what the detector used to wait for: the
-// full stable window has filled (fluxCount ≥ maxLag+1 — one period of the slowest tempo, exactly
+// full stable window has filled (fluxCount ≥ maxLag+1 - one period of the slowest tempo, exactly
 // the old emission gate → the AUTHORITATIVE lock) AND at least LOCK_PROMOTE_BEATS beats have since
 // been emitted on that validated grid AND confidence clears a floor. (Persistence is counted as
 // beats-after-authoritative-lock, not onset-MATCHED beats: on syncopated material the IBI-derived
-// refractory hides the on-grid onsets so the grid legitimately free-runs — the full-window lock +
+// refractory hides the on-grid onsets so the grid legitimately free-runs - the full-window lock +
 // confidence already establish trustworthiness.) The promotion latches (one provisional→locked
 // transition per stable segment) and also gates the state-message tempo report, so sync-critical
 // consumers and the public tempo/confidence getters only ever see post-lock (trustworthy) values
 // while the visual layer still reacts early. The gains are INTERNAL constants (API decision: not
 // public). When emitProvisionalBeats is false, provisional beats are suppressed (grid bookkeeping
-// still runs) and only locked beats are posted — the original emission shape.
+// still runs) and only locked beats are posted - the original emission shape.
 const LOCK_PROMOTE_BEATS = 3; // beats emitted after the authoritative lock before promotion to locked
 const LOCK_PROMOTE_CONFIDENCE = 0.1; // confidence floor that must be cleared to promote to locked
 

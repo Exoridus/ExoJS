@@ -1,5 +1,5 @@
 /**
- * Tooltip tests — delayed show/hide scheduling (driven by Application.onFrame,
+ * Tooltip tests - delayed show/hide scheduling (driven by Application.onFrame,
  * frozen while the scene is paused), UIRoot-ancestor lookup, screen-space
  * pointer coordinates, node teardown on hide, default vs. custom option
  * decoding, and destroy() cleanup.
@@ -70,7 +70,7 @@ const makeApp = (): FakeApp => {
   return { app, onFrame, scene };
 };
 
-/** Attach `app` to `root` via a minimal Stage — cascades to every current and future descendant. */
+/** Attach `app` to `root` via a minimal Stage - cascades to every current and future descendant. */
 const attachStage = (root: UIRoot, app: Application): void => {
   const interaction: Stage['interaction'] = {
     _notifyNodeAdded: vi.fn(),
@@ -96,7 +96,7 @@ const tick = (onFrame: Signal<[Time]>, seconds: number): void => {
 
 /**
  * Dispatch a pointerover. `(x, y)` is the InteractionEvent's own layer-space
- * position; `(pointerX, pointerY)` — defaulting to the same values — is the
+ * position; `(pointerX, pointerY)` - defaulting to the same values - is the
  * separate screen-space `Pointer` position Tooltip now actually positions
  * from. Pass them apart to simulate a world-tree target under a moved camera.
  */
@@ -234,7 +234,7 @@ describe('Tooltip show/hide scheduling', () => {
     dispatchOver(target);
     dispatchOver(target);
 
-    // _scheduleShow() cancels its own prior subscription before re-adding —
+    // _scheduleShow() cancels its own prior subscription before re-adding -
     // two overs in a row must still leave exactly one onFrame listener, not two.
     expect(onFrame.count).toBe(1);
 
@@ -426,7 +426,7 @@ describe('Tooltip node teardown (ME-59: leak)', () => {
     const firstNode = root.children[1] as Container;
 
     // _show() is re-entered (e.g. a second show while already visible) via a
-    // fresh over/delay cycle — the first node must not survive as a leak.
+    // fresh over/delay cycle - the first node must not survive as a leak.
     dispatchOut(target);
     dispatchOver(target);
     tick(onFrame, 0.05);
@@ -480,7 +480,7 @@ describe('Tooltip.destroy()', () => {
     expect(target.onPointerOver.count).toBe(0);
     expect(target.onPointerOut.count).toBe(0);
 
-    // Further hover after destroy is inert — the listener was removed.
+    // Further hover after destroy is inert - the listener was removed.
     dispatchOver(target);
     tick(onFrame, 1.0);
     expect(root.children.length).toBe(1);

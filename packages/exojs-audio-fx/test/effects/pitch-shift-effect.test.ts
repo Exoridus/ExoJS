@@ -165,7 +165,7 @@ describe('PitchShiftEffect', () => {
     it('_dryDelay is created after worklet-ready with the correct SOLA latency', async () => {
       // Regression test for the field-order bug: _grainSize is assigned after
       // super() in PitchShiftEffect, so _dryLatencySeconds must NOT be read
-      // synchronously in _setup() — it must be deferred to the worklet-ready
+      // synchronously in _setup() - it must be deferred to the worklet-ready
       // callback (which is always async, guaranteeing the constructor finished).
       //
       // On the pre-fix code this test would FAIL because _dryDelay would be null:

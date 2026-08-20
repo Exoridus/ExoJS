@@ -61,7 +61,7 @@ describe('BackendTargetPass coordinator routing', () => {
       expect(descriptor.clearColor).toBe(Color.red);
       expect(descriptor.load).toBe('clear');
       expect(ran).toBe(true);
-      // The coordinator owns save/restore — the inline fallback must not run.
+      // The coordinator owns save/restore - the inline fallback must not run.
       expect(setRenderTarget).not.toHaveBeenCalled();
     } finally {
       target.destroy();

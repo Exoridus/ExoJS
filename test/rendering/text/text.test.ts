@@ -23,7 +23,7 @@ import type { GlyphInfo } from '#rendering/text/types';
 // Layout-pass counter
 //
 // The dirty model's whole promise is "at most one pass per change", which is
-// only observable by counting the passes — a geometry comparison cannot tell
+// only observable by counting the passes - a geometry comparison cannot tell
 // one rebuild from three.
 // ---------------------------------------------------------------------------
 
@@ -384,7 +384,7 @@ describe('Text', () => {
   // The anchor is measured against the typographic box, NOT against the ink:
   // the SDF padding reaches past the glyphs by a different amount on each
   // side, so anchoring to the ink would centre the padded tile instead of the
-  // caption — and would push an unanchored label off its own position.
+  // caption - and would push an unanchored label off its own position.
   test('the anchor is taken against the advance, not the padded ink', () => {
     const text = new Text('Hi');
     const advance = text.textBounds;

@@ -81,7 +81,7 @@ describe('continuous collision (bullet mode)', () => {
       world.step(FRAME);
     }
 
-    // CCD keeps it inside the thin-walled box — never escaping, never NaN.
+    // CCD keeps it inside the thin-walled box - never escaping, never NaN.
     expect(Number.isFinite(ball.x)).toBe(true);
     expect(Number.isFinite(ball.y)).toBe(true);
     expect(Math.abs(ball.x)).toBeLessThan(105);
@@ -90,7 +90,7 @@ describe('continuous collision (bullet mode)', () => {
 
   it('a fast bullet does not tunnel through a thin *dynamic* body', () => {
     // A thin dynamic target the bullet's per-step landings straddle without ever
-    // landing inside it, so discrete detection misses it — only a swept test catches it.
+    // landing inside it, so discrete detection misses it - only a swept test catches it.
     const make = (bullet: boolean): { world: PhysicsWorld; ball: PhysicsBody } => {
       const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
       // Heavy thin dynamic target at x = 200 (barely shoved within the short run).
@@ -137,7 +137,7 @@ describe('continuous collision (bullet mode)', () => {
     }
 
     expect(ball.x).toBeLessThan(200); // stopped at the wall, did not tunnel
-    // It slides down the wall — a velocity-kill (stripping the whole travel vector)
+    // It slides down the wall - a velocity-kill (stripping the whole travel vector)
     // would have dead-stopped it at vy ≈ 0.
     expect(ball.linearVelocityY).toBeGreaterThan(1000);
   });
@@ -148,7 +148,7 @@ describe('continuous collision (bullet mode)', () => {
     ball.isBullet = true;
     world.add(ball);
 
-    // No velocity, no gravity — the body barely moves (well below the sweep's
+    // No velocity, no gravity - the body barely moves (well below the sweep's
     // 1e-6 distance floor), so `_advanceBullets` must bail out via the
     // near-zero-distance guard instead of normalizing a ~zero-length direction.
     expect(() => world.step(FRAME)).not.toThrow();
@@ -159,7 +159,7 @@ describe('continuous collision (bullet mode)', () => {
   it('a slow bullet impact below the restitution threshold does not bounce', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     // The ball starts with its surface a hair short of the wall face at x = 198
-    // and creeps in at 0.5 px/s — well below `ccdRestitutionThreshold` (1 px/s),
+    // and creeps in at 0.5 px/s - well below `ccdRestitutionThreshold` (1 px/s),
     // so the swept-shape response must be a pure slide (restitution 0), not a
     // bounce, and the discrete solver takes over the resting contact afterwards.
     world.add(new PhysicsBody({ type: 'static', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(4, 400) }] }));
@@ -191,7 +191,7 @@ describe('continuous collision (swept shape, not just the centre)', () => {
 
   it('a large fast box whose centre path misses a thin wall does not tunnel (extents hit)', () => {
     // Wall x ∈ [198, 202], y ∈ [-50, 50]. The box flies at y = 70 (centre line
-    // clears the wall top at y = 50) but spans y ∈ [40, 100] — a 10px face hit.
+    // clears the wall top at y = 50) but spans y ∈ [40, 100] - a 10px face hit.
     const make = (bullet: boolean): { world: PhysicsWorld; box: PhysicsBody } => {
       const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
       world.add(new PhysicsBody({ type: 'static', position: { x: 200, y: 0 }, colliders: [{ shape: new BoxShape(4, 100) }] }));
@@ -204,7 +204,7 @@ describe('continuous collision (swept shape, not just the centre)', () => {
       return { world, box };
     };
 
-    // Discrete detection misses it entirely — and with the old centre-point
+    // Discrete detection misses it entirely - and with the old centre-point
     // sweep a bullet tunnelled too (the regression this suite pins).
     const plain = make(false);
     for (let frame = 0; frame < 3; frame++) {
@@ -315,7 +315,7 @@ describe('continuous collision (swept shape, not just the centre)', () => {
   it('the sweep respects collision filters (a bullet passes through geometry it cannot collide with)', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     // Wall in category 0x2; the bullet's mask only matches 0x1, so the pair
-    // never collides — neither discretely nor via the swept test.
+    // never collides - neither discretely nor via the swept test.
     world.add(
       new PhysicsBody({
         type: 'static',
@@ -358,7 +358,7 @@ describe('continuous collision (swept shape, not just the centre)', () => {
 
   it('a fast-falling bullet lands and hands the resting contact to the discrete solver', () => {
     // The clamp leaves a hair of overlap so the next step's detection forms a
-    // real contact — resting, friction and events stay with the solver instead
+    // real contact - resting, friction and events stay with the solver instead
     // of the bullet hovering on repeated swept-test velocity kills.
     const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
     world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [{ shape: new BoxShape(400, 20) }] }));
@@ -477,7 +477,7 @@ describe('swept SAT — exact tangency is not a blocking hit', () => {
     const target = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
     // Swept from (20, 0) to (0, 20): the moving box's bottom-left corner slides
     // along the line x + y = 10 and touches the target's (5, 5) corner at
-    // exactly t = 0.5 — separation reaches 0 for one instant, never negative.
+    // exactly t = 0.5 - separation reaches 0 for one instant, never negative.
     const moving = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 20 });
 
     expect(sweepProxies(moving, -20, 20, target, hit)).toBe(false);

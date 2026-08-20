@@ -3,7 +3,7 @@
  * `IndexedDbDatabase` / `IndexedDbStore` through their real event-driven code
  * paths in unit tests (jsdom does not implement IndexedDB).
  *
- * This is intentionally NOT a spec-complete polyfill — it only implements the
+ * This is intentionally NOT a spec-complete polyfill - it only implements the
  * subset of `IDBFactory` / `IDBDatabase` / `IDBTransaction` / `IDBObjectStore`
  * behaviour those two modules touch, including the `abort`/`error` event
  * bubbling from a versionchange transaction up to its `IDBDatabase` (which is
@@ -165,7 +165,7 @@ class FakeIdbTransaction extends EventTarget {
   public abort(): void {
     this.aborted = true;
     // Real IndexedDB bubbles an aborted versionchange transaction's `abort`
-    // event to its connection (`IDBDatabase`) — `IndexedDbDatabase.connect()`
+    // event to its connection (`IDBDatabase`) - `IndexedDbDatabase.connect()`
     // listens for exactly that to reject the open() promise.
     this.dispatchEvent(new Event('abort'));
     this._db.dispatchEvent(new Event('abort'));
@@ -298,7 +298,7 @@ class FakeIdbFactory {
 
         if (transaction.aborted) {
           // `transaction.abort()` already bubbled `abort` to `db` synchronously
-          // above (inside the `upgradeneeded` listener) — the production code's
+          // above (inside the `upgradeneeded` listener) - the production code's
           // `database.addEventListener('abort', ...)` already rejected the
           // caller's promise. Firing `success` here would be a spec violation
           // (and a wasted, ignored settle on an already-rejected promise).
@@ -355,7 +355,7 @@ export interface FakeIndexedDb {
   storeNamesOf(name: string): readonly string[] | undefined;
 }
 
-/** Creates a fresh, isolated fake `IDBFactory` — one per test to avoid cross-test bleed. */
+/** Creates a fresh, isolated fake `IDBFactory` - one per test to avoid cross-test bleed. */
 export const createFakeIndexedDb = (): FakeIndexedDb => {
   const factory = new FakeIdbFactory();
 

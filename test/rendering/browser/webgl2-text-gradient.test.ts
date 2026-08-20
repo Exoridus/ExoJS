@@ -1,5 +1,5 @@
 /**
- * WebGL2 browser test — the gradient ramp is normalized against the text INK.
+ * WebGL2 browser test - the gradient ramp is normalized against the text INK.
  *
  * `text.vert` computes `v_gradUV = clamp((a_position - box.xy) / box.zw)` from
  * the rectangle the renderer uploads, and `text-sdf.frag` mixes the two ramp
@@ -10,7 +10,7 @@
  *
  * The check does not depend on the shape of the glyph. With a pure red/blue
  * vertical ramp, `r / (r + b)` at any covered pixel IS the red stop's weight,
- * and that weight is a closed form of the uploaded box — so each ink row can
+ * and that weight is a closed form of the uploaded box - so each ink row can
  * be predicted from `text.getLocalBounds()` and compared. Partial coverage
  * scales both channels equally and cancels out of the ratio.
  *
@@ -112,7 +112,7 @@ describe('WebGL2: the text gradient ramp spans the ink extent', () => {
     const backend = await createBackend();
     const root = new Container();
     // 'M' is wide and solid, so most rows carry a strong, unambiguous sample.
-    // gradientColors[0] is the TOP stop — it feeds the shader's ramp-0.0 end,
+    // gradientColors[0] is the TOP stop - it feeds the shader's ramp-0.0 end,
     // [1] its ramp-1.0 end.
     const text = new Text('M', {
       fontSize: 56,
@@ -143,7 +143,7 @@ describe('WebGL2: the text gradient ramp spans the ink extent', () => {
         // The shader interpolates at the pixel centre.
         const localY = y + 0.5 - textY;
         const t = Math.min(1, Math.max(0, (localY - ink.y) / ink.height));
-        // Red is gradientColors[0] — the TOP stop — so its share is 1 at the
+        // Red is gradientColors[0] - the TOP stop - so its share is 1 at the
         // top of the ink box and falls to 0 at the bottom.
         const expected = 1 - t;
 

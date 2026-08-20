@@ -3,8 +3,8 @@ import { mountControls } from '@examples/runtime';
 
 // The camera continuously pans (a slow figure-eight) and breathes its zoom, so
 // the same design-space pixel maps to a moving world point every frame.
-// `screenToWorld(x, y)` undoes the camera transform — pointer coordinates are
-// already in design space (`0..app.width`) — so we never hand-roll the inverse
+// `screenToWorld(x, y)` undoes the camera transform - pointer coordinates are
+// already in design space (`0..app.width`) - so we never hand-roll the inverse
 // projection. Tap to drop a marker in *world* space; it stays pinned to the
 // world as the camera moves over it.
 class PointerToWorldScene extends Scene {
@@ -84,7 +84,7 @@ class PointerToWorldScene extends Scene {
         this.view.setZoom(this.userZoom * (1 + Math.sin(this.elapsed * 0.35) * 0.25));
         this.view.update(delta.milliseconds);
 
-        // Live world coordinate under the cursor — recomputed every frame because
+        // Live world coordinate under the cursor - recomputed every frame because
         // the mapping changes as the camera moves.
         this.world = this.view.screenToWorld(this.cursor.x, this.cursor.y);
 

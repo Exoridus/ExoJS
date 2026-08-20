@@ -134,7 +134,7 @@ describe('SceneLoader catalog adopt', () => {
     });
 
     // Each assertion is wrapped in an uncalled arrow so only the overload
-    // resolution is checked — invoking `load()` for real here would fire an
+    // resolution is checked - invoking `load()` for real here would fire an
     // unmocked fetch.
     //
     // Value leaf (AssetRef<T>): resolves to LoadingQueue<T>, never LoadingQueue<AssetRef<T>>.

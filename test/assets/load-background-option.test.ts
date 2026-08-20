@@ -41,7 +41,7 @@ const mockFetchJson = (payload: unknown): ReturnType<typeof vi.fn> => {
   return fetchMock;
 };
 
-/** Alias-keyed queue probe — avoids coupling the assertions to token identity. */
+/** Alias-keyed queue probe - avoids coupling the assertions to token identity. */
 const isQueued = (loader: Loader, alias: string): boolean =>
   (loader as unknown as { _residency: { _backgroundQueue: Array<{ asset: { source: string } }> } })._residency._backgroundQueue.some(
     e => e.asset.source === alias,
@@ -70,7 +70,7 @@ describe('load(target, { priority: LoadPriority.Background })', () => {
     const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
     owner.load(catalog, { priority: LoadPriority.Background });
 
-    // Adopted (registered + claimed) but NOT fetched — the leaf sits in the background queue.
+    // Adopted (registered + claimed) but NOT fetched - the leaf sits in the background queue.
     expect(catalog.ship.loadState).toBe('loading');
     expect(isQueued(loader, 'ship.png')).toBe(true);
     expect(fetchMock).not.toHaveBeenCalled();

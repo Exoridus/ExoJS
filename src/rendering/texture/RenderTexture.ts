@@ -10,7 +10,7 @@ export interface RenderTextureOptions extends Partial<TextureOptions> {
   /**
    * Color attachment format. Defaults to {@link TextureFormat.Rgba8}.
    * The float formats ({@link TextureFormat.Rgba16F} / {@link TextureFormat.Rgba32F})
-   * allocate a floating-point offscreen target for rendering values outside `[0, 1]` — they require
+   * allocate a floating-point offscreen target for rendering values outside `[0, 1]` - they require
    * `EXT_color_buffer_float` at render time (throws otherwise) and default to
    * `nearest` sampling. The format is immutable for the texture's lifetime.
    */

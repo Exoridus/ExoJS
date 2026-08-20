@@ -17,7 +17,7 @@ import { MembershipBits, type VisibilityQueryStats } from './SourceVisibilityInd
 export interface SelectionDelta {
   /** Grid cells walked across every scope this frame. */
   cells: number;
-  /** Items the visibility query looked at — the spatial candidate set. */
+  /** Items the visibility query looked at - the spatial candidate set. */
   candidates: number;
   /** Items admitted now that were not admitted last selection. */
   entered: number;
@@ -133,7 +133,7 @@ export class DerivedRootProduct {
    * Re-key the product against a freshly built source.
    *
    * A rebuilt source renumbers its handles, so the previous membership no longer
-   * describes anything — it is dropped rather than remapped, and the next
+   * describes anything - it is dropped rather than remapped, and the next
    * selection reports every admitted item as ENTERED, which is exactly true.
    */
   public rebind(scopes: readonly SourceScope[]): void {
@@ -185,8 +185,8 @@ export class DerivedRootProduct {
   /**
    * Fill one scope's membership from `rect` and fold the result into the delta.
    *
-   * A scope the caller skipped entirely — a group whose aggregate bounds miss
-   * the rect — keeps its cleared bits, which is the correct answer (nothing in
+   * A scope the caller skipped entirely - a group whose aggregate bounds miss
+   * the rect - keeps its cleared bits, which is the correct answer (nothing in
    * it is admitted) and costs nothing to produce.
    */
   public selectScope(scope: SourceScope, rect: ReadonlyRectangle, visibility: RenderItemVisibility): MembershipBits {
@@ -200,14 +200,14 @@ export class DerivedRootProduct {
     return bits;
   }
 
-  /** This selection's membership for `ordinal` — valid only inside a selection. */
+  /** This selection's membership for `ordinal` - valid only inside a selection. */
   public bits(ordinal: number): MembershipBits {
     return this._current[ordinal]!;
   }
 
   /**
-   * Seal the selection: fold every scope the walk never reached — a group culled
-   * as a whole — so its items report as EXITED rather than silently vanishing
+   * Seal the selection: fold every scope the walk never reached - a group culled
+   * as a whole - so its items report as EXITED rather than silently vanishing
    * from the accounting, then make this membership the next one's baseline.
    */
   public commitSelection(scopes: readonly SourceScope[]): void {
@@ -222,14 +222,14 @@ export class DerivedRootProduct {
     this._hasPrevious = true;
 
     // Scope 0 IS the root (`finalizeSourceScopes` pushes it first), and the
-    // previous membership is still intact here — `beginSelection` is what swaps
+    // previous membership is still intact here - `beginSelection` is what swaps
     // the two, so nothing has overwritten it during this selection.
     if (this.slotsEnabled && scopes.length > 0) {
       if (!this.slots.matches(this._handleCount)) {
         this.slots.rebind(this._handleCount);
 
         // A table sized only now has no previous assignment to diff against, so
-        // every admitted item enters — which is what the backend's empty stores
+        // every admitted item enters - which is what the backend's empty stores
         // require anyway.
         this.slots.update(scopes[0]!, this._current, null);
 

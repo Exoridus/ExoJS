@@ -148,7 +148,7 @@ describe('ParticleSystem texture / frame accessors', () => {
     const first = system.vertices;
     const second = system.vertices;
 
-    // Same underlying Float32Array instance, with unchanged values — the
+    // Same underlying Float32Array instance, with unchanged values - the
     // cache-hit branch must skip the recompute block entirely.
     expect(second).toBe(first);
     expect(second[0]).toBeCloseTo(-10);

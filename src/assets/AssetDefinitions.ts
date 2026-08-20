@@ -17,7 +17,7 @@ import type { AssetRef } from './AssetRef';
  * Extension packages add their own via declaration merging. An entry declares
  * the runtime `resource` it produces and the `config` it accepts; it may also
  * carry `isValue: true` to mirror a binding whose leaf is a deferred
- * {@link AssetRef} rather than a heal-in-place handle — required whenever
+ * {@link AssetRef} rather than a heal-in-place handle - required whenever
  * `defineAsset` is called without a `seamless` adapter (see
  * {@link ValueAssetKind}).
  */
@@ -70,13 +70,13 @@ export type AnyAssetConfig = {
   [K in keyof AssetDefinitions]: { type: K } & AssetDefinitions[K]['config'] &
     // `parse` is a value-type-only, SYNCHRONOUS post-load transform:
     // it maps the decoded raw value and may not return a Promise (async parse is a
-    // follow-up — it would need the fill/store flow to await).
+    // follow-up - it would need the fill/store flow to await).
     (K extends ValueAssetKind ? { parse?: (raw: AssetDefinitions[K]['resource']) => unknown } : object);
 }[keyof AssetDefinitions];
 
 /**
  * The built-in types whose catalog leaf is a deferred {@link AssetRef} rather
- * than a heal-in-place resource handle — the type-level mirror of the core
+ * than a heal-in-place resource handle - the type-level mirror of the core
  * `isValue: true` registrations in `coreAssetBindings.ts`.
  *
  * A structural `R extends object` heuristic cannot classify these, because
@@ -90,8 +90,8 @@ export type CoreValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'srt' | 'vtt'
  * types with `isValue: true`.
  *
  * `defineAsset` decides this at RUNTIME as `isValue ?? seamless === undefined`,
- * so a binding that ships no seamless adapter — the common case for a package
- * type like `tileMap` or `ldtkMap` — is a value type and hands out an
+ * so a binding that ships no seamless adapter - the common case for a package
+ * type like `tileMap` or `ldtkMap` - is a value type and hands out an
  * `AssetRef`. The type system cannot see seamless adapters, so an extension
  * package that omits `seamless` must say so here, or `get(...)` would be typed
  * as the bare resource while returning an `AssetRef` wrapper at runtime.
@@ -115,7 +115,7 @@ type DeclaredValueAssetKind = {
  */
 // `DeclaredValueAssetKind` collapses to `never` in a build that sees no
 // declaration-merged entries (the engine's own `tsc --noEmit`, which compiles
-// `src/` alone), which is exactly when the union member is redundant — but it is
+// `src/` alone), which is exactly when the union member is redundant - but it is
 // load-bearing for any consumer build that DOES see a package augmentation.
 // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 export type ValueAssetKind = CoreValueAssetKind | DeclaredValueAssetKind;
@@ -191,7 +191,7 @@ export type ResourceForKind<K extends keyof AssetDefinitions> = AssetDefinitions
  * yields a branded `AssetRef` over its resource, a resource type the branded
  * placeholder resource itself.
  *
- * The brand is what the loader's single-leaf overloads match on — it mirrors the
+ * The brand is what the loader's single-leaf overloads match on - it mirrors the
  * runtime `_assetMeta` stamp `createLeaf` applies, so a raw `new Texture()` (or
  * an `AudioStream`, a `BmFont`, …) is correctly rejected where a materialized
  * leaf is required.
@@ -199,7 +199,7 @@ export type ResourceForKind<K extends keyof AssetDefinitions> = AssetDefinitions
  * Deliberately NOT the type of a bare-path `loader.get(path)` result (that is
  * {@link LeafForPath}): the bare-path branch resolves through the source-keyed
  * dedup rather than `createLeaf`, so a freshly minted handle there carries no
- * stamp — and claiming otherwise would let `load(loader.get('x.png'))` compile
+ * stamp - and claiming otherwise would let `load(loader.get('x.png'))` compile
  * into the record fallback at runtime.
  */
 export type CatalogLeafForKind<K extends keyof AssetDefinitions> = K extends ValueAssetKind
@@ -215,7 +215,7 @@ export type OptionsForKind<K extends keyof AssetDefinitions> = Omit<AssetDefinit
  * {@link ValueAssetKind} a deferred `AssetRef<resource>`. `unknown` when the
  * suffix is unregistered.
  *
- * Unbranded on purpose — see {@link CatalogLeafForKind}. The CATALOG twin (what
+ * Unbranded on purpose - see {@link CatalogLeafForKind}. The CATALOG twin (what
  * `Assets.from({ ship: 'ship.png' }).ship` is) is {@link CatalogLeafForPath}.
  */
 export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
@@ -224,14 +224,14 @@ export type LeafForPath<S extends string> = [KindByPath<S>] extends [never]
     ? AssetRef<ResourceForKind<KindByPath<S>>>
     : ResourceForKind<KindByPath<S>>;
 
-/** {@link LeafForPath}, branded — the leaf a bare path materializes as inside a catalog. */
+/** {@link LeafForPath}, branded - the leaf a bare path materializes as inside a catalog. */
 export type CatalogLeafForPath<S extends string> = [KindByPath<S>] extends [never] ? unknown : CatalogLeafForKind<KindByPath<S>>;
 
 /** A single catalog field input: a bare path string, an `Asset.type(...)` descriptor, or an explicit config. */
 export type CatalogEntry = string | Asset<unknown> | AnyAssetConfig;
 
 /**
- * The leaf type a {@link CatalogEntry} materializes as — always BRANDED (see
+ * The leaf type a {@link CatalogEntry} materializes as - always BRANDED (see
  * {@link LeafForKind}), because every one of these is produced by `createLeaf`
  * and therefore carries the runtime `_assetMeta` stamp. A {@link ValueAsset}
  * brand (from `Asset.type<T>('json', …)`) classifies as `AssetRef<T>` FIRST,
@@ -255,7 +255,7 @@ export type InferCatalogLeaf<E extends CatalogEntry> = E extends string
         : never;
 
 /**
- * The LOADED payload a {@link CatalogEntry} resolves to — what a
+ * The LOADED payload a {@link CatalogEntry} resolves to - what a
  * `loader.load(catalog)` result map holds, as opposed to the handle-hybrid leaf
  * {@link InferCatalogLeaf} materializes on the catalog itself.
  *

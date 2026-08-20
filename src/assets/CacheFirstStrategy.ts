@@ -15,8 +15,8 @@ import { fetchAsset } from './fetchAsset';
  *
  * A failing store never fails the load: read, eviction and write errors are
  * all degraded so that a broken or full cache can never prevent an asset from
- * being delivered. Every degraded error — and every discarded entry, which is
- * itself the evidence that a store is serving unusable data — is handed to
+ * being delivered. Every degraded error - and every discarded entry, which is
+ * itself the evidence that a store is serving unusable data - is handed to
  * {@link CacheRequest.reportCacheError} instead of vanishing, so quota
  * exhaustion and cache corruption stay diagnosable. `Loader` routes that to
  * its `onCacheError`.
@@ -29,7 +29,7 @@ import { fetchAsset } from './fetchAsset';
  * arrived) and the original rejection as `cause`. A cancelled load still
  * rejects with the platform `AbortError`.
  *
- * Returns the fully constructed resource — callers do not need to call
+ * Returns the fully constructed resource - callers do not need to call
  * `request.factory.create` again.
  */
 export class CacheFirstStrategy implements CacheStrategy {
@@ -53,7 +53,7 @@ export class CacheFirstStrategy implements CacheStrategy {
         } catch (corruptError: unknown) {
           // Stale or corrupt entry: drop it so the next load re-fetches. The
           // discard itself is the evidence that the entry was unusable, so it
-          // is reported whether or not the eviction below succeeds — otherwise
+          // is reported whether or not the eviction below succeeds - otherwise
           // a store that reliably serves garbage and deletes it cleanly stays
           // completely invisible.
           report(request, 'load', 'Discarded an unusable cache entry.', corruptError);
@@ -77,7 +77,7 @@ export class CacheFirstStrategy implements CacheStrategy {
       try {
         await store.save(storageName, key, source);
       } catch (error: unknown) {
-        // Quota exceeded or non-cloneable value — continue without caching.
+        // Quota exceeded or non-cloneable value - continue without caching.
         report(request, 'save', 'Writing an asset to a cache store failed.', error);
       }
     }

@@ -18,7 +18,7 @@ import { isScrolling } from '../world';
  *
  * Excalibur's `ExcaliburGraphicsContextWebGL` renders through a real WebGL2
  * context, so the harness's WebGL2 structural probe and GPU timer attach exactly
- * as they do for the ExoJS/Pixi WebGL2 arms — this arm reports full draw-call
+ * as they do for the ExoJS/Pixi WebGL2 arms - this arm reports full draw-call
  * structure. Excalibur ships no WebGPU renderer, so it does not support the
  * `'webgpu'` backend.
  *
@@ -46,7 +46,7 @@ const WOBBLE_SPEED = 0.15;
 /** Constant elapsed-ms handed to the draw path each frame (the harness, not this value, owns timing). */
 const FRAME_ELAPSED_MS = 16;
 
-/** A pre-selected leaf actor and its resting grid position — the only nodes `mutate` disturbs. */
+/** A pre-selected leaf actor and its resting grid position - the only nodes `mutate` disturbs. */
 interface MutableLeaf {
   readonly actor: ex.Actor;
   readonly baseX: number;
@@ -55,7 +55,7 @@ interface MutableLeaf {
 
 /**
  * Generate one of `total` visually distinct solid-colour 8x8 textures from a
- * canvas — the same construction the ExoJS/Pixi arms use, so the
+ * canvas - the same construction the ExoJS/Pixi arms use, so the
  * `batch-breaking` archetype breaks batches on every arm for the same reason
  * (distinct GPU texture identities).
  *
@@ -91,7 +91,7 @@ export const createExcaliburAdapter = (): EngineAdapter => {
   let root: ex.Actor | null = null;
   let images: ex.ImageSource[] = [];
   let mutableLeaves: MutableLeaf[] = [];
-  /** Leaf indices the most recent buildScene selected for mutation — the source of {@link EngineAdapter.mutationSignature}. */
+  /** Leaf indices the most recent buildScene selected for mutation - the source of {@link EngineAdapter.mutationSignature}. */
   let mutableIndices: number[] = [];
   /** Shared top-left anchor reused by every actor (read-only during draw; never mutated) to avoid per-node allocation. */
   const topLeftAnchor = new ex.Vector(0, 0);
@@ -110,7 +110,7 @@ export const createExcaliburAdapter = (): EngineAdapter => {
     coversArchetype(spec: ArchetypeSpec): boolean {
       // This arm builds a fixed, viewport-sized scene with a static camera. A
       // scrolling archetype would silently render as an ordinary fully-visible
-      // one here, i.e. a row that looks comparable and is not — so the arm sits
+      // one here, i.e. a row that looks comparable and is not - so the arm sits
       // the archetype out instead.
       return !isScrolling(spec);
     },
@@ -142,7 +142,7 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       // `start()` boots the engine and initialises the default scene (its draw
       // systems and the WebGL2 context). It briefly runs the StandardClock while
       // the (empty) loader completes; halt that clock immediately afterwards so
-      // the harness — not Excalibur — drives every subsequent frame.
+      // the harness - not Excalibur - drives every subsequent frame.
       await instance.start();
       instance.clock.stop();
 
@@ -179,7 +179,7 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       const cellHeight = (VIEWPORT_HEIGHT - 2 * GRID_MARGIN) / rows;
       const overdraw = spec.id === 'overdraw';
 
-      // Shared, canonical mutation selection — the SAME helper every arm routes
+      // Shared, canonical mutation selection - the SAME helper every arm routes
       // through, so all arms select the byte-for-byte identical index set and the
       // harness's cross-arm determinism assertion holds.
       const selectedIndices = selectMutationIndices(nodeCount, spec.mutationFraction, seed);
@@ -188,7 +188,7 @@ export const createExcaliburAdapter = (): EngineAdapter => {
 
       for (let i = 0; i < nodeCount; i++) {
         // Texture indexed by position WITHIN the spine bucket, not the global
-        // index — identical to the other arms, so the batch-breaking archetype
+        // index - identical to the other arms, so the batch-breaking archetype
         // overflows the batcher's texture slots the same way everywhere. Each
         // leaf gets its own Sprite graphic sharing the ImageSource/GPU texture.
         //
@@ -247,7 +247,7 @@ export const createExcaliburAdapter = (): EngineAdapter => {
         scratch.x = leaf.baseX + dx;
         scratch.y = leaf.baseY + dy;
         // Assigning `pos` copies x/y into the actor's watched position vector,
-        // flagging its transform dirty — the same in-place update the ExoJS/Pixi
+        // flagging its transform dirty - the same in-place update the ExoJS/Pixi
         // arms do via `setPosition`, with no per-leaf allocation.
         leaf.actor.pos = scratch;
       }
@@ -264,7 +264,7 @@ export const createExcaliburAdapter = (): EngineAdapter => {
       }
 
       // One explicit frame: the exact sequence Excalibur's private per-frame draw
-      // runs, reconstructed from public API. Only the draw path executes — the
+      // runs, reconstructed from public API. Only the draw path executes - the
       // update systems (motion, collision, off-screen culling) are never stepped.
       const context = engine.graphicsContext;
 
@@ -280,7 +280,7 @@ export const createExcaliburAdapter = (): EngineAdapter => {
 
     teardown(): void {
       if (engine !== null) {
-        // `dispose` tears the whole engine down — scene graph, systems and the
+        // `dispose` tears the whole engine down - scene graph, systems and the
         // WebGL2 context. A fresh engine + canvas is created for the next cell,
         // so nothing here needs to survive.
         engine.dispose();

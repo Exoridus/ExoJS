@@ -45,7 +45,7 @@ class MiniMapScene extends Scene {
         this.miniView = new View(width / 2, height / 2, width, height);
 
         // Every stage is a RenderNodePass so the off-screen target redirect and
-        // its clear stay inside the pass machinery — mixing in a manual
+        // its clear stay inside the pass machinery - mixing in a manual
         // `context.backend.clear()` (immediate-mode) here leaks the off-screen
         // pass's clear onto the canvas and leaves the texture empty.
         this.pipeline = new RenderPipeline()

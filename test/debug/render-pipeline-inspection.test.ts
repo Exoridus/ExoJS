@@ -5,7 +5,7 @@ import { RenderPipeline } from '#rendering/RenderPipeline';
 
 class TestPass extends RenderPass {
   public override execute(_context: RenderingContext): void {
-    // no-op — inspection tests never run the pass.
+    // no-op - inspection tests never run the pass.
   }
 }
 

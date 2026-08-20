@@ -107,7 +107,7 @@ describe('Loader: silent-404 diagnostic (F7 / DX-1)', () => {
       const first = loader.get('typo.png');
       await expect(first.loaded).rejects.toThrow();
 
-      // Second get() of the same failed source retries in place — must NOT re-warn.
+      // Second get() of the same failed source retries in place - must NOT re-warn.
       const second = loader.get('typo.png');
       await expect(second.loaded).rejects.toThrow();
 

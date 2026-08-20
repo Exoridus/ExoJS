@@ -21,7 +21,7 @@ describe('contact events', () => {
     expect(starts).toHaveLength(1);
     expect(ends).toHaveLength(0);
 
-    // Still overlapping — no duplicate start.
+    // Still overlapping - no duplicate start.
     world.step(DT);
     expect(starts).toHaveLength(1);
 
@@ -179,7 +179,7 @@ describe('contact events', () => {
     const world = new PhysicsWorld();
     // sensorA overlaps two different bodies (ties on sensor.id, so the sort must
     // fall through to comparing other.id) while a second, distinct sensor
-    // overlaps a third body (differing sensor.id) — all entering on the first step.
+    // overlaps a third body (differing sensor.id) - all entering on the first step.
     colliderAt(world, new BoxShape(40, 40), { x: 0, y: 0 }, 0, 'static', { isSensor: true });
     world.add(new PhysicsBody({ type: 'kinematic', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
     world.add(new PhysicsBody({ type: 'kinematic', position: { x: -5, y: 0 }, colliders: [{ shape: new BoxShape(10, 10) }] }));
@@ -241,7 +241,7 @@ describe('collision filter group override', () => {
     world.onCollisionStart.add(start);
     world.step(DT);
 
-    // Groups differ (no override) — default category/mask (0x0001 / 0xffff) still
+    // Groups differ (no override) - default category/mask (0x0001 / 0xffff) still
     // matches, so it collides via the fallback path.
     expect(start).toHaveBeenCalledTimes(1);
   });

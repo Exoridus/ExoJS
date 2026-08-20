@@ -19,7 +19,7 @@ import type { TileSet } from './TileSet';
  * chunks are culled by their accurate {@link getLocalBounds} before `render`
  * is ever called, so a camera pan rebuilds nothing.
  *
- * The node references — but never owns — the runtime chunk, tilesets, and
+ * The node references - but never owns - the runtime chunk, tilesets, and
  * tileset textures. Destroying it releases only its cached CPU geometry; the
  * `TileMap`/`TileLayer` data and Loader-owned textures are untouched.
  *
@@ -41,8 +41,8 @@ export class TileChunkNode extends Drawable {
    * Bound once so `TileChunk._addDirtyListener`/`_removeDirtyListener` add and
    * remove the SAME function reference. Pushes the chunk's revision bump onto
    * this node's own content revision (see `TileChunk._dirtyListeners`) so a
-   * `RetainedContainer` ancestor — which skips walking a content-clean
-   * subtree entirely — observes the mutation and re-collects instead of
+   * `RetainedContainer` ancestor - which skips walking a content-clean
+   * subtree entirely - observes the mutation and re-collects instead of
    * replaying stale cached geometry.
    */
   private readonly _onChunkDirty = (): void => {

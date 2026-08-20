@@ -4,7 +4,7 @@ import { logger } from '#core/logging';
 import { Texture } from '#rendering/texture/Texture';
 import type { TextureOptions } from '#rendering/texture/TextureOptions';
 
-/** Pre-sizing options for deferred texture handles — reserves placeholder dimensions to avoid a layout jump when the payload arrives. */
+/** Pre-sizing options for deferred texture handles - reserves placeholder dimensions to avoid a layout jump when the payload arrives. */
 export interface PreSizeOptions {
   /** Width to reserve on the placeholder until the payload arrives. */
   width?: number;
@@ -87,7 +87,7 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
     const expected = presizes.get(handle);
 
     presizes.delete(handle);
-    // Transplant ONLY the decoded source — the handle keeps the per-handle
+    // Transplant ONLY the decoded source - the handle keeps the per-handle
     // sampler state applied at createPlaceholder (do NOT copy the donor's).
     handle.setSource(donor.source);
 
@@ -108,7 +108,7 @@ export const textureSeamlessAdapter: SeamlessAdapter<Texture> = {
 
   evict(handle: Texture): void {
     presizes.delete(handle);
-    // setSource(null) alone only bumps the version — a backend only notices
+    // setSource(null) alone only bumps the version - a backend only notices
     // on its next bind, which may never come for a handle nothing is
     // currently drawing. releaseGpu() frees the backend's GPU texture now.
     handle.setSource(null);

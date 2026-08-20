@@ -14,7 +14,7 @@
  * `(zIndex, seq)` IS that contract: the optimizer sorts a scope by `zIndex` and
  * keeps `seq` as the tie-break, so two draws with equal `zIndex` still paint in
  * `seq` order. A second, subtly different implementation of it would not fail a
- * type check — it would change draw order.
+ * type check - it would change draw order.
  */
 export interface EntryPlacementState {
   /** Next auto-assigned sequence number; also the high-water mark of explicit ones. */
@@ -28,7 +28,7 @@ export interface EntryPlacementState {
 /**
  * Place one entry and return the sequence number it occupies.
  *
- * `seq` is the caller's explicit placement — a child index, or a verbatim
+ * `seq` is the caller's explicit placement - a child index, or a verbatim
  * position replayed from a capture or selected from a source. `undefined` means
  * "append": take the next free slot. Either way the high-water mark advances, so
  * a later sibling in the same container can never collide with a slot that was

@@ -1,5 +1,5 @@
 /**
- * WebGL2 renderer-matrix browser tests — NineSlice retained instruction-set
+ * WebGL2 renderer-matrix browser tests - NineSlice retained instruction-set
  * replay.
  *
  * The nine-slice counterpart of `webgl2-retained-instruction-replay.test.ts`:
@@ -36,7 +36,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader mocks (Sprite/Mesh/Text — the nine-slice renderer uses inline GLSL).
+// Shader mocks (Sprite/Mesh/Text - the nine-slice renderer uses inline GLSL).
 // The sprite vertex mock keeps u_group so the OUTSIDE sprite stays correct
 // under camera-pan / group-move cells; the transform texel 2 carries its tint.
 // ---------------------------------------------------------------------------
@@ -113,12 +113,12 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 
 /**
  * Standard cell scene: one live sprite OUTSIDE (and before) the retained
- * group so the group's shared transform rows never start at row 0 — the
+ * group so the group's shared transform rows never start at row 0 - the
  * group-local node-index rebase is load-bearing in every pixel assertion,
  * and the replay path interleaves with a live batch every frame.
  *
  * The group holds two nine-slice nodes with DISTINCT textures, so each records
- * its own single-texture batch (nine-slice binds one base texture per flush) —
+ * its own single-texture batch (nine-slice binds one base texture per flush) -
  * exercising per-batch byte offsets across more than one recorded batch. Every
  * nine-slice node fills a 16x16 solid rect (slices/border 4 over a 16x16
  * source), 9 quad-instances sharing one transform row.
@@ -175,7 +175,7 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
     const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
 
     try {
-      // F1 — full collect + fragment capture (slow tier).
+      // F1 - full collect + fragment capture (slow tier).
       render(backend, scene.root);
 
       const collectFrame = readCanvas(backend);
@@ -183,7 +183,7 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
       expectBaseScenePixels(backend);
       expect(replaySpy).not.toHaveBeenCalled();
 
-      // F2 — entry replay + instruction recording (the recording source).
+      // F2 - entry replay + instruction recording (the recording source).
       render(backend, scene.root);
 
       const recordFrame = readCanvas(backend);
@@ -191,7 +191,7 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
       expect(beginSpy).toHaveBeenCalledTimes(1);
       expect(replaySpy).not.toHaveBeenCalled();
 
-      // F3/F4 — instruction splice: recorded nine-slice batches replay from
+      // F3/F4 - instruction splice: recorded nine-slice batches replay from
       // group-owned resources. Same bytes, same rows (group-local rebase),
       // same live uniforms -> byte-identical.
       render(backend, scene.root);
@@ -256,7 +256,7 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
       const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
 
       // Move the WHOLE group: content revisions untouched (a group move is
-      // decoupled by design), so the set keeps replaying — via live u_group.
+      // decoupled by design), so the set keeps replaying - via live u_group.
       scene.group.setPosition(24, 8);
       render(backend, scene.root);
 
@@ -286,7 +286,7 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
 
       // A pure transform move on a direct child stays content-clean, so the
       // group keeps its recording and patches just this child's shared
-      // transform row in place — all 9 quad-instances that reference it move
+      // transform row in place - all 9 quad-instances that reference it move
       // together. The pixel readback is the stale-render guard on a real GPU.
       scene.redNine.setPosition(32, 0); // world (40,24)-(56,40)
       render(backend, scene.root);
@@ -294,7 +294,7 @@ describe('WebGL2 renderer matrix: NineSlice retained instruction-set replay cell
       expect(beginSpy).not.toHaveBeenCalled(); // NO re-record: the recording is patched in place
       // Two distinct-texture nine-slice nodes record as TWO single-texture
       // batches (nine-slice binds one base texture per flush), so each replayed
-      // frame splices both — proving per-batch byte offsets across >1 batch.
+      // frame splices both - proving per-batch byte offsets across >1 batch.
       expect(replaySpy).toHaveBeenCalledTimes(2); // one frame, two batches
       expectPixelNear(readWebGl2Pixel(backend, 48, 28), [255, 0, 0, 255]); // patched to the NEW spot
       expectPixelNear(readWebGl2Pixel(backend, 12, 28), [0, 0, 0, 255]); // old spot cleared

@@ -1,7 +1,7 @@
 /**
  * Deterministic verification of the coordinated release package matrix.
  *
- * Asserts — without publishing anything — that the release automation actually
+ * Asserts - without publishing anything - that the release automation actually
  * handles every official package, in the right order, with coherent versions,
  * via the two-stage build-once pipeline:
  *
@@ -82,7 +82,7 @@ for (const ext of extensions) {
 // 2b. Provenance prerequisite: `npm publish --provenance` (the release publish
 // flag) refuses to build the SLSA attestation without a `repository` field.
 // A missing one aborts the coordinated publish MID-RUN, after earlier packages
-// are already on the registry — exactly the v0.13.0 partial-publish incident.
+// are already on the registry - exactly the v0.13.0 partial-publish incident.
 for (const pkg of official) {
   if (pkg.repository == null) {
     problems.push(`${pkg.name}: missing "repository" field (required by \`npm publish --provenance\`).`);
@@ -163,7 +163,7 @@ if (PUBLISH_ORDER.length === expectedOrder.length && PUBLISH_ORDER.every((name, 
 }
 
 // 7b. What `release:prepare` actually packs (officialPackages) must cover the
-// canonical PUBLISH_ORDER exactly — a package missing here would silently never
+// canonical PUBLISH_ORDER exactly - a package missing here would silently never
 // be packed, and therefore never published.
 const packed = officialPackages(rootDir);
 const packedNames = packed.map(p => p.name);

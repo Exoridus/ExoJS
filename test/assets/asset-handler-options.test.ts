@@ -101,7 +101,7 @@ describe('AssetHandler type contracts', () => {
   it('handler without options cannot access typed option properties', () => {
     const handler: AssetHandler<ExampleAsset> = {
       async load(request) {
-        // @ts-expect-error — options is undefined, no .format property
+        // @ts-expect-error - options is undefined, no .format property
         void request.options?.format;
         return new ExampleAsset();
       },
@@ -113,7 +113,7 @@ describe('AssetHandler type contracts', () => {
   it('handler with options rejects unknown option properties', () => {
     const handler: AssetHandler<ExampleAsset, ExampleLoadOptions> = {
       async load(request) {
-        // @ts-expect-error — unknownField is not part of ExampleLoadOptions
+        // @ts-expect-error - unknownField is not part of ExampleLoadOptions
         void request.options?.unknownField;
         return new ExampleAsset();
       },
@@ -151,7 +151,7 @@ describe('AssetBinding type contracts', () => {
     const _binding = {
       ctor: ExampleAsset,
 
-      // @ts-expect-error — OtherAsset is not assignable to ExampleAsset. The
+      // @ts-expect-error - OtherAsset is not assignable to ExampleAsset. The
       // mismatch surfaces on `create` (the whole factory is the wrong shape),
       // not on the inner `load`, so the directive has to sit here.
       create() {
@@ -168,7 +168,7 @@ describe('AssetBinding type contracts', () => {
 
   it('binding rejects mismatched constructor (type field produces wrong result type)', () => {
     const _binding = {
-      // @ts-expect-error — OtherAsset constructor produces OtherAsset instances, not ExampleAsset
+      // @ts-expect-error - OtherAsset constructor produces OtherAsset instances, not ExampleAsset
       ctor: OtherAsset,
 
       create() {
@@ -207,7 +207,7 @@ describe('AssetBinding type contracts', () => {
       create() {
         return {
           async load(request: AssetLoadRequest) {
-            // @ts-expect-error — options is undefined, no .format property
+            // @ts-expect-error - options is undefined, no .format property
             void request.options?.format;
             return new ExampleAsset();
           },
@@ -256,7 +256,7 @@ describe('declarative bindAsset identity propagation', () => {
     let loadCount = 0;
     materializeAssetBindings(loader, [buildExampleBinding(() => loadCount++)]);
 
-    // Both assets have identical source + options — same identity → single load
+    // Both assets have identical source + options - same identity → single load
     const a1 = new Asset({ type: 'example', source: 'file.dat', format: 'example', strict: true });
     const a2 = new Asset({ type: 'example', source: 'file.dat', format: 'example', strict: true });
 
@@ -300,9 +300,9 @@ describe('declarative bindAsset identity propagation', () => {
     let loadCount = 0;
     materializeAssetBindings(loader, [buildExampleBinding(() => loadCount++)]);
 
-    // load with no options — handler normalizes to { format: 'example', strict: true }
+    // load with no options - handler normalizes to { format: 'example', strict: true }
     const noOpts = new Asset({ type: 'example', source: 'map.dat' });
-    // load with explicit defaults — same normalized result
+    // load with explicit defaults - same normalized result
     const explicitDefaults = new Asset({ type: 'example', source: 'map.dat', format: 'example', strict: true });
 
     await Promise.all([loader.load(noOpts), loader.load(explicitDefaults)]);
@@ -321,7 +321,7 @@ describe('declarative bindAsset identity propagation', () => {
       create() {
         return {
           getIdentityDiscriminator(request) {
-            // Intentionally excludes `trace` — it is control-only
+            // Intentionally excludes `trace` - it is control-only
             const o = resolveExampleOptions(request.options);
             return [request.source, o.format, String(o.strict)].join('|');
           },
@@ -372,7 +372,7 @@ describe('declarative bindAsset identity propagation', () => {
 
     await Promise.all([loader.load(a1), loader.load(a2)]);
 
-    // Source-only deduplication — both have same source, so single load
+    // Source-only deduplication - both have same source, so single load
     expect(loadCount).toBe(1);
     loader.destroy();
   });
@@ -459,7 +459,7 @@ describe('declarative bindAsset identity propagation', () => {
 // ---------------------------------------------------------------------------
 
 // Verify that external packages can augment AssetDefinitions without touching core.
-// This is a compile-time-only test — no runtime assertions needed.
+// This is a compile-time-only test - no runtime assertions needed.
 declare module '#assets/AssetDefinitions' {
   interface AssetDefinitions {
     example: {

@@ -11,8 +11,8 @@ const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 describe('officialPackages — the set release:prepare actually packs', () => {
   it('covers the canonical PUBLISH_ORDER exactly, in order', () => {
-    // A package missing here is silently never packed — and therefore never
-    // published — while verify:lockstep and the publish unit tests still pass.
+    // A package missing here is silently never packed - and therefore never
+    // published - while verify:lockstep and the publish unit tests still pass.
     expect(officialPackages(rootDir).map(p => p.name)).toEqual([...PUBLISH_ORDER]);
   });
 

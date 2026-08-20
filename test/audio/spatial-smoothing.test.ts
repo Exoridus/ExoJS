@@ -85,7 +85,7 @@ describe('SmoothedAudioParam', () => {
     p.setTargetAtTime.mockClear();
     p.cancelScheduledValues.mockClear();
 
-    // Move by less than POSITION_EPSILON — treated as stationary.
+    // Move by less than POSITION_EPSILON - treated as stationary.
     s.write(p as unknown as AudioParam, 100 + POSITION_EPSILON / 2, 0.016, settings);
 
     expect(p.setValueAtTime).not.toHaveBeenCalled();
@@ -160,7 +160,7 @@ describe('deriveVelocity', () => {
     deriveVelocity(sample, 100, 0, 1);
     expect(sample.x).toBe(100);
 
-    // Same position as the last sample, but a distinctly LATER timestamp —
+    // Same position as the last sample, but a distinctly LATER timestamp -
     // the source has genuinely stopped moving, so the derived velocity must
     // now zero out rather than keep coasting on the last non-zero value.
     deriveVelocity(sample, 100, 0, 2);

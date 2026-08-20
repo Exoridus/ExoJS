@@ -31,7 +31,7 @@ function buildSourceUrl(versionId: string, filePath: string): string {
     if (isCurrentVersion(versionId)) {
         return buildExampleUrl(filePath, { 'no-cache': Date.now() });
     }
-    // Remote release sources are immutable — let the browser/CDN cache normally.
+    // Remote release sources are immutable - let the browser/CDN cache normally.
     return buildGithubRawExampleUrl(versionId, filePath);
 }
 

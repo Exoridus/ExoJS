@@ -37,11 +37,11 @@ type LoadedMap = Awaited<ReturnType<typeof loadIt>>;
 type _ConfigResolved = Expect<Equal<LoadedMap['config'], Config>>;
 type _ShipResolved = Expect<Equal<LoadedMap['ship'], Texture>>;
 
-// direct get(asset) honors the same brand — value → AssetRef<T>, resource → T
+// direct get(asset) honors the same brand - value → AssetRef<T>, resource → T
 // (regression guard: the brand-blind `T extends object` overload typed object
 // value kinds as the resource while runtime returned an AssetRef). Both come
 // back as MATERIALIZED leaves: `get(Asset.type(...))` mints them via `createLeaf`,
-// so the `_assetMeta` stamp — and with it single-leaf re-loadability — survives.
+// so the `_assetMeta` stamp - and with it single-leaf re-loadability - survives.
 function getConfig() {
   return loader.get(Asset.type<Config>('json', 'config.json'));
 }

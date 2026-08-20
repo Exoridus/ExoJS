@@ -20,8 +20,8 @@ import particleSimulateWgsl from './wgsl/particle-simulate.wgsl';
  *   textureIndex as `u32`, plus the instance output buffer. Sits at the
  *   default WebGPU `maxStorageBuffersPerShaderStage = 8` limit. Built on
  *   the shared {@link WebGpuStorageBuffer} SDK primitive.
- * - **Three uniform buffers** (sim state `dt`/`liveCount`, module configs —
- *   concatenated per-module structs with WGSL std140-ish alignment — and
+ * - **Three uniform buffers** (sim state `dt`/`liveCount`, module configs -
+ *   concatenated per-module structs with WGSL std140-ish alignment - and
  *   frame UVs, `array<vec4<f32>, N>` where N is the system's frame count or
  *   1 when no atlas is declared, each vec4 `(uvMinX, uvMinY, uvMaxX, uvMaxY)`
  *   already flipY-adjusted), built on the shared {@link WebGpuUniformBuffer}
@@ -34,13 +34,13 @@ import particleSimulateWgsl from './wgsl/particle-simulate.wgsl';
  *   holds uniforms + module lookup textures/samplers, group 1 holds the
  *   8 SoA storage buffers). The bind-group *layouts* are derived straight
  *   from the shader's own `@group`/`@binding` declarations via
- *   {@link reflectComputeBindings} — no hand-written binding list kept in
+ *   {@link reflectComputeBindings} - no hand-written binding list kept in
  *   sync with the WGSL text by hand.
  *
  * The compute shader's pack-instances step reads `textureIndex[i]`, looks
  * up the matching frame UV, and writes a 40-byte interleaved record into
  * the instance output buffer (`STORAGE | VERTEX`). The renderer binds that
- * buffer directly as instanced vertex source — no readback.
+ * buffer directly as instanced vertex source - no readback.
  */
 
 const workgroupSize = 64;
@@ -586,7 +586,7 @@ export class ParticleGpuState {
     const flipY = texture.flipY;
 
     if (frames.length === 0) {
-      // Single-frame fallback — full texture.
+      // Single-frame fallback - full texture.
       view[0] = 0;
       view[1] = flipY ? 1 : 0;
       view[2] = 1;
@@ -613,7 +613,7 @@ export class ParticleGpuState {
   /**
    * Push the listed CPU SoA slots to the GPU. Called by `ParticleSystem`
    * with newly-spawned slots and just-expired slots (lifetime sentinel).
-   * Slots not in the dirty set are left alone — GPU keeps the integrated
+   * Slots not in the dirty set are left alone - GPU keeps the integrated
    * state from previous compute dispatches.
    *
    * Each dirty slot triggers 7 small writes (one per SoA channel, via
@@ -694,7 +694,7 @@ export class ParticleGpuState {
 
   /**
    * WGSL variable names of module lookup textures/samplers whose format isn't natively
-   * filterable (`r32float` Curve LUTs) — fed to {@link reflectComputeBindings} so it declares
+   * filterable (`r32float` Curve LUTs) - fed to {@link reflectComputeBindings} so it declares
    * `'unfilterable-float'`/`'non-filtering'` for those specific bindings instead of the default
    * `'float'`/`'filtering'`, an ambiguity the WGSL text itself can't resolve (see that
    * function's doc comment).

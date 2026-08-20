@@ -3,7 +3,7 @@
  *
  * The Node allocation gate (`test/perf/rendering/allocation.ts`) drives V8's
  * allocation sampling profiler through `node:inspector`. That session belongs
- * to the Node process, and the WebGPU backend does not run there at all — it
+ * to the Node process, and the WebGPU backend does not run there at all - it
  * needs a real browser with a real adapter. The same profiler is reachable in
  * Chromium over CDP (`HeapProfiler.startSampling` / `stopSampling`), and the
  * playwright browser provider hands every vitest browser command a live

@@ -5,7 +5,7 @@
  * real `PointerEvent`/`contextmenu` dispatches through a real `<canvas>` via
  * `BrowserPlatform`, into a real `InputManager`, and (for the
  * `InteractionManager` cases) a real `InteractionManager` attached to a real
- * `Scene` root — not manual `app.input.onPointerX.dispatch(...)` calls in
+ * `Scene` root - not manual `app.input.onPointerX.dispatch(...)` calls in
  * isolation. Covers the four confirmed defects this file's tests were
  * written against:
  *
@@ -14,7 +14,7 @@
  *    cross-pointer arrival order (`P1 Down -> P2 Down -> P1 Up` became
  *    `P1 Down, P1 Up, P2 Down`).
  *  - Bug B: a context-menu request was a single overwritable slot, always
- *    flushed after every pointer phase in a fixed type-order — a second
+ *    flushed after every pointer phase in a fixed type-order - a second
  *    request in the same frame silently clobbered the first, and neither
  *    ever interleaved with a pointer phase in true arrival order.
  *  - Bug C: `InteractionManager` re-grouped `InputManager`'s (now correctly
@@ -145,7 +145,7 @@ const destroyHarness = (h: Harness): void => {
 };
 
 /**
- * One full app-update tick: input first, then interaction — matching
+ * One full app-update tick: input first, then interaction - matching
  * `Application.update`'s real order, including the deferred pointer
  * retirement finalized only after interaction dispatch has fully drained
  * (even if a node handler throws).
@@ -177,7 +177,7 @@ const fireContextMenu = (canvas: HTMLCanvasElement, clientX: number, clientY: nu
 };
 
 // ---------------------------------------------------------------------------
-// Bug A — cross-pointer chronological order at InputManager
+// Bug A - cross-pointer chronological order at InputManager
 // ---------------------------------------------------------------------------
 
 describe('InputManager — cross-pointer chronological order (Bug A)', () => {
@@ -193,7 +193,7 @@ describe('InputManager — cross-pointer chronological order (Bug A)', () => {
     input.preUpdate(Time.zero);
     calls.length = 0;
 
-    // True arrival order: P1 presses, THEN P2 presses, THEN P1 releases —
+    // True arrival order: P1 presses, THEN P2 presses, THEN P1 releases -
     // all inside the same frame, before update() ever runs.
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fire(canvas, 'pointerdown', { pointerId: 2, pointerType: 'mouse', clientX: 20, clientY: 20, isPrimary: false });
@@ -201,7 +201,7 @@ describe('InputManager — cross-pointer chronological order (Bug A)', () => {
     input.preUpdate(Time.zero);
 
     // The old per-pointer-grouped dispatch would have produced
-    // ['down:1', 'up:1', 'down:2'] — this pinpoints the exact defect.
+    // ['down:1', 'up:1', 'down:2'] - this pinpoints the exact defect.
     expect(calls).toEqual(['down:1', 'down:2', 'up:1']);
 
     input.destroy();
@@ -253,7 +253,7 @@ describe('InputManager — cross-pointer chronological order (Bug A)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Bug B — context-menu requests: true interleaving + queue (not a slot)
+// Bug B - context-menu requests: true interleaving + queue (not a slot)
 // ---------------------------------------------------------------------------
 
 describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
@@ -291,7 +291,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
     fireContextMenu(canvas, 20, 20);
     input.preUpdate(Time.zero);
 
-    // The old single-slot design would only ever see the SECOND request —
+    // The old single-slot design would only ever see the SECOND request -
     // the first is silently lost with no signal ever firing for it.
     expect(seen).toEqual([
       { x: 10, y: 10 },
@@ -336,7 +336,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
     });
 
     // The terminal Leave arrives FIRST, then the context-menu request arrives
-    // AFTER it in the same flush — the ordering under test.
+    // AFTER it in the same flush - the ordering under test.
     fire(canvas, 'pointerleave', { pointerId: 1, pointerType: 'mouse', clientX: 10, clientY: 10, isPrimary: true });
     fireContextMenu(canvas, 12, 12);
     input.preUpdate(Time.zero);
@@ -344,7 +344,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
     expect(receivedPointer).toBe(pointer);
     expect(wasAlreadyDestroyedWhenMenuFired).toBe(false);
     // InputManager's OWN journal drain only flags the pointer as PENDING
-    // retirement now — InteractionManager still owns queued node-level
+    // retirement now - InteractionManager still owns queued node-level
     // events (e.g. app-level onContextMenu subscribers aside, a real node's
     // onContextMenu handler) that reference this same Pointer, and those only
     // dispatch in ITS pass, which runs strictly after this input.preUpdate().
@@ -362,7 +362,7 @@ describe('InputManager — context-menu ordering and queuing (Bug B)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Bug C — InteractionManager preserves the SAME global order internally
+// Bug C - InteractionManager preserves the SAME global order internally
 // ---------------------------------------------------------------------------
 
 describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C)', () => {
@@ -394,7 +394,7 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
     tick(h);
 
     // The old per-pointer-bucketed `_pending: Map<number, PointerQueue>`
-    // would have produced ['down:A', 'up:A', 'down:B'] — InteractionManager
+    // would have produced ['down:A', 'up:A', 'down:B'] - InteractionManager
     // re-losing the same ordering InputManager had just fixed.
     expect(calls).toEqual(['down:A', 'down:B', 'up:A']);
 
@@ -493,9 +493,9 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
     const pointer = pointers.get(1)!;
     const destroySpy = vi.spyOn(pointer, 'destroy');
 
-    // The node's own onContextMenu handler — dispatched during THIS tick's
+    // The node's own onContextMenu handler - dispatched during THIS tick's
     // interaction pass for the request queued below, which resolves against
-    // a fresh hit test rather than the `_lastHit` cache — synchronously
+    // a fresh hit test rather than the `_lastHit` cache - synchronously
     // re-enters the SAME pointerId (a rapid leave/re-enter flicker) before
     // the retirement boundary closes.
     sprite.onContextMenu.add(() => {
@@ -506,7 +506,7 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
     fireContextMenu(canvas, 25, 25);
     tick(h);
 
-    // Reentry revived the SAME Pointer object (no longer terminal) — the
+    // Reentry revived the SAME Pointer object (no longer terminal) - the
     // finalize pass must not destroy it just because it was pending at the
     // start of the flush.
     expect(destroySpy).not.toHaveBeenCalled();
@@ -562,7 +562,7 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
 });
 
 // ---------------------------------------------------------------------------
-// Bug D — a swipe must not leave a stale press-target for the NEXT cycle
+// Bug D - a swipe must not leave a stale press-target for the NEXT cycle
 // ---------------------------------------------------------------------------
 
 describe('InteractionManager — swipe does not corrupt the next unrelated press cycle (Bug D)', () => {
@@ -571,7 +571,7 @@ describe('InteractionManager — swipe does not corrupt the next unrelated press
     const { canvas, scene } = h;
     const sprite = new TestSprite().setBounds(0, 0, 50, 50);
 
-    // NOT draggable — this must exercise InputManager's own swipe/tap
+    // NOT draggable - this must exercise InputManager's own swipe/tap
     // classification (pointerDistanceThreshold), not drag-candidate capture.
     sprite.interactive = true;
     scene.addChild(sprite);
@@ -583,7 +583,7 @@ describe('InteractionManager — swipe does not corrupt the next unrelated press
     fire(canvas, 'pointerover', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
     tick(h);
 
-    // Cycle 1: press A, release far away (well past the 10px threshold) —
+    // Cycle 1: press A, release far away (well past the 10px threshold) -
     // a swipe, not a tap. `onPointerTap` never fires for this cycle at all.
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
     fire(canvas, 'pointerup', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 300, isPrimary: true });
@@ -591,7 +591,7 @@ describe('InteractionManager — swipe does not corrupt the next unrelated press
 
     expect(tapped).not.toHaveBeenCalled();
 
-    // Cycle 2: an entirely unrelated press in EMPTY space (no hit — the old
+    // Cycle 2: an entirely unrelated press in EMPTY space (no hit - the old
     // code's Down handler only ever recorded a press-target when `hit !==
     // null`, so this cycle's OWN press-target stays unset/empty).
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 500, clientY: 500, isPrimary: true });
@@ -604,7 +604,7 @@ describe('InteractionManager — swipe does not corrupt the next unrelated press
     expect(tapped).not.toHaveBeenCalled();
 
     // Control: a genuine, correlated press+release cycle on A must still tap
-    // — proving the fix closes the STALE cycle specifically, not tap
+    // - proving the fix closes the STALE cycle specifically, not tap
     // detection in general.
     fire(canvas, 'pointerdown', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });
     fire(canvas, 'pointerup', { pointerId: 1, pointerType: 'mouse', clientX: 25, clientY: 25, isPrimary: true });

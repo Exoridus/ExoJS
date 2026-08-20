@@ -11,7 +11,7 @@ export interface SampledChunkSourceOptions {
   /**
    * Sample a scalar value at a tile coordinate. Called once per tile within
    * each requested chunk. Must be a pure, deterministic function of
-   * `(tx, ty)` — {@link import('./ChunkStreamer').ChunkStreamer} regenerates
+   * `(tx, ty)` - {@link import('./ChunkStreamer').ChunkStreamer} regenerates
    * a chunk from scratch via this source whenever it's revisited after
    * eviction, so a non-deterministic sampler would make previously-visited
    * terrain silently change underneath the player.
@@ -28,17 +28,17 @@ export interface SampledChunkSourceOptions {
 
 /**
  * Build a {@link import('./ChunkStreamer').ChunkStreamer}-ready
- * {@link ChunkSource} from a caller-supplied sampling function — the
+ * {@link ChunkSource} from a caller-supplied sampling function - the
  * generic mechanism behind procedurally generated tile content (noise,
  * a heightmap, or any other per-tile-coordinate scalar function). This
  * module intentionally has no opinion on the sampling algorithm itself
  * ({@link SampledChunkSourceOptions.sample}/`mapValueToTile` are both
- * required, not defaulted) — pick or write whatever generation function
+ * required, not defaulted) - pick or write whatever generation function
  * fits your game.
  *
  * `layer` supplies the target chunk grid ({@link TileLayer.chunkWidth}/
  * `chunkHeight`) and the tileset list tiles are packed against
- * ({@link TileLayer.tilesets}) — the same `TileLayer` you'll construct the
+ * ({@link TileLayer.tilesets}) - the same `TileLayer` you'll construct the
  * `ChunkStreamer` with.
  * @advanced
  */

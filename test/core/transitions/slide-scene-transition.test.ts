@@ -4,10 +4,10 @@ import { Time } from '#core/Time';
 import { SlideSceneTransition } from '#core/transitions/SlideSceneTransition';
 import type { Sprite } from '#rendering/sprite/Sprite';
 
-// Exposes the protected authoring hooks through public wrappers — same
+// Exposes the protected authoring hooks through public wrappers - same
 // pattern as FadeSceneTransition's test suite (Task 1). Scratch state is
 // created once per instance and reused across callEnter()/callExit() calls
-// on that same instance — matching how a real session drives one phase's
+// on that same instance - matching how a real session drives one phase's
 // state across its own frames.
 class TestableSlideSceneTransition extends SlideSceneTransition {
   private readonly _testState = this._createPhaseStateForSession();
@@ -26,7 +26,7 @@ class TestableSlideSceneTransition extends SlideSceneTransition {
 const navContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };
 
 // Minimal SceneTransitionEnvironment for driving a real session through
-// SlideSceneTransition.beginSession() — mirrors phased-scene-transition.test.ts's
+// SlideSceneTransition.beginSession() - mirrors phased-scene-transition.test.ts's
 // own TestEnvironment fixture (a fake that settles commit() synchronously).
 class TestEnvironment implements SceneTransitionEnvironment {
   public readonly context = navContext;
@@ -49,7 +49,7 @@ class TestEnvironment implements SceneTransitionEnvironment {
 
 // The real SceneTransitionPhaseContext['rendering'] is a RenderingContext.
 // SlideSceneTransition draws a Sprite via rendering.render(sprite, { view }),
-// reading the screen bounds from rendering.screenView.getBounds() — so the
+// reading the screen bounds from rendering.screenView.getBounds() - so the
 // stub needs both. Assertions inspect the captured Sprite node's own
 // properties (x/y/texture/tint.a), not a plain call-argument object, since
 // `render()` takes a RenderNode rather than a `{x, y, alpha}` bag.
@@ -153,7 +153,7 @@ describe('SlideSceneTransition', () => {
       session.update(new Time(1));
       session.render(rendering, { outgoing: null, current: currentTexture, committed: false });
 
-      // Exactly the phase's own slide draw — no extra identity-composite
+      // Exactly the phase's own slide draw - no extra identity-composite
       // call ahead of it, since push's exit already declares `texture`
       // itself (ownRequirements.currentFrame === 'texture').
       expect(render).toHaveBeenCalledTimes(1);
@@ -186,14 +186,14 @@ describe('SlideSceneTransition', () => {
       const rendering = stubRendering(render);
       const currentTexture = { current: true } as never;
 
-      // Drive past exit (100ms) — requests commit — then one more update()
+      // Drive past exit (100ms) - requests commit - then one more update()
       // to observe `committed` and switch into the enter phase.
       session.update(new Time(100));
       session.update(new Time(1));
 
       session.render(rendering, { outgoing: null, current: currentTexture, committed: true });
 
-      // reveal mode's enter() is an intentional no-op — without the
+      // reveal mode's enter() is an intentional no-op - without the
       // identity-composite fix, render() was never called here and the
       // screen showed only clear color for the whole enter phase.
       expect(render).toHaveBeenCalledTimes(1);
@@ -235,7 +235,7 @@ describe('SlideSceneTransition', () => {
       session.render(rendering, { outgoing: null, current: currentTexture, committed: false });
 
       // cover mode's exit() is an intentional no-op (the outgoing scene
-      // stays static) — without the identity-composite fix, render() was
+      // stays static) - without the identity-composite fix, render() was
       // never called here and the screen showed only clear color for the
       // whole exit phase.
       expect(render).toHaveBeenCalledTimes(1);

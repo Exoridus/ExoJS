@@ -35,7 +35,7 @@ const tempPoint = new ObservableVector(null);
  * a rectangle offers, with none of its writers.
  *
  * Returned by APIs that hand out a LIVE internal rectangle for zero allocation
- * cost — {@link SceneNode.getLocalBounds} being the canonical one. Those
+ * cost - {@link SceneNode.getLocalBounds} being the canonical one. Those
  * rectangles are read on hot per-frame paths, so cloning them defensively would
  * add a per-frame allocation; the view costs nothing at runtime and removes the
  * write at the type level instead. Owners keep a real {@link Rectangle} and
@@ -75,13 +75,13 @@ export interface ReadonlyRectangle extends Collidable {
  * `Rectangle.temp` is a shared scratch instance. Edge normals are lazily
  * computed and cached; they are invalidated when position or size mutates.
  *
- * Position and size are reactive components, so EVERY mutation — the accessors
+ * Position and size are reactive components, so EVERY mutation - the accessors
  * here, `set`/`copy`, and a write one level down such as `rect.size.width = 5`
- * — funnels through a single internal notification. Pass `onChange` to be told
+ * - funnels through a single internal notification. Pass `onChange` to be told
  * about all of them: an owner that hands out its live rectangle uses it to run
- * whatever invalidation a direct write implies — a camera's viewport rectangle
+ * whatever invalidation a direct write implies - a camera's viewport rectangle
  * bumps the camera's update counter this way. {@link clone} deliberately does
- * not carry the callback over — a copy is a value, not a second owner.
+ * not carry the callback over - a copy is a value, not a second owner.
  *
  * See {@link ReadonlyRectangle} for the read-only view engine APIs hand out
  * when they return a live internal rectangle.

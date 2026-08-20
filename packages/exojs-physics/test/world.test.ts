@@ -190,7 +190,7 @@ describe('PhysicsWorld lifecycle and mass model', () => {
     const world = new PhysicsWorld();
     const body = new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new BoxShape(10, 10) }] });
 
-    // Never passed to world.add() — destroyBody must still find and tear it down
+    // Never passed to world.add() - destroyBody must still find and tear it down
     // (the "created and destroyed within the same dispatch" case documented on
     // PhysicsWorld._removeBody).
     world.destroyBody(body);
@@ -245,7 +245,7 @@ describe('PhysicsWorld joints and backend accessors', () => {
   it('steps a jointed pair of dynamic bodies, coupling them into one sleep island', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
     // `bodyB` is added first (the lower island index) but passed as the joint's
-    // *second* body — deliberately reversed from index order, so the island
+    // *second* body - deliberately reversed from index order, so the island
     // union-find takes its `rootB < rootA` branch, not just `rootA < rootB`.
     const dynB = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 20, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }));
     const dynA = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }));
@@ -264,7 +264,7 @@ describe('PhysicsWorld joints and backend accessors', () => {
     // The two circles overlap (distance 8 < the sum of their radii, 10), so the
     // same pair is unioned twice in one pass: once via the solid contact (which
     // merges them first), once via the joint. The second call finds both
-    // already at the same union-find root — neither `_union` branch fires.
+    // already at the same union-find root - neither `_union` branch fires.
     const dynB = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 8, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }));
     const dynA = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new CircleShape(5), density: 1 }] }));
     const joint = world.addJoint(new DistanceJoint({ bodyA: dynA, bodyB: dynB, length: 8 }));
@@ -283,7 +283,7 @@ describe('PhysicsWorld joints and backend accessors', () => {
   it('sorts persistent solid contacts by (a.id, b.id), including ties on a.id, and removeCollider drops only the matching record', () => {
     const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
     // The floor is added first (lowest id) and both boxes rest on it without
-    // touching each other — two solid contacts share the same `a` (the floor),
+    // touching each other - two solid contacts share the same `a` (the floor),
     // so the sort comparator must fall through to comparing `b.id`.
     colliderAt(world, new BoxShape(400, 20), { x: 0, y: 100 });
     const boxLeft = world.add(new PhysicsBody({ type: 'dynamic', position: { x: -50, y: 100 - 10 - 5 }, colliders: [{ shape: new BoxShape(16, 16) }] }));

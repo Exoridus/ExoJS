@@ -5,7 +5,7 @@ import { CrossFadeSceneTransition } from '#core/transitions/CrossFadeSceneTransi
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { Sprite } from '#rendering/sprite/Sprite';
 
-// beginSession() is public (wraps the protected createSession()) — the real
+// beginSession() is public (wraps the protected createSession()) - the real
 // entry point any consumer (the Director) uses; no protected-access shim needed here.
 const navContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };
 
@@ -26,7 +26,7 @@ const makeEnvironment = (): SceneTransitionEnvironment & { _committed: boolean }
 };
 
 // CrossFadeSceneTransition draws Sprites via context.render(sprite, { view })
-// — a full-frame crossfade needs no offset math, so unlike SlideSceneTransition
+// - a full-frame crossfade needs no offset math, so unlike SlideSceneTransition
 // the stub's screenView is never actually read; an empty object satisfies the
 // type. Assertions inspect the captured Sprite node's own properties
 // (texture/x/y/tint.a), since render() takes a RenderNode, not a plain

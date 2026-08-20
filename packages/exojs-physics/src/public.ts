@@ -1,5 +1,5 @@
 // Side-effect-free public API for @codexo/exojs-physics.
-// Importing this entry performs no registration — physics is a peer-dependency
+// Importing this entry performs no registration - physics is a peer-dependency
 // library, constructed directly (`new PhysicsWorld(...)`), not an Application
 // extension. The tree-shakeable debug overlay lives at `@codexo/exojs-physics/debug`.
 

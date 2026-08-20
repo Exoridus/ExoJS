@@ -226,7 +226,7 @@ describe('WebGPU stencil composition', () => {
 
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
-      // Whole canvas is green — no stale stencil clipped any of it.
+      // Whole canvas is green - no stale stencil clipped any of it.
       expectPixelNear(readPixel(12, 12), [0, 255, 0, 255]);
       expectPixelNear(readPixel(52, 52), [0, 255, 0, 255]);
 

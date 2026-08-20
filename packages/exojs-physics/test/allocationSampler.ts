@@ -3,11 +3,11 @@
  *
  * Mirrors the render-perf harness's method (root `test/perf/rendering/
  * allocation.ts`): a `heapUsed` delta does NOT measure short-lived per-step
- * garbage — V8 reclaims it concurrently during the window, so it never shows up
+ * garbage - V8 reclaims it concurrently during the window, so it never shows up
  * in a heap-size diff (a `heapUsed` delta reports retained growth plus noise,
  * not the throwaway rate). Instead this uses V8's allocation **sampling
  * profiler** via `node:inspector`, started with the `includeObjectsCollectedBy*
- * GC` flags — without them the profile reports only objects still live at stop
+ * GC` flags - without them the profile reports only objects still live at stop
  * and misses the dead-on-arrival garbage entirely (a ~500× undercount). It
  * records at allocation time, is statistical (one sample per `samplingInterval`
  * bytes) but accurate over a window of many iterations, and needs no

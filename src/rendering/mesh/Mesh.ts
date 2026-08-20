@@ -18,10 +18,10 @@ const assertImplicitIndexRange = (vertexCount: number): void => {
  *
  * Provide the geometry in exactly one of two forms:
  *
- * - **Convenience form** — a flat `vertices` array of (x, y) pairs in local
+ * - **Convenience form** - a flat `vertices` array of (x, y) pairs in local
  *   space, with optional `uvs`, per-vertex `colors`, and `indices`. This is
  *   the simplest path: `new Mesh({ vertices })`.
- * - **Geometry form** — a {@link Geometry} object whose standard attributes
+ * - **Geometry form** - a {@link Geometry} object whose standard attributes
  *   (`a_position`/`position`, `a_texcoord`/`texcoord`, `a_color`/`color`) are
  *   read into the mesh: `new Mesh({ geometry })`. The geometry must use the
  *   `triangle-list` topology.
@@ -30,7 +30,7 @@ const assertImplicitIndexRange = (vertexCount: number): void => {
  *
  * When present, `uvs` must match the vertex count (as (u, v) pairs) and
  * `colors` must supply one packed-RGBA8 u32 per vertex. `indices` are optional
- * — if absent, the vertex stream is drawn as a flat triangle list (3*N
+ * - if absent, the vertex stream is drawn as a flat triangle list (3*N
  * vertices = N triangles). A texture is optional; a textured mesh samples it
  * at the supplied UVs while an untextured mesh paints solid vertex colors only.
  *
@@ -263,7 +263,7 @@ const findAttribute = (attributes: readonly GeometryAttribute[], names: Set<stri
  * Read a {@link Geometry}'s standard mesh attributes into the flat
  * `vertices`/`uvs`/`colors` arrays the mesh renderers consume. Only the
  * `triangle-list` topology and the canonical attribute layout (`f32` position
- * and texcoord, `u8`/`u32`/`f32` color) are supported — this is the immediate
+ * and texcoord, `u8`/`u32`/`f32` color) are supported - this is the immediate
  * (non-batched) bridge; shared GPU buffers and instancing arrive later.
  *
  * Exported (not barrelled) so the pooled immediate-draw mesh can reuse the exact

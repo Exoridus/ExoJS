@@ -17,15 +17,15 @@ export interface ExoCanvasProps extends HTMLAttributes<HTMLDivElement> {
   options?: ExoApplicationOptions;
   /**
    * Called once each time the {@link Application} is (re)created. The backend
-   * (WebGL2 / WebGPU) is not yet initialized at this point — that happens when
+   * (WebGL2 / WebGPU) is not yet initialized at this point - that happens when
    * the first {@link import('./useScene').useScene} child calls `app.start()`.
    */
   onReady?: (app: Application) => void;
   /**
-   * Called for every {@link Application.onError} dispatch — async init or
+   * Called for every {@link Application.onError} dispatch - async init or
    * scene-load failures (including the ones surfaced by
    * {@link import('./useScene').useScene} and {@link import('./Scenes').Scenes}
-   * descendants) — while an Application exists.
+   * descendants) - while an Application exists.
    */
   onError?: (error: unknown) => void;
   /**

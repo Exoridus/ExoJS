@@ -146,7 +146,7 @@ describe('SceneNode dirty-walk epoch early-out (F10)', () => {
     leaf.setPosition(9, 9);
 
     // Both the boundary node AND its ancestors above it must be stamped on the
-    // transform channel — no boundary stop in the dirty walk (D7 superseded).
+    // transform channel - no boundary stop in the dirty walk (D7 superseded).
     expect(group._transformRevision).toBeGreaterThan(groupBefore);
     expect(root._transformRevision).toBeGreaterThan(rootBefore);
 

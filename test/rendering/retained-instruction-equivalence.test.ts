@@ -24,7 +24,7 @@ import { BlendModes } from '#rendering/types';
 
 // ---------------------------------------------------------------------------
 // The instruction-replay tier must reproduce the EXACT
-// batch payloads the slow path's flush sequence produces — same batch count,
+// batch payloads the slow path's flush sequence produces - same batch count,
 // same order, per batch the same blend mode, instance count, instance BYTES
 // (after rebasing node indices group-local) and the same transform rows.
 //
@@ -33,7 +33,7 @@ import { BlendModes } from '#rendering/types';
 // 6-word instance (bounds, packed tint, node index), batches split on blend
 // change, group boundaries are flush boundaries, captures stage byte copies
 // owned by the innermost bundle, and capture end rebases node indices and
-// copies the referenced transform rows — exactly the model the real
+// copies the referenced transform rows - exactly the model the real
 // backends implement (their true bytes are covered by the backend suites and
 // the browser pixel cells; THIS suite pins that the collect switch, player,
 // and optimizer feed both tiers identical data in identical order).
@@ -445,7 +445,7 @@ describe('instruction-replay equivalence: instruction replay reproduces the slow
     const { backend, log, frameRows } = createByteBackend();
     const { root, group } = buildScene();
 
-    // F1: slow baseline — full collect, normal playback.
+    // F1: slow baseline - full collect, normal playback.
     playFrame(root, backend);
 
     const slow = rebaseSegment(groupSegmentBatches(log));
@@ -601,13 +601,13 @@ describe('instruction-replay equivalence: instruction replay reproduces the slow
     // inner records first while outer thrashes, then outer records with the
     // inner batch verbatim.
     // A move on the direct child would be row-patched (outer stays clean),
-    // breaking the thrash cadence — content-dirty the outer instead.
+    // breaking the thrash cadence - content-dirty the outer instead.
     dynamic.invalidateContent();
     playFrame(root, backend); // inner records
     dynamic.invalidateContent();
     playFrame(root, backend); // inner splices, outer suppressed
 
-    // F4: outer recovery capture — a genuine slow collect for d's FINAL
+    // F4: outer recovery capture - a genuine slow collect for d's FINAL
     // content (the inner subtree splices, so d's flush is the last slow
     // baseline the scene will produce).
     log.length = 0;

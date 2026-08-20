@@ -70,7 +70,7 @@ describe('useScene', () => {
 
     view.unmount();
 
-    // Navigation always targets a registered constructor —
+    // Navigation always targets a registered constructor -
     // there is no public "clear to scene-less" call. Application.destroy()
     // (owned by ExoCanvas) is the actual teardown path for a still-active scene.
     expect(app.scenes.change).not.toHaveBeenCalled();
@@ -86,7 +86,7 @@ describe('useScene', () => {
     const { findByText } = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
 
     await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
-    // The probe never receives a scene — it stays in the loading state.
+    // The probe never receives a scene - it stays in the loading state.
     expect(await findByText('loading')).toBeTruthy();
   });
 
@@ -122,7 +122,7 @@ describe('useScene', () => {
     app.onError.add(error => errors.push(error));
 
     // StrictMode double-invokes effects in development: mount, cleanup, mount
-    // again — synchronously, within the same commit. The second mount runs
+    // again - synchronously, within the same commit. The second mount runs
     // while the first mount's app.start() is still mid-navigation.
     const { findByText } = render(
       <StrictMode>
@@ -175,7 +175,7 @@ describe('useScene', () => {
 
     const view = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
 
-    // Cleanup has run by the time the pending start() rejects — the failure
+    // Cleanup has run by the time the pending start() rejects - the failure
     // belongs to a run nothing is listening to any more.
     view.unmount();
     rejectStart(new Error('start failed after unmount'));
@@ -197,7 +197,7 @@ describe('useScene', () => {
     const view = render(provide(app, <SceneProbe sceneClass={LevelScene} />));
     expect(app.start).toHaveBeenCalledTimes(1);
 
-    // Unmount before the pending start() promise settles — the effect's
+    // Unmount before the pending start() promise settles - the effect's
     // cleanup already ran (cancelled = true) by the time it resolves below.
     view.unmount();
     resolveStart(app);

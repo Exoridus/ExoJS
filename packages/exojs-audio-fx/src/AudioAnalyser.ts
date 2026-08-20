@@ -38,7 +38,7 @@ type RequiredAnalyserOptions = Required<AudioAnalyserOptions>;
  * Lightweight visualisation analyser backed by a Web Audio AnalyserNode.
  *
  * Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is
- * a parallel branch — it does not affect the source's main routing. Tap a bus
+ * a parallel branch - it does not affect the source's main routing. Tap a bus
  * for a whole submix, or an individual {@link Voice} (its `output` node) for a
  * single playing instance.
  */
@@ -147,7 +147,7 @@ export class AudioAnalyser {
     return this._options.fftSize;
   }
 
-  /** Number of frequency bins available — half of `fftSize`. */
+  /** Number of frequency bins available - half of `fftSize`. */
   public get frequencyBinCount(): number {
     return this._options.fftSize >> 1;
   }
@@ -328,7 +328,7 @@ export class AudioAnalyser {
   /**
    * Log-scaled spectrum, byte domain (0..255). Output length = `bands`.
    * Bins are spaced so each output covers an equal fraction of the
-   * `log2(fMax / fMin)` octave range — useful when you want a
+   * `log2(fMax / fMin)` octave range - useful when you want a
    * frequency-axis visualization where each octave gets the same width.
    */
   public getSpectrumLog(into?: Uint8Array<ArrayBuffer>, options?: SpectrumMappingOptions): Uint8Array<ArrayBuffer> {
@@ -439,7 +439,7 @@ export class AudioAnalyser {
 
     const tap = this._resolveToAudioNode(source, audioContext);
     if (!tap) {
-      // AudioBus not ready yet — defer via its onceSetup
+      // AudioBus not ready yet - defer via its onceSetup
       this._deferConnectionViaBus(source);
       return;
     }
@@ -451,7 +451,7 @@ export class AudioAnalyser {
   private _resolveToAudioNode(source: AudioAnalyserSource, audioContext: AudioContext): AudioNode | null {
     if (source === null) return null;
 
-    // MediaStream — detect by getTracks (duck-type, since AudioNode also doesn't exist in jsdom)
+    // MediaStream - detect by getTracks (duck-type, since AudioNode also doesn't exist in jsdom)
     const asStream = source as Partial<{ getTracks: unknown }>;
     if (typeof asStream.getTracks === 'function') {
       if (this._streamSource) {
@@ -463,19 +463,19 @@ export class AudioAnalyser {
       return msNode;
     }
 
-    // AudioBus — has _getOutputNode (checked first since bus nodes also have connect/disconnect)
+    // AudioBus - has _getOutputNode (checked first since bus nodes also have connect/disconnect)
     const asBus = source as Partial<{ _getOutputNode: () => AudioNode | null }>;
     if (typeof asBus._getOutputNode === 'function') {
       return asBus._getOutputNode();
     }
 
-    // Voice — tap its output node
+    // Voice - tap its output node
     const asVoice = source as Partial<{ output: AudioNode }>;
     if ('output' in asVoice && asVoice.output) {
       return asVoice.output;
     }
 
-    // Raw AudioNode — duck-type: has connect & disconnect
+    // Raw AudioNode - duck-type: has connect & disconnect
     const asNode = source as Partial<{ connect: unknown; disconnect: unknown }>;
     if (typeof asNode.connect === 'function' && typeof asNode.disconnect === 'function') {
       return source as unknown as AudioNode;
@@ -523,7 +523,7 @@ export class AudioAnalyser {
 }
 
 // ---------------------------------------------------------------------------
-// Filterbank helpers — module-private, shared between byte and float variants.
+// Filterbank helpers - module-private, shared between byte and float variants.
 // ---------------------------------------------------------------------------
 
 interface LogBandRange {

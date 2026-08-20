@@ -22,8 +22,8 @@ export const enum CaptureVerdict {
  * waste. One is tolerated, because a lone mutation between two replays is
  * exactly the one-shot case where recapturing immediately is the right answer.
  * The SECOND consecutive wasted capture is evidence of per-frame thrash, and
- * from then on dirty frames skip the snapshot entirely — a plain collect, the
- * cheapest dirty frame there is — until the owner's key stops moving, at which
+ * from then on dirty frames skip the snapshot entirely - a plain collect, the
+ * cheapest dirty frame there is - until the owner's key stops moving, at which
  * point one full collect plus capture recovers the retained tier. One frame
  * late, self-correcting, no tunables.
  *
@@ -45,7 +45,7 @@ export class CaptureThrashSuppressor {
     return this._suppressed;
   }
 
-  /** The active capture was replayed at least once — it earned its keep. */
+  /** The active capture was replayed at least once - it earned its keep. */
   public markReplayed(): void {
     this._replayedSinceCapture = true;
   }
@@ -63,7 +63,7 @@ export class CaptureThrashSuppressor {
   }
 
   /**
-   * Advance the machine for one DIRTY frame — the owner's clean-frame gate has
+   * Advance the machine for one DIRTY frame - the owner's clean-frame gate has
    * already failed. Call exactly once per such frame, before collecting.
    *
    * `keyUnchanged` is only read on the suppressed branch, yet is passed by value

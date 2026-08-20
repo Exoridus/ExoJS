@@ -1,5 +1,5 @@
 /**
- * WebGPU Sprite browser test — v0.16 renderer-matrix proof entry.
+ * WebGPU Sprite browser test - v0.16 renderer-matrix proof entry.
  *
  * The simplest possible matrix case: a single opaque {@link Sprite} over a
  * solid-color {@link Texture}, asserting pixel colour inside the sprite's
@@ -7,7 +7,7 @@
  * paired webgl2/webgpu pixel-assertion pattern for the drawable-matrix test
  * suite.
  *
- * All WebGPU renderers use inline WGSL — no shader file mocks are needed.
+ * All WebGPU renderers use inline WGSL - no shader file mocks are needed.
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe); `renderScene` only skips when the software adapter
  * drops the device mid-test.

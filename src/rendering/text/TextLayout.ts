@@ -31,7 +31,7 @@ export function emptyTextLayout(): TextLayoutResult {
  * shaping, and ligature shaping are out of scope; Unicode/diacritics are
  * delegated to the browser's canvas engine.
  *
- * Returns the placements alongside both extents the callers need — see
+ * Returns the placements alongside both extents the callers need - see
  * {@link TextLayoutResult} for why the advance and the ink are different
  * numbers. Text that places no glyph yields zeroes for both.
  */
@@ -124,7 +124,7 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
   // Pass 2: apply alignment offset and build final GlyphPlacement array.
   //
   // The ink extent accumulates here rather than in a follow-up sweep: every
-  // quad is already in hand, and the minimum is genuinely open — in SDF mode
+  // quad is already in hand, and the minimum is genuinely open - in SDF mode
   // the first glyph starts at a negative x/y because the atlas hands out
   // bearings that pull the padded tile back around the cursor.
   const result: GlyphPlacement[] = [];
@@ -274,7 +274,7 @@ const ELLIPSIS = '…';
 
 /**
  * Reverse a line by code point, so astral characters survive the round trip.
- * Combining marks and bidi runs are not reordered — see `layoutText`.
+ * Combining marks and bidi runs are not reordered - see `layoutText`.
  */
 function _reverseGraphemes(line: string): string {
   return [...line].reverse().join('');

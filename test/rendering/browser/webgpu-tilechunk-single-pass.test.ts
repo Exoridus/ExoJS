@@ -4,9 +4,9 @@
  * `WebGpuTileChunkRenderer` used to write its shared instance buffer from offset
  * 0 on every flush and end (submit) the pass at the tail of each one. Since the
  * render pass survives a renderer switch, flush k+1's write would otherwise land
- * under the draws flush k had already recorded into the still-open pass —
+ * under the draws flush k had already recorded into the still-open pass -
  * `queue.writeBuffer` is ordered against the submit, not against the individual
- * draws inside it — so the unconditional pass end was load-bearing. A frame with
+ * draws inside it - so the unconditional pass end was load-bearing. A frame with
  * N tile-chunk flushes therefore cost N passes and N submits.
  *
  * The flush path now appends at a pass-scoped cursor and adds the base offset at
@@ -20,7 +20,7 @@
  * rewrite is a pass boundary here, so the skip state has to compare group
  * CONTENT rather than the backend's monotonic group-transform id. A retained
  * group entered and left around tile chunks restores byte-identical group bytes
- * while that id advances twice — under an id comparison every boundary split
+ * while that id advances twice - under an id comparison every boundary split
  * the frame, at one extra pass and submit per boundary.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -221,7 +221,7 @@ describe('WebGPU tile-chunk single pass', () => {
     });
 
     // A group sitting at the origin with no transform of its own composes to the
-    // identity — the same matrix the ungrouped draws around it are projected
+    // identity - the same matrix the ungrouped draws around it are projected
     // with. Entering and leaving it therefore restores BYTE-IDENTICAL group
     // bytes while the backend's group-transform id advances twice, which is
     // exactly the case the projection skip state must not read as a change: a
@@ -259,7 +259,7 @@ describe('WebGPU tile-chunk single pass', () => {
       const groupIdBefore = backend.renderGroupTransformId;
       const submits = countSubmits(backend, renderGrouped);
 
-      // The frame really crossed two group boundaries — without this the
+      // The frame really crossed two group boundaries - without this the
       // counters below would pass for a frame that never entered a group.
       expect(backend.renderGroupTransformId - groupIdBefore).toBe(2);
       // One draw call per tile-chunk flush, plus the trailing sprite.
@@ -290,7 +290,7 @@ describe('WebGPU tile-chunk single pass', () => {
     // A sprite drawn first consumes the frame's pending clear and leaves a
     // pass open holding its draw. The tile node is wrapped in a container
     // clipped to a rectangle entirely off-canvas: `pushScissorRect` (which
-    // ends the sprite's open pass — a genuine boundary) resolves the clip to
+    // ends the sprite's open pass - a genuine boundary) resolves the clip to
     // zero pixels, so the tile chunk's quads accumulate during `render()` but
     // the mask clips all of them by the time `flush()` observes the scissor.
     // With no clear pending at that point, `flush()` must not open (and count)

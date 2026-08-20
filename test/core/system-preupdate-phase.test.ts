@@ -2,7 +2,7 @@ import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
 import { Time } from '#core/Time';
 
-// The `preUpdate` phase — the frame slot ahead of the fixed steps, where the
+// The `preUpdate` phase - the frame slot ahead of the fixed steps, where the
 // engine's own per-frame state is brought in sync before any simulation runs.
 // Ordering semantics (order/before/after) are shared with the other phases and
 // covered in system-registry.test.ts; these specs cover the phase itself.

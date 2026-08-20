@@ -142,7 +142,7 @@ describe('RenderNode and SceneNode contract', () => {
     // ts-expect-error sentinel so the constraint cannot be silently
     // weakened in a future refactor.
     const bareNode = new SceneNode();
-    // @ts-expect-error — Container.addChild requires a RenderNode, not a bare SceneNode.
+    // @ts-expect-error - Container.addChild requires a RenderNode, not a bare SceneNode.
     container.addChild(bareNode);
 
     // Runtime fallback: even though the cast went through above, the bare

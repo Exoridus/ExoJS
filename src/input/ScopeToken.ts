@@ -1,7 +1,7 @@
 /**
  * Opaque, stable identity for one scope pushed via
- * {@link InteractionManager.pushScope}. Release exactly that scope — wherever
- * it currently sits in the stack — through the matching
+ * {@link InteractionManager.pushScope}. Release exactly that scope - wherever
+ * it currently sits in the stack - through the matching
  * {@link InteractionManager.popScope} call, regardless of whether other
  * scopes were pushed (and are still active) above or below it.
  *

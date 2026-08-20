@@ -10,7 +10,7 @@ import type { Playable, PlayOptions, Voice } from './Playable';
 import { seedVoiceFromPlayOptions } from './spatial-options';
 
 /**
- * Streaming long-form audio backed by an `HTMLAudioElement` — background
+ * Streaming long-form audio backed by an `HTMLAudioElement` - background
  * tracks, voice-over, **and internet radio** (same mechanism, low CPU/RAM).
  * Decoded lazily via the browser's media pipeline, so memory cost scales with
  * the decode buffer rather than total duration.
@@ -21,7 +21,7 @@ import { seedVoiceFromPlayOptions } from './spatial-options';
  * for fine-grained control (pause/resume, seek, loop, rate, volume, spatial).
  *
  * Because an `HTMLAudioElement` has a single playhead, a stream has **one active
- * voice at a time** — playing again stops the previous voice. Routes through the
+ * voice at a time** - playing again stops the previous voice. Routes through the
  * manager's `music` bus by default (override via {@link PlayOptions.bus}).
  *
  * Use {@link Sound} for short, frequently-triggered clips that benefit from
@@ -81,7 +81,7 @@ export class AudioStream implements Playable {
 
   /**
    * `true` once {@link AudioStream.destroy} has run. A destroyed stream is not
-   * reusable — playing it throws. Load the asset again to get a fresh stream.
+   * reusable - playing it throws. Load the asset again to get a fresh stream.
    */
   public get destroyed(): boolean {
     return this._destroyed;
@@ -95,7 +95,7 @@ export class AudioStream implements Playable {
    *
    * Throws on a destroyed stream. The check is unconditional, not `__DEV__`-only:
    * `createMediaElementSource()` may be called exactly once per media element,
-   * and the second call raises `InvalidStateError` in the browser — a hard,
+   * and the second call raises `InvalidStateError` in the browser - a hard,
    * hard-to-trace runtime failure that a production build must not walk into.
    */
   public _createVoice(manager: AudioManager, options: PlayOptions): Voice {
@@ -114,7 +114,7 @@ export class AudioStream implements Playable {
       this._activeVoice.stop();
     }
 
-    // The MediaElementAudioSourceNode is 1:1 with the element — create it once.
+    // The MediaElementAudioSourceNode is 1:1 with the element - create it once.
     if (this._sourceNode === null) {
       this._sourceNode = audioContext.createMediaElementSource(this._audioElement);
     } else {

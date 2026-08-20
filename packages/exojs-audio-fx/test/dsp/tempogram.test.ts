@@ -35,7 +35,7 @@ function syntheticNovelty(bpm: number, numHops: number): Float32Array {
  * Novelty curve whose onsets are spread over a few hops, mimicking how a real ~6 ms
  * percussive burst smears across the FFT/flux pipeline. A single-sample impulse splits
  * the fundamental's correlation across adjacent integer lags at high BPM, which is a
- * test artifact, not detector behaviour — the spread shape is the realistic case.
+ * test artifact, not detector behaviour - the spread shape is the realistic case.
  */
 function spreadNovelty(bpm: number, seconds: number): Float32Array {
   const hopRate = SAMPLE_RATE / HOP_SIZE;
@@ -245,20 +245,20 @@ describe('findTempoPeaks — endpoint peaks and defaults', () => {
   });
 
   // NOTE on two lines that remain uncovered in `parabolicPeakOffset` after this test:
-  // - `if (denom >= 0) return 0;` — mathematically unreachable through `findTempoPeaks`'
+  // - `if (denom >= 0) return 0;` - mathematically unreachable through `findTempoPeaks`'
   //   strict peak-selection gate (`acf[i] > acf[i-1] && acf[i] > acf[i+1]`): if yMid is
   //   strictly greater than both neighbours, `yPrev + yNext < 2*yMid` always holds (adding
   //   the two strict inequalities), so `denom = yPrev - 2*yMid + yNext` is always negative.
   //   A randomized search of >230M float32 triples satisfying the strict-peak invariant
   //   (spanning the full float32 dynamic range, including extreme-magnitude mismatches that
-  //   trigger catastrophic cancellation) found zero counterexamples — confirming this is a
+  //   trigger catastrophic cancellation) found zero counterexamples - confirming this is a
   //   pure defensive guard against a case that cannot occur via the public API, not merely a
   //   rare one. Left uncovered as documented unreachable code.
-  // - `if (d < -0.5) d = -0.5;` — the mirror-image clamp of the `d > 0.5` case covered by the
+  // - `if (d < -0.5) d = -0.5;` - the mirror-image clamp of the `d > 0.5` case covered by the
   //   test below. The `d > 0.5` clamp WAS found (below) via floating-point cancellation with
   //   an extreme-magnitude yPrev; an equally extensive randomized search (>500M triples,
   //   including deliberately mirroring the found +0.5 triple) for the symmetric `d < -0.5`
-  //   case found none — the two branches of this expression are not perfectly symmetric under
+  //   case found none - the two branches of this expression are not perfectly symmetric under
   //   floating-point rounding (`p - 2*m + q` evaluates left-to-right, so swapping p/q changes
   //   intermediate rounding). Left uncovered; treated as practically unreachable rather than
   //   forcing an artificial non-representative test.
@@ -280,7 +280,7 @@ describe('findTempoPeaks — endpoint peaks and defaults', () => {
 
   it('uses the default topK of 3 when omitted', () => {
     // Five independent single-neighbour "peaks" alternating up/down so every
-    // interior sample plus both endpoints qualify — without the default topK
+    // interior sample plus both endpoints qualify - without the default topK
     // cap this would return more than 3 candidates.
     const acf = new Float32Array([5, 1, 5, 1, 5, 1, 5]);
     const peaks = findTempoPeaks(acf, 10, HOP_SIZE, SAMPLE_RATE);
@@ -309,7 +309,7 @@ describe('scoreTempoHypotheses — defaults and boundary lag', () => {
   it('samples the ACF exactly at its last representable lag (boundary interpolation)', () => {
     // acf has 5 samples for lags 10..14 (minLag=10, length=5, maxIndex=4).
     // A candidate at lag=7 makes its super-multiple lag*2 === 14, landing
-    // exactly on the last ACF sample — the interpolator's "at the last index,
+    // exactly on the last ACF sample - the interpolator's "at the last index,
     // no right neighbour" boundary path.
     const acf = new Float32Array([0.1, 0.2, 0.3, 0.4, 0.5]);
     expect(() => scoreTempoHypotheses([{ bpm: 100, score: 0, lag: 7 }], acf, 10, { maxBpm: 300 })).not.toThrow();

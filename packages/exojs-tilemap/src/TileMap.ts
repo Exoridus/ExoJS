@@ -17,7 +17,7 @@ export interface TileMapOptions {
   readonly name?: string;
   /**
    * Map width in tiles. Omit together with {@link height} for an unbounded
-   * map — layers you add are then free to be unbounded too (this option
+   * map - layers you add are then free to be unbounded too (this option
    * does not constrain per-layer dimensions either way).
    */
   readonly width?: number;
@@ -43,7 +43,7 @@ export interface TileMapOptions {
   readonly class?: string;
   /**
    * Map background colour as a `0xRRGGBB` integer, or `null` (Tiled
-   * `backgroundcolor`). Informational — the renderer does not auto-clear to it.
+   * `backgroundcolor`). Informational - the renderer does not auto-clear to it.
    * Default `null`.
    */
   readonly backgroundColor?: number | null;
@@ -53,24 +53,24 @@ export interface TileMapOptions {
   readonly properties?: TileProperties;
   /**
    * Combined document order across tile and image layers, as an ordered list
-   * of layer ids — exposed via {@link TileMap.renderableLayers}. Every tile
+   * of layer ids - exposed via {@link TileMap.renderableLayers}. Every tile
    * and image layer passed to this map (via {@link layers} / {@link
    * imageLayers}) must appear exactly once; an id that belongs to neither
    * kind, or is listed more than once, throws. The list's length must also
-   * equal the total number of tile/image layer instances — nothing enforces
+   * equal the total number of tile/image layer instances - nothing enforces
    * unique ids across image layers, so two image layers sharing an id would
    * otherwise both satisfy the id-based checks while one silently drops out
    * of {@link TileMap.renderableLayers}; that mismatch throws too.
    *
    * A tile layer and an image layer sharing the same id makes the order
-   * ambiguous — that combination throws when `documentOrder` is provided.
+   * ambiguous - that combination throws when `documentOrder` is provided.
    * It is NOT rejected when this option is omitted: the fallback order below
    * is unambiguous by construction (tile layers are always listed before
    * image layers), so hand-built maps that predate this option are
    * unaffected even if such an id collision exists.
    *
    * Omit to fall back to all tile layers in insertion order, followed by all
-   * image layers in insertion order — the map's implicit ordering before
+   * image layers in insertion order - the map's implicit ordering before
    * this option existed.
    *
    * Named `documentOrder` rather than `renderOrder` to avoid colliding with
@@ -84,10 +84,10 @@ export interface TileMapOptions {
  * A generic, format-independent tile map.
  *
  * Owns a finite grid of {@link TileLayer}s and a shared set of {@link TileSet}s.
- * Tile data is stored in compact chunked arrays — no per-tile heap objects.
+ * Tile data is stored in compact chunked arrays - no per-tile heap objects.
  *
  * The map does NOT own tileset textures (those are Loader-owned) and does
- * NOT own SceneNode children — see {@link import('./TileMapNode').TileMapNode},
+ * NOT own SceneNode children - see {@link import('./TileMapNode').TileMapNode},
  * which owns those.
  *
  * Multiple tilesets are supported: each cell stores a packed tileset index
@@ -200,7 +200,7 @@ export class TileMap {
    * Validate an explicit `documentOrder` option against current tile/image
    * layer membership and resolve it to layer instances, or compute the
    * fallback order (tile layers in insertion order, then image layers) when
-   * omitted. The order stores instance references — not ids — so a
+   * omitted. The order stores instance references - not ids - so a
    * cross-kind id collision in a fallback map can never resolve to the
    * wrong layer.
    * @throws Per the validation rules documented on {@link
@@ -380,7 +380,7 @@ export class TileMap {
    * Get an object layer by name (first match in insertion order), or undefined.
    *
    * Supply an {@link ObjectSchema} type argument `S` to obtain a typed view of
-   * the layer — `getObjectLayer<LevelObjects>('Entities')` returns an
+   * the layer - `getObjectLayer<LevelObjects>('Entities')` returns an
    * `ObjectLayer<LevelObjects>` whose {@link ObjectLayer.byType} / {@link
    * ObjectLayer.where} accessors narrow `properties`. The schema is a static
    * developer promise only; no runtime validation is performed and the call
@@ -424,7 +424,7 @@ export class TileMap {
    * Add an image layer after construction. Appended to both {@link
    * imageLayers} and the end of {@link renderableLayers}'s document order.
    * @throws If an image layer with the same ID already exists. An ID shared
-   *   with a *tile* layer is permitted — the two kinds keep separate ID
+   *   with a *tile* layer is permitted - the two kinds keep separate ID
    *   spaces, and all internal bookkeeping is instance-based.
    */
   public addImageLayer(layer: ImageLayer): void {
@@ -496,10 +496,10 @@ export class TileMap {
    * independently placeable band / layer scene nodes for interleaving
    * application actors between tile layers.
    *
-   * Each call returns a fresh, independent view — the map does **not** cache a
+   * Each call returns a fresh, independent view - the map does **not** cache a
    * single global view, so multiple coexisting views of the same map are
    * allowed. The view references this map but never owns it: destroying the
-   * view frees only its generated layer/band nodes — never the map, its layers,
+   * view frees only its generated layer/band nodes - never the map, its layers,
    * tileset textures, or any application actors.
    *
    * @advanced

@@ -41,7 +41,7 @@ describe('Assets.compose / Assets.extend types', () => {
   it('types a conflict as a diagnostic no loader input accepts', () => {
     const other = Assets.from({ ship: 'z.png' });
     // Type-only: a conflicting composition THROWS at runtime, so the call is
-    // never made — only its return type is inspected.
+    // never made - only its return type is inspected.
     const compose = () => Assets.compose(shared, other);
     type Conflicted = ReturnType<typeof compose>;
 
@@ -53,10 +53,10 @@ describe('Assets.compose / Assets.extend types', () => {
     expectTypeOf<Conflicted['_conflictingKeys']>().toEqualTypeOf<'ship'>();
 
     const load = (loader: Loader, conflicted: Conflicted) =>
-      // @ts-expect-error — a conflicting composition is not a loader input.
+      // @ts-expect-error - a conflicting composition is not a loader input.
       loader.load(conflicted);
     const get = (loader: Loader, conflicted: Conflicted) =>
-      // @ts-expect-error — nor a readable catalog.
+      // @ts-expect-error - nor a readable catalog.
       loader.get(conflicted);
 
     expectTypeOf(load).toBeFunction();

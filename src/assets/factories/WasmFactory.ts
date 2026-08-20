@@ -4,7 +4,7 @@ import { AbstractAssetFactory } from '#assets/AbstractAssetFactory';
  * {@link AssetFactory} implementation that loads WebAssembly binary (`.wasm`)
  * files and produces a compiled {@link WebAssembly.Module}.
  *
- * The module is compiled but not instantiated — callers receive a reusable
+ * The module is compiled but not instantiated - callers receive a reusable
  * `WebAssembly.Module` that can be instantiated multiple times with different
  * import objects via `new WebAssembly.Instance(module, imports)`.
  */

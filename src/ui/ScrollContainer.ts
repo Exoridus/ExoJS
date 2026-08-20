@@ -39,13 +39,13 @@ export interface ScrollContainerOptions {
  * ```
  */
 export class ScrollContainer extends Widget {
-  /** Add children here — not to the `ScrollContainer` itself. */
+  /** Add children here - not to the `ScrollContainer` itself. */
   public readonly content: Container;
 
   private readonly _direction: ScrollDirection;
   private _scrollX = 0;
   private _scrollY = 0;
-  /** Scratch rect reused by {@link ScrollContainer.updateBounds} — avoids an allocation on every bounds rebuild. */
+  /** Scratch rect reused by {@link ScrollContainer.updateBounds} - avoids an allocation on every bounds rebuild. */
   private readonly _viewportRect = new Rectangle();
 
   private readonly _onWheel = (deltaX: number, deltaY: number): void => {
@@ -118,14 +118,14 @@ export class ScrollContainer extends Widget {
   protected override _relayout(): void {
     // Re-clamp scroll in case the widget was resized.
     this.scrollTo(this._scrollX, this._scrollY);
-    // uiWidth/uiHeight just changed — the viewport rect `updateBounds` builds
+    // uiWidth/uiHeight just changed - the viewport rect `updateBounds` builds
     // from them is now stale.
     this._invalidateBoundsCascade();
   }
 
   /**
-   * Bounds this widget to its declared viewport — `(0, 0, uiWidth, uiHeight)`
-   * in world space — instead of {@link Container.updateBounds}'s default
+   * Bounds this widget to its declared viewport - `(0, 0, uiWidth, uiHeight)`
+   * in world space - instead of {@link Container.updateBounds}'s default
    * union of `content`'s (scrolled, often far larger) child extent.
    *
    * This is what {@link ScrollContainer.clip} clips descendants to (a `null`
@@ -143,7 +143,7 @@ export class ScrollContainer extends Widget {
   /**
    * A point only hits this widget when it both falls within the viewport
    * AND lands on a visible child ({@link Container.contains}'s child-union
-   * check) — a scrolled-out child's own geometry no longer makes the
+   * check) - a scrolled-out child's own geometry no longer makes the
    * `ScrollContainer` itself claim a point far outside what is actually
    * rendered.
    */
@@ -151,7 +151,7 @@ export class ScrollContainer extends Widget {
     return this.getBounds().contains(x, y) && super.contains(x, y);
   }
 
-  /** @internal — subscribe to the app's wheel signal when entering the scene tree. */
+  /** @internal - subscribe to the app's wheel signal when entering the scene tree. */
   public override _setStage(stage: Stage | null): void {
     const prevApp = this._stage?.app;
     const nextApp = stage?.app;

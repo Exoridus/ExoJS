@@ -94,7 +94,7 @@ const median = (values: readonly number[]): number => {
   return sorted.length === 0 ? 0 : sorted[Math.floor(sorted.length / 2)]!;
 };
 
-/** Nearest-rank percentile — the same definition `shared/timing.ts` uses. */
+/** Nearest-rank percentile - the same definition `shared/timing.ts` uses. */
 const percentile = (values: readonly number[], p: number): number => {
   const sorted = [...values].sort((a, b) => a - b);
 

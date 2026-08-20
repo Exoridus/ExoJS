@@ -85,14 +85,14 @@ export class RendererRegistry<Runtime extends RenderBackend> {
       seen.add(target);
     }
 
-    // Validate: no target already registered — throw before any mutation
+    // Validate: no target already registered - throw before any mutation
     for (const target of targets) {
       if (this._renderers.hasOwn(target)) {
         throw new Error(`A renderer is already registered for ${target.name}.`);
       }
     }
 
-    // All validation passed — atomically install all mappings
+    // All validation passed - atomically install all mappings
     for (const target of targets) {
       this._renderers.set(target, renderer);
     }
@@ -117,7 +117,7 @@ export class RendererRegistry<Runtime extends RenderBackend> {
 
   /**
    * Find the renderer responsible for `drawable`.
-   * Uses a first-resolution cache — after warm-up, a single Map.get.
+   * Uses a first-resolution cache - after warm-up, a single Map.get.
    * Falls back to prototype-chain walk on cache miss.
    *
    * @throws Error if no renderer is found for the drawable's type.

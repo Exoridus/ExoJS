@@ -197,7 +197,7 @@ describe('Application.onFrame', () => {
     rawApp['_frameClock'] = { elapsedTime: { milliseconds: 16, seconds: 0.016 }, restart: vi.fn() };
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     // Object.create() bypasses the constructor, so the real field
-    // initializer (`= new Time()`) never runs — stand in with a real Time so
+    // initializer (`= new Time()`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = new Time();
     rawApp['_updateHandler'] = vi.fn();
@@ -225,7 +225,7 @@ describe('Application.onFrame', () => {
 
     // destroy() disposes scenes first, awaited internally in a background
     // async chain, before the rest of teardown (including onFrame.destroy())
-    // runs — give it a few microtask turns to settle.
+    // runs - give it a few microtask turns to settle.
     for (let i = 0; i < 16 && app.onFrame.count > 0; i++) {
       await Promise.resolve();
     }

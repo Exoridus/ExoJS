@@ -81,8 +81,8 @@ describe('specialized gamepad mappings', () => {
     const mapping = createSteamDeckGamepadMapping();
     const triggerAxes = mapping.axes.filter(a => a.index === 8 || a.index === 9);
 
-    // Triggers come via a8/a9 (not raw buttons 6/7) — left at a9, right at
-    // a8 per SDL — but must still land on the SAME canonical channels every
+    // Triggers come via a8/a9 (not raw buttons 6/7) - left at a9, right at
+    // a8 per SDL - but must still land on the SAME canonical channels every
     // other family's triggers use, or `new ButtonAction(GamepadButton.RightTrigger)`
     // (the canonical, device-agnostic way to bind a trigger) silently reads
     // nothing on Steam Deck.
@@ -231,7 +231,7 @@ describe('specialized gamepad mappings', () => {
       } as Parameters<typeof parseGamepadDescriptor>[0]),
     );
 
-    // The solo Joy-Con is standard-mapped *and* deliberately incomplete — the
+    // The solo Joy-Con is standard-mapped *and* deliberately incomplete - the
     // guard must not backfill it with generic channels it does not have.
     expect(resolved.mapping.family).toBe(GamepadMappingFamily.JoyConLeft);
     expect(resolved.mapping.hasChannel(GamepadButton.RightTrigger)).toBe(false);

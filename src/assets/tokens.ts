@@ -8,7 +8,7 @@
  *
  * `loader.load(Asset.type('json', 'config.json'))` returns `Promise<unknown>`.
  * Narrow via generic: `loader.load(Asset.type<Config>('json', 'config.json'))`.
- * Handles all JSON shapes — objects, arrays, scalars.
+ * Handles all JSON shapes - objects, arrays, scalars.
  */
 export abstract class Json {
   declare protected readonly _token: 'json';

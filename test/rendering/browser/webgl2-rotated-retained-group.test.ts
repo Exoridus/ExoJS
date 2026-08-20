@@ -1,5 +1,5 @@
 /**
- * WebGL2 renderer-matrix browser tests — RetainedContainer under ROTATION,
+ * WebGL2 renderer-matrix browser tests - RetainedContainer under ROTATION,
  * mirroring webgpu-rotated-retained-group.test.ts 1:1 (cross-backend gate
  * for the per-group matrix).
  *
@@ -11,7 +11,7 @@
  * Group transform: SceneNode.setRotation(θ) builds (a, b, c, d) =
  * (cosθ, sinθ, -sinθ, cosθ), so position (32, 32) + rotation 90° maps
  * child-local (x, y) to world (32 + y, 32 - x); the TRANSPOSED application
- * would map it to (32 - y, 32 + x) — the black-checked artifact positions.
+ * would map it to (32 - y, 32 + x) - the black-checked artifact positions.
  *
  * Run via:  pnpm test:browser:webgl
  */
@@ -98,7 +98,7 @@ const createSolidTexture = (color: string, size: number): Texture => {
 };
 
 // A BitmapText whose single glyph 'A' fills the whole `size`×`size` atlas
-// page at the line origin, so its quad covers (0,0)–(size,size) before any
+// page at the line origin, so its quad covers (0,0)-(size,size) before any
 // node/group transform (same fixture as webgl2-retained-container.test.ts).
 const createSolidBitmapText = (color: string, size: number): { text: BitmapText; texture: Texture } => {
   const texture = createSolidTexture(color, size);
@@ -115,7 +115,7 @@ const createSolidBitmapText = (color: string, size: number): { text: BitmapText;
 
 // A solid-color quad (two triangles) in local space with vertex colors; the
 // default mesh path samples the 1×1 white texture, so the output is the
-// vertex color. usage defaults to 'static' — the instanced-batch requirement.
+// vertex color. usage defaults to 'static' - the instanced-batch requirement.
 const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaTuple): Geometry => {
   const stride = 12;
   const corners: ReadonlyArray<readonly [number, number]> = [

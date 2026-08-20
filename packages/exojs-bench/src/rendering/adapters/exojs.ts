@@ -121,14 +121,14 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 `.trim();
 
-/** Build one of `total` distinct custom sprite materials (distinct instances — the batcher keys on identity). */
+/** Build one of `total` distinct custom sprite materials (distinct instances - the batcher keys on identity). */
 const createDistinctMaterial = (index: number, total: number): SpriteMaterial =>
   new SpriteMaterial({
     shader: new ShaderSource({ glsl: { vertex: spriteVertexGlsl, fragment: materialFragmentGlsl }, wgsl: materialFragmentWgsl }),
     uniforms: { u_userColor: [1, 1 - index / Math.max(1, total), 1, 1] },
   });
 
-/** A pre-selected leaf sprite and its resting grid position — the only nodes `mutate` disturbs. */
+/** A pre-selected leaf sprite and its resting grid position - the only nodes `mutate` disturbs. */
 interface MutableLeaf {
   readonly sprite: Sprite;
   readonly baseX: number;
@@ -162,7 +162,7 @@ const createDistinctTexture = (index: number, total: number): Texture => {
 
 /**
  * Build `count` `View`s tiled in a near-square screen grid (split-screen /
- * multi-viewport), each showing the SAME full-viewport world rect — the
+ * multi-viewport), each showing the SAME full-viewport world rect - the
  * `split-screen` archetype exercises N simultaneous replays of one retained
  * scene, not N distinct camera framings, so the views deliberately overlap in
  * world space and differ only in which screen fraction they write to.
@@ -189,9 +189,9 @@ const buildViewGrid = (count: number): View[] => {
 /**
  * ExoJS engine arm of the baseline benchmark.
  *
- * Drives the public {@link Application} API — the production path, which
+ * Drives the public {@link Application} API - the production path, which
  * registers the core renderers via `materializeRendererBindings` during
- * construction — rather than constructing a backend directly, so the benchmark
+ * construction - rather than constructing a backend directly, so the benchmark
  * measures the code a user would actually run. A single frame is produced by
  * the same two calls the production render phase issues (`rendering.render(node)`
  * then `backend.flush()`), driven explicitly so the harness owns frame cadence
@@ -213,7 +213,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
   /** Custom sprite materials built for the `mixed-material` archetype; empty for every other archetype. */
   let materials: SpriteMaterial[] = [];
   let mutableLeaves: MutableLeaf[] = [];
-  /** Leaf indices the most recent buildScene selected for mutation — the source of {@link EngineAdapter.mutationSignature}. */
+  /** Leaf indices the most recent buildScene selected for mutation - the source of {@link EngineAdapter.mutationSignature}. */
   let mutableIndices: number[] = [];
   /**
    * The `split-screen` archetype's simultaneous `View`s (`spec.viewCount`,
@@ -234,8 +234,8 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
    * The archetype currently built, when it scrolls a camera
    * (`ArchetypeSpec.cameraSpeed`); `null` for every static-view archetype, in
    * which case `mutate` leaves the view alone. The camera is driven through the
-   * context's own `view` — the engine's real camera, and the rect its per-node
-   * culling and its retained-product validity are keyed on — rather than by
+   * context's own `view` - the engine's real camera, and the rect its per-node
+   * culling and its retained-product validity are keyed on - rather than by
    * translating the world, which is the same distinction a game makes.
    */
   let scrollingSpec: ArchetypeSpec | null = null;
@@ -417,7 +417,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         // not by the global index. Leaves are round-robined across the spine via
         // `i % spine.length`, so a global `i % textureCount` would alias with
         // that stride: every bucket would collect a single residue class of `i`
-        // and hence only a `textureCount / gcd(...)` subset of textures — each
+        // and hence only a `textureCount / gcd(...)` subset of textures - each
         // traversal stream could then see fewer distinct textures than the
         // multi-texture batcher's slot count (16 as of the F9 slot raise), so
         // batches might never break on texture and the batch-breaking archetype
@@ -427,7 +427,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         // Sprite/mesh interleave (see `ArchetypeSpec.meshEvery`): every Nth leaf
         // draws the same SPRITE_SIZE quad through the MESH renderer, so each one
         // costs a renderer switch out and back while nothing else about the
-        // scene changes. Left unset, every leaf is a sprite — the pre-existing
+        // scene changes. Left unset, every leaf is a sprite - the pre-existing
         // shape.
         const leafTexture = textures[Math.floor(i / spine.length) % textures.length]!;
         const isMesh = meshEvery > 0 && i % meshEvery >= meshEvery - meshRunLength;
@@ -462,7 +462,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
         // sprites out on a grid at their native (SPRITE_SIZE) size.
         //
         // Using the native SPRITE_SIZE (8x8px) here would mean nodeCount
-        // stacked sprites cover only ~64px^2 of overlap — negligible fill
+        // stacked sprites cover only ~64px^2 of overlap - negligible fill
         // (25k x 64px ~= 1.6M writes) contributing no fill-rate signal.
         // Stretching to
         // the full viewport (anchor defaults to (0,0)/top-left, so the quad is
@@ -561,12 +561,12 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
 
       // Exactly the production render phase: reset the frame-scoped stats /
       // transform buffer, clear, render the tree once (or once per
-      // `split-screen` view — see `buildScene`/`views`), flush the batch.
+      // `split-screen` view - see `buildScene`/`views`), flush the batch.
       backend.resetStats();
       backend.clear();
 
       // `instanced-batch`: one explicit submission per batch, no scene walk.
-      // The trailing flush below is what ends the frame — drawBatch leaves the
+      // The trailing flush below is what ends the frame - drawBatch leaves the
       // backend's pass open so consecutive calls share one submit, which is the
       // property this archetype exists to measure.
       if (batches.length > 0) {
@@ -586,7 +586,7 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       if (views.length > 0) {
         // Multi-view replay: each additional view re-issues the retained
         // group's ALREADY-RECORDED instruction set with its own view/viewport,
-        // not a fresh per-view scene walk — the property `split-screen` exists
+        // not a fresh per-view scene walk - the property `split-screen` exists
         // to exercise (see the retained-containers guide).
         for (const view of views) {
           app.rendering.render(root, { view });

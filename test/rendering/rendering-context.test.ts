@@ -464,7 +464,7 @@ describe('RenderingContext', () => {
 });
 
 // Standard interleaved mesh layout: position f32x2 @0, texcoord f32x2 @8,
-// color u8x4 @16, stride 20 — three vertices (red, green, blue).
+// color u8x4 @16, stride 20 - three vertices (red, green, blue).
 const createStandardGeometry = (): Geometry => {
   const stride = 20;
   const vertices = [
@@ -537,7 +537,7 @@ describe('RenderingContext.drawGeometry', () => {
     expect(world.d).toBe(3);
     expect(world.x).toBe(10);
     expect(world.y).toBe(20);
-    // No origin/position composition is applied — it is the matrix as given.
+    // No origin/position composition is applied - it is the matrix as given.
     expect(world.a).toBe(transform.a);
     expect(world.x).toBe(transform.x);
 

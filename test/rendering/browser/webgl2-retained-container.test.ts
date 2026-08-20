@@ -90,9 +90,9 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 };
 
 // A BitmapText whose single glyph 'A' fills the whole `size`×`size` atlas page,
-// placed at the line origin so its quad covers (0,0)–(size,size) before any
+// placed at the line origin so its quad covers (0,0)-(size,size) before any
 // node transform. The atlas page is a solid-colour texture, so the
-// colour-atlas shader (msdf = false) emits that colour directly — deterministic
+// colour-atlas shader (msdf = false) emits that colour directly - deterministic
 // pixels with no runtime font rasterisation or atlas-upload timing. Copied
 // verbatim from webgl2-bitmap-text.test.ts's font fixture.
 const createSolidBitmapText = (color: string, size: number): { text: BitmapText; texture: Texture } => {
@@ -236,7 +236,7 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       expectPixelNear(readWebGl2Pixel(backend, 38, 38), [255, 0, 0, 255]);
 
       // Move the group by (16, 0): text bakes group-relative vertices, so the
-      // u_group uniform must lift them (text exception) — the glyph
+      // u_group uniform must lift them (text exception) - the glyph
       // now covers (24,8)-(56,40).
       group.setPosition(16, 0);
       render(backend, root); // frame 2: spliced — the group matrix alone must relocate it
@@ -309,7 +309,7 @@ describe('WebGL2 renderer matrix: RetainedContainer cells', () => {
       // CORRECT output, not a warning: the deep effect lands at its true
       // world position (16+8 -> 24..40) via the escaped world-space branch,
       // and the plain sibling stays group-local under the group uniform
-      // (16..32) — retention and the group transform survive for it (F13/R3).
+      // (16..32) - retention and the group transform survive for it (F13/R3).
       expectPixelNear(readWebGl2Pixel(backend, 36, 36), [255, 0, 0, 255]); // deep cached sprite only
       expectPixelNear(readWebGl2Pixel(backend, 18, 18), [0, 255, 0, 255]); // plain leaf only
       expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);

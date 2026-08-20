@@ -7,7 +7,7 @@ import type { DataTextureFormat } from './texture/DataTexture';
  * Per-backend GPU resource accountant.
  *
  * The GPU exposes no way to query VRAM usage (neither WebGL2 nor WebGPU report
- * it — a deliberate security boundary), so the engine keeps its own running
+ * it - a deliberate security boundary), so the engine keeps its own running
  * tally by booking every allocation (`+`) and every free (`−`) at the points
  * where the backend creates or destroys a GPU texture / buffer. The same
  * bookkeeping runs against the Node fake-context, so it is fully deterministic
@@ -15,7 +15,7 @@ import type { DataTextureFormat } from './texture/DataTexture';
  *
  * The accountant owns the authoritative running total ({@link liveBytes}) and
  * mirrors it into {@link RenderStats.gpuMemoryBytes}. Unlike the per-frame
- * counters, that total is **not** zeroed by {@link resetRenderStats} — live
+ * counters, that total is **not** zeroed by {@link resetRenderStats} - live
  * resources outlive frames. The per-frame upload / download accumulators are
  * written straight into the stats object and reset each tick.
  *

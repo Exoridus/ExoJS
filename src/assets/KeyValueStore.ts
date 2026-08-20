@@ -1,14 +1,14 @@
 /**
- * Async key/value store for application data — game saves, settings, profiles,
+ * Async key/value store for application data - game saves, settings, profiles,
  * cached payloads. A single, uniform surface so calling code does not care
  * whether the backing store is synchronous or asynchronous.
  *
  * The backend is the axis you choose by capability, not a flag:
- * - {@link WebStorageStore} — `localStorage`/`sessionStorage`: small, synchronous,
+ * - {@link WebStorageStore} - `localStorage`/`sessionStorage`: small, synchronous,
  *   JSON-only (no Blobs/ArrayBuffers). The moral successor of the old `JsonStore`.
- * - {@link IndexedDbKeyValueStore} — IndexedDB: large, structured-clone, so Blobs,
+ * - {@link IndexedDbKeyValueStore} - IndexedDB: large, structured-clone, so Blobs,
  *   `ArrayBuffer`s and nested objects round-trip without JSON.
- * - {@link MemoryStore} — in-memory: ephemeral, holds references directly. For
+ * - {@link MemoryStore} - in-memory: ephemeral, holds references directly. For
  *   tests and throwaway data.
  *
  * Pair with {@link Scene.serialize} / {@link Scene.deserialize} for a save

@@ -6,7 +6,7 @@ export interface DistortionEffectOptions {
    * Drive amount: controls the intensity of the tanh soft-clip curve.
    * Range 0..1, default 0.4. Higher values produce heavier, more saturated
    * distortion; lower values produce a milder soft-clip. Note that even at
-   * drive=0 the curve is not perfectly linear — the formula
+   * drive=0 the curve is not perfectly linear - the formula
    * `tanh(x) / tanh(1)` has a gain of `1/tanh(1) ≈ 1.31` at the origin.
    */
   drive?: number;
@@ -38,7 +38,7 @@ interface DistortionEffectSetup {
 }
 
 /**
- * Distortion effect built from native Web Audio nodes — no worklet required.
+ * Distortion effect built from native Web Audio nodes - no worklet required.
  *
  * The input signal is split into a dry path and a wet path. The wet path runs
  * through a `WaveShaperNode` loaded with a tanh-based soft-clip curve, then
@@ -196,7 +196,7 @@ export class DistortionEffect extends AudioEffect {
    * Maps drive to a distortion amount `a = drive * 400 + 1`, then fills the
    * curve with `tanh(x * a) / tanh(a)` so that the output is always bounded
    * to [-1, 1]. At drive=0, `a = 1` and the curve is `tanh(x) / tanh(1)`,
-   * which has a small-signal gain of `1/tanh(1) ≈ 1.31` — not perfectly
+   * which has a small-signal gain of `1/tanh(1) ≈ 1.31` - not perfectly
    * linear. At drive=1, `a = 401` and the curve approximates a hard-clipper.
    */
   private static _buildCurve(drive: number): Float32Array<ArrayBuffer> {

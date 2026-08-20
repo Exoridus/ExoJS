@@ -65,7 +65,7 @@ describe('GamepadPromptLayouts', () => {
     const leftLabels = GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.JoyConLeft);
     const rightLabels = GamepadPromptLayouts.getControlLabels(GamepadMappingFamily.JoyConRight);
 
-    // The channels the mappings actually write — see JoyCon*GamepadMapping.
+    // The channels the mappings actually write - see JoyCon*GamepadMapping.
     expect(leftLabels.get('Paddle1')).toBe('SL');
     expect(leftLabels.get('Paddle3')).toBe('SR');
     expect(rightLabels.get('Paddle2')).toBe('SR');
@@ -101,7 +101,7 @@ describe('GamepadPromptLayouts', () => {
     expect(labels.get('ButtonNorth')).toBe('Y');
     expect(labels.get('Select')).toBe('View');
     expect(labels.get('Start')).toBe('Menu');
-    // Valve keeps the PlayStation-style shoulder names — neither the generic
+    // Valve keeps the PlayStation-style shoulder names - neither the generic
     // nor the Xbox set is right here.
     expect(labels.get('LeftShoulder')).toBe('L1');
     expect(labels.get('LeftTrigger')).toBe('L2');

@@ -146,7 +146,7 @@ function validateOptions(options: TextureRegionOptions, textureWidth: number, te
  * the scalable-sprite repeat planners.
  *
  * All region descriptor fields are stable after construction. Extrusion
- * metadata is copied and frozen during construction — the caller retains no
+ * metadata is copied and frozen during construction - the caller retains no
  * mutable reference to the stored object. The underlying {@link Texture}
  * reference is stable, but the Texture's own lifecycle and sampler state
  * remain owned by {@link Texture}.

@@ -15,8 +15,8 @@ import { View } from '#rendering/View';
 /**
  * The automatic persistent render representation of a render ROOT: a plain
  * `Container` handed to `render()` climbs the same ladder a `RetainedContainer`
- * does — dirty collect, then clean entry replay that arms recording, then an
- * O(batches) instruction splice — without adopting any of the group's
+ * does - dirty collect, then clean entry replay that arms recording, then an
+ * O(batches) instruction splice - without adopting any of the group's
  * semantics.
  */
 
@@ -267,7 +267,7 @@ describe('automatic render-root representation: ladder', () => {
   test('a move ABOVE the render root invalidates it — a root is not a closed dependency boundary', () => {
     const { backend, events } = createRecordingBackend();
     // The rendered node is `inner`; `world` is never collected, so none of its
-    // mutations reach `inner`'s revisions — only its global transform stamp.
+    // mutations reach `inner`'s revisions - only its global transform stamp.
     const world = new Container();
     const inner = new Container();
 
@@ -411,7 +411,7 @@ describe('automatic render-root representation: view dependence', () => {
     expect(events).toContain('replay:a');
 
     // 60px on x is past the 50px margin, so the view now reaches world the
-    // capture never tested — a previously-culled node could be in there and
+    // capture never tested - a previously-culled node could be in there and
     // nothing in the product would point at it.
     events.length = 0;
     backend.setView(new View(460, 300, 800, 600));
@@ -463,7 +463,7 @@ describe('automatic render-root representation: nested RetainedContainer', () =>
 
     expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
-    // F3: the group splices its own set. The root never records over it — a
+    // F3: the group splices its own set. The root never records over it - a
     // deferred boundary is a barrier record, and barriers are not recordable.
     events.length = 0;
     playFrame(root, backend);
@@ -503,7 +503,7 @@ describe('automatic render-root representation: nested RetainedContainer', () =>
 
 /**
  * Contract 9 of the architecture freeze: view-dependent content may derive its
- * product live, and `TileLayerNode`/`ImageLayerNode` do exactly that — they read
+ * product live, and `TileLayerNode`/`ImageLayerNode` do exactly that - they read
  * `builder.view.center` inside their collect and both opt out of view culling.
  *
  * Root retention must therefore never replay a capture over a view the

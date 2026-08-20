@@ -19,7 +19,7 @@ const lookupSize = 256;
  * speed-gated highlights.
  *
  * GPU-eligible: gradient uploaded as a 256-tap 1D RGBA8 texture, sampled
- * with linear filtering. Replaces the full color word — pair with a
+ * with linear filtering. Replaces the full color word - pair with a
  * separate {@link AlphaFadeOverLifetime} after this module if you want to
  * keep alpha controlled by lifetime.
  */

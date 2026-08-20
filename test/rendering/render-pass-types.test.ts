@@ -11,15 +11,15 @@ const contracts = (pipeline: RenderPipeline, node: RenderNode, target: RenderTex
 
   return [
     asPass,
-    // addPass accepts any RenderPass — a RenderNodePass, a raw pass, a nested pipeline.
+    // addPass accepts any RenderPass - a RenderNodePass, a raw pass, a nested pipeline.
     pipeline.addPass(new RenderNodePass(node, { target })),
     pipeline.addPass(pass),
     pipeline.addPass(new RenderPipeline()),
-    // @ts-expect-error — a RenderNode is not a RenderPass; wrap it in a RenderNodePass.
+    // @ts-expect-error - a RenderNode is not a RenderPass; wrap it in a RenderNodePass.
     pipeline.addPass(node),
-    // @ts-expect-error — RenderNodePass requires a RenderNode, not a RenderPass.
+    // @ts-expect-error - RenderNodePass requires a RenderNode, not a RenderPass.
     new RenderNodePass(pass),
-    // @ts-expect-error — `target` must be a RenderTexture, not a number.
+    // @ts-expect-error - `target` must be a RenderTexture, not a number.
     new RenderNodePass(node, { target: 5 }),
   ];
 };

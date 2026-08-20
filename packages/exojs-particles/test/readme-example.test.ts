@@ -1,7 +1,7 @@
 /**
  * Guards the "Minimal working example" code block in this package's README
  * against silently rotting out of sync with the real Scene/ParticleSystem
- * API. The block is copy-paste surface for new users — a stale hook name or
+ * API. The block is copy-paste surface for new users - a stale hook name or
  * a non-existent lifecycle method compiles to nothing at runtime (`Scene`
  * lifecycle hooks that don't exist are simply never called), so a broken
  * example fails silent instead of loud. Typechecking it against the actual
@@ -59,7 +59,7 @@ describe('README "Minimal working example"', () => {
         skipLibCheck: true,
         esModuleInterop: true,
         // The package's own source resolves its internal `#foo` subpath
-        // imports through these two conditions (see package.json#imports) —
+        // imports through these two conditions (see package.json#imports) -
         // without them every internal import inside @codexo/exojs-particles
         // fails to resolve and every export downgrades to `any`, masking
         // real type errors in the snippet under test.
@@ -73,7 +73,7 @@ describe('README "Minimal working example"', () => {
       };
 
       const program = ts.createProgram({ rootNames: [filePath], options: compilerOptions });
-      // Only diagnostics attributed to the README's own snippet count — the
+      // Only diagnostics attributed to the README's own snippet count - the
       // engine and this package have their own, stricter build gates, and
       // holding this test to their diagnostics too would make it fail for
       // reasons that have nothing to do with the README example itself.

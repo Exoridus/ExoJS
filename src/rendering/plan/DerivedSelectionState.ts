@@ -13,7 +13,7 @@ const slotGrowthFactor = 2;
 /**
  * What one incremental update actually did. Counters rather than a comment,
  * for the same reason {@link SelectionDelta}'s are: a path that quietly stopped
- * being incremental — reallocating every slot, rewriting every order entry —
+ * being incremental - reallocating every slot, rewriting every order entry -
  * still produces correct pixels and would pass a timing-only gate on a small
  * scene.
  * @internal
@@ -27,7 +27,7 @@ export interface DerivedSlotStats {
   retained: number;
   /** Slots returned to the free list because their item left the view. */
   released: number;
-  /** Entries written into the order stream — one per visible item. */
+  /** Entries written into the order stream - one per visible item. */
   orderEntries: number;
   /** High-water mark of the slot space, i.e. how many slots exist at all. */
   slotCapacity: number;
@@ -49,7 +49,7 @@ const resetSlotStats = (stats: DerivedSlotStats): void => {
  *
  * # Why the two are separate
  *
- * A slot is a PHYSICAL address — a row in the persistent per-item stores a
+ * A slot is a PHYSICAL address - a row in the persistent per-item stores a
  * backend keeps (static quad attributes, world transform, tint). It is handed
  * out when an item enters the view and taken back when it leaves, so it comes
  * off a free list and its numeric value says nothing about draw order.
@@ -69,7 +69,7 @@ const resetSlotStats = (stats: DerivedSlotStats): void => {
  *
  * Per selection: the delta scan is word-wise over `items / 32`, slot
  * allocation and release are O(entered + exited), and the order stream is
- * rebuilt in full — O(items / 32 + visible) integer writes, no per-item object
+ * rebuilt in full - O(items / 32 + visible) integer writes, no per-item object
  * touched. Rebuilding it beats diffing it: an entry is four bytes, and a diff
  * would have to answer where each survivor MOVED to, which costs more than
  * writing it.
@@ -93,7 +93,7 @@ export class DerivedSelectionState {
 
   /**
    * Items that just took a slot, as flat `(scopeOrdinal, localIndex, slot)`
-   * triples. These — and only these — need their persistent per-item data
+   * triples. These - and only these - need their persistent per-item data
    * written, which is why the list exists instead of a flag per slot: the
    * backend walks it directly rather than searching the slot space for work.
    */
@@ -126,7 +126,7 @@ export class DerivedSelectionState {
     return this._entered;
   }
 
-  /** How many slots exist — the size the backend's per-item stores must cover. */
+  /** How many slots exist - the size the backend's per-item stores must cover. */
   public get slotCount(): number {
     return this._slotCount;
   }
@@ -152,7 +152,7 @@ export class DerivedSelectionState {
    * Everything is dropped rather than remapped: a rebuilt source renumbers its
    * handles, so a slot assignment made against the old numbering describes a
    * different item. The next update therefore reports every visible item as
-   * entered, which is exactly true — the backend's stores hold nothing valid for
+   * entered, which is exactly true - the backend's stores hold nothing valid for
    * them either.
    */
   public rebind(handleCount: number): void {
@@ -196,7 +196,7 @@ export class DerivedSelectionState {
     // Releases run over the WHOLE tree before any allocation, not scope by
     // scope. A camera step swaps items roughly one for one, so vacating first
     // lets the arrivals reuse the departures' slots instead of growing the
-    // space — which is what keeps the backend's per-slot stores proportional to
+    // space - which is what keeps the backend's per-slot stores proportional to
     // what is on screen rather than to everything ever seen.
     if (previous !== null) {
       this._releaseTree(rootScope, current, previous);
@@ -348,7 +348,7 @@ export class DerivedSelectionState {
    * This is the same walk `RenderPlanBuilder._emitSourceSelection` performs, and
    * it has to stay the same walk: the order stream IS the draw order, so any
    * divergence here is a reordered frame. Nested groups are entered
-   * unconditionally rather than behind their subtree cull test — the per-item
+   * unconditionally rather than behind their subtree cull test - the per-item
    * membership already answers that question, and an empty nested scope
    * contributes nothing to append.
    */

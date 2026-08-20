@@ -25,7 +25,7 @@ export interface TileLayerOptions {
   readonly name: string;
   /**
    * Layer width in tiles. Omit together with {@link height} for an
-   * unbounded layer — chunk storage then accepts any signed chunk
+   * unbounded layer - chunk storage then accepts any signed chunk
    * coordinate instead of being clamped to a fixed grid.
    */
   readonly width?: number;
@@ -92,7 +92,7 @@ export interface ChunkRange {
 /**
  * Fired via {@link TileLayer._addStructuralListener} whenever a chunk is
  * installed ({@link TileLayer._adoptChunk}) or evicted
- * ({@link TileLayer._evictChunk}) — structural changes only, not per-tile
+ * ({@link TileLayer._evictChunk}) - structural changes only, not per-tile
  * edits (see {@link import('./TileChunk').TileChunk._addDirtyListener} for
  * those). `chunk` is `null` on eviction.
  * @internal
@@ -182,10 +182,10 @@ function validateTileLayerOptions(options: TileLayerOptions): ResolvedTileLayerO
  * **Mutation must go through the layer's public APIs only.**
  * `setTileAt` / `clearTileAt` validate coordinates, tileset references,
  * and increment revision counters only when the stored value actually
- * changes. Direct chunk mutation is not supported — the layer owns chunk
+ * changes. Direct chunk mutation is not supported - the layer owns chunk
  * storage and exposes only a {@link ReadonlyTileChunk} view.
  *
- * The layer is NOT a SceneNode — that integration lives in
+ * The layer is NOT a SceneNode - that integration lives in
  * {@link import('./TileLayerNode').TileLayerNode}.
  *
  * @advanced
@@ -353,7 +353,7 @@ export class TileLayer {
    *
    * @internal Package-private: used by {@link setTileAt}, {@link fillRect},
    *           and future adapter ingest. External users should not allocate
-   *           chunks — use {@link setTileAt} to populate tiles.
+   *           chunks - use {@link setTileAt} to populate tiles.
    */
   public _ensureChunk(cx: number, cy: number): TileChunk {
     this._checkDestroyed();
@@ -388,7 +388,7 @@ export class TileLayer {
    * bumps the layer revision (installing a chunk is always a structural
    * change, even if the payload happens to be all-zero).
    *
-   * Does not validate `(cx, cy)` against {@link chunkRange} — callers
+   * Does not validate `(cx, cy)` against {@link chunkRange} - callers
    * (chunk-streaming controllers) are trusted to request coordinates within
    * whatever range they intend to manage.
    *
@@ -448,7 +448,7 @@ export class TileLayer {
 
   /**
    * Iterate over all loaded chunks in deterministic (cy, cx) ascending order.
-   * Returns readonly chunk views — callers cannot mutate storage.
+   * Returns readonly chunk views - callers cannot mutate storage.
    * @advanced
    */
   public loadedChunks(): IterableIterator<ReadonlyTileChunk> {

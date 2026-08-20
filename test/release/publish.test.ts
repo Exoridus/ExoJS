@@ -67,7 +67,7 @@ describe('publishRelease — dry-run', () => {
       expect(call.args).toContain('--tag');
       expect(call.args[call.args.indexOf('--tag') + 1]).toBe('latest');
     }
-    // No dist-tag calls — we publish directly to latest.
+    // No dist-tag calls - we publish directly to latest.
     expect(distTagCalls(runner.invocations)).toHaveLength(0);
   });
 });
@@ -80,7 +80,7 @@ describe('publishRelease — live happy path', () => {
     expect(report.ok).toBe(true);
     expect(report.packages.map(p => p.publish)).toEqual(PUBLISH_ORDER.map(() => 'published'));
 
-    // No dist-tag promotion step — direct publish replaces the former staging→promote flow.
+    // No dist-tag promotion step - direct publish replaces the former staging→promote flow.
     expect(distTagCalls(runner.invocations)).toHaveLength(0);
   });
 });
@@ -164,7 +164,7 @@ describe('publishRelease — partial failure stops the chain', () => {
 describe('publishRelease — build-once guarantee', () => {
   it('aborts before any npm call when a tarball drifted since prepare', () => {
     // Rewrite Core's tarball with same-length-but-different bytes after the
-    // manifest was built — exercises content hashing, not just size.
+    // manifest was built - exercises content hashing, not just size.
     const original = readFileSync(join(staging, manifest.packages[0].file));
     const mutated = Buffer.from(original);
     mutated[0] = mutated[0] ^ 0xff;
@@ -176,7 +176,7 @@ describe('publishRelease — build-once guarantee', () => {
     expect(report.ok).toBe(false);
     expect(report.abortReason).toMatch(/artifact drift/);
     expect(report.abortReason).toContain('hash-mismatch');
-    // Crucially: nothing was published — not a single npm invocation.
+    // Crucially: nothing was published - not a single npm invocation.
     expect(runner.invocations).toHaveLength(0);
   });
 

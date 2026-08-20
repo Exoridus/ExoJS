@@ -10,7 +10,7 @@
 //
 // Determinism: DataTextures have an exact, known footprint (no source decode,
 // no mips by default), and the booking runs identically against the fake
-// context — no GPU, no flake.
+// context - no GPU, no flake.
 //
 // The backend's renderers allocate their own GPU buffers (instance/index/etc.)
 // at connect time, so a freshly wired backend already reports a non-zero
@@ -255,7 +255,7 @@ describe('GPU resource accounting (RenderStats)', () => {
         const a = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
         const b = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
 
-        // Warm steady with texture `a` only — transforms quiescent.
+        // Warm steady with texture `a` only - transforms quiescent.
         const sceneA = buildSpriteScene({ count: 1, textures: [a] });
 
         measureSteadyFrame(harness, sceneA.root, 3);
@@ -291,7 +291,7 @@ describe('GPU resource accounting (RenderStats)', () => {
 
         // The render root climbs its retention ladder over the next few frames
         // (capture, record, splice) and allocates the retained bundle's
-        // group-owned buffers on the way — genuine one-off VRAM growth. Baseline
+        // group-owned buffers on the way - genuine one-off VRAM growth. Baseline
         // the running total once that has settled, so this still asserts what it
         // is about: a quiescent frame adds nothing.
         measureFrame(harness, root);

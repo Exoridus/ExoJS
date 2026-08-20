@@ -1,5 +1,5 @@
 /**
- * WebGPU RenderPipeline browser test — opt-in, capability-aware.
+ * WebGPU RenderPipeline browser test - opt-in, capability-aware.
  *
  * Runs under the `browser-webgpu` project: new headless Chromium exposes a WebGPU
  * adapter via swiftshader (`--enable-unsafe-webgpu --ignore-gpu-blocklist`). CI
@@ -83,7 +83,7 @@ describe('RenderPipeline WebGPU browser', () => {
     try {
       await withValidation(ctx, backend, () => {
         // A callback pass redirected into an off-screen target (cleared via the coordinator's
-        // load op), nested one pipeline deep — the full composition path.
+        // load op), nested one pipeline deep - the full composition path.
         const inner = new RenderPipeline({ label: 'inner' }).addPass(new CallbackRenderPass(() => undefined, { target, clear: Color.red }));
         new RenderPipeline({ label: 'frame' }).addPass(inner).execute(context);
         backend.flush();

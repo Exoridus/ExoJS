@@ -5,13 +5,13 @@
  *
  * A growth moves every written row into fresh GPU buffers, so those rows are
  * pending again and must be pushed. The rows ABOVE the old capacity are not:
- * they are either written by the arrivals that triggered the growth — which mark
- * their own blocks through `writeSlotFrom` — or never named by an order stream,
+ * they are either written by the arrivals that triggered the growth - which mark
+ * their own blocks through `writeSlotFrom` - or never named by an order stream,
  * so no draw can read them. Marking them anyway costs a full-store upload on the
  * one frame a store allocates, of which up to half is rows nothing ever wrote.
  *
  * Every assertion here is on the slot count `commitDirtySlots()` reports, i.e.
- * on what actually reached `queue.writeBuffer` — not on the dirty bookkeeping
+ * on what actually reached `queue.writeBuffer` - not on the dirty bookkeeping
  * that produced it.
  */
 
@@ -58,7 +58,7 @@ const createStore = (): WebGpuPersistentSlotStore => {
   return store;
 };
 
-/** Write one slot from zeroed source tables — the content is irrelevant, the dirty mark is not. */
+/** Write one slot from zeroed source tables - the content is irrelevant, the dirty mark is not. */
 const writeSlot = (store: WebGpuPersistentSlotStore, slot: number): void => {
   store.writeSlotFrom(
     slot,
@@ -87,7 +87,7 @@ describe('WebGpuPersistentSlotStore growth', () => {
       store.ensureCapacity(INITIAL_CAPACITY + 1);
 
       // The growth doubled capacity to 2048 and moved every written row into
-      // fresh buffers. Exactly the 1024 carried rows are pending — not the 2048
+      // fresh buffers. Exactly the 1024 carried rows are pending - not the 2048
       // the store can now hold, half of which no row has ever occupied.
       expect(store.commitDirtySlots()).toBe(INITIAL_CAPACITY);
     });
@@ -133,7 +133,7 @@ describe('WebGpuPersistentSlotStore growth', () => {
       store.commitDirtySlots();
       store.ensureCapacity(2049);
 
-      // 2048 carried rows is exactly 8 blocks — the boundary case where rounding
+      // 2048 carried rows is exactly 8 blocks - the boundary case where rounding
       // up must not spill into the new half.
       expect(store.commitDirtySlots()).toBe(2048);
     });

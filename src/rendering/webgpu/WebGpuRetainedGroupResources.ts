@@ -37,7 +37,7 @@ export interface WebGpuRetainedGeometryRef {
  * (option (a) of the mesh generalization). Sprite/nine-slice/repeating leave
  * it null and drive replay entirely from the bundle's own sprite-layout UBO;
  * the mesh renderer parks its group(0) `TransformUniforms` UBO + bind group
- * here so the bundle can dispose it on device loss / destroy — giving the
+ * here so the bundle can dispose it on device loss / destroy - giving the
  * mesh UBO the same grow-only, explicitly-freed lifecycle as the bundle's own
  * buffers WITHOUT the bundle needing to know the mesh layout.
  * @internal
@@ -53,7 +53,7 @@ export const retainedGroupUniformBytes = 144;
 /**
  * Backend-owned replay descriptor for one recorded renderer flush. Carried
  * as the opaque `payload` of a
- * {@link RetainedBatchInstruction}; everything here is DATA — all state
+ * {@link RetainedBatchInstruction}; everything here is DATA - all state
  * (pipeline, projection/group uniforms, texture bindings) is resolved live at
  * replay by the owning {@link WebGpuRetainedBatchReplayer._replayRetainedBatch}.
  * @internal
@@ -88,7 +88,7 @@ export interface WebGpuRetainedBatchPayload {
    * The managed texture views at record time, parallel to {@link textures}.
    * Collect-time validation compares them against the live managed
    * views: `_syncTexture` recreates the view on RESIZE, and resized textures
-   * invalidate the recorded UV words — so a view-identity mismatch must force
+   * invalidate the recorded UV words - so a view-identity mismatch must force
    * a recapture, never a replay.
    */
   readonly recordedViews: readonly GPUTextureView[];
@@ -104,7 +104,7 @@ export interface WebGpuRetainedBatchPayload {
    * for a renderer whose per-instance node index addresses its OWN private
    * data store rather than the shared transform buffer (`_consumesSharedTransform
    * === false`), the generic bundle/scan/rebase machinery has nothing to persist
-   * on its behalf — this field is the renderer's own escape hatch to carry
+   * on its behalf - this field is the renderer's own escape hatch to carry
    * whatever CPU-side snapshot it needs from record time through to replay,
    * where only the renderer that set it interprets the value.
    */
@@ -116,7 +116,7 @@ export interface WebGpuRetainedBatchPayload {
  * counterpart of `WebGl2RetainedNodeIndexRange`. Unlike WebGL2 (which scans
  * the shared bundle store at capture END, once ranges over every batch are
  * known), WebGPU scans each batch's freshly-packed bytes immediately at
- * record time, per batch — so the range here is scoped to ONE batch, not the
+ * record time, per batch - so the range here is scoped to ONE batch, not the
  * whole capture; the backend takes the min/max across all per-batch ranges to
  * get the capture-wide rebase base.
  * @internal
@@ -131,7 +131,7 @@ export interface WebGpuRetainedNodeIndexRange {
  * (the WebGPU counterpart of `WebGl2RetainedBatchReplayer`). The bundle/stage
  * stores raw instance bytes; only the renderer that packed them knows the
  * layout (where the node index lives, how many words per instance), so the
- * backend delegates the layout-aware steps here per batch — mirroring the
+ * backend delegates the layout-aware steps here per batch - mirroring the
  * WebGL2 seam, adapted to WebGPU's byte-staging flow (record-time scan on
  * freshly-packed bytes, finalize-time rebase on the staged copy, rather than
  * WebGL2's capture-end scan/rebase against a live bundle store).
@@ -165,7 +165,7 @@ export interface WebGpuStagedRetainedBatch {
   /**
    * Created with `retainedGenerationUnstamped` at flush time and stamped via
    * `stampRetainedBatchGeneration` at capture end, after the bundle's
-   * grow-only buffers are finalized — growth bumps the generation, so
+   * grow-only buffers are finalized - growth bumps the generation, so
    * stamping earlier would self-invalidate the set.
    */
   readonly instruction: RetainedBatchInstruction;
@@ -186,8 +186,8 @@ export class WebGpuRetainedCaptureFrame {
   /**
    * Set when playback inside the window issued work the recorder cannot
    * replay (non-recordable renderer or compositor). Should be
-   * unreachable — the collect-time recordability predicate excludes
-   * all of it — but wrong pixels are never an acceptable failure mode, so a
+   * unreachable - the collect-time recordability predicate excludes
+   * all of it - but wrong pixels are never an acceptable failure mode, so a
    * poisoned window is dropped and its set permanently vetoed.
    */
   public poisoned = false;
@@ -206,11 +206,11 @@ export class WebGpuRetainedCaptureFrame {
  * - a STORAGE buffer holding the group's transform rows `[0, N)`,
  * - a 128-byte uniform buffer with the same `ProjectionUniforms` layout as
  *   the shared sprite UBO (projection mat4 + group mat4) so the existing
- *   bind-group(0) layout — and therefore every existing pipeline — is reused
+ *   bind-group(0) layout - and therefore every existing pipeline - is reused
  *   as-is at replay,
  * - one cached bind group(0) pairing the two.
  *
- * Buffers are grow-only across recaptures — no realloc churn under
+ * Buffers are grow-only across recaptures - no realloc churn under
  * motion-stop/start. {@link generation} bumps whenever GPU resources are
  * recreated or dropped (growth, device loss, destroy); instruction sets
  * stamped with an older generation fail plan-level validation and fall back
@@ -311,7 +311,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
     let recreated = false;
 
     // Both storage bindings are measured against the connected device BEFORE any
-    // buffer here is destroyed or created — including the instance buffer, which
+    // buffer here is destroyed or created - including the instance buffer, which
     // is a vertex binding and representable on its own. Past the ceiling
     // `createBuffer` still succeeds and `createBindGroup` does not, so allocating
     // first would leave the bundle holding a set the device cannot bind, with the
@@ -419,7 +419,7 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
    * `floats` (8 = one `TransformSlot`, the {@link TransformBuffer} row layout)
    * via a single `queue.writeBuffer` of that row's 32-byte sub-range. Mirrors
    * {@link WebGl2RetainedGroupResources._patchTransformRow}: deliberately does
-   * NOT bump the generation — the recorded instance bytes reference this row by
+   * NOT bump the generation - the recorded instance bytes reference this row by
    * index and stay valid; only the transform behind the index moved. Tint is
    * not touched (a moved node's tint doesn't change).
    *
@@ -443,11 +443,11 @@ export class WebGpuRetainedGroupBundle implements RetainedGroupBundle {
 
   /**
    * The bind group(0) pairing the group UBO with the group transform storage
-   * (and, for a renderer that reads per-instance tint — sprite — the tint
+   * (and, for a renderer that reads per-instance tint - sprite - the tint
    * storage too), against the calling renderer's own uniform layout. Cached;
    * rebuilt when a buffer, `includeTint`, or the layout (device restore)
    * changed. `includeTint` MUST match what `layout` actually declares
-   * (binding 2 present or not) — the entries list below is built to fit
+   * (binding 2 present or not) - the entries list below is built to fit
    * exactly, since WebGPU bind group creation requires an exact match against
    * the layout's binding set (nine-slice/repeating's layout has no binding 2).
    */

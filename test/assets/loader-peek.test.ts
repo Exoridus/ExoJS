@@ -27,7 +27,7 @@ function mockFetchJson(payload: unknown): void {
 }
 
 // `get()` is an acquiring call: it resolves, claims, and starts a fetch when the
-// source is unknown. `peek()` is the pure lookup that was missing next to it —
+// source is unknown. `peek()` is the pure lookup that was missing next to it -
 // the way to ask "is this already here?" without any of those side effects.
 describe('Loader.peek — pure in-memory lookup', () => {
   afterEach(() => {
@@ -104,7 +104,7 @@ describe('Loader.peek — pure in-memory lookup', () => {
 
   // Invalid usage fails loudly exactly as it does on get(); only "the key is
   // fine, nothing stored under it" is the undefined case.
-  // Both of these are rejected at compile time by the overloads too — an
+  // Both of these are rejected at compile time by the overloads too - an
   // unregistered extension resolves `KindByPath` to `never`, and a plain object
   // matches no overload. The runtime guards are what a JavaScript consumer, a
   // dynamic string, or a `registerType` gap runs into, so they get their own

@@ -8,7 +8,7 @@ import type { SerializedNode } from './types';
  * Context handed to {@link NodeSerializer.write}. Carries the framework
  * services a type serializer needs: recursion into children and asset-key
  * resolution. The framework writes the `SceneNode`/`RenderNode`/`Drawable`
- * common fields and the `type` tag itself — a serializer only returns its own
+ * common fields and the `type` tag itself - a serializer only returns its own
  * type-specific fields.
  */
 export interface SerializeContext {
@@ -17,7 +17,7 @@ export interface SerializeContext {
   /** The loader used to resolve asset references, or `null` if none is available. */
   readonly loader: Loader | null;
   /**
-   * Fully serialize a child node — writes its `type` tag, common fields, and
+   * Fully serialize a child node - writes its `type` tag, common fields, and
    * type-specific fields. Use this from container-like serializers to recurse.
    */
   writeNode(node: SceneNode): SerializedNode;
@@ -61,7 +61,7 @@ export interface DeserializeContext {
 export interface NodeSerializer<T extends SceneNode = SceneNode> {
   /**
    * Return the type-specific fields for `node` as a JSON-serialisable record.
-   * Do **not** include the `type` tag or common transform/visual fields — the
+   * Do **not** include the `type` tag or common transform/visual fields - the
    * framework adds those. Recurse into children via {@link SerializeContext.writeNode}.
    */
   write(node: T, ctx: SerializeContext): Record<string, unknown>;

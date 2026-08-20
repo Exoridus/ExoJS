@@ -1,7 +1,7 @@
 /**
  * Driver for the WebGPU allocation cell.
  *
- * Spawns one vitest run — and therefore one browser process — per (scene,
+ * Spawns one vitest run - and therefore one browser process - per (scene,
  * repetition) pair, and reports the median across repetitions. Sequential on
  * purpose: two browsers sharing one GPU contend for it, and a wall-clock or
  * allocation number taken under contention describes the contention.

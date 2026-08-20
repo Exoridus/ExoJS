@@ -1,5 +1,5 @@
 /**
- * WebGL2 Sprite browser test — v0.16 renderer-matrix proof entry.
+ * WebGL2 Sprite browser test - v0.16 renderer-matrix proof entry.
  *
  * The simplest possible matrix case: a single opaque {@link Sprite} over a
  * solid-color {@link Texture}, asserting pixel colour inside the sprite's
@@ -113,7 +113,7 @@ describe('WebGL2 Sprite — solid color', () => {
   test('16 distinct textures render correctly in a single batch (>8 slots)', async () => {
     // Finding F9: WebGL2 batches up to 16 base textures per draw. Sixteen
     // distinct-texture sprites must land in ONE draw call and each must sample
-    // its own texture — proving slots 8..15 (beyond the old 8-slot cap) resolve.
+    // its own texture - proving slots 8..15 (beyond the old 8-slot cap) resolve.
     const backend = await createBackend();
 
     // Sixteen clearly-distinct, non-black solid colours (index → [r,g,b]).
@@ -157,7 +157,7 @@ describe('WebGL2 Sprite — solid color', () => {
       // All sixteen distinct textures merge into a single draw call.
       expect(backend.stats.drawCalls).toBe(1);
 
-      // Every sprite samples its own texture — covers slots 0..15, i.e. the
+      // Every sprite samples its own texture - covers slots 0..15, i.e. the
       // 8..15 range the previous 8-slot renderer could not reach in one batch.
       palette.forEach(([r, g, b], i) => {
         const col = i % 4;

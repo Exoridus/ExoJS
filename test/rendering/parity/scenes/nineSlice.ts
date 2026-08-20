@@ -2,7 +2,7 @@
  * Nine-slice scenes over a coordinate-encoding texture.
  *
  * The interesting property of nine-slice is that it is nine separate quads
- * sharing one texture, each with its own UV window — exactly the place a
+ * sharing one texture, each with its own UV window - exactly the place a
  * backend can disagree about which texel belongs where. Encoding coordinates
  * in the texels turns "the frames match" into "every quad sampled the window
  * it was supposed to".

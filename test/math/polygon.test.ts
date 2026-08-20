@@ -133,7 +133,7 @@ describe('Polygon.getNormals() — dirty-flag cache (0.7.11)', () => {
     polygon.setPosition(5, 5);
 
     // The recomputed normals for a square don't change by translation,
-    // but the dirty flag must have been set — verify by checking the
+    // but the dirty flag must have been set - verify by checking the
     // return is still the same reference (in-place recompute) and
     // no exception is thrown.
     const after = polygon.getNormals();
@@ -169,7 +169,7 @@ describe('Polygon.getNormals() — dirty-flag cache (0.7.11)', () => {
   });
 });
 
-// Positioned-polygon projection matches getBounds() — covered by test (d) in
+// Positioned-polygon projection matches getBounds() - covered by test (d) in
 // the Polygon.project() describe above.
 
 describe('Polygon — constructor', () => {
@@ -264,7 +264,7 @@ describe('Polygon — points / edges', () => {
     // Warm the cache at length 2.
     polygon.getNormals();
 
-    // Grow to 5 points without recomputing normals — cache stays at length 2.
+    // Grow to 5 points without recomputing normals - cache stays at length 2.
     polygon.setPoints([new Vector(0, 0), new Vector(10, 0), new Vector(10, 10), new Vector(0, 10), new Vector(-5, 5)]);
 
     // Shrink to 3 points: diff > 0, but the (stale) cache length (2) is not

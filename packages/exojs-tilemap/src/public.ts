@@ -27,7 +27,7 @@ export type {
   TypedObject,
 } from './ObjectLayer';
 export { ObjectKind, ObjectLayer } from './ObjectLayer';
-// The mutable TileChunk implementation is package-internal —
+// The mutable TileChunk implementation is package-internal -
 // only the ReadonlyTileChunk interface is exported publicly.
 export type { ReadonlyTileChunk } from './TileChunk';
 export type { ChunkRange, TileLayerOptions } from './TileLayer';
@@ -77,7 +77,7 @@ export {
 // Per-tile animation driver (RPG-Maker-style): advances only animated cells.
 export { TileAnimator } from './TileAnimator';
 // Per-tile collision: layer-space geometry from TileDefinition.collision,
-// with whole-cell boxes greedily merged. Physics-agnostic — plain geometry.
+// with whole-cell boxes greedily merged. Physics-agnostic - plain geometry.
 export type {
   TileCollisionGeometry,
   TileCollisionOptions,

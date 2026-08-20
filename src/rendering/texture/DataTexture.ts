@@ -4,7 +4,7 @@ import { Texture } from './Texture';
 import type { TextureOptions } from './TextureOptions';
 
 /**
- * Pixel format for {@link DataTexture} — the {@link TextureFormat} subset that
+ * Pixel format for {@link DataTexture} - the {@link TextureFormat} subset that
  * can be uploaded from a typed array. Excludes `Rgba16F`, which has no
  * matching JS buffer kind.
  *
@@ -38,7 +38,7 @@ const bytesPerChannelForFormat: Record<DataTextureFormat, number> = {
  * Bounds are pixel coordinates with origin at the top-left.
  *
  * The instance {@link DataTexture._consumeDirtyRegion} hands out is the
- * texture's own long-lived record, reused across consume cycles — read it
+ * texture's own long-lived record, reused across consume cycles - read it
  * inside the sync pass that consumed it and do not retain it.
  */
 export interface DataTextureDirtyRegion {
@@ -132,7 +132,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
   /**
    * The one dirty-region record this texture ever owns. `commit`/`commitRect`
    * rewrite it in place and `_dirtyPending` says whether it currently describes
-   * anything, so marking a region dirty allocates nothing — the transform and
+   * anything, so marking a region dirty allocates nothing - the transform and
    * tint stores commit a rect per moved node per frame, which previously cost
    * one record per commit and a second one per union.
    *
@@ -279,7 +279,7 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
    * pass to plan their texSubImage2D / writeTexture operations.
    *
    * The returned object is the texture's own record and is rewritten by the
-   * next {@link commit}/{@link commitRect} — read it within the sync pass, do
+   * next {@link commit}/{@link commitRect} - read it within the sync pass, do
    * not store it.
    *
    * @internal

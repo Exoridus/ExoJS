@@ -49,7 +49,7 @@ export const officialPackages = (rootDir: string): OfficialPackage[] =>
 
 /**
  * Asserts all official packages share one lockstep version and returns it.
- * Throws otherwise — a coordinated release must be version-coherent.
+ * Throws otherwise - a coordinated release must be version-coherent.
  */
 export const assertLockstepVersion = (packages: OfficialPackage[]): string => {
   const versions = packages.map(p => ({ ...p, ...readVersion(resolve(p.dir, 'package.json')) }));
@@ -64,7 +64,7 @@ export const assertLockstepVersion = (packages: OfficialPackage[]): string => {
  * Packs the official packages into `stagingDir` without rebuilding them
  * (`--ignore-scripts` so `prepack` does not fire). Returns the absolute tarball
  * path for each, in publish order. Throws if any pack fails or a tarball is
- * missing — a coordinated release cannot have a hole in the matrix.
+ * missing - a coordinated release cannot have a hole in the matrix.
  */
 export const packOfficialTarballs = (runner: CommandRunner, packages: OfficialPackage[], stagingDir: string): { pkg: OfficialPackage; tarball: string }[] => {
   mkdirSync(stagingDir, { recursive: true });

@@ -1,5 +1,5 @@
 /**
- * WebGPU split-screen viewport browser tests — mirrors
+ * WebGPU split-screen viewport browser tests - mirrors
  * webgl2-split-viewport.test.ts on the WebGPU backend.
  *
  * Validates that {@link View.viewport} correctly restricts rendering to a

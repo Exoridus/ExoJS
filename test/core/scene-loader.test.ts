@@ -7,7 +7,7 @@ import { materializeAssetBindings } from '#extensions/materialize';
 
 // SoundFactory.create() decodes bytes via the shared OfflineAudioContext
 // (`decodeAudioData` from '#audio/audio-context'). jsdom has no real audio
-// decoder, so the module is mocked wholesale — mirrors test/assets/loader-claims.test.ts.
+// decoder, so the module is mocked wholesale - mirrors test/assets/loader-claims.test.ts.
 // `vi.mock` factories are hoisted above imports, so the mock function must be
 // created via `vi.hoisted()` to be referenced safely inside the factory below.
 const { decodeAudioDataMock } = vi.hoisted(() => ({

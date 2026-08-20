@@ -3,7 +3,7 @@ import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
 import { Time } from '#core/Time';
 
-// Direct SystemRegistry tests — order/before/after ordering in isolation,
+// Direct SystemRegistry tests - order/before/after ordering in isolation,
 // without going through Scene/Application wiring (see scene-systems.test.ts
 // for the Scene-level integration).
 
@@ -83,7 +83,7 @@ describe('SystemRegistry ordering — before/after', () => {
 
     registry.add(makeSystem(log, 'c', 10));
     // 'a' declares before:[drawOnlySystem], but drawOnlySystem never enters the
-    // update list — the constraint must not affect update-phase ordering.
+    // update list - the constraint must not affect update-phase ordering.
     registry.add(makeSystem(log, 'a', 20), { before: [drawOnlySystem] });
 
     tick(registry);

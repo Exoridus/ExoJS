@@ -1,5 +1,5 @@
 /**
- * Validates internal links that live directly in guide MDX — the surface the
+ * Validates internal links that live directly in guide MDX - the surface the
  * spine test (guide-structure.test.ts, which checks guide-structure.ts metadata)
  * does not cover. A markdown link to a renamed or deleted API page, a dead
  * `/api/mesh-shader/` reference, an invalid `NextStep` target, or a bad `TryIt`
@@ -59,7 +59,7 @@ function normalizeInternal(href: string): string | null {
   // Drop an optional markdown link title: [x](/path "Title").
   const space = h.search(/\s/);
   if (space >= 0) h = h.slice(0, space);
-  // External, protocol-relative, mailto, anchor-only, or query-only — not ours.
+  // External, protocol-relative, mailto, anchor-only, or query-only - not ours.
   if (/^(https?:)?\/\//i.test(h) || h.startsWith('mailto:')) return null;
   if (h.startsWith('#') || h.startsWith('?')) return null;
   // Strip hash + query.

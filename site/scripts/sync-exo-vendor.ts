@@ -59,13 +59,13 @@ const sourceDistDir = path.resolve(packageRoot, 'dist');
 
 const flatTargetDir = path.resolve(projectRoot, 'public', 'vendor', 'exojs');
 
-// Required artifacts — abort on missing. If a required file is unavailable,
+// Required artifacts - abort on missing. If a required file is unavailable,
 // the iframe runtime can't load the library, so failing loud is correct.
 const requiredArtifacts = ['exo.esm.js', 'exo.esm.js.map'];
 
 // Names of flat-level files this script writes (not source-derived). The
 // `exo.d.ts` is generated from whatever declaration source the library
-// ships — sometimes a bundled top-level file, sometimes derived from the
+// ships - sometimes a bundled top-level file, sometimes derived from the
 // dist/esm tree. `esm-typings.json` is the manifest of declaration files
 // that Monaco walks at runtime. `monaco-registry.json` provides a virtual
 // package.json and subpath shim entries for proper node_modules resolution
@@ -76,7 +76,7 @@ const generatedTypingsFiles = ['exo.d.ts', 'module-shims.d.ts', 'esm-typings.jso
 // `esm/` directory is included so subsequent syncs can clean it up before
 // re-populating. Historical versioned subdirectories are no longer produced
 // (released versions load via jsDelivr at runtime); leftovers from prior
-// syncs may remain on disk and are harmless — they're gitignored.
+// syncs may remain on disk and are harmless - they're gitignored.
 const flatManagedEntries: ReadonlyArray<{ name: string; type: 'file' | 'dir' }> = [
     ...requiredArtifacts.map(name => ({ name, type: 'file' as const })),
     ...generatedTypingsFiles.map(name => ({ name, type: 'file' as const })),
@@ -250,12 +250,12 @@ const copyEsmTree = (sourceEsmDir: string, destEsmDir: string): { allFiles: stri
 };
 
 // Monaco (the in-browser TypeScript worker) cannot resolve Node `#`-subpath
-// imports — those rely on the package.json `imports` map, which the browser TS
+// imports - those rely on the package.json `imports` map, which the browser TS
 // worker does not apply. The shipped npm types are fine (Node/tsc resolve `#`
 // natively), but in the playground every `#`-imported symbol reads as
 // "has no exported member" (e.g. `Application`). Per the root `imports` map,
-// `#<path>` resolves to `dist/esm/<path>` — i.e. `<path>` within this copied
-// esm tree — so rewrite each `#<path>` to a path relative to its declaration
+// `#<path>` resolves to `dist/esm/<path>` - i.e. `<path>` within this copied
+// esm tree - so rewrite each `#<path>` to a path relative to its declaration
 // file. Then assert none survived: a stray one silently breaks the playground.
 const rewriteSubpathImports = (esmDir: string, dtsRelFiles: ReadonlyArray<string>): number => {
     const importRe = /(\bfrom\s*|\bimport\s*\(\s*)(['"])#([^'"]+)\2/g;
@@ -277,7 +277,7 @@ const rewriteSubpathImports = (esmDir: string, dtsRelFiles: ReadonlyArray<string
         }
     }
 
-    // Only flag `#` in import position — not GLSL `"#version …"` strings, hex
+    // Only flag `#` in import position - not GLSL `"#version …"` strings, hex
     // colours like `'#6495ed'`, or `//# sourceMappingURL` comments.
     const leakRe = /(?:\bfrom\s*|\bimport\s*\(\s*)['"]#[^'"]+['"]/;
     const leaked = dtsRelFiles.filter(rel => leakRe.test(fs.readFileSync(path.resolve(esmDir, rel), 'utf8')));
@@ -361,7 +361,7 @@ const syncVendor = (): void => {
     fs.mkdirSync(flatTargetDir, { recursive: true });
 
     // Clear only the entries we manage; any leftover versioned subdirectories
-    // from older syncs are left in place — they're gitignored and harmless.
+    // from older syncs are left in place - they're gitignored and harmless.
     for (const entry of flatManagedEntries) {
         const target = path.resolve(flatTargetDir, entry.name);
         if (entry.type === 'dir') {
@@ -405,7 +405,7 @@ const syncVendor = (): void => {
         if (!fs.existsSync(pkgDist)) {
             // Hard error on purpose. This used to warn-and-skip, which shipped a
             // playground where every extension example failed at runtime with
-            // "Cannot find module '@codexo/exojs-…'" — and nobody saw the warning.
+            // "Cannot find module '@codexo/exojs-…'" - and nobody saw the warning.
             throw new Error(
                 `[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist}. ` +
                     `Build the extension packages first: pnpm --filter "@codexo/exojs-*" build`

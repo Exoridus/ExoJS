@@ -1,7 +1,7 @@
 /**
  * Tier-A structural regression tests for the NineSliceSprite renderer.
  *
- * Key measured fact: the nine-slice renderer is single-texture — it has NO
+ * Key measured fact: the nine-slice renderer is single-texture - it has NO
  * multi-texture slot merge, so each texture change flushes. Same-atlas
  * nine-slices batch (up to ⌈quads / 4096⌉ draws); distinct textures cost one
  * draw per texture switch.

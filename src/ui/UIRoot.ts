@@ -8,7 +8,7 @@ import type { RenderingContext } from '#rendering/RenderingContext';
  *
  * Unlike {@link Scene.root}, the UI layer is **auto-rendered** by the
  * {@link SceneDirector} after `Scene.draw()`, through the
- * {@link RenderingContext.screenView} — so its children live in screen space
+ * {@link RenderingContext.screenView} - so its children live in screen space
  * (origin top-left, `0..width` × `0..height`) and never scroll with the
  * camera. Pointer hit-testing and keyboard focus are routed to UI nodes in that
  * same screen space, ahead of the world layer.
@@ -33,7 +33,7 @@ export class UIRoot extends Container {
     return this._screenHeight;
   }
 
-  /** @internal — render this UI layer screen-fixed, above the scene content. */
+  /** @internal - render this UI layer screen-fixed, above the scene content. */
   public _render(context: RenderingContext): void {
     const view = context.screenView;
 

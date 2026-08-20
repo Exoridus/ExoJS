@@ -27,7 +27,7 @@ export enum ViewFlags {
   VertexTint = 0x80,
 }
 
-/** A target that a {@link View} can track — either a {@link SceneNode} or any `{x, y}` position object. */
+/** A target that a {@link View} can track - either a {@link SceneNode} or any `{x, y}` position object. */
 export type ViewFollowTarget = SceneNode | { x: number; y: number } | null;
 
 /** Options for {@link View.follow}. */
@@ -187,8 +187,8 @@ export class View implements ObservableVectorOwner {
   /**
    * The normalized (0..1) viewport rectangle this camera renders into.
    *
-   * Returns the LIVE rectangle, and writing to it directly — `view.viewport.x =
-   * 0.5`, `view.viewport.set(…)`, `view.viewport.size.width = …` — is a
+   * Returns the LIVE rectangle, and writing to it directly - `view.viewport.x =
+   * 0.5`, `view.viewport.set(…)`, `view.viewport.size.width = …` - is a
    * supported way to move the viewport: the rectangle reports every mutation
    * back here, so {@link updateId} advances exactly as it does for
    * {@link setViewport}. Backends key their "may I keep the open pass" decision
@@ -216,8 +216,8 @@ export class View implements ObservableVectorOwner {
 
   /**
    * `true` once {@link destroy} has run. A destroyed view keeps its last
-   * computed transform but no longer reacts to mutations — its center stops
-   * marking the transform stale — so it must not be put back into use.
+   * computed transform but no longer reacts to mutations - its center stops
+   * marking the transform stale - so it must not be put back into use.
    */
   public get destroyed(): boolean {
     return this._isDestroyed;
@@ -256,7 +256,7 @@ export class View implements ObservableVectorOwner {
   /**
    * Set the normalized (0..1) viewport rectangle fluently.
    * Mirrors the `set viewport` property setter without allocating a
-   * {@link Rectangle} — pass the four components directly.
+   * {@link Rectangle} - pass the four components directly.
    *
    * @param x      - Left edge as a fraction of the canvas width.
    * @param y      - Top edge as a fraction of the canvas height.
@@ -427,7 +427,7 @@ export class View implements ObservableVectorOwner {
 
   /**
    * Return the cached world-to-clip projection matrix, recalculating it if dirty.
-   * The returned matrix is owned by this view — do not store a reference across frames.
+   * The returned matrix is owned by this view - do not store a reference across frames.
    */
   public getTransform(): Matrix {
     if (this._flags.hasMask(ViewFlags.Transform)) {
@@ -460,7 +460,7 @@ export class View implements ObservableVectorOwner {
     }
 
     // Translate THEN rotate, i.e. `clip = R · (world - centre)`. Subtracting the
-    // centre in clip space instead — `R · world - centre` — pivots the camera
+    // centre in clip space instead - `R · world - centre` - pivots the camera
     // around the world origin, so a rotated view looks at `R⁻¹ · centre` rather
     // than the position it was given, and the error grows with the centre's
     // distance from the origin. Folding the centre through the already-rotated
@@ -490,8 +490,8 @@ export class View implements ObservableVectorOwner {
    * Convert a logical/design-space pixel coordinate to a world-space position.
    *
    * The 2-argument form treats `(x, y)` as coordinates in the view's own
-   * design space (`0..view.width` × `0..view.height`) — the same space as
-   * {@link Pointer.x}/{@link Pointer.y} and node positions — and applies only
+   * design space (`0..view.width` × `0..view.height`) - the same space as
+   * {@link Pointer.x}/{@link Pointer.y} and node positions - and applies only
    * the inverse camera transform. The viewport rectangle is intentionally
    * ignored, because design-space input already lives inside the camera's
    * projection (any letterbox offset was removed upstream when the pointer was
@@ -533,7 +533,7 @@ export class View implements ObservableVectorOwner {
     // Solve the forward transform `clip = M · world` directly for `world`,
     // including the translation, so this is an exact inverse of worldToScreen
     // (returns absolute world coordinates, identity at the default centered
-    // camera). Inlined 2×2 solve — a det guard + no Matrix allocation on this
+    // camera). Inlined 2×2 solve - a det guard + no Matrix allocation on this
     // pointer-mapping path; equivalent to `transformInverse(getTransform())`.
     const m = this.getTransform();
     const det = m.a * m.d - m.b * m.c;
@@ -630,7 +630,7 @@ export class View implements ObservableVectorOwner {
     // renders and content popped in at the rotated corners. Going through the
     // projection keeps rotation, zoom and shake correct by construction.
     //
-    // Same inlined 2x2 solve as `screenToWorld` — no Matrix allocation on a
+    // Same inlined 2x2 solve as `screenToWorld` - no Matrix allocation on a
     // path that reruns whenever the camera moves.
     const dxLeft = -1 - m.x;
     const dxRight = 1 - m.x;
@@ -647,7 +647,7 @@ export class View implements ObservableVectorOwner {
   }
 
   /**
-   * Release the math objects this view owns. Idempotent — the same view can be
+   * Release the math objects this view owns. Idempotent - the same view can be
    * reachable from more than one owner (a {@link RenderTarget} it was assigned
    * to as well as the code that created it), so a second call must not take
    * `_center`, `_size`, `_viewport` and the cached matrices through a second

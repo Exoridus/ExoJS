@@ -2,7 +2,7 @@
  * `Application.stop()` against a REAL `SceneDirector` (no director mock): the
  * stop contract says the active scene is unloaded, and that must hold whether
  * or not a navigation happens to be in flight at the moment `stop()` is
- * called — transitioned or not. A stop is allowed to interrupt a navigation;
+ * called - transitioned or not. A stop is allowed to interrupt a navigation;
  * `ConcurrentSceneNavigationError` must never escape to the user for it.
  */
 import { Application } from '#core/Application';
@@ -52,7 +52,7 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   }),
 }));
 
-/** A session that never finishes on its own — commit is driven manually. */
+/** A session that never finishes on its own - commit is driven manually. */
 class ManualSession implements SceneTransitionSession {
   public readonly placement = 'screen' as const;
   public done = false;
@@ -155,7 +155,7 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
 
       expect(title).toBeInstanceOf(TitleScene);
 
-      // A plain change() — no transition, so there is no session for
+      // A plain change() - no transition, so there is no session for
       // `_abortInFlightNavigation()` to abort, yet the navigation lock IS
       // held while GameScene.load() hangs.
       const navigation = app.scenes.change(GameScene);
@@ -190,8 +190,8 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
   // error pipeline itself rather than rejecting, so what this pins is the
   // end-to-end guarantee: dropping `ConcurrentSceneNavigationError` from the
   // stop path did not also swallow genuine teardown failures. The director-level
-  // "a rejecting disposal rejects _stopAndClearActiveScene()" case — the one
-  // `Application.stop()`'s own catch handles — lives in scene-director.test.ts.
+  // "a rejecting disposal rejects _stopAndClearActiveScene()" case - the one
+  // `Application.stop()`'s own catch handles - lives in scene-director.test.ts.
   test("a scene's own throwing unload() still surfaces through onError — only the concurrent-navigation rejection stopped being an error", async () => {
     const teardownError = new Error('unload blew up');
 

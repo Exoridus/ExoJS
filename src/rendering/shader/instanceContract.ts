@@ -5,7 +5,7 @@
  * tint through the engine's shared per-frame transform buffer, indexed by
  * `a_nodeIndex` (GLSL) / `nodeIndex` (WGSL). The buffer's texel layout, the
  * affine unpacking and the render-only pixel-snap policy are all internal and
- * have changed before — most recently when the tint moved into its own rgba8
+ * have changed before - most recently when the tint moved into its own rgba8
  * row to keep the transform row at two texels.
  *
  * These constants exist so that layout stays internal. Paste one into a custom
@@ -14,7 +14,7 @@
  * the helper rather than breaking every shader that copied its body.
  *
  * A shader that does not satisfy this contract is rejected on its first
- * {@link RenderingContext.drawBatch} — the check reads the linked program, so it
+ * {@link RenderingContext.drawBatch} - the check reads the linked program, so it
  * cannot run any earlier.
  */
 
@@ -29,18 +29,18 @@ import { TRANSFORM_TEXTURE_GLSL_INCLUDE } from './transformTextureLayout';
  * Declares the engine-supplied inputs (`a_position`, `a_texcoord`, `a_color`,
  * `a_nodeIndex`) and uniforms, and exposes two helpers:
  *
- * - `vec2 exoInstanceClipPosition(vec2 localPosition, uint nodeIndex)` — maps a
+ * - `vec2 exoInstanceClipPosition(vec2 localPosition, uint nodeIndex)` - maps a
  *   local-space vertex of the current instance to clip space, including pixel
  *   snapping. Returns clip space rather than world space because snapping is
  *   defined in device pixels and needs the projection, group matrix and viewport
  *   together.
- * - `vec4 exoInstanceTint(uint nodeIndex)` — the instance's tint, to be passed
+ * - `vec4 exoInstanceTint(uint nodeIndex)` - the instance's tint, to be passed
  *   through to the fragment stage.
  *
  * Unused declarations are stripped at link time; a batch shader that ignores
  * texcoords or vertex colors needs no further ceremony. The `#exo-include`
  * comment the constant carries is expanded by the engine when it compiles the
- * shader — it is what keeps the buffers' texel addressing internal, so leave it
+ * shader - it is what keeps the buffers' texel addressing internal, so leave it
  * in place.
  *
  * @example
@@ -113,7 +113,7 @@ vec4 exoInstanceTint(uint nodeIndex) {
  *
  * Declares the engine-owned `@group(0)` bindings and exposes the same two
  * helpers as {@link INSTANCE_TRANSFORM_GLSL}. Because WGSL has no global vertex
- * inputs, both take the node index explicitly — which is also why the GLSL
+ * inputs, both take the node index explicitly - which is also why the GLSL
  * helpers take it as a parameter, so a material's two shader bodies read alike:
  *
  * - `exoInstanceClipPosition(localPosition: vec2<f32>, nodeIndex: u32) -> vec2<f32>`

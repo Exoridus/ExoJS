@@ -128,8 +128,8 @@ export class Matrix implements Cloneable<Matrix> {
       return result.copy(Matrix.identity);
     }
 
-    // Inverse of the row-major affine `[[a,b,x],[c,d,y],[e,f,z]]` — the same
-    // convention `transform()`/`combine()` use — so it is the EXACT inverse of
+    // Inverse of the row-major affine `[[a,b,x],[c,d,y],[e,f,z]]` - the same
+    // convention `transform()`/`combine()` use - so it is the EXACT inverse of
     // the forward map (translation stays in x/y, not e/f). The previous form
     // inverted the transpose, which dropped the translation into e/f and forced
     // hand-rolled inverses in SceneNode.contains / View.screenToWorld.
@@ -180,7 +180,7 @@ export class Matrix implements Cloneable<Matrix> {
     const offsetX = centerX * (1 - cos) + centerY * sin;
     const offsetY = centerY * (1 - cos) - centerX * sin;
 
-    // Expanded from `combine(rotationMatrix)` — see the note on {@link translate}.
+    // Expanded from `combine(rotationMatrix)` - see the note on {@link translate}.
     return this.set(
       this.a * cos - this.c * sin + this.e * offsetX,
       this.b * cos - this.d * sin + this.f * offsetX,
@@ -200,7 +200,7 @@ export class Matrix implements Cloneable<Matrix> {
     const offsetX = centerX * (1 - scaleX);
     const offsetY = centerY * (1 - scaleY);
 
-    // Expanded from `combine(scaleMatrix)` — see the note on {@link translate}.
+    // Expanded from `combine(scaleMatrix)` - see the note on {@link translate}.
     return this.set(
       this.a * scaleX + this.e * offsetX,
       this.b * scaleX + this.f * offsetX,

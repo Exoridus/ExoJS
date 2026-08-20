@@ -11,7 +11,7 @@ import { sampleStrongest, toChannels } from './types';
 /**
  * Sources for one two-dimensional binding. `x`/`y` take directly signed
  * sources (stick axes); `up`/`down`/`left`/`right` take button groups. Both
- * forms may appear in the same binding — per axis, whichever of the two
+ * forms may appear in the same binding - per axis, whichever of the two
  * deflects further wins.
  */
 export interface VectorBindingShape {
@@ -108,7 +108,7 @@ function evaluateAxis(buffer: Float32Array, direct: readonly number[], negative:
 export class VectorAction extends ActionBase<OneOrMany<VectorBinding>> {
   public override readonly kind = 'vector' as const;
 
-  /** Current vector. The same instance every frame — copy it if you need to retain a value. */
+  /** Current vector. The same instance every frame - copy it if you need to retain a value. */
   public readonly value = new Vector();
 
   private _bindings: readonly ResolvedVectorBinding[] = [];
@@ -153,7 +153,7 @@ export class VectorAction extends ActionBase<OneOrMany<VectorBinding>> {
 
   /**
    * Sample the channel buffers for this frame. A vector has no
-   * frame-to-frame edge memory to protect, unlike {@link ButtonAction} — a
+   * frame-to-frame edge memory to protect, unlike {@link ButtonAction} - a
    * suspend/resume cycle or an ownership handoff is just a normal sample, so
    * there is nothing more to decide here.
    *

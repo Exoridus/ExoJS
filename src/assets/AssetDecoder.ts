@@ -13,7 +13,7 @@ import { isAbortError } from './SharedAbort';
 /** Sink a decoded resource is handed to, returning the value callers should see for it. */
 export type ResourceStore = (asset: CanonicalAsset, resource: unknown) => unknown;
 
-/** Construction options for {@link AssetDecoder}. Values are already resolved by `Loader` — see `Loader`'s constructor. */
+/** Construction options for {@link AssetDecoder}. Values are already resolved by `Loader` - see `Loader`'s constructor. */
 export interface AssetDecoderOptions {
   basePath: string;
   fetchOptions: RequestInit;
@@ -25,7 +25,7 @@ export interface AssetDecoderOptions {
  * Turns "a type + a path, or a `bindAsset` handler" into a decoded resource:
  * URL resolution, cache-strategy dispatch, `bindAsset` handler invocation
  * (including the {@link AssetLoaderContext} handlers receive), and the
- * container byte-injection path. Extracted from `Loader` — every method here
+ * container byte-injection path. Extracted from `Loader` - every method here
  * is a direct, behavior-preserving relocation.
  *
  * Deliberately does not know about claims, deferred handles, or the
@@ -45,7 +45,7 @@ export class AssetDecoder {
   /**
    * Where decoded resources go. Bound by {@link _bindResourceStore} after the
    * owner has built the residency this forwards to, so it is deliberately not
-   * a constructor parameter — see that method for why.
+   * a constructor parameter - see that method for why.
    */
   private _storeResource: ResourceStore = () => {
     throw new Error('AssetDecoder decoded a resource before its owner bound a resource store. Call _bindResourceStore() first.');
@@ -53,7 +53,7 @@ export class AssetDecoder {
 
   /**
    * Per-request diagnostic sink handed to the cache strategy. One stable
-   * closure per decoder — a strategy shared between loaders reports each
+   * closure per decoder - a strategy shared between loaders reports each
    * degraded failure only to the loader whose request caused it, and holds no
    * reference to any loader between calls.
    */
@@ -77,7 +77,7 @@ export class AssetDecoder {
    * dependent: the residency needs a decoder to dispatch fetches, and the
    * decoder needs the residency to store what it decodes. Passing the sink as a
    * constructor argument forced it to close over a field that was still
-   * unassigned, which held only because nothing invoked it synchronously — a
+   * unassigned, which held only because nothing invoked it synchronously - a
    * guarantee no type could express and only a comment recorded. Binding it
    * afterwards makes the order structural, and the throwing default above turns
    * any future too-early call into an immediate, named failure.
@@ -183,7 +183,7 @@ export class AssetDecoder {
    * Calls a handler-based custom asset loader and hands the result to the
    * `storeResource` callback.
    *
-   * This does NOT automatically bypass caching — the handler controls caching
+   * This does NOT automatically bypass caching - the handler controls caching
    * by calling `context.fetchText` /
    * `context.fetchArrayBuffer` / `context.fetchJson`, which route through
    * the loader's cache strategy.
@@ -218,7 +218,7 @@ export class AssetDecoder {
    * Shared by the foreground and background fetch dispatchers on `Loader` so
    * both honor `bindAsset` handlers identically.
    *
-   * `signal` cancels the dispatched work — it reaches the network through the
+   * `signal` cancels the dispatched work - it reaches the network through the
    * handler context's `fetch*` helpers.
    * @internal
    */

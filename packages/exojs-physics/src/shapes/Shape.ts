@@ -2,7 +2,7 @@
 export type ShapeType = 'circle' | 'polygon';
 
 /**
- * Immutable local-space collision geometry. A `Shape` carries no transform — a
+ * Immutable local-space collision geometry. A `Shape` carries no transform - a
  * {@link Collider} positions it in a body. Shapes also expose the area-based
  * mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive
  * mass and rotational inertia from a density; these are computed once at

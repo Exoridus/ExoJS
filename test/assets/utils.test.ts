@@ -28,7 +28,7 @@ describe('determineMimeType', () => {
 
   describe('MP4 detection (matchesMp4Video)', () => {
     test('detects a valid MP4 box (correct box size, "ftypmp4" brand)', () => {
-      // 20-byte box: [box size u32][ 'ftypmp4' ][ padding ] — header.length === boxSize (20),
+      // 20-byte box: [box size u32][ 'ftypmp4' ][ padding ] - header.length === boxSize (20),
       // which satisfies `header.length >= max(12, boxSize)` and `boxSize % 4 === 0`.
       const bytes = [...u32be(20), 0x66, 0x74, 0x79, 0x70, 0x6d, 0x70, 0x34, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 

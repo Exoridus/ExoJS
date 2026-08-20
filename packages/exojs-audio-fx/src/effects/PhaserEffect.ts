@@ -266,7 +266,7 @@ export class PhaserEffect extends AudioEffect {
     // spec-compliant browsers do not mute the entire allpass chain. Browsers
     // are permitted to silence feedback cycles that contain no DelayNode (i.e.
     // zero-latency cycles), so even delayTime=0 here is sufficient to make the
-    // cycle legal — the DelayNode itself introduces at least one render-quantum
+    // cycle legal - the DelayNode itself introduces at least one render-quantum
     // of delay regardless of its delayTime parameter.
     const feedbackDelay = ctx.createDelay(1);
     feedbackDelay.delayTime.setValueAtTime(0, ctx.currentTime);

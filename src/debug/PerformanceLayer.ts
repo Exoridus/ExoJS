@@ -68,7 +68,7 @@ export class PerformanceLayer extends DebugLayer {
   private readonly _sparkSamples: Float32Array = new Float32Array(sparklineSampleCount);
   private _sparkSampleIndex = 0;
 
-  // Root container — lazily initialized on first update() call so the
+  // Root container - lazily initialized on first update() call so the
   // glyph atlas is not touched in environments where canvas 2D is absent.
   private _root: Container | null = null;
   private _textFps: Text | null = null;
@@ -94,7 +94,7 @@ export class PerformanceLayer extends DebugLayer {
   public override update(delta: Time): void {
     // Lazily build the scene graph on first update so that Text (which
     // touches the glyph atlas immediately) is only constructed when the
-    // layer is first made visible — not at DebugOverlay construction time.
+    // layer is first made visible - not at DebugOverlay construction time.
     if (this._root === null) {
       this._build();
     }

@@ -1,7 +1,7 @@
 // Internal dev/diagnostic utilities.
 //
 // Every function in this module is guarded by `__DEV__`, which is statically
-// replaced with `false` in production builds — the entire function body becomes
+// replaced with `false` in production builds - the entire function body becomes
 // dead code and is tree-shaken.
 //
 // ── Argument-evaluation note ────────────────────────────────────────────────
@@ -10,19 +10,19 @@
 // though the assert body is a no-op. All callsites in the engine source have
 // been audited and fall into these categories:
 //
-//   1. Trivial value/property checks — the comparisons and template-literal
+//   1. Trivial value/property checks - the comparisons and template-literal
 //      messages are simple enough that the production cost is negligible.
 //      → No guard needed; the inline `if (__DEV__ && …)` in the function
 //        body is sufficient.
 //
-//   2. Nontrivial string formatting or allocations — the callsite wraps the
+//   2. Nontrivial string formatting or allocations - the callsite wraps the
 //      call in an explicit `if (__DEV__) { … }` block so the arguments are
 //      never evaluated in production.
 //
-//   3. Side-effecting validation — callsites that mutate state must always
+//   3. Side-effecting validation - callsites that mutate state must always
 //      be guarded externally. (None exist in the current engine source.)
 //
-//   4. Always-on runtime validation — guards user input and public-contract
+//   4. Always-on runtime validation - guards user input and public-contract
 //      invariants that must remain active in production. {@link invariant}
 //      is this category: it throws unconditionally and is never stripped.
 //

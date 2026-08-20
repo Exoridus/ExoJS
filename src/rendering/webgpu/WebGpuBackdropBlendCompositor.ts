@@ -29,7 +29,7 @@ const blendUniformBytes = 16;
  * texture via `copyTextureToTexture`, samples the premultiplied source (group 1,
  * slot 0) and captured backdrop (slot 2), computes the W3C blend for the
  * requested {@link BlendModes}, and draws the result over the target with normal
- * (premultiplied source-over) blending — so the GPU composites the blended
+ * (premultiplied source-over) blending - so the GPU composites the blended
  * source over the backdrop already in the target.
  *
  * Mirrors {@link WebGpuMaskCompositor}'s structure. The backdrop texture is
@@ -41,7 +41,7 @@ const blendUniformBytes = 16;
  *
  * Pipelines are cached per (target format, stencil). The compositor is not an
  * {@link AbstractWebGpuRenderer} and never participates in renderer registry
- * dispatch — the backend invokes it directly.
+ * dispatch - the backend invokes it directly.
  */
 export class WebGpuBackdropBlendCompositor {
   private readonly _projectionData: Float32Array = new Float32Array(16);
@@ -301,7 +301,7 @@ export class WebGpuBackdropBlendCompositor {
     const targetFormat = manager.renderTargetFormat;
     // A geometric stencil clip can wrap the block (the executor pushes the clip
     // outermost), so the compositor may draw into a stencil-enabled pass. Select
-    // the matching pipeline variant — a stencil-free pipeline is incompatible
+    // the matching pipeline variant - a stencil-free pipeline is incompatible
     // with the pass's depth/stencil attachment.
     const stencil = manager._passCoordinator.stencilActive;
     const pipeline = this._getOrCreatePipeline(targetFormat, stencil);

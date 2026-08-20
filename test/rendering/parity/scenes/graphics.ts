@@ -1,7 +1,7 @@
 /**
  * Vector primitive scenes.
  *
- * Graphics draws no texture at all — geometry is generated from the fill
+ * Graphics draws no texture at all - geometry is generated from the fill
  * commands themselves, so this is the one family where the two backends can
  * disagree about triangulation rather than about sampling. Nothing here is
  * traceable to a texel; the honest claim is that both backends produced the

@@ -20,7 +20,7 @@ interface VaoAttribute {
   readonly integer: boolean;
   /**
    * Vertex-attribute divisor passed to `gl.vertexAttribDivisor`. Zero
-   * means per-vertex (the default). One means per-instance — the
+   * means per-vertex (the default). One means per-instance - the
    * attribute advances once per drawArraysInstanced / drawElementsInstanced
    * instance instead of once per vertex.
    */
@@ -32,7 +32,7 @@ export interface WebGl2VertexArrayObjectRuntime {
   unbind(vao: WebGl2VertexArrayObject): void;
   draw(vao: WebGl2VertexArrayObject, size: number, start: number, type: RenderingPrimitives): void;
   /**
-   * Instanced draw — `count` vertices/indices replicated `instanceCount`
+   * Instanced draw - `count` vertices/indices replicated `instanceCount`
    * times. Per-vertex attributes (divisor 0) are shared across instances;
    * per-instance attributes (divisor 1) advance once per instance.
    * Optional: runtimes that don't drive instanced rendering can omit this

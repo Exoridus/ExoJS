@@ -29,7 +29,7 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
  * texture (slot 0) and the captured premultiplied backdrop texture (slot 1),
  * computes the W3C blend for the requested {@link BlendModes}, and draws the
  * result over the active target with normal (premultiplied source-over)
- * blending — so the GPU composites the blended source over the backdrop already
+ * blending - so the GPU composites the blended source over the backdrop already
  * in the target.
  *
  * Mirrors {@link WebGl2MaskCompositor}'s structure; like it, this is invoked

@@ -190,7 +190,7 @@ function isEar(vertices: ArrayLike<number>, _prev: Uint32Array, next: Uint32Arra
   const cy = vertices[nextVertexIndex * 2 + 1]!;
 
   // Walk all remaining vertices and check if any lie strictly inside the ear triangle.
-  // Skip the three ear vertices themselves — they can never be "inside" by strict test,
+  // Skip the three ear vertices themselves - they can never be "inside" by strict test,
   // but we exclude them explicitly for clarity and to avoid floating-point edge cases.
   let node = next[nextVertexIndex]!;
 

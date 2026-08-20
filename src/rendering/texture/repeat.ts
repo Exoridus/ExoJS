@@ -64,7 +64,7 @@ export interface RepeatPlan {
 
 /**
  * Validate generic numeric inputs shared across all modes.
- * Throws unconditionally — these are user/programming errors, not dev-only
+ * Throws unconditionally - these are user/programming errors, not dev-only
  * assertions.
  */
 function validateInputs(sourceLength: number, destinationLength: number): void {
@@ -208,7 +208,7 @@ function buildRoundPlan(destinationLength: number, sourceLength: number, mirror:
  *
  * The planner returns a new result object on every call. Callers should
  * cache the plan and recompute only when `sourceLength`, `destinationLength`,
- * `mode`, or `fit` changes — typically on resize or texture change.
+ * `mode`, or `fit` changes - typically on resize or texture change.
  *
  * @param sourceLength - Native size of the source pattern in destination units.
  * @param destinationLength - Total span to fill.

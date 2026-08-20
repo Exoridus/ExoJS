@@ -3,9 +3,9 @@
  *
  * The playground/Monaco editor injects a typed `assets` global into every
  * example runtime (no import). For hierarchical autocomplete and exact literal
- * types to work in Monaco — which loads `.d.ts` extra-libs into an isolated
+ * types to work in Monaco - which loads `.d.ts` extra-libs into an isolated
  * virtual filesystem and cannot follow a relative `import type` into the
- * canonical catalog module — the global declaration must be SELF-CONTAINED:
+ * canonical catalog module - the global declaration must be SELF-CONTAINED:
  * the full nested object type is inlined as string/number literals.
  *
  * Source of truth: `examples/assets/assets.ts` (the canonical hierarchical

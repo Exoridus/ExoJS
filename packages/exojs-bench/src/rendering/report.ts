@@ -111,10 +111,10 @@ const toCsv = (data: ReportData): string => [CSV_HEADER.join(','), ...data.resul
 
 /**
  * Human-readable Markdown: one provenance block PER BACKEND first (so a reader
- * knows which GPU produced which backend's numbers — presenting a WebGPU row
+ * knows which GPU produced which backend's numbers - presenting a WebGPU row
  * under WebGL2's adapter string would misattribute it), then one table with the
- * structural counters sitting BESIDE the timings — a timing win that came from
- * doing less work must be visible in the same row — and a `note` column so the
+ * structural counters sitting BESIDE the timings - a timing win that came from
+ * doing less work must be visible in the same row - and a `note` column so the
  * reason behind an `unavailable`/`exceeded` cell, or a timing sourced from an
  * rAF delta rather than a real GPU timer, is visible in the row it belongs to.
  */
@@ -151,7 +151,7 @@ const toMarkdown = (data: ReportData): string => {
 
     // Sprite-batch slot tier (WebGPU only): the negotiated texture-slot ceiling
     // (8/16/32) the sprite batcher resolved for this adapter. Recorded so a
-    // slot-sensitive archetype (e.g. `batch-breaking`) is auditable — a reader
+    // slot-sensitive archetype (e.g. `batch-breaking`) is auditable - a reader
     // can see whether this run's tier is below the archetype's textureCount (so
     // batches actually broke) or a future ceiling change lifted the tier past it.
     if (entry.slotTier !== undefined) {
@@ -172,7 +172,7 @@ const toMarkdown = (data: ReportData): string => {
   }
 
   // Methodology disclosure: leaving per-archetype culling on while an archetype
-  // keeps its sprites on-screen would mean the cull check never removes a node —
+  // keeps its sprites on-screen would mean the cull check never removes a node -
   // pure asymmetric overhead, since ExoJS's `cullable` drives a real per-node
   // bounds check in the render walk while Pixi's `cullable` is inert unless
   // something calls `Culler.shared.cull(...)`. Culling is therefore disabled on
@@ -250,9 +250,9 @@ const toMarkdown = (data: ReportData): string => {
 
 /**
  * Writes the three report artifacts into `outDir`:
- * - `results.json` — full fidelity (provenance + every result field).
- * - `results.csv` — one row per cell, machine-parseable.
- * - `results.md` — provenance block plus a human-readable table.
+ * - `results.json` - full fidelity (provenance + every result field).
+ * - `results.csv` - one row per cell, machine-parseable.
+ * - `results.md` - provenance block plus a human-readable table.
  */
 export const writeReport = (data: ReportData, outDir: string): void => {
   writeReportArtifacts(outDir, {

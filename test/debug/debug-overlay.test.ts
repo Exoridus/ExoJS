@@ -46,7 +46,7 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Minimal Application mock — enough for DebugOverlay constructor + usage.
+// Minimal Application mock - enough for DebugOverlay constructor + usage.
 // ---------------------------------------------------------------------------
 
 // A view-like object that satisfies the SceneNode.inView() call path.
@@ -90,8 +90,8 @@ const makeOnResize = () => new Signal<[number, number, unknown]>();
 
 /**
  * Stand-in for the binding side of `InputManager`. The overlay claims its
- * keys through `onStart` — registering a binding is what marks a key consumed
- * so its browser default is suppressed — so the mock records the callbacks
+ * keys through `onStart` - registering a binding is what marks a key consumed
+ * so its browser default is suppressed - so the mock records the callbacks
  * per channel and lets `pressKey` fire one.
  */
 const makeInput = () => {
@@ -135,7 +135,7 @@ const makeApp = () => {
 };
 
 /**
- * Same mock, but with a REAL {@link InputManager} on a real canvas — the only
+ * Same mock, but with a REAL {@link InputManager} on a real canvas - the only
  * way to observe what the overlay's keybindings do to the actual DOM event,
  * which is the whole point of claiming them through bindings.
  */
@@ -228,7 +228,7 @@ describe('DebugOverlay — lifecycle', () => {
 
     canvas.dispatchEvent(new FocusEvent('focus'));
 
-    // F3 opens the browser's find bar by default — the overlay owns it now.
+    // F3 opens the browser's find bar by default - the overlay owns it now.
     const claimed = new KeyboardEvent('keydown', { code: 'F3', cancelable: true });
 
     window.dispatchEvent(claimed);
@@ -295,7 +295,7 @@ describe('DebugOverlay — render path', () => {
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
-    // visible defaults to false — dispatch a frame
+    // visible defaults to false - dispatch a frame
     const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
 
     app.onFrame.dispatch(fakeTime);

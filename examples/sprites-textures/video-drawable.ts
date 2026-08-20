@@ -2,7 +2,7 @@ import { Application, Asset, Color, Keyboard, type RenderingContext, Scene, Spri
 import { mountControls } from '@examples/runtime';
 
 // Every video in the asset catalog, switchable at runtime with the number
-// keys. Only the first entry is fetched up front — the others lazy-load on
+// keys. Only the first entry is fetched up front - the others lazy-load on
 // first selection so startup stays fast.
 const VIDEOS = [
     { name: 'demoLoop', label: 'Demo loop (webm)', url: assets.demo.video.demoLoop },
@@ -34,7 +34,7 @@ class VideoDrawableScene extends Scene {
 
         this.configureVideo();
 
-        // A sprite composited on top of the live video texture — the same scene
+        // A sprite composited on top of the live video texture - the same scene
         // graph draws video frames and regular sprites side by side. Texture IS
         // seamless, so it is fetched directly by source with no preload step.
         this.overlay = new Sprite(this.loader.get(assets.demo.textures.shipA));

@@ -130,7 +130,7 @@ describe('computeShaderTiling', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildRepeatingSpriteQuads — zero-size
+// buildRepeatingSpriteQuads - zero-size
 // ---------------------------------------------------------------------------
 
 describe('buildRepeatingSpriteQuads — zero size', () => {
@@ -146,7 +146,7 @@ describe('buildRepeatingSpriteQuads — zero size', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildRepeatingSpriteQuads — stretch
+// buildRepeatingSpriteQuads - stretch
 // ---------------------------------------------------------------------------
 
 describe('buildRepeatingSpriteQuads — stretch', () => {
@@ -163,7 +163,7 @@ describe('buildRepeatingSpriteQuads — stretch', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildRepeatingSpriteQuads — repeat
+// buildRepeatingSpriteQuads - repeat
 // ---------------------------------------------------------------------------
 
 describe('buildRepeatingSpriteQuads — repeat/round', () => {
@@ -219,7 +219,7 @@ describe('buildRepeatingSpriteQuads — repeat/clip', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildRepeatingSpriteQuads — mirror-repeat
+// buildRepeatingSpriteQuads - mirror-repeat
 // ---------------------------------------------------------------------------
 
 describe('buildRepeatingSpriteQuads — mirror-repeat', () => {
@@ -236,7 +236,7 @@ describe('buildRepeatingSpriteQuads — mirror-repeat', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildRepeatingSpriteQuads — atlas subregion UV range
+// buildRepeatingSpriteQuads - atlas subregion UV range
 // ---------------------------------------------------------------------------
 
 describe('buildRepeatingSpriteQuads — atlas region UV', () => {
@@ -267,7 +267,7 @@ describe('buildRepeatingSpriteQuads — atlas region UV', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildRepeatingSpriteQuads — offset
+// buildRepeatingSpriteQuads - offset
 // ---------------------------------------------------------------------------
 
 describe('buildRepeatingSpriteQuads — offset', () => {
@@ -311,7 +311,7 @@ describe('buildRepeatingSpriteQuads — offset', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildRepeatingSpriteQuads — destination coverage
+// buildRepeatingSpriteQuads - destination coverage
 // ---------------------------------------------------------------------------
 
 describe('buildRepeatingSpriteQuads — destination coverage', () => {

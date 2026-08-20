@@ -45,7 +45,7 @@ export interface RetainedFragmentGroup {
   retainedInstructions: RetainedInstructionSet | null;
   /**
    * Pooled entry list owned by this record, rewritten in place on recapture.
-   * Valid up to {@link RetainedFragmentGroup.entryCount} — the array itself may
+   * Valid up to {@link RetainedFragmentGroup.entryCount} - the array itself may
    * still hold records a longer earlier capture left behind, which is what keeps
    * the recapture from re-growing it (see {@link RetainedGroupFragment}).
    */
@@ -54,7 +54,7 @@ export interface RetainedFragmentGroup {
 }
 
 /**
- * A barrier-effect node inside the fragment. NOT captured — re-dispatched
+ * A barrier-effect node inside the fragment. NOT captured - re-dispatched
  * through a normal `_collect` on every replay (semantics-neutral by
  * construction; the node reference stays valid because any change below it
  * content-dirties the owning RetainedContainer and drops the fragment).
@@ -72,8 +72,8 @@ export type RetainedFragmentEntry = RetainedFragmentDraw | RetainedFragmentGroup
 /**
  * Process-wide monotonic epoch for the dirty-transform-row dedup
  * (see {@link RetainedGroupFragment}). Each fragment reset claims a fresh value,
- * so a node's dedup stamp from any earlier cycle — this fragment's or another's
- * — can never equal a fragment's current epoch, making a false dedup (a dropped
+ * so a node's dedup stamp from any earlier cycle - this fragment's or another's
+ * - can never equal a fragment's current epoch, making a false dedup (a dropped
  * move → stale render) impossible.
  */
 let nextDirtyRowEpoch = 1;
@@ -81,7 +81,7 @@ let nextDirtyRowEpoch = 1;
 /**
  * Whole-command-range fragment cache for one {@link RetainedContainer}.
  * Keyed on the subtree's aggregate
- * content/structure revision and the backend identity — deliberately NOT on
+ * content/structure revision and the backend identity - deliberately NOT on
  * `View.updateId` (group-level culling makes the fragment view-independent;
  * this is the camera-pan win) and NOT on the container's own transform
  * (a group move only changes the group matrix).
@@ -95,7 +95,7 @@ export class RetainedGroupFragment {
    * Snapshotted entries, valid up to {@link _entryCount}. Like every other
    * per-capture store here the array is rewritten rather than emptied: the
    * records in it are pooled and immortal either way, and emptying would hand
-   * the backing store back and re-grow it on the next capture — ~33 bytes per
+   * the backing store back and re-grow it on the next capture - ~33 bytes per
    * entry per capture, which is the whole cost of recapturing a scene whose
    * content changes every frame.
    */
@@ -115,7 +115,7 @@ export class RetainedGroupFragment {
 
   // Thrash suppression. The state machine is shared with the render-root
   // representation ({@link CaptureThrashSuppressor}); what stays here is this
-  // tier's KEY — the content and structure revisions, and nothing else, because
+  // tier's KEY - the content and structure revisions, and nothing else, because
   // a group's clean-frame test spans exactly those two channels.
   private readonly _thrash = new CaptureThrashSuppressor();
   private _observedContent = -1;
@@ -123,7 +123,7 @@ export class RetainedGroupFragment {
 
   // Instruction-set tier. `_instructions` is a stable
   // per-fragment singleton (lazily created on first record arming) so
-  // captured references to it — e.g. inside an OUTER group's fragment —
+  // captured references to it - e.g. inside an OUTER group's fragment -
   // survive re-records; validity is re-checked per collect. Recordability
   // is computed lazily per capture and cached.
   private _instructions: RetainedInstructionSet | null = null;
@@ -133,11 +133,11 @@ export class RetainedGroupFragment {
   // Lazy drawable -> captured shared-row map over EVERY draw record in the
   // fragment, nested groups included. Built on first lookup after a capture,
   // dropped on the next capture. Which of those rows a given consumer may
-  // actually patch is the consumer's own eligibility question — a
+  // actually patch is the consumer's own eligibility question - a
   // {@link RetainedContainer} restricts itself to direct children, the
   // render-root representation does not.
   private _rowMap: Map<Drawable, RetainedFragmentDraw> | null = null;
-  // The smallest nodeIndex among ALL draw records — the fragment's own
+  // The smallest nodeIndex among ALL draw records - the fragment's own
   // shared-buffer base at CAPTURE time. Local row = nodeIndex minus this.
   // Computed with the row map; -1 when there are no draws.
   private _rowMinIndex = -1;
@@ -150,22 +150,22 @@ export class RetainedGroupFragment {
   //
   // `length = 0` would be wrong here, not merely different. V8 hands the
   // backing store back on a shrink to zero, so the refill re-grows from empty
-  // through the whole doubling sequence — measured at ~27 bytes per queued node
+  // through the whole doubling sequence - measured at ~27 bytes per queued node
   // per frame, which made this queue the single largest allocation in a scene
   // where every node moves (28.6 KB/frame at 1000 nodes). Dedup is O(1) via a
-  // per-node epoch stamp keyed on `_dirtyRowEpoch` — a globally unique value
+  // per-node epoch stamp keyed on `_dirtyRowEpoch` - a globally unique value
   // bumped on every reset, so a stale stamp never falsely dedups.
   //
   // Slots at or beyond `_dirtyRowCount` keep whatever node they last held.
   // That retains nothing a live subtree does not already retain, and it cannot
   // outlive a node's removal: removing a child moves the subtree's structure
-  // revision, and the next build therefore recaptures or invalidates — both of
+  // revision, and the next build therefore recaptures or invalidates - both of
   // which drop the references through {@link _dropDirtyTransformRows}.
   private readonly _dirtyTransformRows: RenderNode[] = [];
   private _dirtyRowCount = 0;
   private _dirtyRowEpoch = nextDirtyRowEpoch++;
 
-  /** Snapshot policy for nested transform groups — see {@link _snapshotInto}. */
+  /** Snapshot policy for nested transform groups - see {@link _snapshotInto}. */
   private _deferTransformGroups = false;
 
   public get hasCapture(): boolean {
@@ -206,14 +206,14 @@ export class RetainedGroupFragment {
    *   (`transformRowBase`). The two frames can start the fragment at different
    *   absolute rows (a sibling before it changing its row count between capture
    *   and record), and each node's local position is a property of the
-   *   unchanged subtree — captured here — not of the absolute base. Using the
+   *   unchanged subtree - captured here - not of the absolute base. Using the
    *   record-frame base offsets every patch by the delta.
    * - It spans NESTED draws, not just top-level ones. The backend rebases by
    *   the minimum node index over every recorded batch, and entries carry
    *   monotonically increasing indices in collect order, so a fragment whose
    *   first child is a plain container holding a drawable starts lower than its
    *   first top-level draw. A top-level-only minimum then shifts every patch by
-   *   that difference — the nested node takes the moved node's transform and
+   *   that difference - the nested node takes the moved node's transform and
    *   the moved node freezes.
    */
   public recordedRowBase(): number {
@@ -287,7 +287,7 @@ export class RetainedGroupFragment {
     return this._dirtyTransformRows[index]!;
   }
 
-  /** Drop the queue — after patching them, or after a full re-collect subsumed them. */
+  /** Drop the queue - after patching them, or after a full re-collect subsumed them. */
   public clearDirtyTransformRows(): void {
     // Rewinding the logical length keeps the backing store for the next frame
     // (see the field comment); a fresh epoch invalidates every prior dedup
@@ -297,7 +297,7 @@ export class RetainedGroupFragment {
   }
 
   /**
-   * Drop the queue AND its references — the structural counterpart of
+   * Drop the queue AND its references - the structural counterpart of
    * {@link clearDirtyTransformRows}, for the two paths that follow a change in
    * what the subtree contains. Keeping the backing store across those would let
    * a removed node stay reachable through a slot nothing will overwrite again.
@@ -341,7 +341,7 @@ export class RetainedGroupFragment {
     return this._thrash.suppressed;
   }
 
-  /** The active capture was replayed (spliced) at least once — it earned its keep. */
+  /** The active capture was replayed (spliced) at least once - it earned its keep. */
   public markReplayed(): void {
     this._thrash.markReplayed();
   }
@@ -371,7 +371,7 @@ export class RetainedGroupFragment {
   }
 
   /**
-   * The captured entries. Valid up to {@link entryCount} — reading past it walks
+   * The captured entries. Valid up to {@link entryCount} - reading past it walks
    * records an earlier, longer capture left in the array.
    */
   public get entries(): readonly RetainedFragmentEntry[] {
@@ -474,13 +474,13 @@ export class RetainedGroupFragment {
         // A snapshot that DEFERS transform groups (the automatic render-root
         // representation) records a nested boundary as a live re-dispatch
         // instead of copying its scope: the boundary owns its own retention
-        // tier — capture key, recorded set, in-place transform-row patching —
+        // tier - capture key, recorded set, in-place transform-row patching -
         // and swallowing its entries into an outer snapshot would stop its
         // `_collectContent` from ever running again, silently disabling all of
         // it. Re-dispatch keeps `RetainedContainer` semantics byte-identical
         // and costs the outer fragment only its recordability (a re-dispatch
         // record is a barrier, and barriers cannot interleave with cached batch
-        // runs) — it stays on the entry-replay tier, which is what an outer
+        // runs) - it stays on the entry-replay tier, which is what an outer
         // scope full of nested groups would replay anyway.
         if (this._deferTransformGroups && entry.scope.transformNode !== null) {
           const deferred = this._barrierPool.acquire();
@@ -516,7 +516,7 @@ export class RetainedGroupFragment {
 }
 
 // Record factories, one per pool. Written out field by field at a single site
-// each — see the hidden-class note on `RetainedRecordPool`.
+// each - see the hidden-class note on `RetainedRecordPool`.
 
 const createFragmentDraw = (): RetainedFragmentDraw => ({
   kind: RenderEntryKind.Draw,

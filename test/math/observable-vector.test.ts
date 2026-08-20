@@ -112,7 +112,7 @@ describe('ObservableVector owner notification', () => {
 });
 
 describe('ObservableVector angle/length overrides', () => {
-  // The subclass must redeclare the getter next to each setter override —
+  // The subclass must redeclare the getter next to each setter override -
   // a setter-only accessor on the subclass prototype would shadow the whole
   // inherited accessor pair and leave `get` undefined.
   test('reading .angle works like AbstractVector.angle', () => {

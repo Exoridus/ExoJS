@@ -27,7 +27,7 @@ const material: MaterialKey = { rendererId: 1, blendMode: 0, textureId: -1, shad
 const fakeBackendA = {} as RenderBackend;
 const fakeBackendB = {} as RenderBackend;
 
-// A scope entry as the builder's current scope would hold it — the fragment
+// A scope entry as the builder's current scope would hold it - the fragment
 // deep-copies it into its own pooled records at capture.
 const makeScopeDrawEntry = (drawable: Drawable, nodeIndex = 0): DrawScopeEntry => ({
   kind: RenderEntryKind.Draw,
@@ -107,7 +107,7 @@ describe('RetainedGroupFragment', () => {
     const spriteB = new Drawable();
 
     // Two direct drawable children on shared rows 3 and 5 (a sibling occupied
-    // the earlier rows — the group's rows never start at 0).
+    // the earlier rows - the group's rows never start at 0).
     fragment.capture(1, 1, fakeBackendA, [makeScopeDrawEntry(spriteA, 3), makeScopeDrawEntry(spriteB, 5)]);
 
     expect((fragment.entries[0] as { nodeIndex: number }).nodeIndex).toBe(3);
@@ -181,7 +181,7 @@ describe('RetainedGroupFragment', () => {
 
   test('invalidate() releases the queue references so a dropped node can GC', async () => {
     // The per-frame reset deliberately keeps its slots (that is what makes the
-    // refill allocation-free), so the structural paths — invalidate and capture —
+    // refill allocation-free), so the structural paths - invalidate and capture -
     // are what has to hand the references back.
     const fragment = new RetainedGroupFragment();
     // Queued, cleared and released inside a scope that ends here, so the only
@@ -236,7 +236,7 @@ describe('RetainedGroupFragment', () => {
 });
 
 // File-local fake backend (repo convention keeps test harnesses file-local
-// rather than importing them across test files) — duplicated verbatim from
+// rather than importing them across test files) - duplicated verbatim from
 // test/rendering/retained-subtree-skip.test.ts.
 const createTestBackend = (): RenderBackend => {
   const renderTarget = new RenderTarget(800, 600, true);
@@ -298,7 +298,7 @@ const createTestBackend = (): RenderBackend => {
 };
 
 // `build()` wraps a Container root in its own Group scope, so the draws for a
-// scene never live at `pass.root.entries` — they are nested one or more
+// scene never live at `pass.root.entries` - they are nested one or more
 // Group/Barrier scopes deep. Walk the scope tree in entry order to recover the
 // true post-optimize paint order.
 const gatherScopeDraws = (scope: GroupScope, out: DrawCommand[]): void => {
@@ -413,7 +413,7 @@ describe('builder: transformNode marking, cull suppression, snapshot/replay roun
     const builder = RenderPlanBuilder.acquire();
     const plan = builder.build(root, backend);
     // `group`'s own scope (holding its direct child, the 'a' draw) is nested
-    // below root's own wrapping scope — see findScopeOwningDraw.
+    // below root's own wrapping scope - see findScopeOwningDraw.
     const groupScope = findScopeOwningDraw(plan.passes[0]!.root, 'a');
 
     expect(groupScope).not.toBeNull();

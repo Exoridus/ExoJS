@@ -53,14 +53,14 @@ export const instancedMeshShaderSource: string = instancedMeshShaderSourceModule
 // Per-vertex layout (20 bytes): pos f32x2 + uv f32x2 + color u8x4-norm.
 // Default-shader path bakes the (view * globalTransform) into position so the
 // vertex shader stays branchless and uniform-free except for the per-mesh tint.
-// Custom-shader path keeps positions in LOCAL space — the user's vertex
+// Custom-shader path keeps positions in LOCAL space - the user's vertex
 // shader receives mesh transforms via the auto-bound u_mesh uniform block.
 const vertexStrideBytes = 20;
 const wordsPerVertex = vertexStrideBytes / 4;
 /**
  * Byte size of `indexCount` uint16 indices, rounded up to 4. `GPUQueue.writeBuffer`
  * rejects byte counts and offsets that are not a multiple of 4, so index sub-ranges
- * within the shared buffer are laid out on 4-byte boundaries — which also satisfies
+ * within the shared buffer are laid out on 4-byte boundaries - which also satisfies
  * `setIndexBuffer`'s weaker 2-byte offset requirement.
  */
 const alignIndexBytes = (indexCount: number): number => (indexCount * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
@@ -69,9 +69,9 @@ const tintByteLength = 32; // vec4 tint + vec4 flags (only flags.x used)
 const transformUniformByteLength = 128; // mat3x3<f32> projection (48B) + mat3x3<f32> group (48B) + vec4<f32> flags (16B) + vec4<f32> snap viewport (16B)
 
 // Custom-shader uniform layout:
-//   mat3x3<f32> projection   — 48 bytes (3 vec3 columns padded to vec4 in WGSL)
-//   mat3x3<f32> translation  — 48 bytes
-//   vec4<f32>   tint         — 16 bytes
+//   mat3x3<f32> projection   - 48 bytes (3 vec3 columns padded to vec4 in WGSL)
+//   mat3x3<f32> translation  - 48 bytes
+//   vec4<f32>   tint         - 16 bytes
 // Total: 112 bytes; aligned up to 256 for dynamic offset.
 const customMeshUniformBytes = 112;
 
@@ -165,7 +165,7 @@ interface CustomShaderResources {
   // the vertex state.
   instancedPipelineLayout: GPUPipelineLayout;
   instancedPipelines: Map<string, GPURenderPipeline>;
-  // Vertex/index stream — local-space data, separate from the default path's
+  // Vertex/index stream - local-space data, separate from the default path's
   // shared buffers because custom shaders read positions un-baked.
   vertexBuffer: GPUBuffer | null;
   indexBuffer: GPUBuffer | null;
@@ -242,14 +242,14 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
    * flush-level batch. Custom-material meshes and meshes without shared static
    * geometry are excluded at collect time and never open a capture. A LONE
    * static-geometry mesh still can: it takes the CPU-baked default path (view
-   * baked into vertices — uncacheable) and poisons the window from there,
+   * baked into vertices - uncacheable) and poisons the window from there,
    * because run length is only known at flush time.
    */
   public readonly _supportsRetainedBatches = true;
 
   /**
    * Only a mesh backed by SHARED, STATIC {@link Geometry} can reach the
-   * recordable instanced path at all — an array-vertex mesh
+   * recordable instanced path at all - an array-vertex mesh
    * (`geometry === null`) and a `dynamic`/`stream` geometry re-pack into this
    * renderer's own scratch buffers every frame and always take the CPU-baked
    * default path. Vetoing them at collect time stops a group of array meshes
@@ -312,7 +312,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   // pass object on every acquire, so a pass ended by anyone else (a target
   // switch, a stencil clip, another renderer) is distinguished automatically.
   private _instancedBatchPass: WebGpuActiveRenderPass | null = null;
-  // The open pass this renderer has actually RECORDED draws into — set only
+  // The open pass this renderer has actually RECORDED draws into - set only
   // after a draw is encoded, by both the immediate-batch path and `flush()`.
   // `_instancedBatchPass` alone cannot answer that: it is set when the cursors
   // are bound to a pass, which happens before anything is recorded.
@@ -324,7 +324,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _instancedNodeIndexData: Uint32Array = new Uint32Array(0);
   // Write cursor into the shared node-index buffer (bytes), scoped to one open
   // render pass. Every instanced batch in a pass goes into ONE submit, so each
-  // MUST occupy a DISTINCT sub-range — writing them all at offset 0 aliases: the
+  // MUST occupy a DISTINCT sub-range - writing them all at offset 0 aliases: the
   // first batch's draw would read the last batch's node indices at submit time.
   // Both the flush loop and the immediate `drawInstancedBatch` path append here;
   // reset whenever the pass they wrote into is ended.
@@ -348,10 +348,10 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
   private _indexBufferCapacity = 0;
   private _uniformBufferCapacity = 0;
   private _vertexData: ArrayBuffer = new ArrayBuffer(0);
-  /** Reused per-flush staging for the default path's uniform slots — see `flush`. */
+  /** Reused per-flush staging for the default path's uniform slots - see `flush`. */
   private _defaultUniformStaging: ArrayBuffer = new ArrayBuffer(0);
   private _defaultUniformStagingF32: Float32Array = new Float32Array(0);
-  /** Reused per-flush cursors for the custom-material paths — see `flush`. */
+  /** Reused per-flush cursors for the custom-material paths - see `flush`. */
   private readonly _customVertexCursors = new Map<Material, number>();
   private readonly _customIndexCursors = new Map<Material, number>();
   private _float32View: Float32Array = new Float32Array(this._vertexData);
@@ -436,7 +436,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
    * paying a pass plus a submit each. Every per-batch upload therefore takes a
    * fresh slice of a pass-scoped cursor (node indices, uniform slot, free
    * attributes), and anything that would retroactively change a draw already
-   * recorded into the pass ends it first — the same discipline the sprite batch
+   * recorded into the pass ends it first - the same discipline the sprite batch
    * path uses, since `queue.writeBuffer` is ordered against the submit rather
    * than against the individual draws inside it.
    *
@@ -533,7 +533,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const renderTargetFormat = backend.renderTargetFormat;
     const stencil = coordinator.stencilActive;
     // The material owns its blend mode; the mesh's own overrides it when set
-    // away from the default — same rule as the node and WebGL2 batch paths.
+    // away from the default - same rule as the node and WebGL2 batch paths.
     const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
     const pass = active.pass;
 
@@ -647,7 +647,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       // No drawable content but a clear is pending: open the coordinator's
       // pass so createColorAttachment consumes the clear-state once, but
       // leave it open (not ended) so a following renderer's flush in the same
-      // frame — e.g. the sprite flush right after this one — can append its
+      // frame - e.g. the sprite flush right after this one - can append its
       // draws into it instead of paying for an extra pass and submit.
       if (backend.clearRequested) {
         backend._passCoordinator.acquirePass();
@@ -706,7 +706,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     // Phases 3-4 below write into the shared vertex/index/uniform and instanced
     // node-index buffers, and may reallocate them. Draws of OURS left in the
-    // open pass — from `drawInstancedBatch` or from an earlier flush — still
+    // open pass - from `drawInstancedBatch` or from an earlier flush - still
     // read those exact buffers, and `queue.writeBuffer` lands ahead of the whole
     // submit, so this flush must APPEND at the pass cursors rather than rewrite
     // from offset 0. Ending the pass is the fallback for the two cases appending
@@ -717,7 +717,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // renderer switch precisely so they can stay.
     const ownDrawsInPass = this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass;
     // Sized for everything this pass has taken SO FAR plus this flush, captured
-    // BEFORE the guard below may reset the cursors — and used to size the buffers
+    // BEFORE the guard below may reset the cursors - and used to size the buffers
     // even when it does split. Sizing to the lone flush that remains after a
     // split would peg every buffer at one flush forever: the guard would split,
     // the split would shrink the requirement back, the capacity would never
@@ -762,7 +762,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const defaultUniformBytes = defaultDrawCalls * this._uniformAlignment;
     // Grown on demand and reused, like `_vertexData` / `_packedIndexData`
     // beside it. A fresh buffer per flush is 256 bytes PER DRAW CALL of malloc
-    // and zero-fill — 256 KB every frame at a thousand meshes — and the bytes
+    // and zero-fill - 256 KB every frame at a thousand meshes - and the bytes
     // are dead the moment `writeBuffer` has copied them. Only the first
     // `defaultUniformBytes` are uploaded, and every uploaded slot is fully
     // written by the loop below, so stale contents beyond a slot's 32 declared
@@ -857,7 +857,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         (resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3,
       );
 
-      // Refresh the user uniform UBO from the material — uploaded only when the
+      // Refresh the user uniform UBO from the material - uploaded only when the
       // uniform values actually changed since the last frame.
       this._uploadUserUniforms(material, resources);
     }
@@ -874,7 +874,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     // Any draw still in the open pass at this point may belong to ANOTHER
     // renderer, or to an earlier flush of ours that this one appended after. The
-    // loop below resolves textures and the shared transform storage — both can
+    // loop below resolves textures and the shared transform storage - both can
     // mutate a resource such a draw already reads, and both land on the queue
     // timeline ahead of the deferred submit. Checking costs two walks over the
     // draw calls, so it only runs when there is something to protect.
@@ -897,7 +897,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     const renderTargetFormat = backend.renderTargetFormat;
     // A clip scope flushes the active renderer on push/pop, so every draw call
-    // in this batch shares one stencil state — read it once. While active, the
+    // in this batch shares one stencil state - read it once. While active, the
     // coordinator's pass carries a depth/stencil attachment, so the default,
     // static-batch, and custom-material pipelines must all select their
     // stencil-enabled variants to match it.
@@ -963,7 +963,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
           // Retained recording (mesh opt-in): hand this instanced flush's
           // per-instance node-index stream + a reference to the SHARED,
           // persistent geometry to the recorder. Geometry bytes are never
-          // copied into the group bundle — only the node-index words are
+          // copied into the group bundle - only the node-index words are
           // group-owned. `staticGeometry` is structurally a
           // WebGpuRetainedGeometryRef (vertexBuffer/indexBuffer/indexCount).
           if (backend._retainedCaptureActive) {
@@ -990,7 +990,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         // ----- Default path -----
         // A single (non-batched) mesh renders through the CPU-baked default
         // pipeline (view * group folded into vertex positions), which is
-        // view-dependent and cannot be cached — poison any open capture so the
+        // view-dependent and cannot be cached - poison any open capture so the
         // group degrades to entry replay. Belt-and-braces (mirrors WebGL2's
         // dynamic-single poison); the predicate admits material-less meshes.
         if (backend._retainedCaptureActive) {
@@ -1053,7 +1053,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         pass.setBindGroup(0, resources.meshUniformBindGroup, [cursor * meshUniformAlignment]);
 
         // This draw reads the material's user-uniform buffer for as long as the
-        // pass stays open — which it now does past the end of this flush. A
+        // pass stays open - which it now does past the end of this flush. A
         // later `drawInstancedBatch` with the same material consults exactly
         // this set before writing that buffer.
         if (resources.userUniformBuffer !== null) {
@@ -1306,7 +1306,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       // The view is post-multiplied straight into the six affine components the
       // bake needs, instead of through `matrix.combine(view)`. Writing the
       // product back into the scratch matrix costs ~47 bytes per call in a
-      // browser V8 — nine double field stores — and this runs once per mesh, so
+      // browser V8 - nine double field stores - and this runs once per mesh, so
       // it was 47 KB/frame at a thousand meshes, a third of that frame's total
       // allocation. The projective row (`e`/`f`/`z`) is not read by the loop
       // below, so nothing else needs the product. Same formula as
@@ -1344,7 +1344,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
         this._uint32View[targetIndex + 4] = colors !== null ? colors[i]! : 0xffffffff;
       }
     } else {
-      // Should not happen — default path always bakes. Defensive no-op.
+      // Should not happen - default path always bakes. Defensive no-op.
       // Same bounds reasoning as the bake branch above.
       for (let i = 0; i < vertexCount; i++) {
         const sourceIndex = i * 2;
@@ -1417,7 +1417,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     // Resolve the binding every call so a mutable DataTexture (e.g. an
     // audio spectrogram mutated each frame) uploads its dirty region before it
     // is sampled. Reuse the cached bind group only while the underlying view is
-    // unchanged — the backend swaps the view when it recreates the GPU texture
+    // unchanged - the backend swaps the view when it recreates the GPU texture
     // on resize. A plain cache hit that skipped this would freeze the texture
     // on its first-frame contents.
     const binding = backend.getTextureBinding(texture);
@@ -1791,9 +1791,9 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
   /**
    * Replay one recorded default-path mesh batch into the OPEN pass. All
-   * STATE is resolved live — the instanced pipeline, `TransformUniforms`
+   * STATE is resolved live - the instanced pipeline, `TransformUniforms`
    * (projection + group) from the live view/group, the per-batch premultiply
-   * flag, the texture — and only DATA is reused: the SHARED geometry
+   * flag, the texture - and only DATA is reused: the SHARED geometry
    * (vertex + index buffers), the group-owned node-index stream (bundle vertex
    * buffer 1 at `payload.byteOffset`), and the group-owned transform storage
    * (bind group(0) binding 1). Drawn indexed (`drawIndexed`).
@@ -1821,7 +1821,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     }
 
     // Drain any pending live mesh draws first so replay draws follow them in
-    // order — the backend only flushes the OUTGOING renderer on a switch, so a
+    // order - the backend only flushes the OUTGOING renderer on a switch, so a
     // mesh already active before the group would still hold pending draws.
     this.flush();
 
@@ -1838,7 +1838,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
     const slot = payload.batchIndexInBundle ?? 0;
 
     // Size the group-owned UBO to cover this slot. Growth destroys the old
-    // buffer — if this bundle's earlier draws are already in the open pass they
+    // buffer - if this bundle's earlier draws are already in the open pass they
     // reference it, so end (submit) that pass first (rare: first replay frame /
     // batch-count increase). Slots replay in ascending order, so once sized no
     // further growth happens this frame.
@@ -2422,7 +2422,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
       });
     }
 
-    // Index buffer — capacity must be 4-byte aligned for GPUQueue.writeBuffer.
+    // Index buffer - capacity must be 4-byte aligned for GPUQueue.writeBuffer.
     const indexBytes = (resources.totalIndices * Uint16Array.BYTES_PER_ELEMENT + 3) & ~3;
     if (resources.indexData.length * Uint16Array.BYTES_PER_ELEMENT < indexBytes) {
       resources.indexData = new Uint16Array(Math.max(indexBytes / Uint16Array.BYTES_PER_ELEMENT, resources.indexData.length * 2));
@@ -2640,7 +2640,7 @@ export class WebGpuMeshRenderer extends AbstractWebGpuRenderer<Mesh> implements 
 
     // Always keep a UBO (even if empty) since binding 0 of the user layout is
     // fixed. Min size 16 bytes to satisfy WebGPU's minimum buffer size. The
-    // buffer is reused across frames — only (re)created on capacity growth.
+    // buffer is reused across frames - only (re)created on capacity growth.
     const bufferBytes = userUniformBufferBytes(scalarValues.length);
     let forceWrite = false;
 

@@ -1,7 +1,7 @@
 export * from './Circle';
 export * from './CircleLike';
 // `./Collision` provides the collision TYPES (CollisionType, Collidable,
-// CollisionResponse) — it does NOT export a `Collision` value despite the
+// CollisionResponse) - it does NOT export a `Collision` value despite the
 // filename. The `Collision` VALUE below is the query-namespace facade
 // (intersects.*/resolve.*) from `./collision-detection`. Keep these distinct.
 export * from './Collision';

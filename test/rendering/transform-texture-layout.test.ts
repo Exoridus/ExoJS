@@ -174,7 +174,7 @@ describe('transform texture GLSL include', () => {
     // A source scan rather than a list of imports: the consuming sources are
     // spread across .vert files, template literals in renderers, and a separate
     // package, and only a scan can fail when a NEW one hand-rolls the mapping.
-    // (Text has its own per-node store — `u_nodeData` — and is untouched.)
+    // (Text has its own per-node store - `u_nodeData` - and is untouched.)
     const roots = [resolve(import.meta.dirname, '../../src'), resolve(import.meta.dirname, '../../packages')];
     const offenders: string[] = [];
     const consumers: string[] = [];

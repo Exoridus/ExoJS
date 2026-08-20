@@ -221,7 +221,7 @@ describe('Tab traversal without an explicit scope spans both scene layers', () =
 
     uiNode.focusable = true;
     worldNode.focusable = true;
-    // World node added first, so document order alone would favor it — the
+    // World node added first, so document order alone would favor it - the
     // UI-layer tie-break must still win.
     scene.addChild(worldNode);
     scene.ui.addChild(uiNode);
@@ -246,7 +246,7 @@ describe('UI scope reactivation re-enforces the focus trap immediately', () => {
     scene.ui.addChild(outside);
 
     // Pushed (and later checked) through `im`, not the standalone `focus`
-    // returned by `createUIApp` — the scope trap this exercises is enforced
+    // returned by `createUIApp` - the scope trap this exercises is enforced
     // by `InteractionManager`'s own internal FocusController, reached via
     // `im.pushScope`/`im.focus`/`im.focused`, not a separately constructed one.
     const token = im.pushScope(modal);
@@ -254,16 +254,16 @@ describe('UI scope reactivation re-enforces the focus trap immediately', () => {
     im.focus(insideModal);
     expect(im.focused).toBe(insideModal);
 
-    // Detach the scope root WITHOUT popping its scope entry — it goes dead
+    // Detach the scope root WITHOUT popping its scope entry - it goes dead
     // (see `FocusController._isOwned`'s doc comment), so it stops trapping
     // anything until it reattaches.
     scene.ui.removeChild(modal);
 
-    // While dead, nothing traps focus — a direct focus() call elsewhere succeeds.
+    // While dead, nothing traps focus - a direct focus() call elsewhere succeeds.
     im.focus(outside);
     expect(im.focused).toBe(outside);
 
-    // Reattaching to the UI layer must re-enforce the trap immediately — this
+    // Reattaching to the UI layer must re-enforce the trap immediately - this
     // exercises InteractionManager's UI hook bundle specifically, since the
     // UI layer never registers nodes into the world tree.
     scene.ui.addChild(modal);
@@ -288,7 +288,7 @@ describe('attachUIRoot / detachUIRoot mirror attachRoot / detachRoot exactly (mi
 
     im.detachUIRoot(ui);
 
-    // Assembled — including its own scope — entirely while `ui` is detached,
+    // Assembled - including its own scope - entirely while `ui` is detached,
     // then attached as one whole unit. `addChild`'s own per-node
     // notification never fires here because `ui` isn't on the stage yet.
     modal.addChild(insideModal);
@@ -375,7 +375,7 @@ describe('UI Tab traversal excludes destroyed nodes', () => {
     expect(focus.focused).toBe(a);
 
     signals.onKeyDown.dispatch(Keyboard.Tab);
-    // Wraps back to `a` — the sole surviving candidate — `b` is never a stop.
+    // Wraps back to `a` - the sole surviving candidate - `b` is never a stop.
     expect(focus.focused).toBe(a);
   });
 });

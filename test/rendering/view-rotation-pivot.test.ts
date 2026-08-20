@@ -18,7 +18,7 @@ describe('View rotation pivots around the camera center', () => {
 
     // The projection applied `R · world - centre` instead of
     // `R · (world - centre)`, so a rotated camera looked at `R⁻¹ · centre`
-    // rather than the position it was told to look at — at 30 degrees with
+    // rather than the position it was told to look at - at 30 degrees with
     // centre (120, -60) the middle of the viewport landed on (133.93, 8.04).
     const world = view.screenToWorld(WIDTH / 2, HEIGHT / 2);
 

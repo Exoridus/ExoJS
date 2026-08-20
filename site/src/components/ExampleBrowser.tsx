@@ -216,7 +216,7 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
         const desktopMediaQuery = window.matchMedia('(min-width: 1120px)');
         const compactMobileMediaQuery = window.matchMedia('(max-width: 760px)');
         const syncBreakpoints = (): void => {
-            // Mirror viewport media-query state into React — the canonical
+            // Mirror viewport media-query state into React - the canonical
             // "subscribe to an external system, setState on change" effect use.
             // The synchronous initial call is the SSR-safe form of that pattern.
             /* eslint-disable @eslint-react/set-state-in-effect */

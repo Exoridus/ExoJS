@@ -58,7 +58,7 @@ export class Interval implements Cloneable<Interval> {
   }
 
   public destroy(): void {
-    // no-op — pure value class, kept for Destroyable interface conformance
+    // no-op - pure value class, kept for Destroyable interface conformance
   }
 
   public static readonly zero = new Interval(0, 0);

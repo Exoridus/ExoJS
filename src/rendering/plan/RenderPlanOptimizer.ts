@@ -15,9 +15,9 @@ export class RenderPlanOptimizer {
 
   private static _optimizeGroup(scope: GroupScope): void {
     if (scope.hasMixedZ) {
-      // Sorted in place, with no index tiebreak. `seq` is unique within a scope —
+      // Sorted in place, with no index tiebreak. `seq` is unique within a scope -
       // `RenderPlanBuilder._reserveEntryPlacement` advances `_nextSeq` past every
-      // placement and the retained-replay path mirrors that — so the comparator is
+      // placement and the retained-replay path mirrors that - so the comparator is
       // already a total order and an index tiebreak can never be reached; even if
       // it could, `Array.prototype.sort` is stable as of ES2019. The wrapper the
       // sort used to run over cost one `{ entry, index }` object per entry plus one
@@ -49,7 +49,7 @@ export class RenderPlanOptimizer {
     // common case. The scan can only ever save a draw call when the scope holds
     // draws that would flush against each other AND is allowed to reorder;
     // without both, every segment walks its draws, allocates the per-z buckets,
-    // and then bails. Gating here — not deep inside `_overlapAwareGroup` — is
+    // and then bails. Gating here - not deep inside `_overlapAwareGroup` - is
     // what actually removes the cost.
     //
     // The flag is `hasMixedPipeline`, not "more than one material key": a scope
@@ -79,7 +79,7 @@ export class RenderPlanOptimizer {
 
   /**
    * Assigns the adjacency `groupIndex` the backends batch on. Runs on every
-   * scope unconditionally — unlike the reordering above, this is not an
+   * scope unconditionally - unlike the reordering above, this is not an
    * optimization the plan can go without.
    *
    * The break condition is {@link forcesBatchFlush}, matching the batcher: a run
@@ -158,7 +158,7 @@ export class RenderPlanOptimizer {
 
   private static _overlapAwareGroup(zGroup: DrawScopeEntry[], entries: ScopeEntry[], segStart: number, segEnd: number): void {
     // Bucket the z-group by what would make the batcher flush between two draws,
-    // which is what a reorder can save — see `forcesBatchFlush`. Default-path
+    // which is what a reorder can save - see `forcesBatchFlush`. Default-path
     // draws all collapse into their pipeline's single `-1` sub-bucket regardless
     // of texture, because the 16 texture slots batch them as they are; only a
     // draw carrying its own Material splits further, by its `bindKey`. The
@@ -205,7 +205,7 @@ export class RenderPlanOptimizer {
     // O(n) scan; with many same-z draws (e.g. cycled textures over a flat list)
     // that made this method O(n^2). A scope's entries are distinct objects, so a
     // single Map over `entries[segStart..segEnd)` yields the same first-match
-    // index `indexOf` returned — and this method performs at most one reorder,
+    // index `indexOf` returned - and this method performs at most one reorder,
     // after which it returns, so no lookup ever runs against stale positions
     // (the map stays valid for the whole scan).
     const positionIndex = new Map<ScopeEntry, number>();
@@ -275,7 +275,7 @@ export class RenderPlanOptimizer {
         continue;
       }
 
-      // A draw the moved run would batch with anyway is not an obstacle — same
+      // A draw the moved run would batch with anyway is not an obstacle - same
       // criterion the buckets were built on.
       if (!forcesBatchFlush(groupMaterial, mid.command.material)) {
         continue;

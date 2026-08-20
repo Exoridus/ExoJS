@@ -1,5 +1,5 @@
 /**
- * Rendering benchmark — CPU-side traversal / culling cost.
+ * Rendering benchmark - CPU-side traversal / culling cost.
  *
  * Measures wall-clock time for Container.render() across scenes of varying
  * density and camera coverage.  No GPU work is performed: the stub backend
@@ -178,7 +178,7 @@ const scenarios: RenderingScenario[] = [
     name: 'dense-visible',
     root: createGridScene(200, 40, 20),
     beforeFrame: () => {
-      /* camera at origin — most nodes visible */
+      /* camera at origin - most nodes visible */
     },
   },
   {

@@ -88,7 +88,7 @@ class DialogSystemScene extends Scene {
             return;
         }
 
-        // The last line is read — offer the choice row.
+        // The last line is read - offer the choice row.
         this.awaitingChoice = true;
         this.setChoicesVisible(true);
     }

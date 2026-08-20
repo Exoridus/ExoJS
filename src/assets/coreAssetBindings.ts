@@ -188,7 +188,7 @@ function textFactoryHandler<T>(makeFactory: () => FactoryLike<string, T>): (load
  * absolute URL; loaders are frequently called with relative paths (e.g.
  * `assets/demo/fonts/x.fnt`), so fall back to a synthetic base and strip it.
  * A root-absolute source (`/assets/demo/fonts/x.fnt`) must yield a
- * root-absolute result again — dropping the leading slash would make the
+ * root-absolute result again - dropping the leading slash would make the
  * browser re-resolve the page image against the document base URL.
  * @internal exported for tests
  */
@@ -345,7 +345,7 @@ const bmFontBinding = defineAsset({
   }),
 });
 
-// Conditional bindings — only registered when the environment supports them.
+// Conditional bindings - only registered when the environment supports them.
 const conditionalBindings: AssetBinding[] = [];
 
 if (typeof FontFace !== 'undefined') {
@@ -383,7 +383,7 @@ if (typeof WebAssembly !== 'undefined') {
 }
 
 /**
- * Core asset bindings — installed by every Application for built-in asset types.
+ * Core asset bindings - installed by every Application for built-in asset types.
  * Uses the same materializeAssetBindings path as extension packages.
  * @internal
  */

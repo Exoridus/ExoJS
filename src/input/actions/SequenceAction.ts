@@ -13,7 +13,7 @@ import type { ActionOptions, ActionSample } from './types';
  */
 export type SequenceBinding = string | InputSequence;
 
-/** Options for {@link SequenceAction} — the options every action shares, plus pattern timing and restart behavior. */
+/** Options for {@link SequenceAction} - the options every action shares, plus pattern timing and restart behavior. */
 export interface SequenceActionOptions extends ActionOptions {
   /**
    * Maximum source-event gap between completed steps, in milliseconds.
@@ -29,7 +29,7 @@ export interface SequenceActionOptions extends ActionOptions {
 }
 
 /**
- * Ordered input pattern — `+` joins a chord within one step, `|` alternates
+ * Ordered input pattern - `+` joins a chord within one step, `|` alternates
  * between whole alternatives within one step (any ONE of which satisfies
  * it), `>` advances to the next step. `triggered` is `true` for the one
  * frame the final step completes; see {@link progress}'s own doc comment for
@@ -37,7 +37,7 @@ export interface SequenceActionOptions extends ActionOptions {
  *
  * Precedence, loosest to tightest: `'>'` separates steps, `'|'` separates
  * alternatives within one step, `'+'` joins channels required simultaneously
- * within one alternative — `'A+B|C>D'` is "(A and B) or C, then D". A step
+ * within one alternative - `'A+B|C>D'` is "(A and B) or C, then D". A step
  * with no `'|'` has exactly one alternative, so this is a strict superset of
  * the pre-`'|'` grammar: nothing about a plain `'+'`/`'>'` pattern changes.
  *
@@ -45,20 +45,20 @@ export interface SequenceActionOptions extends ActionOptions {
  * the two presses: holding the channel down after the first accepted step
  * never re-satisfies the second on its own, since a step only advances on a
  * channel's rising (inactive-to-active) edge, not merely because it reads
- * active — see `_update`'s implementation.
+ * active - see `_update`'s implementation.
  *
  * A single atomic {@link ChannelEventBatch} never invents an order: two
  * channels written together by the same real-world event (e.g. `A` and `B`
  * both changing in one batch) can complete a chord STEP together, but can
  * never be read as two sequential steps (`A` then `B`) within that same
- * batch — see `_update`'s implementation comment. Switching from one
+ * batch - see `_update`'s implementation comment. Switching from one
  * alternative to another within the same step is never treated as an
- * unrelated, mismatching entry — only a channel that belongs to NONE of the
+ * unrelated, mismatching entry - only a channel that belongs to NONE of the
  * step's alternatives is.
  *
  * A string pattern resolves tokens as case-insensitive {@link Keyboard} enum
  * names (`'Down>Down+Right>Right>A'`). This is a shortcut list syntax for enum
- * lookups, not text or IME input — it never decodes typed characters, dead
+ * lookups, not text or IME input - it never decodes typed characters, dead
  * keys, or composed input, and rejects any token that is not a known
  * `Keyboard` member. Use an {@link InputSequence} array of channels/chords/
  * alternations directly to include pointer or gamepad channels.
@@ -66,14 +66,14 @@ export interface SequenceActionOptions extends ActionOptions {
  * A string LITERAL is additionally checked at compile time, so a typo
  * (`'Up>Up>Dwon'`) or a stray separator (`'A>>B'`) is a type error naming the
  * reason rather than a throw on the first frame that constructs the action. A
- * pattern that is only known at runtime — read from a config file, assembled
- * from parts, or passed in from JavaScript — types as plain `string` and is
+ * pattern that is only known at runtime - read from a config file, assembled
+ * from parts, or passed in from JavaScript - types as plain `string` and is
  * checked by the parser alone, exactly as before.
  *
  * @example
  * ```ts
  * const konami = new SequenceAction('Up>Up>Down>Down>Left>Right>Left>Right>B>A', { maxGap: 800 });
- * // Holding J after the first step does nothing on its own — the second J
+ * // Holding J after the first step does nothing on its own - the second J
  * // requires its own release-then-press, same as the two steps below it.
  * const comboAttack = new SequenceAction([Keyboard.J, Keyboard.J, [Keyboard.Control, Keyboard.K]]);
  * // Either modifier satisfies the first step: [[Control, K], [Meta, K]] is the array form of 'Control+K|Meta+K'.
@@ -85,7 +85,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
 
   /** One entry per step; each is one entry per alternative, each the channels that alternative requires together. */
   private _steps: readonly NormalizedStep[] = [];
-  /** One entry per step — every channel across all of that step's alternatives, flattened and deduplicated, for "does this batch touch this step at all" checks. */
+  /** One entry per step - every channel across all of that step's alternatives, flattened and deduplicated, for "does this batch touch this step at all" checks. */
   private _stepChannels: ReadonlyArray<readonly number[]> = [];
   private readonly _threshold: number;
   private readonly _maxGap: number;
@@ -103,7 +103,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
    * unknown `Keyboard` token or an empty `+`/`>`/`|` segment, a mix of a bare
    * channel and a nested alternative within the same step, or any single
    * alternative repeats the same channel twice. A string literal is rejected
-   * at compile time for the same reasons — see
+   * at compile time for the same reasons - see
    * {@link ValidatedSequenceBinding}.
    */
   public constructor(pattern: ValidatedSequenceBinding<Pattern>, options: SequenceActionOptions = {}) {
@@ -152,7 +152,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
   }
 
   /**
-   * How far the pattern has advanced, as `completedSteps / totalSteps` — in
+   * How far the pattern has advanced, as `completedSteps / totalSteps` - in
    * `[0, (n-1)/n]` for `n` steps, and never `1`: the same update that accepts
    * the final step also sets {@link triggered} and resets `progress` back to
    * `0`, so a caller polling both together never observes `progress` at its
@@ -161,7 +161,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
    * `maxGap`/`timeout` expiry is evaluated once per frame against
    * {@link ActionSample.timestamp} as well as against each arriving batch, so a
    * half-completed pattern that goes quiet snaps back to `0` on the frame its
-   * window actually elapses — no event has to arrive first. It is still not a
+   * window actually elapses - no event has to arrive first. It is still not a
    * timer: expiry is observed on the frames the owning {@link ActionMap} is
    * updated, so a map that is detached or unavailable holds its progress until
    * it is fed again.
@@ -228,7 +228,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     // Expire against the frame's own clock, after the batches. Without this a
     // half-completed pattern that simply went quiet would hold its progress
     // until some unrelated tracked channel finally arrived and carried a
-    // timestamp in — `maxGap`/`timeout` would be enforced on the next event
+    // timestamp in - `maxGap`/`timeout` would be enforced on the next event
     // rather than when they actually elapse.
     this._expire(sample.timestamp);
   }
@@ -263,7 +263,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     this._lastStepAt = null;
   }
 
-  /** A step is active if ANY ONE of its alternatives has every one of its own channels active — `'|'`'s OR-of-AND semantics. */
+  /** A step is active if ANY ONE of its alternatives has every one of its own channels active - `'|'`'s OR-of-AND semantics. */
   private _isStepActive(index: number): boolean {
     const step = this._steps[index];
     if (step === undefined) return false;

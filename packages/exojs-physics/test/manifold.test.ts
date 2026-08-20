@@ -180,11 +180,11 @@ describe('testOverlap — boolean overlap without a manifold', () => {
     // Face region (the circle sits squarely in front of one edge).
     expect(testOverlap(colliderAt(world, new CircleShape(3), { x: 0, y: 7 }), box)).toBe(true);
 
-    // Vertex v1 Voronoi region — nearest feature is the reference edge's start vertex.
+    // Vertex v1 Voronoi region - nearest feature is the reference edge's start vertex.
     expect(testOverlap(colliderAt(world, new CircleShape(3), { x: 8, y: -6 }), box)).toBe(false);
     expect(testOverlap(colliderAt(world, new CircleShape(3.5), { x: 8, y: -6 }), box)).toBe(true);
 
-    // Vertex v2 Voronoi region — nearest feature is the reference edge's end vertex.
+    // Vertex v2 Voronoi region - nearest feature is the reference edge's end vertex.
     expect(testOverlap(colliderAt(world, new CircleShape(1), { x: 5.3, y: -6 }), box)).toBe(false);
     expect(testOverlap(colliderAt(world, new CircleShape(1.5), { x: 5.3, y: -6 }), box)).toBe(true);
 

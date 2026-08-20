@@ -58,7 +58,7 @@ const mockContext2d = {
 // Guarded on `HTMLCanvasElement` so the file is inert under the `node`
 // environment (see the MouseEvent note above).
 if (typeof HTMLCanvasElement !== 'undefined') {
-  // This answers EVERY context id with the 2d stub, `'webgl2'` included — which
+  // This answers EVERY context id with the 2d stub, `'webgl2'` included - which
   // is why capability probing reports webgl2: true across the whole jsdom lane.
   // Suites that need the opposite answer redefine this property locally; it is
   // `configurable: true` for exactly that reason (see the webgl2: false case in
@@ -120,7 +120,7 @@ class MockAudioContext {
     upX: AudioParam;
     upY: AudioParam;
     upZ: AudioParam;
-    // NO context property — matches real WebAudio spec
+    // NO context property - matches real WebAudio spec
   };
 
   public constructor() {
@@ -409,7 +409,7 @@ class MockOfflineAudioContext {
     } as unknown as AudioBufferSourceNode;
   }
 
-  /** Renders silence at the requested rate — enough to exercise resampling paths. */
+  /** Renders silence at the requested rate - enough to exercise resampling paths. */
   public startRendering(): Promise<AudioBuffer> {
     return Promise.resolve({
       sampleRate: this.sampleRate,
@@ -431,7 +431,7 @@ Object.defineProperty(globalThis, 'OfflineAudioContext', {
   value: MockOfflineAudioContext,
 });
 
-// AudioWorkletNode mock — jsdom does not implement AudioWorkletNode.
+// AudioWorkletNode mock - jsdom does not implement AudioWorkletNode.
 Object.defineProperty(globalThis, 'AudioWorkletNode', {
   configurable: true,
   writable: true,
@@ -461,7 +461,7 @@ Object.defineProperty(globalThis, 'AudioWorkletNode', {
   },
 });
 
-// jsdom does not implement HTMLMediaElement playback — stub play/pause/load so
+// jsdom does not implement HTMLMediaElement playback - stub play/pause/load so
 // AudioStream / Video voices can drive an <audio>/<video> element in tests.
 if (typeof HTMLMediaElement !== 'undefined') {
   Object.defineProperty(HTMLMediaElement.prototype, 'play', {
@@ -483,7 +483,7 @@ if (typeof HTMLMediaElement !== 'undefined') {
   });
 }
 
-// MediaStream mock — jsdom does not implement MediaStream.
+// MediaStream mock - jsdom does not implement MediaStream.
 if (typeof globalThis.MediaStream === 'undefined') {
   Object.defineProperty(globalThis, 'MediaStream', {
     configurable: true,

@@ -2,7 +2,7 @@ import { ParticleSystem } from '../src/ParticleSystem';
 
 // ParticleSystem falls back to a lazily-initialised, module-level 1x1 white
 // texture when constructed without one. That singleton is created at most
-// once per module instance (`defaultWhiteTexture` lives at module scope) —
+// once per module instance (`defaultWhiteTexture` lives at module scope) -
 // this file is dedicated to it so its *first* access in this module's
 // lifetime is deterministic (a fresh test file gets a fresh module graph),
 // letting us exercise both the "not yet created" and "already created"

@@ -125,7 +125,7 @@ describe('SceneNode transform cache (post-Transformable inline)', () => {
 
     const updateSpy = vi.spyOn(node, 'updateTransform');
 
-    // Mutate via the observable vector directly — confirms that the
+    // Mutate via the observable vector directly - confirms that the
     // ObservableVector → _setScalingDirty wiring survives the inline.
     node.scale.set(2, 3);
 
@@ -196,7 +196,7 @@ describe('SceneNode parent-chain composition', () => {
     const beforeX = beforeMove.x;
     const beforeY = beforeMove.y;
 
-    // Mutate parent — the child's own GlobalTransform flag is never touched
+    // Mutate parent - the child's own GlobalTransform flag is never touched
     // eagerly; the next
     // getGlobalTransform() on child must detect staleness lazily via the
     // parent-version compare and recombine.
@@ -334,8 +334,8 @@ describe('SceneNode bounds after transform changes', () => {
     // Warm the cache: the aggregate spans (0,0)-(300,300) while both are visible.
     expect(container.getBounds().width).toBe(300);
 
-    // Hiding a child shrinks the aggregate — Container.updateBounds() only folds
-    // in visible children — so the cached rect must be rebuilt, not replayed.
+    // Hiding a child shrinks the aggregate - Container.updateBounds() only folds
+    // in visible children - so the cached rect must be rebuilt, not replayed.
     childB.visible = false;
 
     expect(container.getBounds().width).toBe(100);
@@ -489,7 +489,7 @@ describe('SceneNode getBounds caching contract', () => {
     const a = drawable.getBounds();
     const b = drawable.getBounds();
 
-    // The returned Rectangle is the same instance — callers wanting a
+    // The returned Rectangle is the same instance - callers wanting a
     // snapshot must `.clone()`. This matches the pre-inline behavior.
     expect(a).toBe(b);
 
@@ -520,7 +520,7 @@ describe('SceneNode getBounds caching contract', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Skew — API surface
+// Skew - API surface
 // ---------------------------------------------------------------------------
 
 describe('SceneNode.skewX / skewY / setSkew — API surface', () => {
@@ -576,7 +576,7 @@ describe('SceneNode.skewX / skewY / setSkew — API surface', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Skew — isAlignedBox gating
+// Skew - isAlignedBox gating
 // ---------------------------------------------------------------------------
 
 describe('SceneNode.isAlignedBox — skew gating', () => {
@@ -645,7 +645,7 @@ describe('SceneNode.isAlignedBox — skew gating', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Skew — local transform matrix
+// Skew - local transform matrix
 // ---------------------------------------------------------------------------
 
 describe('SceneNode.updateTransform() — skew matrix coefficients', () => {
@@ -712,7 +712,7 @@ describe('SceneNode.updateTransform() — skew matrix coefficients', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Skew — dirty-flag / lazy recomputation
+// Skew - dirty-flag / lazy recomputation
 // ---------------------------------------------------------------------------
 
 describe('SceneNode skew — dirty-flag invalidation', () => {
@@ -778,7 +778,7 @@ describe('SceneNode skew — dirty-flag invalidation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Skew — bounds under shear
+// Skew - bounds under shear
 // ---------------------------------------------------------------------------
 
 describe('SceneNode skew — bounds under shear', () => {

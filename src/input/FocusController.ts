@@ -8,7 +8,7 @@ import { KeyEvent } from './KeyEvent';
 import type { ScopeToken } from './ScopeToken';
 import { Keyboard } from './types';
 
-/** One entry of the focus-scope stack — see {@link FocusController.pushScope}. */
+/** One entry of the focus-scope stack - see {@link FocusController.pushScope}. */
 interface FocusScopeEntry {
   readonly token: ScopeToken;
   readonly root: RenderNode;
@@ -22,7 +22,7 @@ interface FocusScopeEntry {
  * {@link InputManager} to it, and provides Tab-order traversal across the
  * focusable nodes of the active scope.
  *
- * Not public API — RenderNode focus is reached through `app.interaction`
+ * Not public API - RenderNode focus is reached through `app.interaction`
  * (`focused`, `focus`, `blur`, `focusNext`, `focusPrevious`), which forwards
  * here. Kept as a separate class because focus and pointer picking are
  * genuinely different concerns; they merely share an owner and a scope stack.
@@ -41,7 +41,7 @@ export class FocusController implements FocusHooks {
   private _shiftDown = false;
 
   // Stack of scopes that bound Tab traversal AND act as a focus trap; a modal
-  // dialog pushes one. Keyed by stable token, not by root — see ScopeToken's
+  // dialog pushes one. Keyed by stable token, not by root - see ScopeToken's
   // doc comment for why root identity alone cannot identify an entry.
   private readonly _scopeStack: FocusScopeEntry[] = [];
 
@@ -66,8 +66,8 @@ export class FocusController implements FocusHooks {
    * Move keyboard focus to `node`. No-op when `node` is already focused, is
    * not {@link _isFocusEligible eligible for focus}, does not belong to this
    * {@link Application} (a different Application's node, one never attached
-   * to any stage, or one already removed — see {@link _isOwned}'s doc
-   * comment), or — while a scope is active — sits outside that scope's
+   * to any stage, or one already removed - see {@link _isOwned}'s doc
+   * comment), or - while a scope is active - sits outside that scope's
    * subtree: an active scope is a real focus trap, not only a Tab-order
    * boundary, so programmatic focus cannot escape it either. Fires `onBlur`
    * on the previously focused node, then `onFocus` on `node`.
@@ -90,7 +90,7 @@ export class FocusController implements FocusHooks {
 
   /**
    * Clear focus, or only clear it when `node` currently holds it. Fires
-   * `onBlur` — unless the previously focused node is already destroyed, in
+   * `onBlur` - unless the previously focused node is already destroyed, in
    * which case no event is dispatched on it. `destroy()` unlinks the node and
    * so routes through {@link _notifyNodeRemoved} here, but it raises the
    * destroyed flag first precisely so a teardown drops focus without calling
@@ -111,21 +111,21 @@ export class FocusController implements FocusHooks {
   }
 
   /**
-   * Bound subsequent Tab traversal — and, from this point on, every
-   * programmatic {@link focus} call — to `root`'s subtree. Pushed by
+   * Bound subsequent Tab traversal - and, from this point on, every
+   * programmatic {@link focus} call - to `root`'s subtree. Pushed by
    * {@link InteractionManager.pushScope} so focus navigation and pointer
-   * hit-testing are confined to the same subtree — a modal that shields
+   * hit-testing are confined to the same subtree - a modal that shields
    * clicks must shield Tab (and focus) too.
    *
    * Whatever holds focus at this instant is blurred immediately if it sits
-   * outside `root` — a scope is a trap from the moment it activates, not
+   * outside `root` - a scope is a trap from the moment it activates, not
    * only once something inside it is explicitly focused. That prior focus is
    * remembered either way and restored by the matching {@link popScope}.
    *
    * The immediate blur only happens when `root` is already live (see
    * {@link _isOwned}): pushing a scope for a root that isn't attached yet
    * (e.g. a dialog subtree prepared before being added to the scene) must
-   * not blur current focus right now — there is nothing live to trap
+   * not blur current focus right now - there is nothing live to trap
    * anything with yet. Once `root` does attach, it becomes the topmost live
    * entry on this stack (it was just pushed last) and
    * `InteractionManager._notifyNodeAdded` calls {@link _enforceActiveScopeTrap}
@@ -155,7 +155,7 @@ export class FocusController implements FocusHooks {
 
   /**
    * Whether `node` belongs to this controller's {@link Application}: not
-   * destroyed, and currently attached to a stage — one installed by THIS
+   * destroyed, and currently attached to a stage - one installed by THIS
    * Application, or (per {@link Stage.app}'s own doc comment) a lightweight
    * stub stage that does not declare an owner at all, which every production
    * stage does. Rejects a different Application's node, one never attached
@@ -163,7 +163,7 @@ export class FocusController implements FocusHooks {
    * enough: `removeChild()` detaches a node from its stage without
    * destroying it, and a node merely reparented elsewhere within the SAME
    * Application (a temporary state, not a removal) still passes here, which
-   * is the point — ownership is what matters at the point of use, not
+   * is the point - ownership is what matters at the point of use, not
    * whether the node briefly changed parents.
    */
   private _isOwned(node: RenderNode): boolean {
@@ -173,7 +173,7 @@ export class FocusController implements FocusHooks {
   }
 
   /**
-   * The nearest active scope root that is still owned by this Application —
+   * The nearest active scope root that is still owned by this Application -
    * walking down the stack skips any entry whose root died (destroyed or
    * detached) since it was pushed, rather than either trusting a stale root
    * or letting it permanently block the real scene graph once the live entry
@@ -189,9 +189,9 @@ export class FocusController implements FocusHooks {
   }
 
   /**
-   * Release the scope identified by `token`, wherever it sits in the stack —
+   * Release the scope identified by `token`, wherever it sits in the stack -
    * a targeted removal, never a rebuild of the entries around it. Only
-   * popping the EFFECTIVELY active scope affects focus — the topmost entry
+   * popping the EFFECTIVELY active scope affects focus - the topmost entry
    * whose root is still live, not necessarily the last physical array
    * entry: an entry above it that already died (its root destroyed or
    * detached) was never really the one focus was trapped by, so popping
@@ -199,7 +199,7 @@ export class FocusController implements FocusHooks {
    * true active scope, and popping a dead entry itself must not restore
    * focus as though it had been active. Whatever was focused when the
    * popped scope was pushed is restored, provided it is still focusable
-   * and — if another scope is now active underneath — still inside that
+   * and - if another scope is now active underneath - still inside that
    * scope; otherwise focus is cleared rather than left somewhere the
    * newly-active scope does not own. Releasing a scope buried under others
    * (see {@link InteractionScope.release}'s any-order contract) changes
@@ -244,10 +244,10 @@ export class FocusController implements FocusHooks {
 
   /**
    * Re-enforce the active scope's focus trap right now, rather than waiting
-   * for the next explicit {@link focus} call to notice — called by
+   * for the next explicit {@link focus} call to notice - called by
    * {@link InteractionManager._notifyNodeAdded} whenever a subtree attaches
    * to the scene, since a scope root that was temporarily detached (and so
-   * not actively trapping anything — see {@link _activeScopeRoot}'s doc
+   * not actively trapping anything - see {@link _activeScopeRoot}'s doc
    * comment) may have just become live again. Blurs the currently focused
    * node if it now sits outside the (possibly newly reactivated) active
    * scope.
@@ -268,7 +268,7 @@ export class FocusController implements FocusHooks {
     }
   }
 
-  /** @internal — clear focus when a focused node (or an ancestor of it) leaves the tree. */
+  /** @internal - clear focus when a focused node (or an ancestor of it) leaves the tree. */
   public _notifyNodeRemoved(node: RenderNode): void {
     let current: RenderNode | null = this._focused;
 
@@ -327,7 +327,7 @@ export class FocusController implements FocusHooks {
   }
 
   /**
-   * The currently focused node, or `null` — blurring first (silently, since
+   * The currently focused node, or `null` - blurring first (silently, since
    * {@link blur} itself skips the event for an already-destroyed node) if
    * the focused node died since it was last checked, so a stale target never
    * receives a key event. See {@link blur}'s doc comment for why this can be
@@ -374,7 +374,7 @@ export class FocusController implements FocusHooks {
   /**
    * Advance focus by `direction` (+1 next, -1 previous), wrapping around the
    * scope. {@link focus} is a silent no-op when its target turns out to be
-   * invalid (not focusable, not owned, or outside an active scope — see its
+   * invalid (not focusable, not owned, or outside an active scope - see its
    * own doc comment), so a single candidate is not enough: this walks
    * forward through the candidate list, trying each in turn, and stops at
    * the first one `focus()` actually applies. Bounded by `count` attempts so
@@ -427,7 +427,7 @@ export class FocusController implements FocusHooks {
   }
 
   /**
-   * Restore whatever was focused before the just-popped scope activated —
+   * Restore whatever was focused before the just-popped scope activated -
    * provided it is still {@link _isFocusEligible eligible} and, if another
    * scope is now active underneath, still inside that one. Blurs otherwise: guessing at a
    * different node to focus instead would be surprising, and leaving focus
@@ -451,10 +451,10 @@ export class FocusController implements FocusHooks {
   /**
    * Collect the focusable nodes of the active scope in Tab order: ascending
    * `tabIndex`, ties broken by document (tree) order. A scope confines
-   * traversal to its own single subtree, whichever layer it lives in — a
+   * traversal to its own single subtree, whichever layer it lives in - a
    * modal has no business reaching into the other layer. Without an active
-   * scope, traversal spans BOTH of the scene's layers — `scene.ui` AND
-   * `scene.root` — since a screen-fixed UI button and a world node are both
+   * scope, traversal spans BOTH of the scene's layers - `scene.ui` AND
+   * `scene.root` - since a screen-fixed UI button and a world node are both
    * legitimately Tab-reachable at the same time; `tabIndex` orders across
    * them exactly as it does within either alone, and a tie between a UI
    * node and a world node favors the UI one (it paints on top and is the

@@ -3,7 +3,7 @@
  *
  * Verifies that:
  * 1. A phaser graph with a DelayNode in the feedback path is NOT muted by the
- *    browser — spec-compliant browsers (Chrome, Edge, Safari) silently mute
+ *    browser - spec-compliant browsers (Chrome, Edge, Safari) silently mute
  *    feedback cycles that contain no DelayNode (zero-latency cycles). Even a
  *    DelayNode with delayTime=0 is sufficient to make the cycle legal.
  * 2. Removing the DelayNode from the feedback path would cause the wet path to
@@ -88,13 +88,13 @@ async function renderPhaser(opts: PhaserRenderOptions): Promise<Float32Array> {
   // Feedback path
   last.connect(feedbackGain);
   if (withDelay) {
-    // DelayNode breaks the zero-latency cycle — required for spec-compliant browsers.
+    // DelayNode breaks the zero-latency cycle - required for spec-compliant browsers.
     const feedbackDelay = ctx.createDelay(1);
     feedbackDelay.delayTime.value = 0;
     feedbackGain.connect(feedbackDelay);
     feedbackDelay.connect(allpassFilters[0]!);
   } else {
-    // Direct connection — zero-latency cycle, muted by spec-compliant browsers.
+    // Direct connection - zero-latency cycle, muted by spec-compliant browsers.
     feedbackGain.connect(allpassFilters[0]!);
   }
 
@@ -105,7 +105,7 @@ async function renderPhaser(opts: PhaserRenderOptions): Promise<Float32Array> {
 
 describe('PhaserEffect — acoustic contract (real Web Audio)', () => {
   it('allpass chain with feedbackDelay carries signal (wet path is not muted)', async () => {
-    // Full wet, no dry — if the allpass chain is muted the output would be silent.
+    // Full wet, no dry - if the allpass chain is muted the output would be silent.
     // This assertion FAILS before the C1 fix (i.e. when the feedbackDelay is absent
     // and the browser mutes the zero-latency allpass feedback cycle).
     const out = await renderPhaser({ wet: 1, feedback: 0.7, durationSeconds: 0.1, withFeedbackDelay: true });
@@ -114,7 +114,7 @@ describe('PhaserEffect — acoustic contract (real Web Audio)', () => {
   });
 
   it('wet=0 passes only dry signal (output reflects oscillator amplitude)', async () => {
-    // Dry only — the allpass path is gated off by wetGain=0.
+    // Dry only - the allpass path is gated off by wetGain=0.
     const out = await renderPhaser({ wet: 0, durationSeconds: 0.1, withFeedbackDelay: true });
     const skip = Math.floor(0.01 * SAMPLE_RATE);
     // 440 Hz sine at unit amplitude: RMS ≈ 1/√2 ≈ 0.707.

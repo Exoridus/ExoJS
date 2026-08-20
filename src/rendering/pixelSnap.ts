@@ -7,10 +7,10 @@
  *
  * ```
  * local space      quad / boundary coordinates relative to the node origin
- *   │  × node world matrix (a, b, c, d, x, y)  — logical, NEVER mutated here
+ *   │  × node world matrix (a, b, c, d, x, y)  - logical, NEVER mutated here
  *   ▼
  * world space      the scene's logical coordinate system
- *   │  × View.getTransform()                   — the camera (center, zoom, rotation)
+ *   │  × View.getTransform()                   - the camera (center, zoom, rotation)
  *   ▼
  * clip space       OpenGL/WebGPU normalised device coordinates, [-1, 1]
  *   │  × viewport (fraction) × target device pixels
@@ -19,7 +19,7 @@
  *                  (root canvas = css × pixelRatio; RenderTexture = its own size)
  * ```
  *
- * Pixel snapping aligns rendered geometry to **device pixels** — not to integer
+ * Pixel snapping aligns rendered geometry to **device pixels** - not to integer
  * world units. One world unit only equals one device pixel when the view scale
  * and pixel ratio are both `1`; under zoom or a high-DPR backbuffer the device
  * grid is finer or coarser, so snapping always happens in device space.
@@ -45,7 +45,7 @@
  *
  * Because the group matrix is applied *before* the rounding, a node inside a
  * translated / scaled {@link RetainedContainer} lands on the device-pixel grid
- * without any CPU peel-inverse dance — and the uploaded row/quads stay
+ * without any CPU peel-inverse dance - and the uploaded row/quads stay
  * view-independent, so a snapped drawable in either mode remains eligible for
  * retained instruction recording.
  *
@@ -57,14 +57,14 @@
  *
  * ## Modes
  *
- * - `PixelSnapMode.Position` — snap the node's rendered origin (the world
+ * - `PixelSnapMode.Position` - snap the node's rendered origin (the world
  *   translation) only. The origin is a single point with a well-defined device
  *   position, so it is safe under any transform (rotation, skew, non-uniform
  *   scale).
- * - `PixelSnapMode.Geometry` — additionally snap shared geometry boundaries
+ * - `PixelSnapMode.Geometry` - additionally snap shared geometry boundaries
  *   (NineSlice edges, repeat-segment boundaries, the sprite quad). Each unique
  *   boundary is rounded by the same pure device-space function, so adjacent
- *   quads that share a boundary value snap to the same result — seams cannot
+ *   quads that share a boundary value snap to the same result - seams cannot
  *   open. The shader falls back to `Position` semantics for a rotated / skewed
  *   transform (in the node or the view), decided in-shader from the composed
  *   linear part's cross-terms.
@@ -80,10 +80,10 @@
 /**
  * Render-only pixel-snapping policy for a {@link Drawable}.
  *
- * - `None` — no snapping; rendered transform and geometry use existing behaviour.
- * - `Position` — snap the rendered origin to the nearest device pixel. Logical
+ * - `None` - no snapping; rendered transform and geometry use existing behaviour.
+ * - `Position` - snap the rendered origin to the nearest device pixel. Logical
  *   `x`/`y`, matrices, bounds and collision are unchanged.
- * - `Geometry` — snap a single coherent shared-boundary plan (origin + boundaries)
+ * - `Geometry` - snap a single coherent shared-boundary plan (origin + boundaries)
  *   so neighbouring quads stay seam-free. Falls back to `Position` automatically
  *   when the transform is not axis-aligned (rotation / skew).
  *

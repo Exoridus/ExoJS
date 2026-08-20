@@ -7,7 +7,7 @@ import { RenderPipeline } from '../../src/rendering/RenderPipeline';
 // Pure orchestration overhead: a no-op pass isolates the per-frame loop cost
 // (enabled check, reentrancy guard, try/finally) from any GPU work. The claim
 // under test is that RenderPipeline.execute adds negligible overhead over a
-// hand-rolled imperative loop. (CPU-only; very noisy — sub-30% deltas are noise.)
+// hand-rolled imperative loop. (CPU-only; very noisy - sub-30% deltas are noise.)
 const context = {} as RenderingContext;
 
 class NoopPass extends RenderPass {

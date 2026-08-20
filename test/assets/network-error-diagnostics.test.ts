@@ -4,8 +4,8 @@
  * A flat `Error` collapses three very different situations into one string:
  * the server answered 404, the request never left the machine (offline, DNS,
  * CORS, TLS), and the load was cancelled. `AssetNetworkError` keeps the URL and
- * the HTTP status structured — `status === null` being the marker that no
- * response arrived — and carries the original rejection as `cause`, while a
+ * the HTTP status structured - `status === null` being the marker that no
+ * response arrived - and carries the original rejection as `cause`, while a
  * cancellation stays an untouched `AbortError` because the residency dispatches
  * on that name.
  */
@@ -81,7 +81,7 @@ describe.each(strategies)('%s network failures', (_name, makeStrategy, makeStore
     const networkError = error as AssetNetworkError;
 
     expect(networkError.url).toBe('https://example.com/offline.json');
-    // No response arrived at all — that is what separates this from a 404.
+    // No response arrived at all - that is what separates this from a 404.
     expect(networkError.status).toBeNull();
     expect(networkError.statusText).toBeNull();
     expect(networkError.cause).toBe(transportFailure);

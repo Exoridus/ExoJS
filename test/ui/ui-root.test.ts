@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 /**
- * UIRoot tests — the internal `_render()` resize-detection hook and
+ * UIRoot tests - the internal `_render()` resize-detection hook and
  * `destroy()` cleanup. `Scene.ui` integration (hit-testing, lazy creation)
  * is covered separately in `test/ui/scene-ui.test.ts`.
  */

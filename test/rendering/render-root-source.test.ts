@@ -20,7 +20,7 @@ import { View } from '#rendering/View';
  * The persistent source of a render ROOT: the items a view change re-selects
  * from instead of walking the scene graph again.
  *
- * Every test here is about one of two things — that a selection paints exactly
+ * Every test here is about one of two things - that a selection paints exactly
  * what a full collect of the same scene paints, and that the producers whose
  * semantics the source refuses to reimplement stay live re-dispatches at their
  * exact placement.
@@ -44,7 +44,7 @@ class CountingContainer extends Container {
 }
 
 /**
- * A producer whose output is a function of the camera — the `ImageLayerNode` /
+ * A producer whose output is a function of the camera - the `ImageLayerNode` /
  * `TileLayerNode` shape, reduced to the part that matters here: it reads
  * `builder.view` during collect, which is what the source observes.
  */
@@ -54,7 +54,7 @@ class ParallaxProducer extends Container {
 
   public constructor() {
     super();
-    // Both real view-dependent nodes opt out of view culling — their coverage is
+    // Both real view-dependent nodes opt out of view culling - their coverage is
     // sized from the camera, so their bounds say nothing about whether they are
     // on screen. Without this the producer would be culled before it could read
     // the view at all.
@@ -174,7 +174,7 @@ const sourceOf = (root: RenderNode): RenderRootSource | null => root._retainedRo
 const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group as unknown as { _fragment: RetainedGroupFragment })._fragment;
 
 /**
- * One entry of the root scope in RECORDED order — the shape the source used to
+ * One entry of the root scope in RECORDED order - the shape the source used to
  * hold as objects, rebuilt from the packed store so these tests keep asserting
  * order and kind rather than storage layout.
  */
@@ -221,7 +221,7 @@ const viewAt = (centerX: number): View => new View(centerX, 300, 800, 600);
  *
  * These tests are about which of the root's ITEMS a view admits, and a render
  * root that leaves the view entirely short-circuits that question before the
- * representation is ever consulted — the world container of a scrolling game
+ * representation is ever consulted - the world container of a scrolling game
  * opts out for the same reason.
  */
 const makeRoot = <T extends RenderNode>(root: T): T => {
@@ -236,7 +236,7 @@ const makeRoot = <T extends RenderNode>(root: T): T => {
  *
  * The build gate wants two consecutive rebuild frames that found the same
  * content, so the camera has to force a second rebuild before the discovery walk
- * happens. `viewAt(1000)` is far enough out that no view tolerance can hold —
+ * happens. `viewAt(1000)` is far enough out that no view tolerance can hold -
  * every scene in this file sits around `x = 0..300`.
  */
 const driveToSourceTier = (root: RenderNode, backend: RenderBackend): void => {
@@ -281,7 +281,7 @@ describe('render-root source: discovery', () => {
     root.addChild(leaf);
 
     // Every rebuild frame finds different content, so the gate never sees two in
-    // a row over the same subtree — the alternating case a naive gate would pay
+    // a row over the same subtree - the alternating case a naive gate would pay
     // a full discovery walk for on every other frame.
     for (const centerX of [400, 1000, 400, 1000, 400]) {
       leaf.invalidateContent();
@@ -327,9 +327,9 @@ describe('render-root source: discovery', () => {
     backend.setView(viewAt(400));
     playFrame(root, backend);
 
-    // The discovery frame. Both items are found — the walk is culling-free by
+    // The discovery frame. Both items are found - the walk is culling-free by
     // construction, since an off-screen item is exactly the one that has to be
-    // findable later — but this view admits neither, and `nodeCount` is the
+    // findable later - but this view admits neither, and `nodeCount` is the
     // frame's transform-row demand. A discovery walk that took the normal emit
     // path would report two rows for two draws that never happen.
     backend.setView(viewAt(1000));
@@ -389,7 +389,7 @@ describe('render-root source: stored bounds', () => {
     expect(draws).toEqual(['stays']);
 
     // A transform-only move. The item's identity, placement and producer are
-    // all unchanged, so nothing about the ITEMS is wrong — but their stored
+    // all unchanged, so nothing about the ITEMS is wrong - but their stored
     // AABBs now describe where the drawables were, and selecting against those
     // would drop a node that just moved into view.
     moves.setPosition(140, 300);
@@ -401,7 +401,7 @@ describe('render-root source: stored bounds', () => {
     // The frame took the ordinary collect path and dropped the stale items,
     // rather than selecting from them. Not merely a safety fallback: a collect
     // over a moved subtree replays each container's unchanged drawables from its
-    // own retained slot cache, which a live-bounds selection cannot do — it was
+    // own retained slot cache, which a live-bounds selection cannot do - it was
     // measured as the faster of the two, by a wide margin.
     expect(sourceOf(root)?.isUsable(root._contentRevision, root._structureRevision, root._globalTransformStamp, root._transformRevision)).toBe(false);
 
@@ -449,7 +449,7 @@ describe('render-root source: draw order', () => {
     const last = new Leaf('c');
 
     // `b` is the middle child by document order, so its seq places it between
-    // the two others — but it starts outside every cull rect used below.
+    // the two others - but it starts outside every cull rect used below.
     first.setPosition(100, 300);
     entering.setPosition(860, 300);
     last.setPosition(120, 300);
@@ -683,8 +683,8 @@ describe('render-root source: boundaries the source refuses to rebuild', () => {
 
 describe('render-root source: a transform group pays for none of the root machinery', () => {
   /**
-   * The two tiers share their capture layer — the pooled records, the thrash
-   * rule, the transform-row reconcile — and share nothing above it. A source is
+   * The two tiers share their capture layer - the pooled records, the thrash
+   * rule, the transform-row reconcile - and share nothing above it. A source is
    * a spatial index plus one packed item per drawable, built so a MOVED CAMERA
    * can re-select what it admits; inside a transform group there is no such
    * question to answer, because `RenderNode._collectForRenderPlan` suppresses
@@ -718,8 +718,8 @@ describe('render-root source: a transform group pays for none of the root machin
     expect(groupRoot).toBeNull();
 
     // Its own tier still carries it across camera steps: the group fragment's
-    // key omits `View.updateId` on purpose — the group is culled as a whole, so
-    // its capture is view-independent — and that is exactly what a root-style
+    // key omits `View.updateId` on purpose - the group is culled as a whole, so
+    // its capture is view-independent - and that is exactly what a root-style
     // per-child re-selection inside the group would take away.
     const captureSpy = vi.spyOn(fragmentOf(group), 'capture');
 

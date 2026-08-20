@@ -3,9 +3,9 @@ import type { MockInstance } from 'vitest';
 /**
  * Regression coverage for real de-spatialization: clearing `position`/
  * `follow` once nothing spatial remains must actually tear down the
- * `PannerNode` — disconnect it, restore the direct source-to-output route via
+ * `PannerNode` - disconnect it, restore the direct source-to-output route via
  * each concrete voice's `_routeDirect()`, and unregister the voice from
- * `AudioManager`'s per-frame spatial tick set — not merely stop writing to a
+ * `AudioManager`'s per-frame spatial tick set - not merely stop writing to a
  * panner that is still silently wired into the graph.
  */
 import { getAudioContext } from '#audio/audio-context';
@@ -109,7 +109,7 @@ interface MockGainNode {
  * Spy on `createGain`, returning every `GainNode` mock it hands out, in
  * creation order. Construct the {@link AudioManager} BEFORE calling this so
  * the busses' own internal gain nodes (created synchronously in their
- * constructors) are not captured — the first gain node captured after this
+ * constructors) are not captured - the first gain node captured after this
  * runs is always the next voice's `output`.
  */
 const setupGainSpy = (): { gains: MockGainNode[]; restore: () => void } => {
@@ -168,7 +168,7 @@ const setupMediaElementSourceSpy = (): { sources: MockSourceNode[]; restore: () 
   return { sources, restore: () => spy.mockRestore() };
 };
 
-/** Spy on `createMediaStreamSource` (InputVoice's source) — the default mock already vends `vi.fn` nodes; just capture them. */
+/** Spy on `createMediaStreamSource` (InputVoice's source) - the default mock already vends `vi.fn` nodes; just capture them. */
 const setupMediaStreamSourceSpy = (): { sources: MockSourceNode[]; restore: () => void } => {
   const ctx = getAudioContext() as AudioContext & { createMediaStreamSource: (stream: MediaStream) => MediaStreamAudioSourceNode };
   const original = ctx.createMediaStreamSource.bind(ctx);
@@ -182,7 +182,7 @@ const setupMediaStreamSourceSpy = (): { sources: MockSourceNode[]; restore: () =
 };
 
 // ---------------------------------------------------------------------------
-// Tests — per-voice-type reconnection
+// Tests - per-voice-type reconnection
 // ---------------------------------------------------------------------------
 
 describe('Real de-spatialization — each concrete voice reconnects directly exactly once', () => {
@@ -323,7 +323,7 @@ describe('Real de-spatialization — each concrete voice reconnects directly exa
 });
 
 // ---------------------------------------------------------------------------
-// Tests — manager tick-set membership and re-spatialization
+// Tests - manager tick-set membership and re-spatialization
 // ---------------------------------------------------------------------------
 
 describe('Real de-spatialization — AudioManager tick-set membership', () => {
@@ -375,7 +375,7 @@ describe('Real de-spatialization — AudioManager tick-set membership', () => {
   });
 
   test('re-spatialization re-snaps an unchanged orientation onto the fresh PannerNode', () => {
-    // The old panner's orientationX/Y/Z AudioParams are gone once de-spatialized —
+    // The old panner's orientationX/Y/Z AudioParams are gone once de-spatialized -
     // a subsequent re-spatialization creates a brand-new PannerNode whose
     // orientation params have never been written to. If the shared smoothing
     // helpers weren't reset alongside the position ones, they would think the

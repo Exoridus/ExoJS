@@ -11,7 +11,7 @@
  * The check parses attw's machine-readable `--format json` output rather than
  * scraping the human-rendered text: attw's text/table rendering is not stable
  * across versions (a `@latest` bump changed the layout and silently broke the
- * previous `bundler: 🟢` substring match — exit code 0, types fine, but the
+ * previous `bundler: 🟢` substring match - exit code 0, types fine, but the
  * marker string no longer present), so the version is also pinned. Invoked via
  * `pnpm dlx` (no permanent dependency added).
  */
@@ -52,7 +52,7 @@ interface AttwAnalysis {
 /**
  * Pure interpreter of attw's `--format json` payload for one tarball. `ok` iff
  * every entrypoint's `bundler` resolution resolved to a real file AND no
- * reported problem is scoped to the `bundler` resolution — the latter catches a
+ * reported problem is scoped to the `bundler` resolution - the latter catches a
  * bundler defect that an `--ignore-rules` entry would otherwise hide from the
  * exit code. The JSON `problems` array lists every problem regardless of
  * `--ignore-rules` (that flag only affects the exit code), so the bundler scope

@@ -19,7 +19,7 @@ declare const gamepadAxisChannelBrand: unique symbol;
  *
  * The brand keeps the type system from confusing axis channels with
  * {@link GamepadButtonChannel} or raw `number`s during mapping authoring.
- * User code does not construct values of this type directly — read them
+ * User code does not construct values of this type directly - read them
  * from the {@link GamepadAxis} namespace (`GamepadAxis.LeftStickLeft`, ...).
  *
  * @internal
@@ -85,7 +85,7 @@ export interface GamepadAxisOptions {
    */
   bipolar?: boolean;
   /**
-   * Raw `Gamepad.axes[]` index of the axis this one forms a 2D stick with —
+   * Raw `Gamepad.axes[]` index of the axis this one forms a 2D stick with -
    * the Y index on an X axis and vice versa. Set on both halves of a stick so
    * the deadzone is evaluated on the pair's radius instead of each axis on its
    * own; see {@link GamepadAxis.transformValue}. Leave unset for a control
@@ -101,15 +101,15 @@ export interface GamepadAxisOptions {
  * the transform pipeline applied each frame by {@link transformValue}.
  *
  * Direction-split axis channels (e.g. `LeftStickLeft`, `LeftStickRight`)
- * live in the 0..1 range — set `invert: true` on the negative half so it
+ * live in the 0..1 range - set `invert: true` on the negative half so it
  * reads positive when pushed in its direction.
  *
  * Aggregate channels (e.g. `LeftStickX`, `LeftStickY`) live in the full
- * -1..1 range — set `bipolar: true` to preserve sign through the pipeline.
+ * -1..1 range - set `bipolar: true` to preserve sign through the pipeline.
  *
  * The static namespace exports (`GamepadAxis.LeftStickLeft`,
  * `.LeftStickX`, ...) carry the canonical channel offsets used to address
- * each axis. `channel` can also target a {@link GamepadButtonChannel} —
+ * each axis. `channel` can also target a {@link GamepadButtonChannel} -
  * some devices report an inherently analog, button-shaped control (a
  * trigger) through the raw `axes[]` array rather than `buttons[]`; routing
  * such an axis at the canonical trigger channel keeps app code that binds
@@ -146,7 +146,7 @@ export class GamepadAxis {
    * judged together on their radius, and everything past that radius is
    * rescaled so the channel ramps from 0 at the deadzone edge to full travel
    * at the rim. Per-axis deadzones are what produce the two artefacts this
-   * avoids — a jump to `threshold`'s magnitude the instant the stick leaves
+   * avoids - a jump to `threshold`'s magnitude the instant the stick leaves
    * the deadzone, and a square response curve where a diagonal reads further
    * than a cardinal push of the same physical deflection. The scaled radius is
    * capped at 1, so hardware that reports a square gate (`x = y = 1`) still
@@ -155,7 +155,7 @@ export class GamepadAxis {
    *
    * A one-dimensional control (a trigger reported through `axes[]`, a
    * standalone auxiliary axis) gets the same rescaled deadzone applied to its
-   * own magnitude, in the channel's own domain — i.e. after {@link normalize}
+   * own magnitude, in the channel's own domain - i.e. after {@link normalize}
    * has moved a trigger's rest position from -1 to 0, so the deadzone covers
    * the bottom of the pull rather than the middle of it.
    *
@@ -188,7 +188,7 @@ export class GamepadAxis {
 }
 
 /**
- * Scale `component` by the deadzone response of `magnitude` — the radius of
+ * Scale `component` by the deadzone response of `magnitude` - the radius of
  * the whole control the component belongs to, which for a stick spans both of
  * its axes and for a one-dimensional control is just `|component|`. Returns 0
  * inside the deadzone; outside it, remaps `(threshold, 1]` onto `(0, 1]` so
@@ -235,13 +235,13 @@ export namespace GamepadAxis {
   /** Signed right-stick Y axis (-1..1). */
   export const RightStickY = axis(43);
 
-  // Touchpad XY — device-specific, written by no built-in mapping.
+  // Touchpad XY - device-specific, written by no built-in mapping.
   //
   // The Gamepad API does not carry touchpad coordinates: its standard axis set
   // stops after the two sticks, and browsers model a touchpad as a *button*
   // (the click) rather than an axis pair. These four channels exist for custom
-  // `GamepadDefinition`s that source finger positions elsewhere — WebHID being
-  // the practical route — and stay at 0 otherwise. The touchpad click itself
+  // `GamepadDefinition`s that source finger positions elsewhere - WebHID being
+  // the practical route - and stay at 0 otherwise. The touchpad click itself
   // is a real channel: see `GamepadButton.Touchpad`.
   /**
    * Primary touchpad X (0..1, left to right).

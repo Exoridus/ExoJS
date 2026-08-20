@@ -41,7 +41,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   /**
    * Retained-batch capability flag: a nine-slice
    * group's per-flush instanced batches (fixed 32-byte layout, node index at
-   * word 7 — the same seam as the sprite renderer) record and replay from
+   * word 7 - the same seam as the sprite renderer) record and replay from
    * group-owned resources. Pixel-snapped draws are excluded by the collect-time
    * recordability predicate (and belt-and-braces poisoning in {@link render});
    * nine-slice has no custom-material path to exclude.
@@ -52,7 +52,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   // Projection-uniform skip state: a matching (view identity, view.updateId,
   // group-matrix content) triple means the shared UBO already holds this
-  // flush's projection, so the 128-byte write is skipped — static frames issue
+  // flush's projection, so the 128-byte write is skipped - static frames issue
   // zero projection uploads. Mirrors the sprite renderer's redundant-write skip.
   private _writtenView: View | null = null;
   private _writtenViewUpdateId = -1;
@@ -293,7 +293,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
     // ProjectionUniforms layout: mat4x4 projection + mat4x4 group + vec4 snap
     // viewport, packed via the shared canonical (non-transposed) column order.
     // The write is skipped when the UBO already holds this exact (view,
-    // updateId, group bytes, snap-rect) state — static frames then issue zero
+    // updateId, group bytes, snap-rect) state - static frames then issue zero
     // projection uploads.
     const view = backend.view;
     const viewportChanged = packSnapViewport(backend, this._projectionData, 32);
@@ -335,7 +335,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
       // Resolving the transform storage may reallocate (and free) its GPU buffer;
       // end the pass first when earlier batches in it still reference the old
-      // one — again from any renderer sharing this pass, not only ours.
+      // one - again from any renderer sharing this pass, not only ours.
       if (coordinator.passHasDraws && backend._transformStorageWouldGrow(needCount)) {
         active = this._reopenPass(coordinator);
       }
@@ -380,7 +380,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
 
     // Retained capture: while a capture window is active,
     // additionally stage this batch's exact packed bytes into the group-owned
-    // bundle — the recorded data IS the drawn data, byte-identical by
+    // bundle - the recorded data IS the drawn data, byte-identical by
     // construction. Recorded regardless of the live visibility decision above
     // (mask/scissor), since visibility is re-evaluated live at replay. The
     // nine-slice batch always binds a single base texture (slot 0); a
@@ -456,7 +456,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
   // ── Retained-batch record/replay ──────────────────────────────────────────
   // The bundle/stage stores raw instance bytes; this renderer owns the 32-byte
   // (8-word) layout (node index at word 7), so the layout-aware finalize steps
-  // (node-index scan/rebase) and the replay dispatch live here — mirroring
+  // (node-index scan/rebase) and the replay dispatch live here - mirroring
   // WebGpuSpriteRenderer's seam, adapted to nine-slice's single-texture path.
 
   /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
@@ -492,7 +492,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
    * Replay one recorded batch from its group-owned bundle into the OPEN pass.
    * Reuses only recorded DATA (instance bytes,
    * transform rows, texture, blend mode); every piece of STATE is resolved
-   * live — pipeline via the `_getPipeline` cache, the group(1) texture bind
+   * live - pipeline via the `_getPipeline` cache, the group(1) texture bind
    * group via the live texture-set cache (resolving re-syncs dirty content),
    * and the group's 128-byte UBO (projection from the live view + the live
    * player-composed group matrix) written only when its content changed. The
@@ -511,7 +511,7 @@ export class WebGpuNineSliceSpriteRenderer extends AbstractWebGpuRenderer<NineSl
       return;
     }
 
-    // Drain any pending live batch into the open pass first (defensive — the
+    // Drain any pending live batch into the open pass first (defensive - the
     // group boundary already flushed; flush() never ends the pass on the
     // default path and guards its own shared-UBO hazards).
     this.flush();

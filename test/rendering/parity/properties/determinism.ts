@@ -1,7 +1,7 @@
 /**
  * Rendering the same scene twice must produce the same frame.
  *
- * Cheap, and it holds for every scene regardless of fixture kind — which makes
+ * Cheap, and it holds for every scene regardless of fixture kind - which makes
  * it the property that proves the runner itself works. A failure here means
  * frame-to-frame state leaks (a retained cache serving a stale batch, an
  * uncleared buffer), not a backend difference.

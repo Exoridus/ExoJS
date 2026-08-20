@@ -101,7 +101,7 @@ export class DuckingEffect extends WorkletEffect {
     this._setAudioParam('ratio', this._ratio);
   }
 
-  /** Attack time in milliseconds — how quickly the ducker engages. Default 30. */
+  /** Attack time in milliseconds - how quickly the ducker engages. Default 30. */
   public get attackMs(): number {
     return this._attackMs;
   }
@@ -112,7 +112,7 @@ export class DuckingEffect extends WorkletEffect {
     }
   }
 
-  /** Release time in milliseconds — how quickly the ducker disengages. Default 300. */
+  /** Release time in milliseconds - how quickly the ducker disengages. Default 300. */
   public get releaseMs(): number {
     return this._releaseMs;
   }

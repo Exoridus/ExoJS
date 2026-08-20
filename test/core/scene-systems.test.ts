@@ -13,7 +13,7 @@ import { Time } from '#core/Time';
 // destroys every remaining registered system.
 
 // `System` is a union (via `RequireAtLeastOne`), so a class cannot
-// `implements` it directly — structural assignability (e.g. passing an
+// `implements` it directly - structural assignability (e.g. passing an
 // instance to `scene.systems.add()`) is what the contract actually relies on.
 class MockSystem {
   public updates = 0;
@@ -57,7 +57,7 @@ const makeAttachedScene = (): { scene: Scene; scope: SceneScope<void> } => {
 };
 
 // A "frame" against a bare registry: open the mutation-buffering window,
-// dispatch the update phase, then close it — mirroring how Application
+// dispatch the update phase, then close it - mirroring how Application
 // drives `scene.systems` in practice.
 const tick = (scene: Scene): void => {
   scene.systems._beginFrame();

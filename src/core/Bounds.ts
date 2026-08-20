@@ -10,7 +10,7 @@ import { Rectangle } from '#math/Rectangle';
  * subtree's combined extent for culling and hit-testing.
  *
  * The {@link Bounds.getRect} accessor lazily folds the current min/max into
- * a shared {@link Rectangle} — copy the result if you need to retain it
+ * a shared {@link Rectangle} - copy the result if you need to retain it
  * across further accumulation.
  */
 export class Bounds {
@@ -52,7 +52,7 @@ export class Bounds {
   /**
    * Expand the bounds to include `rectangle`. When `transform` is provided
    * the rectangle's corners are transformed into the bounds' coordinate
-   * space first (via `Rectangle.temp` — does not mutate `rectangle`).
+   * space first (via `Rectangle.temp` - does not mutate `rectangle`).
    */
   public addRect(rectangle: ReadonlyRectangle, transform?: Matrix): this {
     if (transform) {
@@ -64,7 +64,7 @@ export class Bounds {
 
   /**
    * Materialize the accumulated min/max as a {@link Rectangle}. Returns
-   * the same instance across calls — copy if you need to retain it past
+   * the same instance across calls - copy if you need to retain it past
    * the next mutation.
    */
   public getRect(): Rectangle {

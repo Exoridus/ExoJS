@@ -3,8 +3,8 @@
  *
  * The allocation gate (`allocation.test.ts`) only catches regressions that
  * ALLOCATE. A CPU regression that walks twice as many nodes per frame without
- * allocating — exactly the class of change a collect-path rework can
- * introduce — merges green through every existing gate. This file closes that
+ * allocating - exactly the class of change a collect-path rework can
+ * introduce - merges green through every existing gate. This file closes that
  * hole by asserting EXACT algorithmic call-counts on a fixed scene rendered
  * through the CPU-stub WebGL2 harness (`counters.ts` wraps the four hot
  * collect-path methods and tallies invocations for one measured frame).
@@ -12,12 +12,12 @@
  * Why `toBe(n)`, not `toBeLessThan(budget)`: these are integer call-counts that
  * depend only on the CPU-side algorithm, so they are identical on every machine
  * and every run (proven: 3 back-to-back processes produced byte-identical
- * numbers, Node 24.14.1). A hard equality is the whole point — it flags a
+ * numbers, Node 24.14.1). A hard equality is the whole point - it flags a
  * regression AND an improvement, both of which must be a conscious edit here.
  *
  * ── INTEGRATOR NOTE ─────────────────────────────────────────────────────────
  * Parallel rendering workstreams may change the dirty-walk (early-out
- * epoch) and batching (8→16 slots). Those WILL move the pinned numbers below —
+ * epoch) and batching (8→16 slots). Those WILL move the pinned numbers below -
  * that is the gate working as designed. When you integrate such a change, update
  * the single `EXPECTED` table below to the new measured values and confirm the
  * DELTA matches your intent (a lower `collect`/`materialKey` is a win; a higher
@@ -49,7 +49,7 @@ const SPRITE_COUNT = 1000;
 const EXPECTED = {
   // Plain Container, nothing changes frame-to-frame. The automatic render-root
   // representation is fully engaged: the root is visited once and the frame
-  // replays recorded flush-level batches — zero child _collect, zero cull, zero
+  // replays recorded flush-level batches - zero child _collect, zero cull, zero
   // material-key work. This is the O(1)-visit steady state.
   //
   // globalTransform re-pinned 2001 -> 2 when the render root became retained by
@@ -63,7 +63,7 @@ const EXPECTED = {
   // the static row exactly: the capture now culls against the view grown by a
   // margin and stays valid for every view still inside that rect, so a slow pan
   // is absorbed and the frame replays. This row is the headline of the capture
-  // margin — if it climbs back toward 1001, the margin stopped engaging and
+  // margin - if it climbs back toward 1001, the margin stopped engaging and
   // every scrolling scene regressed to a per-frame rebuild.
   panPlain: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
 
@@ -83,7 +83,7 @@ const EXPECTED = {
   //
   // - `inView` stays 1001 because the selection still asks the cull question
   //   once per item, through the node's own rule rather than a second copy of
-  //   it — only the bounds it feeds that rule changed source.
+  //   it - only the bounds it feeds that rule changed source.
   // - `culledNodes` stays 112, so a strategy that silently stopped culling and
   //   submitted the whole subtree could not pass this row.
   // - `materialKey` stays 888, because a selection resolves it live for exactly
@@ -91,8 +91,8 @@ const EXPECTED = {
   //
   // `globalTransform` re-pins 5554 -> 1778 with the same change: nothing in the
   // subtree moved since the items were discovered, so the stored world AABBs
-  // answer both questions a `getBounds()` call used to be made for — the cull
-  // test, and the screen extent the emitted command carries — and that call
+  // answer both questions a `getBounds()` call used to be made for - the cull
+  // test, and the screen extent the emitted command carries - and that call
   // resolves the whole parent chain. A rise back toward 5554 means the
   // stored-bounds path stopped engaging on a settled scene.
   // Re-pinned again when the persistent-indexed tier landed. The frame no
@@ -102,7 +102,7 @@ const EXPECTED = {
   //
   // - `globalTransform` 1778 -> 2. Only the root's own matrix resolves. A
   //   selected item's world transform was written into its slot when it
-  //   ENTERED and has not been read since — that is the saving, and a rise back
+  //   ENTERED and has not been read since - that is the saving, and a rise back
   //   toward 1778 means the per-item materialisation returned.
   // - `materialKey` 888 -> 0. The store's texture table and blend mode are
   //   fixed for the source's life (that is what acquisition checks), so there
@@ -113,7 +113,7 @@ const EXPECTED = {
   //   the old suppressed-capture frame culled against the tight view rect. The
   //   68 extra items are the band: off-screen, rasterised to nothing, and the
   //   reason a small camera step can re-issue the same stream instead of
-  //   re-querying. `culledNodes` is still the anti-cheat — it must stay well
+  //   re-querying. `culledNodes` is still the anti-cheat - it must stay well
   //   above zero, or the tier stopped culling and is simply drawing everything.
   panPlainBeyondMargin: {
     collect: 1,
@@ -135,7 +135,7 @@ const EXPECTED = {
   // exactly once, because an item that is off-screen now is precisely the one
   // that must be findable when it scrolls in.
   //
-  // `globalTransform` is 4002 — HALF what the plain re-collect this frame
+  // `globalTransform` is 4002 - HALF what the plain re-collect this frame
   // replaced paid (8002). Discovery reads each drawable's bounds once, and the
   // selection that immediately follows it reuses those stored values instead of
   // asking the node again, so even the frame that pays for the walk comes out
@@ -162,7 +162,7 @@ const EXPECTED = {
 
   // RetainedContainer with the camera panning every frame. The retained fragment
   // is captured view-independently (deliberately omits View.updateId
-  // and the group's own transform from the key), so a pan does NOT bust it — the
+  // and the group's own transform from the key), so a pan does NOT bust it - the
   // whole child range is spliced in with ONE root-level visit. Identical to its
   // own static frame, and ~1000× fewer collect visits than `panPlain` above.
   // THIS ROW PINS THE RETAINED CAMERA-PAN WIN: if `collect` here ever climbs
@@ -172,7 +172,7 @@ const EXPECTED = {
   // globalTransform re-pinned 1002 -> 2 once the WebGL2 instruction-set
   // splice landed: the steady frame now replays recorded flush-level batches, so the
   // player's Phase-1 transform pre-pass no longer touches the group's 1000
-  // rows — only the root's own matrix and the group boundary compose. If this
+  // rows - only the root's own matrix and the group boundary compose. If this
   // climbs back toward 1002, the instruction tier stopped engaging and the
   // splice regressed to per-node entry replay.
   panRetained: { collect: 1, inView: 1, globalTransform: 2, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
@@ -185,7 +185,7 @@ const EXPECTED = {
   // full re-collect this frame used to pay. The residual globalTransform (2082 vs
   // the static row's 2) is the reconcile itself: each moved node resolves its own
   // matrix for the patched row plus the bounds refresh, and the invalidation
-  // cascade resolves a few ancestors — O(k), not O(n). If `collect` climbs back
+  // cascade resolves a few ancestors - O(k), not O(n). If `collect` climbs back
   // toward 1001, the row patch stopped engaging and every moving scene regressed
   // to a full rebuild.
   mutate10: { collect: 1, inView: 1, globalTransform: 2082, materialKey: 0, submittedNodes: 1000, culledNodes: 0, drawCalls: 1, batches: 1 },
@@ -219,7 +219,7 @@ const populate = (root: Container, count: number): Sprite[] => {
 
 /**
  * A pan that leaves the capture margin on every frame, alternating direction so
- * the scene stays in front of the camera — the row is about what the frame does
+ * the scene stays in front of the camera - the row is about what the frame does
  * with its content, not about an empty view.
  */
 const beyondMarginPan = (harness: WebGl2Harness): (() => void) => {
@@ -250,7 +250,7 @@ describe('CPU collect-path shape gate', () => {
 
       populate(root, SPRITE_COUNT);
       // A rising `collect`/`materialKey` here means the per-Container
-      // retained cache stopped engaging on a fully static frame — the collect
+      // retained cache stopped engaging on a fully static frame - the collect
       // walk regressed from an O(1) splice back toward touching every child.
       expectCounters(measureFrameCounters(harness, root), EXPECTED.staticPlain);
       root.destroy();
@@ -265,7 +265,7 @@ describe('CPU collect-path shape gate', () => {
       const pan = (): void => void harness.view.move(1, 0);
 
       // A RISING `collect` here means the captured cull rect stopped covering
-      // the panned view — the margin is the only thing keeping this frame off
+      // the panned view - the margin is the only thing keeping this frame off
       // the O(n) path below.
       expectCounters(measureFrameCounters(harness, root, { beforeFrame: pan }), EXPECTED.panPlain);
       root.destroy();
@@ -285,7 +285,7 @@ describe('CPU collect-path shape gate', () => {
       // A RISING `collect` means the source stopped engaging and the frame went
       // back to finding its content by walking the scene graph. A FALLING
       // `culledNodes` means it stopped culling per item, which would buy time by
-      // drawing what the camera cannot see — that row, not `inView`, is the
+      // drawing what the camera cannot see - that row, not `inView`, is the
       // anti-cheat now that the index answers without calling the node.
       expectCounters(actual, EXPECTED.panPlainBeyondMargin);
 
@@ -311,14 +311,14 @@ describe('CPU collect-path shape gate', () => {
 
       populate(root, SPRITE_COUNT);
       // One warmup frame in front of the measured one, so the measured frame is
-      // the SECOND rebuild over unchanged content — the one the build gate arms
+      // the SECOND rebuild over unchanged content - the one the build gate arms
       // discovery on.
       const actual = measureFrameCounters(harness, root, { beforeFrame: beyondMarginPan(harness), warmup: 1 });
 
       expectCounters(actual, EXPECTED.sourceDiscovery);
       // The walk is the price of every later selection, so it has to stay a
       // single visit per node. Anything above that is a super-linear discovery
-      // regression — exactly the CPU-only class the allocation gate misses.
+      // regression - exactly the CPU-only class the allocation gate misses.
       expect(actual.collect).toBe(SPRITE_COUNT + 1);
       root.destroy();
     });
@@ -338,7 +338,7 @@ describe('CPU collect-path shape gate', () => {
       // captured view-INDEPENDENTLY, so it survives camera motion of any size
       // without ever revisiting the scene graph. Anchored against the DISCOVERY
       // row rather than the beyond-margin one, which now also visits the root
-      // once — the group tier's claim is that it never pays a walk at all, and
+      // once - the group tier's claim is that it never pays a walk at all, and
       // that is what inverting here would disprove.
       //
       // `materialKey` rather than `inView` as the second anchor: since the

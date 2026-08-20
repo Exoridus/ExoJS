@@ -1,6 +1,6 @@
 import { AudioEffect } from '#audio/AudioEffect';
 
-// AudioEffect is an abstract base — TS abstract-ness is compile-time only, so a
+// AudioEffect is an abstract base - TS abstract-ness is compile-time only, so a
 // minimal concrete subclass exercises the shared default `ready` getter without
 // needing a real Web Audio effect implementation.
 class MinimalEffect extends AudioEffect {

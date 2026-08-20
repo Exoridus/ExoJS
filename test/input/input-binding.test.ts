@@ -1,5 +1,5 @@
 /**
- * Direct unit tests for InputBinding — constructed standalone (no
+ * Direct unit tests for InputBinding - constructed standalone (no
  * InputManager/DOM involved) for precise control over the channel buffer,
  * the tap-threshold timer, and the detacher callback.
  */
@@ -11,7 +11,7 @@ import { ChannelSize } from '#input/types';
 const makeChannels = (): Float32Array => new Float32Array(ChannelSize.Container);
 
 /**
- * Monotonic counter mirroring `InputManager`'s own `_batchSequence` — shared
+ * Monotonic counter mirroring `InputManager`'s own `_batchSequence` - shared
  * across every `batchOf()` call in this file so sequence numbers stay
  * globally increasing, exactly like the real thing. Tests that care about a
  * specific watermark boundary read this via `nextSequence()` instead.
@@ -20,14 +20,14 @@ let sequenceCounter = 0;
 const nextSequence = (): number => ++sequenceCounter;
 
 /**
- * Monotonic counter mirroring `InputManager`'s own `getPreciseTime()` stamp —
+ * Monotonic counter mirroring `InputManager`'s own `getPreciseTime()` stamp -
  * distinct from `sequenceCounter` so tests can freely set an explicit
  * timestamp (a real source-event time) independent of the ordering-only
  * `sequence` field.
  */
 let timestampCounter = 0;
 
-/** One atomic batch touching a single channel — mirrors `InputManager._recordChannelChanges` for a single-channel write. */
+/** One atomic batch touching a single channel - mirrors `InputManager._recordChannelChanges` for a single-channel write. */
 const batchOf = (channel: number, value: number, sequence = nextSequence(), timestamp = ++timestampCounter): ChannelEventBatch => ({
   channels: [{ channel, value }],
   sequence,
@@ -43,7 +43,7 @@ describe('InputBinding — construction defaults', () => {
     expect(binding.value).toBe(0);
     expect(binding.active).toBe(false);
 
-    // unbind() must not throw even though no detacher was provided —
+    // unbind() must not throw even though no detacher was provided -
     // `this._detacher?.detach(this)` short-circuits on the null default.
     expect(() => {
       binding.unbind();
@@ -201,7 +201,7 @@ describe('InputBinding — batch-based frame truth', () => {
   test('a full activate-then-deactivate within one update() fires transition signals but no final-state onActive', () => {
     // `onActive` is a final-frame-state signal (see `_replayOrEvaluate`'s doc
     // comment): it means "this binding is active right now, at the end of
-    // this call" — a press-then-release within one call never appeared
+    // this call" - a press-then-release within one call never appeared
     // active to a once-per-frame observer, so it must fire onStart/onStop
     // (and, within the threshold, onTrigger) but NOT onActive at all. This
     // replaces a prior assertion that expected onActive once here, which
@@ -218,7 +218,7 @@ describe('InputBinding — batch-based frame truth', () => {
     binding.onStop.add(onStop);
     binding.onTrigger.add(onTrigger);
 
-    // First call ever baselines from the (all-zero) live buffer — establish
+    // First call ever baselines from the (all-zero) live buffer - establish
     // that baseline before the batch under test, so the batch below is
     // measured as a genuine transition rather than the initial seed.
     binding.update(channels);
@@ -249,7 +249,7 @@ describe('InputBinding — batch-based frame truth', () => {
     channels[1] = 0;
     // The press and release "really" happened 500ms apart (100ms and 600ms)
     // even though both batches are replayed back-to-back in this single,
-    // synchronous update() call — the trigger must be judged against that
+    // synchronous update() call - the trigger must be judged against that
     // real 500ms gap, not however many microseconds this call took to run.
     binding.update(channels, [batchOf(1, 1, nextSequence(), 100), batchOf(1, 0, nextSequence(), 600)]);
 
@@ -269,7 +269,7 @@ describe('InputBinding — batch-based frame truth', () => {
     binding.update(channels); // baseline: inactive
 
     channels[1] = 1;
-    // press, release, press again — all within one call, ending active.
+    // press, release, press again - all within one call, ending active.
     binding.update(channels, [batchOf(1, 1), batchOf(1, 0), batchOf(1, 1)]);
 
     expect(onActive).toHaveBeenCalledTimes(1);
@@ -396,7 +396,7 @@ describe('InputBinding — construction watermark (observation boundary)', () =>
     binding.update(channels, [stale]);
 
     // The batch is filtered out (it predates the watermark), so the binding
-    // seeds from the LIVE buffer instead — it still correctly reports
+    // seeds from the LIVE buffer instead - it still correctly reports
     // active/onStart because the source really is held, but via the seed
     // path, not a replayed edge.
     expect(onStart).toHaveBeenCalledTimes(1);
@@ -483,7 +483,7 @@ describe('InputBinding — construction watermark (observation boundary)', () =>
     // Space/channel 8 was already held at construction, but its press batch
     // belonged to an earlier frame and is no longer present in this frame's
     // shared log. The first post-construction event is therefore only the
-    // release — the exact case a watermark without a snapshot cannot recover.
+    // release - the exact case a watermark without a snapshot cannot recover.
     channels[8] = 0;
     binding.update(channels, [batchOf(8, 0)]);
 
@@ -545,7 +545,7 @@ describe('InputBinding — onActive dispatch granularity', () => {
     binding.update(channels); // baseline: inactive
 
     // Three batches in one call, all keeping the channel active (analog
-    // jitter) — never crossing back to 0 in between.
+    // jitter) - never crossing back to 0 in between.
     binding.update(channels, [batchOf(1, 0.6), batchOf(1, 0.8), batchOf(1, 0.7)]);
 
     expect(onStart).toHaveBeenCalledTimes(1);

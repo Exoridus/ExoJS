@@ -757,7 +757,7 @@ describe('RenderPlanPlayer: retained replay (Task 4 replay hook)', () => {
 
     expect(set.hasRecording).toBe(true);
 
-    // The inner group MOVES after recording — replay must compose the matrix
+    // The inner group MOVES after recording - replay must compose the matrix
     // of the day, not the recorded one (the group-move win).
     inner.setPosition(20, 7);
 
@@ -839,7 +839,7 @@ describe('RenderPlanPlayer: retained replay (Task 4 replay hook)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Task 5: the collect switch, end-to-end through the REAL collect path —
+// Task 5: the collect switch, end-to-end through the REAL collect path -
 // RetainedContainer._collectContent decides the tier per frame:
 // instruction splice -> entry replay (+ record arming) -> plain collect.
 // ---------------------------------------------------------------------------
@@ -979,7 +979,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
   });
 
   test('a transform-only child move on a backend WITHOUT row-patch support drops the recording (no stale splice) — CRITICAL-1 regression', () => {
-    // The fake bundle has no `_patchTransformRow` — the WebGPU shape (4c not
+    // The fake bundle has no `_patchTransformRow` - the WebGPU shape (4c not
     // built). A recorded group's baked transform rows cannot be patched, so a
     // transform-only descendant move MUST drop the recording and fall to entry
     // replay (live transforms), never keep splicing the stale rows.
@@ -1010,7 +1010,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
     expect(events).toContain('flush:a'); // drew the moved leaf live
     expect(events.filter(e => e === 'beginCapture')).toHaveLength(1); // re-recorded
 
-    // F5: the fresh recording splices again — the moved leaf is now baked in.
+    // F5: the fresh recording splices again - the moved leaf is now baked in.
     events.length = 0;
     playFrame(root, backend);
 
@@ -1055,7 +1055,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
 
     collectOnce(root, backend); // F1: capture
 
-    // F2 (clean): inspect the built plan BEFORE play — the scope must carry
+    // F2 (clean): inspect the built plan BEFORE play - the scope must carry
     // neither a record target nor spliced instructions.
     const builder = RenderPlanBuilder.acquire();
     const plan = builder.build(root, backend);
@@ -1090,7 +1090,7 @@ describe('collect switch: fallback ladder end-to-end (Task 5)', () => {
     // F1: everything dirty -> captures, no arming.
     playFrame(root, backend);
 
-    // F2: outer dirty (mutated direct child, content-dirty — a move would
+    // F2: outer dirty (mutated direct child, content-dirty - a move would
     // patch instead), inner clean -> inner arms and records its own set
     // during the outer's full collect.
     dynamic.invalidateContent();

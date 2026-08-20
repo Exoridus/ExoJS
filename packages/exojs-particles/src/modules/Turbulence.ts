@@ -5,7 +5,7 @@ import type { WgslContribution } from './WgslContribution';
 
 /**
  * Adds a smooth pseudo-random force field that animates over time.
- * Implemented as 2D value noise with cubic Hermite smoothing — sampled
+ * Implemented as 2D value noise with cubic Hermite smoothing - sampled
  * twice per particle (offset to decorrelate x and y components) and scaled
  * by `strength`. The field evolves at `timeScale` units per second; lower
  * values produce slow-moving currents, higher values produce buzzy chaos.

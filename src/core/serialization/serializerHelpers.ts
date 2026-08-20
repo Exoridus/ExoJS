@@ -195,7 +195,7 @@ export function readLayoutOptions(value: unknown): LayoutOptions | undefined {
  *
  * `TextOptions` is a flat merge of style and layout options, so a text node
  * handed that bag verbatim would keep the style keys in its layout copy and
- * then hand them back out through `node.layout` — and through every serialized
+ * then hand them back out through `node.layout` - and through every serialized
  * document written from it.
  *
  * Unlike {@link readLayoutOptions} this trusts its input's static type: it

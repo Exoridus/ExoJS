@@ -39,7 +39,7 @@ import textShaderTemplate from './wgsl/text.wgsl';
 
 // ── Node data layout (identical to WebGl2TextRenderer) ───────────────────────
 //
-// Storage buffer: array<vec4<f32>> — 10 entries per node.
+// Storage buffer: array<vec4<f32>> - 10 entries per node.
 //
 // [ni*10+0]: (a,  c,  0,  tx)   transform col 0+2
 // [ni*10+1]: (b,  d,  0,  ty)   transform col 1+2
@@ -62,7 +62,7 @@ const nodeIndexWord = 4;
 
 /**
  * Byte size of `indexCount` uint32 indices. `GPUQueue.writeBuffer` rejects byte
- * counts and offsets that are not a multiple of 4 — with 4-byte indices every
+ * counts and offsets that are not a multiple of 4 - with 4-byte indices every
  * index count already lands on a 4-byte boundary, so no rounding is needed
  * (unlike the uint16 index type this renderer used before: 16-bit indices
  * needed an explicit round-up to satisfy that same constraint).
@@ -74,7 +74,7 @@ const initialIndexCapacity = 384;
 const initialNodeCapacity = 32;
 // One short line of text is already ~64 quads, so that floor made almost
 // every real retained draw pay several doubling steps (createBuffer + a CPU
-// index fill + writeBuffer each, plus — since the pass-open growth guard —
+// index fill + writeBuffer each, plus - since the pass-open growth guard -
 // an extra submit). 1024 quads is 24 KiB (uint32 indices) and covers normal
 // text scenes in one allocation.
 const initialRetainedQuadCapacity = 1024;
@@ -117,7 +117,7 @@ const sharesAtlasBatchClass = (a: PendingQuad, b: PendingQuad): boolean =>
  * Opaque, renderer-private snapshot carried on {@link WebGpuRetainedBatchPayload.rendererData}
  * for one recorded Text/BitmapText batch.
  * Text opts out of the shared `TransformBuffer` (`_consumesSharedTransform ===
- * false`), so the generic bundle machinery has nothing to persist for it — this
+ * false`), so the generic bundle machinery has nothing to persist for it - this
  * is the renderer's own carrier from record time (`flush()`) through to replay
  * (`_replayRetainedBatch`), where `TextRetainedReplayState` uploads it into a
  * persistent, group-owned GPU buffer on first use.
@@ -126,7 +126,7 @@ interface TextRetainedRendererData {
   /** Copy of this flush's packed per-node style+transform data (10 vec4s/node, dense, 0-based). */
   readonly nodeData: Float32Array;
   readonly nodeCount: number;
-  /** Node `i`'s drawable, parallel to `nodeData`'s dense row `i` — backs the own-transform-move patch lookup. */
+  /** Node `i`'s drawable, parallel to `nodeData`'s dense row `i` - backs the own-transform-move patch lookup. */
   readonly drawables: ReadonlyArray<Text | BitmapText>;
   readonly shaderType: ShaderType;
   readonly quadCount: number;
@@ -135,7 +135,7 @@ interface TextRetainedRendererData {
 /**
  * Per-bundle Text replay state (retained-batch opt-in), parked on
  * {@link WebGpuRetainedGroupBundle.rendererReplayState} so it shares the
- * bundle's grow-only / explicitly-freed lifecycle — mirrors Mesh's
+ * bundle's grow-only / explicitly-freed lifecycle - mirrors Mesh's
  * `MeshRetainedReplayState`. Holds Text's OWN persistent per-node data buffer
  * (same 10-vec4/node layout the live path uses) and FrameUniforms buffer,
  * since Text's row format differs from both the shared `TransformBuffer` row
@@ -144,7 +144,7 @@ interface TextRetainedRendererData {
  * mat4x4 pair every other retained renderer's shared UBO uses).
  *
  * A bundle can hold at most ONE recorded Text batch per capture (`flush()`
- * poisons rather than recording a second one) — so this state is a single
+ * poisons rather than recording a second one) - so this state is a single
  * slot, not a per-batch array: `lastPayload` identifies which recording's
  * node data currently lives in `nodeDataBuffer`, re-uploaded only when a
  * fresh recording replaces it.
@@ -205,14 +205,14 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * Retained-batch opt-in: one compatible shader/page class containing at most
    * eight atlas textures is recordable. A flush that needs several batches, or
    * a second Text flush within the same capture window, poisons the capture
-   * instead (see `_tryRecordRetainedBatch`) — always safe, just a missed
+   * instead (see `_tryRecordRetainedBatch`) - always safe, just a missed
    * optimization.
    * @internal
    */
   public readonly _supportsRetainedBatches = true;
 
   // Retained-batch record-time scratch: which capture windows this renderer
-  // has already recorded a batch into (nesting-safe — a fresh
+  // has already recorded a batch into (nesting-safe - a fresh
   // WebGpuRetainedCaptureFrame instance per capture-open call means a stale
   // entry can never alias a later, unrelated capture).
   private readonly _recordedCaptureFrames = new WeakSet<WebGpuRetainedCaptureFrame>();
@@ -268,12 +268,12 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   // the packed floats at [12, 24), staged into `_stagedGroupData` by
   // `_groupContentChanged`) mean the proj UBO already holds this flush's
   // transform, so the 96-byte write is skipped. Per-node style data (the
-  // storage buffer) is uploaded unconditionally — it genuinely changes per
+  // storage buffer) is uploaded unconditionally - it genuinely changes per
   // frame; only the shared projection is elided here.
   //
   // Content comparison, not the backend's group-transform id: a projection
   // rewrite is a PASS boundary below, so a group boundary that restores
-  // byte-identical group bytes must not read as a change — otherwise a retained
+  // byte-identical group bytes must not read as a change - otherwise a retained
   // group entered and left around text splits the single-submit frame.
   private _writtenView: View | null = null;
   private _writtenViewUpdateId = -1;
@@ -341,7 +341,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // Stage FrameUniforms: projection + group as vec4-padded mat3x3 columns
     // plus the device-pixel snap viewport rect, packed via the shared canonical
     // (non-transposed) column order. The write is skipped when the UBO already
-    // holds this exact (view, updateId, group bytes, snap-rect) state — static
+    // holds this exact (view, updateId, group bytes, snap-rect) state - static
     // text then issues zero projection uploads. Whether it changes is decided
     // here but applied below, because a rewrite of this single-slot UBO would
     // retroactively re-project draws of ours already recorded into the open
@@ -446,8 +446,8 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const flushIndexBytes = alignIndexBytes(packedI);
 
     // The writes below land in the shared vertex / index / node buffers and may
-    // reallocate them. Draws of OURS left in the open pass — from an earlier
-    // flush — still read those exact buffers, and `queue.writeBuffer` lands
+    // reallocate them. Draws of OURS left in the open pass - from an earlier
+    // flush - still read those exact buffers, and `queue.writeBuffer` lands
     // ahead of the whole submit, so this flush APPENDS at the pass cursors
     // rather than rewriting from offset 0. Ending the pass is the fallback for
     // the two cases appending cannot cover: a reallocation (which frees the
@@ -457,7 +457,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // renderer switch precisely so they can stay.
     const ownDrawsInPass = this._ownDrawsPass !== null && this._ownDrawsPass === coordinator.activePass;
     // Sized for everything this pass has taken SO FAR plus this flush, captured
-    // BEFORE the guard below may reset the cursors — and used to size the
+    // BEFORE the guard below may reset the cursors - and used to size the
     // buffers even when it does split. Sizing to the lone flush that remains
     // after a split would peg every buffer at one flush forever: the guard
     // would split, the split would shrink the requirement back, the capacity
@@ -522,7 +522,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     const frameBindGroup = this._getFrameBindGroup(device);
 
     // The pass survives a renderer switch, so it can still hold another
-    // renderer's draws — or an earlier flush of ours this one appended after.
+    // renderer's draws - or an earlier flush of ours this one appended after.
     // Resolving an atlas bind group below syncs a dirty glyph page on the queue
     // timeline, ahead of the deferred submit, which would retroactively change
     // a recorded draw sampling that same atlas.
@@ -579,7 +579,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   /**
    * Whether the packed floats of the active group matrix differ from what the
    * FrameUniforms buffer currently holds at [12, 24). Stages the packed matrix
-   * into `_stagedGroupData` as a side effect (idempotent — safe to call more
+   * into `_stagedGroupData` as a side effect (idempotent - safe to call more
    * than once per flush).
    */
   private _groupContentChanged(backend: WebGpuBackend): boolean {
@@ -1060,7 +1060,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
   // Text's per-vertex "node index" addresses its OWN dense, per-flush node
-  // buffer (packed above), never a row in the shared `TransformBuffer` — so,
+  // buffer (packed above), never a row in the shared `TransformBuffer` - so,
   // unlike every other retained renderer, its instance bytes carry no index
   // the generic bundle/scan/rebase machinery can meaningfully rebase. Both
   // hooks below are true no-ops; the renderer instead carries its own node
@@ -1088,7 +1088,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
    * capture(s) when this flush is not a clean single-batch recording.
    * `TextRetainedReplayState` holds at most one recorded batch per bundle per
    * capture window (identified via `backend._currentRetainedCaptureFrame`,
-   * unique per capture-open call) — a flush spanning multiple distinct
+   * unique per capture-open call) - a flush spanning multiple distinct
    * incompatible shader/page classes or more than eight atlas textures, or a
    * second Text flush within the same window, would need a second slot this
    * design doesn't provide.
@@ -1144,8 +1144,8 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
   /**
    * Replay one recorded Text batch from its group-owned bundle into the OPEN
-   * pass. STATE is resolved live — pipeline, FrameUniforms (projection +
-   * group) from the live view/group, the texture binding; DATA is reused —
+   * pass. STATE is resolved live - pipeline, FrameUniforms (projection +
+   * group) from the live view/group, the texture binding; DATA is reused -
    * the group-owned vertex bytes (`bundle.instanceBuffer` at
    * `payload.byteOffset`), the renderer-owned static quad-index pattern, and
    * Text's own persisted per-node style+transform buffer (uploaded once per
@@ -1227,7 +1227,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
     // because other renderers can target one.
     // Same-frame atlas-mutation guard: syncing a dirty glyph page below lands on
     // the queue timeline ahead of the deferred submit, retroactively changing
-    // draws already recorded into the open pass — from any renderer, since the
+    // draws already recorded into the open pass - from any renderer, since the
     // pass survives a renderer switch.
     if (coordinator.passHasDraws) {
       for (const texture of payload.textures) {
@@ -1262,11 +1262,11 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
   /**
    * Own-transform-move O(1) patch ({@link OwnTransformRowPatcher}): recompute
    * only the moved node's transform-column pair (2 of its 10 vec4s) via
-   * `getGlobalTransform()` (group-local — {@link RetainedContainer} composes
+   * `getGlobalTransform()` (group-local - {@link RetainedContainer} composes
    * up to the enclosing boundary only) and `queue.writeBuffer` just that row's
    * byte range in the persisted node-data buffer. `base` (the shared-buffer
    * direct-draw base) is irrelevant to Text's own dense local indexing and is
-   * unused. Returns `false` (ineligible — falls back to a full re-record) when
+   * unused. Returns `false` (ineligible - falls back to a full re-record) when
    * `bundle` isn't a WebGPU bundle with a live Text replay state, or `node`
    * wasn't part of the recorded batch.
    * @internal
@@ -1370,7 +1370,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
   /**
    * Renderer-owned, grow-only index buffer holding the deterministic
-   * `[0,1,2,0,2,3] + 4*i` quad pattern up to `quadCount` quads — glyph quad
+   * `[0,1,2,0,2,3] + 4*i` quad pattern up to `quadCount` quads - glyph quad
    * indices are ALWAYS this exact pattern (`buildTextPageQuads` never packs
    * anything else), so replay never needs to persist per-batch index bytes;
    * one shared, ever-growing buffer serves every recorded Text batch on this
@@ -1384,7 +1384,7 @@ export class WebGpuTextRenderer extends AbstractWebGpuRenderer<Text | BitmapText
 
     // Growing below destroys the current buffer. An earlier retained replay
     // in this same still-open pass may still have a draw bound to it, and
-    // the pass no longer ends at the tail of a replay call — end it first so
+    // the pass no longer ends at the tail of a replay call - end it first so
     // that draw reaches the queue against a live buffer.
     if (this._retainedQuadIndexBuffer !== null && coordinator.passHasDraws) {
       coordinator.endPass();

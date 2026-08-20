@@ -20,7 +20,7 @@ function createCoreLoader(): Loader {
   return loader;
 }
 
-// jsdom has no audio decoder — mirror the `{ duration }` AudioBuffer stub used
+// jsdom has no audio decoder - mirror the `{ duration }` AudioBuffer stub used
 // by the other loader tests (see test/assets/loader-claims.test.ts).
 const { decodeAudioDataMock } = vi.hoisted(() => ({
   decodeAudioDataMock: vi.fn(async (): Promise<AudioBuffer> => ({ duration: 2 }) as AudioBuffer),

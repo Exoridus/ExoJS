@@ -198,7 +198,7 @@ export class WebGpuShaderFilterPass {
 
     // ---- Render pipeline ----
     // `output` is always a temporary offscreen RenderTexture (see Filter.apply
-    // docs) — never the canvas/root target directly — and this pipeline is
+    // docs) - never the canvas/root target directly - and this pipeline is
     // built and cached before BackendTargetPass redirects rendering into it.
     // Reading `backend.renderTargetFormat` here would reflect whatever target
     // is *currently* bound (typically still the canvas), not the format
@@ -267,9 +267,9 @@ export class WebGpuShaderFilterPass {
    * Build the GPUBindGroupLayout for group 1 (user uniforms).
    *
    * Layout:
-   *   binding 0 — uniform buffer (scalar/vector uniforms), if any scalar uniforms exist
-   *   binding 1, 3, 5, ... — texture entries (one per texture uniform, in order)
-   *   binding 2, 4, 6, ... — sampler entries (paired with textures)
+   *   binding 0 - uniform buffer (scalar/vector uniforms), if any scalar uniforms exist
+   *   binding 1, 3, 5, ... - texture entries (one per texture uniform, in order)
+   *   binding 2, 4, 6, ... - sampler entries (paired with textures)
    */
   private _buildUserBindGroupLayout(device: GPUDevice): GPUBindGroupLayout {
     // Binding 0 is unconditional: `_buildUserBindGroup` always binds a uniform
@@ -340,7 +340,7 @@ export class WebGpuShaderFilterPass {
         } else if (value instanceof Float32Array) {
           data.set(value, baseFloatIndex);
         } else if (value instanceof Int32Array) {
-          // Int32Array values — reinterpret as float (best-effort)
+          // Int32Array values - reinterpret as float (best-effort)
           for (let i = 0; i < value.length; i++) {
             // In-bounds: `i` < `value.length`.
             data[baseFloatIndex + i] = value[i]!;
@@ -374,7 +374,7 @@ export class WebGpuShaderFilterPass {
         resource: { buffer: conn.userUniformBuffer },
       });
     } else {
-      // No scalar uniforms — still need binding 0 to satisfy the layout.
+      // No scalar uniforms - still need binding 0 to satisfy the layout.
       // Create a minimal 16-byte dummy buffer if needed.
       if (conn.userUniformBuffer === null) {
         conn.userUniformBuffer = device.createBuffer({

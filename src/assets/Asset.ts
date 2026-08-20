@@ -26,13 +26,13 @@ export class AssetImpl {
 // Public interface & constructor facade
 // ---------------------------------------------------------------------------
 
-/** A typed, loadable asset reference. Holds config only — no loaded resource. */
+/** A typed, loadable asset reference. Holds config only - no loaded resource. */
 export interface Asset<T> {
   /** @internal */
   readonly _config: AnyAssetConfig;
   readonly type: keyof AssetDefinitions;
   readonly source: string;
-  /** Phantom type marker — never actually present at runtime. */
+  /** Phantom type marker - never actually present at runtime. */
   readonly _resource?: T;
 }
 
@@ -41,7 +41,7 @@ declare const VALUE_ASSET: unique symbol;
 /**
  * A value/ref-type asset descriptor. Structurally an
  * {@link Asset}, but branded so a catalog classifies its leaf as a deferred
- * `AssetRef<T>` — even when `T` is an object type (e.g. typed JSON), where the
+ * `AssetRef<T>` - even when `T` is an object type (e.g. typed JSON), where the
  * plain `T extends object` heuristic would otherwise misread it as a resource.
  * The brand is a phantom (never present at runtime).
  */
@@ -55,7 +55,7 @@ type AssetFacade = AssetConstructorFn & {
    * per-class `.of()` statics. `type` autocompletes from {@link AssetDefinitions};
    * the resource type is inferred from `type`; `options` is that type's option bag.
    * The `<T>` generic is accepted ONLY for value/ref types, where it annotates the
-   * decoded value — passing `<T>` to a resource type is a type error.
+   * decoded value - passing `<T>` to a resource type is a type error.
    *
    * @example
    * ```ts
@@ -73,7 +73,7 @@ type AssetFacade = AssetConstructorFn & {
 
 export const Asset = AssetImpl as unknown as AssetFacade;
 
-// Attach the runtime `type` static — the single POJO descriptor factory that
+// Attach the runtime `type` static - the single POJO descriptor factory that
 // backs `Asset.type(...)`.
 (Asset as unknown as { type: (type: keyof AssetDefinitions, source: string, options?: object) => Asset<unknown> }).type = (type, source, options) =>
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- generic `type` widens to `keyof AssetDefinitions`, losing the type/config correlation `AnyAssetConfig` needs; the cast is required here, not just stylistic.

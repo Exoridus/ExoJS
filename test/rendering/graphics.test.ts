@@ -385,7 +385,7 @@ describe('Graphics', () => {
 
       graphics.lineWidth = 2;
       graphics.moveTo(0, 0);
-      // 90 degree turn with a radius far larger than either leg — the tangent
+      // 90 degree turn with a radius far larger than either leg - the tangent
       // distance would exceed both segment lengths.
       graphics.arcTo(10, 0, 10, 10, 1000);
 
@@ -535,7 +535,7 @@ describe('Graphics', () => {
       const graphics = new Graphics();
 
       // Default lineWidth is 0, so buildLine produces a zero-thickness quad
-      // whose vertices all share the same Y — a degenerate vertical span.
+      // whose vertices all share the same Y - a degenerate vertical span.
       graphics.strokeStyle = createLinearGradient();
       graphics.drawLine(0, 5, 10, 5);
 

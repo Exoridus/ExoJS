@@ -25,7 +25,7 @@ function makeMediaStream(): MediaStream {
  *
  * The shared mock AudioContext (see `test/setup-env.vitest.ts`) starts
  * `'running'` immediately, which means `onAudioContextReady.add()`/`.once()`
- * dispatch synchronously the very first time anything touches the context —
+ * dispatch synchronously the very first time anything touches the context -
  * there is no way to observe an intermediate "still pending" state, and no way
  * to have multiple deferred registrations accumulate before the ready signal
  * fires. A real browser starts `'suspended'` under the autoplay policy and only
@@ -154,7 +154,7 @@ describe('AudioAnalyser', () => {
         expect(a.minDecibels).toBe(-90);
         expect(a.maxDecibels).toBe(-25);
         // Setters store the option unconditionally and only touch the
-        // analyser node when it exists — no-ops (but do not throw) here.
+        // analyser node when it exists - no-ops (but do not throw) here.
         expect(() => {
           a.smoothingTimeConstant = 0.9;
           a.minDecibels = -70;
@@ -511,7 +511,7 @@ describe('AudioAnalyser', () => {
     });
   });
 
-  // ---- Source setter — idempotence ----
+  // ---- Source setter - idempotence ----
 
   describe('source setter — same value twice', () => {
     it('is a no-op when assigning the same source again (no re-tap)', () => {
@@ -614,7 +614,7 @@ describe('AudioAnalyser', () => {
       // deferred callback (_setupAnalyser, which itself calls _connectSource
       // for any already-assigned source) and the source setter's own deferred
       // handler both fire in the same onAudioContextReady dispatch, both
-      // calling _connectSource for the same MediaStream — exercising the
+      // calling _connectSource for the same MediaStream - exercising the
       // "already had a stream source" replace-and-disconnect path.
       await withSuspendedContext(({ fresh, FreshAudioAnalyser, flipToReady }) => {
         const a = new FreshAudioAnalyser();
@@ -669,7 +669,7 @@ describe('AudioAnalyser', () => {
       a.source = bus;
       expect(capturedCallback).toBeDefined();
 
-      // Re-assign the source before the deferred callback fires — the
+      // Re-assign the source before the deferred callback fires - the
       // callback's `this._source === source` guard must now be false.
       const node = makeAudioNode();
       a.source = node;
@@ -686,7 +686,7 @@ describe('AudioAnalyser', () => {
     it('_deferConnectionViaBus falls back to onAudioContextReady.once and resolves once ready', async () => {
       // _connectSource (and therefore _deferConnectionViaBus) is only ever
       // reached once isAudioContextReady() is true, but onAudioContextReady is
-      // a one-shot latch (see src/audio/audio-context.ts's `readyDispatched`) —
+      // a one-shot latch (see src/audio/audio-context.ts's `readyDispatched`) -
       // a *new* registration made after the ready event already fired can never
       // fire again. The "otherwise" fallback branch is therefore only
       // observably exercised by invoking the private method directly while the
@@ -716,7 +716,7 @@ describe('AudioAnalyser', () => {
     });
   });
 
-  // ---- Private defensive guards (reached only via direct invocation — see note) ----
+  // ---- Private defensive guards (reached only via direct invocation - see note) ----
 
   describe('private defensive guards', () => {
     it('_connectSource is a no-op once the analyser has been released (post-destroy)', () => {

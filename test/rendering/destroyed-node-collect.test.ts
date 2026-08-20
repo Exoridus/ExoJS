@@ -3,20 +3,20 @@
  *
  * Two halves:
  *
- *   1. Behaviour — the node contributes nothing to the render plan. A destroyed
+ *   1. Behaviour - the node contributes nothing to the render plan. A destroyed
  *      node has released its pooled transform/bounds, so collecting it reads
  *      freed state and re-pins it; "renders nothing" is the only correct result.
  *      `destroy()` unlinks the node from its parent, so the ordinary route into
  *      the collector is already closed; the remaining one is a destroyed node
  *      handed to the renderer as a detached root, which the guard still covers.
  *
- *   2. Production parity — the skip is never `__DEV__`-gated, so dev and
+ *   2. Production parity - the skip is never `__DEV__`-gated, so dev and
  *      production behave identically. Vitest always compiles `__DEV__` to
  *      `true`, which makes a dev-only skip indistinguishable from an
  *      unconditional one at runtime, so this half is verified structurally: the
  *      early return must not sit inside anything `__DEV__` can switch off.
  *      Gating it would leave production replaying a destroyed node's last
- *      visual state — a behavioural divergence, not a missing diagnostic.
+ *      visual state - a behavioural divergence, not a missing diagnostic.
  */
 
 import { readFileSync } from 'node:fs';
@@ -200,7 +200,7 @@ const devToken = /(?<![a-zA-Z0-9_$])__DEV__(?![a-zA-Z0-9_$])/;
 const parseSource = (rel: string): ts.SourceFile => ts.createSourceFile(rel, readFileSync(resolve(rootDir, rel), 'utf8'), ts.ScriptTarget.ES2022, true);
 
 /**
- * Whether `node` sits inside anything `__DEV__` can switch off — an
+ * Whether `node` sits inside anything `__DEV__` can switch off - an
  * `if (__DEV__)` branch, a `__DEV__ && …` short-circuit, or a `__DEV__ ? …`
  * conditional. A neighbouring `if (__DEV__) logger.warn(…)` statement is
  * correctly *not* a gate, which is why this walks the AST instead of nearby

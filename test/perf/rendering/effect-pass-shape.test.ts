@@ -64,7 +64,7 @@ describe('effect pass shape', () => {
     try {
       const frame = measureSteadyFrame(harness, root);
 
-      // Two passes and two acquired targets per filtered node; three draws —
+      // Two passes and two acquired targets per filtered node; three draws -
       // the subject into the capture, the filter quad, the composite. The
       // filter's quad goes through its own VAO rather than a drawable, so it
       // pushes no transform row: the byte column is one row per node lighter

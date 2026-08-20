@@ -58,7 +58,7 @@ function makeNoiseBurst(rand: () => number): Float32Array {
 }
 
 /**
- * Pure unit impulse — single 1.0 sample at position 0.
+ * Pure unit impulse - single 1.0 sample at position 0.
  * Spectrally flat; used as a controlled sanity fixture only.
  */
 function makeImpulse(): Float32Array {
@@ -77,22 +77,22 @@ const SWELL_ATTACK_SEC = 0.08; // 80 ms linear ramp-up (no sharp transient at t=
 // These three shapes replace the white-noise bursts used in djMix / djMixDrift.
 // The white-noise hat (3 ms, 80-sample decay) produced HIGHER spectral flux than
 // the white-noise kick (6 ms, 500-sample decay) because the tighter transient
-// caused a larger per-frame delta in every mel bin — even though both were
+// caused a larger per-frame delta in every mel bin - even though both were
 // peak-normalised to roughly the same amplitude.  That made the off-beat 8th-note
 // position the dominant onset, bootstrapping the phase tracker half-a-beat off.
 //
 // The fix concentrates the kick's onset energy in the lowest mel bins (180→80 Hz
 // FM sweep, cosine start = peak at sample 0) while keeping the hat at 8 % of the
-// kick's peak amplitude.  The mel filterbank covers 80–8000 Hz: the kick occupies
-// mel bins 0–1 at high per-bin flux; the hat (first-difference HP noise in the
-// 4–8 kHz region) reaches only the top ~6 bins at much lower per-bin flux.
+// kick's peak amplitude.  The mel filterbank covers 80-8000 Hz: the kick occupies
+// mel bins 0-1 at high per-bin flux; the hat (first-difference HP noise in the
+// 4-8 kHz region) reaches only the top ~6 bins at much lower per-bin flux.
 
 /**
  * Kick drum: cosine FM synthesis sweeping from 180 Hz down to 80 Hz over 30 ms,
  * with a 130 ms amplitude decay.  Starts at maximum (cos(0) = 1) so the onset
  * is a clean, high-energy transient.  All pitch content stays within the mel
- * filterbank range (80–8000 Hz), concentrating the onset energy in the lowest
- * 1–2 mel bins and dominating the spectral flux at every beat position.
+ * filterbank range (80-8000 Hz), concentrating the onset energy in the lowest
+ * 1-2 mel bins and dominating the spectral flux at every beat position.
  *
  * `_rand` is accepted for API consistency with the other shapes but is not used
  * in the main synthesis (the kick is fully deterministic FM).
@@ -137,8 +137,8 @@ function makeSnareDrum(rand: () => number): Float32Array {
  * Hi-hat: first-difference high-pass filtered noise (attenuates energy below
  * ~Nyquist/2, emphasises the high-frequency region) with a 12 ms decay and
  * intentionally low peak amplitude (×0.08 before mixing).  Within the mel
- * filterbank (80–8000 Hz) the hat energy reaches only the top ~6 bins at
- * per-bin flux well below the kick's concentrated low-bin onset — so the
+ * filterbank (80-8000 Hz) the hat energy reaches only the top ~6 bins at
+ * per-bin flux well below the kick's concentrated low-bin onset - so the
  * beat detector always bootstraps to the kick grid.
  */
 function makeHiHatDrum(rand: () => number): Float32Array {
@@ -158,7 +158,7 @@ function makeHiHatDrum(rand: () => number): Float32Array {
 /**
  * Slow-attack band-limited swell (~300 ms):
  * 80 ms linear ramp-up then 120 ms 1/e exponential decay.
- * Amplitude at sample 0 is exactly 0 — there is no sharp transient at the onset.
+ * Amplitude at sample 0 is exactly 0 - there is no sharp transient at the onset.
  */
 function makeSoftSwell(rand: () => number): Float32Array {
   const swellLen = Math.round(SWELL_DURATION_SEC * SAMPLE_RATE);
@@ -375,7 +375,7 @@ export function breakDrop(bpm = 128, durationSec = 24): BeatFixture {
   for (let t = 0; t < grooveEnd - 1e-9; t += ibi) {
     beatTimesSec.push(t);
   }
-  // Drop section (silence during break — no GT beats)
+  // Drop section (silence during break - no GT beats)
   for (let t = breakEnd; t < durationSec - 1e-9; t += ibi) {
     beatTimesSec.push(t);
   }
@@ -446,7 +446,7 @@ export function grooveOffset(bpm = 120, jitterMs = 10, durationSec = DEFAULT_DUR
 /**
  * Realistic drum-kit pattern at a constant `startBpm`.
  * Kick on every beat (quarter notes), snare on beats 2 & 4, hi-hats on
- * 8th notes — a standard 4/4 dance-floor pattern.
+ * 8th notes - a standard 4/4 dance-floor pattern.
  *
  * **Canonical octave-half regression guard** when called with `startBpm=180`:
  * a correct detector must lock to 180, NOT 90 (= startBpm / 2).
@@ -543,7 +543,7 @@ export function djMixDrift(baseBpm = 180, driftBpm = 5, durationSec = 30): BeatF
  * Soft-onset fixture: slow-attack amplitude swells at a steady tempo.
  * Each swell begins with an 80 ms linear ramp-up (amplitude = 0 at t=0,
  * rising to peak over 80 ms) followed by a ~120 ms exponential decay.
- * There is no sharp transient — the spectral-flux novelty peak is broad
+ * There is no sharp transient - the spectral-flux novelty peak is broad
  * and delayed relative to the notional onset time.
  *
  * Tests whether the detector can recall onsets when the novelty curve

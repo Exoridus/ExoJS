@@ -20,7 +20,7 @@ interface ReverbEffectSetup {
  * into a `ConvolverNode`. The impulse response is a stereo noise burst whose
  * amplitude decays exponentially, simulating room reflections. Adjusting
  * `durationSeconds` or `decay` rebuilds the impulse response immediately, so
- * avoid animating these properties at audio rate — use `wet` for real-time
+ * avoid animating these properties at audio rate - use `wet` for real-time
  * mix control instead.
  */
 export class ReverbEffect extends AudioEffect {

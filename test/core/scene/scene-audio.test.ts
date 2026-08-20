@@ -303,7 +303,7 @@ describe('SceneAudio — Preparing gate', () => {
     audio._flushPending();
 
     // If the `when` policy were lost during the flush swap, pause() would
-    // never touch the real voice — asserting it does proves the policy
+    // never touch the real voice - asserting it does proves the policy
     // survived the PendingVoice -> real Voice swap.
     audio.pause();
 
@@ -364,7 +364,7 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
 
   // SceneAudio detects pausable voices by duck-typing `pause`/`resume`.
   // The mocks above satisfy that by construction, so they cannot catch a real
-  // voice type that never implemented `Pausable` — which is exactly how every
+  // voice type that never implemented `Pausable` - which is exactly how every
   // `Sound` ambience kept playing through scene.pause()/suspend(). These two
   // drive a real AudioManager and a real Sound.
   describe('with a real Sound voice', () => {
@@ -398,8 +398,8 @@ describe('SceneAudio — dormancy gate widens to Ready/Suspended, rejects Destro
     // code keeps triggering the same Sound while the scene is dormant, and the
     // pool picks the frozen voice as its eviction victim (it looks oldest under
     // FIFO and closest-to-end under LRU, because its bookkeeping ages against
-    // the running context clock). restore() then skips it — it is `ended`, not
-    // `paused` — and the ambience is silently gone.
+    // the running context clock). restore() then skips it - it is `ended`, not
+    // `paused` - and the ambience is silently gone.
     test('a suspended ambience survives pool pressure and comes back on restore', () => {
       const manager = new AudioManager();
       const sound = new Sound({ duration: 10 } as AudioBuffer, { poolSize: 2 });

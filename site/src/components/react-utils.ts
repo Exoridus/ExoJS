@@ -1,13 +1,13 @@
 import { useSyncExternalStore } from 'react';
 
 const NEVER_UNSUBSCRIBE = (): void => {
-    // Nothing was subscribed to — see useClientValue.
+    // Nothing was subscribed to - see useClientValue.
 };
 
 const subscribeToFixedValue = (): (() => void) => NEVER_UNSUBSCRIBE;
 
 /**
- * Reads a browser-only value that is fixed for the lifetime of the page —
+ * Reads a browser-only value that is fixed for the lifetime of the page -
  * platform detection, portal readiness, capability probes. The server render
  * and the hydration pass both see `serverValue`; React re-renders with the real
  * one immediately afterwards.

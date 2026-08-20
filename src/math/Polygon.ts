@@ -37,7 +37,7 @@ export class Polygon implements ShapeLike {
   private readonly _position: Vector;
   private readonly _points: Vector[] = [];
   private readonly _edges: Vector[] = [];
-  /** Cached normals — null until first getNormals() call; reused across calls. */
+  /** Cached normals - null until first getNormals() call; reused across calls. */
   private _cachedNormals: Vector[] | null = null;
   private _normalsDirty = true;
 
@@ -83,7 +83,7 @@ export class Polygon implements ShapeLike {
 
   /**
    * The precomputed edge vectors (each edge is `points[i+1] - points[i]`).
-   * Updated automatically by {@link setPoints}. Read-only — mutating the
+   * Updated automatically by {@link setPoints}. Read-only - mutating the
    * returned array directly will desync the internal state.
    */
   public get edges(): Vector[] {
@@ -192,7 +192,7 @@ export class Polygon implements ShapeLike {
   /**
    * Returns the edge normals for this polygon.
    *
-   * The returned array is cached and reused across calls — the same array
+   * The returned array is cached and reused across calls - the same array
    * reference is returned on consecutive calls when the polygon has not
    * changed. The cache is invalidated automatically when `setPoints`,
    * `setPosition`, `set`, or `copy` mutate the polygon.

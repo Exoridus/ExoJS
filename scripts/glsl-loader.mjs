@@ -25,7 +25,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
-// Mirror of vitest.config.ts `aliasConfig` — public cross-package specifiers → source.
+// Mirror of vitest.config.ts `aliasConfig` - public cross-package specifiers → source.
 // Longest-first so subpaths (`@codexo/exojs/debug`) match before the bare root.
 const packageAliases = new Map([
   ['@codexo/exojs/extensions', 'src/extensions/index.ts'],

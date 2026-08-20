@@ -48,7 +48,7 @@ describe('anchor → origin is a pure function of the anchor and the layout box'
     roundTripped.anchor.set(0, 0);
 
     // The defect this guards: with the bounds origin folded in, this landed on
-    // (-50, -50) while the untouched mesh sat at (0, 0) — same anchor value,
+    // (-50, -50) while the untouched mesh sat at (0, 0) - same anchor value,
     // two different origins, decided by history.
     expect(roundTripped.origin.x).toBe(untouched.origin.x);
     expect(roundTripped.origin.y).toBe(untouched.origin.y);

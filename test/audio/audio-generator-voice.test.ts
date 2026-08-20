@@ -7,7 +7,7 @@ import { AudioManager } from '#audio/AudioManager';
 import { Envelope } from '#audio/Envelope';
 
 // ---------------------------------------------------------------------------
-// Helpers — mirrors the oscillator/gain spies used in audio-generator.test.ts.
+// Helpers - mirrors the oscillator/gain spies used in audio-generator.test.ts.
 // ---------------------------------------------------------------------------
 
 interface MockAudioParam {
@@ -273,7 +273,7 @@ describe('AudioGeneratorVoice', () => {
 
     // The envelope's own release() is bypassed entirely for a faded stop.
     expect(releaseSpy).not.toHaveBeenCalled();
-    // The oscillator itself is not told to stop synchronously — BaseVoice
+    // The oscillator itself is not told to stop synchronously - BaseVoice
     // schedules a timed gain fade on the voice output instead.
     expect(spy.oscillators[0].stop).not.toHaveBeenCalled();
     expect(voice.ended).toBe(false);

@@ -31,8 +31,8 @@ const usageByGeometryUsage: Record<GeometryUsage, BufferUsage> = {
 
 /**
  * Attribute component types that reach the shader as raw integers rather than
- * as floats. Everything else — including normalised integer types such as the
- * quad mode's `u8x4` colour — goes through `vertexAttribPointer` and arrives as
+ * as floats. Everything else - including normalised integer types such as the
+ * quad mode's `u8x4` colour - goes through `vertexAttribPointer` and arrives as
  * a float, so only these two need `vertexAttribIPointer`.
  */
 const integerAttributeTypes = new Set<AttributeType>(['u32', 'i32']);
@@ -59,7 +59,7 @@ interface ParticleRendererConnection {
 
 /**
  * The GL-side realisation of one render mode: its compiled program, its vertex
- * array object and the buffers behind it. Cached per {@link Material} — the
+ * array object and the buffers behind it. Cached per {@link Material} - the
  * mode's material is its stable identity, and its `destroy()` evicts the entry.
  */
 interface ParticleModeResources {
@@ -87,8 +87,8 @@ interface ParticleModeResources {
  * Particle renderer for WebGL2.
  *
  * One ParticleSystem = one batch. The system's {@link ParticleRenderMode} owns
- * the *how* — vertex layout, shader pair, draw model and the loop that fills
- * the buffer — and this renderer is the executor: each `render(system)` flushes
+ * the *how* - vertex layout, shader pair, draw model and the loop that fills
+ * the buffer - and this renderer is the executor: each `render(system)` flushes
  * any pending batch, sets the system-level uniforms (transform, local bounds,
  * texture) and asks the mode to build its vertex data. The next `flush()`
  * uploads that data and issues the single draw the mode declares.
@@ -120,7 +120,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
    * Materials this renderer already registered a dispose listener on.
    *
    * `Material` has no unsubscribe, and a disconnect clears {@link _resources}
-   * without clearing the material's callback set — so registering on every
+   * without clearing the material's callback set - so registering on every
    * resource creation would leave one dead closure per material behind on
    * every device-loss/reconnect cycle. The listener stays valid across those
    * cycles (it resolves the entry through the map when it fires), so it is
@@ -309,7 +309,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       // destroys a mode it owns, which destroys the material.
       material._onDispose(() => {
         // `Material.destroy` drops its callbacks after firing them, so this
-        // registration is gone — forget it, and the next creation re-registers.
+        // registration is gone - forget it, and the next creation re-registers.
         this._disposeListenerRegistered.delete(material);
 
         const stored = this._resources.get(material);
@@ -384,7 +384,7 @@ export class WebGl2ParticleRenderer extends AbstractWebGl2Renderer<ParticleSyste
       throw new Error('WebGl2ParticleRenderer: could not create vertex array object.');
     }
 
-    // Per-instance for an instanced mode, per-vertex otherwise — the same
+    // Per-instance for an instanced mode, per-vertex otherwise - the same
     // interleaved layout serves both draw models.
     const divisor = mode.instanced ? 1 : 0;
     const vao = new WebGl2VertexArrayObject();

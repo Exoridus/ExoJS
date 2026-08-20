@@ -39,7 +39,7 @@ export type GamepadDefinitionResult =
  * `productKey` is the colon-joined pair (`"045e:028e"`), used as a compact lookup key.
  * `name` is the human-readable portion of the id with the vendor/product tokens removed,
  * or `null` when the id contained only identifiers.
- * `mapping` is the browser's own verdict, verbatim — `"standard"` when it has
+ * `mapping` is the browser's own verdict, verbatim - `"standard"` when it has
  * normalised the device into the W3C layout, `""` when it hands the raw HID
  * report through.
  */
@@ -60,7 +60,7 @@ export interface GamepadDescriptor {
  * `ids` is an optional allow-list of vendor IDs (`"045e"`) or `vendorId:productId`
  * pairs (`"045e:028e"`); when omitted the definition matches every device.
  * `resolve` is called with the parsed {@link GamepadDescriptor} and must return a
- * {@link GamepadDefinitionResult} — `null`/`undefined` to skip, a mapping otherwise.
+ * {@link GamepadDefinitionResult} - `null`/`undefined` to skip, a mapping otherwise.
  */
 export interface GamepadDefinition {
   ids?: string | string[];
@@ -70,7 +70,7 @@ export interface GamepadDefinition {
 
 /**
  * The fully resolved product of running a {@link GamepadDefinition} against a
- * connected gamepad — bundles the original descriptor, the resolved display name,
+ * connected gamepad - bundles the original descriptor, the resolved display name,
  * and the chosen {@link GamepadMapping} together for use by {@link Gamepad}.
  */
 export interface ResolvedGamepadDefinition {
@@ -228,7 +228,7 @@ export const resolveDefinition = (definition: GamepadDefinition, descriptor: Gam
  * the device as already standard-normalised.
  *
  * A raw mapping encodes one device's unnormalised HID report order, so routing
- * standard indices through it produces silently wrong channels — the Steam Deck
+ * standard indices through it produces silently wrong channels - the Steam Deck
  * expects its face cluster at 3-6, which a standard-mapped pad puts at 0-3. The
  * resolved family and name are kept: the device is still what the definition
  * says it is, and its prompt labels are a property of the hardware, not of the
@@ -252,8 +252,8 @@ const withStandardLayoutGuard = (resolved: ResolvedGamepadDefinition, descriptor
 /**
  * Resolves the best-matching {@link ResolvedGamepadDefinition} for a connected gamepad.
  *
- * Iterates `definitions` in order — exact product IDs first, then vendor fallbacks,
- * then a generic catch-all — and returns the first match. Falls back to
+ * Iterates `definitions` in order - exact product IDs first, then vendor fallbacks,
+ * then a generic catch-all - and returns the first match. Falls back to
  * {@link GenericDualAnalogGamepadMapping} when no definition matches, and
  * replaces a matched {@link GamepadMappingLayout.Raw} mapping with the generic
  * layout when the browser reports `mapping: "standard"` for the device.

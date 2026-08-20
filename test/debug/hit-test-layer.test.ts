@@ -196,7 +196,7 @@ describe('HitTestLayer', () => {
 
     vi.restoreAllMocks();
 
-    // Yellow = (255, 255, 0) — Color channels are 0..255.
+    // Yellow = (255, 255, 0) - Color channels are 0..255.
     expect(colorAssignments.some(c => c.r === 255 && c.g === 255 && c.b === 0)).toBe(true);
   });
 
@@ -226,7 +226,7 @@ describe('HitTestLayer', () => {
 
     vi.restoreAllMocks();
 
-    // Cyan = (0, 255, 255) — Color channels are 0..255.
+    // Cyan = (0, 255, 255) - Color channels are 0..255.
     expect(colorAssignments.some(c => c.r === 0 && c.g === 255 && c.b === 255)).toBe(true);
   });
 
@@ -253,7 +253,7 @@ describe('HitTestLayer', () => {
 
     vi.restoreAllMocks();
 
-    // Magenta = (255, 0, 255) — Color channels are 0..255.
+    // Magenta = (255, 0, 255) - Color channels are 0..255.
     expect(colorAssignments.some(c => c.r === 255 && c.g === 0 && c.b === 255)).toBe(true);
   });
 
@@ -325,7 +325,7 @@ describe('HitTestLayer', () => {
   });
 
   test('a leaf node with no children property is not recursed into', () => {
-    // Plain leaf (no `children` key at all, as opposed to an empty array) —
+    // Plain leaf (no `children` key at all, as opposed to an empty array) -
     // exercises the Array.isArray(container.children) false branch.
     const leaf = {
       visible: true,

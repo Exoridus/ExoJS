@@ -22,7 +22,7 @@ export class MembershipBits {
     return this._words;
   }
 
-  /** Words actually in use — the array may be larger after a shrinking reset. */
+  /** Words actually in use - the array may be larger after a shrinking reset. */
   public get wordCount(): number {
     return (this._count + 31) >>> 5;
   }
@@ -57,7 +57,7 @@ export class MembershipBits {
     return (this._words[index >>> 5]! & (1 << (index & 31))) !== 0;
   }
 
-  /** Population count — the number of admitted items. */
+  /** Population count - the number of admitted items. */
   public count(): number {
     const words = this._words;
     const end = this.wordCount;
@@ -82,16 +82,16 @@ export class MembershipBits {
  * The split exists because `SceneNode._inCullRect` has three genuinely different
  * inputs and only one of them is indexable:
  *
- * - `cullable === false` — the answer is "always", so the item must never cost a
+ * - `cullable === false` - the answer is "always", so the item must never cost a
  *   cell walk. It also has no meaningful extent to file under.
- * - a custom `cullArea` — a MUTABLE `Rectangle` whose in-place mutation stamps
+ * - a custom `cullArea` - a MUTABLE `Rectangle` whose in-place mutation stamps
  *   no revision (only replacing the reference does). An index that copied it
  *   would go stale unnoticed, so these are re-tested live against the node's
  *   current rect. This is the cut-2 answer the spec left open, and it is the
  *   small one: no new observable contract, no rectangle API rework, and the
  *   existing in-place-mutation test keeps passing because nothing about that
  *   path changed.
- * - a plain bounds item — indexable, and the overwhelming majority.
+ * - a plain bounds item - indexable, and the overwhelming majority.
  * @internal
  */
 const enum ItemClass {
@@ -112,8 +112,8 @@ const maxCells = 1 << 20;
  *
  * Uniform grid over one scope's indexable items.
  *
- * Each item is filed under exactly ONE cell — the cell containing its minimum
- * corner — rather than under every cell it overlaps. A multi-cell filing turns
+ * Each item is filed under exactly ONE cell - the cell containing its minimum
+ * corner - rather than under every cell it overlaps. A multi-cell filing turns
  * a scene of 8px sprites on 32px cells into four entries per item and makes the
  * query hand the same candidate back several times; single-cell filing keeps the
  * table at exactly one `int32` per item and the query duplicate-free. The price
@@ -123,13 +123,13 @@ const maxCells = 1 << 20;
  * Complexity, stated as what it is: **expected O(overlapped cells + candidates),
  * worst case O(N)**. A scene whose items all land in one cell degenerates to the
  * flat scan, and no cell size prevents that. What the grid does buy is the case
- * the cut exists for — a world laid out across an area several times the
- * viewport — where the overwhelming majority of items are never looked at.
+ * the cut exists for - a world laid out across an area several times the
+ * viewport - where the overwhelming majority of items are never looked at.
  *
  * The cell edge is derived from the MEAN item extent rather than from the world
  * size, because the query cost is driven by items per cell, not by cells per
  * world. Items far larger than a cell (a full-screen backdrop among sprites)
- * would push the overhang — and therefore every query's widening — out to their
+ * would push the overhang - and therefore every query's widening - out to their
  * own size, so they are removed from the grid and answered live instead.
  */
 export class SourceVisibilityIndex {
@@ -168,7 +168,7 @@ export class SourceVisibilityIndex {
     return this._built;
   }
 
-  /** Items answered live per query — the honest part of the query's cost. */
+  /** Items answered live per query - the honest part of the query's cost. */
   public get liveCullCount(): number {
     return this._liveCull.length;
   }
@@ -189,7 +189,7 @@ export class SourceVisibilityIndex {
   /**
    * File `items` into a fresh grid.
    *
-   * Two passes: one to classify and size, one to fill the CSR table. Cold work —
+   * Two passes: one to classify and size, one to fill the CSR table. Cold work -
    * it happens once per source build, not once per camera step.
    */
   public build(items: PackedSourceItems): void {
@@ -364,7 +364,7 @@ export class SourceVisibilityIndex {
    *
    * The grid walk has a fast path worth naming: a cell whose own box, WIDENED by
    * the recorded overhang, lies entirely inside `rect` cannot hold an item that
-   * misses it — every item filed there starts inside the cell and reaches at
+   * misses it - every item filed there starts inside the cell and reaches at
    * most to the overhang. Those items are admitted without a test, which is what
    * keeps the interior of a large visible area free of per-item arithmetic.
    */
@@ -458,8 +458,8 @@ export class SourceVisibilityIndex {
         const cellLeft = originX + column * cellSize;
 
         if (rowInterior && cellLeft >= left && cellLeft + cellSize + overhangX <= right) {
-          // Admitting a whole cell is the query's inner loop at scale — nine
-          // candidates in ten reach it on a viewport-sized rect — so the set is
+          // Admitting a whole cell is the query's inner loop at scale - nine
+          // candidates in ten reach it on a viewport-sized rect - so the set is
           // written through its word array directly. `bits.set` is the same two
           // operations behind a call, and at a third of a million admissions a
           // frame the call is a measurable share of the query.
@@ -480,7 +480,7 @@ export class SourceVisibilityIndex {
           scratch.width = maxX[i]! - scratch.x;
           scratch.height = maxY[i]! - scratch.y;
 
-          // The same primitive `_inCullRectUsingBounds` ends in — these items
+          // The same primitive `_inCullRectUsingBounds` ends in - these items
           // were classified as cullable-with-plain-bounds at build time, and
           // both classifiers stamp the structure revision the source is keyed
           // on, so the classification cannot have gone stale here.

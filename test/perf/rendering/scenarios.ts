@@ -55,7 +55,7 @@ export const buildScenarioCatalog = (profile: BenchProfile): BenchScenario[] => 
 
   for (const count of spriteCounts(profile)) {
     for (const textureCount of spriteTextureCounts) {
-      // >8 distinct textures cycled forces a flush per slot-window — the O(N²)
+      // >8 distinct textures cycled forces a flush per slot-window - the O(N²)
       // transform-upload amplification makes huge counts pathologically slow.
       // Demonstrate the break at moderate counts; keep large counts single-draw.
       if (textureCount >= 9 && count > 1000) {
@@ -92,7 +92,7 @@ export const buildScenarioCatalog = (profile: BenchProfile): BenchScenario[] => 
       }
     }
 
-    // Alternating blend modes — forces a flush per blend change, which exposes
+    // Alternating blend modes - forces a flush per blend change, which exposes
     // the per-flush transform re-upload amplification. Capped at moderate counts
     // because it is intentionally O(N) draws / O(N²) upload bytes.
     if (count <= 1000) {

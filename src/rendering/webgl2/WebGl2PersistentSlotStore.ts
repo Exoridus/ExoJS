@@ -23,7 +23,7 @@ import { WebGl2RenderBuffer, type WebGl2RenderBufferRuntime } from './WebGl2Rend
 /**
  * Floats one slot occupies in each of the two rgba32f stores. Both hold two
  * texels, which is what lets the shader address them with the single row
- * mapping the shared transform texture already publishes — and what keeps the
+ * mapping the shared transform texture already publishes - and what keeps the
  * textures 2048 texels wide, the width every WebGL2 context guarantees.
  */
 const floatsPerSlotRow = TRANSFORM_TEXELS_PER_ROW * 4;
@@ -43,7 +43,7 @@ const initialSlotCapacity = 1024;
  * item stays visible. A camera step therefore writes only the rows of the items
  * that just entered; the rest of the store is already correct and is not read,
  * not rewritten and not re-uploaded. What does change every selection is the
- * order buffer — four bytes per visible item — because that is the draw order
+ * order buffer - four bytes per visible item - because that is the draw order
  * and insertions move it.
  *
  * # Upload granularity
@@ -59,7 +59,7 @@ const initialSlotCapacity = 1024;
  * # Growth
  *
  * Capacity doubles and COPIES, so a slot keeps both its number and its contents
- * across a growth — which is why growth does not bump {@link generation}. The
+ * across a growth - which is why growth does not bump {@link generation}. The
  * generation exists for the cases where the contents genuinely stop being
  * trustworthy: a lost device, or an explicit release.
  */
@@ -113,7 +113,7 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
   /**
    * The one blend mode the whole source agreed on. A blend change is a hard
    * flush boundary for the batcher, so a source that mixes modes never gets a
-   * store at all — which is why this can be a single value rather than per slot.
+   * store at all - which is why this can be a single value rather than per slot.
    */
   public blendMode: BlendModes = BlendModes.Normal;
 
@@ -236,13 +236,13 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
    * whole point of the source-side prepack is that an item entering the view is
    * never read out of the scene graph again, so this method must have no way to
    * do so. The quad record's eight floats are already in this store's attribute
-   * layout — local bounds then UV — so they copy straight across.
+   * layout - local bounds then UV - so they copy straight across.
    *
    * `textureIndex` overwrites the canonical transform row's spare fourth
    * component, which the shared packer leaves at zero and no other shader reads.
    * It is the one genuinely derived field here, because which slot of the
    * store's table a texture occupies is a batching fact, not a property of the
-   * item — see `sprite-indexed.vert`.
+   * item - see `sprite-indexed.vert`.
    */
   public writeSlotFrom(
     slot: number,
@@ -343,7 +343,7 @@ export class WebGl2PersistentSlotStore implements PersistentSlotBundle {
     const uploadCount = Math.max(1, count);
 
     if (this._orderBuffer === null) {
-      // Only the constructor still needs a narrowed view — it sizes the initial
+      // Only the constructor still needs a narrowed view - it sizes the initial
       // store from what it is handed and takes no element count.
       this._orderBuffer = new WebGl2RenderBuffer(BufferTypes.ArrayBuffer, this._order.subarray(0, uploadCount), BufferUsage.DynamicDraw).connect(
         createRuntime(gl),

@@ -2,7 +2,7 @@
  * WebGPU Text retained-batch record/replay.
  *
  * Text is the first retained renderer that opts OUT of the shared
- * `TransformBuffer` (`_consumesSharedTransform === false`) — its per-vertex
+ * `TransformBuffer` (`_consumesSharedTransform === false`) - its per-vertex
  * "node index" addresses its OWN private per-node style+transform buffer, so
  * the generic bundle/scan/rebase machinery has nothing to persist for it.
  * These tests pin the renderer-owned mechanism that replaces it end to end:
@@ -188,7 +188,7 @@ const createMockWebGpuEnvironment = (): MockWebGpuEnvironment => {
   }
 
   // Glyph rasterization (GlyphAtlas) creates its OWN canvases and reads a '2d'
-  // context — stub it at the prototype level. The WebGPU surface canvas below
+  // context - stub it at the prototype level. The WebGPU surface canvas below
   // shadows this with an instance-level override for 'webgpu'.
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
@@ -308,7 +308,7 @@ describe('WebGPU Text retained-batch record/replay', () => {
       expect(countLabel(environment.writes(), instanceLabel)).toBe(1);
       expect(countLabel(environment.writes(), nodeDataLabel)).toBe(0); // uploaded lazily, on first REPLAY
 
-      // A Text-only capture must never issue the shared-transform-row copy —
+      // A Text-only capture must never issue the shared-transform-row copy -
       // the WebGpuBackend._finalizeRetainedCapture guard this task added.
       expect(countLabel(environment.writes(), sharedTransformLabel)).toBe(0);
 
@@ -506,7 +506,7 @@ describe('WebGPU Text retained-batch record/replay', () => {
 
   test('an in-place style mutation forces a full re-record', async () => {
     // The layout pass itself is deferred to the next read, but a replaying
-    // group never reads the node — so the content stamp has to land when the
+    // group never reads the node - so the content stamp has to land when the
     // style is mutated, not when the pass eventually runs.
     const environment = createMockWebGpuEnvironment();
 
@@ -566,7 +566,7 @@ describe('WebGPU Text retained-batch record/replay', () => {
       const set = fragmentOf(group).instructions;
 
       // A poisoned window's plan-level key still looks committed
-      // (`hasRecording`/`isValidFor`) — the backend applies its own veto on
+      // (`hasRecording`/`isValidFor`) - the backend applies its own veto on
       // top (mirrors the existing Sprite poison test in
       // webgpu-retained-record-replay.test.ts): `_validateRetainedInstructionSet`
       // must reject it so the group never replays the incomplete recording.
@@ -650,7 +650,7 @@ describe('WebGPU Text retained-batch record/replay', () => {
         // recording the SAME frame it discovers the patch is ineligible, and
         // the fragment is still content/structure-clean, so it re-records
         // immediately within this one `renderFrame` call (no extra frame
-        // needed) — a full re-record re-uploads the vertex stream, which the
+        // needed) - a full re-record re-uploads the vertex stream, which the
         // cheap O(1) patch never touches.
         renderFrame(backend, root);
 

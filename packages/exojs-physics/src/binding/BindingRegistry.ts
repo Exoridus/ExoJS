@@ -20,7 +20,7 @@ const hasNonIdentityTransform = (ancestor: SceneNode): boolean =>
  * body's WORLD transform into the node's LOCAL position/rotation, which is
  * only correct when local space == world space. Walk the parent chain and
  * warn when an ancestor either carries a non-identity transform or is a
- * transform-group boundary (RetainedContainer) — in both cases the ancestor
+ * transform-group boundary (RetainedContainer) - in both cases the ancestor
  * contribution is applied ON TOP of the world-space values sync() writes,
  * double-transforming the node on screen.
  */
@@ -51,7 +51,7 @@ const warnUnlessWorldSpaceRooted = (node: SceneNode): void => {
 
 /**
  * Owns the body ↔ node links and writes bound node transforms after each step.
- * Backend-agnostic (frontend-level) — it reads only the public body transform.
+ * Backend-agnostic (frontend-level) - it reads only the public body transform.
  */
 export class BindingRegistry {
   private readonly _bindings = new Map<PhysicsBody, PhysicsBinding>();
@@ -59,7 +59,7 @@ export class BindingRegistry {
   /**
    * Link `body` to `node`. Rejects destroyed nodes and nodes with non-zero
    * skew; runtime scale is ignored. In dev builds, warns when the node is not
-   * world-space-rooted (moved ancestor or transform-group boundary above it) —
+   * world-space-rooted (moved ancestor or transform-group boundary above it) -
    * see {@link PhysicsBinding} for the local==world contract.
    */
   public bind(body: PhysicsBody, node: SceneNode): PhysicsBinding {
@@ -93,7 +93,7 @@ export class BindingRegistry {
    * has been destroyed.
    *
    * `SceneNode.destroy()` returns the node's position/rotation state to a shared
-   * pool, so a `sync()` that kept writing would not merely update a dead node —
+   * pool, so a `sync()` that kept writing would not merely update a dead node -
    * it would write through recycled state into whichever live node next takes
    * that slot. Pruning here (rather than only on an explicit `unbind`) is what
    * makes destroying a bound node safe without a physics-side teardown call.

@@ -52,7 +52,7 @@ const createDrawCommand = (drawable: Drawable, nodeIndex: number): DrawCommand =
 });
 
 // Mirror WebGpuBackend._prepareDrawCommand: write consuming commands into the
-// shared storage, record skips for renderers that opt out — routed through the
+// shared storage, record skips for renderers that opt out - routed through the
 // production `drawCommandUsesSharedTransform` predicate.
 const backend = {
   rendererRegistry: {

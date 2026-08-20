@@ -14,9 +14,9 @@ export interface WebStorageStoreOptions {
  * `sessionStorage`).
  *
  * Web Storage holds only strings, so values are JSON-serialized on write and
- * parsed on read — they must be JSON-serializable (**no** Blobs/`ArrayBuffer`s;
+ * parsed on read - they must be JSON-serializable (**no** Blobs/`ArrayBuffer`s;
  * use {@link IndexedDbKeyValueStore} for those). The backend is synchronous with
- * a small (~5–10 MB) quota; the async interface wraps it so call sites stay
+ * a small (~5-10 MB) quota; the async interface wraps it so call sites stay
  * uniform across stores. This is the moral successor of the former `JsonStore`:
  * JSON is intrinsic here because the backend can only hold strings.
  *

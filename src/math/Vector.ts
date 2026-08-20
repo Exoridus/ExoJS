@@ -26,7 +26,7 @@ let temp: Vector | null = null;
  * {@link ShapeLike} collision support (treated as a point collider).
  *
  * `Vector.temp` provides a shared scratch instance for intermediate
- * calculations — never store the reference across frames. `Vector.zero` and
+ * calculations - never store the reference across frames. `Vector.zero` and
  * `Vector.one` are read-only sentinel constants.
  *
  * The four static factory methods (`add`, `subtract`, `multiply`, `divide`)
@@ -89,7 +89,7 @@ export class Vector extends AbstractVector implements ShapeLike {
     // Point-vs-point containment is exact equality (the shared threshold is 0).
     // Routing the probe through `Vector.temp` made this self-aliasing: calling
     // it ON the scratch overwrote the receiver with the probe and then measured
-    // its distance to itself, so it always answered `true` — and any other call
+    // its distance to itself, so it always answered `true` - and any other call
     // clobbered whatever the scratch was holding.
     return this.x === x && this.y === y;
   }
@@ -103,7 +103,7 @@ export class Vector extends AbstractVector implements ShapeLike {
   }
 
   public destroy(): void {
-    // no-op — pure value class, kept for Destroyable interface conformance
+    // no-op - pure value class, kept for Destroyable interface conformance
   }
 
   public static get temp(): Vector {

@@ -1,23 +1,23 @@
 /// <reference types="@webgpu/types" />
 
 /**
- * WebGPU backdrop-aware blend SPIKE — proves the advanced-blend primitive
+ * WebGPU backdrop-aware blend SPIKE - proves the advanced-blend primitive
  * (`WebGpuBackdropBlendCompositor`) end-to-end in isolation, before any
  * render-plan integration. Mode = Darken (the motivating bug); mirrors the
  * WebGL2 spike (`webgl2-backdrop-blend`).
  *
  * Verifies the two things the spike exists to de-risk on WebGPU:
  *  1. Backdrop capture (copyTextureToTexture) + composite math: a transparent
- *     source region shows the backdrop through (NOT black — the old
+ *     source region shows the backdrop through (NOT black - the old
  *     fixed-function Darken bug), and a covered region equals min(backdrop,
  *     source).
  *  2. Spatial / V-flip correctness: the captured backdrop is composited at the
  *     right place (a vertically-split backdrop under an opaque white source comes
- *     back unflipped — copyTextureToTexture preserves top-left order, unlike the
+ *     back unflipped - copyTextureToTexture preserves top-left order, unlike the
  *     WebGL2 framebuffer blit).
  *
  * Pixel readback is real GPU-side readback (`copyTextureToBuffer` +
- * `mapAsync`), NOT `ctx.drawImage(webgpuCanvas)` into a 2D canvas — the
+ * `mapAsync`), NOT `ctx.drawImage(webgpuCanvas)` into a 2D canvas - the
  * drawImage path silently reads back all-zero on the software (SwiftShader /
  * lavapipe) adapters CI runs on, which would make this spike pass without
  * proving anything.
@@ -94,7 +94,7 @@ const bytesPerRowAligned = (widthPx: number, bytesPerPixel: number): number => M
 // copyTextureToBuffer -> mapAsync -> getMappedRange, mirroring
 // `WebGpuStorageBuffer.read`. `ctx.drawImage(webgpuCanvas)` into a 2D canvas
 // looks like a readback but returns all-zero on the software (SwiftShader /
-// lavapipe) adapters CI runs the WebGPU lane on — it never actually exercises
+// lavapipe) adapters CI runs the WebGPU lane on - it never actually exercises
 // the GPU-visible pixel data, so a real regression there would go undetected.
 const readGpuCanvas = async (backend: WebGpuBackend): Promise<(x: number, y: number) => RgbaTuple> => {
   const device = backend.device;
@@ -193,7 +193,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
 
       // Left (red over blue, Darken): min((60,120,200),(255,0,0)) = (60,0,0).
       expectRgbNear(readPixel(16, 32), [60, 0, 0]);
-      // Right (transparent): the backdrop shows through — NOT black.
+      // Right (transparent): the backdrop shows through - NOT black.
       expectRgbNear(readPixel(48, 32), [60, 120, 200]);
     } catch (error) {
       if (isDeviceLoss(error)) {
@@ -222,7 +222,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
       textureOptions: { scaleMode: ScaleModes.Nearest },
     });
     // Opaque white under Darken = min(white, backdrop) = backdrop, so the result
-    // must match the backdrop spatially (top red, bottom blue) — a V-flip or a
+    // must match the backdrop spatially (top red, bottom blue) - a V-flip or a
     // channel-swap bug would change these.
     const white = new DataTexture({
       width: 1,

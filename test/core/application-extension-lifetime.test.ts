@@ -3,7 +3,7 @@ import type { MockInstance } from 'vitest';
 /**
  * An extension's lifetime is its Application's lifetime: `install(app)` runs
  * once at construction, the disposer it returns runs once at teardown, and the
- * two are mirror images — installation order forwards, disposal order back.
+ * two are mirror images - installation order forwards, disposal order back.
  * These drive a real `Application`; only the WebGL2 backend is mocked, because
  * jsdom has no GL context.
  */
@@ -128,7 +128,7 @@ describe('Extension disposers', () => {
 
     await app.destroy();
 
-    // Installation order is the snapshot order — dependencies first — so
+    // Installation order is the snapshot order - dependencies first - so
     // disposal is its mirror.
     expect(order).toEqual(['last', 'root', 'dep']);
   });
@@ -194,7 +194,7 @@ describe('Extension disposers', () => {
 
     const app = new Application({ backend: { type: 'webgl2' }, extensions: [first, hostile] });
 
-    // onFrame is destroyed at the very end of the teardown chain — a live
+    // onFrame is destroyed at the very end of the teardown chain - a live
     // handler afterwards means the chain was cut short.
     app.onFrame.add(() => {});
 
@@ -324,7 +324,7 @@ describe('Systems registered by an extension install()', () => {
     const app = new Application({ backend: { type: 'webgl2' }, extensions: [ext] });
 
     // onFrame is destroyed at the very end of _disposeManagedResources, well
-    // past systems.destroy() — a live handler afterwards means the chain that
+    // past systems.destroy() - a live handler afterwards means the chain that
     // also releases rendering, audio, input, backend and platform was cut short.
     app.onFrame.add(() => {});
 

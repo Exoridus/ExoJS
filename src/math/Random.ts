@@ -7,8 +7,8 @@ const normalize = 1 / 2 ** 32;
 /**
  * Seedable pseudo-random number generator using the xoshiro128** algorithm.
  *
- * xoshiro128** (Blackman & Vigna, 2018) keeps a compact 128-bit state — four
- * 32-bit words — and produces high-quality 32-bit outputs that clear the full
+ * xoshiro128** (Blackman & Vigna, 2018) keeps a compact 128-bit state - four
+ * 32-bit words - and produces high-quality 32-bit outputs that clear the full
  * BigCrush / PractRand test batteries. It replaces the previous Mersenne
  * Twister: ~16 bytes of state instead of ~2.5 KB, faster, and entirely 32-bit
  * (no 64-bit arithmetic), which suits JavaScript well.
@@ -49,7 +49,7 @@ export class Random {
 
   /**
    * Reinitialise the generator from the current {@link seed} without
-   * changing it — equivalent to rewinding to the start of the sequence.
+   * changing it - equivalent to rewinding to the start of the sequence.
    * Returns `this` for chaining.
    */
   public reset(): this {
@@ -109,6 +109,6 @@ export class Random {
   }
 
   public destroy(): void {
-    // no-op — pure value class, kept for Destroyable interface conformance
+    // no-op - pure value class, kept for Destroyable interface conformance
   }
 }

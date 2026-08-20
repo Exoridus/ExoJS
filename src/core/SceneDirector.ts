@@ -63,7 +63,7 @@ export {
 
 type PreloadStatus = 'loading' | 'ready' | 'claimed' | 'cancelling';
 
-/** Internal `_preloaded` entry — a small internal-only interface colocated with the class that uses it. */
+/** Internal `_preloaded` entry - a small internal-only interface colocated with the class that uses it. */
 interface PreloadEntry {
   readonly scope: SceneScope;
   readonly data: unknown;
@@ -120,12 +120,12 @@ class DirectorTransitionEnvironment implements SceneTransitionEnvironment {
 /**
  * Single-active-scene controller owned by {@link Application}. Holds at most one
  * active {@link Scene} (the current "screen"); {@link SceneDirector.change}
- * switches to a new scene — ending the previous one permanently — with an
+ * switches to a new scene - ending the previous one permanently - with an
  * optional {@link SceneTransition}.
  *
  * The `Registry` generic (inferred from `ApplicationOptions.scenes`)
  * types the scene registry passed at construction. This class stores
- * it bidirectionally (`byConstructor`/`byKey`) — `byConstructor` backs
+ * it bidirectionally (`byConstructor`/`byKey`) - `byConstructor` backs
  * constructor-target registration/diagnostics checks, `byKey` backs
  * key-based navigation (`change`/`restore` given a registered string key
  * instead of a constructor).
@@ -159,13 +159,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   private _sessionCommitStarted = false;
   /**
    * The teardown the CURRENT navigation must await before its own promise
-   * resolves — one navigation's view, deliberately overwritten by the next
+   * resolves - one navigation's view, deliberately overwritten by the next
    * one. Never the answer to "is any scene still tearing down?"; that is
    * `_pendingTeardowns` below.
    */
   private _pendingOutgoingTeardown: Promise<void> | null = null;
   /**
-   * EVERY scene teardown this Director has started that has not settled yet —
+   * EVERY scene teardown this Director has started that has not settled yet -
    * `change()`/`restore()`'s outgoing scope, `_clearScene()`'s discard, and
    * `_stopAndClearActiveScene()`'s. Entries remove themselves as they settle.
    *
@@ -173,8 +173,8 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * questions, and conflating them is a bug: a navigation that commits while
    * an earlier teardown is still running overwrites the single handle (with
    * `Promise.resolve()` when it has no outgoing scope of its own), which
-   * would leave {@link SceneDirector._dispose} — and therefore
-   * `Application.destroy()` — no longer waiting for a `Scene.unload()` that
+   * would leave {@link SceneDirector._dispose} - and therefore
+   * `Application.destroy()` - no longer waiting for a `Scene.unload()` that
    * is still running against the very managers it is about to destroy.
    * Folding into the single handle instead would fix that at the cost of
    * making an ordinary `change()` wait on an unrelated, possibly
@@ -209,7 +209,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly onResume = new Signal<[Scene]>();
   /**
    * Fires whenever a scene's {@link SceneState} changes, as
-   * `(previous, next, scene)` — every edge in the state graph, including
+   * `(previous, next, scene)` - every edge in the state graph, including
    * `Preparing` → `Ready`, `Ready` → `Active`, and the terminal
    * `Destroying` → `Destroyed` teardown, not just pause/resume/retention.
    * Pure observation: a throwing listener is reported through
@@ -219,7 +219,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly onStateChange = new Signal<[SceneState, SceneState, Scene]>();
 
   // Relies on class field initializers running top-to-bottom in declaration
-  // order — `_retained`/`onStopScene`/`onStateChange` above are already
+  // order - `_retained`/`onStopScene`/`onStateChange` above are already
   // assigned by the time this initializer runs.
   private readonly _navigation = new SceneNavigationTransaction(this._retained, this.onStopScene, this.onStateChange, error =>
     this._reportLifecycleError(error),
@@ -230,7 +230,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     this._registry = validateSceneRegistry(scenes, Scene);
   }
 
-  /** The active scene, or `null` when none is set. Read-only — see {@link SceneDirector.change} to change it. */
+  /** The active scene, or `null` when none is set. Read-only - see {@link SceneDirector.change} to change it. */
   public get currentScene(): Scene | null {
     return (this._activeScope?.scene as Scene | undefined) ?? null;
   }
@@ -246,7 +246,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * @internal `true` while a {@link SceneTransitionSession} is in flight —
+   * @internal `true` while a {@link SceneTransitionSession} is in flight -
    * used by {@link SceneInputs} (`when` policy) and {@link InteractionManager}
    * to suppress scene input/interaction dispatch for the transition's
    * duration, regardless of `when: 'always'`. A
@@ -258,7 +258,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Switch to a fresh instance of `target` (a registered key or a
-   * constructor), ending the previously active scene permanently — unless
+   * constructor), ending the previously active scene permanently - unless
    * `options.suspendCurrent` is set, in which case the outgoing scene is
    * suspended and retained (keyed by its constructor) for a later
    * {@link SceneDirector.restore} call instead. Ordinary switching always
@@ -266,7 +266,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * `load()`+`init()` while the outgoing scene is still fully live and
    * driving frames; the switch itself is then atomic:
    * once the incoming scope has been prepared, nothing past that point can
-   * fail or roll back — the outgoing scope is suspended or torn down and
+   * fail or roll back - the outgoing scope is suspended or torn down and
    * the incoming scope activated as one uninterruptible step, and the
    * returned promise additionally waits for the outgoing scope's permanent
    * teardown to fully settle (skipped when `suspendCurrent` is set, since
@@ -276,11 +276,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * the switch through a {@link SceneTransitionSession}: the atomic commit
    * boundary is deferred until the session requests it via
    * `environment.commit()`, and the returned promise resolves only once the
-   * session finishes. With no `transition` — and no registry-level default
-   * for the target — the switch runs the direct fast path.
+   * session finishes. With no `transition` - and no registry-level default
+   * for the target - the switch runs the direct fast path.
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
-   * navigation is already in flight (dev and production builds — no
+   * navigation is already in flight (dev and production builds - no
    * queueing); with {@link UnregisteredSceneError} (dev
    * builds for a constructor target, every build for an unresolvable
    * registry key) when `target` is not present in
@@ -295,7 +295,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     const data = (options as { data?: unknown }).data;
 
     await this._runWithNavigation(async () => {
-      // Resolved inside the navigation lock, deliberately — this preserves
+      // Resolved inside the navigation lock, deliberately - this preserves
       // the existing check order (concurrent-navigation guard first, then
       // target validation) for both a bad key and an unregistered
       // constructor alike, rather than only for the latter.
@@ -310,11 +310,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       }
 
       // Synchronous, before-first-await claim of a matching `_preloaded`
-      // entry (Object.is() on the activation data) — mirrors restore()'s
+      // entry (Object.is() on the activation data) - mirrors restore()'s
       // eager claim-before-await pattern for `_retained`. A claimed-but-
       // uncommitted entry that never reaches the commit boundary below goes
       // back into `_preloaded` as `ready` rather than being destroyed
-      // — see the `catch` on the transitioned action below, which is
+      // - see the `catch` on the transitioned action below, which is
       // reachable via the frame-loop abort (`_abortInFlightNavigation`).
       const preloadEntry = this._preloaded.get(resolvedTarget);
       const claimedEntry = preloadEntry !== undefined && preloadEntry.status !== 'cancelling' && Object.is(preloadEntry.data, data) ? preloadEntry : null;
@@ -332,9 +332,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
       // Flipped `true` the instant the atomic switch begins consuming the
       // claim (before its `await`). Distinguishes "the claim was never
-      // reached — a pre-commit session abort settled the navigation before
+      // reached - a pre-commit session abort settled the navigation before
       // `commitSwitch` ran" (restore the claim) from "`commitSwitch`
-      // already started — it now owns the claimed scope's fate itself,
+      // already started - it now owns the claimed scope's fate itself,
       // whether it goes on to commit, fail preparation, or bail on the
       // race guard below". The catch must never touch a claim `commitSwitch`
       // has taken over.
@@ -355,7 +355,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         const scene = claimedEntry !== null ? (claimedEntry.scope.scene as Scene) : new resolvedTarget();
         const newScope = claimedEntry !== null ? await this._awaitClaimedPreload(claimedEntry) : await this._prepareScene(scene, data);
 
-        // Concurrency guard, combining TWO checks — neither subsumes the
+        // Concurrency guard, combining TWO checks - neither subsumes the
         // other:
         //   • The generation term catches an abort routed through
         //     `_abortInFlightNavigation` (the only caller that bumps
@@ -363,7 +363,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         //     commit that previously had no abort checkpoint at all.
         //   • The session-identity term catches a session that self-terminated
         //     DURING this async prepare window WITHOUT going through
-        //     `_abortInFlightNavigation` — i.e. `session.update()`/`render()`
+        //     `_abortInFlightNavigation` - i.e. `session.update()`/`render()`
         //     threw, or the session reported `done` before commit. Those paths
         //     call `_finishActiveSession` directly (clearing `_activeSession`
         //     and rejecting the navigation) but do NOT bump the generation, so
@@ -373,7 +373,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         if (this._navigationGeneration !== generationAtStart || (sessionAtStart !== null && this._activeSession !== sessionAtStart)) {
           // Guarded (unlike the commit path below, which lets a genuine
           // failure propagate to _performSessionCommit's catch): this
-          // disposal runs for a navigation that has already settled — its
+          // disposal runs for a navigation that has already settled - its
           // session (if any) was aborted moments ago, so _finishActiveSession's
           // `session === null` guard makes any catch further up a no-op,
           // silently dropping the error instead of surfacing it. Report it
@@ -392,7 +392,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           }
 
           if (sessionAtStart === null) {
-            // Direct (non-transitioned) navigation — nothing else will
+            // Direct (non-transitioned) navigation - nothing else will
             // reject change()'s own promise on abort (a session-driven
             // commit's rejection instead comes from the session's own
             // outer promise via `_finishActiveSession`), so this bail must
@@ -416,7 +416,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         this.onStartScene.dispatchIsolated(error => this._reportLifecycleError(error), scene as Scene);
 
         // Not rollback-able. `onStopScene` fires
-        // here — after the incoming scope is fully live — and ONLY THEN does
+        // here - after the incoming scope is fully live - and ONLY THEN does
         // outgoing teardown actually start; it settles in the background
         // while the session keeps playing, and the navigation awaits it last
         // via `_awaitPendingOutgoingTeardown`.
@@ -440,7 +440,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         // nothing newer has since claimed this slot (a fresh `preload()` call
         // for the same target, registered while this one was in flight) and
         // the Director itself is not mid-`_dispose()` (which will tear
-        // `_preloaded` down itself — resurrecting a claim here would leak it
+        // `_preloaded` down itself - resurrecting a claim here would leak it
         // past that teardown).
         if (!commitStarted && claimedEntry !== null) {
           if (!this._destroyed && !this._preloaded.has(resolvedTarget)) {
@@ -468,12 +468,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * @internal Clear the active scene (if any) without activating a new one,
-   * as an ordinary navigation — it takes the navigation lock and therefore
+   * as an ordinary navigation - it takes the navigation lock and therefore
    * rejects with {@link ConcurrentSceneNavigationError} while another
    * navigation is in flight. Used by {@link SceneDirector.unload}'s
    * active-scope match, where an explicit `transition` drives a full
    * {@link SceneTransitionSession} (operation `'unload'`,
-   * `hasIncomingScene: false` — the discard has no scene to enter). Never
+   * `hasIncomingScene: false` - the discard has no scene to enter). Never
    * part of the public navigation surface itself (navigation always targets a
    * registered constructor).
    *
@@ -496,7 +496,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         this._activeScopeTarget = null;
 
         // onChangeScene fires before outgoing teardown starts (and therefore
-        // before onStopScene, dispatched inside _disposeScene) — matches
+        // before onStopScene, dispatched inside _disposeScene) - matches
         // change()/restore()'s order (new-scene signals before the outgoing
         // scope's), and _stopAndClearActiveScene()'s equivalent.
         this.onChangeScene.dispatchIsolated(error => this._reportLifecycleError(error), null);
@@ -524,7 +524,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * In order:
    *
    * 1. **Invalidate the navigation generation and abort any in-flight
-   *    session** — {@link SceneDirector._abortInFlightNavigation} bumps
+   *    session** - {@link SceneDirector._abortInFlightNavigation} bumps
    *    `_navigationGeneration` unconditionally and, when a
    *    {@link SceneTransitionSession} is in flight, settles that navigation's
    *    outer promise synchronously. The generation bump is what makes this
@@ -533,20 +533,20 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    *    incoming scene's `load()`/`init()`): when its `commitSwitch` resumes
    *    it sees the generation moved and bails at its own race guard instead
    *    of committing on top of the scene this call is about to clear.
-   * 2. **Clear and destroy the active scope, unconditionally** — deliberately
+   * 2. **Clear and destroy the active scope, unconditionally** - deliberately
    *    NOT through {@link SceneDirector._clearScene}: that routes through
    *    {@link SceneDirector._runWithNavigation}, and an interrupted
    *    navigation still holds `_navigationInFlight` (its own
    *    `_runWithNavigation` wrapper only releases it once its rejection has
    *    propagated back up through `await`/`catch`, several microtask turns
-   *    later — and for a navigation stuck in a pending `load()`, not at all).
+   *    later - and for a navigation stuck in a pending `load()`, not at all).
    *    Taking the lock here would reject with
    *    {@link ConcurrentSceneNavigationError} and leave the scene standing,
    *    which is exactly what a stop must not do. A stop is allowed to
    *    interrupt a navigation; that is the point of it.
    *
    * Bypassing the lock is safe precisely because of step 1: the interrupted
-   * navigation can no longer mutate `_activeScope` unnoticed — either its
+   * navigation can no longer mutate `_activeScope` unnoticed - either its
    * `commitSwitch` never started (nothing left to run for it), or it started
    * and is still asynchronously preparing, in which case its race guard sees
    * the bumped generation (and, for a session-driven commit, the cleared
@@ -587,11 +587,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Reactivate a scene previously retained via
    * `change(..., { suspendCurrent: true })` or
-   * `restore(..., { suspendCurrent: true })` — the same instance, returned
+   * `restore(..., { suspendCurrent: true })` - the same instance, returned
    * to whichever of `Active`/`Paused` it had before suspension. `load()`/
    * `init()` do not run again. Shares the same atomic
    * commit boundary and optional {@link SceneTransition} behavior as
-   * {@link SceneDirector.change} — see its doc comment for the exact
+   * {@link SceneDirector.change} - see its doc comment for the exact
    * guarantee.
    *
    * Rejects with {@link ConcurrentSceneNavigationError} when another
@@ -614,11 +614,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     this._retained.delete(resolvedTarget);
 
     // Flipped `true` at the exact point `commitSwitch` mutates `_activeScope`
-    // to `retainedScope` — mirrors `change()`'s local `commitStarted` flag
+    // to `retainedScope` - mirrors `change()`'s local `commitStarted` flag
     // (see its doc comment). `_activeScope` identity alone can no longer
     // answer "did the switch commit?": `_stopAndClearActiveScene()`
     // (the single stop-and-clear step `Application.stop()` runs)
-    // nulls `_activeScope` — and disposes the scope it held — from OUTSIDE
+    // nulls `_activeScope` - and disposes the scope it held - from OUTSIDE
     // this method's own control flow, on a navigation that had already
     // committed. A local flag set only by this method's own commit path is
     // immune to that external mutation.
@@ -632,7 +632,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
           hasIncomingScene: true,
         };
 
-        // Atomic commit boundary — restore() has no async prepare step, so
+        // Atomic commit boundary - restore() has no async prepare step, so
         // this reaches the commit point immediately (or as soon as a
         // transition session requests commit).
         const commitSwitch = (): Promise<void> => {
@@ -665,7 +665,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
         await this._awaitPendingOutgoingTeardown();
       });
     } catch (error) {
-      // Put the eager claim back into `_retained` — but only if the switch
+      // Put the eager claim back into `_retained` - but only if the switch
       // never actually committed. A post-commit session failure (the
       // new scene stays live) means `retainedScope` is now legitimately
       // `_activeScope`; re-adding it here would make the same scope both
@@ -675,7 +675,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       // local `committed` flag, not `_activeScope` identity: an already-
       // committed switch can have its `_activeScope` externally nulled (and
       // the scope disposed) by `_stopAndClearActiveScene()` before
-      // this catch runs — re-adding it here would put a disposed scope back
+      // this catch runs - re-adding it here would put a disposed scope back
       // into `_retained` as if it were still reactivatable.
       if (!committed) {
         this._retained.set(resolvedTarget, retainedScope);
@@ -689,18 +689,18 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Transparently pre-warm a fresh instance of `target` into {@link SceneState.Ready}
-   * — fully prepared (`load()` + `init()` complete), but never activated. A
+   * - fully prepared (`load()` + `init()` complete), but never activated. A
    * later {@link SceneDirector.change} call for the same constructor with
    * `Object.is()`-matching data consumes it automatically, skipping `load()`/
    * `init()` entirely. Not exclusive of an active or retained instance of the
-   * same constructor — preloading "the next `GameScene`" while a different
+   * same constructor - preloading "the next `GameScene`" while a different
    * `GameScene` instance is currently playing, or already retained, is fully
    * supported.
    *
    * A racing second `preload()` call for the same constructor shares this
    * same in-flight preparation when its data matches (`Object.is()`); a call
    * with different data discards the stale entry (once its own preparation
-   * settles) and starts a fresh one with the new data — the newest call's
+   * settles) and starts a fresh one with the new data - the newest call's
    * data always wins, never silently ignored.
    *
    * Rejects with {@link UnregisteredSceneError} (dev builds) when `target` is
@@ -742,10 +742,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Discard whatever is parked or active for `target`'s constructor — the
+   * Discard whatever is parked or active for `target`'s constructor - the
    * single, unified replacement for the removed `releaseScene()`. Checks
    * every candidate (active, retained, preloaded); when more than one
-   * exists, `options.instance` must disambiguate which one — there is no
+   * exists, `options.instance` must disambiguate which one - there is no
    * priority order. `options.transition` only materializes for an
    * active-scope match (a retained or preloaded match has nothing visible on
    * screen to transition, and always runs the direct, non-transitioned
@@ -822,7 +822,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       return false;
     }
 
-    // 'unload' never consults the registry default — resolveSceneTransitionSelection
+    // 'unload' never consults the registry default - resolveSceneTransitionSelection
     // enforces that internally regardless of what defaultTransitions holds for `target`.
     const resolvedTransition = resolveSceneTransitionSelection('unload', options.transition, this._registry.defaultTransitions.get(target));
 
@@ -834,9 +834,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Discard a `_preloaded` entry, racing an in-flight `preload()` safely:
    * marks the entry `cancelling` synchronously (so `preload()`'s own claim
-   * check and `change()`'s claim check both skip it — see `preload()` and
+   * check and `change()`'s claim check both skip it - see `preload()` and
    * `change()`'s claim step above), then waits for its `ready` to settle
-   * before tearing anything down — `scope.destroy()` never runs
+   * before tearing anything down - `scope.destroy()` never runs
    * concurrently with an in-progress `prepare()`.
    */
   private async _unloadPreloaded(target: AnySceneConstructor): Promise<boolean> {
@@ -851,12 +851,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     try {
       await entry.ready;
     } catch {
-      // prepare() failed — _runPreloadPrepare() already ran the
+      // prepare() failed - _runPreloadPrepare() already ran the
       // failed-preparation cleanup and removed the entry. Nothing further to do.
       return true;
     }
 
-    // prepare() succeeded — the scope genuinely reached Ready. Normal
+    // prepare() succeeded - the scope genuinely reached Ready. Normal
     // permanent teardown, WITH unload() ("Ready-scope
     // cleanup"), but WITHOUT dispatching onStopScene (never activated).
     if (this._preloaded.get(target) === entry) {
@@ -870,9 +870,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Pause the active scene. Its `fixedUpdate`/`update` stop running, but
-   * `draw` keeps rendering and input/interaction stay live — the canonical
+   * `draw` keeps rendering and input/interaction stay live - the canonical
    * "pause menu drawn over a frozen world" shape. This does not change
-   * {@link SceneDirector.state} — see {@link SceneDirector.paused} instead.
+   * {@link SceneDirector.state} - see {@link SceneDirector.paused} instead.
    * No-op (returns `false`) when no scene is active, it is not currently
    * `Active`, or it is already paused.
    */
@@ -918,7 +918,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * `fixedUpdate()` hook, then its systems' fixed-update phase. Called zero
    * or more times per frame by the {@link Application} loop, ahead of
    * {@link SceneDirector.update}. No drawing or transition advance happens
-   * here — those are per-frame, not per fixed step.
+   * here - those are per-frame, not per fixed step.
    */
   public fixedUpdate(step: Time): this {
     this._activeScope?.fixedUpdate(step);
@@ -931,7 +931,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * this frame's fixed steps: for the active scene, gated by its
    * `SceneScope` state, runs `update()` then its systems' update phase.
    * Dispatches {@link SceneDirector.onUpdateScene} whenever a scene is
-   * active, regardless of state. Drawing is a separate call — see
+   * active, regardless of state. Drawing is a separate call - see
    * {@link SceneDirector.draw}.
    */
   public preUpdate(delta: Time): this {
@@ -953,11 +953,11 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Draw entry point called by {@link Application.update}, after this
-   * frame's {@link SceneDirector.update}: draws the active scene — gated by
-   * its `SceneScope` state — then its systems' draw phase, then its
+   * frame's {@link SceneDirector.update}: draws the active scene - gated by
+   * its `SceneScope` state - then its systems' draw phase, then its
    * screen-fixed UI layer on top. No-op when no scene is active or the
    * active scope's state does not permit drawing. An active transition
-   * session's own visual output is drawn separately — see
+   * session's own visual output is drawn separately - see
    * {@link SceneDirector._renderTransition}.
    *
    * When a session requested `currentFrame: 'texture'`, the active
@@ -1029,7 +1029,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * @internal Render the active {@link SceneTransitionSession}'s own visual
-   * output (not the scene itself — it does not share the render-surface the
+   * output (not the scene itself - it does not share the render-surface the
    * scene draws to), then check whether it just requested commit or reported
    * `done`. No-op when no session is active. The {@link SceneTransitionFrame}
    * carries the provisioned resources: the one-time outgoing snapshot, and
@@ -1064,7 +1064,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * @internal Opens the active scope's systems registry mutation-buffering
-   * window for this frame — forwards to {@link SystemRegistry._beginFrame}.
+   * window for this frame - forwards to {@link SystemRegistry._beginFrame}.
    * No-op when no scene is active.
    */
   public _beginFrame(): void {
@@ -1073,7 +1073,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * @internal Drains the active scope's systems registry buffered
-   * mutations, closing this frame's window — forwards to
+   * mutations, closing this frame's window - forwards to
    * {@link SystemRegistry._endFrame}. No-op when no scene is active.
    */
   public _endFrame(): void {
@@ -1085,7 +1085,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * await any scene teardown already in flight, destroy the active scene,
    * destroy every retained scene, destroy every preloaded-but-never-consumed
    * scene, then destroy all Signals. Fires `_dispose()` (async teardown) and
-   * returns immediately — errors are reported through the app error pipeline
+   * returns immediately - errors are reported through the app error pipeline
    * rather than propagated, matching every other synchronous `destroy()` in
    * the engine. An async shutdown path that needs to know teardown has fully
    * finished may `await` {@link SceneDirector._dispose} directly instead of
@@ -1099,7 +1099,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * @internal Awaited teardown, in order: abort any in-flight transition
    * session (destroy it, reject its navigation) → await every scene teardown
    * already in flight (drained via {@link SceneDirector._awaitPendingTeardowns}
-   * from the `_pendingTeardowns` set — a committed switch's outgoing scope,
+   * from the `_pendingTeardowns` set - a committed switch's outgoing scope,
    * or the scene a fire-and-forget {@link Application.stop} just cleared,
    * including its own async `unload()`) → destroy the active scope
    * (guarded, errors reported) → destroy every retained scope in reverse
@@ -1109,7 +1109,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * `onStopScene` never dispatched since it was never activated) → destroy
    * every Signal. Signals are destroyed last so scene teardown (`unload()`,
    * `onStopScene` listeners) can still use them while it runs. Does not
-   * participate in the `_navigationInFlight` guard — teardown must always
+   * participate in the `_navigationInFlight` guard - teardown must always
    * proceed regardless of any in-flight navigation.
    */
   public async _dispose(): Promise<void> {
@@ -1119,7 +1119,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     // entry point every frame-loop stop uses. A no-op when nothing is
     // in flight; otherwise `_finishActiveSession` owns the full synchronous
     // teardown (destroy the session, release `_sessionResources`, decrement
-    // the input gate — each exactly once) and rejects the pending navigation.
+    // the input gate - each exactly once) and rejects the pending navigation.
     // A `commitSwitch()` still awaiting its incoming scene's prepare() when
     // this fires is now caught by that method's own race guard: it sees
     // the session gone and bails instead of mutating `_activeScope` behind us.
@@ -1128,7 +1128,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     // A prior committed switch's outgoing scope may still be tearing down in
     // the background, and so may the scene a fire-and-forget
     // `Application.stop()` just cleared. EVERY one of them is waited for here
-    // — via `_pendingTeardowns`, not the single-navigation
+    // - via `_pendingTeardowns`, not the single-navigation
     // `_pendingOutgoingTeardown` handle, which the next navigation to commit
     // overwrites. Without that, `destroy()`'s documented guarantee ("scenes
     // fully disposed first, including any scene's own async unload()") is
@@ -1162,7 +1162,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
     // Preloaded-but-never-consumed scopes are Director-owned activations
     // (spec: preloaded scopes are Director-owned, must not be restored or
-    // left behind at Director teardown) — never touched by the loops above.
+    // left behind at Director teardown) - never touched by the loops above.
     // In reverse insertion order for symmetry with `_retained`. Marked
     // `cancelling` first, mirroring `_discardStalePreload`/`_unloadPreloaded`,
     // so a `preload()`/`change()` claim racing this teardown sees it and
@@ -1177,7 +1177,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       try {
         await entry.ready;
       } catch {
-        // prepare() failed — _runPreloadPrepare()'s own catch already ran
+        // prepare() failed - _runPreloadPrepare()'s own catch already ran
         // the failed-preparation cleanup. Nothing further to do.
         continue;
       }
@@ -1213,12 +1213,12 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * pre-commit `catch`, restoring any claimed preload/retained entry.
    *
    * Returns `true` when a session was actually in flight and got aborted;
-   * `false` when there was nothing to interrupt — no session at all, or a
+   * `false` when there was nothing to interrupt - no session at all, or a
    * navigation already past its atomic commit boundary (a committed switch is
    * never undone). Idempotent: a second call once the session has
    * settled is a no-op `false`, since `_finishActiveSession` already cleared
    * `_activeSession`. Called by {@link Application} whenever it stops the
-   * frame loop, and again — deliberately, since it is idempotent — as the
+   * frame loop, and again - deliberately, since it is idempotent - as the
    * first step of {@link SceneDirector._stopAndClearActiveScene}, so that
    * operation is self-sufficient rather than relying on a caller having
    * aborted first.
@@ -1230,7 +1230,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    *
    * NOTE: a `commitSwitch()` whose `_prepareScene()`/`_awaitClaimedPreload()`
    * is still asynchronously awaiting when this fires is handled by that
-   * closure's own race guard — it re-checks liveness after the `await`
+   * closure's own race guard - it re-checks liveness after the `await`
    * and bails instead of mutating `_activeScope` for an already-rejected
    * navigation. That guard lives in {@link SceneDirector.change}'s commit
    * closure (the only navigation whose commit has an async prepare step).
@@ -1248,7 +1248,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Report an exception thrown by a lifecycle Signal listener — used as the
+   * Report an exception thrown by a lifecycle Signal listener - used as the
    * `onError` callback for every `dispatchIsolated` call in this class:
    * logged, then forwarded to
    * {@link Application.onError}. Never propagates itself; `Signal.dispatchIsolated`
@@ -1266,7 +1266,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * Resolve a `change()`/`restore()` navigation target: a constructor
    * passes through unchanged; a registered key resolves to its constructor
    * via the bidirectional registry. An unresolvable key is always an
-   * error, in every build — unlike an unregistered *constructor* (checked
+   * error, in every build - unlike an unregistered *constructor* (checked
    * separately, dev-only), there is no constructor to fall back to for an
    * unresolvable key.
    *
@@ -1293,13 +1293,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Construct (unless `scope` is already supplied — used by
+   * Construct (unless `scope` is already supplied - used by
    * {@link SceneDirector.preload}, which needs the `SceneScope` reference to
    * exist before `prepare()` resolves) and run its activation sequence
    * (attach → `Preparing` → `load()` → `init()`). On failure, runs the
-   * failed-activation cleanup — engine-managed registrations
+   * failed-activation cleanup - engine-managed registrations
    * destroyed, loader claims released, `scene.destroy()` invoked, but
-   * `unload()` is never called — and rethrows the original error unchanged.
+   * `unload()` is never called - and rethrows the original error unchanged.
    */
   private async _prepareScene<Data>(
     scene: Scene<Data>,
@@ -1327,13 +1327,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Await a claimed `_preloaded` entry's own `ready` — already resolved if
+   * Await a claimed `_preloaded` entry's own `ready` - already resolved if
    * the preload had reached `Ready`, still pending if it was mid-`load()`/
    * `init()` when claimed (an already-preloaded target
    * reaches the commit boundary almost immediately since there's nothing
    * left to await). If `ready` rejects, the preload's own preparation
    * failure already ran the ordinary failed-preparation cleanup
-   * (`_runPreloadPrepare`'s catch, see above) — nothing further to restore
+   * (`_runPreloadPrepare`'s catch, see above) - nothing further to restore
    * here, this call simply propagates the same rejection `change()` would
    * have produced for a fresh `prepare()` failure.
    */
@@ -1341,7 +1341,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * Mark a preload entry as cancelling and abort its scene's
    * {@link Scene.lifecycleSignal} in the same step. Every caller then waits
    * for `entry.ready` before tearing the scope down, and that wait is on a
-   * `prepare()` whose `load()` may be arbitrarily long — the abort is what
+   * `prepare()` whose `load()` may be arbitrarily long - the abort is what
    * gives a cooperative `load()` the chance to stop early instead of holding
    * the cancellation open. `cancelling` is only ever set on an entry that is
    * about to be disposed, so aborting here can never strand a scope that goes
@@ -1361,9 +1361,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Runs the actual `prepare()` for a `preload()` entry. Marks the entry
    * `ready` on success (unless a racing `unload()` already marked it
-   * `cancelling` — in that case `unload()` itself owns the final teardown;
+   * `cancelling` - in that case `unload()` itself owns the final teardown;
    * this method leaves it alone), or removes it from `_preloaded` and
-   * rethrows on failure (ordinary failed-preparation cleanup — no `unload()`).
+   * rethrows on failure (ordinary failed-preparation cleanup - no `unload()`).
    */
   private async _runPreloadPrepare(target: AnySceneConstructor, entry: PreloadEntry, scene: Scene, data: unknown): Promise<void> {
     try {
@@ -1386,10 +1386,10 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Discard a `_preloaded` entry that a newer `preload()`/`change()` call
    * superseded (mismatched data). Never destroys the scope while its own
-   * `prepare()` is still in flight — waits for `ready` to settle first, then
+   * `prepare()` is still in flight - waits for `ready` to settle first, then
    * tears it down through the normal "Ready-scope cleanup" path (`unload()`
    * runs, `onStopScene` does not). A failed `prepare()`
-   * already cleaned itself up via `_runPreloadPrepare`'s own catch above —
+   * already cleaned itself up via `_runPreloadPrepare`'s own catch above -
    * nothing further to do in that case.
    */
   private _discardStalePreload(entry: PreloadEntry): void {
@@ -1398,13 +1398,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     void entry.ready
       .then(() => this._disposeScene(entry.scope, { dispatchStopScene: false }))
       .catch(() => {
-        /* prepare() itself failed — already cleaned up */
+        /* prepare() itself failed - already cleaned up */
       });
   }
 
   /**
    * Permanently end `scope`'s scene: dispatch {@link SceneDirector.onStopScene}
-   * (unless `dispatchStopScene: false` — used by {@link SceneDirector.unload}
+   * (unless `dispatchStopScene: false` - used by {@link SceneDirector.unload}
    * for a preloaded scope that never reached `Active`; `onStopScene` fires
    * only for a scope activated at least once), then run
    * the scope's teardown sequence.
@@ -1420,7 +1420,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Run `action` as one atomic navigation step, guarded so at most one
    * navigation (`change`/`restore`/`_clearScene`, transitioned or not) is
-   * ever in flight at a time — a second request rejects
+   * ever in flight at a time - a second request rejects
    * rather than queueing. Transition handling lives in each navigation
    * method's own body, not here. Does not guard
    * {@link SceneDirector._dispose}, which must always be able to proceed.
@@ -1457,9 +1457,9 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * caller to await or publish as it sees fit.
    *
    * The `catch` is attached to a DERIVED promise, not to `teardown` itself:
-   * it marks the rejection handled — a teardown whose owner never gets to
+   * it marks the rejection handled - a teardown whose owner never gets to
    * await it (a navigation aborted before `_awaitPendingOutgoingTeardown`)
-   * must not surface as an unhandled rejection — while leaving `teardown`
+   * must not surface as an unhandled rejection - while leaving `teardown`
    * itself free to reject for whoever does await it.
    */
   private _trackTeardown(teardown: Promise<void>): Promise<void> {
@@ -1542,7 +1542,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       this._sessionResources = resources;
 
       // A session may call environment.commit() and/or report done()
-      // synchronously from inside its own createSession() — check right away
+      // synchronously from inside its own createSession() - check right away
       // rather than waiting for the first per-frame tick.
       this._checkCommitRequested();
       this._checkSessionDone();
@@ -1560,7 +1560,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * If the active session has requested commit and it has not started yet,
    * kick off the atomic switch. The switch itself runs asynchronously (its
-   * `_prepareScene` may await) — never reentrantly from inside the session
+   * `_prepareScene` may await) - never reentrantly from inside the session
    * callback that requested it.
    */
   private _checkCommitRequested(): void {
@@ -1597,7 +1597,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Finish the active session if it has reported `done`: a session done
    * before commit is a `'done-before-commit'` lifecycle error (the switch
-   * never happened — the old scene stays live), otherwise a clean success.
+   * never happened - the old scene stays live), otherwise a clean success.
    * No-op while the session is not yet done.
    */
   private _checkSessionDone(): void {
@@ -1633,16 +1633,16 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Finish the active session, performing ALL session-completion cleanup
-   * synchronously and exactly once at the moment completion is detected —
+   * synchronously and exactly once at the moment completion is detected -
    * before settling the outer navigation promise (whose `await` continuation
    * in {@link SceneDirector._runTransitionedAction} only resumes on a later
    * microtask). Clearing `_activeSession`/`_activeEnvironment` and releasing
    * `_sessionResources` here (rather than in that continuation) is what makes
    * the rest of the SAME frame safe: once this returns, any later per-frame
-   * call this tick — {@link SceneDirector.draw},
+   * call this tick - {@link SceneDirector.draw},
    * {@link SceneDirector._updateTransition},
    * {@link SceneDirector._transitionPlacement},
-   * {@link SceneDirector._renderTransition} — sees a cleared session and
+   * {@link SceneDirector._renderTransition} - sees a cleared session and
    * no-ops, so `session.update()`/`session.render()` are never called on, and
    * `draw()` never redirects into a texture owned by, the session this method
    * just destroyed (see {@link SceneTransitionSession.destroy}'s "no
@@ -1652,13 +1652,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    *
    * Steps, in order: null the session/environment/action/settle handles and
    * release the render resources, decrement the input gate (exactly once per
-   * session lifecycle — the increment lives in `_runTransitionedAction`),
+   * session lifecycle - the increment lives in `_runTransitionedAction`),
    * destroy the session exactly once, report any failure (both the
    * session's own error and any error `session.destroy()` itself throws)
    * through the app error pipeline, then settle the outer navigation promise
    * last.
    *
-   * Idempotent — a second call once the session has already settled is a
+   * Idempotent - a second call once the session has already settled is a
    * no-op, which matters because `_updateTransition` and `_renderTransition`
    * can each independently decide the session is done on the same frame, and
    * because `_dispose()` may abort a session that a per-frame method is
@@ -1672,7 +1672,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       return;
     }
 
-    // Clear all session state synchronously, up front — before destroy() and
+    // Clear all session state synchronously, up front - before destroy() and
     // before settle(). The guard above (captured into `session`/`settle`)
     // makes this the single, atomic ownership handoff: any re-entrant or
     // later same-tick call now short-circuits.
@@ -1687,7 +1687,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
     this._inputGateDepth--;
 
     try {
-      // Guarded like session.destroy() below — release() can throw (a
+      // Guarded like session.destroy() below - release() can throw (a
       // backend releaseRenderTexture call against a lost/destroyed backend)
       // and must never skip settle() any more than a throwing session or a
       // throwing onError listener may.
@@ -1702,7 +1702,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       } catch (error) {
         // dispatchIsolated with a no-op onError callback: an onError
         // listener itself throwing must never propagate out of this method
-        // and skip `settle()` below — Signal.dispatchIsolated already
+        // and skip `settle()` below - Signal.dispatchIsolated already
         // isolates a throwing LISTENER; the no-op callback here additionally
         // isolates a throwing onError CALLBACK, which a plain `.dispatch()`
         // would not.
@@ -1723,7 +1723,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * to the current canvas backing-store dimensions (device-pixel-ratio
    * aware, since `Application` already bakes `pixelRatio` into
    * `canvas.width`/`canvas.height`) and, for the pooled "current" texture
-   * only, resized live if the canvas resizes mid-session — a frozen
+   * only, resized live if the canvas resizes mid-session - a frozen
    * `outgoingFrame: 'snapshot'` is deliberately never resized: the
    * same snapshot texture is used for the entire session and never reallocated.
    */
@@ -1760,7 +1760,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
       release: () => {
         this._app.onResize.remove(onResize);
 
-        // Each release is independently guarded — one texture's release
+        // Each release is independently guarded - one texture's release
         // throwing (e.g. against a lost/destroyed backend) must not skip
         // the other's, or the un-released texture leaks. The caller
         // (_finishActiveSession) already isolates a throw from this whole

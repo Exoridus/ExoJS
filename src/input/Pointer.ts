@@ -28,7 +28,7 @@ const slot = (s: number, field: 0 | 1 | 2): PointerChannel => pointerCh(s * poin
  * Identifies which platform phase a {@link PointerPhaseEntry} records. Also
  * used as a bitmask by the frame accessors ({@link Pointer.pressed},
  * {@link Pointer.moved}, {@link Pointer.released}, …), which only ask "did
- * this happen at all this frame" — order doesn't matter for that question,
+ * this happen at all this frame" - order doesn't matter for that question,
  * only for dispatch (see {@link Pointer._phaseList}).
  *
  * @internal
@@ -46,7 +46,7 @@ export enum PointerStateFlag {
 /**
  * One platform phase recorded in the exact chronological position it
  * happened, with the coordinates and (for `Up`) the tap/swipe classification
- * data that belongs to THAT occurrence specifically — not whatever the
+ * data that belongs to THAT occurrence specifically - not whatever the
  * pointer's fields read later, after further phases in the same frame may
  * have overwritten them. `Move` phases immediately adjacent to one another
  * coalesce into the latest (see {@link Pointer._pushPhase}); every other
@@ -66,7 +66,7 @@ export interface PointerPhaseEntry {
 }
 
 /**
- * Map a host-pixel client point into design space — the position-only half of
+ * Map a host-pixel client point into design space - the position-only half of
  * {@link Pointer._computeDesignGeometry}'s conversion, usable without a live
  * {@link Pointer} instance. Used for a context-menu request, which may need
  * to report a design-space position (the keyboard context-menu key, Shift+F10)
@@ -89,7 +89,7 @@ export function computeDesignPoint(app: Application, platform: PlatformAdapter, 
  *
  * Distinct from {@link PointerStateFlag}, which is a bitfield of the per-frame
  * events a pointer saw. This is the single state the pointer is *in*, and it is
- * only ever compared by identity — hence string values, which read as
+ * only ever compared by identity - hence string values, which read as
  * themselves in a debugger.
  */
 export enum PointerState {
@@ -109,7 +109,7 @@ export enum PointerState {
  * be polled by {@link Input} bindings or read directly by interaction-aware
  * scene nodes.
  *
- * Coordinates are stored in logical/design pixel space — i.e. `app.width`/
+ * Coordinates are stored in logical/design pixel space - i.e. `app.width`/
  * `app.height` units (`0..app.width` × `0..app.height`), matching node
  * positions, the 2-argument {@link View.screenToWorld}, and the active camera.
  * The CSS-pixel event coordinates are mapped through the application's content
@@ -129,13 +129,13 @@ export class Pointer {
   public readonly type: string;
 
   /**
-   * Current position in design pixels — always the pointer's latest, live
+   * Current position in design pixels - always the pointer's latest, live
    * position, never rewound to an earlier phase. A signal handler that needs
    * the coordinates a SPECIFIC phase happened at (press, move, release,
    * context menu) receives them as explicit arguments rather than reading
    * this property, and {@link InteractionEvent.x}/{@link InteractionEvent.y}
    * are the corresponding immutable per-phase snapshot at the interaction
-   * layer — this is a deliberate choice over a temporary rewind-and-restore,
+   * layer - this is a deliberate choice over a temporary rewind-and-restore,
    * which could leave a handler reading a DIFFERENT phase's position if it
    * runs any code after the dispatch that called it returns.
    */
@@ -148,7 +148,7 @@ export class Pointer {
    */
   public readonly previousPosition: Vector = new Vector();
 
-  /** Movement accumulated over the current frame — `position - previousPosition`. */
+  /** Movement accumulated over the current frame - `position - previousPosition`. */
   public readonly delta: Vector = new Vector();
 
   /** Position of the most recent press. Retains its value after release so tap/drag logic can still read it. */
@@ -156,7 +156,7 @@ export class Pointer {
 
   /**
    * Position of the most recent move. Several platform moves in one frame
-   * collapse into this, their last one — the coordinates the frame's
+   * collapse into this, their last one - the coordinates the frame's
    * {@link moved} phase is dispatched at. `(-1, -1)` until the pointer has
    * moved at least once.
    */
@@ -184,14 +184,14 @@ export class Pointer {
 
   /** Phases seen since the last frame boundary, in order; promoted to `_framePhases` by {@link Pointer._beginFrame}. */
   private _pendingPhases: PointerPhaseEntry[] = [];
-  /** Phases belonging to the current frame, in order. Stable for the whole frame — reading it does not consume it. */
+  /** Phases belonging to the current frame, in order. Stable for the whole frame - reading it does not consume it. */
   private _framePhases: readonly PointerPhaseEntry[] = [];
   private _maxDistanceFromPress = 0;
   private _pressActive = false;
   /** Kept aside so {@link position} can stay the single always-live source of truth. */
   private readonly _latestPosition = new Vector();
   /**
-   * Position {@link delta} is measured from — the pointer's coordinates at the
+   * Position {@link delta} is measured from - the pointer's coordinates at the
    * frame boundary before last. Kept apart from {@link previousPosition} so
    * that one can keep meaning "where the pointer was on the previous frame"
    * for readers, instead of being overwritten with the current position as a
@@ -287,7 +287,7 @@ export class Pointer {
   /**
    * `true` when the pointer was pressed during this frame. A press and release
    * that both land between two frames set {@link pressed} *and*
-   * {@link released} on the same frame — the phases are not lost.
+   * {@link released} on the same frame - the phases are not lost.
    */
   public get pressed(): boolean {
     return this._framePhases.some(phase => phase.flag === PointerStateFlag.Down);
@@ -361,8 +361,8 @@ export class Pointer {
   }
 
   /**
-   * Returns this release's own tap/swipe classification data — whether it
-   * closed an actual press, and that press's accumulated excursion — so the
+   * Returns this release's own tap/swipe classification data - whether it
+   * closed an actual press, and that press's accumulated excursion - so the
    * caller (the raw `pointerup` handler, the only place true global arrival
    * order across pointers is still observable) can fold it directly onto the
    * journal entry it builds for this occurrence, rather than reading it back
@@ -414,7 +414,7 @@ export class Pointer {
   }
 
   /**
-   * This frame's phases, in the exact order they happened — the
+   * This frame's phases, in the exact order they happened - the
    * {@link InputManager}'s signal dispatch iterates this directly instead of
    * checking a bitmask in a fixed order, so an Up followed by a Down within
    * one frame dispatches in that same order, and two discrete presses in one
@@ -429,7 +429,7 @@ export class Pointer {
   /**
    * Record `flag` as having happened, at the pointer's current (post-event)
    * position. A `Move` immediately following another pending `Move` replaces
-   * it in place rather than appending — intermediate positions of a fast
+   * it in place rather than appending - intermediate positions of a fast
    * drag are never individually meaningful, only the latest is, so runs of
    * moves stay coalesced exactly as before. Any other phase, or a `Move` that
    * is not adjacent to a prior one (a Down or Up happened in between), is
@@ -602,7 +602,7 @@ export namespace Pointer {
   export const Twist = pointerCh(6);
   export const TiltX = pointerCh(7);
   export const TiltY = pointerCh(8);
-  // Fields 9..11 are the buttons — addressed through `PointerButton`.
+  // Fields 9..11 are the buttons - addressed through `PointerButton`.
   export const IsMouse = pointerCh(12);
   export const IsTouch = pointerCh(13);
   export const IsPen = pointerCh(14);

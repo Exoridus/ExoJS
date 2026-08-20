@@ -15,7 +15,7 @@ export abstract class Joint {
   /** When `false`, the joint is skipped by the solver (but still tracked by the world). */
   public enabled = true;
 
-  /** Whether this joint solves this frame — set in {@link _prepare} (disabled, sleeping or two static bodies → `false`). */
+  /** Whether this joint solves this frame - set in {@link _prepare} (disabled, sleeping or two static bodies → `false`). */
   protected _active = false;
 
   protected constructor(bodyA: PhysicsBody, bodyB: PhysicsBody) {
@@ -23,10 +23,10 @@ export abstract class Joint {
     this.bodyB = bodyB;
   }
 
-  /** @internal — build this frame's constraint data; called once per fixed step after detection. */
+  /** @internal - build this frame's constraint data; called once per fixed step after detection. */
   public abstract _prepare(h: number): void;
-  /** @internal — re-apply the accumulated impulse; called each sub-step (TGS-Soft warm-start). */
+  /** @internal - re-apply the accumulated impulse; called each sub-step (TGS-Soft warm-start). */
   public abstract _warmStart(): void;
-  /** @internal — one velocity pass; `useBias` is the soft-bias pass, `false` the relax pass. */
+  /** @internal - one velocity pass; `useBias` is the soft-bias pass, `false` the relax pass. */
   public abstract _solve(useBias: boolean): void;
 }

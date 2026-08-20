@@ -21,7 +21,7 @@ import { expectPixelNear } from './_pixels';
 // locations (0, 3, 5, 6; tint read from transform texel 2) so the renderer's
 // shared VAO matches the custom material's `spriteVertexGlsl` (which is also
 // location-pinned). The custom path compiles
-// the real `spriteVertexGlsl` constant — that module is not a `.vert` import and
+// the real `spriteVertexGlsl` constant - that module is not a `.vert` import and
 // is therefore NOT mocked.
 
 const canvasSize = 64;
@@ -119,7 +119,7 @@ void main() {
 }`;
 
 // Custom fragment: never calls sampleBase and outputs a material texture
-// instead — proves material-texture binding is independent of the base slot
+// instead - proves material-texture binding is independent of the base slot
 // table, and that a program with every slot sampler optimised out still links.
 const patternFragment = `#version 300 es
 precision mediump float;

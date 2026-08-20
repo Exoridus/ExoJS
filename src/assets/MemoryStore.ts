@@ -2,7 +2,7 @@ import type { KeyValueStore } from './KeyValueStore';
 
 /**
  * In-memory {@link KeyValueStore} backed by a `Map`. Holds values **by
- * reference** — no cloning, no serialization — so it accepts any value but does
+ * reference** - no cloning, no serialization - so it accepts any value but does
  * not persist across sessions and does not isolate the caller from later
  * mutation of a stored object. Ideal for tests and ephemeral data, and as a
  * drop-in store when persistence is not needed.

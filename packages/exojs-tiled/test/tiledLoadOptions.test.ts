@@ -23,9 +23,9 @@ describe('TiledLoadOptions typing', () => {
   });
 
   it('rejects a foreign format and the removed `strict` option', () => {
-    // @ts-expect-error — only 'tiled' is an accepted format (no 'ldtk' fall-through)
+    // @ts-expect-error - only 'tiled' is an accepted format (no 'ldtk' fall-through)
     const foreign: TiledLoadOptions = { format: 'ldtk' };
-    // @ts-expect-error — `strict` was removed; Tiled parsing is unconditionally strict
+    // @ts-expect-error - `strict` was removed; Tiled parsing is unconditionally strict
     const strict: TiledLoadOptions = { strict: false };
     void foreign;
     void strict;

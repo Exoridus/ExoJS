@@ -11,8 +11,8 @@ import type { Sprite } from './Sprite';
  * The parts of a backend's persistent slot store this module fills.
  *
  * Deliberately structural rather than a base class: the two stores share no
- * representation at all — one addresses its slots through data textures, the
- * other through storage buffers — and inheriting from a common ancestor would
+ * representation at all - one addresses its slots through data textures, the
+ * other through storage buffers - and inheriting from a common ancestor would
  * be a claim about how they store things rather than about what they store.
  * @internal
  */
@@ -37,7 +37,7 @@ export interface PersistentSpriteSlotStore {
  * Decide whether one slot store can serve every sprite in `source`, filling its
  * texture table and per-handle texture index on the way.
  *
- * Three refusals, each of them a BATCHING rule rather than an ordering one —
+ * Three refusals, each of them a BATCHING rule rather than an ordering one -
  * ordering was already settled by the plan layer, which only offers a source
  * whose recorded order is its draw order:
  *
@@ -45,13 +45,13 @@ export interface PersistentSpriteSlotStore {
  *   switch is a hard flush/pipeline boundary. One ordered stream cannot express
  *   that, so any own-material item disqualifies the source.
  * - A blend-mode change is likewise a hard boundary, so the whole source has to
- *   agree on one — which is why the store keeps a single value rather than one
+ *   agree on one - which is why the store keeps a single value rather than one
  *   per slot.
  * - The base textures must all fit ONE table. That is what makes a slot's
  *   texture index item-stable: with one table there is no per-batch re-slotting
  *   for a membership change to invalidate.
  *
- * Shared by both backends because it is the same question in both — the only
+ * Shared by both backends because it is the same question in both - the only
  * backend-specific input is `maxTextures`, the batch table's width. Runs once
  * per built source, never per frame.
  * @internal
@@ -112,7 +112,7 @@ export const fillPersistentSpriteSlotTable = (source: RenderRootSource, store: P
  * source's prepacked tables.
  *
  * `entered` is a flat `(scopeOrdinal, localIndex, slot)` triple list holding
- * arrivals only — a staying item's rows are already what this would write, which
+ * arrivals only - a staying item's rows are already what this would write, which
  * is the whole saving. No drawable is touched: an item entering the view has not
  * been read for hundreds of frames, and resolving its transform, bounds and
  * texture frame out of cold objects was the measured cost of a camera step.

@@ -19,7 +19,7 @@ const changelog = readFileSync(resolve(repoRoot, 'CHANGELOG.md'), 'utf8');
 
 // The version being cut is read from the newest CHANGELOG heading rather than
 // hard-coded, so this release gate never goes stale on a bump. A non-dated
-// heading (a placeholder / "Unreleased") must never reach a tag — release:notes
+// heading (a placeholder / "Unreleased") must never reach a tag - release:notes
 // hard-fails on it in the publish job, after npm has already published.
 const heading = /^## \[(\d+\.\d+\.\d+)\] - \d{4}-\d{2}-\d{2}$/m.exec(changelog);
 const releaseVersion = heading?.[1] ?? '';
@@ -60,7 +60,7 @@ describe('release coherence', () => {
 
   // exojs-tiled and exojs-ldtk both render tiles via exojs-tilemap's runtime
   // classes, but consumers only get one copy of those classes if the host app
-  // supplies exojs-tilemap itself — hence a peerDependency (not a runtime
+  // supplies exojs-tilemap itself - hence a peerDependency (not a runtime
   // `dependencies` entry) backed by a workspace:* devDependency for local dev/test.
   for (const consumer of ['exojs-tiled', 'exojs-ldtk']) {
     it(`@codexo/${consumer} declares @codexo/exojs-tilemap as a peerDependency`, () => {

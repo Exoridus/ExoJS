@@ -49,7 +49,7 @@ export class WebGpuStorageBuffer {
    * subsequent calls re-use it.
    *
    * Caller passes `target` (a typed-array view) to be filled. Async; one
-   * frame of latency at minimum. Use sparingly — readback is a stall.
+   * frame of latency at minimum. Use sparingly - readback is a stall.
    */
   public async read(target: ArrayBufferView, encoder?: GPUCommandEncoder): Promise<void> {
     if (this._readbackBuffer === null) {

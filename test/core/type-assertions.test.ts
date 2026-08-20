@@ -2,7 +2,7 @@
  * Compile-time type contracts for key public APIs.
  *
  * Uses Vitest's built-in `expectTypeOf` to assert parameter types, return
- * types, and generic constraints — things that are invisible at runtime and
+ * types, and generic constraints - things that are invisible at runtime and
  * therefore not covered by the snapshot tests.  These assertions are checked
  * by the TypeScript compiler during `vitest run` / `tsc --noEmit`.
  *
@@ -15,7 +15,7 @@ import { Signal } from '#core/Signal';
 import type { Texture } from '#rendering/texture/Texture';
 
 // ---------------------------------------------------------------------------
-// Application — cursor API
+// Application - cursor API
 // ---------------------------------------------------------------------------
 
 describe('Application type contracts', () => {
@@ -51,7 +51,7 @@ describe('Application type contracts', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Signal — generic type safety for all public methods
+// Signal - generic type safety for all public methods
 // ---------------------------------------------------------------------------
 
 describe('Signal<Args> generic type safety', () => {

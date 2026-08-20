@@ -229,7 +229,7 @@ describe('Vector static factories', () => {
 });
 
 // ---------------------------------------------------------------------------
-// AbstractVector — exercised through the concrete Vector subclass, since
+// AbstractVector - exercised through the concrete Vector subclass, since
 // AbstractVector itself cannot be instantiated.
 // ---------------------------------------------------------------------------
 

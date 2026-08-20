@@ -1,26 +1,26 @@
 /**
- * WebGL2 Video browser test — v0.16 renderer-matrix drawable entry.
+ * WebGL2 Video browser test - v0.16 renderer-matrix drawable entry.
  *
  * {@link Video} wraps an `HTMLVideoElement` as a live-texture {@link Sprite}
  * (see `src/rendering/video/Video.ts`): its `Texture` holds the video element
  * directly as `source`, and `updateTexture()` calls `texture.updateSource()`
  * to bump the texture version whenever the decoded frame changes, which makes
  * the backend re-upload via the same generic `texImage2D(..., source)` path
- * used for any `TexImageSource` (canvas/image/video) — there is no
+ * used for any `TexImageSource` (canvas/image/video) - there is no
  * video-specific upload code in `WebGl2Backend`.
  *
  * Fixture strategy: a `<canvas>` painted a solid colour is turned into a
  * `MediaStream` via `captureStream()`, assigned to a `<video>` element's
  * `srcObject`, and played (muted, so no user-gesture is required). We poll
  * `videoWidth`/`readyState` for the first decoded frame instead of relying on
- * `requestVideoFrameCallback` — empirically, in this headless Chromium
+ * `requestVideoFrameCallback` - empirically, in this headless Chromium
  * configuration `requestVideoFrameCallback` never fires (even with the video
  * attached to the DOM and a `requestAnimationFrame` pump kept alive for the
  * full test). The bounded wait starts before `video.play()`: under full-lane
  * load that promise can stay pending indefinitely even though isolated runs
  * decode in under a second. A *second*,
- * dynamic scenario — repainting the source canvas after the first decoded
- * frame and asserting the video texture picks up the new colour — was
+ * dynamic scenario - repainting the source canvas after the first decoded
+ * frame and asserting the video texture picks up the new colour - was
  * prototyped and found NOT to be reliably observable within a bounded window
  * in this headless environment (0/5 across two variants, including a
  * `requestAnimationFrame`-pumped + DOM-attached variant); it is intentionally
@@ -91,7 +91,7 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
  * Create an `HTMLVideoElement` playing a solid-colour `MediaStream` sourced
  * from a painted `<canvas>`, resolved once the first frame has decoded.
  *
- * Polls `videoWidth`/`readyState` rather than `requestVideoFrameCallback` —
+ * Polls `videoWidth`/`readyState` rather than `requestVideoFrameCallback` -
  * see the file header comment for why.
  */
 const createSolidColorVideo = async (color: string, size = 16): Promise<HTMLVideoElement> => {

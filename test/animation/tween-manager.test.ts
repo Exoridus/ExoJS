@@ -108,7 +108,7 @@ describe('TweenManager', () => {
       expect(first).toBe(t1);
 
       // Composing the sequence binds the tweens to the manager but does not
-      // enter them into the update list — each link registers itself when the
+      // enter them into the update list - each link registers itself when the
       // preceding one chain-starts it.
       expect(trackedCount(manager)).toBe(0);
 
@@ -163,7 +163,7 @@ describe('TweenManager', () => {
       const sparse = [t1, undefined, t3] as unknown as readonly Tween[];
 
       // The subsequent unconditional bind loop dereferences the hole, which
-      // throws — but the chain loop's guard runs first.
+      // throws - but the chain loop's guard runs first.
       expect(() => manager.sequence(sparse)).toThrow();
     });
   });
@@ -303,7 +303,7 @@ describe('TweenManager', () => {
     manager.add(tween);
 
     // Ownership was transferred (the tween now knows this manager), but an
-    // unstarted tween must not pin itself — and its target — in the
+    // unstarted tween must not pin itself - and its target - in the
     // application-wide manager.
     expect(trackedCount(manager)).toBe(0);
 

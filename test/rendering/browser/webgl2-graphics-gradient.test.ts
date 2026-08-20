@@ -82,7 +82,7 @@ describe('Graphics gradient fills WebGL2 browser', () => {
       const left = readWebGl2Pixel(backend, 10, 32);
       const right = readWebGl2Pixel(backend, 54, 32);
 
-      // Left edge is dominantly red, right edge dominantly blue — proving the
+      // Left edge is dominantly red, right edge dominantly blue - proving the
       // gradient is sampled across the fill rather than a flat color.
       expect(left[0]).toBeGreaterThan(180);
       expect(left[2]).toBeLessThan(70);

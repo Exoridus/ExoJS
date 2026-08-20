@@ -12,7 +12,7 @@ const setContextState = (state: AudioContextState): void => {
 /**
  * Bring the module-global context into existence and let its one-shot ready
  * signal fire, so every case below starts from "audio has already unlocked
- * once" — the state a re-lock happens from.
+ * once" - the state a re-lock happens from.
  */
 const settleFirstUnlock = async (): Promise<void> => {
   getAudioContext();
@@ -48,7 +48,7 @@ describe('AudioManager.onUnlock contract', () => {
   // never at the CURRENT lock state. Inside a re-lock window (an iOS
   // audio-session interruption, a bfcache restore) that replayed the handler
   // immediately into a locked context, where `play()` answers with a NoopVoice
-  // and warns — recommending `onUnlock`, the path that had just failed.
+  // and warns - recommending `onUnlock`, the path that had just failed.
   test('a handler added during a re-lock window waits for the next unlock', async () => {
     const manager = new AudioManager();
 
@@ -83,7 +83,7 @@ describe('AudioManager.onUnlock contract', () => {
     expect(registered).toHaveBeenCalledTimes(1);
 
     // A replayed handler and a registered one must both stay at one call
-    // across any number of further lock cycles — otherwise the menu music
+    // across any number of further lock cycles - otherwise the menu music
     // starts a second time on top of the first after every interruption.
     const replayed = vi.fn();
     manager.onUnlock.add(replayed);
@@ -104,7 +104,7 @@ describe('AudioManager.onUnlock contract', () => {
   });
 
   // Finding 2: a manager constructed inside a re-lock window took the
-  // `onAudioContextReady.add(...)` branch — but that signal is a documented
+  // `onAudioContextReady.add(...)` branch - but that signal is a documented
   // one-shot guarded by `readyDispatched`, which had long since fired. The
   // handler was never called, so `onUnlock` was dead for the manager's whole
   // lifetime.
@@ -142,7 +142,7 @@ describe('AudioManager.onUnlock contract', () => {
 
   // Finding 3: a queued replay could not be cancelled, because the replay path
   // never registered the handler for `remove()` to find. A scene subscribing in
-  // `init` and cleaning up in `unload` still started music for a dead scene —
+  // `init` and cleaning up in `unload` still started music for a dead scene -
   // and a handler surviving `destroy()` calls `play()` on a destroyed manager,
   // which throws unobserved out of the microtask.
   describe('cancellation', () => {
@@ -222,7 +222,7 @@ describe('AudioManager.onUnlock contract', () => {
 
   // Finding 8: AudioBus and AudioListener both drop their global-ready
   // subscription in destroy(); AudioManager did not. A manager destroyed before
-  // the first gesture still ran its handler from inside the global dispatch —
+  // the first gesture still ran its handler from inside the global dispatch -
   // and per Signal's contract a handler that throws there terminates the OUTER
   // dispatch, taking every other Application's bus setup down with it.
   test('destroy() unsubscribes the manager from the global ready signal', () => {

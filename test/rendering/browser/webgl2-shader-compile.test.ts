@@ -21,7 +21,7 @@ import { composeTextAtlasFragmentGlsl } from '#rendering/text/textAtlasTextureSl
 
 import { TILE_DIAGONAL_BIT, TILE_ROW_MASK } from '../../../packages/exojs-tilemap/src/tileWord';
 
-// Core shaders plus the extension packages' own — the particle stage ships
+// Core shaders plus the extension packages' own - the particle stage ships
 // from `@codexo/exojs-particles`, so a glob over `src/` alone would leave the
 // only GLSL outside core uncompiled here.
 //
@@ -62,7 +62,7 @@ const placeholderValues: Readonly<Record<string, Readonly<Record<string, number>
 
 // `WebGl2ShaderProgram` expands the engine's `#exo-include` directives before
 // handing a source to the driver, so a shader that reads the shared transform
-// store only compiles in its resolved form — the same form the renderer submits.
+// store only compiles in its resolved form - the same form the renderer submits.
 const composeRuntimeSource = (name: string, source: string): string => {
   const values = placeholderValues[name];
   const filled = values ? fillShaderSource(source, values) : source;

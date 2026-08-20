@@ -10,7 +10,7 @@ import { ChannelSize, Keyboard, resolveGamepadSlotChannel } from '#input/types';
 interface SampleDriver {
   readonly sample: ActionSample;
   batch(timestamp: number, writes: ReadonlyArray<readonly [channel: number, value: number]>): void;
-  /** Close the frame. Pass `now` to advance the frame clock without any input — see {@link ActionSample.timestamp}. */
+  /** Close the frame. Pass `now` to advance the frame clock without any input - see {@link ActionSample.timestamp}. */
   frame(now?: number): void;
 }
 
@@ -42,16 +42,16 @@ function createSample(): SampleDriver {
 }
 
 /**
- * Presents a pattern the way a caller who assembled it at runtime does —
+ * Presents a pattern the way a caller who assembled it at runtime does -
  * read from a key-binding config, joined from parts, or handed over from
- * JavaScript — by giving it the type such a caller has: plain `string`.
+ * JavaScript - by giving it the type such a caller has: plain `string`.
  *
  * The string parser is the ONLY guard those callers get, so the rejections
  * asserted below are exactly the ones that matter for them. As a literal, a
  * malformed pattern is rejected one layer earlier, by the compile-time check
  * in `ValidatedChordBinding`/`ValidatedSequenceBinding` (covered in
  * `test/type-tests/action-patterns.type-test.ts`), and would never reach the
- * parser at all — which is why these cases have to arrive as non-literals to
+ * parser at all - which is why these cases have to arrive as non-literals to
  * test anything. Keep this in place: without it the assertions still pass at
  * runtime, but the file no longer type-checks.
  */
@@ -155,7 +155,7 @@ describe('ChordAction', () => {
     const action = new ChordAction([GamepadButton.South, GamepadButton.RightTrigger]);
 
     // South is fully engaged (1); the trigger's own pull (0.6) is the
-    // least-engaged member, so it — not South's binary 1 — is what value
+    // least-engaged member, so it - not South's binary 1 - is what value
     // reports for the chord as a whole.
     driver.batch(10, [
       [GamepadButton.South, 1],
@@ -248,7 +248,7 @@ describe('ChordAction: `|` alternation', () => {
     expect(action.active).toBe(false);
     expect(action.released).toBe(true);
 
-    // The other alternative satisfies it just as well — Control was never
+    // The other alternative satisfies it just as well - Control was never
     // part of this one, so its earlier release is irrelevant here.
     driver.frame();
     driver.batch(30, [[Keyboard.Meta, 1]]);
@@ -258,7 +258,7 @@ describe('ChordAction: `|` alternation', () => {
   });
 
   test('neither alternative alone activates a `+`-joined one — precedence binds `+` tighter than `|`', () => {
-    // 'A+B|C': (A and B) or C. Holding only A must never activate it — B is
+    // 'A+B|C': (A and B) or C. Holding only A must never activate it - B is
     // still required for that alternative, and C (the other alternative) was
     // never touched.
     const driver = createSample();
@@ -289,7 +289,7 @@ describe('ChordAction: `|` alternation', () => {
     const action = new ChordAction([[GamepadButton.South, GamepadButton.RightTrigger], [GamepadButton.LeftTrigger]]);
 
     // First alternative: South is fully engaged (1) but the trigger only
-    // pulled to 0.4 — the alternative's own value is limited by its weakest
+    // pulled to 0.4 - the alternative's own value is limited by its weakest
     // member. The second alternative (LeftTrigger) pulled further (0.7), so
     // the chord as a whole reports the STRONGER of the two alternatives.
     driver.batch(10, [
@@ -314,7 +314,7 @@ describe('ChordAction: `|` alternation', () => {
   });
 
   test('rejects a single empty alternative in an array pattern, distinct from an entirely empty chord', () => {
-    // `[[]]` is one alternative (itself empty) — not the same shape as `[]`
+    // `[[]]` is one alternative (itself empty) - not the same shape as `[]`
     // (an entirely empty chord, which throws the pre-existing "is empty").
     expect(() => new ChordAction([[]])).toThrow(/ChordAction:.*alternative 1 of the chord is empty/);
     expect(() => new ChordAction([])).toThrow(/ChordAction: the chord is empty/);
@@ -388,7 +388,7 @@ describe('SequenceAction', () => {
     expect(action.triggered).toBe(false);
 
     // Holding A produces no further channel writes at all, so no new batch
-    // ever arrives to (mis)evaluate — the pattern must stay parked on step 2
+    // ever arrives to (mis)evaluate - the pattern must stay parked on step 2
     // rather than free-run to completion from a single held key.
     driver.frame();
     action._update(driver.sample);
@@ -596,7 +596,7 @@ describe('SequenceAction', () => {
     action._update(driver.sample);
     expect(action.progress).toBeCloseTo(1 / 3);
 
-    // C arrives out of order — with the default (true), this would reset
+    // C arrives out of order - with the default (true), this would reset
     // progress to 0. With resetOnMismatch: false, step 1 (still waiting on
     // B) is left untouched instead.
     driver.frame();
@@ -745,7 +745,7 @@ describe('ChordAction/SequenceAction composed with an ActionMap owner', () => {
     expect(map.combo.progress).toBeCloseTo(0.5);
 
     // Availability lost mid-pattern (e.g. a scene pause under a `when: SceneAvailability.Active`
-    // policy — see SceneInputs.attach): the map forces a reset, discarding the
+    // policy - see SceneInputs.attach): the map forces a reset, discarding the
     // half-completed sequence rather than leaving it armed while unobserved.
     available = false;
     map._update(driver.sample);

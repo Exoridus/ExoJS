@@ -35,7 +35,7 @@ export interface GamepadVibrationOptions {
 
 /**
  * One of four stable gamepad slots. Lives for the entire `Application`
- * lifetime even when no physical pad is attached — a "mailbox" that
+ * lifetime even when no physical pad is attached - a "mailbox" that
  * physical hardware moves into and out of.
  *
  * Subscribe to {@link onConnect} / {@link onDisconnect} for hardware
@@ -44,7 +44,7 @@ export interface GamepadVibrationOptions {
  * {@link onActive} / {@link onStart} / {@link onStop} to register
  * stateful {@link InputBinding}s pinned to this slot.
  *
- * Listeners survive disconnect/reconnect cycles — a binding registered when
+ * Listeners survive disconnect/reconnect cycles - a binding registered when
  * the slot was empty will automatically activate when a pad connects.
  */
 export class Gamepad {
@@ -146,7 +146,7 @@ export class Gamepad {
   /**
    * Returns `true` when this pad's mapping declares the requested channel.
    * Use to gate listener registration on optional hardware (e.g. Joy-Con
-   * solo lacks a right stick — `pad.hasChannel(GamepadAxis.RightStickX)`
+   * solo lacks a right stick - `pad.hasChannel(GamepadAxis.RightStickX)`
    * returns `false`).
    */
   public hasChannel(channel: GamepadButtonChannel | GamepadAxisChannel): boolean {
@@ -219,7 +219,7 @@ export class Gamepad {
    * Receives the channel value (0..1 for buttons, -1..1 for bipolar axes).
    *
    * The callback is optional: with none, this just creates a binding, which is
-   * the idiomatic way to poll a stick or trigger per frame — read
+   * the idiomatic way to poll a stick or trigger per frame - read
    * {@link InputBinding.active} / {@link InputBinding.value} in your own
    * `update()` instead of tracking held-state in a callback.
    *
@@ -416,7 +416,7 @@ export class Gamepad {
       const offset = this._resolveOffset(axis.channel);
       const previous = channels[offset];
       // A stick axis is deadzoned on its pair's radius, so its partner's raw
-      // value from THIS same poll has to travel with it — see
+      // value from THIS same poll has to travel with it - see
       // `GamepadAxis.transformValue`. A partner index the hardware does not
       // report degrades to 0, i.e. to the axis's own magnitude.
       const value = axis.transformValue(rawAxis, axis.pair === null ? 0 : (rawAxes[axis.pair] ?? 0)) || 0;
@@ -459,7 +459,7 @@ export class Gamepad {
   }
 
   /**
-   * Static counterpart to {@link Gamepad.resolveChannelOffset} — resolves
+   * Static counterpart to {@link Gamepad.resolveChannelOffset} - resolves
    * an absolute channel-buffer offset for a given slot index without
    * requiring a Gamepad instance.
    */

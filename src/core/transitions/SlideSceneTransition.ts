@@ -7,9 +7,9 @@ import {
 import type { SceneTransitionContext } from '#core/SceneTransition';
 import { Sprite } from '#rendering/sprite/Sprite';
 
-/** The edge the outgoing content exits toward — see {@link SlideSceneTransitionOptions.direction}. */
+/** The edge the outgoing content exits toward - see {@link SlideSceneTransitionOptions.direction}. */
 export type SlideDirection = 'left' | 'right' | 'up' | 'down';
-/** The three visual shapes a slide can take — see {@link SlideSceneTransition} for details. */
+/** The three visual shapes a slide can take - see {@link SlideSceneTransition} for details. */
 export type SlideMode = 'push' | 'cover' | 'reveal';
 
 /** Options for {@link SlideSceneTransition}. */
@@ -41,14 +41,14 @@ const oppositeDirection: Record<SlideDirection, SlideDirection> = {
   down: 'up',
 };
 
-/** Per-session scratch state for {@link SlideSceneTransition} — never shared with the (immutable, reusable-across-navigations) definition instance, and never retains a texture past the session that assigned it. */
+/** Per-session scratch state for {@link SlideSceneTransition} - never shared with the (immutable, reusable-across-navigations) definition instance, and never retains a texture past the session that assigned it. */
 interface SlidePhaseState {
   readonly currentSprite: Sprite;
   readonly snapshotSprite: Sprite;
 }
 
 /**
- * Directional slide transition — covers menu/inventory/page-style navigation.
+ * Directional slide transition - covers menu/inventory/page-style navigation.
  * Three modes:
  * - `'push'` (default): the outgoing scene exits toward `direction` while the
  *   incoming scene enters from the opposite edge. Phase-split at the commit
@@ -118,7 +118,7 @@ export class SlideSceneTransition extends PhasedSceneTransition<SlidePhaseState>
       return;
     }
 
-    // The incoming scene always enters from `direction`'s OPPOSITE edge —
+    // The incoming scene always enters from `direction`'s OPPOSITE edge -
     // `direction` names the edge the outgoing content exits toward (or, for
     // `'cover'`, the edge it conceptually would have exited toward), so the
     // incoming content comes from the other side in every animated mode.

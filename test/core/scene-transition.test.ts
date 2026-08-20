@@ -56,7 +56,7 @@ describe('SceneTransition', () => {
   });
 
   test('is not directly instantiable (abstract)', () => {
-    // Compile-time guarantee — `new SceneTransition()` is a type error. This
+    // Compile-time guarantee - `new SceneTransition()` is a type error. This
     // test documents the contract at the value level: only a subclass can be
     // constructed.
     expect(() => new FakeTransition()).not.toThrow();

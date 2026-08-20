@@ -292,7 +292,7 @@ describe('SpawnModule', () => {
       }),
     );
 
-    // 1 particle/s * 0.01s = 0.01 accumulated — rounds down to 0, so the
+    // 1 particle/s * 0.01s = 0.01 accumulated - rounds down to 0, so the
     // module must return early without spawning or throwing.
     system.update(tick(0.01));
 
@@ -304,7 +304,7 @@ describe('SpawnModule', () => {
 
     system.addSpawnModule(new RateSpawn({ rate: new Constant(100) }));
 
-    // A short tick — a full 1s tick would make elapsed (integrated in the
+    // A short tick - a full 1s tick would make elapsed (integrated in the
     // same frame) equal the default lifetime, expiring particles instantly.
     system.update(tick(0.1));
 
@@ -497,7 +497,7 @@ describe('UpdateModule', () => {
     system.update(tick(0.5));
 
     // After 0.5s of 1s lifetime, t≈0.5, so color near grey.
-    // RGBA u32 layout is 0xAABBGGRR — extract low byte for red.
+    // RGBA u32 layout is 0xAABBGGRR - extract low byte for red.
     const rgba = system._storage.color[slot];
     const r = rgba & 0xff;
 
@@ -543,7 +543,7 @@ describe('UpdateModule', () => {
     const slot = system._spawnSlot();
 
     system._storage.lifetime[slot] = 1;
-    // RGBA u32: 0xAABBGGRR — set RGB to mid-grey, alpha to 0xff.
+    // RGBA u32: 0xAABBGGRR - set RGB to mid-grey, alpha to 0xff.
     system._storage.color[slot] = 0xff808080;
     system.addUpdateModule(
       new AlphaFadeOverLifetime(
@@ -634,7 +634,7 @@ describe('UpdateModule', () => {
     );
 
     // A single 1s tick advances elapsed to exactly lifetime (t=1), where the
-    // curve evaluates to exactly 0 — the module must not store a literal 0
+    // curve evaluates to exactly 0 - the module must not store a literal 0
     // (which would divide-by-zero on a later frame) but a tiny sentinel.
     system.update(tick(1));
 
@@ -703,7 +703,7 @@ describe('UpdateModule', () => {
 
     system.update(tick(1));
 
-    // dist === 0 < epsilon guard — the module must skip this particle
+    // dist === 0 < epsilon guard - the module must skip this particle
     // entirely rather than dividing by zero (which would produce NaN/Infinity).
     expect(system._storage.velX[slot]).toBe(0);
     expect(system._storage.velY[slot]).toBe(0);

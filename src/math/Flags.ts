@@ -6,7 +6,7 @@ import type { TypedEnum } from '#core/types';
  * `T` should be a numeric const-enum or a type whose values are `number`.
  * Internally stores the combined flags as a single 32-bit integer.
  *
- * Pass the enum TYPE as `T`, not `typeof MyEnum` — the reverse mapping of a
+ * Pass the enum TYPE as `T`, not `typeof MyEnum` - the reverse mapping of a
  * numeric enum object carries string values and does not satisfy the
  * constraint.
  *
@@ -87,7 +87,7 @@ export class Flags<T extends TypedEnum<T, number>> {
 
   /**
    * Set one or more flags (bitwise OR). Mutates in place and returns `this`
-   * for chaining. Allocates a rest array per call — use {@link addMask} on hot
+   * for chaining. Allocates a rest array per call - use {@link addMask} on hot
    * paths.
    */
   public push<V extends number = T[keyof T]>(...flags: V[]): this {
@@ -108,7 +108,7 @@ export class Flags<T extends TypedEnum<T, number>> {
 
   /**
    * Clear one or more flags (bitwise AND NOT). Mutates in place and returns
-   * `this` for chaining. Allocates a rest array per call — use
+   * `this` for chaining. Allocates a rest array per call - use
    * {@link removeMask} on hot paths.
    */
   public remove<V extends number = T[keyof T]>(...flags: V[]): this {
@@ -121,7 +121,7 @@ export class Flags<T extends TypedEnum<T, number>> {
 
   /**
    * Return `true` when **any** of the supplied flags are currently set
-   * (bitwise OR test). Allocates a rest array and a closure per call — use
+   * (bitwise OR test). Allocates a rest array and a closure per call - use
    * {@link hasMask} on hot paths.
    */
   public has<V extends number = T[keyof T]>(...flags: V[]): boolean {

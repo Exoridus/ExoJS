@@ -20,7 +20,7 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
   protected _values: Float32Array = new Float32Array(0);
   /**
    * `false` until this action has established an initial baseline for every
-   * bound channel — see `_update`'s doc comment. Reset by `_reset()`, and
+   * bound channel - see `_update`'s doc comment. Reset by `_reset()`, and
    * implicitly by the owning {@link ActionMap} on a legitimate ownership
    * handoff (a fresh reset forces the next `_update` to re-baseline against
    * the new owner's live state).
@@ -41,7 +41,7 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
    * number `_update` compares against `_threshold`. {@link ButtonAction}
    * reports the strongest entry (the loudest of a set of interchangeable
    * sources wins); {@link ChordAction} reports the weakest (a chord is only
-   * as strong as its least-engaged member) — `min(|v|) > threshold` for every
+   * as strong as its least-engaged member) - `min(|v|) > threshold` for every
    * bound channel is equivalent to requiring every one of them individually
    * past threshold, so `ChordAction`'s AND-of-all semantics fall out of this
    * same comparison without a separate code path.
@@ -57,7 +57,7 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
 
   /**
    * Aggregate source value this frame, in 0..1. Reads `0` on a frame where the
-   * source was pressed and released again between two frame boundaries — check
+   * source was pressed and released again between two frame boundaries - check
    * {@link pressed} for that case rather than the value.
    */
   public get value(): number {
@@ -73,7 +73,7 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
    * `true` on the frame the AGGREGATE value crossed above the action's own
    * threshold. Bound sources are replayed in the true order their channels
    * changed, batch by whole batch (see {@link ChannelEventBatch}'s doc
-   * comment — every channel a single real-world event wrote together is
+   * comment - every channel a single real-world event wrote together is
    * applied before the aggregate is evaluated even once), so a value that
    * crosses the threshold twice within one frame (0.4 → 0.7 → 0.4 at
    * threshold 0.5) sets both {@link pressed} and {@link released} on that
@@ -96,16 +96,16 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
    * Replay this frame's ordered batches, evaluating the aggregate state once
    * per batch rather than once per individual channel within it.
    *
-   * The very first call ever (or the first call after `_reset()` — see that
+   * The very first call ever (or the first call after `_reset()` - see that
    * method's doc comment) additionally seeds every bound channel that has NO
-   * batch entry THIS SAME call directly from `sample.values`, with no edge —
+   * batch entry THIS SAME call directly from `sample.values`, with no edge -
    * a channel already active before this action started watching correctly
    * contributes to the aggregate without a synthetic press. A channel that
    * DOES have a batch entry this call is deliberately left unseeded: it was
    * necessarily `0` a moment ago (a batch entry only exists where the value
    * actually changed), so replaying it below detects a real, legitimate edge
    * instead of being masked by a seed that jumped straight to the final
-   * value — seeding every bound channel unconditionally from `sample.values`
+   * value - seeding every bound channel unconditionally from `sample.values`
    * (the frame's FINAL state) and then still replaying the very batches that
    * led there would silently erase whatever edge those batches represent.
    *
@@ -156,7 +156,7 @@ export abstract class ButtonLikeAction<Binding> extends ActionBase<Binding> {
     this._active = wasActive;
   }
 
-  /** Seed every bound channel with no batch entry this call directly from `sample.values` — see `_update`'s doc comment. */
+  /** Seed every bound channel with no batch entry this call directly from `sample.values` - see `_update`'s doc comment. */
   private _seedUntouchedChannels(sample: ActionSample): void {
     const touched = new Set<number>();
 

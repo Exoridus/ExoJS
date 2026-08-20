@@ -119,7 +119,7 @@ export class AudioGeneratorVoice extends BaseVoice implements RatePitched, Pausa
   // -------------------------------------------------------------------------
 
   /**
-   * Stored but inert — an `OscillatorNode` has no playback rate. Retune via
+   * Stored but inert - an `OscillatorNode` has no playback rate. Retune via
    * {@link AudioGeneratorVoice.frequency} or {@link AudioGeneratorVoice.detune}.
    */
   public get playbackRate(): number {

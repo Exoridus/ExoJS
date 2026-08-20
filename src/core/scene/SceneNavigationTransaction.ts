@@ -19,16 +19,16 @@ export interface OutgoingDisposition {
 /**
  * @internal Collaborator owned by `SceneDirector`, holding the atomic
  * commit-boundary logic shared by
- * `change()` and `restore()` — and the exact seam the
+ * `change()` and `restore()` - and the exact seam the
  * transition-session runner calls through at its own commit point, so this
  * logic exists in exactly one place rather than duplicated per call site.
  * Holds no state of its own beyond the `_retained` map and the two Director
- * signals it dispatches through, both handed in at construction —
+ * signals it dispatches through, both handed in at construction -
  * `SceneDirector` remains the sole owner of `_activeScope`/
  * `_activeScopeTarget`/`_retained` itself.
  *
- * Split into three steps — `prepareOutgoingDisposition` →
- * `dispatchStopScene` → `beginOutgoingTeardown` — rather than one call,
+ * Split into three steps - `prepareOutgoingDisposition` →
+ * `dispatchStopScene` → `beginOutgoingTeardown` - rather than one call,
  * so the caller can interleave incoming-scope activation and
  * `onChangeScene`/`onStartScene` dispatch BETWEEN deciding the outgoing
  * scope's fate and actually starting its teardown (the outgoing
@@ -48,7 +48,7 @@ export class SceneNavigationTransaction {
    * Decide the outgoing scope's fate WITHOUT starting its
    * teardown: suspend and retain it under `outgoing.target` when
    * `suspendCurrent` is set (dispatching `onStateChange` for the edge
-   * immediately — suspension has no `unload()`/`onStopScene` to sequence
+   * immediately - suspension has no `unload()`/`onStopScene` to sequence
    * against), otherwise return it as `pendingStopScene` for the caller to
    * pass to {@link SceneNavigationTransaction.dispatchStopScene} and
    * {@link SceneNavigationTransaction.beginOutgoingTeardown} once it has
@@ -74,7 +74,7 @@ export class SceneNavigationTransaction {
   }
 
   /**
-   * Dispatch `onStopScene` for a scope about to be permanently torn down —
+   * Dispatch `onStopScene` for a scope about to be permanently torn down -
    * guarded via `Signal.dispatchIsolated`, never throws back to the caller.
    * Call AFTER the incoming scope has activated and its own
    * `onChangeScene`/`onStartScene` have fired, and BEFORE
@@ -95,7 +95,7 @@ export class SceneNavigationTransaction {
    * teardown (`scope.destroy()`, which synchronously flips it to
    * `Destroying` and begins running `Scene.unload()` before this method
    * returns). Call AFTER {@link SceneNavigationTransaction.dispatchStopScene}.
-   * Returns the still-settling teardown promise — already resolved when
+   * Returns the still-settling teardown promise - already resolved when
    * `pendingStopScene` is `null`.
    */
   public beginOutgoingTeardown(pendingStopScene: SceneScope | null): Promise<void> {

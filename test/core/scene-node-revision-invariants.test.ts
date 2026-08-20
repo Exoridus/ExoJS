@@ -66,12 +66,12 @@ const containerWithSizedChild = (): Container => {
 };
 
 // THE TABLE. One row per public member that changes visual output. Adding a
-// mutator to SceneNode/RenderNode/Drawable/Container — OR to a Drawable
-// SUBCLASS (Sprite/NineSliceSprite/Mesh/Text/…, see `subclassCases` below) —
+// mutator to SceneNode/RenderNode/Drawable/Container - OR to a Drawable
+// SUBCLASS (Sprite/NineSliceSprite/Mesh/Text/…, see `subclassCases` below) -
 // without a row here is a review error; a row whose bump assertion fails is an
 // engine bug.
 const cases: readonly MutatorCase[] = [
-  // SceneNode transform family — transform-dirty ONLY: an
+  // SceneNode transform family - transform-dirty ONLY: an
   // own-transform move stamps the transform channel, not content/structure, so
   // an enclosing RetainedContainer patches the row instead of re-collecting.
   drawableCase('setPosition', 'transform', n => n.setPosition(10, 20)),
@@ -105,11 +105,11 @@ const cases: readonly MutatorCase[] = [
   drawableCase('rotate', 'transform', n => n.rotate(5)),
   // zIndex is draw-order, not a spatial transform: still content-dirty.
   drawableCase('zIndex setter', 'content', n => (n.zIndex = 3)),
-  // SceneNode cull family — structure-dirty (same class as `visible`: changes
+  // SceneNode cull family - structure-dirty (same class as `visible`: changes
   // WHICH draws a collect emits). These are two of the five audit gaps.
   drawableCase('cullable setter', 'structure', n => (n.cullable = false)),
   drawableCase('cullArea setter', 'structure', n => (n.cullArea = new Rectangle(0, 0, 8, 8))),
-  // SceneNode visibility — structure-dirty, already wired for containers.
+  // SceneNode visibility - structure-dirty, already wired for containers.
   drawableCase('visible setter', 'structure', n => (n.visible = false)),
   // RenderNode effect/plan-shape family. First three are audit gaps.
   drawableCase('preserveDrawOrder setter', 'structure', n => (n.preserveDrawOrder = true)),
@@ -121,19 +121,19 @@ const cases: readonly MutatorCase[] = [
   drawableCase('cacheAsTexture setter', 'content', n => (n.cacheAsTexture = true)),
   drawableCase('invalidateCache', 'content', n => n.invalidateCache()),
   drawableCase('invalidateContent', 'content', n => n.invalidateContent()),
-  // Drawable visual-source family — content-dirty.
+  // Drawable visual-source family - content-dirty.
   drawableCase('setTint', 'content', n => n.setTint(new Color(10, 20, 30))),
   drawableCase('setBlendMode', 'content', n => n.setBlendMode(BlendModes.Add)),
   drawableCase('pixelSnapMode setter', 'content', n => (n.pixelSnapMode = PixelSnapMode.Geometry)),
-  // Container structural mutators — structure-dirty.
+  // Container structural mutators - structure-dirty.
   containerCase('addChild', 'structure', n => n.addChild(new Drawable())),
   // addChild is itself a structure-dirty mutator (tested above), so the
   // sized child needed to make the width/height division non-trivial must be
-  // added during `create` — before the "before" revisions are captured —
+  // added during `create` - before the "before" revisions are captured -
   // not inside `mutate`, or the structure-dirty assertion below would be
   // polluted by the addChild call rather than reflecting the width/height
   // setter alone.
-  // width/height set the container's SCALE to hit a target extent — a spatial
+  // width/height set the container's SCALE to hit a target extent - a spatial
   // transform, so transform-dirty (not content).
   containerCase('width setter', 'transform', n => (n.width = 128), containerWithSizedChild),
   containerCase('height setter', 'transform', n => (n.height = 128), containerWithSizedChild),
@@ -174,7 +174,7 @@ const subclassCases: readonly MutatorCase[] = [
     n => ((n as unknown as Mesh).texture = makeTexture(16, 16)),
     () => new Mesh({ vertices: new Float32Array([0, 0, 16, 0, 8, 16]) }),
   ),
-  // NineSliceSprite metric mutators — all re-tessellate the quad geometry.
+  // NineSliceSprite metric mutators - all re-tessellate the quad geometry.
   drawableCase(
     'NineSliceSprite.setSize',
     'content',
@@ -213,7 +213,7 @@ describe('revision invariants: every public visual mutator bumps the right revis
       mutatorCase.mutate(node);
 
       if (mutatorCase.expects === 'transform') {
-        // An own-transform move travels the transform channel ONLY —
+        // An own-transform move travels the transform channel ONLY -
         // it must NOT content- or structure-dirty (that decoupling is what lets
         // a RetainedContainer patch the row instead of re-collecting).
         expect(node._transformRevision).toBeGreaterThan(nodeTransformBefore);
@@ -292,7 +292,7 @@ describe('revision invariants: every public visual mutator bumps the right revis
 });
 
 // RetainedContainer is the one Drawable subclass whose transform-relevant
-// mutator deliberately DIVERGES from the base contract — an own-transform move
+// mutator deliberately DIVERGES from the base contract - an own-transform move
 // reroutes to the group-matrix version instead of content-dirtying the
 // retained fragment. The base table cannot express this (it asserts
 // content propagation on every transform mutator), so the divergence is pinned
@@ -406,7 +406,7 @@ describe('revision invariants: transform-revision channel', () => {
 
       expect(node._transformRevision).toBeGreaterThan(nodeTransformBefore);
       expect(parent._transformRevision).toBeGreaterThan(parentTransformBefore);
-      // The content channel is decoupled from the transform channel — a
+      // The content channel is decoupled from the transform channel - a
       // transform move does NOT bump content (that is what keeps a retained
       // fragment valid).
       expect(node._contentRevision).toBe(nodeContentBefore);

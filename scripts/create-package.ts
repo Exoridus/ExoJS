@@ -1,5 +1,5 @@
 /**
- * create:package — scaffold a new lockstep extension package.
+ * create:package - scaffold a new lockstep extension package.
  *
  * `pnpm create:package <name> [flags]` generates `packages/exojs-<name>/` from
  * the conventions the existing library-style extension packages share
@@ -7,12 +7,12 @@
  * adding a package is one command instead of a ~10-file hand-edit.
  *
  * Auto-wired (string-edit, idempotent):
- *   - scripts/release/lockstep-packages.ts  (LOCKSTEP_PACKAGES entry — the SoT
+ *   - scripts/release/lockstep-packages.ts  (LOCKSTEP_PACKAGES entry - the SoT
  *     every release script derives from: cut/manifest/prepare/run/verify-*)
  *   - scripts/ci/select-lanes.mjs           (RUNTIME_PACKAGES entry)
  *   - pnpm-workspace.yaml                    (explicit member list, not a glob)
  *
- * NOT auto-wired (enumerated YAML / a different runtime / a manual bootstrap) —
+ * NOT auto-wired (enumerated YAML / a different runtime / a manual bootstrap) -
  * printed as a concrete, copy-pasteable checklist at the end:
  *   - .github/workflows/_ci-checks.yml + release.yml `--filter` lines
  *   - vitest.config.ts createJsdomTestProject entry (+ aliasConfig if imported)
@@ -158,7 +158,7 @@ for (const dep of deps) {
 const camel = toCamel(name);
 const description = opts.description ?? `${toTitle(name)} library for ExoJS.`;
 
-// Version is shared across all lockstep packages — read it from Core rather than
+// Version is shared across all lockstep packages - read it from Core rather than
 // hard-coding, so the scaffold always matches the current in-tree version.
 const coreVersion = (JSON.parse(readFileSync(resolve(rootDir, 'package.json'), 'utf8')) as { version: string }).version;
 const [major, minor] = coreVersion.split('.');
@@ -175,7 +175,7 @@ const emit = (relPath: string, contents: string): void => {
   generated.push(`${pkgDirRel}/${relPath}`);
 };
 
-// package.json — key order mirrors the reference packages exactly.
+// package.json - key order mirrors the reference packages exactly.
 const manifest: Record<string, unknown> = {
   name: pkgName,
   version: coreVersion,
@@ -217,7 +217,7 @@ const manifest: Record<string, unknown> = {
 };
 emit('package.json', `${JSON.stringify(manifest, null, 2)}\n`);
 
-// tsconfig.json — Core paths to source (+ each runtime dep), like aseprite/tiled.
+// tsconfig.json - Core paths to source (+ each runtime dep), like aseprite/tiled.
 // Hand-built (not JSON.stringify) to keep the references' inline-array style.
 const pathEntries: [string, string][] = [
   ['@codexo/exojs', '../../src/index.ts'],
@@ -315,7 +315,7 @@ ${buildPathLines}
 const indexHeader = `// ${pkgName} — side-effect-free root entry.`;
 emit('src/index.ts', `${indexHeader}\n\nexport * from './public';\n`);
 
-// src/public.ts — a small placeholder so TypeDoc/typecheck has a public symbol.
+// src/public.ts - a small placeholder so TypeDoc/typecheck has a public symbol.
 const depTypeExports = deps
   .map(
     dep => `
@@ -338,7 +338,7 @@ ${depTypeExports}
 `;
 emit('src/public.ts', publicTs);
 
-// test/<name>.test.ts — a trivial smoke test (mirrors the package tests'
+// test/<name>.test.ts - a trivial smoke test (mirrors the package tests'
 // relative `../src/index` import convention).
 const testSymbol = `${camel}PackageName`;
 emit(
@@ -394,14 +394,14 @@ MIT © Codexo
 `;
 emit('README.md', readme);
 
-// LICENSE — copy the MIT text from a sibling package verbatim.
+// LICENSE - copy the MIT text from a sibling package verbatim.
 emit('LICENSE', readFileSync(resolve(rootDir, 'packages/exojs-aseprite/LICENSE'), 'utf8'));
 
 // ── Auto-wire the single sources of truth (idempotent) ───────────────────────
 
 const wired: string[] = [];
 
-// 1. scripts/release/lockstep-packages.ts — append a LockstepPackage entry.
+// 1. scripts/release/lockstep-packages.ts - append a LockstepPackage entry.
 {
   const entry = `  { name: '${pkgName}', dir: '${pkgDirRel}', isExtension: true, inOfflineSmoke: ${inOfflineSmoke} },`;
   const updated = insertBefore(lockstepSrc, '] as const satisfies readonly LockstepPackage[];', [entry]);
@@ -409,7 +409,7 @@ const wired: string[] = [];
   wired.push('scripts/release/lockstep-packages.ts (LOCKSTEP_PACKAGES)');
 }
 
-// 2. scripts/ci/select-lanes.mjs — append the directory to RUNTIME_PACKAGES.
+// 2. scripts/ci/select-lanes.mjs - append the directory to RUNTIME_PACKAGES.
 {
   const lanesPath = resolve(rootDir, 'scripts/ci/select-lanes.mjs');
   const src = readFileSync(lanesPath, 'utf8');
@@ -427,7 +427,7 @@ const wired: string[] = [];
   }
 }
 
-// 3. pnpm-workspace.yaml — explicit member list (NOT a glob), so a new package is
+// 3. pnpm-workspace.yaml - explicit member list (NOT a glob), so a new package is
 // invisible to pnpm until listed here.
 {
   const wsPath = resolve(rootDir, 'pnpm-workspace.yaml');

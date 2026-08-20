@@ -8,7 +8,7 @@ export interface FlangerEffectOptions {
    */
   delayMs?: number;
   /**
-   * LFO modulation depth in milliseconds — the peak deviation added to and
+   * LFO modulation depth in milliseconds - the peak deviation added to and
    * subtracted from `delayMs` by the sine LFO. Range 0..10, default 2.
    */
   depthMs?: number;
@@ -18,7 +18,7 @@ export interface FlangerEffectOptions {
    */
   rateHz?: number;
   /**
-   * Feedback amount — fraction of the delay output fed back to the delay input.
+   * Feedback amount - fraction of the delay output fed back to the delay input.
    * Higher values intensify the comb-filter resonance. Range 0..0.95, default 0.5.
    */
   feedback?: number;
@@ -43,9 +43,9 @@ interface FlangerEffectSetup {
 /**
  * Flanger effect using native WebAudio nodes (no worklet required).
  *
- * A flanger is a very short LFO-modulated delay (1–10 ms) with a feedback
- * loop. Unlike a chorus — which uses longer delays without feedback to produce
- * thickening — the flanger's feedback reinforces phase cancellation, creating
+ * A flanger is a very short LFO-modulated delay (1-10 ms) with a feedback
+ * loop. Unlike a chorus - which uses longer delays without feedback to produce
+ * thickening - the flanger's feedback reinforces phase cancellation, creating
  * the characteristic sweeping comb-filter "jet-plane" sound as notches and
  * peaks slide up and down the spectrum.
  *
@@ -166,7 +166,7 @@ export class FlangerEffect extends AudioEffect {
   }
 
   /**
-   * Feedback amount — fraction of delay output fed back to delay input.
+   * Feedback amount - fraction of delay output fed back to delay input.
    * Range 0..0.95, default 0.5.
    */
   public get feedback(): number {

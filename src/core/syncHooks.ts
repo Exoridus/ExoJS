@@ -3,21 +3,21 @@
 // Nothing in this module is `__DEV__`-gated. An `async` override of a hook the
 // engine never awaits drops that hook's timing and swallows every error it
 // throws, so the failure has to look the same in a production build as it does
-// in development — a dev-only warning would hide the exact defect it is meant
+// in development - a dev-only warning would hide the exact defect it is meant
 // to surface. This is the {@link invariant} category from `./dev`, not the
 // {@link assert} one: it throws in every build and is never stripped.
 //
 // The type system rejects an async override ahead of this guard (see
-// {@link Synchronous}); the guard covers what types cannot reach — plain
+// {@link Synchronous}); the guard covers what types cannot reach - plain
 // JavaScript consumers, `any`, `Object.assign`ed methods, and anything crossing
 // a module boundary untyped.
 
 const swallow = (): void => {
-  // Intentionally empty — see requireSynchronousHook's detach comment.
+  // Intentionally empty - see requireSynchronousHook's detach comment.
 };
 
 /**
- * Class name of `owner`, or `fallback` when it has none worth reporting — a
+ * Class name of `owner`, or `fallback` when it has none worth reporting - a
  * plain object literal, a null-prototype object, or an anonymous class
  * expression.
  */

@@ -43,7 +43,7 @@ class CursorAttractorParticlesScene extends Scene {
         );
 
         // Both force fields target the same cursor point. We swap behaviour by
-        // moving the strength between them — the inactive module stays at 0 so
+        // moving the strength between them - the inactive module stays at 0 so
         // it contributes no acceleration. `falloff`/`radius` of 260 softens the
         // pull/push near the centre instead of slingshotting particles.
         this.attractor = new AttractToPoint(0, 0, forceStrength, 260);

@@ -3,7 +3,7 @@ import { Drawable } from '#rendering/Drawable';
 
 /**
  * Test double for a transform-group boundary whose engagement flips at
- * runtime — mirrors RetainedContainer's live `_isTransformGroupBoundary`
+ * runtime - mirrors RetainedContainer's live `_isTransformGroupBoundary`
  * getter without a render backend.
  */
 class ToggleBoundary extends Container {
@@ -27,7 +27,7 @@ class VersionProbe extends Drawable {
  * `_globalTransformVersion` counter ALSO started at 0, so the sentinel
  * collided with the natural initial version of a never-resolved parent. The
  * collision was masked only because `parent.getGlobalTransform()` is evaluated
- * BEFORE `parentVersion` is read (forcing the parent to >= 1) — a statement
+ * BEFORE `parentVersion` is read (forcing the parent to >= 1) - a statement
  * ordering a future refactor could silently break, re-introducing a stale
  * transform on a boundary flip.
  *
@@ -83,7 +83,7 @@ describe('SceneNode getGlobalTransform: no-parent sentinel cannot collide with a
     expect(child.getGlobalTransform().x).toBe(5);
 
     // Flip the boundary off: the child must now compose the parent chain. This
-    // exercises the exact seam T3 guards — a false-clean skip here would leave
+    // exercises the exact seam T3 guards - a false-clean skip here would leave
     // the child rendering in the stale group-local space.
     group.engaged = false;
 

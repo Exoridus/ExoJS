@@ -1,6 +1,6 @@
 /**
  * Deterministic scene fixtures for the renderer benchmark harness. Every builder
- * produces a scene whose structural metrics depend only on the configuration —
+ * produces a scene whose structural metrics depend only on the configuration -
  * no randomness, no time, no GPU. Placement scatters nodes inside the view so
  * they all pass frustum culling unless a builder is explicitly asked to push some
  * off-screen.
@@ -19,7 +19,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 import { type BlendModes } from '#rendering/types';
 
-/** A sized texture with no pixel source — enough for batching/format metrics. */
+/** A sized texture with no pixel source - enough for batching/format metrics. */
 export const makeTexture = (size = 64): Texture => {
   const texture = new Texture();
   texture.setSize(size, size);
@@ -67,7 +67,7 @@ export interface SpriteSceneConfig {
   /**
    * Consecutive sprites sharing one blend mode before the cycle advances
    * (default 1 = alternate per sprite). A plateau > 1 models the realistic
-   * "a few hundred state switches per frame" scene — the batcher flushes once
+   * "a few hundred state switches per frame" scene - the batcher flushes once
    * per run instead of once per sprite, so the two settings bracket the
    * batch-record path from both ends.
    */
@@ -115,7 +115,7 @@ export interface NineSliceSceneConfig {
   readonly count: number;
   readonly textures: readonly Texture[];
   readonly assign?: TextureAssign;
-  /** Source slice inset (px) — corner size in the atlas. */
+  /** Source slice inset (px) - corner size in the atlas. */
   readonly slice?: number;
   /** Destination size of each nine-slice. */
   readonly width?: number;
@@ -279,7 +279,7 @@ export interface MeshScene {
   readonly meshes: readonly Mesh[];
 }
 
-/** `count` textured-quad {@link Mesh} drawables — exercises the mesh-renderer draw path (2e). */
+/** `count` textured-quad {@link Mesh} drawables - exercises the mesh-renderer draw path (2e). */
 export const buildMeshScene = (config: MeshSceneConfig): MeshScene => {
   const { count, textures, assign = 'cycle', size = 64, viewW = 1280, viewH = 720 } = config;
   const root = new Container();

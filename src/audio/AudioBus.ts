@@ -23,7 +23,7 @@ interface AudioBusSetup {
 /**
  * Hierarchical mixer node in the engine's audio routing graph. Each bus
  * owns three Web Audio nodes (input gain, optional effect chain, stereo
- * pan, output gain) and routes its output into its parent's input — the
+ * pan, output gain) and routes its output into its parent's input - the
  * root bus connects to the destination.
  *
  * The three engine-built-in busses are constructed by {@link AudioManager}:
@@ -136,7 +136,7 @@ export class AudioBus {
    * `destroy()` the effect once it is no longer used anywhere. Neither
    * {@link AudioBus.removeEffect} nor {@link AudioBus.destroy} destroys it.
    *
-   * A no-op once the bus has been {@link AudioBus.destroy}ed — without this
+   * A no-op once the bus has been {@link AudioBus.destroy}ed - without this
    * guard the effect would silently accumulate in the (otherwise unused)
    * internal list forever.
    */
@@ -149,7 +149,7 @@ export class AudioBus {
 
   /**
    * Remove `effect` from the chain. No-op if not present. The caller still
-   * owns it and must `destroy()` it — the same contract {@link AudioBus.destroy}
+   * owns it and must `destroy()` it - the same contract {@link AudioBus.destroy}
    * follows for whatever is still attached when the bus goes away.
    */
   public removeEffect(effect: AudioEffect): this {
@@ -162,7 +162,7 @@ export class AudioBus {
       // delay/reverb tail bleed through after removal. Its internal input
       // wiring is deliberately left intact so the caller can reuse the effect
       // (same contract as `BaseVoice.removeEffect`). Skipped for an effect
-      // whose own nodes have not been created yet — it was never wired in.
+      // whose own nodes have not been created yet - it was never wired in.
       if (isEffectReady(effect)) {
         effect.outputNode.disconnect();
       }
@@ -220,7 +220,7 @@ export class AudioBus {
    * Tear the bus down: drop pending setup work, detach every attached effect
    * and disconnect this bus's own nodes from the graph.
    *
-   * Attached effects are detached, **not** destroyed — a bus never owns them
+   * Attached effects are detached, **not** destroyed - a bus never owns them
    * (see {@link AudioBus.addEffect}), and the same instance may still be in
    * use on a voice or another bus. Destroy each effect yourself once it is no
    * longer needed anywhere.
@@ -237,7 +237,7 @@ export class AudioBus {
     // Detach, never destroy: a bus does not own the effects handed to it. The
     // same instance may also sit on a voice or on another bus, and destroying
     // it here would pull it out from under them. Mirrors
-    // {@link AudioBus.removeEffect} and `BaseVoice._finish` — cut the outgoing
+    // {@link AudioBus.removeEffect} and `BaseVoice._finish` - cut the outgoing
     // edge, leave the effect's own internal wiring intact, skip an effect whose
     // nodes were never created.
     for (const effect of this._effects) {
@@ -286,7 +286,7 @@ export class AudioBus {
       if (parentInput) {
         this._setup.outputNode.connect(parentInput);
       } else {
-        // Parent not yet ready — subscribe to parent's setup, keeping the
+        // Parent not yet ready - subscribe to parent's setup, keeping the
         // disposer so a teardown before the parent unlocks unsubscribes (AU3).
         this._parentSetupDispose = this._parent.onceSetup(() => {
           this._parentSetupDispose = null;
@@ -345,12 +345,12 @@ export class AudioBus {
     // An effect attached via `addEffect()` before the shared AudioContext became
     // ready may not have finished its OWN setup yet: `onAudioContextReady`
     // dispatches to every registered listener in a single synchronous pass, and
-    // this bus's listener — typically registered early, e.g. at AudioManager
-    // construction — can run before an attached effect's listener (registered
+    // this bus's listener - typically registered early, e.g. at AudioManager
+    // construction - can run before an attached effect's listener (registered
     // later, e.g. from a Scene's async `init()`). Touching that effect's
     // `inputNode`/`outputNode` here would throw ("not yet initialized").
     // Retrying once on a microtask is sufficient: by then every listener queued
-    // for that same dispatch pass — including the effect's own setup — has
+    // for that same dispatch pass - including the effect's own setup - has
     // already run. An effect still not ready after the retry is a genuine
     // caller error (e.g. a custom effect that never wires itself up) and is
     // left to throw naturally instead of retrying forever.
@@ -361,7 +361,7 @@ export class AudioBus {
 
     // Disconnect current chain. Only the edges this bus created are cut: the
     // bus input, each effect's output, and the pan stage. An effect's *input*
-    // node is deliberately left alone — for any effect built from more than
+    // node is deliberately left alone - for any effect built from more than
     // one node (a wet/dry mix, a filter bank) the edges leaving its input node
     // are its own internal wiring, and disconnecting them silences the effect
     // permanently.

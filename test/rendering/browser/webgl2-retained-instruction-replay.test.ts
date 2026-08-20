@@ -1,14 +1,14 @@
 /**
- * WebGL2 renderer-matrix browser tests — retained instruction-set replay.
+ * WebGL2 renderer-matrix browser tests - retained instruction-set replay.
  *
  * Pixel cells for the flush-level batch cache: a retained group whose
  * playback was recorded replays through `_replayRetainedBatch` from
  * group-owned resources (persistent instance buffer + group transform
  * texture) and must produce BYTE-IDENTICAL frames to the entry-replay slow
- * path — the recorded bytes ARE the slow path's bytes, the transform rows
+ * path - the recorded bytes ARE the slow path's bytes, the transform rows
  * are the same group-relative rows, and everything view/group-dependent is
  * resolved live at replay. Cells: tier byte-equality, camera pan and group
- * move on the replay path (no recapture — spy-asserted), child-mutation
+ * move on the replay path (no recapture - spy-asserted), child-mutation
  * fallback + recapture, tint change, texture swap.
  *
  * Scaffolded from webgl2-retained-container.test.ts.
@@ -102,7 +102,7 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 
 /**
  * Standard cell scene: one live sprite OUTSIDE (and before) the retained
- * group, so the group's shared transform rows never start at row 0 — the
+ * group, so the group's shared transform rows never start at row 0 - the
  * group-local node-index rebase is load-bearing in every pixel assertion,
  * and the replay path interleaves with a live batch every frame.
  *
@@ -159,7 +159,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
     const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
 
     try {
-      // F1 — full collect + fragment capture (slow tier).
+      // F1 - full collect + fragment capture (slow tier).
       render(backend, scene.root);
 
       const collectFrame = readCanvas(backend);
@@ -167,7 +167,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       expectBaseScenePixels(backend);
       expect(replaySpy).not.toHaveBeenCalled();
 
-      // F2 — entry replay + instruction recording (the recording source).
+      // F2 - entry replay + instruction recording (the recording source).
       render(backend, scene.root);
 
       const recordFrame = readCanvas(backend);
@@ -175,7 +175,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       expect(beginSpy).toHaveBeenCalledTimes(1);
       expect(replaySpy).not.toHaveBeenCalled();
 
-      // F3/F4 — instruction splice: recorded batches replay from group-owned
+      // F3/F4 - instruction splice: recorded batches replay from group-owned
       // resources. Same bytes, same rows, same live uniforms -> identical.
       render(backend, scene.root);
 
@@ -239,7 +239,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
 
       // Move the WHOLE group: content revisions untouched (a group move is
-      // decoupled by design), so the set keeps replaying — via live u_group.
+      // decoupled by design), so the set keeps replaying - via live u_group.
       scene.group.setPosition(24, 8);
       render(backend, scene.root);
 
@@ -313,7 +313,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       render(backend, root); // F3 splice
       expectPixelNear(readWebGl2Pixel(backend, 12, 28), [255, 255, 255, 255]);
 
-      // Tint is baked into the recorded instance bytes (word 6) — the setter
+      // Tint is baked into the recorded instance bytes (word 6) - the setter
       // bumps the content revision, so the set recaptures instead of
       // replaying stale bytes.
       sprite.tint = new Color(0, 255, 0);
@@ -371,7 +371,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
 
     // Dedicated scene: the group sprite samples a canvas texture through a
     // PINNED 16x16 frame, so a source resize changes only the UV
-    // normalization — the instance words the recorder baked are
+    // normalization - the instance words the recorder baked are
     // view-independent DATA that would silently go stale. A resize bumps only
     // the texture version, never a node revision, so the fragment stays
     // clean and ONLY the backend's collect-time validation can catch it.
@@ -438,7 +438,7 @@ describe('WebGL2 renderer matrix: retained instruction-set replay cells', () => 
       expectPixelNear(readWebGl2Pixel(backend, 20, 36), [0, 255, 0, 255]);
 
       // Same-size repaint: a pure content update keeps the recorded UVs
-      // valid — the fast tier must keep replaying (no recapture) and sample
+      // valid - the fast tier must keep replaying (no recapture) and sample
       // the re-uploaded pixels.
       ctx.fillStyle = '#ff00ff';
       ctx.fillRect(0, 0, 32, 32);

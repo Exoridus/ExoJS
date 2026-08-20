@@ -116,7 +116,7 @@ describe('WebGL2 untextured mesh rendering', () => {
 
   test('a full Application frame loop renders an untextured mesh (playground parity)', async () => {
     // The three backend-level cases above pass even when the playground shows
-    // nothing — this case reproduces the REAL app path: Application bootstrap,
+    // nothing - this case reproduces the REAL app path: Application bootstrap,
     // scene draw via RenderingContext, per-frame flush.
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -182,7 +182,7 @@ describe('WebGL2 untextured mesh rendering', () => {
 
   test('a multi-segment stroke path renders EVERY segment, not just the last', async () => {
     // Regression: a stroked rectangle outline (4 chained segments) rendered
-    // only its final segment as a thin sliver — single-segment strokes were
+    // only its final segment as a thin sliver - single-segment strokes were
     // fine, which is why the case above stayed green.
     const size = 64;
     const backend = await createBackend(size);
@@ -248,7 +248,7 @@ describe('WebGL2 untextured mesh rendering', () => {
       await new Promise(resolve => setTimeout(resolve, 250));
 
       const backend = app.backend as WebGl2Backend;
-      // The box outline hugs the mesh bounds (40..88). Sample the top edge —
+      // The box outline hugs the mesh bounds (40..88). Sample the top edge -
       // it must NOT be the mesh fill (60ish) or background (0): the layer
       // colors are saturated HSL-derived values, so at least one channel is
       // bright.
@@ -265,7 +265,7 @@ describe('WebGL2 untextured mesh rendering', () => {
   test('a drawRectangle outline strokes ALL four edges (closing segment)', async () => {
     // Regression: shape builders return their perimeter open (first point not
     // repeated), so buildPath treated the outline as an open polyline and the
-    // closing segment — the rectangle's LEFT edge — was never stroked.
+    // closing segment - the rectangle's LEFT edge - was never stroked.
     const size = 64;
     const backend = await createBackend(size);
     const graphics = new Graphics();

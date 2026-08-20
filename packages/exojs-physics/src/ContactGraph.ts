@@ -36,7 +36,7 @@ export interface ContactRecord {
  *
  * Touching solid contacts are also collected into {@link solidContacts} (with a
  * warm-start impulse cache) for the dynamics solver. The graph holds no
- * module-level state — each world owns one.
+ * module-level state - each world owns one.
  */
 export class ContactGraph {
   /** Immutable solid-contact begin snapshots produced by the latest {@link update}. */
@@ -47,11 +47,11 @@ export class ContactGraph {
   public readonly sensorEnter: SensorEvent[] = [];
   /** Immutable sensor-exit snapshots produced by the latest {@link update}. */
   public readonly sensorExit: SensorEvent[] = [];
-  /** Touching solid contacts this pass, in deterministic order — consumed by the solver. */
+  /** Touching solid contacts this pass, in deterministic order - consumed by the solver. */
   public readonly solidContacts: ContactRecord[] = [];
 
   // Integer pair-keys (`(a.id << 16) | b.id`, a.id < b.id guaranteed by the broad
-  // phase) — cheaper than string keys on the per-step solver hot path.
+  // phase) - cheaper than string keys on the per-step solver hot path.
   private readonly _records = new Map<number, ContactRecord>();
 
   /** Touching pairs currently tracked (for debug draw). */
@@ -153,7 +153,7 @@ export class ContactGraph {
   }
 
   /**
-   * `Map.forEach` callback (its `this` bound via the forEach thisArg) — drops a
+   * `Map.forEach` callback (its `this` bound via the forEach thisArg) - drops a
    * record the latest pass did not see, firing an end event if it was touching.
    * A method reference + thisArg keeps the per-step iteration allocation-free,
    * unlike `for (const [key, record] of map)` which allocates an entry tuple per
@@ -170,7 +170,7 @@ export class ContactGraph {
   }
 }
 
-/** `Map.forEach` callback — clears the per-pass `seen` flag (no iterator allocation). */
+/** `Map.forEach` callback - clears the per-pass `seen` flag (no iterator allocation). */
 const resetSeen = (record: ContactRecord): void => {
   record.seen = false;
 };

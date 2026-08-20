@@ -30,7 +30,7 @@ export interface EffectDescriptor {
   readonly cacheAsTexture: boolean;
   readonly blendMode: BlendModes;
   /**
-   * When `true`, the node uses a backdrop-aware blend mode (modes 5–17). The
+   * When `true`, the node uses a backdrop-aware blend mode (modes 5-17). The
    * render-effect executor renders the content off-screen and composites it back
    * via {@link RenderBackend.composeWithBackdropBlend} instead of the regular
    * draw-texture path.
@@ -42,7 +42,7 @@ export interface EffectDescriptor {
  * @internal
  *
  * `seq`/`zIndex`/`command` are mutable so the {@link RenderPlanBuilder} can
- * recycle a pooled entry across frames. `kind` stays `readonly` —
+ * recycle a pooled entry across frames. `kind` stays `readonly` -
  * a pooled entry never changes its discriminant.
  */
 export interface DrawScopeEntry {
@@ -78,7 +78,7 @@ export interface GroupScope {
   hasMixedZ: boolean;
   /**
    * `true` once this scope has seen two draws that would force the batcher to
-   * flush between them on material grounds — see `forcesBatchFlush`. Maintained
+   * flush between them on material grounds - see `forcesBatchFlush`. Maintained
    * incrementally while the plan is collected, exactly like
    * {@link GroupScope.hasMixedZ}, and read by {@link RenderPlanOptimizer} to skip
    * the material-grouping pass outright: when no draw pairing in the scope costs
@@ -94,7 +94,7 @@ export interface GroupScope {
   /**
    * The transform-group boundary node whose world matrix scopes this group's
    * draws, or `null` for a plain scope. Read live by the
-   * plan player at playback time — never captured — so a group move between
+   * plan player at playback time - never captured - so a group move between
    * collect and play (or across multi-render() bases) is always honored.
    */
   transformNode: RenderNode | null;

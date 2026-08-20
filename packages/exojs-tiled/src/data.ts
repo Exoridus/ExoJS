@@ -1,4 +1,4 @@
-// Raw Tiled JSON (TMJ/TSJ) interfaces — type-only mirrors of the on-disk
+// Raw Tiled JSON (TMJ/TSJ) interfaces - type-only mirrors of the on-disk
 // format. These types describe exactly what `JSON.parse` can produce for a
 // Tiled map/tileset file; they carry no behaviour and are never Loader
 // tokens. Parsed, validated runtime classes (TiledMap, TiledTileset,
@@ -60,7 +60,7 @@ export interface TiledAnimationFrameData {
 // ── Per-tile tileset definitions ────────────────────────────────────────────
 
 /**
- * A per-tile definition within a tileset's `tiles` array. Sparse — only
+ * A per-tile definition within a tileset's `tiles` array. Sparse - only
  * tiles carrying metadata (properties, animation, a collision objectgroup,
  * or a collection-of-images source) appear here.
  */
@@ -84,7 +84,7 @@ export interface TiledTileData {
 /**
  * One color (terrain) entry within a wangset's `colors` array.
  *
- * `tile` is the representative tile local id for this color (–1 if unset).
+ * `tile` is the representative tile local id for this color (-1 if unset).
  * `probability` is the relative spawn weight used by Tiled's random fill.
  */
 export interface TiledWangColorData {
@@ -112,9 +112,9 @@ export interface TiledWangTileData {
  * A wangset entry within a tileset's `wangsets` array.
  *
  * `type` is `'corner'`, `'edge'`, or `'mixed'` (Tiled 1.5+). Older files may
- * omit it or use other strings — treat unknown values as-is.
+ * omit it or use other strings - treat unknown values as-is.
  *
- * `tile` is the representative tile local id for this wangset (–1 if unset).
+ * `tile` is the representative tile local id for this wangset (-1 if unset).
  */
 export interface TiledWangSetData {
   readonly name: string;
@@ -131,7 +131,7 @@ export interface TiledWangSetData {
  * Where a tile object's stored `x`/`y` sits within the tile's bounding box
  * ({@link TiledTilesetData.objectalignment}).
  *
- * `'unspecified'` is Tiled's own default and is orientation-dependent — see
+ * `'unspecified'` is Tiled's own default and is orientation-dependent - see
  * {@link import('./objectAlignment').resolveTiledObjectAlignment}.
  */
 export type TiledObjectAlignment =
@@ -182,7 +182,7 @@ export interface TiledExternalTilesetRefData {
 /** A map's `tilesets[]` entry with the tileset embedded inline. */
 export type TiledEmbeddedTilesetRefData = TiledTilesetData & { readonly firstgid: number };
 
-/** One entry of {@link TiledMapData.tilesets} — either external (`source`) or embedded. */
+/** One entry of {@link TiledMapData.tilesets} - either external (`source`) or embedded. */
 export type TiledTilesetRefData = TiledExternalTilesetRefData | TiledEmbeddedTilesetRefData;
 
 // ── Objects ──────────────────────────────────────────────────────────────────

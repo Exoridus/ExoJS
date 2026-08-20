@@ -1,5 +1,5 @@
 /**
- * Render-fail surface (S3 diagnostics, minimal slice) — browser lane, real
+ * Render-fail surface (S3 diagnostics, minimal slice) - browser lane, real
  * WebGL2 driver (SwiftShader/ANGLE on Chromium, native GL on Firefox):
  * a custom material with intentionally broken GLSL must surface as a thrown
  * RenderError with code 'shader-compile' and the real driver log in detail.
@@ -115,7 +115,7 @@ describe('render-error surface WebGL2 browser', () => {
       expect(renderError.code).toBe('shader-compile');
       expect(renderError.message.toLowerCase()).toContain('shader');
       // Real SwiftShader/ANGLE (Chromium) and native (Firefox) info-log text
-      // differs — assert loosely on the driver log presence.
+      // differs - assert loosely on the driver log presence.
       expect(renderError.detail ?? '').toMatch(/ERROR|error/);
     } finally {
       mesh.destroy();
@@ -125,7 +125,7 @@ describe('render-error surface WebGL2 browser', () => {
         backend.destroy();
       } catch {
         // destroy() re-flushes the active renderer, which re-binds the broken
-        // shader — the same persistent RenderError. Expected here.
+        // shader - the same persistent RenderError. Expected here.
       }
     }
   });

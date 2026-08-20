@@ -9,14 +9,14 @@ import { mountControls } from '@examples/runtime';
 //
 //   1. A hand-built `TileMap` is rendered with a `TileMapNode` (tilemap
 //      extension installed below).
-//   2. An `ObjectLayer` carries the level's solid regions — exactly the data a
+//   2. An `ObjectLayer` carries the level's solid regions - exactly the data a
 //      Tiled "collision" object layer would hold.
 //   3. `buildCollidersFromObjectLayer` (the shared bridge recipe) walks that
 //      layer and adds one static `PhysicsBody` per region to the world.
 //   4. A dynamic actor is dropped in with `world.attach` and falls onto the
 //      generated colliders, bouncing between the walls.
 //
-// The green outlines are the physics debug overlay — every outline was built
+// The green outlines are the physics debug overlay - every outline was built
 // from an object-layer rectangle by the bridge, so they line up with the tiles.
 
 const TILE = 64;
@@ -191,7 +191,7 @@ const app = new Application({
     },
     clearColor: new Color(38, 46, 66),
     // The tilemap extension wires the per-backend tile chunk renderers so
-    // TileMapNode can draw. Physics is a plain library — no extension needed.
+    // TileMapNode can draw. Physics is a plain library - no extension needed.
     extensions: [tilemapExtension],
 });
 

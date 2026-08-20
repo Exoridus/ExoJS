@@ -49,7 +49,7 @@ export const particlesExtension: Extension = Object.freeze({
 
 /**
  * Create a Particles extension with custom configuration.
- * Returns an application-local descriptor — safe to pass to one
+ * Returns an application-local descriptor - safe to pass to one
  * `Application` only. For shared use, prefer {@link particlesExtension}.
  *
  * @example

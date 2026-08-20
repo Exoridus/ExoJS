@@ -24,7 +24,7 @@ import { BrowserPlatform } from '#platform/BrowserPlatform';
  * `ChannelEventBatch`, exactly like `InputManager._recordChannelChanges`
  * does for a single-channel range. `setBatch()` mimics several channels
  * written TOGETHER by one real-world event (e.g. a pointer's whole slot) as
- * ONE batch — for tests specifically about batch-vs-per-channel evaluation.
+ * ONE batch - for tests specifically about batch-vs-per-channel evaluation.
  * `frame()` closes the frame (clearing the batch log and bumping `frameId`,
  * mirroring `InputManager.update`).
  */
@@ -228,7 +228,7 @@ describe('ButtonAction', () => {
     expect(action.pressed).toBe(true);
     expect(action.active).toBe(true);
 
-    // A second, alternative source taps on its own — the aggregate never
+    // A second, alternative source taps on its own - the aggregate never
     // drops below threshold because Space stays held throughout.
     frame();
     set(GamepadButton.South, 1);
@@ -502,7 +502,7 @@ describe('ActionMap', () => {
   it('rejects a `__proto__` action name (prototype-pollution vector via Object.assign)', () => {
     // Object literal syntax special-cases a LITERAL `__proto__:` key as a
     // prototype-set, not an own enumerable property, so `Object.entries`
-    // would never see it — a computed key produces a genuine own property
+    // would never see it - a computed key produces a genuine own property
     // instead, exercising the actual `Object.assign(this, actions)` hazard.
     const action = new ButtonAction(Keyboard.Space);
 
@@ -528,7 +528,7 @@ describe('ActionMap', () => {
     const crash = new ButtonAction(Keyboard.A);
 
     // `crash` collides with a reserved name, so this whole construction
-    // throws — `jump`, validated earlier in the same call, must NOT end up
+    // throws - `jump`, validated earlier in the same call, must NOT end up
     // permanently claimed by a map that was never actually built.
     expect(() => new ActionMap({ jump, _actions: crash })).toThrow(/reserved/i);
 
@@ -597,7 +597,7 @@ describe('ActionMap', () => {
     const { sample, set } = createSample();
     const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
 
-    // Activity recorded into the shared batch log BEFORE this map attaches —
+    // Activity recorded into the shared batch log BEFORE this map attaches -
     // e.g. another consumer's channel changing earlier in the same real
     // frame's processing, ahead of this map ever being asked to watch.
     set(Keyboard.Space, 1);
@@ -616,7 +616,7 @@ describe('ActionMap', () => {
 
     map._update(sample);
 
-    // Space was already held BEFORE this map started watching — seeded as
+    // Space was already held BEFORE this map started watching - seeded as
     // an already-active baseline, not a synthetic press.
     expect(map.jump.active).toBe(true);
     expect(map.jump.pressed).toBe(false);
@@ -665,7 +665,7 @@ describe('ActionMap', () => {
     map._update(sample);
 
     // The watermark in effect is the SECOND owner's, captured at the second
-    // attach — the pre-existing press is seeded as already-active, not a
+    // attach - the pre-existing press is seeded as already-active, not a
     // synthetic press, exactly as a fresh single attach would see it.
     expect(map.jump.active).toBe(true);
     expect(map.jump.pressed).toBe(false);
@@ -737,7 +737,7 @@ describe('ActionMap × InputManager lifecycle', () => {
 
     expect(map.attached).toBe(true);
 
-    // Still tracked by `other` only — `im` must have let go of it.
+    // Still tracked by `other` only - `im` must have let go of it.
     im.preUpdate(0 as never);
     other.preUpdate(0 as never);
 
@@ -761,7 +761,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     expect(map.jump.active).toBe(true);
     expect(map.jump.pressed).toBe(true);
 
-    // The map moves to a different manager — an entirely unrelated channel
+    // The map moves to a different manager - an entirely unrelated channel
     // buffer, where Space was never pressed.
     other.attach(map);
     other.preUpdate(0 as never);
@@ -797,7 +797,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     im.preUpdate(0 as never);
     expect(map.jump.pressed).toBe(true);
 
-    // Simulate a scene suspend: detach, reset — key stays physically held.
+    // Simulate a scene suspend: detach, reset - key stays physically held.
     map.detach();
     map._reset();
     expect(map.jump.active).toBe(false);
@@ -828,7 +828,7 @@ describe('ActionMap × InputManager lifecycle', () => {
     im.attach(map);
 
     // Released strictly after attach, but still before the map is ever
-    // updated — a watermark alone would exclude this channel from the
+    // updated - a watermark alone would exclude this channel from the
     // action's live-value seed (it IS touched by a post-watermark batch)
     // without the attach-moment snapshot supplying its true held value, so
     // the release would look like an already-0 channel instead of a real

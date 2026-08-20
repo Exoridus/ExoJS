@@ -11,12 +11,12 @@ const lookupSize = 256;
 /**
  * Multiplies every live particle's velocity by a curve sampled at the
  * particle's current `elapsed / lifetime` ratio. The same scalar is applied
- * to both axes — the direction is preserved, only the magnitude scales.
+ * to both axes - the direction is preserved, only the magnitude scales.
  *
  * Common patterns:
- * - **Snappy spawn, slow drift:** `[0,1]→[1,0.1]` — fast initial motion
+ * - **Snappy spawn, slow drift:** `[0,1]→[1,0.1]` - fast initial motion
  *   that decays over lifetime.
- * - **Late acceleration:** `[0,0.2]→[1,1]` — particles ease in.
+ * - **Late acceleration:** `[0,0.2]→[1,1]` - particles ease in.
  * - **Pulse:** sine-shaped curve for breathing-style motion.
  *
  * Note: the curve **replaces** velocity each frame relative to the previous
@@ -65,8 +65,8 @@ export class VelocityOverLifetime extends UpdateModule {
 
   public override wgsl(): WgslContribution {
     // GPU path uses a different formulation: re-derive velocity from
-    // initial speed at t=0 by storing nothing — instead, scale relative
-    // to the previous sample stored in scales[idx] alpha? No — keep it
+    // initial speed at t=0 by storing nothing - instead, scale relative
+    // to the previous sample stored in scales[idx] alpha? No - keep it
     // simple and stateless: scale the integrated velocity by the
     // *ratio* of (current sample) / (sample at previous frame's t).
     // We approximate the previous t with `(elapsed - dt) / lifetime`.

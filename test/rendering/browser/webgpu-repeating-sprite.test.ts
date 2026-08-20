@@ -1,5 +1,5 @@
 /**
- * WebGPU RepeatingSprite browser tests — opt-in, capability-aware.
+ * WebGPU RepeatingSprite browser tests - opt-in, capability-aware.
  *
  * Validates both rendering paths:
  *  - Shader path: bare {@link Texture} source, UV tiling in WGSL, GPUSampler
@@ -7,7 +7,7 @@
  *  - Geometry path: {@link TextureRegion} source, Cartesian-product quads
  *    built on the CPU with clamped UVs.
  *
- * All WebGPU renderers use inline WGSL — no shader file mocks are needed.
+ * All WebGPU renderers use inline WGSL - no shader file mocks are needed.
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe); `renderScene` only skips when the software adapter
  * drops the device mid-test.

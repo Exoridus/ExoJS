@@ -5,7 +5,7 @@ import type { ArchetypeSpec, Backend, EngineAdapter } from '../EngineAdapter';
 import { cameraCenterAt, GRID_MARGIN, gridLayout, gridPosition, isScrolling, SPRITE_SIZE, VIEWPORT_HEIGHT, VIEWPORT_WIDTH, worldExtent } from '../world';
 
 /**
- * Pixi.js v8 arm of the rendering benchmark — the direct renderer comparison and
+ * Pixi.js v8 arm of the rendering benchmark - the direct renderer comparison and
  * the only other 2D library that ships WebGPU.
  *
  * This is a COMMITTED, official arm (pinned exact `pixi.js` devDependency). It
@@ -20,7 +20,7 @@ import { cameraCenterAt, GRID_MARGIN, gridLayout, gridPosition, isScrolling, SPR
  *
  * The harness owns frame cadence, so Pixi's own ticker is disabled (`autoStart`
  * false, `sharedTicker` false) and one frame is produced by a single explicit
- * `renderer.render(...)` — the same shape as the ExoJS adapter's one-call frame.
+ * `renderer.render(...)` - the same shape as the ExoJS adapter's one-call frame.
  */
 
 /** Peak per-axis displacement applied to a mutated leaf; small enough to never cross the viewport edge. */
@@ -36,7 +36,7 @@ const WOBBLE_SPEED = 0.15;
  */
 const CYCLED_BLEND_MODES = ['normal', 'add', 'multiply', 'screen'] as const;
 
-/** A pre-selected leaf sprite and its resting grid position — the only nodes `mutate` disturbs. */
+/** A pre-selected leaf sprite and its resting grid position - the only nodes `mutate` disturbs. */
 interface MutableLeaf {
   readonly sprite: Sprite;
   readonly baseX: number;
@@ -57,7 +57,7 @@ const EXPECTED_RENDERER_TYPE: Record<Backend, number> = {
 
 /**
  * Generate one of `total` visually distinct solid-colour textures from a small
- * canvas — the same construction the ExoJS arm uses, so the `batch-breaking`
+ * canvas - the same construction the ExoJS arm uses, so the `batch-breaking`
  * archetype breaks batches on both arms for the same reason (distinct GPU binds).
  */
 const createDistinctTexture = (index: number, total: number): Texture => {
@@ -86,7 +86,7 @@ const createDistinctTexture = (index: number, total: number): Texture => {
  * `default` is stock Pixi: it never culls, because Pixi culls only when the app
  * registers `CullerPlugin` (which hooks `Application.render`, a loop this
  * harness never runs) or calls `Culler.shared.cull(...)` itself. On an archetype
- * with off-screen content that arm therefore draws the whole world — Pixi's real
+ * with off-screen content that arm therefore draws the whole world - Pixi's real
  * out-of-the-box behaviour, and the honest upper bound.
  *
  * `culled` is the same arm plus the explicit per-frame cull call, i.e. what a
@@ -103,12 +103,12 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
   let root: Container | null = null;
   let textures: Texture[] = [];
   let mutableLeaves: MutableLeaf[] = [];
-  /** Leaf indices the most recent buildScene selected for mutation — the source of {@link EngineAdapter.mutationSignature}. */
+  /** Leaf indices the most recent buildScene selected for mutation - the source of {@link EngineAdapter.mutationSignature}. */
   let mutableIndices: number[] = [];
   /**
    * The archetype currently built, when it scrolls a camera; `null` otherwise.
-   * Pixi has no camera object, so the idiomatic equivalent — and what this arm
-   * does — is to translate the world container under a fixed screen rect. Same
+   * Pixi has no camera object, so the idiomatic equivalent - and what this arm
+   * does - is to translate the world container under a fixed screen rect. Same
    * visible content per frame as the ExoJS arm's view move; different mechanism,
    * disclosed in the report's Methodology.
    */
@@ -146,7 +146,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         powerPreference: 'high-performance',
         backgroundColor: 0x000000,
         antialias: false,
-        // The harness drives frames explicitly — never let Pixi start its own
+        // The harness drives frames explicitly - never let Pixi start its own
         // requestAnimationFrame render loop.
         autoStart: false,
         sharedTicker: false,
@@ -156,7 +156,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       if (instance.renderer.type !== EXPECTED_RENDERER_TYPE[target]) {
         const actual = instance.renderer.type;
 
-        // `removeView: false` — the harness owns the shared `#stage` canvas and
+        // `removeView: false` - the harness owns the shared `#stage` canvas and
         // reuses it across every cell; Pixi must never detach it from the DOM.
         instance.destroy({ removeView: false }, { children: true, texture: true });
 
@@ -186,8 +186,8 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
 
       // `spec.cullingEnabled` is `false` for every fully-visible archetype (see
       // `archetypes.ts` for the fairness rationale). On the `default` arm the
-      // flag is inert either way — Pixi acts on `.cullable` only when something
-      // calls `Culler.shared.cull(...)`, which that arm never does — and it is
+      // flag is inert either way - Pixi acts on `.cullable` only when something
+      // calls `Culler.shared.cull(...)`, which that arm never does - and it is
       // kept in sync with the ExoJS arm purely so both scenes stay a
       // byte-for-byte transcription of each other. On the `culled` arm it is
       // load-bearing: it is exactly the flag the per-frame cull in `renderFrame`
@@ -206,20 +206,20 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
 
       // World extent and grid come from the SAME shared helpers the ExoJS arm
       // uses (`world.ts`), so a scrolling archetype places the identical leaf at
-      // the identical world position on both arms — the layout counterpart of
+      // the identical world position on both arms - the layout counterpart of
       // the shared mutation selection below.
       const world = worldExtent(spec, VIEWPORT_WIDTH, VIEWPORT_HEIGHT);
       const layout = gridLayout(nodeCount, world.width, world.height, GRID_MARGIN);
       const overdraw = spec.id === 'overdraw';
 
-      // Shared, canonical mutation selection — the SAME helper the ExoJS arm
+      // Shared, canonical mutation selection - the SAME helper the ExoJS arm
       // routes through, so both arms select the byte-for-byte identical index set
       // and the harness's cross-arm determinism assertion holds.
       // Blend-mode plateaus, computed by the SAME formula as the ExoJS arm
       // (`adapters/exojs.ts`), so both arms hand the identical mode to the
       // identical leaf index. `spec.materialCount` is deliberately IGNORED here:
       // Pixi 8 has no per-Sprite custom-shader API, so the `mixed-material`
-      // archetype renders on this arm as plain `mixed-blend` — disclosed in
+      // archetype renders on this arm as plain `mixed-blend` - disclosed in
       // `ArchetypeSpec.materialCount` and in the report's Methodology, never
       // presented as a like-for-like row.
       const blendModeCount = Math.max(1, Math.min(spec.blendModeCount ?? 1, CYCLED_BLEND_MODES.length));
@@ -231,7 +231,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
 
       for (let i = 0; i < nodeCount; i++) {
         // Texture indexed by position WITHIN the spine bucket, not the global
-        // index — identical to the ExoJS arm, so the batch-breaking archetype
+        // index - identical to the ExoJS arm, so the batch-breaking archetype
         // overflows the batcher's texture slots the same way on both arms.
         const sprite = new Sprite(textures[Math.floor(i / spine.length) % textures.length]!);
 
@@ -346,7 +346,7 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
       scrollingSpec = null;
 
       if (app !== null) {
-        // `removeView: false` — keep the shared `#stage` canvas in the DOM for
+        // `removeView: false` - keep the shared `#stage` canvas in the DOM for
         // the next cell; `destroy(true, …)` would detach it and every later cell
         // would fail with "#stage not found".
         app.destroy({ removeView: false }, { children: true, texture: true });

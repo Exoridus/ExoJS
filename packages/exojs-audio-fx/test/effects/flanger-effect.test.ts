@@ -263,7 +263,7 @@ describe('FlangerEffect', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Setters — clamping and ramping
+  // Setters - clamping and ramping
   // -------------------------------------------------------------------------
 
   describe('delayMs setter', () => {

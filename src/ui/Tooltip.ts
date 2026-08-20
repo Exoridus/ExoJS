@@ -40,7 +40,7 @@ export interface TooltipOptions {
  * The target must have `interactive = true` for the hover signals to fire.
  * The show delay is driven by the target's app's {@link Application.onFrame}
  * rather than a wall-clock timer, so it freezes while `app.scenes.pause()`
- * is active instead of finishing in the background — and only starts
+ * is active instead of finishing in the background - and only starts
  * counting once the target is attached to a live app.
  *
  * @example
@@ -71,7 +71,7 @@ export class Tooltip {
 
   /**
    * Advances the pending show delay by real elapsed time, but only while the
-   * target's current scene is not paused — so `app.scenes.pause()` freezes a
+   * target's current scene is not paused - so `app.scenes.pause()` freezes a
    * tooltip about to appear exactly like it freezes everything else, instead
    * of the delay quietly finishing in the background.
    */
@@ -94,7 +94,7 @@ export class Tooltip {
   private readonly _onPointerOver = (event: InteractionEvent): void => {
     // `Pointer.x`/`Pointer.y` are raw design-pixel screen coordinates,
     // independent of camera pan/zoom/rotate (see InteractionEvent.x's doc,
-    // which contrasts the two) — the same space this tooltip's node is
+    // which contrasts the two) - the same space this tooltip's node is
     // positioned in, since it is always parented to the screen-space UI
     // layer. `event.x`/`event.y` read in `target`'s own layer space instead,
     // which for a world-tree target would drift under a moved camera.
@@ -130,7 +130,7 @@ export class Tooltip {
   private _scheduleShow(x: number, y: number): void {
     this._cancelTimer();
 
-    // Not attached to a live app — nothing to drive the delay (and, per
+    // Not attached to a live app - nothing to drive the delay (and, per
     // `_findUIRoot`, nothing that could show a tooltip either way).
     const app = this._target._getStage()?.app;
 
@@ -191,7 +191,7 @@ export class Tooltip {
   }
 
   /**
-   * Destroys (not just detaches) the current tooltip node — `destroy()`
+   * Destroys (not just detaches) the current tooltip node - `destroy()`
    * unlinks it from its parent itself (see `SceneNode.destroy`'s doc) and
    * recursively tears down its `Graphics`/`Text` children, so a hidden
    * tooltip's GPU-backed resources and signal listeners don't leak. Safe to

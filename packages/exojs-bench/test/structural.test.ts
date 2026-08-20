@@ -79,7 +79,7 @@ describe('attachWebGl2Probe', () => {
 /**
  * Fake WebGPU device graph mirroring the real submission chain: the device
  * mints a FRESH encoder per `createCommandEncoder`, and each encoder mints a
- * FRESH pass per `beginRenderPass` — exactly as real WebGPU (encoders and passes
+ * FRESH pass per `beginRenderPass` - exactly as real WebGPU (encoders and passes
  * are single-use), which is what lets the probe instrument each ephemeral object
  * once. Every terminal method appends to a shared `calls` log so tests can prove
  * the original was still invoked after counting.

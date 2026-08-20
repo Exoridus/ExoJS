@@ -48,7 +48,7 @@ function saveProfile(profile: BindingProfile): void {
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
     } catch {
-        // Non-fatal — persistence is best-effort.
+        // Non-fatal - persistence is best-effort.
     }
 }
 
@@ -150,7 +150,7 @@ class KeyRebindingScene extends Scene {
         this.graphics.fillColor = new Color(40, 48, 64);
         this.graphics.drawRectangle(0, this.groundY + 40, width, 4);
 
-        // Hero square — heroY is animated by the (rebindable) jump key.
+        // Hero square - heroY is animated by the (rebindable) jump key.
         this.graphics.fillColor = new Color(255, 190, 90);
         this.graphics.drawRectangle(width / 2 - 20, this.heroY, 40, 40);
 

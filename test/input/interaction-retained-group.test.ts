@@ -101,7 +101,7 @@ const createApp = (): {
   return { app, scene, signals };
 };
 
-/** A drawable with real 0..50 local bounds — hit-testing goes through the engine's contains(). */
+/** A drawable with real 0..50 local bounds - hit-testing goes through the engine's contains(). */
 const makeSprite = (): Drawable => {
   const sprite = new Drawable();
 
@@ -158,7 +158,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     child.onPointerDown.add(handler);
 
     // (25, 25) is inside the child's GROUP-LOCAL rect but on screen the child
-    // sits at 200..250 x 100..150 — a click here must miss.
+    // sits at 200..250 x 100..150 - a click here must miss.
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     im.preUpdate();
 
@@ -228,7 +228,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     child.onPointerDown.add(handler);
 
     // Oracle: lift the child's local center into world space via the real
-    // world matrix — the click there must hit.
+    // world matrix - the click there must hit.
     const worldCenter = new Vector(25, 25).transform(child.getWorldTransform());
 
     dispatchPointer(signals.onPointerDown, { x: worldCenter.x, y: worldCenter.y });
@@ -237,8 +237,8 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
     handler.mockClear();
 
-    // (250, 300) maps to group-local (-17.7, -17.7) — OUTSIDE the 0..50 rect
-    // (but inside where the unrotated AABB around the origin would reach) —
+    // (250, 300) maps to group-local (-17.7, -17.7) - OUTSIDE the 0..50 rect
+    // (but inside where the unrotated AABB around the origin would reach) -
     // must miss.
     dispatchPointer(signals.onPointerDown, { x: 250, y: 300 });
     im.preUpdate();
@@ -344,7 +344,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
 
     child.onPointerDown.add(handler);
 
-    // Identity group: the child's world rect is 0..50 — a click there hits.
+    // Identity group: the child's world rect is 0..50 - a click there hits.
     dispatchPointer(signals.onPointerDown, { x: 25, y: 25 });
     im.preUpdate();
     expect(handler).toHaveBeenCalledTimes(1);
@@ -382,7 +382,7 @@ describe('InteractionManager: hit-testing children of a translated RetainedConta
     const grandChild = makeSprite();
 
     // The barrier child escapes the group, taking its whole subtree to world
-    // space with it — so the interactive grandchild is world-quadtree-indexed.
+    // space with it - so the interactive grandchild is world-quadtree-indexed.
     barrierChild.cacheAsTexture = true;
     barrierChild.addChild(grandChild);
     group.addChild(barrierChild);

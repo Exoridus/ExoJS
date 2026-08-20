@@ -8,15 +8,15 @@ import { GATE_GROUPS, type GateGroup } from '../../scripts/ci/gate-groups';
 /**
  * Locks the required GitHub CI jobs (`.github/workflows/_ci-checks.yml`) to the
  * SAME gate set as the local `verify:quick` pre-push hook. Both sides run the
- * lists in `scripts/ci/gate-groups.ts` — the hook as `pnpm gates all`, CI as one
- * `pnpm gates <group>` per job — so a gate cannot drift out of CI by being
+ * lists in `scripts/ci/gate-groups.ts` - the hook as `pnpm gates all`, CI as one
+ * `pnpm gates <group>` per job - so a gate cannot drift out of CI by being
  * spelled out in only one of the two places, which is how the two gates fell
  * apart before.
  *
  * A group's `pnpm gates <group>` invocation is not enough on its own: it also
  * has to live in the job `EXPECTED_JOB_FOR_GROUP` says it belongs to, AND that
  * job has to be a dependency of `required-ci`. Otherwise a group can run in a
- * job nobody requires — green everywhere, but silently optional — which is the
+ * job nobody requires - green everywhere, but silently optional - which is the
  * same drift class the original job-block assertion guarded against, one level
  * up: not "gate missing from CI" but "gate runs in CI, just not where a merge
  * is blocked on it".
@@ -42,8 +42,8 @@ const groupNames = Object.keys(GATE_GROUPS) as GateGroup[];
 /**
  * The CI job each gate group is expected to run in. Kept as an explicit
  * per-group table (rather than re-deriving it from the workflow) so a group
- * quietly moving to the wrong job — or a new group shipping with no entry
- * here — shows up as a failing assertion instead of passing by construction.
+ * quietly moving to the wrong job - or a new group shipping with no entry
+ * here - shows up as a failing assertion instead of passing by construction.
  */
 const EXPECTED_JOB_FOR_GROUP = {
   typecheck: 'typecheck',

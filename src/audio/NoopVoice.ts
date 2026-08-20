@@ -8,7 +8,7 @@ import type { AudioEffect } from './AudioEffect';
 import type { DistanceModel, Voice } from './Playable';
 
 /**
- * An already-ended {@link Voice} returned for degenerate play calls — a seek
+ * An already-ended {@link Voice} returned for degenerate play calls - a seek
  * offset past the asset's duration, or a generator played before the
  * `AudioContext` is unlocked. All controls are inert; `ended` is `true` from
  * the start and {@link NoopVoice.onEnd} never fires.
@@ -37,7 +37,7 @@ export class NoopVoice implements Voice {
   }
 
   public set volume(_value: number) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get bus(): AudioBus {
@@ -45,15 +45,15 @@ export class NoopVoice implements Voice {
   }
 
   public set bus(_bus: AudioBus) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public fade(_to: number, _ms: number): void {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public stop(_fadeMs?: number): void {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public addEffect(_effect: AudioEffect): this {
@@ -64,7 +64,7 @@ export class NoopVoice implements Voice {
     return this;
   }
 
-  // Spatializable — inert like the rest of this class. A voice that has
+  // Spatializable - inert like the rest of this class. A voice that has
   // already ended has nowhere to place a panner, but the getters still answer
   // with the documented defaults so a caller that positions a voice without
   // checking `ended` reads back something coherent.
@@ -74,11 +74,11 @@ export class NoopVoice implements Voice {
   }
 
   public set position(_value: Vector | { x: number; y: number } | null) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public follow(_node: SceneNode | null): void {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get distanceModel(): DistanceModel {
@@ -86,7 +86,7 @@ export class NoopVoice implements Voice {
   }
 
   public set distanceModel(_value: DistanceModel) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get refDistance(): number {
@@ -94,7 +94,7 @@ export class NoopVoice implements Voice {
   }
 
   public set refDistance(_value: number) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get maxDistance(): number {
@@ -102,7 +102,7 @@ export class NoopVoice implements Voice {
   }
 
   public set maxDistance(_value: number) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get rolloffFactor(): number {
@@ -110,7 +110,7 @@ export class NoopVoice implements Voice {
   }
 
   public set rolloffFactor(_value: number) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get panningModel(): PanningModelType | null {
@@ -118,7 +118,7 @@ export class NoopVoice implements Voice {
   }
 
   public set panningModel(_value: PanningModelType | null) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get orientation(): number {
@@ -126,7 +126,7 @@ export class NoopVoice implements Voice {
   }
 
   public set orientation(_value: number) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get coneInnerAngle(): number {
@@ -134,7 +134,7 @@ export class NoopVoice implements Voice {
   }
 
   public set coneInnerAngle(_value: number) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get coneOuterAngle(): number {
@@ -142,7 +142,7 @@ export class NoopVoice implements Voice {
   }
 
   public set coneOuterAngle(_value: number) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get coneOuterGain(): number {
@@ -150,7 +150,7 @@ export class NoopVoice implements Voice {
   }
 
   public set coneOuterGain(_value: number) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 
   public get velocity(): Vector | null {
@@ -158,6 +158,6 @@ export class NoopVoice implements Voice {
   }
 
   public set velocity(_value: Vector | { x: number; y: number } | null) {
-    // inert — the voice already ended
+    // inert - the voice already ended
   }
 }

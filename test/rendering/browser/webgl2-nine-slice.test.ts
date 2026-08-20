@@ -176,7 +176,7 @@ describe('WebGL2 NineSliceSprite', () => {
       expectPixelNear(readWebGl2Pixel(backend, 32, 32), colors.center);
 
       // Corner/edge boundary sharpness (horizontal): the TL corner column
-      // ends exactly at dest x=20 — one pixel inside remains corner colour,
+      // ends exactly at dest x=20 - one pixel inside remains corner colour,
       // one pixel past the boundary is already the (stretched) edge colour.
       expectPixelNear(readWebGl2Pixel(backend, 19, 14), colors.tl);
       expectPixelNear(readWebGl2Pixel(backend, 21, 14), colors.top);
@@ -211,7 +211,7 @@ describe('WebGL2 NineSliceSprite', () => {
 
       render(backend, root);
 
-      // Corner centers — each corner's footprint matches its own border size.
+      // Corner centers - each corner's footprint matches its own border size.
       expectPixelNear(readWebGl2Pixel(backend, 4, 8), colors.tl); // 8x16
       expectPixelNear(readWebGl2Pixel(backend, 52, 8), colors.tr); // 24x16
       expectPixelNear(readWebGl2Pixel(backend, 4, 48), colors.bl); // 8x32
@@ -230,7 +230,7 @@ describe('WebGL2 NineSliceSprite', () => {
       // exact integer seam: still inside the top-left corner just before its
       // row boundary (y=16), then already past the (smaller) left border
       // (x=8) into the top edge, then already past the top border into the
-      // left edge — proving left/top were honoured independently rather than
+      // left edge - proving left/top were honoured independently rather than
       // forced symmetric with right/bottom.
       expectPixelNear(readWebGl2Pixel(backend, 4, 12), colors.tl);
       expectPixelNear(readWebGl2Pixel(backend, 12, 8), colors.top);

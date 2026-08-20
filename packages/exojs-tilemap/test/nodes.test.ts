@@ -132,7 +132,7 @@ describe('TileLayerNode', () => {
     });
     const node = new TileLayerNode(layer);
 
-    // Construction must NOT apply a parallax shift — the shift is render-time only.
+    // Construction must NOT apply a parallax shift - the shift is render-time only.
     expect(node.x).toBe(10);
     expect(node.y).toBe(20);
   });
@@ -187,7 +187,7 @@ describe('TileLayerNode', () => {
 
     // The cull test runs before the collect-time parallax patch, so a bounded
     // parallax layer's static bounds no longer match its render-time position
-    // — it must opt out of culling entirely, exactly like an unbounded layer.
+    // - it must opt out of culling entirely, exactly like an unbounded layer.
     expect(node.cullable).toBe(false);
   });
 
@@ -437,7 +437,7 @@ describe('TileMapNode', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapNode — interleaved image layers
+// TileMapNode - interleaved image layers
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapNode interleaved image layers', () => {
@@ -855,7 +855,7 @@ describe('TileLayerNode structural-listener reaction', () => {
     const node = new TileLayerNode(layer);
     node.refresh(); // establishes _syncedOpacity=0.5/_syncedTint=0x00ff00 via the initial build's _syncTint()
 
-    // Opacity/tint are unchanged since the initial sync — a naive `_syncTint()`
+    // Opacity/tint are unchanged since the initial sync - a naive `_syncTint()`
     // call would short-circuit on its own change-detection guard and skip the
     // newly-added node entirely.
     layer._adoptChunk(1, 0, {

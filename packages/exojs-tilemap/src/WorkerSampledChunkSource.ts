@@ -58,7 +58,7 @@ export interface WorkerSampledChunkSourceOptions {
   /**
    * Convert a sampled value (and its absolute tile coordinate) into a
    * resolved tile, or `null` for an empty cell. Always runs on the main
-   * thread — a `ResolvedTile` references a `TileSet`/`Texture`, neither of
+   * thread - a `ResolvedTile` references a `TileSet`/`Texture`, neither of
    * which can cross a `postMessage` boundary. Must be pure and
    * deterministic, same requirement as
    * {@link import('./SampledChunkSource').SampledChunkSourceOptions.mapValueToTile}.
@@ -101,23 +101,23 @@ interface PendingRequest {
 
 /**
  * Build a {@link import('./ChunkStreamer').ChunkStreamer}-ready
- * {@link ChunkSource} that samples off the main thread via a Web Worker —
+ * {@link ChunkSource} that samples off the main thread via a Web Worker -
  * the async counterpart to
  * {@link import('./SampledChunkSource').createSampledChunkSource}, for
  * sampling functions expensive enough to want off-thread execution.
  *
  * Unlike the synchronous provider, sampling logic cannot be passed as a
- * live function — functions cannot cross a `postMessage` boundary. Instead
+ * live function - functions cannot cross a `postMessage` boundary. Instead
  * {@link WorkerSampledChunkSourceOptions.workerSource} is a self-contained
  * worker script string; see its documentation for the protocol.
  *
  * The returned value's `destroy()` MUST be called when done with it (e.g.
- * alongside your `ChunkStreamer.destroy()` call) — the underlying `Worker`
+ * alongside your `ChunkStreamer.destroy()` call) - the underlying `Worker`
  * is a real resource that leaks otherwise. `ChunkSource` itself has no
  * lifecycle hook, so this is not automatic.
  *
  * Implementation note: `workerSource` is Blob-URL'd into a real `Worker`
- * (`new Blob([workerSource])` → `URL.createObjectURL` → `new Worker(url)`) —
+ * (`new Blob([workerSource])` → `URL.createObjectURL` → `new Worker(url)`) -
  * the same technique {@link import('@codexo/exojs').WorkletEffect} already
  * uses for AudioWorklet processors. This is bundler-agnostic (no special
  * config needed in Vite/webpack/etc.) but requires a Content-Security-Policy
@@ -152,7 +152,7 @@ export function createWorkerSampledChunkSource(
     let out: Uint32Array | null = null;
     for (let ty = startTy; ty < startTy + chunkHeight; ty++) {
       for (let tx = startTx; tx < startTx + chunkWidth; tx++) {
-        // Bounded-layer edge chunks may be smaller than a full chunk — same
+        // Bounded-layer edge chunks may be smaller than a full chunk - same
         // clamp createSampledChunkSource applies, computed here (not asked
         // of the worker) since only this side knows the layer's bounds.
         if (layer.width !== undefined && layer.height !== undefined && (tx >= layer.width || ty >= layer.height)) continue;

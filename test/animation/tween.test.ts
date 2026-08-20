@@ -181,11 +181,11 @@ describe('Tween', () => {
       const sprite = makeSprite(0);
       const tween = new Tween(sprite).to({ x: 100 }, 1.0).repeat(1).yoyo().start();
 
-      // End of cycle 1 — x should be at target
+      // End of cycle 1 - x should be at target
       tween.update(1.0);
       expect(sprite.x).toBeCloseTo(100, 5);
 
-      // End of cycle 2 — x should be back at start (reversed)
+      // End of cycle 2 - x should be back at start (reversed)
       tween.update(1.0);
       expect(sprite.x).toBeCloseTo(0, 5);
     });

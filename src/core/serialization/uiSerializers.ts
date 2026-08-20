@@ -16,7 +16,7 @@ const num = (value: unknown): number | undefined => (typeof value === 'number' &
 
 // Widget composition note: widgets own internal children (a Label's Text, a
 // Panel's background Graphics, a ScrollContainer's content Container, etc.) that
-// their constructors rebuild — those are never serialized. Only user-added
+// their constructors rebuild - those are never serialized. Only user-added
 // children of the container widgets (Panel, ScrollContainer, Stack, UIRoot)
 // round-trip; for ScrollContainer those live one level down, inside `content`.
 // Anchoring (anchorIn) references a UIRoot and is not serialized; the resolved

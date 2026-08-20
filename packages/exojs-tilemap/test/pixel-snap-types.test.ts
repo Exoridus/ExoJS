@@ -55,18 +55,18 @@ describe('PixelSnapMode type contracts', () => {
     layerNode.pixelSnapMode = PixelSnapMode.Geometry;
 
     // … invalid ones do not.
-    // @ts-expect-error — the legacy 'none' string is not a PixelSnapMode
+    // @ts-expect-error - the legacy 'none' string is not a PixelSnapMode
     sprite.pixelSnapMode = 'none';
-    // @ts-expect-error — the legacy 'geometry' string is not a PixelSnapMode
+    // @ts-expect-error - the legacy 'geometry' string is not a PixelSnapMode
     nineSlice.pixelSnapMode = 'geometry';
-    // @ts-expect-error — a widened string is not narrowable to PixelSnapMode
+    // @ts-expect-error - a widened string is not narrowable to PixelSnapMode
     drawable.pixelSnapMode = String('none');
-    // @ts-expect-error — arbitrary strings are not PixelSnapMode
+    // @ts-expect-error - arbitrary strings are not PixelSnapMode
     view.pixelSnapMode = 'bogus';
-    // @ts-expect-error — out-of-domain numeric literals are not PixelSnapMode
+    // @ts-expect-error - out-of-domain numeric literals are not PixelSnapMode
     mapNode.pixelSnapMode = 7;
     // A widened `number` IS statically assignable to a numeric enum (TypeScript
-    // semantics) — the runtime setter guard is what rejects out-of-domain
+    // semantics) - the runtime setter guard is what rejects out-of-domain
     // values there, covered by the invalid-value tests in pixel-snap.test.ts.
     layerNode.pixelSnapMode = Number(1);
   });

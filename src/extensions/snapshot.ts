@@ -8,7 +8,7 @@ export interface ExtensionSnapshot {
   readonly serializers: readonly SerializerBinding[];
 }
 
-// Shared empty singleton — zero allocation for extensions: [] selection.
+// Shared empty singleton - zero allocation for extensions: [] selection.
 const emptySnapshot: ExtensionSnapshot = Object.freeze({
   extensions: Object.freeze([]),
   renderers: Object.freeze([]),
@@ -20,10 +20,10 @@ export { emptySnapshot as EMPTY_SNAPSHOT };
 
 /**
  * Freeze an extension descriptor and its nested arrays in development builds.
- * Idempotent — safe to call on already-frozen descriptors.
+ * Idempotent - safe to call on already-frozen descriptors.
  * Called from buildSnapshot (every visited extension) so global and local
  * descriptors receive consistent treatment.
- * @param ext — the descriptor to freeze
+ * @param ext - the descriptor to freeze
  * @internal
  */
 export function freezeExtension(ext: Extension): void {
@@ -32,7 +32,7 @@ export function freezeExtension(ext: Extension): void {
   Object.freeze(ext);
 
   if (ext.dependencies) {
-    // Only freeze the array — do not recursively mutate dependency descriptors.
+    // Only freeze the array - do not recursively mutate dependency descriptors.
     // Each dependency is frozen individually when visited during buildSnapshot.
     Object.freeze(ext.dependencies);
   }
@@ -90,7 +90,7 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
   const ordered: Extension[] = [];
 
   function visit(ext: Extension): void {
-    // (1) Reserve ID + mismatch check FIRST — before dependency traversal.
+    // (1) Reserve ID + mismatch check FIRST - before dependency traversal.
     //     This catches nested same-id/different-object descriptors immediately.
     const existing = byId.get(ext.id);
 
@@ -102,10 +102,10 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
       byId.set(ext.id, ext);
     }
 
-    // (2) Already fully processed — diamond / shared dependency.
+    // (2) Already fully processed - diamond / shared dependency.
     if (visited.has(ext)) return;
 
-    // (3) Back-edge in current DFS stack — cycle.
+    // (3) Back-edge in current DFS stack - cycle.
     if (visiting.has(ext)) {
       const cyclePath = [...stack.slice(stack.indexOf(ext)), ext].map(e => e.id).join(' → ');
       throw new Error(`Extension dependency cycle detected: ${cyclePath}`);
@@ -122,7 +122,7 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
     stack.pop();
     visiting.delete(ext);
 
-    // (5) Finalise — remove from in-progress, mark as fully processed, push to output.
+    // (5) Finalise - remove from in-progress, mark as fully processed, push to output.
     visited.add(ext);
     ordered.push(ext);
 
@@ -134,7 +134,7 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
 
   for (const ext of input) visit(ext);
 
-  // Flatten in topological (post-order) order — deps before dependents.
+  // Flatten in topological (post-order) order - deps before dependents.
   const renderers: RendererBinding[] = [];
   const assets: AssetBinding[] = [];
   const serializers: SerializerBinding[] = [];

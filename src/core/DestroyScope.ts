@@ -3,7 +3,7 @@ import type { Destroyable } from './types';
 /**
  * Ownership container for {@link Destroyable} resources. Items registered with
  * {@link track} are destroyed in reverse registration order when the scope
- * itself is destroyed — the spine of ExoJS's ownership-driven cleanup.
+ * itself is destroyed - the spine of ExoJS's ownership-driven cleanup.
  *
  * A {@link Scene} owns one for its whole lifetime, exposed as `Scene.track`.
  * An `Application` does not: it creates one for the duration of its

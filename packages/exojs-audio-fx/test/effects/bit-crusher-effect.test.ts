@@ -257,7 +257,7 @@ describe('BitCrusherEffect', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Setters before ready (worklet node not yet created — _setAudioParam no-ops)
+  // Setters before ready (worklet node not yet created - _setAudioParam no-ops)
   // -------------------------------------------------------------------------
   describe('setters before worklet is ready', () => {
     it('bits setter updates the internal value without throwing', () => {

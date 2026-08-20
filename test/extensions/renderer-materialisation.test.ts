@@ -181,7 +181,7 @@ describe('materializeRendererBindings', () => {
     const binding: RendererBinding = { targets: [CustomDrawableA], create: () => renderer };
     materializeRendererBindings(backend, [binding]);
 
-    // First resolution — walks prototype chain
+    // First resolution - walks prototype chain
     const drawable = new CustomDrawableA();
     backend.rendererRegistry.resolve(drawable);
 
@@ -204,7 +204,7 @@ describe('materializeRendererBindings', () => {
     // Warm up cache
     backend.rendererRegistry.resolve(new CustomDrawableA());
 
-    // Add new binding — should invalidate cache
+    // Add new binding - should invalidate cache
     backend.rendererRegistry.bindRenderer([CustomDrawableC], rendererC);
     expect(backend.rendererRegistry.resolve(new CustomDrawableC())).toBe(rendererC);
   });

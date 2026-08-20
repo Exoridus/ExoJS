@@ -5,7 +5,7 @@
  * promotion) is expressed against this interface rather than calling
  * `child_process` directly. Production code injects {@link createExecRunner}
  * (real processes); tests inject a fake runner that pattern-matches argv and
- * returns scripted results — so every publish ordering, idempotent-resume and
+ * returns scripted results - so every publish ordering, idempotent-resume and
  * partial-failure path is exercised without a real npm registry or network.
  */
 import { spawnSync } from 'node:child_process';
@@ -31,7 +31,7 @@ export interface CommandRunner {
 
 /**
  * Real runner: executes the process synchronously and captures output. Never
- * throws on a non-zero exit — the orchestration inspects `code` and decides.
+ * throws on a non-zero exit - the orchestration inspects `code` and decides.
  */
 export const createExecRunner = (options: { echo?: boolean } = {}): CommandRunner => ({
   run({ command, args, cwd }) {

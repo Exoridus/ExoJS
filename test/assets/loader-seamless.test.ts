@@ -144,10 +144,10 @@ describe('Loader seamless get (Texture)', () => {
   test('a handler that legitimately resolves to null/undefined stores that value (presence, not truthiness)', async () => {
     const loader = createCoreLoader();
 
-    // A bindAsset-bound custom type (adapterless — no seamless adapter, no
+    // A bindAsset-bound custom type (adapterless - no seamless adapter, no
     // value channel) whose handler resolves `null`/`undefined` as the actual
     // stored resource. The residency store must distinguish "never loaded" from
-    // "loaded, and the resource itself is nullish" — presence, not truthiness (a
+    // "loaded, and the resource itself is nullish" - presence, not truthiness (a
     // `Map.has()` check, not a `!== null` check on the read value). Observable
     // through the load fast path: a re-load of a stored nullish resource must
     // NOT re-invoke the handler.
@@ -236,7 +236,7 @@ describe('Loader seamless get (Texture)', () => {
     loader.load(catalog, { priority: LoadPriority.Background });
 
     // A bare get() for the same source returns the adopted leaf, whose sampler
-    // options were baked at createPlaceholder — not just applied at fetch time.
+    // options were baked at createPlaceholder - not just applied at fetch time.
     const handle = loader.get('ship.png');
     expect(handle.scaleMode).toBe(ScaleModes.Nearest);
 
@@ -284,7 +284,7 @@ describe('Loader seamless get (Texture)', () => {
     await expect(handle.loaded).rejects.toThrow('unloaded while');
     expect(handle.loadState).toBe('failed');
 
-    // Fetch mock is still OK — a later get() must retry and heal the SAME handle.
+    // Fetch mock is still OK - a later get() must retry and heal the SAME handle.
     const again = loader.get('ship.png');
 
     expect(again).toBe(handle);
@@ -496,9 +496,9 @@ describe('Loader seamless get (Texture)', () => {
 
     expectTypeOf(loader.get('ship.png')).toEqualTypeOf<Texture>();
     expectTypeOf(loader.get('sprites/hero.jpeg')).toEqualTypeOf<Texture>();
-    // @ts-expect-error — BmFont is not seamless in slice 2
+    // @ts-expect-error - BmFont is not seamless in slice 2
     void (() => loader.get('fonts/ui.fnt'));
-    // @ts-expect-error — unregistered extension
+    // @ts-expect-error - unregistered extension
     void (() => loader.get('theme.custom'));
   });
 

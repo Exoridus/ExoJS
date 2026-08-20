@@ -230,7 +230,7 @@ describe('CacheFirstStrategy', () => {
       await expect(strategy.resolve(makeRequest({ factory, reportCacheError }), [store])).resolves.toBe('resource:fresh-source');
 
       // A store that reliably serves corrupt entries and deletes them cleanly
-      // was previously invisible — the discard is the evidence of corruption.
+      // was previously invisible - the discard is the evidence of corruption.
       expect(store.delete).toHaveBeenCalledWith('test', 'alias');
       expect(reported).toHaveLength(1);
       expect(reported[0]!.operation).toBe('load');
@@ -284,7 +284,7 @@ describe('CacheFirstStrategy', () => {
 
       const strategy = new CacheFirstStrategy();
 
-      // `reportCacheError` is optional — omitting it must not turn a degraded
+      // `reportCacheError` is optional - omitting it must not turn a degraded
       // cache write into a failed load.
       await expect(strategy.resolve(makeRequest({ factory }), [store])).resolves.toBe('resource:processed');
     });

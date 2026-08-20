@@ -31,7 +31,7 @@ class TestSprite extends Drawable {
     this._height = height;
     // What a real node does whenever its geometry changes: cascade the bounds
     // invalidation, so the interaction manager learns the node has to be
-    // re-indexed — and that whatever sits under a resting pointer may have
+    // re-indexed - and that whatever sits under a resting pointer may have
     // changed with it.
     this._invalidateBoundsCascade();
 
@@ -53,7 +53,7 @@ class TestSprite extends Drawable {
  * A container whose world bounds are set directly, for deterministic
  * `clipShape: null` tests. Named `_fixedBounds` (not `_bounds`) to avoid
  * colliding with `SceneNode`'s own protected `_bounds` cache field, which is
- * a `Bounds` instance, not a `Rectangle` — shadowing it silently corrupts the
+ * a `Bounds` instance, not a `Rectangle` - shadowing it silently corrupts the
  * base class's own bounds machinery.
  */
 class TestClipContainer extends Container {
@@ -78,7 +78,7 @@ interface MockPointerOptions {
   id?: number;
   x?: number;
   y?: number;
-  /** Press excursion so far — what the drag threshold is compared against. */
+  /** Press excursion so far - what the drag threshold is compared against. */
   travelled?: number;
 }
 
@@ -148,7 +148,7 @@ const createApp = (): {
     focus: { focused: null, focus() {}, blur: vi.fn(), _notifyNodeRemoved() {} },
     // Default centered camera: design-space pointer coords pass through to
     // world space unchanged (identity screenToWorld). `screenView` uses the
-    // same identity mapping — tests that need to distinguish UI vs world
+    // same identity mapping - tests that need to distinguish UI vs world
     // space position their nodes accordingly.
     rendering: {
       view: {
@@ -223,7 +223,7 @@ const createAppNoScene = (
 
 /**
  * Flush all pending interaction events. Because InteractionManager is now
- * tick-based, signal handlers only enqueue events — call this after each
+ * tick-based, signal handlers only enqueue events - call this after each
  * `signals.onPointerXxx.dispatch()` to actually run hit-testing and fire
  * node listeners.
  */
@@ -302,7 +302,7 @@ describe('InteractionManager — hit-test basics', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. Z-order — top child wins
+// 2. Z-order - top child wins
 // ---------------------------------------------------------------------------
 
 describe('InteractionManager — z-order', () => {
@@ -336,7 +336,7 @@ describe('InteractionManager — z-order', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 3. Bubble — child + parent both interactive
+// 3. Bubble - child + parent both interactive
 // ---------------------------------------------------------------------------
 
 describe('InteractionManager — bubbling', () => {
@@ -569,7 +569,7 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
     flushInteractions(im);
     expect(overHandler).toHaveBeenCalledTimes(1);
 
-    // Move off the sprite entirely — no node under the pointer any more.
+    // Move off the sprite entirely - no node under the pointer any more.
     dispatchPointer(signals.onPointerMove, { x: 500, y: 500 });
     flushInteractions(im);
 
@@ -595,7 +595,7 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
 
     const bOver = vi.fn();
 
-    // A's own pointerout handler reaches out and destroys B — the node the
+    // A's own pointerout handler reaches out and destroys B - the node the
     // SAME flush is about to dispatch pointerover on next.
     spriteA.onPointerOut.add(() => spriteB.destroy());
     spriteB.onPointerOver.add(bOver);
@@ -630,7 +630,7 @@ describe('InteractionManager — pointerover / pointerout on move', () => {
     }).not.toThrow();
 
     // The node that was just hovered destroyed itself from inside its own
-    // pointerover handler — it must not linger as the recorded hover target.
+    // pointerover handler - it must not linger as the recorded hover target.
     expect(im.getHoveredNode()).toBeNull();
 
     im.destroy();
@@ -659,7 +659,7 @@ describe('InteractionManager — hover tracks scene changes under a stationary p
     flushInteractions(im);
     expect(im.getHoveredNode()).toBe(sprite);
 
-    // The pointer never moves — the node does.
+    // The pointer never moves - the node does.
     sprite.setBounds(200, 200, 50, 50);
     flushInteractions(im);
 
@@ -813,7 +813,7 @@ describe('InteractionManager — removing or disabling a hovered node balances e
 
     // `destroy()` raises the destroyed flag before it unlinks, so detach-time
     // observers see a node that is going away rather than one being
-    // reparented — focus suppresses `onBlur` the same way. A node coming back
+    // reparented - focus suppresses `onBlur` the same way. A node coming back
     // from a pool is removed, not destroyed, and does get its `pointerout`.
     expect(outHandler).not.toHaveBeenCalled();
     expect(im.getHoveredNode()).toBeNull();
@@ -961,7 +961,7 @@ describe('InteractionManager — phase-consistent event coordinates', () => {
     let seenPointerX: number | null = null;
 
     // The pointer's mock `x` is its LIVE field (set once, at dispatch time,
-    // by the test harness below) — a real Pointer always reads live too (see
+    // by the test harness below) - a real Pointer always reads live too (see
     // Pointer.position's own doc comment); it is deliberately not what a
     // handler should read for "where did THIS phase happen".
     sprite.onPointerDown.add(event => {
@@ -973,7 +973,7 @@ describe('InteractionManager — phase-consistent event coordinates', () => {
 
     signals.onPointerDown.dispatch(pointer, 50, 50);
     // Mutate the mock pointer's live field to a LATER value, exactly as a
-    // same-frame Move happening after Down would leave it — proving a
+    // same-frame Move happening after Down would leave it - proving a
     // handler reading event.x gets the Down phase's own coordinate (50)
     // rather than silently observing the pointer's later, live position.
     (pointer as unknown as { x: number }).x = 999;
@@ -1095,11 +1095,11 @@ describe('InteractionManager — tap', () => {
 
     sprite.onPointerTap.add(handler);
     // A tap only fires when this release resolves to the same node its own
-    // cycle's press landed on — see `_pressTargets`' doc comment — so a
+    // cycle's press landed on - see `_pressTargets`' doc comment - so a
     // preceding press is required now, not just the release/tap signal. The
     // real `InputManager` always dispatches `onPointerUp` immediately before
     // a conditional `onPointerTap` for the SAME occurrence (see
-    // `InteractionJournalEntry.tap`'s doc comment) — `onPointerTap` folds its
+    // `InteractionJournalEntry.tap`'s doc comment) - `onPointerTap` folds its
     // classification onto that Up entry rather than standing alone.
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
@@ -1137,7 +1137,7 @@ describe('InteractionManager — tap target semantics', () => {
     right.onPointerTap.add(rightTap);
 
     // Press lands on `left`, a 2px sub-threshold shift lands the release on
-    // `right` instead — the press and release targets genuinely differ, even
+    // `right` instead - the press and release targets genuinely differ, even
     // though nothing here would ever promote to a real drag.
     dispatchPointer(signals.onPointerDown, { x: 49, y: 25 });
     dispatchPointer(signals.onPointerUp, { x: 51, y: 25 });
@@ -1169,7 +1169,7 @@ describe('InteractionManager — tap target semantics', () => {
     flushInteractions(im);
 
     // Something unrelated to this pointer's own dispatch destroys the press
-    // target before its release ever arrives — a bare destroy(), no
+    // target before its release ever arrives - a bare destroy(), no
     // removeChild, the harder case (see `_isLive`'s doc comment).
     sprite.destroy();
 
@@ -1204,12 +1204,12 @@ describe('InteractionManager — tap target semantics', () => {
     child.onDragStart.add(dragStart);
 
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
-    // 40 design pixels past the default 8px drag threshold — would promote a
+    // 40 design pixels past the default 8px drag threshold - would promote a
     // candidate to a real drag if one had been created.
     dispatchPointer(signals.onPointerMove, { x: 90, y: 50 });
     flushInteractions(im);
 
-    // Propagation is unaffected by preventDefault() — only stopPropagation()
+    // Propagation is unaffected by preventDefault() - only stopPropagation()
     // halts bubbling.
     expect(parentDown).toHaveBeenCalledTimes(1);
     expect(dragStart).not.toHaveBeenCalled();
@@ -1239,7 +1239,7 @@ describe('InteractionManager — destroy cleanup', () => {
     im.destroy();
 
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
-    // No flushInteractions — im is destroyed, so update() is also a no-op.
+    // No flushInteractions - im is destroyed, so update() is also a no-op.
 
     expect(handler).not.toHaveBeenCalled();
 
@@ -1305,7 +1305,7 @@ describe('InteractionManager — drag and drop', () => {
     sprite.onDrag.add(dragHandler);
     sprite.onDragEnd.add(dragEndHandler);
 
-    // Pointer down only notes a candidate — no drag yet.
+    // Pointer down only notes a candidate - no drag yet.
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
     expect(dragStartHandler).not.toHaveBeenCalled();
@@ -1345,11 +1345,11 @@ describe('InteractionManager — drag and drop', () => {
     sprite.position.y = 50;
     scene.addChild(sprite);
 
-    // Grab at (60, 60) — offset is (50-60, 50-60) = (-10, -10)
+    // Grab at (60, 60) - offset is (50-60, 50-60) = (-10, -10)
     dispatchPointer(signals.onPointerDown, { x: 60, y: 60 });
     flushInteractions(im);
 
-    // Move pointer to (100, 80) — expected node position: (100-10, 80-10) = (90, 70)
+    // Move pointer to (100, 80) - expected node position: (100-10, 80-10) = (90, 70)
     dispatchPointer(signals.onPointerMove, { x: 100, y: 80, travelled: pastThreshold });
     flushInteractions(im);
 
@@ -1382,7 +1382,7 @@ describe('InteractionManager — drag and drop', () => {
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    // Move pointer into other sprite's bounds — should NOT fire pointerover on other
+    // Move pointer into other sprite's bounds - should NOT fire pointerover on other
     dispatchPointer(signals.onPointerMove, { x: 250, y: 50, travelled: pastThreshold });
     flushInteractions(im);
 
@@ -1502,7 +1502,7 @@ describe('InteractionManager — drag and drop', () => {
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    // 40 design pixels from the press position — comfortably past the
+    // 40 design pixels from the press position - comfortably past the
     // default 8px drag threshold, which InteractionManager now measures as
     // real geometric distance from its own recorded press position rather
     // than trusting a declared `travelled` value decoupled from x/y.
@@ -1584,13 +1584,13 @@ describe('InteractionManager — drag and drop', () => {
     dispatchPointer(signals.onPointerDown, { id: 1, x: 25, y: 25 });
     flushInteractions(im);
 
-    // Pointer 2 down on B — should fire normally (separate pointer)
+    // Pointer 2 down on B - should fire normally (separate pointer)
     dispatchPointer(signals.onPointerDown, { id: 2, x: 80, y: 25 });
     flushInteractions(im);
 
     expect(bDown).toHaveBeenCalledTimes(1);
 
-    // Move pointer 1 — only A's drag fires. 45 design pixels from the press
+    // Move pointer 1 - only A's drag fires. 45 design pixels from the press
     // position, past the default 8px drag threshold (see the drag-target
     // test above for why this needs real geometric distance now).
     dispatchPointer(signals.onPointerMove, { id: 1, x: 70, y: 25 });
@@ -1628,7 +1628,7 @@ describe('InteractionManager — drag and drop', () => {
     dispatchPointer(signals.onPointerMove, { x: 50, y: 10 });
     dispatchPointer(signals.onPointerUp, { x: 50, y: 10 });
 
-    // Cycle 2: a brand-new press sharing the SAME flush — must register its
+    // Cycle 2: a brand-new press sharing the SAME flush - must register its
     // own fresh candidate rather than being confused with cycle 1's
     // just-ended drag, and its own move must promote its own independent
     // second drag.
@@ -1776,14 +1776,14 @@ describe('InteractionManager — interaction scope', () => {
     outside.onPointerDown.add(outsideHandler);
     im.pushScope(modal);
 
-    // Detach the scope root itself — without popping the scope.
+    // Detach the scope root itself - without popping the scope.
     scene.removeChild(modal);
 
     dispatchPointer(signals.onPointerDown, { x: 250, y: 50 });
     flushInteractions(im);
 
     // The dead scope no longer hit-tests its own (now detached) subtree, nor
-    // does it keep blocking the real scene graph — `outside` is reachable.
+    // does it keep blocking the real scene graph - `outside` is reachable.
     expect(outsideHandler).toHaveBeenCalledTimes(1);
 
     im.destroy();
@@ -1931,7 +1931,7 @@ describe('InteractionManager — getCapturedNodes', () => {
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    // A press alone is only a candidate — capture starts with the drag.
+    // A press alone is only a candidate - capture starts with the drag.
     expect(im.getCapturedNodes()).toEqual([]);
 
     dispatchPointer(signals.onPointerMove, { x: 90, y: 50, travelled: pastThreshold });
@@ -1972,10 +1972,10 @@ describe('InteractionManager — detachRoot', () => {
 
     expect(im.focused).toBeNull();
 
-    // Interactive nodes were unregistered — the quadtree is torn down.
+    // Interactive nodes were unregistered - the quadtree is torn down.
     expect(im._getDebugQuadtree()).toBeNull();
 
-    // The subtree's stage was cleared — nodes are no longer routed anywhere.
+    // The subtree's stage was cleared - nodes are no longer routed anywhere.
     expect(sprite._getStage()).toBeNull();
 
     // The (stale) scope pushed above was cleared, not merely shadowed.
@@ -2134,7 +2134,7 @@ describe('InteractionManager — UI layer', () => {
     flushInteractions(im);
 
     expect(dragHandler).toHaveBeenCalledTimes(1);
-    // Grabbed at (50,50) while at position (0,0) — offset (-50,-50). Moving
+    // Grabbed at (50,50) while at position (0,0) - offset (-50,-50). Moving
     // to (60,60) in (identity-mapped) world space yields position (10,10).
     expect(worldSprite.position.x).toBe(10);
     expect(worldSprite.position.y).toBe(10);
@@ -2193,7 +2193,7 @@ describe('InteractionManager — no active scene', () => {
     const { app } = createAppNoScene({ width: 0, height: 0 });
     const im = new InteractionManager(app);
 
-    // A freestanding container (not the scene's root — there is no scene) can
+    // A freestanding container (not the scene's root - there is no scene) can
     // still be attached directly; registering its interactive child forces
     // quadtree creation while `app.scenes.currentScene` is null.
     const root = new Container();
@@ -2382,7 +2382,7 @@ describe('InteractionManager — clip-aware hit-testing', () => {
     const handler = vi.fn();
     child.onPointerDown.add(handler);
 
-    // Well outside the clipper's tiny bounds — a Rectangle clip would block this,
+    // Well outside the clipper's tiny bounds - a Rectangle clip would block this,
     // but a Geometry (stencil) clip has no cheap point-in-silhouette test and is
     // intentionally not enforced by hit-testing.
     dispatchPointer(signals.onPointerDown, { x: 75, y: 75 });
@@ -2417,7 +2417,7 @@ describe('InteractionManager — coalesced events', () => {
     sprite.onPointerDown.add(downHandler);
     sprite.onPointerMove.add(moveHandler);
 
-    // Both dispatched BEFORE update() — coalesced into a single pending queue entry.
+    // Both dispatched BEFORE update() - coalesced into a single pending queue entry.
     dispatchPointer(signals.onPointerDown, { id: 3, x: 50, y: 50 });
     dispatchPointer(signals.onPointerMove, { id: 3, x: 55, y: 55 });
     flushInteractions(im);
@@ -2451,10 +2451,10 @@ describe('InteractionManager — coalesced events', () => {
     right.onPointerMove.add(rightMove);
     left.onPointerUp.add(leftUp);
 
-    // A mock pointer carries only ONE (x, y) — makePointer's `x`/`y` become
+    // A mock pointer carries only ONE (x, y) - makePointer's `x`/`y` become
     // whatever pointer.x/y read AT dispatch time, which is exactly what
     // InteractionManager._enqueue captures per phase. Down and Up share the
-    // same stub position (25, 25) — still over `left` — while Move alone
+    // same stub position (25, 25) - still over `left` - while Move alone
     // reports (225, 25), over `right`; all three collapse into one flush.
     dispatchPointer(signals.onPointerDown, { id: 9, x: 25, y: 25 });
     dispatchPointer(signals.onPointerMove, { id: 9, x: 225, y: 25 });
@@ -2489,7 +2489,7 @@ describe('InteractionManager — ordered phase processing', () => {
     sprite.onPointerDown.add(() => order.push('down'));
 
     // Signal dispatch order is the source of truth InteractionManager must
-    // preserve end-to-end — an aggregated bitmask cannot represent this at
+    // preserve end-to-end - an aggregated bitmask cannot represent this at
     // all, since it always processed Down before Up regardless.
     dispatchPointer(signals.onPointerUp, { x: 50, y: 50 });
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
@@ -2704,7 +2704,7 @@ describe('InteractionManager — registration guards', () => {
     sprite.interactive = true;
     scene.addChild(sprite);
 
-    // Re-attaching the same, already-attached root re-walks the subtree —
+    // Re-attaching the same, already-attached root re-walks the subtree -
     // `_registerNode`'s "already registered" guard must no-op for `sprite`.
     expect(() => im.attachRoot(scene.root)).not.toThrow();
 
@@ -2714,7 +2714,7 @@ describe('InteractionManager — registration guards', () => {
     dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
     flushInteractions(im);
 
-    // Still fires exactly once — no duplicate registration/dispatch.
+    // Still fires exactly once - no duplicate registration/dispatch.
     expect(handler).toHaveBeenCalledTimes(1);
 
     im.destroy();
@@ -2733,7 +2733,7 @@ describe('InteractionManager — registration guards', () => {
     scene.addChild(sprite);
 
     // First call unregisters normally; the second call finds `sprite` already
-    // absent from the tracking set — `_unregisterNode`'s own guard no-ops.
+    // absent from the tracking set - `_unregisterNode`'s own guard no-ops.
     expect(() => {
       im._notifyInteractiveChanged(sprite, false);
       im._notifyInteractiveChanged(sprite, false);
@@ -2751,10 +2751,10 @@ describe('InteractionManager — registration guards', () => {
 
     const sprite = new TestSprite().setBounds(0, 0, 100, 100);
 
-    // Added while non-interactive — `_notifyNodeAdded` skips registration.
+    // Added while non-interactive - `_notifyNodeAdded` skips registration.
     scene.addChild(sprite);
 
-    // Now flip it on while already attached — this is the setter's own
+    // Now flip it on while already attached - this is the setter's own
     // `_notifyInteractiveChanged(node, true)` path, distinct from the
     // addChild-time subtree walk exercised by every other test in this file.
     sprite.interactive = true;

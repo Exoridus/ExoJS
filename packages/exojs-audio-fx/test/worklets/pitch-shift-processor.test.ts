@@ -3,7 +3,7 @@
  *
  * Like vocoder-processor.test.ts these tests evaluate the worklet source string
  * with minimal stubs, drive process() in 128-sample blocks, and measure the DSP
- * output — dominant frequency, tonal purity, and loudness — without a browser or
+ * output - dominant frequency, tonal purity, and loudness - without a browser or
  * AudioContext.
  *
  * The pitch shifter's job: scale the pitch of the input by `pitch`. A 440 Hz sine

@@ -6,15 +6,15 @@
  * ~9 ms under 7.5 % churn, because the engine rebuilt collect -> pack ->
  * transform-upload over ALL nodes every frame even though only a few moved. The
  * design attribution is explicit: 100 % of the cost is CPU-side in `render`
- * (collect+transform+pack), `flush` ~0. So the fix's core property — upload work
- * proportional to the number of MOVED rows, independent of group size — is a
+ * (collect+transform+pack), `flush` ~0. So the fix's core property - upload work
+ * proportional to the number of MOVED rows, independent of group size - is a
  * CPU-pipeline property that this GPU-free Node harness measures exactly and
  * deterministically (the recording fake context turns the GPU draw into a
  * no-op; every expensive staging step still runs for real).
  *
  * These gates pin that property structurally (counters, not wall-clock, so they
  * are reproducible and CI-safe). The absolute wall-clock head-to-head vs Pixi
- * still belongs on a real GPU (packages/exojs-bench) — that is a separate,
+ * still belongs on a real GPU (packages/exojs-bench) - that is a separate,
  * hardware-bound measurement and is intentionally NOT what these gates claim.
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -40,7 +40,7 @@ const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
 /**
  * A retained group of `n` default-path sprites on one texture (so they all
  * batch), warmed to the instruction-replay tier. One sprite sits OUTSIDE and
- * before the group so the group's transform rows never start at shared row 0 —
+ * before the group so the group's transform rows never start at shared row 0 -
  * the group-local rebase is load-bearing, not incidentally satisfied.
  */
 const buildScaledScene = (n: number) => {
@@ -117,7 +117,7 @@ describe('transform-row patch is O(k moved), independent of group size', () => {
     expect(large.transformRows).toBe(4);
     expect(large.transformRows).toBe(small.transformRows); // n grew 16x, cost flat
 
-    // The group uploads ZERO instance bytes on a transform patch — the only
+    // The group uploads ZERO instance bytes on a transform patch - the only
     // instance traffic is the one immediate `outside` sprite (32 B = 8 words),
     // which is CONSTANT across n. If the group re-uploaded its instances this
     // would scale with n; it does not.
@@ -155,7 +155,7 @@ describe('transform-row patch is O(k moved), independent of group size', () => {
     const small = measureContentCost(16);
     const large = measureContentCost(256);
 
-    // The full re-record stores every row, so cost scales with n — the exact
+    // The full re-record stores every row, so cost scales with n - the exact
     // O(n) behaviour the transform patch avoids. (Rows include the one outside
     // sprite, so compare the group-dominated totals, not an exact multiple.)
     expect(small).toBeGreaterThanOrEqual(16);

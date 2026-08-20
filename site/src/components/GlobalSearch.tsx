@@ -116,7 +116,7 @@ const useGlobalSearch = (
     }, [trimmed, baseUrl]);
 
     // Everything the UI needs falls out of comparing the live query to the one
-    // the last settled result was computed for — no state writes in the effect.
+    // the last settled result was computed for - no state writes in the effect.
     const settled = result.query === trimmed;
     let status: SearchStatus = 'idle';
     if (trimmed) status = settled ? result.status : 'searching';
@@ -151,7 +151,7 @@ const decodeEntities = (text: string): string =>
  * Pagefind excerpts are HTML: matches are wrapped in `<mark>` and the
  * surrounding text is entity-escaped. Rather than trusting that escaping with
  * `dangerouslySetInnerHTML`, split on the mark tags and hand the pieces to
- * React as text — anything Pagefind failed to escape renders literally instead
+ * React as text - anything Pagefind failed to escape renders literally instead
  * of becoming markup.
  */
 const renderExcerpt = (excerpt: string): ReactNode[] => {
@@ -272,7 +272,7 @@ const getIsMac = (): boolean => /Mac|iP(ad|hone|od)/.test(window.navigator.platf
 
 export function GlobalSearch({ baseUrl }: GlobalSearchProps): JSX.Element {
     const [open, setOpen] = useState(false);
-    // The platform never changes after load — a read, not state.
+    // The platform never changes after load - a read, not state.
     const isMac = useClientValue(getIsMac, false);
     const dialogRef = useRef<HTMLDialogElement>(null);
 

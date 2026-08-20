@@ -34,13 +34,13 @@ export interface FocusHooks {
   focus(node: RenderNode): void;
   /** Clear focus, or only clear it when `node` currently holds it. */
   blur(node?: RenderNode): void;
-  /** @internal — drop focus when a focused node (or an ancestor) leaves the tree. */
+  /** @internal - drop focus when a focused node (or an ancestor) leaves the tree. */
   _notifyNodeRemoved(node: RenderNode): void;
 }
 
 /**
  * Per-Application service bundle that scene nodes reach through their owning
- * tree — set on attach via `SceneNode._setStage` and cleared on detach.
+ * tree - set on attach via `SceneNode._setStage` and cleared on detach.
  *
  * Replaces the former process-global active-manager singleton: each Application
  * owns its own stage, so multiple Applications coexist on one page without

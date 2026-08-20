@@ -294,7 +294,7 @@ describe('render effects', () => {
     drawable.render(runtime);
 
     // The captured rectangle still reflects the original position; the
-    // mask was never bound to the source node — clipBounds holds a Rectangle.
+    // mask was never bound to the source node - clipBounds holds a Rectangle.
     expect(clipBoundsCalls[0]).toBe(snapshotRect);
     expect(clipBoundsCalls[0].x).toBe(snapshotRect.x);
     expect(clipBoundsCalls[0].y).toBe(snapshotRect.y);

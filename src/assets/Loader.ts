@@ -58,7 +58,7 @@ export type Loadable = abstract new (...args: any[]) => unknown;
  *
  * Keyed on {@link CatalogEntry}, not `AssetInput`: a materialized catalog may
  * have been defined with bare path strings, which `AssetInput` (configs and
- * `Asset` descriptors only) does not cover — the loader consumes the already
+ * `Asset` descriptors only) does not cover - the loader consumes the already
  * materialized leaves and must not re-validate the definition entries.
  */
 export type InferLoadedMap<M extends Record<string, CatalogEntry>> = {
@@ -96,7 +96,7 @@ export interface AssetLoaderContext {
   readonly identityKey: string;
   /**
    * Cancellation signal for the load this handler invocation belongs to. It
-   * aborts once no claim scope needs the result any more — a scene torn down
+   * aborts once no claim scope needs the result any more - a scene torn down
    * mid-navigation, or a {@link LoadingQueue.cancel} call.
    *
    * The `fetch*` helpers below already forward it, so a handler built out of
@@ -128,7 +128,7 @@ export interface AssetLoaderContext {
  *
  * `basePath` is prepended to relative asset paths at fetch time.
  * `cache` accepts one or more {@link CacheStore} instances. `cacheStrategy`
- * picks the policy used to consult them — defaults to
+ * picks the policy used to consult them - defaults to
  * {@link CacheFirstStrategy} (check stores → network → write back).
  * `concurrency` caps the number of simultaneous background-queue fetches
  * (default `6`).
@@ -153,8 +153,8 @@ export enum LoadPriority {
   Immediate = 'immediate',
   /**
    * Route the fetch through the low-priority background queue. Every adopted
-   * leaf is still claimed and registered — it heals in place and a later
-   * {@link Loader.get} returns the same instance — but instead of starting
+   * leaf is still claimed and registered - it heals in place and a later
+   * {@link Loader.get} returns the same instance - but instead of starting
    * immediately it streams concurrency-capped, drops from the queue if released
    * at refcount 0, and is boosted to fetch now on a direct `get()`.
    */
@@ -181,9 +181,9 @@ export interface LoadOptions {
  * {@link bindAsset} (or the higher-level `defineAsset`).
  *
  * Assets can be loaded in two ways:
- * - **Direct** — `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
+ * - **Direct** - `loader.load(Assets.from({ hero: 'hero.png' }))` fetches
  *   immediately and resolves to the finished assets.
- * - **Background** — pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm
+ * - **Background** - pass `{ priority: LoadPriority.Background }` to `load(...)` to pre-warm
  *   assets at low priority; {@link awaitBackground} resolves once the queue drains.
  *
  * Once loaded, assets are stored in memory and returned from cache on
@@ -322,7 +322,7 @@ export class Loader {
 
   /**
    * Fires for cache failures the configured {@link CacheStrategy} degraded
-   * instead of propagating — most commonly a persistent store hitting its
+   * instead of propagating - most commonly a persistent store hitting its
    * quota. Purely diagnostic: the affected load still succeeds from the
    * network, so without a listener the only symptom is that caching quietly
    * stopped working.
@@ -331,7 +331,7 @@ export class Loader {
    * for the originating `DOMException` (`QuotaExceededError` and friends).
    *
    * Reports only failures caused by *this* loader's own requests, even when
-   * its {@link CacheStrategy} instance is shared with other loaders — the
+   * its {@link CacheStrategy} instance is shared with other loaders - the
    * strategy is handed a per-request sink rather than subscribing to one.
    */
   public readonly onCacheError = new Signal<[error: AssetCacheError]>();
@@ -416,7 +416,7 @@ export class Loader {
    * declared by the `bindAsset` binding that claimed the suffix and the global
    * `defineAsset` default.
    *
-   * It does NOT affect loader-free catalog construction — `Assets.from('level.json')`
+   * It does NOT affect loader-free catalog construction - `Assets.from('level.json')`
    * has no loader to consult and always resolves through the global table. Use
    * `Asset.type(type, source)` there instead.
    *
@@ -510,7 +510,7 @@ export class Loader {
   }
 
   // -----------------------------------------------------------------------
-  // Loading — canonical Asset / Assets descriptor forms
+  // Loading - canonical Asset / Assets descriptor forms
   // -----------------------------------------------------------------------
 
   /**
@@ -519,18 +519,18 @@ export class Loader {
    * Every accepted input normalizes to the same canonical descriptor shape
    * (`{ type, source }`) before dispatch:
    *
-   * - **Path string** — normalized by suffix through the app-local
+   * - **Path string** - normalized by suffix through the app-local
    *   {@link registerType} override, then the binding-declared type, then the
    *   global `defineAsset` default
    *   (basename-only, longest-suffix-first). Only *leaf-capable* suffixes are
    *   accepted at compile time; a non-leaf type (`bmFont`, `font`, `svg`,
    *   `image`, `music`, `video`) must be named explicitly with `Asset.type(...)`.
-   * - **Asset<T>** — an explicit descriptor from `Asset.type(...)`.
-   * - **Assets<M>** — a typed catalog from `Assets.from(...)`; keys become aliases.
-   * - **A catalog leaf** — an `Assets.from()` property, adopted and resolved.
+   * - **Asset<T>** - an explicit descriptor from `Asset.type(...)`.
+   * - **Assets<M>** - a typed catalog from `Assets.from(...)`; keys become aliases.
+   * - **A catalog leaf** - an `Assets.from()` property, adopted and resolved.
    *
    * (The inline record-catalog form `{ alias: { type, source } }` is no longer a
-   * public overload — build catalogs with `Assets.from(...)`; a runtime record
+   * public overload - build catalogs with `Assets.from(...)`; a runtime record
    * fallback is retained only for internal multi-alias plumbing.)
    *
    * In-flight and already-loaded assets are de-duplicated: calling `load`
@@ -553,12 +553,12 @@ export class Loader {
   public load<T>(asset: Asset<T>): LoadingQueue<T>;
   public load<M extends Record<string, CatalogEntry>>(assets: Assets<M>, options?: LoadOptions): LoadingQueue<InferLoadedMap<M>>;
   // Single value-leaf (an `Assets.from()` AssetRef property): `AssetRef.loaded` resolves
-  // to the raw value, not the ref — this overload must win over the generic leaf one below.
+  // to the raw value, not the ref - this overload must win over the generic leaf one below.
   public load<T>(leaf: CatalogValueLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
   // Single handle-hybrid leaf (an `Assets.from()` property): adopt + resolve its value.
   //
-  // Both leaf overloads match on the CATALOG-LEAF BRAND — the type-level mirror
-  // of the runtime `_assetMeta` stamp that `_loadClaimed` dispatches on — so a
+  // Both leaf overloads match on the CATALOG-LEAF BRAND - the type-level mirror
+  // of the runtime `_assetMeta` stamp that `_loadClaimed` dispatches on - so a
   // raw `new Texture()` / `new AssetRef()`, or a non-leaf resource like an
   // `AudioStream`, is rejected here exactly as the runtime rejects it. `T` is
   // recovered from the brand's phantom field, so the queue resolves to the plain
@@ -566,7 +566,7 @@ export class Loader {
   public load<T extends object>(leaf: CatalogResourceLeaf<T>, options?: LoadOptions): LoadingQueue<T>;
 
   // -----------------------------------------------------------------------
-  // Loading — bare path (type normalized from the file suffix)
+  // Loading - bare path (type normalized from the file suffix)
   // -----------------------------------------------------------------------
 
   /**
@@ -576,7 +576,7 @@ export class Loader {
    * `json`), and consults the app-local {@link registerType} override, then the
    * binding-declared type, then the global `defineAsset` default.
    *
-   * Only **leaf-capable** suffixes are accepted at compile time — those a
+   * Only **leaf-capable** suffixes are accepted at compile time - those a
    * catalog can also materialize (`ExtensionKindMap`, the map to augment by
    * declaration merging). Non-leaf resource types (`bmFont`, `font`, `svg`,
    * `image`, `music`, `video`) and unregistered suffixes are rejected here;
@@ -597,7 +597,7 @@ export class Loader {
   public load<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): LoadingQueue<ResourceForKind<KindByPath<S>>>;
 
   // -----------------------------------------------------------------------
-  // Loading — implementation
+  // Loading - implementation
   // -----------------------------------------------------------------------
 
   public load(arg0: unknown, arg1?: unknown): LoadingQueue<unknown> {
@@ -628,7 +628,7 @@ export class Loader {
       return this._createLoadingQueue(claimer, [{ alias, asset }], results => results.get(alias));
     }
 
-    // 2. Assets<M> container — adopt every handle-hybrid leaf (fill in place,
+    // 2. Assets<M> container - adopt every handle-hybrid leaf (fill in place,
     // claim under `claimer`) and resolve the adopted queue to a map of the
     // loaded values/handles. The container's own leaves heal in place.
     if (arg0 instanceof AssetsImpl) {
@@ -650,7 +650,7 @@ export class Loader {
       });
     }
 
-    // 2a. Single meta-stamped leaf (e.g. `load(assets.ship)`) — adopt it and
+    // 2a. Single meta-stamped leaf (e.g. `load(assets.ship)`) - adopt it and
     // resolve its loaded value/handle directly.
     if (_readMeta(arg0) !== undefined) {
       const leaf = arg0 as object;
@@ -660,7 +660,7 @@ export class Loader {
       return this._createAdoptedQueue(claimer, [['value', leaf]], results => results.get('value'));
     }
 
-    // 2b. Bare path string — normalize it to a `{ type, source }` descriptor and
+    // 2b. Bare path string - normalize it to a `{ type, source }` descriptor and
     // dispatch on the type's bound constructor.
     if (typeof arg0 === 'string') {
       if (arg1 !== undefined) {
@@ -672,7 +672,7 @@ export class Loader {
 
       const { type, source: path, ctor } = this._resolveBarePath(arg0);
 
-      // The font type requires a family option — infer it from the filename when not provided
+      // The font type requires a family option - infer it from the filename when not provided
       const options: unknown = type === 'font' ? { family: (path.split('/').pop()?.split(/[?#]/)[0] ?? '').replace(/\.[^.]+$/, '') } : undefined;
 
       const canonical = this._canonicalize(ctor, path, options);
@@ -698,8 +698,8 @@ export class Loader {
     }
 
     // Internal record fallback: `Record<string, AssetInput>`. The TYPED inline
-    // record-catalog overload is deliberately absent — public callers go through
-    // `Assets.from({...})` — but this path preserves the Loader's internal
+    // record-catalog overload is deliberately absent - public callers go through
+    // `Assets.from({...})` - but this path preserves the Loader's internal
     // multi-alias/identity plumbing and its regression coverage.
     //
     // Every value is routed through the SAME `_normalizeEntry` used by
@@ -728,7 +728,7 @@ export class Loader {
   // -----------------------------------------------------------------------
 
   /**
-   * Resolves when the low-priority background queue has fully drained — every
+   * Resolves when the low-priority background queue has fully drained - every
    * leaf enqueued via `load(target, { priority: LoadPriority.Background })` has finished loading
    * (successfully or not). Kicks the queue first, so a concurrency change that
    * left pending entries unstarted still makes progress.
@@ -767,8 +767,8 @@ export class Loader {
    * (or, for `scene.loader`, until the scene tears down). That claim is the
    * reason `get` is the right default: you almost always want the thing you
    * are about to use to stay loaded. When you only want to know whether
-   * something is already in memory — without claiming it and without starting
-   * a fetch — use {@link peek}.
+   * something is already in memory - without claiming it and without starting
+   * a fetch - use {@link peek}.
    *
    * Failed loads switch the handle to its failed representation;
    * calling `get` again for a `'failed'` source retries and heals the same
@@ -783,16 +783,16 @@ export class Loader {
    * `txt`, `csv`, …) yields a stable {@link AssetRef}. Only leaf-capable
    * suffixes are accepted at compile time (`ExtensionKindMap`); dynamic strings
    * resolving to an unregistered suffix or a non-leaf type throw with guidance.
-   * The same source always yields the same instance — also across
-   * {@link load} — and options are first-wins: conflicting options on a later
+   * The same source always yields the same instance - also across
+   * {@link load} - and options are first-wins: conflicting options on a later
    * call are ignored with a one-time dev warning.
    *
    * @remarks For a seamless type, `get('sprite.png')` on an unloaded source
-   * returns a `'loading'` placeholder and fetches URL `<source>` — it no longer
+   * returns a `'loading'` placeholder and fetches URL `<source>` - it no longer
    * throws "missing resource". A bare alias that isn't a real path (a typo, or a
    * not-yet-preloaded alias) therefore fetches that string and can 404 quietly
    * instead of throwing; preloaded aliases still return the stored payload. This
-   * is intended seamless-by-default behaviour — the note is for debuggability.
+   * is intended seamless-by-default behaviour - the note is for debuggability.
    * When such a fetch DOES fail, a **development build** logs a one-time
    * (per-source) warning naming the literal path and how to fix it, so the 404
    * is no longer completely silent; production builds stay quiet. For a dynamic
@@ -804,12 +804,12 @@ export class Loader {
    * Adopts an {@link Assets} catalog: every handle-hybrid leaf is registered,
    * claimed, and driven to load, and the same leaf objects are returned keyed by
    * their record key. The catalog's own properties heal in place as payloads
-   * arrive — the returned map holds those very leaves.
+   * arrive - the returned map holds those very leaves.
    */
   public get<M extends Record<string, CatalogEntry>>(catalog: Assets<M>): InferAssetsProperties<M>;
 
   /**
-   * Seamless/value access from an `Asset.type(...)` descriptor —
+   * Seamless/value access from an `Asset.type(...)` descriptor -
    * the replacement for the removed `get(Type, dynamicSource)` form. Builds and
    * adopts the descriptor's handle-hybrid leaf: a resource type yields its
    * heal-in-place handle, a value type a stable {@link AssetRef}. A type with
@@ -818,7 +818,7 @@ export class Loader {
    *
    * The return type follows the {@link ValueAsset} brand (as {@link InferCatalogLeaf}
    * does): a value-type descriptor (`Asset.type<T>('json', …)`) returns
-   * `AssetRef<T>` — even for an object payload — while a resource-type descriptor
+   * `AssetRef<T>` - even for an object payload - while a resource-type descriptor
    * returns the resource itself, so the type always matches the runtime value.
    * Both come back BRANDED, mirroring the `_assetMeta` stamp `createLeaf` applies,
    * so the returned leaf can be fed straight back into a single-leaf `load(…)`.
@@ -826,16 +826,16 @@ export class Loader {
    * Unlike bare-path `get('x.png')`, this form is **not instance-deduped by
    * source**: each call builds a fresh leaf, so repeated `get(Asset.type(type, sameSrc))`
    * accumulates distinct handles (all healing to the same deduped backend
-   * payload). It is the dynamic-source escape hatch — capture the handle once.
+   * payload). It is the dynamic-source escape hatch - capture the handle once.
    */
-  // A materialized VALUE LEAF resolves exactly like a value descriptor — it is
-  // adopted and handed back unchanged — so both share one signature.
+  // A materialized VALUE LEAF resolves exactly like a value descriptor - it is
+  // adopted and handed back unchanged - so both share one signature.
   public get<T>(asset: ValueAsset<T> | CatalogValueLeaf<T>): CatalogValueLeaf<T>;
   public get<T>(asset: Asset<T>): CatalogResourceLeaf<T>;
 
   /**
    * Adopts a single handle-hybrid leaf (an `Assets.from()` property) and returns
-   * it — the same object, healing in place once its payload arrives.
+   * it - the same object, healing in place once its payload arrives.
    *
    * Matches on the catalog-leaf brand, so only a MATERIALIZED leaf is accepted;
    * a raw resource instance has no `_assetMeta` stamp and is rejected here as it
@@ -857,7 +857,7 @@ export class Loader {
    * @internal
    */
   public _getClaimed(claimer: LoaderScope, input: string | object, options?: unknown): unknown {
-    // Assets<M> container — adopt every handle-hybrid leaf (fill in place, claim
+    // Assets<M> container - adopt every handle-hybrid leaf (fill in place, claim
     // under `claimer`) and return the leaves keyed by their record key.
     if (input instanceof AssetsImpl) {
       const out: Record<string, unknown> = {};
@@ -872,7 +872,7 @@ export class Loader {
     }
 
     // Single `Asset.type(...)` descriptor (e.g. `get(Asset.type('json', 'x.json'))` /
-    // `get(Asset.type('texture', dynamicPath))`) — build its handle-hybrid leaf from the
+    // `get(Asset.type('texture', dynamicPath))`) - build its handle-hybrid leaf from the
     // config, adopt it, and return it. A value type yields an AssetRef, a
     // resource type the seamless placeholder handle. Mirrors `load`'s AssetImpl
     // branch and the single-meta-leaf path below. Must precede the string branch
@@ -897,7 +897,7 @@ export class Loader {
       return leaf;
     }
 
-    // Single meta-stamped leaf (e.g. `get(assets.ship)`) — adopt and return it.
+    // Single meta-stamped leaf (e.g. `get(assets.ship)`) - adopt and return it.
     if (_readMeta(input) !== undefined) {
       this._adopt(input as object, claimer);
 
@@ -910,11 +910,11 @@ export class Loader {
       throw new Error('Loader: get() accepts a path string, an Asset.type(...) descriptor, an Assets catalog, or one of its leaves.');
     }
 
-    // Bare path string — normalize it to a `{ type, source }` descriptor, then
+    // Bare path string - normalize it to a `{ type, source }` descriptor, then
     // hand it to the SAME source-keyed dedup the catalog leaves use: a seamless
     // type yields its shared heal-in-place handle, a value type its shared
     // AssetRef. (This is deliberately NOT routed through `createLeaf` like the
-    // `Asset.type(...)` branch above — a bare path is instance-deduped by
+    // `Asset.type(...)` branch above - a bare path is instance-deduped by
     // source, and `createLeaf` mints a fresh leaf per call.)
     const { type, source: path, ctor } = this._resolveBarePath(input);
 
@@ -945,7 +945,7 @@ export class Loader {
    * Pure in-memory lookup: the resource already stored for `path`, or
    * `undefined` if nothing is held for it.
    *
-   * The counterpart to {@link get} — and the one to reach for when the answer
+   * The counterpart to {@link get} - and the one to reach for when the answer
    * "not loaded" is a legitimate one rather than something to fix by loading.
    * Unlike `get`, this **never** starts a fetch, **never** mints a placeholder
    * handle, and **never** claims anything, so it cannot keep an asset alive by
@@ -962,7 +962,7 @@ export class Loader {
    * @example
    * ```ts
    * // Use the real texture if it happens to be resident, otherwise skip the
-   * // decoration entirely — without pulling it into memory.
+   * // decoration entirely - without pulling it into memory.
    * const sparkle = loader.peek('image/sparkle.png');
    * if (sparkle !== undefined) {
    *     stage.addChild(new Sprite(sparkle));
@@ -974,7 +974,7 @@ export class Loader {
    * indistinguishable from "not stored".
    */
   public peek<S extends string>(path: [KindByPath<S>] extends [never] ? never : S): ResourceForKind<KindByPath<S>> | undefined;
-  /** Pure in-memory lookup from an `Asset.type(...)` descriptor — see the path overload. */
+  /** Pure in-memory lookup from an `Asset.type(...)` descriptor - see the path overload. */
   public peek<T>(asset: Asset<T>): T | undefined;
   public peek(input: string | object): unknown {
     let ctor: AssetConstructor;
@@ -1087,12 +1087,12 @@ export class Loader {
 
   /**
    * Read-only, detached snapshot of every key this loader currently has a
-   * claim on — one {@link AssetInspection} row per claimed `(type, source)`
+   * claim on - one {@link AssetInspection} row per claimed `(type, source)`
    * key, sorted by key. Intended for diagnostics, support bundles, and
    * developer tooling: the returned array and every row are frozen, so
    * mutating (or attempting to mutate) the snapshot never touches residency,
    * and no internal `Set`, claim symbol, or live handle/ref object is exposed
-   * — every field is plain data.
+   * - every field is plain data.
    *
    * @see {@link AssetInspection} for what each row reports.
    */
@@ -1144,7 +1144,7 @@ export class Loader {
   }
 
   // -----------------------------------------------------------------------
-  // Extension binding — @internal / @advanced
+  // Extension binding - @internal / @advanced
   // -----------------------------------------------------------------------
 
   /**
@@ -1214,7 +1214,7 @@ export class Loader {
   public destroy(): void {
     // Order matters: bound-handler destroy must run after store destroy (via
     // this._decoder.destroy(), which mirrors the original inline teardown
-    // order) — see the regression test in loader.test.ts.
+    // order) - see the regression test in loader.test.ts.
     this._decoder.destroy();
     this._typeRegistry.destroyHandlers();
     this._residency.destroy();
@@ -1230,7 +1230,7 @@ export class Loader {
   }
 
   // -----------------------------------------------------------------------
-  // Internal — loading
+  // Internal - loading
   // -----------------------------------------------------------------------
 
   /**
@@ -1244,7 +1244,7 @@ export class Loader {
    *
    * With `background`, the leaf is still registered + claimed + healed in place,
    * but its fetch is diverted into the low-priority background queue (see
-   * `AssetResidency._enqueueBackgroundFetch`) instead of started immediately —
+   * `AssetResidency._enqueueBackgroundFetch`) instead of started immediately -
    * `load(target, { priority: LoadPriority.Background })`.
    * @internal
    */
@@ -1273,7 +1273,7 @@ export class Loader {
 
   /**
    * Release every claim held under a claim scope (a scene unloading its
-   * scene-private assets). Collect the held keys first, then release —
+   * scene-private assets). Collect the held keys first, then release -
    * `AssetResidency._release` mutates its own claim map, so we must not
    * delete during iteration.
    * @internal
@@ -1345,9 +1345,9 @@ export class Loader {
    *
    * Mirrors {@link _createLoadingQueue}'s progress/settle machinery, but the
    * fetch is already driven by `_adopt`; each item's promise is simply the
-   * leaf's own readiness promise (`leaf.loaded` — `Promise<this>` for a resource
+   * leaf's own readiness promise (`leaf.loaded` - `Promise<this>` for a resource
    * handle, `Promise<T>` for an `AssetRef`). No `_claim` here: adoption already
-   * claimed each key — `claimer` is carried only so {@link LoadingQueue.cancel}
+   * claimed each key - `claimer` is carried only so {@link LoadingQueue.cancel}
    * can drop those very claims again. `buildResult` shapes the resolved values
    * into the return.
    * @internal
@@ -1355,7 +1355,7 @@ export class Loader {
   private _createAdoptedQueue<T>(claimer: LoaderScope, entries: Array<[string, object]>, buildResult: (results: Map<string, unknown>) => T): LoadingQueue<T> {
     const results = new Map<string, unknown>();
     // Adoption registered every leaf under its residency key, so the reverse
-    // lookup is the honest source for what this queue claimed — the Loader does
+    // lookup is the honest source for what this queue claimed - the Loader does
     // not re-derive the keys the residency just resolved.
     const claimedKeys = entries.map(([, leaf]) => this._residency._getHandleKey(leaf)).filter((key): key is string => key !== undefined);
     let notifyFn: ((success: boolean) => void) | null = null;
@@ -1390,7 +1390,7 @@ export class Loader {
   /**
    * Back {@link LoadingQueue.cancel}: drop the claims this load registered
    * under its own scope. Whether that actually stops a download is decided one
-   * level down — the residency aborts the in-flight fetch only once the key has
+   * level down - the residency aborts the in-flight fetch only once the key has
    * no claim scope left, so a sibling scene loading the same asset keeps it.
    */
   private _cancelClaims(claimer: LoaderScope, keys: readonly CanonicalAssetKey[]): void {
@@ -1400,7 +1400,7 @@ export class Loader {
   }
 
   // -----------------------------------------------------------------------
-  // Internal — foreground batch tracking
+  // Internal - foreground batch tracking
   // -----------------------------------------------------------------------
 
   /**
@@ -1426,7 +1426,7 @@ export class Loader {
    * The error a settling batch item should REPORT, or `undefined` for a
    * cancellation. A cancelled load still settles the batch (so `onLoadProgress`
    * and `onLoadComplete` stay in lockstep with what was started), but it is not
-   * a failure and must not reach {@link onLoadError} — the caller asked for it.
+   * a failure and must not reach {@link onLoadError} - the caller asked for it.
    */
   private _settleError(error: unknown): Error | undefined {
     return isAbortError(error) ? undefined : this._normalizeError(error);

@@ -14,7 +14,7 @@ const makeStubEffect = (): AudioEffect => {
   return { inputNode, outputNode, destroy: vi.fn(), ready: Promise.resolve() } as unknown as AudioEffect;
 };
 
-/** An effect whose own node setup has not finished yet — `inputNode`/`outputNode` throw, as every built-in effect does pre-setup. */
+/** An effect whose own node setup has not finished yet - `inputNode`/`outputNode` throw, as every built-in effect does pre-setup. */
 const makeUnreadyEffect = (): AudioEffect =>
   ({
     get inputNode(): AudioNode {
@@ -39,7 +39,7 @@ interface CapturedGain {
   };
 }
 
-/** Capture the first createGain after this call — the voice's output gain. */
+/** Capture the first createGain after this call - the voice's output gain. */
 const captureVoiceOutput = (): { get node(): CapturedGain | null; restore: () => void } => {
   const ctx = getAudioContext() as AudioContext & { createGain: () => GainNode };
   const original = ctx.createGain.bind(ctx);
@@ -124,7 +124,7 @@ describe('Voice — per-voice effects', () => {
 
     bus.destroy();
 
-    // A bus never owns the effects handed to it — destroying them here would
+    // A bus never owns the effects handed to it - destroying them here would
     // pull the effect out from under the still-playing voice that also holds it.
     expect(fx.destroy).not.toHaveBeenCalled();
     expect(voice.ended).toBe(false);

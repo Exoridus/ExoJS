@@ -153,7 +153,7 @@ const collectCallsites = (head: ProfileNode): CallsiteRow[] => {
   return [...bySite.entries()].map(([site, selfBytes]) => ({ site, selfBytes })).sort((a, b) => b.selfBytes - a.selfBytes);
 };
 
-/** Same lean frame the allocation gate drives — no `FrameMetrics` object. */
+/** Same lean frame the allocation gate drives - no `FrameMetrics` object. */
 const renderOnce = (harness: WebGl2Harness, root: RenderNode, beforeFrame?: () => void): void => {
   harness.backend.resetStats();
   harness.recorder.reset();
@@ -219,7 +219,7 @@ let previousHeap = liveHeap();
  * Run one phase under the sampler and record all four quantities.
  *
  * The wall-clock in `ms` is taken WITH the profiler running and is therefore an
- * upper bound, not a CPU reading — `--cpu` re-runs the same phase sequence with
+ * upper bound, not a CPU reading - `--cpu` re-runs the same phase sequence with
  * the profiler off for that.
  */
 const phase = async (name: string, body: () => void): Promise<void> => {

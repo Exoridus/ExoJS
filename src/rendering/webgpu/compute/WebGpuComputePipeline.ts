@@ -36,7 +36,7 @@ export interface ComputeSamplerBinding {
  *
  * `'write-only'` is broadly supported in core WebGPU. `'read-only'` and
  * `'read-write'` access are a newer core-feature addition and NOT
- * guaranteed available on every backend/browser — check
+ * guaranteed available on every backend/browser - check
  * `device.features.has(...)`/the relevant capability before requesting
  * anything other than `'write-only'`, and prefer it unless the shader
  * genuinely needs to read back what it wrote within the same dispatch.
@@ -99,7 +99,7 @@ const toGroupEntry = (e: ComputeBindGroupEntry): GPUBindGroupEntry => {
 };
 
 /**
- * Owning wrapper around a `GPUComputePipeline` plus its bind-group layouts —
+ * Owning wrapper around a `GPUComputePipeline` plus its bind-group layouts -
  * one layout per declared group (`@group(0)`, `@group(1)`, ... in
  * declaration order). Created once per shader; multiple bind groups can be
  * built per layout and swapped across dispatches (e.g. to run the same
@@ -187,7 +187,7 @@ export class WebGpuComputePipeline {
 
   /**
    * Set this pipeline, bind `bindGroups` at their array index, and dispatch
-   * a 1D workgroup grid sized for `itemCount` independent items — workgroups
+   * a 1D workgroup grid sized for `itemCount` independent items - workgroups
    * dispatched = `ceil(itemCount / workgroupSize)`. No-ops when `itemCount
    * <= 0`. The common case for "N independent items, one thread per item".
    */
@@ -205,7 +205,7 @@ export class WebGpuComputePipeline {
 
   /**
    * Set this pipeline, bind `bindGroups`, and dispatch `x`×`y`×`z` workgroups
-   * directly — no item-count derivation. Use for 2D/3D compute problems (e.g.
+   * directly - no item-count derivation. Use for 2D/3D compute problems (e.g.
    * per-texel image processing); use {@link dispatch} for the 1D
    * "N independent items" case instead, since the two take different units
    * (workgroup counts here vs. item counts there).
@@ -219,7 +219,7 @@ export class WebGpuComputePipeline {
    * Set this pipeline, bind `bindGroups`, and dispatch indirectly: workgroup
    * counts are read from `indirectBuffer` at `indirectOffset` (3× `u32`,
    * x/y/z) instead of being supplied by the caller. Use when the dispatch
-   * size is only known GPU-side — e.g. a prior compute pass writes a
+   * size is only known GPU-side - e.g. a prior compute pass writes a
    * survivor count after culling/compaction. `indirectBuffer` must have been
    * created with `GPUBufferUsage.INDIRECT` (plus `STORAGE` if a compute
    * shader is what writes the counts into it).

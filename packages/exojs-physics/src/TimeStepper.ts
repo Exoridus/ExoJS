@@ -17,7 +17,7 @@ export interface TimeStepperOptions {
  * {@link alpha} is the leftover fraction of a step `[0, 1)`, for interpolating
  * bound transforms between sub-steps.
  *
- * The stepper holds no mutable module-level state — two stepper instances are
+ * The stepper holds no mutable module-level state - two stepper instances are
  * fully independent (world isolation).
  */
 export class TimeStepper {

@@ -16,7 +16,7 @@ import type { GlyphInfo, GlyphKey, GlyphProvider } from './types';
 export type AtlasMode = 'sdf' | 'color';
 
 /**
- * SDF buffer radius in pixels — the maximum distance outside a glyph that the
+ * SDF buffer radius in pixels - the maximum distance outside a glyph that the
  * SDF field encodes. Determines the maximum usable outline/shadow reach.
  * Exported so applications can import this constant when computing shader uniforms.
  */

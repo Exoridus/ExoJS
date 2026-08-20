@@ -1,7 +1,7 @@
 /**
  * Profile-mode helpers for running benchmark scenarios with granular
  * timing, allocation tracking, and call-count instrumentation. Used by
- * profile-benchmark.ts. Pure dev-tooling — not exported, not shipped.
+ * profile-benchmark.ts. Pure dev-tooling - not exported, not shipped.
  */
 
 import { performance } from 'node:perf_hooks';
@@ -16,7 +16,7 @@ export interface SubTiming {
 export interface MemoryDelta {
   heapUsedDeltaBytes: number;
   heapUsedDeltaMb: number;
-  /** Whether global.gc() was called before the snapshot — true means measurement is more reliable. */
+  /** Whether global.gc() was called before the snapshot - true means measurement is more reliable. */
   gcUsed: boolean;
 }
 

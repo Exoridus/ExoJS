@@ -3,7 +3,7 @@
  *
  * This closes the hole the other two properties share. A scene whose sprite
  * lands off-canvas, whose texture never uploads, or whose renderer was never
- * registered produces an empty frame — and an empty frame is byte-identical to
+ * registered produces an empty frame - and an empty frame is byte-identical to
  * another empty frame and perfectly deterministic. Both comparison properties
  * would pass and report `traced`, and the matrix would fill a row with a claim
  * about nothing.
@@ -21,7 +21,7 @@ import type { PerBackendProperty, PropertyResult } from '../types';
 const verdict = (drawn: number, total: number): PropertyResult => ({
   support: drawn > 0 ? 'supported' : 'divergent',
   // A pixel count is an observation about coverage, not a pixel traced back to
-  // its texel — `sampled` is the honest class however many pixels were read.
+  // its texel - `sampled` is the honest class however many pixels were read.
   evidence: 'sampled',
   delta: null,
   note: drawn > 0 ? `${drawn}/${total} pixels drawn` : 'scene rendered an empty frame',

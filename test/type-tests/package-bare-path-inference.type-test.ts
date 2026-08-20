@@ -1,6 +1,6 @@
 // Type contract for the bare-path suffixes claimed by shipped extension
 // packages. `Loader.load(path)`/`Loader.get(path)` infer through
-// `ExtensionKindMap` (suffix → asset type) — the sole bare-path inference map
+// `ExtensionKindMap` (suffix → asset type) - the sole bare-path inference map
 // (suffix → resource), which no longer drives any call signature. A package that
 // augments the wrong map still compiles, but leaves its documented bare-path
 // call resolving to `never` for consumers, so these assertions pin the map that
@@ -27,7 +27,7 @@ type Expect<T extends true> = T;
 
 declare const loader: Loader;
 
-// ── @codexo/exojs-tiled — the `tmj` suffix ───────────────────────────────────
+// ── @codexo/exojs-tiled - the `tmj` suffix ───────────────────────────────────
 type _TmjKind = Expect<Equal<KindByPath<'world.tmj'>, 'tileMap'>>;
 type _TmjNested = Expect<Equal<KindByPath<'levels/forest.tmj'>, 'tileMap'>>;
 type _TmjQuery = Expect<Equal<KindByPath<'world.tmj?v=2'>, 'tileMap'>>;
@@ -39,7 +39,7 @@ type _TmxUnclaimed = Expect<Equal<KindByPath<'world.tmx'>, never>>;
 const tiledQueue = loader.load('world.tmj');
 type _TiledLoadResolves = Expect<Equal<typeof tiledQueue, LoadingQueue<TileMap>>>;
 
-// ── @codexo/exojs-ldtk — the `ldtk` suffix ───────────────────────────────────
+// ── @codexo/exojs-ldtk - the `ldtk` suffix ───────────────────────────────────
 type _LdtkKind = Expect<Equal<KindByPath<'world.ldtk'>, 'ldtkMap'>>;
 type _LdtkNested = Expect<Equal<KindByPath<'https://example.com/levels/world.ldtk'>, 'ldtkMap'>>;
 
@@ -50,7 +50,7 @@ type _LdtkLoadResolves = Expect<Equal<typeof ldtkQueue, LoadingQueue<LdtkMap>>>;
 //
 // `defineAsset` computes `isValue` at runtime as `isValue ?? seamless === undefined`,
 // so a package binding that ships no seamless adapter hands out an `AssetRef`
-// wrapper — never the bare resource. `LeafForPath` decides the same question
+// wrapper - never the bare resource. `LeafForPath` decides the same question
 // from `ValueAssetKind`, which the package mirrors with `isValue: true` on its
 // `AssetDefinitions` entry. If the two ever drift, `get(path)` type-checks as
 // the unwrapped resource while returning an `AssetRef` at runtime, and
@@ -65,7 +65,7 @@ type _LdtkGetIsRef = Expect<Equal<typeof ldtkLeaf, AssetRef<LdtkMap>>>;
 // bare paths were (`Asset.type(...)` brands a value kind as `ValueAsset<T>`, and
 // both `get(descriptor)` and a catalog leaf resolve it to `AssetRef<T>`).
 // Unlike the bare-path results above, a descriptor leaf is minted by `createLeaf`
-// and therefore comes back BRANDED — still an `AssetRef` for a value kind.
+// and therefore comes back BRANDED - still an `AssetRef` for a value kind.
 const tiledFromDescriptor = loader.get(Asset.type('tiledSource', 'world.tmj'));
 type _TiledDescriptorIsRef = Expect<Equal<typeof tiledFromDescriptor, CatalogValueLeaf<TiledMap>>>;
 const tiledPlainRef: AssetRef<TiledMap> = tiledFromDescriptor;
@@ -79,7 +79,7 @@ const catalog = Assets.from({ map: Asset.type('tileMap', 'world.tmj'), sheet: As
 type _CatalogLeavesAreRefs = Expect<Equal<(typeof catalog)['map'], CatalogValueLeaf<TileMap>>>;
 type _CatalogSheetIsRef = Expect<Equal<(typeof catalog)['sheet'], CatalogValueLeaf<AsepriteSheet>>>;
 
-// A resource kind with a seamless adapter still resolves unwrapped — the marker
+// A resource kind with a seamless adapter still resolves unwrapped - the marker
 // must not turn every package kind into a ref.
 const shipLeaf = loader.get('sprites/ship.png');
 type _SeamlessStaysUnwrapped = Expect<Equal<typeof shipLeaf, Texture>>;

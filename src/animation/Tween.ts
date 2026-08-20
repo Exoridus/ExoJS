@@ -136,7 +136,7 @@ export class Tween<T extends object = object> {
    * Number of additional repeat cycles. -1 = infinite. Default 0 (runs once).
    *
    * The argument counts cycles **after** the first, not the total cycle
-   * count — `repeat(2)` runs the animation three times total (the initial
+   * count - `repeat(2)` runs the animation three times total (the initial
    * pass plus two repeats).
    *
    * @example
@@ -166,7 +166,7 @@ export class Tween<T extends object = object> {
   /**
    * Register a callback fired once when the tween begins interpolating
    * (after any configured delay has elapsed). Fires only on the first
-   * cycle — repeats do not re-trigger it.
+   * cycle - repeats do not re-trigger it.
    */
   public onStart(callback: TweenLifecycleCallback): this {
     this._onStart = callback;
@@ -176,7 +176,7 @@ export class Tween<T extends object = object> {
 
   /**
    * Register a callback fired on every active update. Receives the eased
-   * progress in 0..1 — already direction-flipped for yoyo cycles.
+   * progress in 0..1 - already direction-flipped for yoyo cycles.
    */
   public onUpdate(callback: TweenUpdateCallback): this {
     this._onUpdate = callback;
@@ -211,7 +211,7 @@ export class Tween<T extends object = object> {
    * Start or restart the tween. Resets all elapsed time, the start-value
    * snapshot, playback direction, and repeat counter.
    *
-   * Registers the tween with its manager, if one is assigned — both for the
+   * Registers the tween with its manager, if one is assigned - both for the
    * first start and after an eviction caused by natural completion or
    * {@link Tween.stop}, so it (re)starts receiving frame updates either way.
    * Stand-alone tweens (no manager) are unaffected.
@@ -250,7 +250,7 @@ export class Tween<T extends object = object> {
   /**
    * Stop the tween without finishing. Target properties stay at their
    * current interpolated values. onComplete does NOT fire. The tween is
-   * removed from its manager if one is assigned — unconditionally rather
+   * removed from its manager if one is assigned - unconditionally rather
    * than state-gated, which for anything the manager does not hold (an idle
    * or already-finished tween) is simply a no-op. The manager binding itself
    * survives, so a later {@link Tween.start} re-enters the update list.
@@ -268,7 +268,7 @@ export class Tween<T extends object = object> {
   /**
    * When this tween completes naturally, automatically start `next`.
    * Returns `next` for fluent chaining:
-   *   `fadeIn.chain(moveOut).start()` — note that start() here starts moveOut,
+   *   `fadeIn.chain(moveOut).start()` - note that start() here starts moveOut,
    *   so typically you only call start() on the first tween.
    */
   public chain(next: Tween): Tween {
@@ -279,7 +279,7 @@ export class Tween<T extends object = object> {
 
   /**
    * Bind this tween to a manager, without entering it into that manager's
-   * update list — {@link Tween.start} does the entering. Called by
+   * update list - {@link Tween.start} does the entering. Called by
    * TweenManager.create(), TweenManager.sequence(), TweenManager.add() and
    * TweenSequencer. Not part of the public fluent API.
    * @internal

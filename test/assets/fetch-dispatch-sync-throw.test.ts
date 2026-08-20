@@ -21,7 +21,7 @@ const mockFetchImage = (): void => {
 /**
  * Options object whose getter throws while `_dispatchFetch` copies it into the
  * handler config. This is the one input that makes the dispatch fail
- * *synchronously*, before the returned promise exists — every real 404 or
+ * *synchronously*, before the returned promise exists - every real 404 or
  * decode error fails asynchronously instead.
  */
 const hostileOptions = (): Record<string, unknown> =>
@@ -69,7 +69,7 @@ describe('a synchronous throw out of the fetch dispatch', () => {
    * `Assets` constructor materializes every leaf config up front, so a throwing
    * getter fires there rather than surviving into `QueueEntry.options`. The
    * dispatch is stubbed directly to cover the call site itself, whose failure
-   * mode is worse than the seamless one — the throw escapes before `.finally()`
+   * mode is worse than the seamless one - the throw escapes before `.finally()`
    * is attached, so the active counter never decrements and the queue wedges.
    */
   test('keeps the background queue draining instead of stalling awaitBackground()', async () => {
@@ -83,7 +83,7 @@ describe('a synchronous throw out of the fetch dispatch', () => {
 
     const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
 
-    // load() rejects for a failed leaf even in background mode — settle it here
+    // load() rejects for a failed leaf even in background mode - settle it here
     // so the assertion below is about the queue draining, not about that.
     loader.load(catalog, { priority: LoadPriority.Background }).catch(() => {});
 

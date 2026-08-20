@@ -77,7 +77,7 @@ describe('GranularEffect', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 2. Worklet lifecycle — 1 input
+  // 2. Worklet lifecycle - 1 input
   // -------------------------------------------------------------------------
   describe('worklet lifecycle', () => {
     it('after await filter.ready: workletNode is not null', async () => {

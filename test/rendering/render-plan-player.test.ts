@@ -73,7 +73,7 @@ const createPlaybackSpy = (): PlaybackSpy => {
   const uploads: string[] = [];
 
   // Reconstruct each group's drawable ids from the `(entries, startIndex, count)`
-  // range the refactored hooks pass — the player no longer materializes a group.
+  // range the refactored hooks pass - the player no longer materializes a group.
   const groupIds = (entries: readonly ScopeEntry[], startIndex: number, count: number): string =>
     renderGroupFromRange(entries, startIndex, count)
       .instructions.map(command => (command.drawable as BoxDrawable).id)
@@ -145,7 +145,7 @@ describe('render plan player', () => {
     // Outer scope Phase 1 uploads {a,b} and {c} first; then during Phase 2
     // the nested scope enters its own Phase 1 ({d,e} upload) before its draws.
     // passGroupIndex and firstPassInstructionIndex in the pre-pass context are
-    // computed from each scope's own groups only — they do not account for
+    // computed from each scope's own groups only - they do not account for
     // nested-scope contributions, so values for groups after a nested sub-scope
     // are approximate but functionally correct (no backend reads them today).
     expect(spy.events).toEqual([

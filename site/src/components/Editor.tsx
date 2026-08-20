@@ -96,7 +96,7 @@ export function Editor({
 
         // Reset the editor for the newly-selected example before loading its source
         // asynchronously below. This is a prop-change reset (not a render-derived
-        // value); the React-idiomatic alternative — a `key` remount — would re-init
+        // value); the React-idiomatic alternative - a `key` remount - would re-init
         // Monaco on every example switch, so we suppress the heuristic here instead.
         /* eslint-disable @eslint-react/set-state-in-effect */
         setSourceCode(null);
@@ -163,7 +163,7 @@ export function Editor({
             try {
                 window.localStorage.setItem(LAYOUT_STORAGE_KEY, next);
             } catch {
-                // localStorage disabled — the toggle still works for the session.
+                // localStorage disabled - the toggle still works for the session.
             }
             return next;
         });
@@ -232,12 +232,12 @@ export function Editor({
     const languageLabel = activeExample?.language === 'typescript' ? 'TypeScript' : 'JavaScript';
     const editorLanguage = activeExample?.language === 'typescript' ? 'typescript' : 'javascript';
     const displayPath = getDisplayPath(activeExample);
-    // The toggle only makes sense for a TS example — a "compiled" view of
+    // The toggle only makes sense for a TS example - a "compiled" view of
     // freeform JS scratch code would just be the same text back.
     const canToggleView = editorLanguage === 'typescript';
     const isCompiledView = canToggleView && viewMode === 'compiled';
     const displayedLanguage = isCompiledView ? 'javascript' : editorLanguage;
-    // executionCode only reads null before the very first successful compile —
+    // executionCode only reads null before the very first successful compile -
     // once set, it holds the last successful compile even while a newer edit is
     // still emitting (see getExecutionCode's contract in EditorCode.tsx), so this
     // placeholder is a first-paint-only case.

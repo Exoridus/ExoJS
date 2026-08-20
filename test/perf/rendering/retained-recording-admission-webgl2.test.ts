@@ -6,10 +6,10 @@
  *
  * The predicate used to look only at the renderer's capability flag, so it
  * admitted draws whose renderer then had to POISON the open capture from inside
- * its draw path — a mesh without static geometry and a shader-path repeating
+ * its draw path - a mesh without static geometry and a shader-path repeating
  * sprite both did. That combination is stable but wasteful: the group opens a
  * capture, records into it, poisons it, fails validation, and re-arms on the
- * next clean frame — every frame, forever, for a recording it can never replay.
+ * next clean frame - every frame, forever, for a recording it can never replay.
  * The poison itself stays in place as the safety net its contract describes;
  * these cells pin that a healthy scene no longer reaches it.
  *
@@ -110,8 +110,8 @@ const buildGroupScene = (texture: Texture, fill: (group: RetainedContainer) => v
 };
 
 /**
- * Drive four frames — capture, first clean frame (where recording is armed),
- * and two steady frames — and report what the retained machinery did.
+ * Drive four frames - capture, first clean frame (where recording is armed),
+ * and two steady frames - and report what the retained machinery did.
  */
 const runLadder = (harness: WebGl2Harness, root: Container) => {
   const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');

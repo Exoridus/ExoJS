@@ -3,7 +3,7 @@
  *
  * The counterpart to `test/perf/rendering/run-allocation-cell.ts`, and it exists
  * for the same reason: V8's optimisation state carries across scenes inside a
- * process, so a source-of-truth number — and every callsite attribution — has to
+ * process, so a source-of-truth number - and every callsite attribution - has to
  * come from a process that rendered nothing else. Here "process" means a browser
  * launched for this scene alone, which is why the scene id arrives through a
  * build-time define and the driver (`run-webgpu-allocation.ts`) spawns one
@@ -62,7 +62,7 @@ const frameLabel = (node: SamplingProfileNode): string => {
 
 /**
  * Flatten the sampling tree into per-callsite rows keyed by the function AND its
- * two nearest callers — aggregating by function identity alone merges every
+ * two nearest callers - aggregating by function identity alone merges every
  * `(anonymous) @ (native)` in the page into one row and then reports whichever
  * caller was visited first.
  */
@@ -115,14 +115,14 @@ test(`webgpu allocation cell — ${__EXOJS_ALLOC_ID__}`, async () => {
 
   // ── cpu-ab: two variants of the SAME build, interleaved in one process ──
   // For A/B-ing a spike. Process-to-process variance is the dominant noise term
-  // in a browser CPU reading — ±13% measured on `mesh/1000`, which swamps the
-  // few percent an allocation fix is worth — and it cancels when both variants
+  // in a browser CPU reading - ±13% measured on `mesh/1000`, which swamps the
+  // few percent an allocation fix is worth - and it cancels when both variants
   // run as alternating blocks inside one process.
   //
   // The mode sets `globalThis.__EXOJS_WEBGPU_SPIKE__` to 0 or 1 before each
   // block. NOTHING in shipped code reads it: a spike patch introduces the
   // branch, this mode drives it, and the branch is removed before the fix
-  // lands. (It is how the mesh uniform-staging reuse was justified — the JS
+  // lands. (It is how the mesh uniform-staging reuse was justified - the JS
   // heap sampler cannot see an `ArrayBuffer` backing store at all, so the only
   // available second indicator was wall clock.)
   if (__EXOJS_ALLOC_MODE__ === 'cpu-ab') {

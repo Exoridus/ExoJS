@@ -6,7 +6,7 @@
  * is the single copy of that mock. It MUST declare the same `u_texture0..15`
  * sampler set as the production shader: `WebGl2SpriteRenderer#onConnect` pins
  * all 16 sampler uniforms strictly, so a mock with fewer samplers would throw
- * at connect — by design, since silently skipping a missing sampler in
+ * at connect - by design, since silently skipping a missing sampler in
  * production would leave it on texture unit 0 (wrong texture, no error).
  *
  * The texcoord varying name is parameterised because the per-file mock vertex

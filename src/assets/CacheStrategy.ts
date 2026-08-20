@@ -28,8 +28,8 @@ export interface CacheRequest {
   /**
    * Diagnostic sink for cache failures the strategy degrades instead of
    * propagating (a full quota, an unreadable store). Supplied by the caller
-   * that issued this request — `Loader` passes one that feeds its own
-   * `onCacheError` — so a degraded write is reported to whoever asked for the
+   * that issued this request - `Loader` passes one that feeds its own
+   * `onCacheError` - so a degraded write is reported to whoever asked for the
    * asset and to nobody else.
    *
    * Request-scoped rather than a signal on the strategy: strategies are
@@ -37,7 +37,7 @@ export interface CacheRequest {
    * loaders, which a per-instance subscription would cross-wire (and keep
    * alive past the subscriber's own teardown).
    *
-   * Absent when the caller wants no diagnostics — never assume it is set.
+   * Absent when the caller wants no diagnostics - never assume it is set.
    */
   readonly reportCacheError?: (error: AssetCacheError) => void;
 }

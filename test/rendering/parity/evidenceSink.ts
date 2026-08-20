@@ -13,29 +13,29 @@ import { dirname, resolve } from 'node:path';
 /**
  * How much a (scene, property) pair actually proves on one backend.
  *
- * This is the strength of the check, never its outcome — `delta` carries the
+ * This is the strength of the check, never its outcome - `delta` carries the
  * outcome. A row can read `frame-equal` with `delta: 0` and still be weaker
  * evidence than a `traced` row with the same delta, because a solid-colour
  * texture renders identically whether or not the UVs were mirrored.
  *
- * - `traced` — every output pixel checked against the one texel it must have
+ * - `traced` - every output pixel checked against the one texel it must have
  *   come from. Needs a self-describing fixture under nearest sampling.
- * - `frame-equal` — every pixel compared, but no pixel traceable to a source
+ * - `frame-equal` - every pixel compared, but no pixel traceable to a source
  *   texel: the frames match, which is weaker than each pixel being right.
- * - `oracle` — compared against an expectation computed independently of the
+ * - `oracle` - compared against an expectation computed independently of the
  *   renderer, so agreeing backends can still both be wrong and be caught.
- * - `tolerant` — compared within a tolerance rather than for equality.
- * - `sampled` — only some pixels looked at.
- * - `none` — nothing established; see `note` for why.
+ * - `tolerant` - compared within a tolerance rather than for equality.
+ * - `sampled` - only some pixels looked at.
+ * - `none` - nothing established; see `note` for why.
  */
 export type EvidenceClass = 'traced' | 'frame-equal' | 'oracle' | 'tolerant' | 'sampled' | 'none';
 
 /**
- * Whether the feature actually worked there — distinct from how well it was checked.
+ * Whether the feature actually worked there - distinct from how well it was checked.
  *
  * `unavailable` is a finding, not a gap: the browser has no such backend, so
  * there is nothing to verify and never will be until it ships one. `unknown`
- * means the check could have run and did not — a lost device, a browser we
+ * means the check could have run and did not - a lost device, a browser we
  * have not measured yet.
  */
 export type SupportState = 'supported' | 'divergent' | 'unavailable' | 'unknown';
@@ -47,7 +47,7 @@ export interface EvidenceRow {
   readonly browser: string;
   readonly backend: 'webgl2' | 'webgpu';
   readonly support: SupportState;
-  /** How strong the check was — not what it found. */
+  /** How strong the check was - not what it found. */
   readonly evidence: EvidenceClass;
   /** Largest per-channel deviation observed, when the property measured one. */
   readonly delta: number | null;

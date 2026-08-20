@@ -23,7 +23,7 @@ interface DbHarness {
   fakeIdb: FakeIndexedDb;
 }
 
-/** The harness-scoped class as a *type* — the destructured binding is a value only. */
+/** The harness-scoped class as a *type* - the destructured binding is a value only. */
 type TypedCacheError = InstanceType<DbHarness['AssetCacheError']>;
 
 /**
@@ -429,7 +429,7 @@ describe('IndexedDbDatabase', () => {
       const error = await rejection(db.load('image', 'hero'));
 
       expect(error).toBeInstanceOf(AssetCacheError);
-      // Already typed by `connect()` — re-wrapping it as a 'load' failure would
+      // Already typed by `connect()` - re-wrapping it as a 'load' failure would
       // bury the real cause one level deeper and mislabel the operation.
       expect((error as TypedCacheError).operation).toBe('connect');
       expect((error as TypedCacheError).cause).toBe(openError);
@@ -438,7 +438,7 @@ describe('IndexedDbDatabase', () => {
     test('a synchronous throw from indexedDB.open() is typed too', async () => {
       const { IndexedDbDatabase, AssetCacheError, fakeIdb } = await loadWithFakeIndexedDb();
       // `open()` throws rather than failing its request for an invalid version
-      // — `new IndexedDbDatabase(name, 0)` reaches this through public API.
+      // - `new IndexedDbDatabase(name, 0)` reaches this through public API.
       const openThrow = new TypeError('The version provided must not be 0.');
 
       vi.spyOn(fakeIdb.factory, 'open').mockImplementation(() => {

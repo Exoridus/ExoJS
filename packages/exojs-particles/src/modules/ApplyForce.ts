@@ -6,7 +6,7 @@ import type { WgslContribution } from './WgslContribution';
 /**
  * Adds a constant 2D acceleration to every live particle's velocity each
  * frame. Use for gravity (`new ApplyForce(0, 980)`), wind, or any uniform
- * force field. Force is applied to all particles equally — for per-particle
+ * force field. Force is applied to all particles equally - for per-particle
  * variation, layer multiple ApplyForce modules with different gates.
  *
  * GPU-eligible: implements {@link UpdateModule.wgsl} so this module runs in

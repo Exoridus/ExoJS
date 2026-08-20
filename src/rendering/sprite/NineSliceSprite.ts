@@ -125,7 +125,7 @@ export class NineSliceSprite extends Drawable {
   // Mutators
   // -----------------------------------------------------------------------
 
-  /** Set destination size. Fails atomically — prior state is preserved on invalid input. */
+  /** Set destination size. Fails atomically - prior state is preserved on invalid input. */
   public setSize(width: number, height: number): this {
     validateSizeInput(width, height);
 

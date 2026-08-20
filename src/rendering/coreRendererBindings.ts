@@ -71,7 +71,7 @@ export function buildCoreRendererBindings(options: RenderingApplicationOptions):
       create: backend => meshRenderers[backend.backendType]?.(),
     },
     {
-      // Text and BitmapText share the same renderer class — one multi-target binding.
+      // Text and BitmapText share the same renderer class - one multi-target binding.
       targets: [Text, BitmapText],
       create: backend => textRenderers[backend.backendType]?.(),
     },

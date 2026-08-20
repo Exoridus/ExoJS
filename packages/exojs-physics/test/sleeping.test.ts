@@ -73,7 +73,7 @@ describe('sleeping', () => {
     const top = addBox(world, 0, 300 - 16 - 64);
     advance(world, 2);
 
-    // The top box rests ON the bottom box — if wake-on-contact failed, the
+    // The top box rests ON the bottom box - if wake-on-contact failed, the
     // solver would skip the contact and the top box would tunnel through.
     expect(top.y).toBeLessThan(bottom.y - 24); // a box-height above
     expect(bottom.y).toBeGreaterThan(300 - 16 - 5); // bottom still on the floor
@@ -165,7 +165,7 @@ describe('sleeping', () => {
     const restingY = box.y;
 
     // 2 px/s is below the 5 px/s sleep threshold, so nothing about the platform's
-    // own motion looks "fast" to the sleep pass — yet it must not drive through
+    // own motion looks "fast" to the sleep pass - yet it must not drive through
     // the passenger.
     platform.linearVelocityY = -2;
     advance(world, 2);
@@ -184,7 +184,7 @@ describe('sleeping', () => {
 
     const restingY = box.y;
 
-    // A teleported platform carries no velocity at all — the only trace of its
+    // A teleported platform carries no velocity at all - the only trace of its
     // motion is the transform write itself.
     for (let frame = 0; frame < 120; frame++) {
       platform.setTransform({ x: platform.x, y: platform.y - 2 * FRAME });

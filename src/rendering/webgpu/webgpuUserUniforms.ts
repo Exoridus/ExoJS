@@ -10,13 +10,13 @@ import type { WebGpuBackend } from './WebGpuBackend';
  * Shared user-uniform handling for the WebGPU custom-material paths
  * (WebGpuSpriteRenderer / WebGpuMeshRenderer group(2)).
  *
- * The two renderers pack an identical `@group(2)` layout — one UBO at binding 0
- * followed by texture/sampler pairs — so the packing, change-detection, and
+ * The two renderers pack an identical `@group(2)` layout - one UBO at binding 0
+ * followed by texture/sampler pairs - so the packing, change-detection, and
  * bind-group caching live here to keep them byte-for-byte consistent.
  *
  * The core contract: the per-material UBO scratch and its GPU
  * bind group are reused across frames and re-uploaded/rebuilt only when the
- * material's uniform VALUES (or bound texture views) actually change — a static
+ * material's uniform VALUES (or bound texture views) actually change - a static
  * custom-material scene then issues zero uniform writes and zero bind-group
  * creations per frame instead of one of each per flush.
  * @internal
@@ -70,11 +70,11 @@ export interface UserUniformState {
   floatCount: number;
   /** Cached user bind group, or `null` before the first build / after an invalidation. */
   bindGroup: GPUBindGroup | null;
-  /** UBO identity the cached bind group binds — a new buffer invalidates it. */
+  /** UBO identity the cached bind group binds - a new buffer invalidates it. */
   bindGroupBuffer: GPUBuffer | null;
-  /** Texture views the cached bind group binds — a refreshed view invalidates it. */
+  /** Texture views the cached bind group binds - a refreshed view invalidates it. */
   bindGroupViews: GPUTextureView[];
-  /** Samplers the cached bind group binds — a refreshed sampler invalidates it. */
+  /** Samplers the cached bind group binds - a refreshed sampler invalidates it. */
   bindGroupSamplers: GPUSampler[];
 }
 
@@ -86,7 +86,7 @@ export interface UserUniformState {
  * hazard, not a detail: it lands on the queue timeline ahead of the whole
  * submit, so a draw already recorded into the open pass would read this batch's
  * values instead of its own. The caller answers that with its pass, then
- * applies — see {@link planUserUniformUpload} and {@link applyUserUniformUpload}.
+ * applies - see {@link planUserUniformUpload} and {@link applyUserUniformUpload}.
  */
 export interface UserUniformUpload {
   /** The buffer this batch binds, freshly created when the previous one was too small. */
@@ -113,7 +113,7 @@ export interface UserUniformResources {
  * whose values did not change since its last upload writes nothing.
  *
  * A buffer that outgrew its capacity is replaced here but the old one is NOT
- * destroyed yet — it may still be read by a draw in the open pass, and the
+ * destroyed yet - it may still be read by a draw in the open pass, and the
  * caller needs {@link UserUniformUpload.staleBuffer} to see that before
  * {@link applyUserUniformUpload} frees it.
  */
@@ -182,7 +182,7 @@ export function resetUserUniformState(state: UserUniformState): void {
 }
 
 /**
- * Bytes required to hold `scalarCount` material uniforms — each occupies one
+ * Bytes required to hold `scalarCount` material uniforms - each occupies one
  * `≤vec4` 16-byte slot, with a minimum of one slot to satisfy WebGPU's minimum
  * uniform-buffer size.
  */
@@ -193,7 +193,7 @@ export function userUniformBufferBytes(scalarCount: number): number {
 /**
  * Pack `scalarValues` into `state.data` (reused across frames) and report
  * whether the packed bytes differ from the previous upload. Every slot writes
- * its four components — trailing components of a scalar/vec2/vec3 are zeroed —
+ * its four components - trailing components of a scalar/vec2/vec3 are zeroed -
  * so a uniform changing arity in place is handled correctly.
  *
  * `forceWrite` (the destination GPU buffer was just recreated and holds
@@ -235,7 +235,7 @@ export function packUserUniforms(
       c2 = 0;
       c3 = 0;
     } else {
-      // Float32Array | Int32Array | readonly number[] — all index-addressable;
+      // Float32Array | Int32Array | readonly number[] - all index-addressable;
       // the UBO slot holds at most a vec4, so only the first four are consumed.
       const arr = value as ArrayLike<number>;
       const length = arr.length;
@@ -276,7 +276,7 @@ export function packUserUniforms(
  * at binding 0 followed by texture/sampler pairs. Texture bindings are always
  * re-resolved (which syncs a mutated texture's content before sampling), and
  * the cached group is reused while the UBO identity and every resolved
- * view/sampler are unchanged — a static material then creates zero bind groups
+ * view/sampler are unchanged - a static material then creates zero bind groups
  * per frame while a texture swap/resize rebuilds exactly once.
  */
 export function resolveUserUniformBindGroup(
@@ -292,7 +292,7 @@ export function resolveUserUniformBindGroup(
   const views: GPUTextureView[] = [];
   const samplers: GPUSampler[] = [];
 
-  // Resolve every binding first — this uploads a dirty texture's content to the
+  // Resolve every binding first - this uploads a dirty texture's content to the
   // GPU before it is sampled, so it must run every frame even on a cache hit.
   for (const texture of textures) {
     const binding = backend.getTextureBinding(texture);

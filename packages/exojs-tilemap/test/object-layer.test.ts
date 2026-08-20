@@ -145,7 +145,7 @@ describe('ObjectLayer query() value-matching for structured TilePropertyValue ki
     levelIid: 'level-a',
     worldIid: 'world-a',
   };
-  // Same `id`, every nav field differs — must still match by id alone.
+  // Same `id`, every nav field differs - must still match by id alone.
   const objectRefASameId: TilePropertyObjectRef = {
     kind: TilePropertyKind.ObjectRef,
     id: 'entity-1',

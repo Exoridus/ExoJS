@@ -1,23 +1,23 @@
 /**
  * Allocation sampler for the render-perf harness.
  *
- * Measures the render plan's per-frame **allocation rate** — every byte a frame
+ * Measures the render plan's per-frame **allocation rate** - every byte a frame
  * allocates, including the immediately-dead throwaway objects the plan still
  * produces (per-frame closures, mesh batch records, filter scratch …). The big
- * historical sources — `DrawCommand`/`ScopeEntry`/`MaterialKey` (pooled in 2b)
- * and the per-scope `RenderGroup[]` (eliminated in 2c) — no longer allocate.
+ * historical sources - `DrawCommand`/`ScopeEntry`/`MaterialKey` (pooled in 2b)
+ * and the per-scope `RenderGroup[]` (eliminated in 2c) - no longer allocate.
  *
  * ── Why not a `heapUsed` delta ──────────────────────────────────────────────
- * The obvious approach — GC to a floor, render N frames, diff `heapUsed` — does
+ * The obvious approach - GC to a floor, render N frames, diff `heapUsed` - does
  * NOT work here. The plan's per-frame objects die the instant the frame ends, and
  * V8 reclaims them *concurrently* (minor mark-compact / scavenge) during the
  * sampling window, so they never show up in a heap-size delta. (Measured: a 1000-
  * sprite static frame allocates ~4000 objects yet a `heapUsed` delta reports only
- * ~6 KB/frame — it sees retained growth, not the throwaway rate.) Bumping the
+ * ~6 KB/frame - it sees retained growth, not the throwaway rate.) Bumping the
  * young generation does not help; the concurrent collector still runs.
  *
  * Instead this uses V8's **allocation sampling profiler** via `node:inspector`
- * (`HeapProfiler.startSampling` *with* the `includeObjectsCollectedBy*GC` flags —
+ * (`HeapProfiler.startSampling` *with* the `includeObjectsCollectedBy*GC` flags -
  * without them it reports only objects still live at stop and misses the dead-on-
  * arrival plan garbage entirely, a ~500× undercount). It records at allocation
  * time, is statistical (one sample per `samplingInterval` bytes) but accurate over
@@ -43,12 +43,12 @@ export interface FrameAllocationOptions {
   readonly warmup?: number | undefined;
   /**
    * Sampling interval in bytes (default 512). Finer (smaller) intervals count
-   * small allocations more precisely but bloat the inspector profile — at 64 a
+   * small allocations more precisely but bloat the inspector profile - at 64 a
    * multi-MB/frame scene over 200 frames overflows V8's 512 MB string cap on the
    * profile transfer. 512 stays accurate over the window while keeping it small.
    */
   readonly samplingInterval?: number | undefined;
-  /** Per-frame mutation (move sprites, pan camera) — runs inside the sampled loop. */
+  /** Per-frame mutation (move sprites, pan camera) - runs inside the sampled loop. */
   readonly beforeFrame?: (() => void) | undefined;
 }
 
@@ -84,7 +84,7 @@ export interface ColdStartAllocation {
   readonly frames: number;
 }
 
-/** Render one frame leanly — no `FrameMetrics` object, just the plan build + flush. */
+/** Render one frame leanly - no `FrameMetrics` object, just the plan build + flush. */
 const renderOnce = (harness: WebGl2Harness, root: RenderNode, beforeFrame?: () => void): void => {
   harness.backend.resetStats();
   harness.recorder.reset();
@@ -117,7 +117,7 @@ const sampleBytes = async (samplingInterval: number, body: () => void): Promise<
 
   await post('HeapProfiler.enable');
   // CRITICAL: without these two flags the sampling profiler reports only objects
-  // still LIVE at stopSampling — it discards everything the GC reclaimed during
+  // still LIVE at stopSampling - it discards everything the GC reclaimed during
   // the window, i.e. exactly the immediately-dead plan garbage we want to count.
   // (Measured: omitting them undercounts a known 1000-object/frame allocation by
   // ~500×.) Requires Node ≥ 20; older runtimes ignore the extra keys.
@@ -144,7 +144,7 @@ const sampleBytes = async (samplingInterval: number, body: () => void): Promise<
  * The `warmup` default (30) is sized for the gate's scenes, which reach steady
  * state within a handful of frames. It is NOT a universal "long enough": a scene
  * whose start-up work scales with node count needs orders more (the 1M reference
- * stage still builds its persistent source and spatial index inside frame 20 —
+ * stage still builds its persistent source and spatial index inside frame 20 -
  * see {@link measureColdStartAllocation}), and a window that straddles that work
  * reports a start-up total divided by the window length, not a rate.
  */
@@ -175,22 +175,22 @@ export const measureFrameAllocation = async (harness: WebGl2Harness, root: Rende
 
 /**
  * Sample what rendering `root` allocates ONCE, on the way from a freshly built
- * scene to a steady one — the counterpart to {@link measureFrameAllocation},
+ * scene to a steady one - the counterpart to {@link measureFrameAllocation},
  * which deliberately warms past exactly this.
  *
  * Measured on the 1M-sprite reference stage, this is the work involved: frame 1
  * builds the render plan over every node, computes and caches a material key per
- * drawable, and snapshots the retained group fragments — ~466 MB at a million
+ * drawable, and snapshots the retained group fragments - ~466 MB at a million
  * sprites, against a steady-state rate of ~15 KB/frame for the same scene. Over
  * the next few dozen frames the root then discovers it is eligible for a
  * persistent source, builds the packed item store and the spatial visibility
- * index, sizes the derived slot tables, and runs its first full selection —
+ * index, sizes the derived slot tables, and runs its first full selection -
  * visible in a profile as `SourceVisibilityIndex.build` under
  * `RenderRootSource.adopt`, and structurally as the frame's draw-call count
  * collapsing (75 → 1 on that scene) once the persistent path takes over. The
  * first 100 frames together come to ~809 MB.
  *
- * `root` must not have been rendered yet — the first frame is the measurement.
+ * `root` must not have been rendered yet - the first frame is the measurement.
  */
 export const measureColdStartAllocation = async (
   harness: WebGl2Harness,

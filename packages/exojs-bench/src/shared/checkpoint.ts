@@ -9,9 +9,9 @@ import { dirname, join } from 'node:path';
  * every already-measured cell in the whole run. This writer persists each cell's
  * result the instant it lands, so a later failure can never lose finished work:
  *
- *  - `checkpoint.jsonl` — one JSON line appended per cell, in completion order.
+ *  - `checkpoint.jsonl` - one JSON line appended per cell, in completion order.
  *    Append-only, so even a hard process kill leaves every prior line intact.
- *  - `checkpoint.json` — the full array rewritten after each cell, a
+ *  - `checkpoint.json` - the full array rewritten after each cell, a
  *    convenient single-object view of everything gathered so far.
  *
  * Both files live under the run's output directory and are overwritten fresh at

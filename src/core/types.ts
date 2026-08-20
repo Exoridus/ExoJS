@@ -24,14 +24,14 @@ export type ValueOf<T> = T[keyof T];
  * Return type of the engine hooks that must not be asynchronous:
  * {@link Scene.init}, the frame hooks {@link Scene.fixedUpdate} /
  * {@link Scene.update} / {@link Scene.draw}, and the {@link SystemMethods}
- * phases. Write these overrides exactly as before — a body that returns
+ * phases. Write these overrides exactly as before - a body that returns
  * nothing satisfies `Synchronous`, `override update(delta: Time): void`
  * remains the idiomatic annotation, and the engine's fluent
  * `update(delta): this` convention still fits.
  *
  * It is deliberately *not* a bare `void`. TypeScript makes a `void`-returning
  * signature assignable from a signature returning **anything at all**, so
- * `override async update()` compiles clean against a `void` base — the exact
+ * `override async update()` compiles clean against a `void` base - the exact
  * mistake this contract exists to prevent. The union above keeps `void`,
  * keeps every ordinary object return, and rejects only thenables: `then` is
  * pinned to `never`, so any type carrying a callable `then` (a `Promise`, or
@@ -42,8 +42,8 @@ export type ValueOf<T> = T[keyof T];
  * Nothing here exists at runtime; no engine code reads `then` off a hook
  * result to decide anything (the always-on runtime guard does its own check).
  *
- * Hooks the engine genuinely awaits — {@link Scene.load} and
- * {@link Scene.unload} — are typed `Promise<void> | void` instead and stay
+ * Hooks the engine genuinely awaits - {@link Scene.load} and
+ * {@link Scene.unload} - are typed `Promise<void> | void` instead and stay
  * asynchronous.
  */
 export type Synchronous = void | (object & { then?: never });
@@ -80,7 +80,7 @@ export interface PlaybackOptions {
  * {@link Time}, {@link Vector}, {@link Matrix}, {@link Rectangle}, and
  * other ExoJS value classes.
  *
- * `T` is the cloned type and must be named explicitly — TypeScript cannot
+ * `T` is the cloned type and must be named explicitly - TypeScript cannot
  * infer an interface's implementer, and a default would silently widen every
  * existing use. It is a lower bound, so an implementer whose subclasses must
  * each clone to their own type still declares `clone(): this`. Naming a
@@ -107,7 +107,7 @@ export interface HasBoundingBox {
   /**
    * The axis-aligned bounding box of this object.
    *
-   * Pass `out` to write into a rectangle you own — every implementer honours
+   * Pass `out` to write into a rectangle you own - every implementer honours
    * it, so this form is always safe to retain and never allocates. Without
    * `out`, the {@link ShapeLike} shapes return a **fresh** rectangle, while a
    * node or view that maintains a cached box (see {@link SceneNode.getBounds})

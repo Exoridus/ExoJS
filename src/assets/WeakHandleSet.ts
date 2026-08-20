@@ -1,8 +1,8 @@
 /**
  * An insertion-ordered set of asset handles held **weakly** (via {@link WeakRef}).
  *
- * The {@link Loader} tracks the live consumer handles for one asset key — the
- * representative plus every co-handle adopted for the same source — so that a
+ * The {@link Loader} tracks the live consumer handles for one asset key - the
+ * representative plus every co-handle adopted for the same source - so that a
  * refcount-0 eviction can re-arm them all and a later claim heals them in place.
  * Holding them strongly would keep evicted `Texture` /
  * `Sound` objects alive for the loader's lifetime, so a streaming open world

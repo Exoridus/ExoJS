@@ -1,5 +1,5 @@
 /**
- * Scene-graph benchmark — Container / SceneNode operation cost.
+ * Scene-graph benchmark - Container / SceneNode operation cost.
  *
  * Measures the CPU cost of transform invalidation cascades, bounds cache
  * reads, addChild/removeChild churn, and z-index update churn.
@@ -30,9 +30,9 @@ const makeDrawable = (x = 0, y = 0, size = 16): Drawable => {
 const results: BenchmarkResult[] = [];
 
 // ---------------------------------------------------------------------------
-// Scenario 1 — Deep tree transform invalidation
+// Scenario 1 - Deep tree transform invalidation
 // Levels: 1+10+100+1000+10000 = 11111 nodes
-// Each iteration sets position on the root — triggers _invalidateSubtreeTransform
+// Each iteration sets position on the root - triggers _invalidateSubtreeTransform
 // propagation down all 11111 nodes.
 // ---------------------------------------------------------------------------
 
@@ -81,7 +81,7 @@ const results: BenchmarkResult[] = [];
 }
 
 // ---------------------------------------------------------------------------
-// Scenario 2 — Bounds cache reads (1 000 nodes, 100 getBounds() calls/frame)
+// Scenario 2 - Bounds cache reads (1 000 nodes, 100 getBounds() calls/frame)
 // ---------------------------------------------------------------------------
 
 {
@@ -119,7 +119,7 @@ const results: BenchmarkResult[] = [];
 }
 
 // ---------------------------------------------------------------------------
-// Scenario 3 — addChild/removeChild churn (1 000 nodes, 50 swaps/frame)
+// Scenario 3 - addChild/removeChild churn (1 000 nodes, 50 swaps/frame)
 // ---------------------------------------------------------------------------
 
 {
@@ -170,7 +170,7 @@ const results: BenchmarkResult[] = [];
 }
 
 // ---------------------------------------------------------------------------
-// Scenario 4 — zIndex churn (1 000 children, random z updates every frame)
+// Scenario 4 - zIndex churn (1 000 children, random z updates every frame)
 // ---------------------------------------------------------------------------
 
 {

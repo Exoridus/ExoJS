@@ -213,7 +213,7 @@ describe('render-group upload skips non-consuming transform writes', () => {
     expect(buffer.data[cOffset + 4]).toBe(70);
     expect(buffer.data[cOffset + 5]).toBe(80);
 
-    // Skipped text node at nodeIndex 2 (within range) stays fully zeroed —
+    // Skipped text node at nodeIndex 2 (within range) stays fully zeroed -
     // no consuming draw references it, so the transform is never read.
     const t1Offset = 2 * floatsPerSlot;
     expect(Array.from(buffer.data.subarray(t1Offset, t1Offset + floatsPerSlot))).toEqual(new Array(floatsPerSlot).fill(0));

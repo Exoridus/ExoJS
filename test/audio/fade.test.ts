@@ -74,7 +74,7 @@ describe('Audio fade helpers', () => {
     expect(gainNode.gain.cancelScheduledValues).toHaveBeenCalled();
     expect(gainNode.gain.linearRampToValueAtTime).toHaveBeenCalledWith(0, ctx.currentTime + 0.5);
 
-    // Voice not ended yet — timer hasn't fired
+    // Voice not ended yet - timer hasn't fired
     expect(voice.ended).toBe(false);
     vi.advanceTimersByTime(500);
     expect(voice.ended).toBe(true);
@@ -126,7 +126,7 @@ describe('Audio fade helpers', () => {
     voice.stop();
     expect(voice.ended).toBe(true);
 
-    // Advance past the original fadeOut — should not throw or double-stop
+    // Advance past the original fadeOut - should not throw or double-stop
     vi.advanceTimersByTime(600);
     expect(voice.ended).toBe(true);
 

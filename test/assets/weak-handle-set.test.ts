@@ -74,7 +74,7 @@ describe('WeakHandleSet', () => {
     expect([...set]).toEqual([a, b]);
   });
 
-  // GC-dependent: proves the whole point of the class — a dropped handle is
+  // GC-dependent: proves the whole point of the class - a dropped handle is
   // reclaimable and prune() compacts it out. The deterministic tests above cover
   // the bookkeeping; only these two prove the weakness is real.
   test('prune() drops the slot of a GC-reclaimed handle', async () => {

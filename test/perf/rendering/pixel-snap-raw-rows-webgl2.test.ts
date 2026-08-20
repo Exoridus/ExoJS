@@ -1,7 +1,7 @@
 /**
  * Structural gate for the WebGL2 GPU-side position pixel snap (spec D3-D5): once
  * the snap moves into the vertex shaders, the transform-buffer seam must upload
- * the drawable's RAW global transform — the CPU no longer rounds the translation.
+ * the drawable's RAW global transform - the CPU no longer rounds the translation.
  *
  * This runs the real {@link WebGl2Backend} + sprite renderer against the
  * recording fake GL context (GPU-free, CI-safe) and inspects the shared
@@ -10,7 +10,7 @@
  * the fractional value), with the row's snap-mode flag set so the shader knows to
  * snap it on the GPU.
  *
- * Before the seam flip this FAILS — the CPU seam rounds the translation to the
+ * Before the seam flip this FAILS - the CPU seam rounds the translation to the
  * nearest device pixel, so the row reads the snapped integer, not the raw value.
  */
 import { describe, expect, it } from 'vitest';

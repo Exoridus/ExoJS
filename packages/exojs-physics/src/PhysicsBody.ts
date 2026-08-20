@@ -78,35 +78,35 @@ export class PhysicsBody {
   /** When `false`, this body is never put to sleep. Default `true`. */
   public allowSleep = true;
 
-  /** @internal — Delta position X accumulated across the frame's sub-steps by the TGS integrator; written into the transform once per frame by {@link _finalizePosition}. */
+  /** @internal - Delta position X accumulated across the frame's sub-steps by the TGS integrator; written into the transform once per frame by {@link _finalizePosition}. */
   public _deltaPosX = 0;
-  /** @internal — Delta position Y accumulated across the frame's sub-steps by the TGS integrator. */
+  /** @internal - Delta position Y accumulated across the frame's sub-steps by the TGS integrator. */
   public _deltaPosY = 0;
-  /** @internal — Delta rotation (radians) accumulated across the frame's sub-steps by the TGS integrator. */
+  /** @internal - Delta rotation (radians) accumulated across the frame's sub-steps by the TGS integrator. */
   public _deltaAngle = 0;
-  /** @internal — `cos(_deltaAngle)`, cached so the solver can rotate the contact anchors by the live sub-step rotation without a per-contact trig call. */
+  /** @internal - `cos(_deltaAngle)`, cached so the solver can rotate the contact anchors by the live sub-step rotation without a per-contact trig call. */
   public _deltaCos = 1;
-  /** @internal — `sin(_deltaAngle)`, cached alongside {@link _deltaCos}. */
+  /** @internal - `sin(_deltaAngle)`, cached alongside {@link _deltaCos}. */
   public _deltaSin = 0;
 
   private _forceX = 0;
   private _forceY = 0;
   private _torque = 0;
 
-  /** @internal — seconds the body has stayed below the sleep thresholds (frozen while asleep). Read by the world's island pass. */
+  /** @internal - seconds the body has stayed below the sleep thresholds (frozen while asleep). Read by the world's island pass. */
   public _sleepTime = 0;
-  /** @internal — dense union-find index assigned by the world's island pass each step. */
+  /** @internal - dense union-find index assigned by the world's island pass each step. */
   public _islandIndex = 0;
   /**
-   * @internal — raised by {@link setTransform}, cleared once the fixed step that
+   * @internal - raised by {@link setTransform}, cleared once the fixed step that
    * saw it completes. A static/kinematic body driven by teleporting carries no
    * velocity, so this is the world's only signal that such a body moved and its
    * sleeping contact partners must be woken.
    */
   public _teleported = false;
-  /** @internal — world-space centre of mass at the start of the current fixed step (CCD swept-test origin). */
+  /** @internal - world-space centre of mass at the start of the current fixed step (CCD swept-test origin). */
   public _ccdPrevX = 0;
-  /** @internal — see {@link _ccdPrevX}. */
+  /** @internal - see {@link _ccdPrevX}. */
   public _ccdPrevY = 0;
 
   private _sleeping = false;
@@ -204,7 +204,7 @@ export class PhysicsBody {
     return this._destroyed;
   }
 
-  /** `true` when the body is asleep — skipped by the integrator and solver until woken. */
+  /** `true` when the body is asleep - skipped by the integrator and solver until woken. */
   public get isSleeping(): boolean {
     return this._sleeping;
   }
@@ -223,7 +223,7 @@ export class PhysicsBody {
     }
 
     // Collider imports PhysicsBody type-only (erased), so this value import is
-    // one-directional — no runtime cycle.
+    // one-directional - no runtime cycle.
     const instance = collider instanceof Collider ? collider : new Collider(collider);
 
     this._colliders.push(instance);
@@ -328,12 +328,12 @@ export class PhysicsBody {
   }
 
   /**
-   * @internal — integrate velocity from gravity, accumulated forces/torque and
+   * @internal - integrate velocity from gravity, accumulated forces/torque and
    * damping over the sub-step `h`. No-op for static/kinematic (infinite mass
    * keeps their velocity solver-driven only). Called once per TGS sub-step, so
    * gravity/forces are applied with `h` each sub-step (`N·h = dt`, same total
    * impulse, but the small-step position error scales with `h²`). The
-   * force/torque accumulators are **not** cleared here — they are consumed by
+   * force/torque accumulators are **not** cleared here - they are consumed by
    * every sub-step and cleared once per frame by {@link _finalizePosition}.
    */
   public _integrateVelocity(h: number, gravityX: number, gravityY: number): void {
@@ -352,7 +352,7 @@ export class PhysicsBody {
   }
 
   /**
-   * @internal — accumulate this sub-step's velocity into the per-frame delta
+   * @internal - accumulate this sub-step's velocity into the per-frame delta
    * position/rotation (TGS sub-stepping). The transform itself is **not** moved
    * here; {@link _finalizePosition} writes the accumulated delta once per frame.
    * Tracking the delta (rather than moving the transform each sub-step) lets the
@@ -379,7 +379,7 @@ export class PhysicsBody {
   }
 
   /**
-   * @internal — advance the sleep timer over one fixed step `dt`. A body below
+   * @internal - advance the sleep timer over one fixed step `dt`. A body below
    * both velocity thresholds accumulates time; a too-fast body, or one that opts
    * out via {@link allowSleep}, resets it. The sleep/wake decision is made per
    * island by the world (so a stack sleeps as a unit) from {@link _sleepTime}.
@@ -392,7 +392,7 @@ export class PhysicsBody {
     this._sleepTime = !this.allowSleep || tooFast ? 0 : this._sleepTime + dt;
   }
 
-  /** @internal — set the sleep state. Sleeping zeroes the velocity; waking resets the sleep timer. */
+  /** @internal - set the sleep state. Sleeping zeroes the velocity; waking resets the sleep timer. */
   public _setSleeping(sleeping: boolean): void {
     if (this._sleeping === sleeping) {
       return;
@@ -422,7 +422,7 @@ export class PhysicsBody {
   }
 
   /**
-   * @internal — apply the frame's accumulated delta position/rotation to the
+   * @internal - apply the frame's accumulated delta position/rotation to the
    * transform (rotating about the centre of mass), re-sync collider geometry and
    * clear the force/torque accumulators. Called once per frame after the
    * sub-step loop. Static bodies never move; the force clear still runs (forces
@@ -476,7 +476,7 @@ export class PhysicsBody {
   }
 
   /**
-   * @internal — join `owner`'s world with the allocated `id`. Allocates ids for
+   * @internal - join `owner`'s world with the allocated `id`. Allocates ids for
    * and registers every held collider, then aggregates the mass model and
    * synchronises world geometry. Called once by {@link PhysicsWorld.add}.
    *

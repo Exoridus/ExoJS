@@ -2,7 +2,7 @@
  * A real FadeSceneTransition drives the very first Application.start() call
  * end-to-end, proving the _frameLoopActive startup-sequencing fix actually
  * lets a frame-driven transition session progress before _state flips to
- * Running — the exact deadlock scenario that fix prevents.
+ * Running - the exact deadlock scenario that fix prevents.
  */
 import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/Scene';
@@ -56,7 +56,7 @@ describe('Application.start() with a real FadeSceneTransition', () => {
     const app = new Application({ backend: { type: 'webgl2' }, scenes: { title: TitleScene } });
 
     // jsdom has no Gamepad API (`window.navigator.getGamepads` is undefined),
-    // which InputManager.update() calls unconditionally every frame — the
+    // which InputManager.update() calls unconditionally every frame - the
     // same pre-existing test-environment gap application-loop.test.ts's
     // beforeEach works around identically. This test drives many real
     // frames, so without this stub every frame throws, and 3 consecutive
@@ -73,7 +73,7 @@ describe('Application.start() with a real FadeSceneTransition', () => {
 
     // Application.update() times each frame's delta from a real Clock
     // (`performance.now()` via `getPreciseTime()`), NOT from the timestamp
-    // argument RAF hands its callback — so driving frames in a tight
+    // argument RAF hands its callback - so driving frames in a tight
     // microtask loop (real wall-clock deltas of a fraction of a millisecond
     // each) would need many thousands of iterations to accumulate the
     // transition's 40ms-per-phase duration. Control the clock directly
@@ -91,7 +91,7 @@ describe('Application.start() with a real FadeSceneTransition', () => {
       });
 
       // Drive frames until the transition's session reaches `done` and
-      // start() resolves — bounded so a real deadlock (the bug this slice
+      // start() resolves - bounded so a real deadlock (the bug this slice
       // fixes) fails the test instead of hanging it. The first RAF request
       // isn't registered synchronously (start() awaits backend init first),
       // so each iteration flushes a microtask turn *before* checking for a

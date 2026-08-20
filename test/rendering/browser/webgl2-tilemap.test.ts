@@ -329,7 +329,7 @@ describe('WebGL2 tilemap — batch capacity overflow', () => {
       node.setPosition(0, 0);
 
       expect(() => render(backend, node)).not.toThrow();
-      // The visible portion is fully covered — no gaps from the run boundaries.
+      // The visible portion is fully covered - no gaps from the run boundaries.
       expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 48, 48), [255, 0, 0, 255]);
     } finally {

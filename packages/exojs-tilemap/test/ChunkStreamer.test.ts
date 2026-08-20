@@ -144,10 +144,10 @@ describe('ChunkStreamer.update() — unload hysteresis', () => {
 
     streamer.update();
     const initialCore = expectedCoreRange(layer, view);
-    // The near corner of the streamer's OWN initial load range — must come from
+    // The near corner of the streamer's OWN initial load range - must come from
     // a chunk the streamer itself adopted (via its own `_source`), not a chunk
     // installed directly on the layer: `ChunkStreamer` only ever evicts chunks
-    // in its own resident set, by design (see the class's own JSDoc) — a
+    // in its own resident set, by design (see the class's own JSDoc) - a
     // directly-`_adoptChunk`'d chunk from "another source" is deliberately left
     // alone even once it falls outside every radius.
     const cornerCx = initialCore.minCx - 1;
@@ -191,7 +191,7 @@ describe('ChunkStreamer.update() — load budget', () => {
     streamer.update();
 
     // All previously-resident chunks were evicted (well beyond unloadRadius), and
-    // the newly-wanted set at the teleported position is capped at the budget —
+    // the newly-wanted set at the teleported position is capped at the budget -
     // so residentCount after this tick is exactly the budget, not a range.
     expect(streamer.residentCount).toBe(3);
   });
@@ -483,7 +483,7 @@ describe('ChunkStreamer.destroy() — async in-flight-resolve race', () => {
     expect(layer.getChunk(0, 0)).toBeUndefined();
     expect(streamer.residentCount).toBe(0);
 
-    // A follow-up update() must stay a no-op — no leftover in-flight/resident
+    // A follow-up update() must stay a no-op - no leftover in-flight/resident
     // bookkeeping from the pre-destroy adoption resurrects anything.
     view.setCenter(1000, 1000);
     expect(() => { streamer.update(); }).not.toThrow();

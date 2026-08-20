@@ -3,7 +3,7 @@
  *
  * The custom SpriteMaterial / MeshMaterial paths used to allocate a fresh
  * `Float32Array` and issue an unconditional `writeBuffer` for the group(2) user
- * UBO on EVERY flush, and rebuild the user bind group every flush — per-frame GC
+ * UBO on EVERY flush, and rebuild the user bind group every flush - per-frame GC
  * pressure and buffer churn for any scene using custom materials. These tests
  * drive the REAL WebGpuBackend + renderers against a mock device (see
  * webgpuMockEnvironment) and require, after warmup:

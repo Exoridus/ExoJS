@@ -20,7 +20,7 @@ export interface ObservableVectorOwner {
  *
  * Instead of a per-instance callback closure, the vector holds a reference to
  * its `owner` plus a numeric `channel` and calls `owner._onObservableChange(channel)`
- * on change. This keeps hot per-node vectors closure-free — a `SceneNode`
+ * on change. This keeps hot per-node vectors closure-free - a `SceneNode`
  * carries four of these, so dropping the bound closures saves four allocations
  * per node. Pass `owner = null` for a plain, non-reactive vector.
  *
@@ -29,7 +29,7 @@ export interface ObservableVectorOwner {
  *
  * Deliberately has no `clone()`. A clone is a value, not a second notification
  * channel into this vector's owner, so it would have to hand back a plain
- * `Vector` — and importing `Vector` here closes a module-evaluation cycle
+ * `Vector` - and importing `Vector` here closes a module-evaluation cycle
  * (`Vector` imports `Rectangle`, which constructs at module scope). Copy
  * explicitly instead: `new Vector(v.x, v.y)`.
  */

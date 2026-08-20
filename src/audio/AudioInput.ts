@@ -1,6 +1,6 @@
 import type { Destroyable } from '#core/types';
 
-/** Options for {@link AudioInput.open} — forwarded to `getUserMedia` audio constraints. */
+/** Options for {@link AudioInput.open} - forwarded to `getUserMedia` audio constraints. */
 export interface AudioInputOptions {
   /** Specific input device id (from `enumerateDevices`). */
   deviceId?: string;
@@ -13,7 +13,7 @@ export interface AudioInputOptions {
 }
 
 /**
- * A live audio capture source — a microphone or WebRTC `MediaStream` obtained
+ * A live audio capture source - a microphone or WebRTC `MediaStream` obtained
  * via `getUserMedia`. **Not a {@link Playable}**: you don't "play" a mic, you
  * *open* it. Pass it to {@link AudioManager.open} to get an
  * {@link InputVoice} for monitoring, analysis, or recording.

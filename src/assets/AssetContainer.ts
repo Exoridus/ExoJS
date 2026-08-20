@@ -1,5 +1,5 @@
 /**
- * Binary asset container (`.exoa`) — format constants, reader, and writer.
+ * Binary asset container (`.exoa`) - format constants, reader, and writer.
  *
  * A container packs N assets into one file so a single HTTP request yields all
  * of them (the FFX VBF / Unreal `.pak` model). Layout:
@@ -9,7 +9,7 @@
  * data: concatenated asset bytes [slice0][slice1]…[sliceN]
  * ```
  *
- * The index is a small JSON table of contents read once — zero-copy matters only
+ * The index is a small JSON table of contents read once - zero-copy matters only
  * for the asset *data*, not the TOC, so JSON keeps it trivial to build, parse,
  * and extend. `offset`/`length` are relative to the start of the data section.
  *

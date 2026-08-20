@@ -9,7 +9,7 @@ import { sampleStrongest, toChannels } from './types';
 
 /**
  * Two opposing groups of sources forming one signed axis. `negative` and
- * `positive` are the generic one-dimensional terms — use them for left/right,
+ * `positive` are the generic one-dimensional terms - use them for left/right,
  * down/up, brake/throttle alike. Either side may be omitted for a one-sided
  * axis.
  */
@@ -148,7 +148,7 @@ export class AxisAction extends ActionBase<OneOrMany<AxisBinding>> {
 
   /**
    * Sample the channel buffers for this frame. An axis has no frame-to-frame
-   * edge memory to protect, unlike {@link ButtonAction} — a suspend/resume
+   * edge memory to protect, unlike {@link ButtonAction} - a suspend/resume
    * cycle or an ownership handoff is just a normal sample, so there is
    * nothing more to decide here.
    *

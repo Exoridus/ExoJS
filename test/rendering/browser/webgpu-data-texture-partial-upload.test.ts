@@ -5,14 +5,14 @@
  * reads a tightly packed block, so the backend has to lift the dirty
  * sub-region out of the row-major texture buffer, hand it the right
  * `bytesPerRow`/`rowsPerImage`, and place it at the right `origin`. Every one
- * of those is a silent-corruption bug when it is wrong — nothing throws, the
- * texture simply shows the wrong texels — and the mock-device specs can only
+ * of those is a silent-corruption bug when it is wrong - nothing throws, the
+ * texture simply shows the wrong texels - and the mock-device specs can only
  * check the bytes handed to the driver, not what the driver makes of them.
  *
  * Each case renders once to establish the texture on the GPU (a full upload),
  * then mutates a sub-region and renders again, so the second frame is served
  * exclusively by the partial path. Both frames go through `renderWebGpuOnce`,
- * which opens one validation scope per flush — a single scope spanning both
+ * which opens one validation scope per flush - a single scope spanning both
  * flushes misreports.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -71,7 +71,7 @@ describe('WebGPU uploads a partial DataTexture region', () => {
 
       expect(pixelAt(readWebGpuFrame(backend, CANVAS), 12, 12)).toEqual([...RED]);
 
-      // Columns 8..15 of rows 8..15 — neither row-aligned nor full-width, so a
+      // Columns 8..15 of rows 8..15 - neither row-aligned nor full-width, so a
       // wrong origin, stride or pack offset shifts the block visibly.
       paintRect(texture, 8, 8, 8, 8, BLUE);
       texture.commitRect(8, 8, 8, 8);
@@ -105,7 +105,7 @@ describe('WebGPU uploads a partial DataTexture region', () => {
       if (!(await renderWebGpuOnce(ctx, backend, root, Color.black))) return;
 
       // Full-width rows are already contiguous in the row-major buffer, which
-      // lets the backend skip the packing copy entirely — the resulting texels
+      // lets the backend skip the packing copy entirely - the resulting texels
       // must be identical either way.
       paintRect(texture, 0, 20, EDGE, 4, BLUE);
       texture.commitRect(0, 20, EDGE, 4);
@@ -149,7 +149,7 @@ describe('WebGPU uploads a partial DataTexture region', () => {
       const frame = readWebGpuFrame(backend, CANVAS);
 
       // The second upload must not have reset the texture to the buffer state
-      // of the first — both regions are blue at the same time.
+      // of the first - both regions are blue at the same time.
       expect(pixelAt(frame, 3, 3)).toEqual([...BLUE]);
       expect(pixelAt(frame, 25, 25)).toEqual([...BLUE]);
       expect(pixelAt(frame, 14, 14)).toEqual([...RED]);

@@ -3,7 +3,7 @@
  * key their GPU resources (compiled program / pipelines, vertex array object,
  * vertex buffer) on the mode's `Material`. So material identity across systems
  * is exactly the property that decides whether N particle systems cost one
- * shader compile or N — which is what these specs pin down.
+ * shader compile or N - which is what these specs pin down.
  */
 
 import { describe, expect, it, vi } from 'vitest';

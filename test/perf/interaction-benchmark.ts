@@ -1,25 +1,25 @@
 /**
- * Interaction benchmark — hit-test and pointer-event overhead.
+ * Interaction benchmark - hit-test and pointer-event overhead.
  *
  * Drives the real InputManager → InteractionManager pipeline through
  * {@link createInteractionHarness} (a fake, DOM-free PlatformAdapter + a real
  * InputManager/InteractionManager pair) so every scenario measures actual
  * engine code, not a hand-copied stand-in:
  *
- *   1. World hit-testing — nodes live directly under the scene root, which
+ *   1. World hit-testing - nodes live directly under the scene root, which
  *      auto-maintains InteractionManager's internal spatial index (a
  *      DynamicAabbTree), exercising `_hitTestIndexed`.
- *   2. Scoped hit-testing — the same node count confined under an
+ *   2. Scoped hit-testing - the same node count confined under an
  *      `interaction.pushScope(...)` root, which bypasses the spatial index
  *      and exercises the recursive `_hitTestNode` walk instead.
- *   3. Drag-move — a real `draggable` node dragged through the real
+ *   3. Drag-move - a real `draggable` node dragged through the real
  *      gesture-recognizer + drag state machine (press, then repeated
  *      pointermoves past `dragThreshold`), not a hand-simulated position
  *      write.
  *
  * Each scenario times a block of synthetic pointer events fed through
  * `platform.onSurfaceEvent(...)` and flushed via `input.preUpdate()` +
- * `interaction.preUpdate()` — the exact per-frame call `Application` makes —
+ * `interaction.preUpdate()` - the exact per-frame call `Application` makes -
  * so the measured cost is the real dispatch + hit-test path, never a private
  * method called directly.
  *
@@ -45,7 +45,7 @@ const makeInteractiveDrawable = (x: number, y: number, size = 32): Drawable => {
   return d;
 };
 
-/** Establish pointer id 1 (a `pointerover`) before any move/down/up — InputManager ignores events for an unknown pointer id. */
+/** Establish pointer id 1 (a `pointerover`) before any move/down/up - InputManager ignores events for an unknown pointer id. */
 const primePointer = (harness: InteractionHarness, x: number, y: number): void => {
   harness.firePointer('pointerover', { clientX: x, clientY: y });
   harness.flush();
@@ -58,7 +58,7 @@ const primePointer = (harness: InteractionHarness, x: number, y: number): void =
 const results: BenchmarkResult[] = [];
 
 // ---------------------------------------------------------------------------
-// Scenario 1 — World (indexed) hit-test: 1 000 nodes under the scene root,
+// Scenario 1 - World (indexed) hit-test: 1 000 nodes under the scene root,
 // 100 pointer queries per iteration. InteractionManager auto-builds and
 // maintains its DynamicAabbTree as soon as the first node turns interactive,
 // so this exercises `_hitTestIndexed` for real.
@@ -99,9 +99,9 @@ const results: BenchmarkResult[] = [];
 }
 
 // ---------------------------------------------------------------------------
-// Scenario 2 — Scoped (recursive) hit-test: same node count and query
+// Scenario 2 - Scoped (recursive) hit-test: same node count and query
 // pattern, but confined under `interaction.pushScope(...)`, which bypasses
-// the spatial index and walks the tree via `_hitTestNode` instead — the same
+// the spatial index and walks the tree via `_hitTestNode` instead - the same
 // path a modal/dialog subtree takes.
 // ---------------------------------------------------------------------------
 
@@ -144,7 +144,7 @@ const results: BenchmarkResult[] = [];
 }
 
 // ---------------------------------------------------------------------------
-// Scenario 3 — Drag-move: one draggable node, a real press + 50
+// Scenario 3 - Drag-move: one draggable node, a real press + 50
 // pointermoves-past-threshold per iteration, driven through the actual
 // gesture-recognizer + drag state machine (InteractionManager._advanceDragOnMove),
 // not a hand-simulated `position.x = …` write.

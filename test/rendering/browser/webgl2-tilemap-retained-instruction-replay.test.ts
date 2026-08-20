@@ -1,5 +1,5 @@
 /**
- * WebGL2 renderer-matrix browser tests — TileChunkNode retained
+ * WebGL2 renderer-matrix browser tests - TileChunkNode retained
  * instruction-set replay.
  *
  * A retained group holding TileMapNode(s) whose playback was recorded replays
@@ -107,12 +107,12 @@ interface Scene {
 
 /**
  * Standard cell scene: one live TileMapNode OUTSIDE (and before) the retained
- * group so the group's shared transform rows never start at row 0 — the
+ * group so the group's shared transform rows never start at row 0 - the
  * group-local tile-word rebase is load-bearing in every pixel assertion, and
  * the replay path interleaves with a live batch every frame.
  *
  * The group holds two 16x16 single-tile TileMapNodes with DISTINCT tileset
- * textures, so each records its own single-texture batch — exercising
+ * textures, so each records its own single-texture batch - exercising
  * per-batch byte offsets across more than one recorded batch (mirrors the
  * nine-slice retained-replay cells).
  *
@@ -299,7 +299,7 @@ describe('WebGL2 renderer matrix: TileChunkNode retained instruction-set replay 
       render(backend, scene.root); // F3 splice (recorded tier active)
 
       // Edit a tile INSIDE the already-recorded group: clearing it must not
-      // replay the stale (red) geometry — the chunk revision bump must reach
+      // replay the stale (red) geometry - the chunk revision bump must reach
       // `_markContentDirty()` on the owning TileChunkNode so the group
       // content-dirties and re-collects instead of splicing the previous
       // instruction set. A dirty frame drops the recording but does not

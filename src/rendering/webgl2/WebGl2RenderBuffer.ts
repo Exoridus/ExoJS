@@ -27,7 +27,7 @@ const bytesPerElementOf = (data: DataContainer): number => (data as { BYTES_PER_
  * WebGL2's `(srcData, srcOffset, length)` overload, so a caller that uploads
  * the filled prefix of a persistent scratch array does not have to materialize
  * a `subarray()` view to express the length. Every runtime must go through this
- * (and {@link uploadBufferStore}) rather than calling `gl` directly — a direct
+ * (and {@link uploadBufferStore}) rather than calling `gl` directly - a direct
  * call would silently upload the whole array for a partial range.
  * @internal
  */
@@ -44,7 +44,7 @@ export const uploadBufferRange = (gl: WebGL2RenderingContext, buffer: WebGl2Rend
 };
 
 /**
- * (Re)allocate the buffer's GPU store from its pending upload — the orphaning
+ * (Re)allocate the buffer's GPU store from its pending upload - the orphaning
  * `bufferData` counterpart to {@link uploadBufferRange}. The store is sized to
  * the uploaded RANGE, exactly as a `subarray()` argument used to size it.
  * @internal
@@ -123,7 +123,7 @@ export class WebGl2RenderBuffer {
   }
 
   /**
-   * Bytes the pending upload covers — {@link data}'s `byteLength` for a whole
+   * Bytes the pending upload covers - {@link data}'s `byteLength` for a whole
    * upload, the range's byte length for a partial one. This, not
    * `data.byteLength`, is what a runtime must compare its GPU store against and
    * what the accountant books.
@@ -158,11 +158,11 @@ export class WebGl2RenderBuffer {
    * Stage `data` and issue the GPU upload at destination byte offset `offset`.
    *
    * `elementCount` uploads only the first `elementCount` ELEMENTS of `data`
-   * (elements of the view's own type — floats for a `Float32Array`, not bytes),
+   * (elements of the view's own type - floats for a `Float32Array`, not bytes),
    * which is what a renderer wants when it holds one grown-once scratch array
    * and fills a different prefix of it every flush. Passing the count is
    * equivalent to passing `data.subarray(0, elementCount)` in every observable
-   * way — same GPU bytes, same accounted traffic, same store size — but does not
+   * way - same GPU bytes, same accounted traffic, same store size - but does not
    * allocate a view per upload. Requires `data` to be an `ArrayBufferView`;
    * omit it (the default) to upload all of `data`.
    */

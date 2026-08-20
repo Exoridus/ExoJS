@@ -31,7 +31,7 @@ const mockFetch = (jsonPayload: unknown): void => {
 };
 
 // G1 (S3 Phase 4.5): `get(Asset.type())` is the replacement for the removed
-// `get(Type, dynamicSource)` form — an `Asset.type()` descriptor passed to `get()`
+// `get(Type, dynamicSource)` form - an `Asset.type()` descriptor passed to `get()`
 // must build and adopt its handle-hybrid leaf, not fall through to the legacy
 // alias-lookup branch.
 describe('get(Asset.type()) descriptor access', () => {

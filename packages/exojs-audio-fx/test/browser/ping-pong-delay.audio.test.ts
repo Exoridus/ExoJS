@@ -3,7 +3,7 @@
  *
  * Verifies that:
  * 1. A ping-pong delay seeded at only the left channel produces genuinely
- *    different L and R echo tails. This FAILS before the I1 fix — when the
+ *    different L and R echo tails. This FAILS before the I1 fix - when the
  *    input feeds both delays symmetrically the two chains evolve identically,
  *    collapsing to centred mono (L = R at every sample).
  * 2. The effect confirms that asymmetric seeding (input → delayL only) combined
@@ -107,7 +107,7 @@ describe('PingPongDelayEffect — acoustic contract (real Web Audio)', () => {
     // With input fed to delayL only, the first echo appears in L, the second in
     // R (via feedbackGainA), the third in L again, etc. L and R are never in
     // phase, so their difference carries substantial energy.
-    // This assertion FAILS before the I1 fix — when input feeds both delays the
+    // This assertion FAILS before the I1 fix - when input feeds both delays the
     // chains evolve symmetrically, producing L = R at every sample (diffRms ≈ 0).
     const { left, right } = await renderPingPong({
       delayTime: 0.05,

@@ -6,7 +6,7 @@
  * scratch is a pure memcpy that changes none of the bytes GL reads. WebGL2's
  * `texSubImage2D(…, srcData, srcOffset)` overload takes the band straight out
  * of the texture buffer at an element offset, which removes that copy entirely
- * — and with it the reason to grow a scratch buffer for the shape every
+ * - and with it the reason to grow a scratch buffer for the shape every
  * ring-buffer style upload takes (transform/tint rows, scrolling
  * spectrograms).
  *
@@ -124,7 +124,7 @@ describe('WebGL2 partial DataTexture upload: full-width fast path', () => {
 
     syncTexture(harness.backend, texture);
 
-    // Full-height but one column short — the rows are no longer contiguous.
+    // Full-height but one column short - the rows are no longer contiguous.
     texture.commitRect(0, 0, 7, 8);
     syncTexture(harness.backend, texture);
 
@@ -132,7 +132,7 @@ describe('WebGL2 partial DataTexture upload: full-width fast path', () => {
 
     expect(packed).toBeDefined();
     // Packed into the per-texture scratch, which is at least the region's size
-    // and handed to GL through the same `(srcData, srcOffset)` overload — the
+    // and handed to GL through the same `(srcData, srcOffset)` overload - the
     // rectangle's dimensions fix how much is read, so the scratch never has to
     // be narrowed to an exact-length view.
     expect(packed).toHaveLength(10);

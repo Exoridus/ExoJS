@@ -12,7 +12,7 @@ import { resetParityEvidence, writeParityEvidence } from './test/rendering/parit
 // Note: Vite alias matching uses longest-first order. Subpath aliases must come
 // before the root alias so '@codexo/exojs/renderer-sdk' resolves before '@codexo/exojs'.
 // These map the PUBLIC cross-package specifiers to source for in-repo tests.
-// Package-internal `#*` imports are NOT aliased — they resolve through each
+// Package-internal `#*` imports are NOT aliased - they resolve through each
 // package's own package.json#imports map via the source conditions (see
 // @codexo/exojs-config/vitest `srcConditions`).
 const aliasConfig = [
@@ -43,7 +43,7 @@ const realShaderPlugin = createShaderPlugin();
 // The top-level Vite `define` replaces `__DEV__` in files Vite transforms
 // directly. Under the `#` subpath-imports model some engine modules (e.g.
 // `src/core/dev.ts`) resolve through `package.json#imports` and can be
-// pre-bundled by esbuild's optimizer, which does NOT apply this `define` — so
+// pre-bundled by esbuild's optimizer, which does NOT apply this `define` - so
 // the bare `__DEV__` would survive and throw `__DEV__ is not defined` in the
 // browser runtime. The `_setup-dev-global` setup file (wired into every browser
 // project below) installs `__DEV__` as a real global so the reference resolves
@@ -65,12 +65,12 @@ const browserBase = {
 //    context either way); headed under xvfb in CI via EXOJS_FIREFOX_CI_HEADED=1,
 //    because Firefox on Linux disables WebGL entirely in headless mode.
 //  - WebGPU Chromium: headless by default (safe for local dev with no display server).
-//    CI opts into headed mode via EXOJS_WEBGPU_CI_HEADED=1 — Mesa lavapipe needs a
+//    CI opts into headed mode via EXOJS_WEBGPU_CI_HEADED=1 - Mesa lavapipe needs a
 //    real display to report a real Vulkan adapter instead of falling back to
 //    SwiftShader, and CI supplies one via xvfb (see `browser-tests-webgpu-chromium`
 //    in `_ci-checks.yml`). Without this gate, `headless: false` would pop a real,
 //    visible Chromium window on every local `pnpm test:browser:webgpu` run.
-//  - WebGPU Firefox:  headed — Firefox only exposes a WebGPU adapter in a headed session.
+//  - WebGPU Firefox:  headed - Firefox only exposes a WebGPU adapter in a headed session.
 const headed = process.env['EXOJS_BROWSER_HEADED'] === '1';
 const webgl2Headless = !headed;
 const webgpuCiHeaded = process.env['EXOJS_WEBGPU_CI_HEADED'] === '1';
@@ -96,7 +96,7 @@ export default defineConfig({
       provider: 'istanbul',
       reporter: ['lcov', 'clover', 'text-summary'],
       // Core plus every extension package with a vitest project in
-      // `test:coverage` — all packages have suites, so they all count.
+      // `test:coverage` - all packages have suites, so they all count.
       include: [
         'src/**/*.ts',
         'packages/exojs-particles/src/**/*.ts',
@@ -111,7 +111,7 @@ export default defineConfig({
       ],
       exclude: ['src/**/*.d.ts', 'packages/*/src/**/*.d.ts'],
       // Hard regression gate for the `unit-tests` job (already required in
-      // `_ci-checks.yml`) — `.codecov.yml` posts project/patch coverage statuses
+      // `_ci-checks.yml`) - `.codecov.yml` posts project/patch coverage statuses
       // but they are NOT wired up as required checks, so a coverage drop
       // currently merges silently. These thresholds fail `pnpm test:coverage`
       // itself (the exact command the CI job runs) below the floor.
@@ -119,11 +119,11 @@ export default defineConfig({
       // A ratchet floor, not a target: set a few points below the measured
       // baseline (statements 86.61%, branches 81.95%, functions 90.31%, lines
       // 86.73% as of 2026-07-04 after the fleet-4 pass over the extension
-      // packages — physics/audio-fx/tilemap/particles/tiled/ldtk/aseprite/
+      // packages - physics/audio-fx/tilemap/particles/tiled/ldtk/aseprite/
       // react; remaining gaps are almost entirely GPU renderer files covered
       // by the browser lanes) so normal test-suite churn doesn't flake the
       // gate, while still catching a real regression. Raise the floor as
-      // coverage grows — never lower it without an explicit reason recorded
+      // coverage grows - never lower it without an explicit reason recorded
       // here.
       thresholds: {
         statements: 84,
@@ -207,7 +207,7 @@ export default defineConfig({
         exclude: ['packages/exojs-audio-fx/test/browser/**'],
       }),
 
-      // ── exojs-react — jsdom + React Testing Library (esbuild JSX) ────────
+      // ── exojs-react - jsdom + React Testing Library (esbuild JSX) ────────
       // The shared jsdom factory is reused unchanged; the only addition is the
       // esbuild automatic JSX runtime so `.tsx` test files need no React import.
       // It is set at the project level (like rendering-perf's `plugins`) so the
@@ -222,16 +222,16 @@ export default defineConfig({
         esbuild: { jsx: 'automatic', jsxImportSource: 'react' },
       },
 
-      // ── exojs-bench — cross-library benchmark harness unit tests ─────────
+      // ── exojs-bench - cross-library benchmark harness unit tests ─────────
       // The benchmark package's pure unit tests (timing, mutation-determinism,
       // structural probes, archetype matrix). Its `#*` engine-source imports are
-      // aliased to `<repo>/src` here — the package deliberately defines no
+      // aliased to `<repo>/src` here - the package deliberately defines no
       // `imports` map (Node forbids a `../`-escaping target), mirroring the Vite
       // alias the driver installs at runtime (see rendering/driver.ts). The
       // browser-driving smoke test self-skips without a real GPU. Deliberately
       // NOT added to the default `test`/`test:coverage` gate: per the bench
       // methodology (CI tiering), competitor arms must never red a contributor
-      // PR — run it on demand via `pnpm --filter @codexo/exojs-bench test`.
+      // PR - run it on demand via `pnpm --filter @codexo/exojs-bench test`.
       createJsdomTestProject({
         name: 'exojs-bench',
         alias: [...aliasConfig, { find: /^#(.*)$/, replacement: `${fileURLToPath(new URL('./src', import.meta.url))}/$1` }],
@@ -258,7 +258,7 @@ export default defineConfig({
         },
       },
 
-      // ── rendering-perf — Node renderer benchmark harness (real shaders) ──
+      // ── rendering-perf - Node renderer benchmark harness (real shaders) ──
       // Runs the real WebGL2 renderers against a recording fake GL context for
       // deterministic, GPU-free structural metrics. Uses the real-shader loader
       // instead of the stub so GLSL reflection resolves. Structural regression
@@ -268,17 +268,17 @@ export default defineConfig({
           name: 'rendering-perf',
           alias: aliasConfig,
           include: ['test/perf/rendering/**/*.test.ts'],
-          // The allocation gate is its own project — see `rendering-alloc`.
+          // The allocation gate is its own project - see `rendering-alloc`.
           exclude: ['test/perf/rendering/allocation.test.ts'],
         }),
         plugins: [realShaderPlugin],
       },
 
-      // ── rendering-alloc — the steady-state allocation gate ───────────────
+      // ── rendering-alloc - the steady-state allocation gate ───────────────
       // Same harness as `rendering-perf`, separate project for exactly one
       // reason: this gate must never run under coverage instrumentation.
       // Istanbul rewrites every statement, which defeats V8's escape analysis,
-      // and the numbers stop describing the code we ship — `mesh/1000` reads
+      // and the numbers stop describing the code we ship - `mesh/1000` reads
       // 71 KB/frame instrumented against 0.65 KB/frame plain, a 100x gap on one
       // machine with one Node build. Kept out of `test:coverage` and run by
       // `test:alloc` instead; the suite itself refuses to assert when it detects
@@ -292,7 +292,7 @@ export default defineConfig({
         plugins: [realShaderPlugin],
       },
 
-      // ── browser-webgl-chromium — WebGL2 via Chromium headless ────────────
+      // ── browser-webgl-chromium - WebGL2 via Chromium headless ────────────
       {
         ...browserBase,
         test: {
@@ -311,9 +311,9 @@ export default defineConfig({
         },
       },
 
-      // ── browser-webgl-firefox — WebGL2 via Firefox headless ──────────────
+      // ── browser-webgl-firefox - WebGL2 via Firefox headless ──────────────
       // On Linux this lane failed every file on `getContext('webgl2') === null`
-      // — "This browser or hardware does not support WebGL" — while
+      // - "This browser or hardware does not support WebGL" - while
       // `continue-on-error` kept the check green. The cause is not configuration
       // but Firefox itself: it disables WebGL in headless mode, and no
       // preference overrides that (playwright#1032, vitest#21783 - still current). A
@@ -325,7 +325,7 @@ export default defineConfig({
       //
       // The prefs are belt-and-braces for the runner: `webgl.force-enabled`
       // overrides the driver blocklist that rejects unknown CI hardware, and
-      // `gfx.webrender.software` selects the software backend — the counterpart
+      // `gfx.webrender.software` selects the software backend - the counterpart
       // to Chromium's `--use-angle=swiftshader`. (`webgl.out-of-process: false`
       // was tried and rejected: it kills the browser connection mid-run.)
       {
@@ -353,18 +353,18 @@ export default defineConfig({
         },
       },
 
-      // ── browser-webgpu — WebGPU via Chromium (SwiftShader software backend) ──
+      // ── browser-webgpu - WebGPU via Chromium (SwiftShader software backend) ──
       // The `--enable-features=Vulkan` / `--disable-vulkan-surface` flags are the
       // three.js-proven recipe for headless WebGPU on a free `ubuntu-latest`
       // runner (confirmed against three.js's own CI recipe, which matches this
       // baseline). Two later attempts to force real Mesa-lavapipe/Vulkan routing
       // via `--use-angle=vulkan` (optionally combined with
       // `--enable-features=Vulkan,VulkanFromANGLE,DefaultANGLEVulkan`) both
-      // regressed `requestAdapter()` to returning `null` for almost every test —
+      // regressed `requestAdapter()` to returning `null` for almost every test -
       // the WebGPU browser suite dropped from 100/100 tests actually exercised
       // down to ~4/100, with the rest silently skip-passing. Reverted to this
       // plain baseline, which runs the full suite against Chromium's bundled
-      // SwiftShader software WebGPU implementation — a real, working software
+      // SwiftShader software WebGPU implementation - a real, working software
       // backend, just not Mesa lavapipe. Locally these args are harmless
       // (verified against a real Windows/NVIDIA adapter). `headless` stays true
       // by default so local dev never pops a visible browser window; CI opts
@@ -400,7 +400,7 @@ export default defineConfig({
         },
       },
 
-      // ── browser-webgpu-alloc — the WebGPU allocation audit harness ───────
+      // ── browser-webgpu-alloc - the WebGPU allocation audit harness ───────
       // Never part of `pnpm test`: it is driven one scene per invocation by
       // `test/perf/webgpu/run-webgpu-allocation.ts`, because a steady-state
       // allocation number is only a source of truth when nothing else rendered
@@ -409,7 +409,7 @@ export default defineConfig({
       // build-time defines rather than as test names so the run stays a single
       // test with a single browser.
       //
-      // Same launch recipe as `browser-webgpu` on purpose — a measurement lane
+      // Same launch recipe as `browser-webgpu` on purpose - a measurement lane
       // that configured the adapter differently from the lane that proves
       // correctness would be measuring a renderer nobody ships.
       {
@@ -453,12 +453,12 @@ export default defineConfig({
         },
       },
 
-      // ── browser-webgpu-firefox — WebGPU via Firefox headed ───────────────
+      // ── browser-webgpu-firefox - WebGPU via Firefox headed ───────────────
       // `headless: false` is load-bearing, not a leftover: Firefox exposes
       // `navigator.gpu` either way, but `requestAdapter()` resolves to `null`
       // headless no matter which prefs are set (`dom.webgpu.enabled`,
       // `gfx.webgpu.force-enabled`, …). A window is the only configuration in
-      // which Firefox has a WebGPU adapter at all — so this lane needs a real
+      // which Firefox has a WebGPU adapter at all - so this lane needs a real
       // display, which is why CI cannot run it and the matrix takes its Firefox
       // rows from local runs instead.
       {
@@ -478,12 +478,12 @@ export default defineConfig({
         },
       },
 
-      // ── browser-parity-webkit — matrix rows from WebKit ──────────────────
+      // ── browser-parity-webkit - matrix rows from WebKit ──────────────────
       // Only the parity matrix, never the WebGPU spec suite: the Playwright
       // WebKit build has no `navigator.gpu` at all, so those specs would fail
       // on construction rather than report anything. The matrix instead records
       // `unavailable`, which is the finding. Headed for the same reason Firefox
-      // is — if a WebGPU adapter appears on macOS, a window is the likeliest
+      // is - if a WebGPU adapter appears on macOS, a window is the likeliest
       // configuration to get one, and a wrong `unavailable` row would be worse
       // than a visible browser during a manual run.
       {
@@ -503,11 +503,11 @@ export default defineConfig({
         },
       },
 
-      // ── browser-parity-safari — matrix rows from Safari itself ───────────
+      // ── browser-parity-safari - matrix rows from Safari itself ───────────
       // macOS only, and the reason it exists: Playwright's WebKit build has no
       // WebGPU, so its `unavailable` rows describe the test tool rather than
       // the browser. safaridriver drives the real Safari, which does ship
-      // WebGPU — the rows land under the same `webkit` key and replace the
+      // WebGPU - the rows land under the same `webkit` key and replace the
       // Playwright ones, since Safari is the measurement that speaks for users.
       //
       // Prerequisites on the Mac, once: `safaridriver --enable`, plus
@@ -531,7 +531,7 @@ export default defineConfig({
         },
       },
 
-      // ── browser-webgpu-firefox-dark — same as above, dark colour scheme ──
+      // ── browser-webgpu-firefox-dark - same as above, dark colour scheme ──
       {
         ...browserBase,
         test: {
@@ -548,11 +548,11 @@ export default defineConfig({
         },
       },
 
-      // ── browser-audio-chromium — real OfflineAudioContext + AudioWorklet ──
+      // ── browser-audio-chromium - real OfflineAudioContext + AudioWorklet ──
       // Renders the audio-fx worklet effects through a real Web Audio engine in
       // headless Chromium (the jsdom AudioContext mock cannot render). This is
       // the acoustic-contract layer for our own DSP (PitchShift/Vocoder/Granular)
-      // — exactly where the shipped pitch/gain bugs lived. Path-gated in CI so it
+      // - exactly where the shipped pitch/gain bugs lived. Path-gated in CI so it
       // only runs when audio-fx changes.
       {
         ...browserBase,
@@ -570,7 +570,7 @@ export default defineConfig({
         },
       },
 
-      // ── browser-tilemap-chromium — real Worker for WorkerSampledChunkSource ──
+      // ── browser-tilemap-chromium - real Worker for WorkerSampledChunkSource ──
       // Runs the worker-backed procedural chunk provider through a real Worker in
       // headless Chromium (jsdom implements neither Worker nor
       // URL.createObjectURL). Path-gated in CI so it only runs when exojs-tilemap

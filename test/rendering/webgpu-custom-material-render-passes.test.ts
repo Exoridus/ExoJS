@@ -4,13 +4,13 @@
  * Every custom-material flush used to end (and submit) its own render pass, so
  * a scene whose sprites carry materials paid one `beginRenderPass` +
  * `queue.submit` per BATCH instead of one per frame. The custom path binds a
- * single base texture, so it also flushes on every base-texture change — the
+ * single base texture, so it also flushes on every base-texture change - the
  * two together turn N sprites over N textures into N render passes.
  *
  * The submit existed to order one hazard: a batch re-uploads its material's
  * user-uniform buffer at offset 0, and two draws in one submit would both read
  * the last write. That is a write-after-read hazard on a specific buffer, not a
- * property of custom batches — an unchanged material writes nothing at all.
+ * property of custom batches - an unchanged material writes nothing at all.
  *
  * These tests drive the REAL WebGpuBackend + sprite renderer against a mock
  * device (see webgpuMockEnvironment) and require that batches which write
@@ -151,7 +151,7 @@ describe('WebGPU custom-material batches and render passes', () => {
       const nodes = [new Sprite(texture), new Sprite(texture), new Sprite(texture)];
 
       // Distinct blend modes, so each sprite starts a new batch of the SAME
-      // material — a base-texture change no longer does that now that the
+      // material - a base-texture change no longer does that now that the
       // custom path rotates base textures through its slot table.
       nodes[0]!.blendMode = BlendModes.Normal;
       nodes[1]!.blendMode = BlendModes.Additive;
@@ -166,8 +166,8 @@ describe('WebGPU custom-material batches and render passes', () => {
 
       // Rendering the next sprite flushes the previous batch. Mutating the
       // uniforms between the second and third render means the flush of the
-      // SECOND batch rewrites the very buffer the FIRST batch's draw — already
-      // recorded into the open pass — reads.
+      // SECOND batch rewrites the very buffer the FIRST batch's draw - already
+      // recorded into the open pass - reads.
       backend.resetStats();
       backend.clear(Color.black);
       nodes[0]!.render(backend);

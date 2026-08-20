@@ -45,7 +45,7 @@ export const ribbonParticleWgsl: string = ribbonParticleWgslModule;
  *
  * Every particle contributes two vertices, offset either side of the path
  * running through its neighbours, so the whole live range becomes one continuous
- * band — the shape a sword arc, a projectile streak or a smoke plume wants,
+ * band - the shape a sword arc, a projectile streak or a smoke plume wants,
  * where a quad-per-particle would show as a dotted line.
  *
  * Layout of the per-vertex buffer {@link build} fills (20 bytes, 3 attributes):
@@ -88,7 +88,7 @@ export class RibbonParticles extends ParticleRenderMode {
   public readonly floatsPerVertex = wordsPerVertex;
 
   /**
-   * A strip has no fixed vertex count — the draw covers whatever {@link build}
+   * A strip has no fixed vertex count - the draw covers whatever {@link build}
    * emitted this frame. Non-indexed by construction: the strip's own vertex
    * order is its topology, and an index list would pin the draw to a fixed
    * index count.
@@ -204,7 +204,7 @@ export class RibbonParticles extends ParticleRenderMode {
         directionX = previousDirectionX;
         directionY = previousDirectionY;
       } else {
-        // Head of the strip with nothing to inherit — this particle cannot be
+        // Head of the strip with nothing to inherit - this particle cannot be
         // placed, so it contributes no pair.
         continue;
       }

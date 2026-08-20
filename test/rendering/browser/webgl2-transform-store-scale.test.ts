@@ -1,5 +1,5 @@
 /**
- * WebGL2 browser test — shared transform store past `MAX_TEXTURE_SIZE` rows.
+ * WebGL2 browser test - shared transform store past `MAX_TEXTURE_SIZE` rows.
  *
  * The store used to address a logical transform row as the transform texture's
  * Y coordinate, which capped a frame at `MAX_TEXTURE_SIZE` shared-transform
@@ -10,8 +10,8 @@
  *
  * These cells are pixel proofs rather than `getError()` checks: a marker sprite
  * at a row index far past the old limit has its own position AND its own tint,
- * so a shader that resolved high rows to the wrong texel — or clamped them to a
- * low line — fails here even when allocation succeeds.
+ * so a shader that resolved high rows to the wrong texel - or clamped them to a
+ * low line - fails here even when allocation succeeds.
  *
  * Run via:  pnpm test:browser:webgl
  */

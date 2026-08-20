@@ -1,15 +1,15 @@
 /**
  * WebGL2 per-unit texture bind cache.
  *
- * A logical bind used to cost two `gl.bindTexture` calls — `_syncTexture` bound
- * unconditionally and `bindTexture` bound the very same handle again — and the
+ * A logical bind used to cost two `gl.bindTexture` calls - `_syncTexture` bound
+ * unconditionally and `bindTexture` bound the very same handle again - and the
  * backend remembered only the single last-bound texture, so nothing was ever
  * skipped across units. These tests drive the REAL `WebGl2Backend` against the
  * recording fake context and count the `gl.bindTexture` calls per unit, which
  * is exactly the state the defect showed up in.
  *
  * The cache is keyed on the `WebGLTexture` handle rather than the user-side
- * `Texture`, so a `releaseGpu` cycle — same `Texture`, brand new handle — must
+ * `Texture`, so a `releaseGpu` cycle - same `Texture`, brand new handle - must
  * still re-bind; that is asserted here too.
  */
 

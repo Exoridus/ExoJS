@@ -24,20 +24,20 @@ type DataInferred = InferSceneData<typeof DataScene>; // expect: GameData
 const _voidCheck: VoidInferred = undefined as void;
 const _dataCheck: DataInferred = { level: 1 };
 
-// ChangeSceneArgs — void target: the single options tuple slot is itself optional, and its `data` key is forbidden
+// ChangeSceneArgs - void target: the single options tuple slot is itself optional, and its `data` key is forbidden
 const _voidArgsEmpty: ChangeSceneArgs<void> = [];
 const _voidArgsOptions: ChangeSceneArgs<void> = [{ suspendCurrent: true }];
-// @ts-expect-error — void target must not accept a data field
+// @ts-expect-error - void target must not accept a data field
 const _voidArgsRejectsData: ChangeSceneArgs<void> = [{ data: { level: 1 } }];
 
-// ChangeSceneArgs — data target: the options object is required, and its `data` key is required
+// ChangeSceneArgs - data target: the options object is required, and its `data` key is required
 const _dataArgsRequired: ChangeSceneArgs<GameData> = [{ data: { level: 1 } }];
 const _dataArgsWithSuspend: ChangeSceneArgs<GameData> = [{ data: { level: 1 }, suspendCurrent: true }];
-// @ts-expect-error — the options tuple slot cannot be omitted when data is required
+// @ts-expect-error - the options tuple slot cannot be omitted when data is required
 const _dataArgsRejectsEmpty: ChangeSceneArgs<GameData> = [];
-// @ts-expect-error — required data cannot be omitted from the options object
+// @ts-expect-error - required data cannot be omitted from the options object
 const _dataArgsRejectsMissingData: ChangeSceneArgs<GameData> = [{}];
-// @ts-expect-error — structurally incompatible data is rejected
+// @ts-expect-error - structurally incompatible data is rejected
 const _dataArgsRejectsMismatch: ChangeSceneArgs<GameData> = [{ data: { wrongField: true } }];
 
 // AnySceneConstructor accepts a heterogeneous constructor map
@@ -45,7 +45,7 @@ const _registry: Record<string, AnySceneConstructor> = { voidScene: VoidScene, d
 
 // AnySceneConstructor rejects a non-Scene constructor
 class NotAScene {}
-// @ts-expect-error — must be a Scene subclass constructor
+// @ts-expect-error - must be a Scene subclass constructor
 const _rejectsNonScene: AnySceneConstructor = NotAScene;
 
 // SceneRegistration / SceneRegistryShape / ConstructorOf
@@ -70,7 +70,7 @@ type DescriptorCtorOf = ConstructorOf<{ scene: typeof RegGameScene }>; // expect
 const _bareCtorCheck: BareCtorOf = VoidScene;
 const _descriptorCtorCheck: DescriptorCtorOf = RegGameScene;
 
-// ApplicationLike / ApplicationOf, in isolation — Scene's own AppLike
+// ApplicationLike / ApplicationOf, in isolation - Scene's own AppLike
 // generic is exercised end-to-end in scene-app-typing.type-test.ts (Task 5).
 class CustomApp extends Application {}
 
@@ -93,7 +93,7 @@ const _fromBase: FromBase = baseApp;
 
 // A type not resolving to any Application shape is rejected by the constraint.
 class NotAnApp {}
-// @ts-expect-error — NotAnApp does not extend ApplicationLike
+// @ts-expect-error - NotAnApp does not extend ApplicationLike
 type _rejectsNonApp = ApplicationOf<NotAnApp>;
 
 export {};

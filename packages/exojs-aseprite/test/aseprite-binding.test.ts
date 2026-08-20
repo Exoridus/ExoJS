@@ -77,7 +77,7 @@ describe('asepriteBinding descriptor', () => {
   });
 });
 
-// ── load() — happy path ─────────────────────────────────────────────────────────
+// ── load() - happy path ─────────────────────────────────────────────────────────
 
 describe('asepriteBinding.load — array fixture', () => {
   const fixtures = { 'sprites/hero.json': loadFixture('hero.array.json') };
@@ -133,7 +133,7 @@ describe('asepriteBinding.load — array fixture', () => {
   });
 });
 
-// ── load() — validation / AsepriteFormatError ───────────────────────────────────
+// ── load() - validation / AsepriteFormatError ───────────────────────────────────
 
 describe('asepriteBinding.load — AsepriteFormatError on malformed input', () => {
   async function loadRaw(raw: unknown): Promise<AsepriteSheet> {

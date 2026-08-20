@@ -1,5 +1,5 @@
 /**
- * WebGPU tilemap pixel-snapping browser tests — opt-in, capability-aware.
+ * WebGPU tilemap pixel-snapping browser tests - opt-in, capability-aware.
  *
  * Parity counterpart of `webgl2-tilemap-snap.test.ts` on the WebGPU backend.
  * Verifies that `pixelSnapMode = PixelSnapMode.Geometry` on a {@link TileMapNode} placed
@@ -7,7 +7,7 @@
  * across a chunk boundary in the rendered output.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe), so these tests do not skip on a missing adapter —
+ * against Mesa lavapipe), so these tests do not skip on a missing adapter -
  * `renderScene` only skips when the software adapter drops the device
  * mid-test (a DOMException device-loss caught during rendering).
  *
@@ -142,7 +142,7 @@ describe('WebGPU tilemap pixel snapping — chunk seam', () => {
 
       // The chunk seam is between tile x=1 and x=2, near screen x=32.
       // Scan a horizontal strip covering both chunks; every pixel must carry the
-      // tile colour (red) — a gap would appear as the black clear colour.
+      // tile colour (red) - a gap would appear as the black clear colour.
       for (let x = 4; x <= 59; x++) {
         const pixel = readPixel(x, 8);
 

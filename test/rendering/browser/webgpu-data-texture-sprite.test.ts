@@ -3,7 +3,7 @@
  *
  * A `DataTexture` keeps its pixels in a CPU-side buffer and therefore has no
  * external image `source`. The sprite renderers skip textures whose `source`
- * is null — a guard meant for a `Texture` still waiting on its image, but
+ * is null - a guard meant for a `Texture` still waiting on its image, but
  * `DataTexture` extends `Texture`, so an unqualified check silently drops
  * every procedurally-generated sprite. WebGL2 has no such guard and renders
  * them, which makes this a backend divergence rather than a missing feature.
@@ -23,7 +23,7 @@ import { createWebGpuTestBackend, readWebGpuFrame, renderWebGpuOnce } from './_b
 
 const SIZE = 64;
 
-/** A uniformly red 16×16 `DataTexture` — opaque, so any tolerance question is moot. */
+/** A uniformly red 16×16 `DataTexture` - opaque, so any tolerance question is moot. */
 const solidRedData = (edge = 16): DataTexture<TextureFormat.Rgba8> => {
   const data = new Uint8Array(edge * edge * 4);
 

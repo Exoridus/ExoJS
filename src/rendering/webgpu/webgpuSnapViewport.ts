@@ -9,7 +9,7 @@ import type { WebGpuBackend } from './WebGpuBackend';
  * the staged rect matches {@link WebGpuBackend._snapViewport} in exactly one
  * place.
  *
- * Returns whether the staged floats CHANGED — the projection-UBO writes are
+ * Returns whether the staged floats CHANGED - the projection-UBO writes are
  * skip-gated on (view, updateId, group) state, which does not cover a snap-rect
  * change (e.g. an attachment resize with an unchanged view), so callers fold
  * this flag into their dirty condition. Staging is idempotent: when the rect is

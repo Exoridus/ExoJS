@@ -1,4 +1,4 @@
-// CPU-STUB backend, no GPU submission — MEASUREMENT ONLY, never a CI gate.
+// CPU-STUB backend, no GPU submission - MEASUREMENT ONLY, never a CI gate.
 // Not comparable to the real WebGL2/WebGPU backend, nor to the GPU-baseline
 // suite (`test/perf/baseline/`, `pnpm perf:baseline`).
 // Sub-30% deltas between runs are noise, not signal.
@@ -32,7 +32,7 @@ class TexturedDrawable extends Drawable {
 
 // Minimal stub backend: enough surface for RenderPlanBuilder.build (view / stats)
 // and RenderPlanPlayer.play (draw). It deliberately implements none of the
-// optional playback hooks — in particular not `_prepareRenderInstructionSlot`.
+// optional playback hooks - in particular not `_prepareRenderInstructionSlot`.
 // That mirrors every shipped backend (no backend consumes the per-draw slot) and
 // keeps the measurement on the player's own per-draw / per-group overhead rather
 // than GPU work.

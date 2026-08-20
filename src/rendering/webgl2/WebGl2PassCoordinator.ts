@@ -10,7 +10,7 @@ import type { View } from '#rendering/View';
 /**
  * The minimal surface of {@link WebGl2Backend} that the coordinator drives.
  * Declared structurally so the coordinator stays decoupled from the (large)
- * backend class and is trivially unit-testable with a mock — no GL context
+ * backend class and is trivially unit-testable with a mock - no GL context
  * required.
  * @internal
  */
@@ -42,15 +42,15 @@ export interface WebGl2PassBackend {
 /**
  * WebGL2 implementation of {@link RenderPassCoordinator}.
  *
- * WebGL2 render-pass behaviour is ambient GL state — a bound framebuffer,
- * viewport, scissor and stencil state — so this coordinator is a thin adapter
+ * WebGL2 render-pass behaviour is ambient GL state - a bound framebuffer,
+ * viewport, scissor and stencil state - so this coordinator is a thin adapter
  * over the backend's existing state-transition methods. It owns no GPU pass
  * object: "begin a pass" means set target + view (+ clear); "end a pass" means
  * flush the active renderer.
  *
  * Inline stencil clips delegate straight to the backend's stencil stack and
- * never count as a render pass — no {@link BackendTargetPass}, no `renderPasses`
- * stat — matching the existing inline scissor / stencil behaviour.
+ * never count as a render pass - no {@link BackendTargetPass}, no `renderPasses`
+ * stat - matching the existing inline scissor / stencil behaviour.
  * @internal
  */
 export class WebGl2PassCoordinator implements RenderPassCoordinator {

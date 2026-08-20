@@ -1,8 +1,8 @@
 /**
- * Collect-path phase profile — CPU baseline for the immediate-mode draw-plan
+ * Collect-path phase profile - CPU baseline for the immediate-mode draw-plan
  * build/optimize/play pipeline (static-subtree-skip prep).
  *
- * MEASUREMENT ONLY (Tier B/C, informational — never a CI gate). Run via:
+ * MEASUREMENT ONLY (Tier B/C, informational - never a CI gate). Run via:
  *
  *   pnpm perf:bench:collect-phase   # or: npx tsx test/perf/collect-phase-benchmark.ts (needs a prior pnpm build)
  *
@@ -13,21 +13,21 @@
  * -> RenderPlanPlayer.play() (see src/rendering/plan/playRenderTree.ts). This
  * script isolates those three stages cleanly (they're already separate calls,
  * zero instrumentation needed), then goes one level deeper and attributes
- * build()'s internal cost to four named sub-phases — traversal, cull,
- * world-transform, material-key — via temporary prototype-method wrapping
+ * build()'s internal cost to four named sub-phases - traversal, cull,
+ * world-transform, material-key - via temporary prototype-method wrapping
  * (monkeypatching) installed and removed entirely within this file. No file
  * under src/ is modified.
  *
  * Two independent measurement passes per scenario:
  *
- *   Pass A (clean)        — build()/optimize()/play() timed directly with
+ *   Pass A (clean)        - build()/optimize()/play() timed directly with
  *                            performance.now(), zero added overhead. These are
  *                            the reliable, load-bearing numbers.
- *   Pass B (instrumented) — the same pipeline run again with the four
+ *   Pass B (instrumented) - the same pipeline run again with the four
  *                            sub-phase methods wrapped to accumulate
  *                            exclusive (self) time via a call-stack-based
  *                            profiler. Wrapping adds overhead, which inflates
- *                            Pass B's own build() total — so Pass B is used
+ *                            Pass B's own build() total - so Pass B is used
  *                            only for the *proportional* split between the
  *                            four sub-phases, and those fractions are then
  *                            applied to Pass A's clean build() median to get
@@ -682,7 +682,7 @@ const run = (): void => {
     }
   }
 
-  // S2 — fold the noise-floor flag into a summary block, not just a per-line
+  // S2 - fold the noise-floor flag into a summary block, not just a per-line
   // suffix: a reader skimming only the bottom of stdout still sees which
   // deltas are sub-floor and must not be quoted as real changes.
   if (subFloorDeltas.length > 0) {

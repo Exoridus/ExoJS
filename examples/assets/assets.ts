@@ -86,7 +86,7 @@ export const assets = {
             musicLoop: 'demo/audio/demo-loop-main.ogg',
         },
         voice: {
-            // Kenney "Voiceover Pack" (CC0) — spoken phrases, ideal as a
+            // Kenney "Voiceover Pack" (CC0) - spoken phrases, ideal as a
             // vocoder modulator or for voiced UI feedback.
             congratulations: 'demo/voice/congratulations.ogg',
             missionComplete: 'demo/voice/mission-complete.ogg',

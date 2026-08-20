@@ -28,7 +28,7 @@ let revokeObjectUrlSpy: MockInstance;
 beforeEach(() => {
   capturedImages = [];
   vi.stubGlobal('Image', CapturingImage);
-  // Spy (rather than replace) so the real jsdom Blob-URL behavior still runs —
+  // Spy (rather than replace) so the real jsdom Blob-URL behavior still runs -
   // only the call history is inspected.
   createObjectUrlSpy = vi.spyOn(URL, 'createObjectURL');
   revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL');

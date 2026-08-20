@@ -36,11 +36,11 @@ export interface DebugLayers {
  * screen-space layers then render in the overlay's pixel-space view.
  *
  * Keybindings (while canvas has focus):
- *   F1 — toggle Performance layer
- *   F2 — toggle BoundingBoxes layer
- *   F3 — toggle HitTest layer
- *   F4 — toggle PointerStack layer
- *   F6 — toggle RenderPassInspector layer
+ *   F1 - toggle Performance layer
+ *   F2 - toggle BoundingBoxes layer
+ *   F3 - toggle HitTest layer
+ *   F4 - toggle PointerStack layer
+ *   F6 - toggle RenderPassInspector layer
  *
  * NOTE: F-keys only fire while the canvas has focus (engine convention).
  * F5 is deliberately left unbound: browsers reload the page on it, which
@@ -48,7 +48,7 @@ export interface DebugLayers {
  *
  * Each key is claimed through a real {@link InputBinding} rather than the
  * `onKeyDown` signal, so the overlay's shortcuts also suppress the browser's
- * own default for those keys while it exists — F1 opening a help window and
+ * own default for those keys while it exists - F1 opening a help window and
  * F3 opening the find bar are otherwise triggered right alongside the panel
  * they were meant to toggle. Binding registration is what marks a key
  * consumed; a signal subscription runs a frame too late to prevent anything.
@@ -60,14 +60,14 @@ export class DebugOverlay {
   /** Master visibility switch. When false, no layers render regardless of their individual flags. */
   public visible = true;
 
-  /** The built-in diagnostic layers. Toggle each layer's `visible` flag or use the F1–F4/F6 keybindings. */
+  /** The built-in diagnostic layers. Toggle each layer's `visible` flag or use the F1-F4/F6 keybindings. */
   public readonly layers: DebugLayers;
 
   private readonly _app: Application;
   private readonly _view: View;
   private readonly _onFrameHandler: (delta: Time) => void;
   private readonly _onResizeHandler: (width: number, height: number) => void;
-  /** One per keybinding — held so `destroy()` can release the keys it claimed. */
+  /** One per keybinding - held so `destroy()` can release the keys it claimed. */
   private readonly _keyBindings: readonly InputBinding[];
 
   public constructor(app: Application) {
@@ -93,7 +93,7 @@ export class DebugOverlay {
       app.input.onStart(Keyboard.F2, () => this._toggle(this.layers.boundingBoxes)),
       app.input.onStart(Keyboard.F3, () => this._toggle(this.layers.hitTest)),
       app.input.onStart(Keyboard.F4, () => this._toggle(this.layers.pointerStack)),
-      // F5 is skipped on purpose — see the keybinding note on the class.
+      // F5 is skipped on purpose - see the keybinding note on the class.
       app.input.onStart(Keyboard.F6, () => this._toggle(this.layers.renderPassInspector)),
     ];
   }

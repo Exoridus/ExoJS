@@ -24,7 +24,7 @@ let temp: Line | null = null;
  * Mutable line segment defined by two endpoint positions. Implements
  * {@link ShapeLike} for intersection tests against all shape types.
  *
- * Note: `collidesWith` always returns `null` — lines support boolean
+ * Note: `collidesWith` always returns `null` - lines support boolean
  * intersection only; SAT response is not implemented for line segments.
  * `contains(x, y, threshold)` tests whether `(x, y)` lies on the segment
  * within a configurable threshold (default `0.1`).
@@ -147,7 +147,7 @@ export class Line implements ShapeLike {
 
   /**
    * Always returns `null`. SAT collision response is not defined for line
-   * segments — use {@link Line.intersectsWith} for boolean intersection
+   * segments - use {@link Line.intersectsWith} for boolean intersection
    * tests against any shape.
    */
   public collidesWith(_target: Collidable): CollisionResponse | null {

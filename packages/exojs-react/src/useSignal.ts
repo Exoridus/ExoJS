@@ -7,7 +7,7 @@ import { useCallback, useSyncExternalStore } from 'react';
  * Built on `useSyncExternalStore`, so reads stay tear-free under concurrent
  * rendering.
  *
- * The signal itself is only used to know *when* to re-read — `getSnapshot` is
+ * The signal itself is only used to know *when* to re-read - `getSnapshot` is
  * responsible for producing the actual value (usually a getter on the engine
  * object the signal lives on).
  *
@@ -22,7 +22,7 @@ import { useCallback, useSyncExternalStore } from 'react';
  * ```
  *
  * @param signal - The signal to subscribe to. `null`/`undefined` is accepted
- *   (e.g. before an `Application` exists) — the hook simply does not subscribe
+ *   (e.g. before an `Application` exists) - the hook simply does not subscribe
  *   to anything and `getSnapshot` still runs on every render.
  * @param getSnapshot - Reads the current value. Called on mount and again after
  *   every dispatch of `signal`.
@@ -31,7 +31,7 @@ export function useSignal<Args extends unknown[], T>(signal: Signal<Args> | null
   const subscribe = useCallback(
     (onStoreChange: () => void): (() => void) => {
       if (!signal) {
-        // No signal to subscribe to (e.g. before an Application exists) — nothing to unsubscribe either.
+        // No signal to subscribe to (e.g. before an Application exists) - nothing to unsubscribe either.
         return () => {
           // Nothing was subscribed, so there is nothing to unsubscribe.
         };

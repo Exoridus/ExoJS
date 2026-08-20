@@ -1,12 +1,12 @@
 /**
- * WebGPU renderer-matrix browser tests — Text retained instruction-set
+ * WebGPU renderer-matrix browser tests - Text retained instruction-set
  * replay.
  *
  * Text is the first retained renderer that opts OUT of the shared
  * `TransformBuffer` (`_consumesSharedTransform === false`): it packs its own
  * private per-node style+transform buffer, so the group-owned
  * `TextRetainedReplayState` (node data buffer, FrameUniforms buffer, own
- * quad-index buffer) is the entire replay mechanism — there is no shared-row
+ * quad-index buffer) is the entire replay mechanism - there is no shared-row
  * rebase to get wrong here, but there IS a real risk of stale/garbage node
  * data or a wrong bind group if the replay-time upload/patch logic is broken.
  * These tests reproduce the record frame's pixels exactly through a REAL
@@ -119,7 +119,7 @@ const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group a
  * A single, large, bright-white block-ish glyph over a black background: at
  * this font size a wide uppercase letter fills enough of its cell that a
  * region sampled a few pixels in from its top-left corner is reliably ink,
- * not anti-aliased edge — avoiding brittle single-pixel glyph-shape guesses.
+ * not anti-aliased edge - avoiding brittle single-pixel glyph-shape guesses.
  */
 const buildScene = (): { root: Container; group: RetainedContainer; text: Text; destroy: () => void } => {
   const root = new Container();
@@ -163,7 +163,7 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
       const ink = inkProbe(readCanvas(backend));
 
       // Glyph ink must be visible somewhere in the probed region (not still
-      // pure background) — otherwise the whole comparison below is vacuous.
+      // pure background) - otherwise the whole comparison below is vacuous.
       expect(ink).not.toEqual([0, 0, 0, 255]);
 
       const recordRegion = readCanvas(backend)(0, 0, canvasSize, canvasSize);
@@ -198,7 +198,7 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
       if (!(await renderScene(ctx, backend, scene.root))) return;
 
-      // No recapture: the SAME recorded instruction object still replays —
+      // No recapture: the SAME recorded instruction object still replays -
       // only the live projection uniform changed.
       expect(fragmentOf(scene.group).instructions!.instructions[0]).toBe(recordedInstruction);
       expect(fragmentOf(scene.group).instructions!.hasRecording).toBe(true);
@@ -261,7 +261,7 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
 
       if (!(await renderScene(ctx, backend, scene.root))) return;
 
-      // The O(1) patch rewrites the persisted row in place — the SAME
+      // The O(1) patch rewrites the persisted row in place - the SAME
       // recorded instruction object replays; a full re-record would have
       // produced a fresh instruction from a fresh `_recordRetainedBatch` call.
       expect(fragmentOf(scene.group).instructions!.instructions[0]).toBe(recordedInstruction);
@@ -327,8 +327,8 @@ describe('WebGPU renderer matrix: Text retained instruction replay cells', () =>
       expect(recordInk).not.toEqual([0, 0, 0, 255]);
 
       // F3 (static, no scene change): the fast/instruction-replay tier is the
-      // ONLY path that can reach this frame's draw — no move, no content
-      // change, nothing to reconcile — so `backend.stats.drawCalls` only
+      // ONLY path that can reach this frame's draw - no move, no content
+      // change, nothing to reconcile - so `backend.stats.drawCalls` only
       // increments if `_replayRetainedBatch` actually ran. A neutered version
       // that never acquires a pass or issues `drawIndexed` leaves it at 0.
       WebGpuTextRenderer.prototype._replayRetainedBatch = function (): void {};

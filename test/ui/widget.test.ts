@@ -1,5 +1,5 @@
 /**
- * Widget base-class tests — anchoring math, setSize/anchor interplay, and
+ * Widget base-class tests - anchoring math, setSize/anchor interplay, and
  * destroy() cleanup. Exercised through a minimal concrete subclass since
  * Widget itself is abstract.
  */
@@ -57,7 +57,7 @@ describe('Widget.anchorIn re-invocation', () => {
     widget.anchorIn(root, 'top-left');
     expect(root.onResize.count).toBe(1);
 
-    // Same root, different anchor position — must not add a second subscription.
+    // Same root, different anchor position - must not add a second subscription.
     widget.anchorIn(root, 'bottom-right');
     expect(root.onResize.count).toBe(1);
 

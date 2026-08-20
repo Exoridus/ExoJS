@@ -1,4 +1,4 @@
-// BitCrusher AudioWorkletProcessor — lo-fi bit-depth + sample-rate reduction.
+// BitCrusher AudioWorkletProcessor - lo-fi bit-depth + sample-rate reduction.
 //
 // Built through the `?worklet` plugin (see `@codexo/exojs-build`),
 // which bundles this module - imports included - into the single self-contained
@@ -42,7 +42,7 @@ class BitCrusherProcessor extends AudioWorkletProcessor {
         this._phase -= 1;
         this._held = step * Math.round(input[i]! / step);
       }
-      // Emit the held (quantized) sample — pure wet, no dry mixing here.
+      // Emit the held (quantized) sample - pure wet, no dry mixing here.
       output[i] = this._held;
     }
     return true;

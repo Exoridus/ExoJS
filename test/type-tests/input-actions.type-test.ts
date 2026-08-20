@@ -1,7 +1,7 @@
 // Type contract for the input action layer.
 //
 // Actions take one binding directly or several as an array, with the options
-// object always a separate second parameter — there are no variadic
+// object always a separate second parameter - there are no variadic
 // constructors where the last argument could be either. Composite bindings
 // must carry at least one source, and an `ActionMap` must expose the actions
 // it was built from as own members with their concrete types preserved.
@@ -10,7 +10,7 @@
 // (the example project's settings), both at its default strictness and again
 // with `--strictNullChecks false` on the command line. It is NOT part of
 // `tsconfig.type-tests-strict.json`'s include list (that lane is scoped to
-// the catalog-input/-leaf overloads only) — every assertion below must hold
+// the catalog-input/-leaf overloads only) - every assertion below must hold
 // under both lanes it does run in.
 
 import type { Action, AnyActionMap, BindingConflict, Gamepad } from '@codexo/exojs';

@@ -36,8 +36,8 @@ describe('selectMutationIndices', () => {
 
   // Regression lock: the exact canonical selection for the real dynamic-heavy 1k
   // cell (mutationFraction 0.075). A change here means the shared RNG stream or
-  // the selection algorithm moved — which would silently invalidate every
-  // cross-session comparison — so it must be a deliberate, reviewed change.
+  // the selection algorithm moved - which would silently invalidate every
+  // cross-session comparison - so it must be a deliberate, reviewed change.
   test('locks the canonical dynamic-heavy 1k selection', () => {
     const indices = selectMutationIndices(1_000, 0.075, SEED);
 

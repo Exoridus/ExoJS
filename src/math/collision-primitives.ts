@@ -179,7 +179,7 @@ const polygonsIntersect = (polygonA: PointLike[], polygonB: PointLike[]): boolea
 const intersectionPointPoint = ({ x: x1, y: y1 }: PointLike, { x: x2, y: y2 }: PointLike, threshold = 0): boolean => getDistance(x1, y1, x2, y2) <= threshold;
 
 /**
- * Return `true` when `point` lies on the line segment `(x1,y1)–(x2,y2)`
+ * Return `true` when `point` lies on the line segment `(x1,y1)-(x2,y2)`
  * within `threshold`. Uses sum-of-distances: the point is "on" the segment
  * when `d1 + d2 ≈ d3` within the tolerance.
  */

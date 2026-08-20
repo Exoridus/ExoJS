@@ -16,8 +16,8 @@ import { colliderAt } from './support';
  * threshold) at the default `fixedDelta = 1/60 s`. Coordinates are ExoJS pixels
  * with +Y down, so gravity is `(0, +g)` and "up" is decreasing y.
  *
- * A 20-box tower — the case the previous sequential-impulse + NGS solver
- * could not meet (lateral tipping past ~10 boxes) — is now asserted here: TGS-Soft
+ * A 20-box tower - the case the previous sequential-impulse + NGS solver
+ * could not meet (lateral tipping past ~10 boxes) - is now asserted here: TGS-Soft
  * decouples stiffness from the iteration count and holds it stable.
  */
 
@@ -471,11 +471,11 @@ describe('mass ratios', () => {
     expectAllFinite(world);
 
     // ~100:1 is the top of the supported resting envelope: the squeezed light box
-    // settles a small, bounded distance into the floor (~1.4px here — a few times
+    // settles a small, bounded distance into the floor (~1.4px here - a few times
     // the 0.25px slop, but far less than its 16px half-extent) and its centre
     // never sinks below the surface. Past this ratio the velocity-capped soft
     // push-out (`maxBiasVelocity`, ContactSolver.ts) lets penetration grow
-    // sharply (≈6px at 500:1, fully through by ~5000:1) — a documented
+    // sharply (≈6px at 500:1, fully through by ~5000:1) - a documented
     // soft-constraint tradeoff, not a defect (see the operating-envelope note on
     // PhysicsWorld). This gate pins the edge so a regression into deep
     // penetration at 100:1 is caught.
@@ -620,8 +620,8 @@ describe('failure safety', () => {
 
     // Detection runs once per frame with no swept/continuous test (no CCD), so a
     // body that moves farther than the floor thickness in a single frame passes
-    // straight through. The only contract under such speeds is finiteness — no
-    // NaN/Inf blow-up — which this gate pins. Reliably stopping fast projectiles
+    // straight through. The only contract under such speeds is finiteness - no
+    // NaN/Inf blow-up - which this gate pins. Reliably stopping fast projectiles
     // is a v0.16 CCD / bullet-mode item (see the operating-envelope note).
     expectAllFinite(world);
     expect(bullet.y).toBeGreaterThan(floorTop); // tunnelled through (documented limitation)
@@ -634,7 +634,7 @@ describe('ContactSolver internals', () => {
   it('contactHertz=0 takes the rigid (non-soft) branch and still settles a resting box', () => {
     // Default worlds use contactHertz=30 (soft); this exercises the `contactHertz > 0`
     // false side of ContactSolver.prepare's soft-factor computation (biasRate=0,
-    // massScale=1, impulseScale=0 — the hard-constraint fallback).
+    // massScale=1, impulseScale=0 - the hard-constraint fallback).
     const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY }, contactHertz: 0 });
     const floorTop = 300;
 
@@ -650,7 +650,7 @@ describe('ContactSolver internals', () => {
   it('prepare() skips a contact whose manifold reports zero points', () => {
     // ContactGraph only ever pushes a record into solidContacts when the narrow
     // phase reports `touching` (which requires pointCount ≥ 1), so this path is not
-    // reachable through PhysicsWorld — it is exercised here by calling the solver
+    // reachable through PhysicsWorld - it is exercised here by calling the solver
     // directly with a hand-built record whose manifold was never populated.
     const world = new PhysicsWorld();
     const colliderA = colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 });
@@ -696,7 +696,7 @@ describe('deterministic replay', () => {
 
       const bodies: PhysicsBody[] = [];
 
-      // A mixed, asymmetric scene — boxes and a circle.
+      // A mixed, asymmetric scene - boxes and a circle.
       bodies.push(addBox(world, -20, floorTop - 16 - 1, 32));
       bodies.push(addBox(world, 18, floorTop - 48 - 1, 28));
 

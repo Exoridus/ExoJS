@@ -2,7 +2,7 @@
 import { pathToFileURL } from 'node:url';
 
 /**
- * CI lane selection — the single source of truth for which validation lanes a
+ * CI lane selection - the single source of truth for which validation lanes a
  * set of changed files must trigger.
  *
  * Consumed by:
@@ -13,7 +13,7 @@ import { pathToFileURL } from 'node:url';
  *
  * Written as dependency-free ESM (`.mjs`) on purpose: the detector job runs this
  * with the runner's ambient `node` BEFORE any dependency install, so it must not
- * import anything outside `node:` built-ins. Keep it that way — adding a runtime
+ * import anything outside `node:` built-ins. Keep it that way - adding a runtime
  * import here would force a `pnpm install` into the always-on detector job.
  *
  * Background / the defect this prevents:
@@ -22,7 +22,7 @@ import { pathToFileURL } from 'node:url';
  * were skipped while Required CI still went green. The extension packages are
  * runtime engine code (their source is imported by the in-repo unit AND browser
  * tests via the vitest aliases), so a change to them must run the full engine
- * validation set — not just the docs/site lane.
+ * validation set - not just the docs/site lane.
  */
 
 /**
@@ -46,13 +46,13 @@ import { pathToFileURL } from 'node:url';
  * Runtime workspace packages whose CODE participates in the engine validation
  * lanes (unit tests, package build/verify, browser rendering tests).
  *
- *   - exojs-config    shared vitest/eslint/tsconfig/rollup presets — a change
+ *   - exojs-config    shared vitest/eslint/tsconfig/rollup presets - a change
  *                     here can alter how every package builds, types and tests.
  *   - exojs-particles / exojs-tilemap / exojs-tiled  runtime extension packages
  *                     whose source the in-repo unit and browser tests import.
  *
  * NOT listed: `create-exo-app` (a standalone scaffolding CLI with no engine /
- * browser impact) and `site` (the examples app — covered by the `site` area).
+ * browser impact) and `site` (the examples app - covered by the `site` area).
  *
  * Adding a new runtime extension package == add its directory name here. Keep in
  * sync with `LOCKSTEP_PACKAGES` in scripts/release/lockstep-packages.ts (this
@@ -74,7 +74,7 @@ const RUNTIME_PACKAGES = [
 
 /**
  * Documentation-only files inside a package. A change limited to these must NOT
- * drag in the expensive engine lanes — it still triggers the docs/site lane via
+ * drag in the expensive engine lanes - it still triggers the docs/site lane via
  * the `site` area, because package READMEs feed the generated package API pages.
  * @param {string} file
  */
@@ -102,7 +102,7 @@ const isEnginePath = file => {
   // CHANGELOG, so a changelog-only PR must still run the unit lane (a docs-only
   // changelog edit once skipped it and the mismatch only failed on main).
   if (file === 'CHANGELOG.md') return true;
-  // Runtime-package CODE (source, tests, build config, manifest) — but not docs.
+  // Runtime-package CODE (source, tests, build config, manifest) - but not docs.
   for (const pkg of RUNTIME_PACKAGES) {
     if (file.startsWith(`packages/${pkg}/`) && !isPackageDocPath(file)) return true;
   }
@@ -112,7 +112,7 @@ const isEnginePath = file => {
 /**
  * Audio-fx area: the browser-audio lane renders the audio-fx worklets through a
  * real OfflineAudioContext in headless Chromium. It is expensive relative to its
- * blast radius, so it gates on a NARROW set — the audio-fx package CODE plus the
+ * blast radius, so it gates on a NARROW set - the audio-fx package CODE plus the
  * shared roots that can change how it builds/tests (the vitest config that
  * defines the browser-audio project, the shared config preset, the root
  * manifest/lockfile/workspace, and any workflow change). A change anywhere else
@@ -147,7 +147,7 @@ const isTilemapWorkerPath = file => {
 /**
  * Site area: anything that can change the generated examples site / API docs.
  * Gates the site-build lane. Mirrors (and intentionally keeps) the prior `site`
- * filter: every `packages/**` change — docs included — can affect generated docs
+ * filter: every `packages/**` change - docs included - can affect generated docs
  * or example builds.
  * @param {string} file
  */
@@ -186,7 +186,7 @@ export function selectAreas(changedFiles) {
 
 /**
  * Map effective areas to the concrete CI lanes. This MIRRORS the job `if:` gates
- * in _ci-checks.yml — keep the two in sync:
+ * in _ci-checks.yml - keep the two in sync:
  *   - typecheck + lint are ungated (always run, on every PR);
  *   - unit/coverage, package-verify and all three browser lanes gate on `engine`
  *     (the WebGPU + Firefox browser lanes still run when engine is true; they are
@@ -215,7 +215,7 @@ export function effectiveLanes(areas) {
 
 /**
  * Parse the changed-file list emitted by dorny/paths-filter (`list-files: json`)
- * — tolerant of an empty value or a newline-delimited list.
+ * - tolerant of an empty value or a newline-delimited list.
  * @param {string | undefined} raw
  * @returns {string[]}
  */

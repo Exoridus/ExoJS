@@ -4,13 +4,13 @@
  * `extract-guide-snippets.ts` sorts every fenced ts/js block in the guide into
  * four buckets: STANDALONE and BARE are type-checked, `no-check` blocks are
  * skipped because the author explicitly said so, and `partial` blocks are
- * skipped because the extractor could not make sense of them — silently, and
+ * skipped because the extractor could not make sense of them - silently, and
  * with nothing in the MDX to show for it. That last bucket is the hole this
  * module closes: it is the only one where a block escapes the gate without
  * anyone having decided that it should.
  *
  * The budget is kept PER GUIDE FILE rather than as one repository-wide number.
- * A single total lets a migrated chapter pay for a newly sloppy one — the
+ * A single total lets a migrated chapter pay for a newly sloppy one - the
  * count stays flat while coverage quietly moves from a well-covered page to a
  * bad one. Per file, that trade is impossible: an increase anywhere is a
  * failure regardless of what happened elsewhere.
@@ -46,7 +46,7 @@ export interface BaselineDelta {
 export interface BaselineDiff {
   /** Files that gained `partial` blocks (or appeared with some, unrecorded). */
   regressions: BaselineDelta[];
-  /** Files that lost `partial` blocks — the baseline needs to follow them down. */
+  /** Files that lost `partial` blocks - the baseline needs to follow them down. */
   improvements: BaselineDelta[];
 }
 
@@ -64,7 +64,7 @@ function byFile(a: BaselineDelta, b: BaselineDelta): number {
  *
  * @param baseline  - Recorded budget, keyed by guide-relative MDX path.
  * @param actual    - Counts observed in this run. Files with zero `partial`
- *                    blocks may be omitted or present as `0` — both mean the
+ *                    blocks may be omitted or present as `0` - both mean the
  *                    same thing.
  * @param inScope   - Whether a guide file was visited by this run at all.
  *                    A folder-filtered run (`GUIDE_SNIPPET_FOLDERS`) never sees

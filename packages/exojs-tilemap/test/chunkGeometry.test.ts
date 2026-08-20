@@ -194,7 +194,7 @@ describe('buildChunkPages', () => {
 
   it('skips cells whose underlying texture reports a non-positive width or height', () => {
     // The TextureRegion/TileSet must construct with valid, positive dimensions
-    // (both types enforce this) — but the underlying Texture is a live,
+    // (both types enforce this) - but the underlying Texture is a live,
     // mutable object (e.g. a not-yet-decoded image, or a lost GPU context) that
     // can legitimately report 0 afterwards. buildChunkPages must guard against it.
     const tileset = makeTileset('degenerate', 16, 32, 32, 512, 512);

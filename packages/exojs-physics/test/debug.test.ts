@@ -17,7 +17,7 @@ const advance = (world: PhysicsWorld, seconds: number): void => {
   }
 };
 
-/** Minimal fake render backend — never a real WebGL2/WebGPU backend (jsdom project). */
+/** Minimal fake render backend - never a real WebGL2/WebGPU backend (jsdom project). */
 const makeBackend = () => ({
   stats: {
     frameTimeMs: 0,

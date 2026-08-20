@@ -526,7 +526,7 @@ describe('RenderTo WebGL2 browser', () => {
     const worldRt = new RenderTexture(64, 64);
     // RT content is GREEN; the canvas background is RED. The sampled pixel is red
     // BEFORE the RT sprite draws, so a green readback proves the sprite actually
-    // painted the RT's sampled contents — an empty or invisible RT sprite leaves
+    // painted the RT's sampled contents - an empty or invisible RT sprite leaves
     // red. (The earlier shape drew the same colour to both, so it could not tell a
     // working RT sprite from a transparent one.)
     const rtContent = new Graphics();
@@ -544,7 +544,7 @@ describe('RenderTo WebGL2 browser', () => {
     frame.drawRectangle(0, 0, 8, 8); // mesh frame in the corner
 
     // overlay subtree: RT sprite FIRST, mesh frame AFTER → RT sampler is NOT the last
-    // draw (mini-map shape with the workaround inverted, so the bug — if present — bites).
+    // draw (mini-map shape with the workaround inverted, so the bug - if present - bites).
     const overlay = new Container();
     overlay.addChild(rtSprite);
     overlay.addChild(frame);
@@ -560,7 +560,7 @@ describe('RenderTo WebGL2 browser', () => {
       backend.flush();
 
       // The centre is covered by the red canvas AND the RT sprite. It must show the
-      // RT's GREEN — proving the RT sprite painted its sampled contents.
+      // RT's GREEN - proving the RT sprite painted its sampled contents.
       expectPixelNear(readPixel(backend, canvasSize / 2, canvasSize / 2), [0, 255, 0, 255]);
     } finally {
       pipeline.destroy();
@@ -574,7 +574,7 @@ describe('RenderTo WebGL2 browser', () => {
     // Regression: the backend used texture unit 15 as its render-target sync
     // scratch unit. _flushActiveRenderer re-binds the
     // active target (unconditionally binding the target's own color texture
-    // on that unit) BEFORE the sprite renderer flushes — so with 16 batch
+    // on that unit) BEFORE the sprite renderer flushes - so with 16 batch
     // slots, sampler slot 15 pointed at the target's own texture. Drawing
     // into the target then formed a WebGL feedback loop: INVALID_OPERATION,
     // whole draw dropped, target left at its clear color.

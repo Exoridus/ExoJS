@@ -236,7 +236,7 @@ describe('internal hard-reset claim consistency', () => {
       await Promise.all(handles.map(h => h.loaded));
 
       // Each distinct source registered a claim (and a deferred handle before it
-      // settled) — unloadAll must forget them all.
+      // settled) - unloadAll must forget them all.
       expect(claimSize(loader)).toBeGreaterThan(0);
 
       residencyOf(loader).unloadAll();

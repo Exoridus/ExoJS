@@ -1,5 +1,5 @@
 /**
- * Tests OF the synthetic fixtures — verifies the invariants the bench relies on:
+ * Tests OF the synthetic fixtures - verifies the invariants the bench relies on:
  *   - beatTimesSec spacing equals 60/bpm within < 1 sample at 48 kHz
  *   - click count = floor(durationSec * bpm / 60) ± 1
  *   - peak amplitude <= 0.99 (no clipping)

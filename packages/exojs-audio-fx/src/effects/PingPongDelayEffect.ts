@@ -7,7 +7,7 @@ export interface PingPongDelayEffectOptions {
    */
   delayTime?: number;
   /**
-   * Cross-channel feedback fraction — the portion of each delayed tap routed
+   * Cross-channel feedback fraction - the portion of each delayed tap routed
    * into the opposite channel's delay input. Range 0..0.9, default 0.4.
    */
   feedback?: number;

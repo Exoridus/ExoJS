@@ -7,24 +7,24 @@ import { Joint } from './Joint';
 export interface MouseJointOptions {
   /** The body to drag. */
   body: PhysicsBody;
-  /** World point to pull the body toward — also the grab point on the body at creation. */
+  /** World point to pull the body toward - also the grab point on the body at creation. */
   target: VectorLike;
   /** Soft-spring frequency in Hz (higher = snappier). Default `5`. */
   hertz?: number;
   /** Soft-spring damping ratio. Default `0.7`. */
   dampingRatio?: number;
-  /** Maximum pulling force — clamps the per-step impulse so heavy bodies lag. Default `Infinity`. */
+  /** Maximum pulling force - clamps the per-step impulse so heavy bodies lag. Default `Infinity`. */
   maxForce?: number;
 }
 
-/** Reused output sink — physics steps single-threaded, so a shared scratch is safe. */
+/** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
 const scratch: Mutable2D = { x: 0, y: 0 };
 
 /**
  * Softly pulls a single body's grab point toward a movable **target** point
  * (typically the mouse cursor). The grab point is fixed on the body at creation;
  * update {@link target} each frame to drag. A soft constraint bounded by
- * {@link maxForce} — solved in the sub-step loop, warm-started. Internally the
+ * {@link maxForce} - solved in the sub-step loop, warm-started. Internally the
  * "other" body is a private static ground sentinel, so this is a single-body
  * constraint that touches only the dragged body.
  */

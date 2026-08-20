@@ -12,7 +12,7 @@ import { createSpatialSmoothingSettings, createVelocitySample, deriveVelocity, t
  *   space, composed through RetainedContainer transform-group boundaries)
  * - {@link View}: uses `view.center`
  * - Plain `{ x, y }` object: read directly
- * - `null`: no automatic tracking — set `position` manually.
+ * - `null`: no automatic tracking - set `position` manually.
  */
 export type AudioListenerTarget = SceneNode | View | { x: number; y: number } | null;
 
@@ -22,7 +22,7 @@ export type AudioListenerTarget = SceneNode | View | { x: number; y: number } | 
  * else written directly via {@link AudioListener.position}.
  *
  * **Virtual, not the WebAudio listener.** `AudioContext.listener` belongs to
- * the process-wide context, so it is a single global object — two Applications
+ * the process-wide context, so it is a single global object - two Applications
  * writing their own world position into it every frame would simply overwrite
  * each other, and both mixes would pan against whichever ticked last. This
  * class therefore pins the real WebAudio listener at the origin (orientation
@@ -37,12 +37,12 @@ export type AudioListenerTarget = SceneNode | View | { x: number; y: number } | 
  * voice's relative position and smoothed per voice by the same
  * {@link SpatialSmoothingSettings}. The audible result is the same ramp, but
  * {@link SpatialSmoothingSettings.teleportThreshold} is now evaluated against
- * the *relative* jump — a listener warp snaps every voice individually rather
- * than snapping the listener once — and a moving listener costs one
+ * the *relative* jump - a listener warp snaps every voice individually rather
+ * than snapping the listener once - and a moving listener costs one
  * `setTargetAtTime` per spatial voice per frame instead of three in total.
  *
  * Owned by {@link AudioManager}; one instance per Application. `velocity` feeds
- * the Doppler calculation on every spatial {@link BaseVoice} — explicit when
+ * the Doppler calculation on every spatial {@link BaseVoice} - explicit when
  * set, else auto-derived each frame from the listener's own position delta
  * (same fallback {@link BaseVoice.velocity} uses). That path is unaffected by
  * the virtualization: it has always worked in absolute world coordinates in JS.
@@ -88,7 +88,7 @@ export class AudioListener {
    * Internal: called by AudioManager.update() once per frame. Refreshes
    * {@link AudioListener.position} (and the derived velocity) from
    * {@link AudioListener.target}. Deliberately writes nothing to the WebAudio
-   * listener — that one is global and stays pinned at the origin; the voices
+   * listener - that one is global and stays pinned at the origin; the voices
    * pan relative to this position instead. See the class docs.
    */
   public _tick(): void {
@@ -116,7 +116,7 @@ export class AudioListener {
     const target = this.target;
     if (target === null) return;
 
-    // Check for SceneNode (has getWorldTransform). World — not global — so a
+    // Check for SceneNode (has getWorldTransform). World - not global - so a
     // node inside a RetainedContainer transform group reports its true
     // on-screen position (AU1).
     const asSceneNode = target as Partial<SceneNode>;
@@ -169,7 +169,7 @@ export class AudioListener {
     }
 
     // Pin the global listener at the origin, once. Voices supply their position
-    // relative to their own manager's listener, so this never moves again — and
+    // relative to their own manager's listener, so this never moves again - and
     // a second Application writing the same zeroes here cannot disturb the first.
     if (listener.positionX && listener.positionY && listener.positionZ) {
       listener.positionX.setValueAtTime(0, t);

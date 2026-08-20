@@ -28,8 +28,8 @@ export class MutableRenderPlan implements RenderPlan {
    * Reset the counters a build starts from. The pass list is deliberately NOT
    * emptied here: `RenderPlanBuilder.build` republishes it through
    * {@link setSinglePass} once it knows whether the collect produced anything,
-   * and emptying it first would drop the pooled pass record — and the array's
-   * backing store with it — on every single frame.
+   * and emptying it first would drop the pooled pass record - and the array's
+   * backing store with it - on every single frame.
    */
   public reset(): void {
     this.nodeCount = 0;

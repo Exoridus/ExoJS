@@ -193,7 +193,7 @@ describe('loadTiledMap — error propagation', () => {
   });
 
   it('propagates TiledFormatError when a GID is not covered by any tileset', async () => {
-    // Minimal map with GIDs 1–2 but a tileset covering only GID 1
+    // Minimal map with GIDs 1-2 but a tileset covering only GID 1
     const { context } = makeContext({
       'narrow.tmj': {
         type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',

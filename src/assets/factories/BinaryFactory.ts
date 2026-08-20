@@ -18,7 +18,7 @@ export class BinaryFactory extends AbstractAssetFactory<ArrayBuffer> {
   }
 
   /**
-   * Returns the raw buffer unchanged — no further transformation is applied.
+   * Returns the raw buffer unchanged - no further transformation is applied.
    */
   public async create(source: ArrayBuffer): Promise<ArrayBuffer> {
     return source;

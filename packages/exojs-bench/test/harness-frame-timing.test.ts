@@ -82,7 +82,7 @@ const createFakeArm = (withDevice = true): FakeArm => {
 };
 
 /**
- * A WebGL2 arm that exposes no timer extension — the usual case, since browsers
+ * A WebGL2 arm that exposes no timer extension - the usual case, since browsers
  * gate `EXT_disjoint_timer_query_webgl2` behind a privacy policy. It logs the
  * same `submit` events so a WebGL2 cell's sequence can be compared against a
  * WebGPU one directly.
@@ -172,7 +172,7 @@ describe('WebGPU warmup/timing measurement boundary', () => {
     // Stated as the invariant rather than as a fixed sequence, so this test keeps
     // failing for the right reason if the frame counts above ever change: every
     // warmup submit precedes the first completion wait. The regression this
-    // guards against is the reverse order — warmup, timed frame, and only THEN a
+    // guards against is the reverse order - warmup, timed frame, and only THEN a
     // wait that resolves on the warmup backlog too.
     expect(warmupSubmits).toEqual(['submit', 'submit', 'submit', 'submit', 'submit']);
     expect(arm.events[firstWait + 1]).toBe('submit');
@@ -213,7 +213,7 @@ describe('WebGPU warmup/timing measurement boundary', () => {
     const result = await runCell(arm.adapter, cell('webgpu', 2, 3), stageCanvas());
 
     // `cpuMs*` brackets `mutate` + `renderFrame` only. A 60ms drain (plus a 60ms
-    // wait per timed frame) must not appear in it — the fake arm's frames are
+    // wait per timed frame) must not appear in it - the fake arm's frames are
     // empty, so anything beyond a fraction of a millisecond is the drain leaking
     // into the measurement.
     expect(result.cpuMsMedian).toBeLessThan(10);
@@ -410,7 +410,7 @@ describe('WebGPU frame time comes from the hardware timestamp clock', () => {
   test('reports pass execution as frameMs and queue occupancy as queueMs, from the same frames', async () => {
     // 40ms of queue work per timed frame against 2ms of pass execution: the two
     // columns MUST disagree, and each must report its own quantity. This is the
-    // whole design decision in one assertion — the queue wall clock is not the
+    // whole design decision in one assertion - the queue wall clock is not the
     // frame time, and the frame time cannot see the queue.
     const { device } = createFakeWebGpuDevice({ queueWorkMs: [0, 40, 40, 40], passMs: [2] });
 
@@ -451,7 +451,7 @@ describe('WebGPU frame time comes from the hardware timestamp clock', () => {
 
     // Warmup passes carry no writes; timed passes do. The engine REUSES one
     // render-pass descriptor, so a stale `timestampWrites` surviving out of the
-    // window would silently overwrite recorded query values — this pins that the
+    // window would silently overwrite recorded query values - this pins that the
     // wrapper clears the member instead of leaving it.
     expect(timestampWritesSeen.slice(0, 3)).toEqual([null, null, null]);
     expect(timestampWritesSeen.slice(3, 5).every(entry => entry !== null)).toBe(true);
@@ -470,8 +470,8 @@ describe('WebGPU frame time comes from the hardware timestamp clock', () => {
     expect(timestampWritesSeen.every(entry => entry === null)).toBe(true);
     expect(result.note).toContain('no GPU timer');
     expect(result.note).toContain('no timestamp-query feature');
-    // The queue series is still reported — it is the only signal that sees
-    // upload cost — but it did not become the frame time.
+    // The queue series is still reported - it is the only signal that sees
+    // upload cost - but it did not become the frame time.
     expect(result.queueMsMedian).toBeGreaterThan(30);
     expect(result.frameMsMedian).not.toBeCloseTo(result.queueMsMedian!, 0);
   });
@@ -507,7 +507,7 @@ describe('WebGPU queue occupancy is attributed to the frame that caused it', () 
   });
 
   test('completions observed at the same instant never produce a negative sample', async () => {
-    // B and C add NO work, so all three promises resolve at the same instant —
+    // B and C add NO work, so all three promises resolve at the same instant -
     // the coalescing case. The attributed value for a frame whose completion
     // coincides with its predecessor's is a lower bound (here ~0), which is the
     // documented cost of not counting A's stall three times.

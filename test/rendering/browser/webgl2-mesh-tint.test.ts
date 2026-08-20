@@ -1,5 +1,5 @@
 /**
- * WebGL2 mesh tint / texture-sampling browser tests — mirrors
+ * WebGL2 mesh tint / texture-sampling browser tests - mirrors
  * webgpu-mesh-tint.test.ts on the WebGL2 backend.
  *
  * Regression coverage for a mesh-renderer bug where the per-mesh tint Color
@@ -225,7 +225,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
   // Regression: the mesh renderer caches the texture bind group per Texture.
   // Resolving the binding is what syncs a DataTexture's dirty region to the GPU,
   // so a plain cache hit that skipped it froze a mutated DataTexture on its
-  // first-frame contents — e.g. an audio spectrogram updated every frame would
+  // first-frame contents - e.g. an audio spectrogram updated every frame would
   // never change after the first draw. The fix re-resolves the binding each draw
   // (reusing the bind group only while the view is unchanged).
   test('re-uploads a DataTexture mutated between draws (no stale mesh bind-group cache)', async () => {

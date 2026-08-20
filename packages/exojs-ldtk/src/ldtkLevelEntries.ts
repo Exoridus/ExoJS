@@ -4,7 +4,7 @@ import type { LdtkData, LdtkLevel } from './LdtkData';
  * One level from a (possibly multi-world) {@link LdtkData} document, paired
  * with the {@link import('./LdtkData').LdtkWorldData.iid} of the world it
  * belongs to. `worldIid` is `undefined` when the document uses the legacy
- * single-world shape (`data.levels`, no `worlds[]`) — the overwhelmingly
+ * single-world shape (`data.levels`, no `worlds[]`) - the overwhelmingly
  * common case.
  */
 export interface LdtkLevelEntry {
@@ -19,7 +19,7 @@ export interface LdtkLevelEntry {
  * `data.worlds[].levels`, each tagged here with its owning world's `iid`;
  * per the LDtk spec the root `levels` array is kept but EMPTY in this shape).
  *
- * This is the single place that decides which shape a document uses — every
+ * This is the single place that decides which shape a document uses - every
  * consumer that needs "all levels, in document order" ({@link import('./loadLdtkMap').loadLdtkMap}'s
  * external `.ldtkl` resolution, {@link import('./ldtkToTileMap').ldtkToTileMap}'s
  * conversion, and {@link import('./LdtkMap').LdtkMap.getLevelByName}'s lookup)

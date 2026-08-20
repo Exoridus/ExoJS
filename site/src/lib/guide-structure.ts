@@ -1,5 +1,5 @@
 /**
- * Guide information architecture — the single source of truth for guide
+ * Guide information architecture - the single source of truth for guide
  * ordering, grouping, learning metadata, and cross-references (playground
  * examples and API pages).
  *
@@ -29,7 +29,7 @@ export const GUIDE_LEVEL_LABEL: Record<GuideLevel, string> = {
     advanced: 'Advanced',
 };
 
-/** Authoring shape — only the fields a chapter actually sets. */
+/** Authoring shape - only the fields a chapter actually sets. */
 interface RawChapter {
     slug: string;
     level: GuideLevel;

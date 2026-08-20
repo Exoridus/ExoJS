@@ -16,7 +16,7 @@ export interface PanelOptions {
 
 /**
  * Rectangular background container with rounded corners and an optional border.
- * The base building block for HUD boxes, dialogs, and menus — add content with
+ * The base building block for HUD boxes, dialogs, and menus - add content with
  * `panel.addChild(...)`.
  */
 export class Panel extends Widget {

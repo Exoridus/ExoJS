@@ -300,7 +300,7 @@ describe('AudioBus', () => {
 
   // 8. destroy disconnects nodes and detaches (but does not destroy) effects
   test('destroy disconnects all nodes and detaches its effects without destroying them', () => {
-    // Built before the spy so it gets real nodes — while `spyOnBusCreation` is
+    // Built before the spy so it gets real nodes - while `spyOnBusCreation` is
     // active every `createGain()` returns one of the two bus mocks.
     const filter = new WiredFilter();
     const spy = spyOnBusCreation();
@@ -470,7 +470,7 @@ describe('AudioBus', () => {
   //
   // These exercise the "not set up yet" arm of internal guards by nulling out
   // `_setup` directly rather than going through the deferred-context signal
-  // machinery — the observable contract is simply "no-op / does not throw".
+  // machinery - the observable contract is simply "no-op / does not throw".
 
   test('pan setter updates _pan but skips the panNode write when not yet set up', () => {
     const bus = new AudioBus('pan-not-ready', { pan: 0 });
@@ -503,7 +503,7 @@ describe('AudioBus', () => {
 
     const connectsBefore = spy.inputNode.connect.mock.calls.length;
     expect(bus.removeEffect(filter)).toBe(bus);
-    // No chain rebuild happened — connect call count is unchanged.
+    // No chain rebuild happened - connect call count is unchanged.
     expect(spy.inputNode.connect.mock.calls.length).toBe(connectsBefore);
 
     spy.restore();
@@ -676,7 +676,7 @@ describe('AudioBus', () => {
     const bus = new DeferredAudioBus('deferred-once-setup');
 
     // The bus's own setup handler is the ONLY listener on the global signal.
-    // onceSetup must not add another per registered callback — deferrals are
+    // onceSetup must not add another per registered callback - deferrals are
     // queued on the bus itself, so a chatty pre-unlock game does not pile
     // closures onto the singleton (AU3).
     const countAfterConstruct = fakeSignal.count;
@@ -751,7 +751,7 @@ describe('AudioBus', () => {
     bus.onceSetup(callback);
     expect(callback).not.toHaveBeenCalled();
 
-    // The bus sets up when the context unlocks — its queued callbacks flush then.
+    // The bus sets up when the context unlocks - its queued callbacks flush then.
     const ready = (bus as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady;
     ready(fakeCtx);
 
@@ -795,7 +795,7 @@ describe('AudioBus', () => {
     const childReady = (child as unknown as { _onAudioContextReady: ReadyHandler })._onAudioContextReady;
 
     // Force the CHILD to set up before its parent (bypassing signal-registration
-    // order, which — since a parent must exist before it can be passed in —
+    // order, which - since a parent must exist before it can be passed in -
     // can never naturally place the child's handler ahead of the parent's).
     // This is the scenario `_connectUpstream`'s "parent not ready" branch
     // guards: `parentInput` is null, so the child subscribes via
@@ -803,12 +803,12 @@ describe('AudioBus', () => {
     childReady(fakeCtx);
     expect(child._getInputNode()).not.toBeNull();
     expect(parent._getInputNode()).toBeNull();
-    // The child's output has not been connected upstream yet — it queued a
+    // The child's output has not been connected upstream yet - it queued a
     // reconnect on the parent via parent.onceSetup(...).
     const childOutput = child._getOutputNode() as unknown as { connect: MockInstance };
     expect(childOutput.connect).not.toHaveBeenCalled();
 
-    // Now the parent becomes ready — its own setup runs and flushes the queued
+    // Now the parent becomes ready - its own setup runs and flushes the queued
     // onceSetup callback, which connects the child's output into the parent's
     // freshly-created input node (AU3: the flush happens on the bus's own setup,
     // not on a separate global dispatch).
@@ -823,7 +823,7 @@ describe('AudioBus', () => {
   // ---- _connectUpstream(): defensive early-return when _setup is null ----
   //
   // `_connectUpstream` is only ever invoked from `_setupAudio`, immediately
-  // after `this._setup` is assigned — so this guard cannot be reached through
+  // after `this._setup` is assigned - so this guard cannot be reached through
   // the public API. Exercised directly here purely for coverage.
   test('_connectUpstream() is a no-op when _setup is null', () => {
     const bus = new AudioBus('connect-upstream-no-setup');
@@ -835,7 +835,7 @@ describe('AudioBus', () => {
   // Rebuilding the chain must only cut the edges the bus itself created. An
   // effect's input node is off limits: for any effect made of more than one
   // node, the edges leaving it are the effect's internal wiring, and cutting
-  // them silences the effect for good — every rebuild would leave the bus
+  // them silences the effect for good - every rebuild would leave the bus
   // passing dead effects.
   test('a chain rebuild leaves each effect internal wiring intact', () => {
     const bus = new AudioBus('wiring-test');
@@ -858,7 +858,7 @@ describe('AudioBus', () => {
   });
 
   // A removed effect is no longer part of the chain, so the rebuild never
-  // touches it — leaving its outgoing edge live would let a delay/reverb tail
+  // touches it - leaving its outgoing edge live would let a delay/reverb tail
   // keep bleeding into the pan stage after the effect was taken out.
   test('removeEffect() cuts the removed effect outgoing edge', () => {
     const bus = new AudioBus('remove-effect-edge');

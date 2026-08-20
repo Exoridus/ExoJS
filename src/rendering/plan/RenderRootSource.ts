@@ -56,7 +56,7 @@ export class RenderRootSource {
    * The root's global-transform stamp when the items were built.
    *
    * The items store WORLD bounds, and an ancestor ABOVE the render root can move
-   * without touching any revision inside the subtree — which is why
+   * without touching any revision inside the subtree - which is why
    * `RetainedRootRepresentation` tracks this stamp at all. Stored world bounds
    * are therefore ancestry-dependent data, and a stamp change invalidates them.
    *
@@ -74,8 +74,8 @@ export class RenderRootSource {
    * exactly what makes a stored extent describe where a drawable was rather than
    * where it is.
    *
-   * The alternative — keep the source across a move and read each node's bounds
-   * live during the scan — was measured and is a LOSS, badly. A normal collect
+   * The alternative - keep the source across a move and read each node's bounds
+   * live during the scan - was measured and is a LOSS, badly. A normal collect
    * over a moved subtree is not a naive walk: every `Container` replays its
    * unchanged direct drawables from its own retained slot cache, reusing their
    * cached material key and screen extent. A live-bounds selection reproduces
@@ -92,7 +92,7 @@ export class RenderRootSource {
    * The default moved to the grid in cut 2, on this evidence: at a million items
    * the flat scan is a small share of a camera step (the ~250,000 admitted items
    * dominate it), but once their materialisation is incremental the scan is all
-   * that is left — and a full pass over a million items does not fit in the 8ms
+   * that is left - and a full pass over a million items does not fit in the 8ms
    * the target allows. The scan stays as the reference the grid is pinned
    * against, and as the fallback for a scope with no index.
    */
@@ -138,7 +138,7 @@ export class RenderRootSource {
     return this._scopes;
   }
 
-  /** Total persistent items across all scopes — the handle space's size. */
+  /** Total persistent items across all scopes - the handle space's size. */
   public get itemCount(): number {
     return this._itemCount;
   }

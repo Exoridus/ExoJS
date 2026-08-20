@@ -22,8 +22,8 @@ export const enum RetainedInstructionKind {
  * Backend-owned GPU resource bundle for one retained group: the
  * group's persistent instance buffer, transform store, and per-batch
  * VAOs/bind groups live behind this handle. The plan layer only reads the
- * generation counter — bumped whenever the backend recreates or destroys the
- * bundle's resources (device restore, growth reallocation, destroy) — to
+ * generation counter - bumped whenever the backend recreates or destroys the
+ * bundle's resources (device restore, growth reallocation, destroy) - to
  * reject instruction sets that reference stale GPU state.
  * @internal
  */
@@ -41,7 +41,7 @@ export interface RetainedGroupBundle {
    * `floats` (12 = 3 rgba32f texels, the `TransformBuffer` row layout) and mark
    * only its sub-range for upload, WITHOUT bumping the generation (the recorded
    * instance bytes reference the row by index and stay valid). Absent on
-   * backends without patch support — the caller then falls back to entry replay
+   * backends without patch support - the caller then falls back to entry replay
    * (which re-reads live transforms) or a re-record.
    */
   _patchTransformRow?(localRow: number, floats: Float32Array): void;
@@ -92,7 +92,7 @@ export interface RetainedBatchInstruction {
 /**
  * Marker: the following batches belong to the nested transform group rooted
  * at `node`. The player composes `node.getGlobalTransform()` onto the active
- * group matrix at REPLAY time (existing scratch-matrix logic) — the matrix is
+ * group matrix at REPLAY time (existing scratch-matrix logic) - the matrix is
  * never captured, so nested group moves stay one-matrix-cheap.
  * @internal
  */
@@ -110,7 +110,7 @@ export interface RetainedLeaveGroupInstruction {
 export type RetainedInstruction = RetainedBatchInstruction | RetainedEnterGroupInstruction | RetainedLeaveGroupInstruction;
 
 /**
- * Shared LeaveGroup marker — the instruction carries no state, so every
+ * Shared LeaveGroup marker - the instruction carries no state, so every
  * append reuses this frozen singleton.
  * @internal
  */
@@ -120,20 +120,20 @@ export const retainedLeaveGroupInstruction: RetainedLeaveGroupInstruction = Obje
  * Sentinel for {@link RetainedBatchInstruction.generation} on a batch whose
  * capture has not been finalized yet. Out of the generation domain (bundle
  * generations start at 1 and only grow), so a set whose capture never reached
- * finalization — device loss mid-capture, an aborted playback — can never
+ * finalization - device loss mid-capture, an aborted playback - can never
  * pass {@link RetainedInstructionSet.isValidFor}.
  * @internal
  */
 export const retainedGenerationUnstamped = -1;
 
 /**
- * Stamp `instruction.generation` with its bundle's CURRENT generation — the
+ * Stamp `instruction.generation` with its bundle's CURRENT generation - the
  * one sanctioned mutation point of the otherwise readonly field.
  *
  * Why stamping exists: group GPU resources are grow-only and (re)created at
  * CAPTURE END (finalization), and every recreation bumps the bundle
  * generation. A batch instruction created at flush time therefore cannot know
- * its final generation yet — backends create it with
+ * its final generation yet - backends create it with
  * {@link retainedGenerationUnstamped} and call this once per recorded batch
  * after the bundle's resources are final. Deliberately per-instruction:
  * poison instructions (a forced generation mismatch that permanently vetoes a
@@ -149,7 +149,7 @@ export const stampRetainedBatchGeneration = (instruction: RetainedBatchInstructi
  * group's playback produced at renderer-flush
  * granularity, replayable in O(batches) instead of O(nodes). Owned by the
  * group's {@link RetainedGroupFragment}; its validity is additionally gated by
- * the fragment's revision key at collect time — this class only checks what
+ * the fragment's revision key at collect time - this class only checks what
  * the fragment cannot: backend identity and per-batch resource generations.
  *
  * Everything view- or group-transform-dependent is resolved live at replay:
@@ -217,7 +217,7 @@ export class RetainedInstructionSet {
   /**
    * Drop the recording (fragment recapture/invalidation). Deliberately keeps
    * {@link ownedBundle}: GPU resources are grow-only per group and reused by
-   * the next recording — no realloc churn under motion-stop/start.
+   * the next recording - no realloc churn under motion-stop/start.
    */
   public invalidate(): void {
     this._hasRecording = false;
@@ -282,7 +282,7 @@ export interface RetainedBatchCapableRenderer {
    *
    * A renderer that already poisons an open capture from a non-recordable draw
    * path belongs here: without the veto the fragment is admitted, opens a
-   * capture, records, and gets poisoned again on every single frame — the
+   * capture, records, and gets poisoned again on every single frame - the
    * group ends up on the same (correct) entry-replay tier either way, but pays
    * for a recording it can never use. The poison call stays as the safety net
    * its own contract describes.
@@ -311,15 +311,15 @@ interface BackendWithRendererRegistry {
  * renderer opts in via {@link RetainedBatchCapableRenderer}; no draw is vetoed
  * by its renderer's per-drawable
  * {@link RetainedBatchCapableRenderer._admitsRetainedRecording} check (a mesh
- * without static geometry, a shader-path repeating sprite — draws whose
+ * without static geometry, a shader-path repeating sprite - draws whose
  * renderer would otherwise poison the capture on every frame); own-material
  * draws additionally pass that renderer's live-state capability check; and no
  * barrier record exists anywhere in the fragment (barriers re-dispatch live
  * per frame and cannot interleave with cached batch runs). Nested
  * plain/retained groups recurse. Anything non-recordable stays on the
- * entry-replay tier — correct, just not batch-cached. Both pixel-snap
+ * entry-replay tier - correct, just not batch-cached. Both pixel-snap
  * modes are resolved in the vertex shaders from the transform row flag, so the
- * uploaded rows/quads stay view-independent — a snapped draw is fully recordable.
+ * uploaded rows/quads stay view-independent - a snapped draw is fully recordable.
  * @internal
  */
 export const isRetainedFragmentRecordable = (entries: readonly RetainedFragmentEntry[], entryCount: number, backend: RenderBackend): boolean => {

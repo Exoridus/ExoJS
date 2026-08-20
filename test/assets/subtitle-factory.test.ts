@@ -1,7 +1,7 @@
 import { SubtitleFactory } from '#assets/factories/SubtitleFactory';
 
 // ---------------------------------------------------------------------------
-// VTTCue polyfill — jsdom does not implement the TextTrack cue API, so the
+// VTTCue polyfill - jsdom does not implement the TextTrack cue API, so the
 // global constructor is undefined. SubtitleFactory only calls `new VTTCue(...)`
 // and assigns a handful of properties inside its function bodies, so a plain
 // stand-in installed before the tests run is sufficient (no other test file

@@ -40,7 +40,7 @@ interface PooledGeneratorVoice {
 }
 
 /**
- * Procedural tone generator — produces audio from an `OscillatorNode` without
+ * Procedural tone generator - produces audio from an `OscillatorNode` without
  * any decoded asset. Good for prototyping, game-jam SFX, retro bleeps, and
  * synth-style tones.
  *
@@ -126,7 +126,7 @@ export class AudioGenerator implements Playable {
    *
    * Snapshots the current synth settings into a new {@link AudioGeneratorVoice}.
    * Returns an already-ended {@link NoopVoice} when the `AudioContext` is still
-   * locked by the autoplay policy — oscillators are ephemeral and cannot be
+   * locked by the autoplay policy - oscillators are ephemeral and cannot be
    * deferred.
    */
   public _createVoice(manager: AudioManager, options: PlayOptions): Voice {

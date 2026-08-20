@@ -289,7 +289,7 @@ describe('renderTo', () => {
     mockRenderTo(backend, target, sprite, { view: customView });
 
     expect(drawEvents).toHaveLength(1);
-    // The user-provided view should NOT be destroyed — only a temp one we
+    // The user-provided view should NOT be destroyed - only a temp one we
     // created ourselves should be cleaned up.
     expect(customView.size.width).toBe(100);
     expect(customView.size.height).toBe(50);
@@ -378,7 +378,7 @@ describe('WebGl2Backend.setRenderTarget flush ordering', () => {
     stub.setRenderTarget(target);
 
     expect(stub._flushActiveRenderer).toHaveBeenCalledTimes(1);
-    // Flush observed root — i.e. it ran BEFORE _renderTarget was reassigned.
+    // Flush observed root - i.e. it ran BEFORE _renderTarget was reassigned.
     expect(flushedTargets).toEqual([root]);
     expect(stub._renderTarget).toBe(target);
     expect(stub._stats.renderTargetChanges).toBe(1);

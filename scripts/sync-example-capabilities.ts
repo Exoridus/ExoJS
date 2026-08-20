@@ -79,7 +79,7 @@ function deriveCapabilities(source: string, slug: string, sectionSlug: string): 
   }
 
   // Match Gamepad-related symbols but avoid false positives from things like
-  // "GamepadProfile" on type imports — any usage signals the example expects
+  // "GamepadProfile" on type imports - any usage signals the example expects
   // a controller.
   if (/\bGamepad[A-Za-z]*\b/.test(source)) {
     caps.add('gamepad');

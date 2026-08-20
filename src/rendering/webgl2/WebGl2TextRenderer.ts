@@ -34,17 +34,17 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
 //
 // Row index = nodeIndex (one row per node rendered this frame).
 //
-// Texel 0 : (a,  c,  0,  tx)  — mat3 column-major: col0 + translate.x
-// Texel 1 : (b,  d,  0,  ty)  — mat3 column-major: col1 + translate.y
-// Texel 2 : (r,  g,  b,  a )  — fillColor (linear 0-1)
-// Texel 3 : (r,  g,  b,  a )  — outlineColor
+// Texel 0 : (a,  c,  0,  tx)  - mat3 column-major: col0 + translate.x
+// Texel 1 : (b,  d,  0,  ty)  - mat3 column-major: col1 + translate.y
+// Texel 2 : (r,  g,  b,  a )  - fillColor (linear 0-1)
+// Texel 3 : (r,  g,  b,  a )  - outlineColor
 // Texel 4 : (outlineMin, shadowAlpha, shadowBlur, gradientEnabled)
 //             outlineMin = 0.5 → disabled; < 0.5 → enabled with that threshold
-// Texel 5 : (r,  g,  b,  a )  — shadowColor
+// Texel 5 : (r,  g,  b,  a )  - shadowColor
 // Texel 6 : (shadowOffX_px, shadowOffY_px, gradientVertical, sdfRadius_logical)
-// Texel 7 : (r,  g,  b,  a )  — gradientTop
-// Texel 8 : (r,  g,  b,  a )  — gradientBottom
-// Texel 9 : (minX, minY, w, h) — text block bounds (local space, for gradient UV)
+// Texel 7 : (r,  g,  b,  a )  - gradientTop
+// Texel 8 : (r,  g,  b,  a )  - gradientBottom
+// Texel 9 : (minX, minY, w, h) - text block bounds (local space, for gradient UV)
 //
 // The shaders divide shadowOffset by u_pageSize (a per-batch uniform shared by
 // compatible atlas textures) to convert px → UV space.
@@ -61,7 +61,7 @@ const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 //
 // The vertex shader reads the world transform live from the per-node data texture via
 // texelFetch (same texture the fragment stage already reads style from), keyed by
-// a_nodeIndex — no CPU-side transform baking. Gradient UV is likewise computed in the
+// a_nodeIndex - no CPU-side transform baking. Gradient UV is likewise computed in the
 // vertex shader from the local a_position and the bounds texel, not uploaded per vertex.
 const vertexStrideBytes = 20;
 const vertexStrideWords = vertexStrideBytes / 4; // 5 floats per vertex
@@ -89,7 +89,7 @@ const sharesAtlasBatchClass = (a: PendingQuad, b: PendingQuad): boolean =>
 
 /**
  * Record-time payload carried from `flush()` to `_configureRetainedVao`/replay.
- * `drawables[i]` is the node owning dense row `i` of `nodeData` — the
+ * `drawables[i]` is the node owning dense row `i` of `nodeData` - the
  * own-transform-move O(1) patch looks a node up here to find its row.
  */
 interface TextRetainedRendererData {
@@ -102,7 +102,7 @@ interface TextRetainedRendererData {
 
 /**
  * Group-owned WebGL2 replay state for one recorded Text batch: the persistent
- * per-node RGBA32F data texture (10 texels/row — transform AND style, read
+ * per-node RGBA32F data texture (10 texels/row - transform AND style, read
  * live by both shader stages) and the drawable→row-index map the
  * own-transform-move O(1) patch uses. Grow-only across recaptures; released by
  * the bundle on destroy.
@@ -138,9 +138,9 @@ interface TextRendererConnection {
  * WebGL2 renderer for {@link Text} and {@link BitmapText} nodes.
  *
  * Uses three specialised fragment shaders:
- * - `text-sdf`   — R8 SDF atlas (Text, standard text)
- * - `text-msdf`  — RGB MSDF atlas (BitmapText)
- * - `text-color` — RGBA atlas (emoji / colour fonts)
+ * - `text-sdf`   - R8 SDF atlas (Text, standard text)
+ * - `text-msdf`  - RGB MSDF atlas (BitmapText)
+ * - `text-color` - RGBA atlas (emoji / colour fonts)
  *
  * All per-node data (world transform + style) is packed into a single
  * `RGBA32F` data texture uploaded once per {@link flush}. Compatible atlas
@@ -161,11 +161,11 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
    * eight atlas textures records the vertex bytes into the group instance
    * buffer and replays them with `drawElements`. A flush that needs several
    * batches, or a second Text flush inside the same capture window, poisons the
-   * capture instead — always safe, just a missed optimization.
+   * capture instead - always safe, just a missed optimization.
    *
    * The world transform is read live in the vertex shader (mirrors
    * `WebGpuTextRenderer`), so an own-transform move is an O(1) GPU-side texel
-   * patch via {@link _patchOwnTransformRow} — the same shape as Sprite/
+   * patch via {@link _patchOwnTransformRow} - the same shape as Sprite/
    * NineSlice/Mesh's row patch, just against Text's own private node-data
    * texture instead of the shared `TransformBuffer`.
    * @internal
@@ -192,7 +192,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // Retained-batch state: the renderer-owned, grow-only quad-index buffer (the
   // standard `0,1,2, 0,2,3` glyph pattern shared by every recorded batch) and
   // which capture windows have already recorded a Text batch
-  // (nesting-safe — one entry per capture-open call).
+  // (nesting-safe - one entry per capture-open call).
   private _retainedQuadIndexBuffer: WebGl2RenderBuffer | null = null;
   private _retainedQuadCapacity = 0;
   private readonly _retainedNodeDataUnitScratch = new Int32Array([textAtlasTextureSlots]);
@@ -376,7 +376,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
     // texture-unit and per-unit bind caches stay in sync. A raw gl.activeTexture
     // here would leave the unit cache reading unit 0, and the atlas
     // bindTexture(_, 0) in _drawBatches would then skip its own switch and bind
-    // the atlas to unit 1 — leaving the SDF sampler (unit 0) empty and the text
+    // the atlas to unit 1 - leaving the SDF sampler (unit 0) empty and the text
     // invisible whenever it is the first draw of a frame. A raw gl.bindTexture
     // would likewise leave the bind cache claiming unit 1 still holds whatever
     // managed texture was there last.
@@ -540,7 +540,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
       // Stage uniforms before sync(): setValue() only marks a uniform dirty for the
       // NEXT sync() upload. Syncing first left the initial flush of each text shaderType
-      // drawing with a stale zero u_projection — invisible on a genuine single-shot
+      // drawing with a stale zero u_projection - invisible on a genuine single-shot
       // render (screenshot / RenderTexture pre-bake / first frame), self-healing only
       // from the second frame on. Matches WebGl2SpriteRenderer, which sets its uniforms
       // first and calls sync() last.
@@ -634,7 +634,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   // ── Retained-batch record/replay ──────────────────────────────────────────
   // Text's per-vertex "node index" addresses its OWN dense, per-flush node
   // data texture (transform + style, packed by `_packNodeData`), never a row
-  // in the shared `TransformBuffer` — mirrors `WebGpuTextRenderer` exactly. So,
+  // in the shared `TransformBuffer` - mirrors `WebGpuTextRenderer` exactly. So,
   // unlike every other retained renderer, its instance bytes carry no index
   // the generic bundle/scan/rebase machinery can meaningfully rebase; both
   // hooks below are true no-ops, and the renderer instead carries its own node
@@ -712,9 +712,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   }
 
   /**
-   * Replay one recorded Text batch: all STATE is resolved live — blend, the
+   * Replay one recorded Text batch: all STATE is resolved live - blend, the
    * `u_projection`/`u_group` uniforms from the live view + group matrix (the
-   * camera-pan / group-move win), the atlas texture — and only DATA is cached:
+   * camera-pan / group-move win), the atlas texture - and only DATA is cached:
    * the group instance bytes (bound through the per-batch VAO), the renderer's
    * static quad-index pattern, and the group-owned per-node style texture.
    * @internal
@@ -771,9 +771,9 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
   /**
    * Own-transform-move O(1) patch ({@link OwnTransformRowPatcher}): recompute
    * only the moved node's transform-texel pair (2 of its 10 texels) via
-   * `getGlobalTransform()` (group-local — {@link RetainedContainer} composes up
+   * `getGlobalTransform()` (group-local - {@link RetainedContainer} composes up
    * to the enclosing boundary only) and upload just that row's 2-texel range in
-   * the persisted node-data texture — mirrors `WebGpuTextRenderer`'s buffer
+   * the persisted node-data texture - mirrors `WebGpuTextRenderer`'s buffer
    * write exactly, just against a `DataTexture` instead of a storage buffer.
    * No glyph geometry is touched. `base` (the shared-buffer direct-draw base)
    * is irrelevant to Text's own dense local indexing and is unused. Returns
@@ -900,7 +900,7 @@ export class WebGl2TextRenderer extends AbstractWebGl2Renderer<Text | BitmapText
 
   /**
    * Allocate the renderer-private node-data texture. Both binds go through the
-   * backend so its per-unit bind cache keeps mirroring GL — the allocation
+   * backend so its per-unit bind cache keeps mirroring GL - the allocation
    * happens on whatever unit is active, and leaving that unit's cached handle
    * stale would let a later managed bind on the same unit be skipped.
    */

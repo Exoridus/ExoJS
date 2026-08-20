@@ -5,7 +5,7 @@ import { Drawable } from '#rendering/Drawable';
 
 /**
  * Test double for a transform-group boundary whose engagement can be flipped
- * at runtime — mirrors RetainedContainer's live `_isTransformGroupBoundary`
+ * at runtime - mirrors RetainedContainer's live `_isTransformGroupBoundary`
  * getter (barrier-driven disengage/re-engage) without needing a render
  * backend harness.
  */
@@ -72,7 +72,7 @@ describe('SceneNode.getWorldTransform: world space through transform-group bound
 
     group.addChild(child);
 
-    // Oracle: group-local matrix lifted by the boundary's own world matrix —
+    // Oracle: group-local matrix lifted by the boundary's own world matrix -
     // computed through a different code path (getTransform + explicit clone).
     const expected = child.getGlobalTransform().clone().combine(group.getGlobalTransform());
     const actual = child.getWorldTransform();

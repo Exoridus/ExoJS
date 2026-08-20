@@ -58,7 +58,7 @@ const getGlobalListener = (): Record<string, MockParam> => (getAudioContext() as
 
 // `ctx.listener` belongs to the process-wide AudioContext, so two
 // Applications used to write their own absolute world position into the same
-// global object every frame — last writer per frame wins, and both apps pan
+// global object every frame - last writer per frame wins, and both apps pan
 // against whichever listener happened to tick last. The fix is a virtual
 // listener: the global one is pinned at the origin and each voice writes its
 // position RELATIVE to its own manager's listener.
@@ -100,7 +100,7 @@ describe('per-Application virtual listener', () => {
     second.listener.position.set(-1000, 0);
 
     // Both sources sit at the same world point; each must be heard relative to
-    // its OWN app's listener — 800 units left for the first, 1200 right for the second.
+    // its OWN app's listener - 800 units left for the first, 1200 right for the second.
     first.play(sound, { position: { x: 200, y: 0 } });
     second.play(sound, { position: { x: 200, y: 0 } });
 
@@ -133,7 +133,7 @@ describe('per-Application virtual listener', () => {
     panner.positionX.setValueAtTime.mockClear();
     panner.positionX.setTargetAtTime.mockClear();
 
-    // The source has not moved, but the listener has — the relative offset it
+    // The source has not moved, but the listener has - the relative offset it
     // is panned by must follow, which is exactly what the old central listener
     // smoothing used to cover.
     manager.listener.target = { x: 40, y: 0 };

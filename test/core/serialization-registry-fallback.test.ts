@@ -59,8 +59,8 @@ describe('SerializationRegistry fallback chain (app-scoped serializers)', () => 
 });
 
 /**
- * Constructor resolution ranks the whole chain — own registrations and
- * inherited ones together — by how specific the registered constructor is.
+ * Constructor resolution ranks the whole chain - own registrations and
+ * inherited ones together - by how specific the registered constructor is.
  * Consulting the local registry to exhaustion first would let a local base-class
  * registration beat an exact inherited one.
  */
@@ -91,7 +91,7 @@ describe('SerializationRegistry constructor resolution (specificity ranking)', (
 
     const app = new SerializationRegistry(global);
     // A different type name for the same constructor is only legal across
-    // registries — `register` rejects it within one.
+    // registries - `register` rejects it within one.
     app.register('AppLeaf', LeafNode, stub<LeafNode>());
 
     expect(app.resolveByNode(new LeafNode())?.typeName).toBe('AppLeaf');

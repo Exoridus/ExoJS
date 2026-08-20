@@ -109,7 +109,7 @@ const playGroupUpload = (scope: GroupScope): GroupUploadPlayback => {
     },
     _prepareDrawCommand(command: DrawCommand) {
       prepareDrawCommandCalls.push(command);
-      // No storage write here — mirrors the refactored backend contract.
+      // No storage write here - mirrors the refactored backend contract.
     },
     draw(drawable: Drawable) {
       drawOrder.push(drawable);
@@ -173,7 +173,7 @@ describe('WebGPU group-upload: consuming vs non-consuming writes', () => {
     expect(storage.buffer.data[cOffset + 4]).toBe(70);
     expect(storage.buffer.data[cOffset + 5]).toBe(80);
 
-    // Skipped text node at nodeIndex 2 stays fully zeroed —
+    // Skipped text node at nodeIndex 2 stays fully zeroed -
     // no consuming draw ever references that slot.
     const t1Offset = 2 * floatsPerSlot;
 
@@ -212,7 +212,7 @@ describe('WebGPU group-upload: _prepareDrawCommand performs no storage writes', 
     // The hook fires once per draw regardless of renderer type.
     expect(prepareDrawCommandCalls.map(cmd => cmd.drawable)).toEqual([a, b, t1, c, t2]);
 
-    // All writes originate from _prepareRenderGroupUpload — calling
+    // All writes originate from _prepareRenderGroupUpload - calling
     // _prepareDrawCommand must not add any extra writes to those counts.
     expect(storage.buffer.writeCount).toBe(3);
     expect(storage.buffer.skippedWriteCount).toBe(2);

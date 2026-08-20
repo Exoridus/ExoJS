@@ -122,7 +122,7 @@ export abstract class WorkletEffect extends AudioEffect {
   }
 
   /**
-   * Subclass hook — called once the worklet is loaded and inserted into the
+   * Subclass hook - called once the worklet is loaded and inserted into the
    * wet path. Use for additional wiring (e.g. a sidechain input).
    */
   protected _onWorkletReady?(audioContext: AudioContext): void;
@@ -173,7 +173,7 @@ export abstract class WorkletEffect extends AudioEffect {
       if (!this._inputGain || !this._dryGain || !this._wetGain) return; // destroyed during load
 
       // Read _dryLatencySeconds here, not in _setup(), because the addModule
-      // Promise always resolves asynchronously — by this point the subclass
+      // Promise always resolves asynchronously - by this point the subclass
       // constructor has fully run and any post-super() fields are valid.
       const dryLatency = this._dryLatencySeconds;
       if (dryLatency > 0) {

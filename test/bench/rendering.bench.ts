@@ -1,4 +1,4 @@
-// CPU-STUB backend, no GPU submission — MEASUREMENT ONLY, never a CI gate.
+// CPU-STUB backend, no GPU submission - MEASUREMENT ONLY, never a CI gate.
 // Not comparable to the real WebGL2/WebGPU backend, nor to the GPU-baseline
 // suite (`test/perf/baseline/`, `pnpm perf:baseline`).
 // Sub-30% deltas between runs are noise, not signal.

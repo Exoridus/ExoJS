@@ -13,7 +13,7 @@ import { RenderTexture } from '#rendering/texture/RenderTexture';
 
 class DummyDrawable extends Drawable {}
 
-// Ambient (erased at runtime) — exists only as a type argument for
+// Ambient (erased at runtime) - exists only as a type argument for
 // Scene<void, CustomApp> below. `declare class` is only legal at module
 // scope, which is why this sits here rather than inside the describe block
 // that uses it.
@@ -137,7 +137,7 @@ describe('Scene', () => {
     branch.addChild(leaf);
     scene.addChild(branch);
 
-    // Scene owns no separate child walk — it delegates to the root container's
+    // Scene owns no separate child walk - it delegates to the root container's
     // recursive destroy, so every node a scene held is released on teardown
     // instead of leaking its resources across the scene change.
     scene._teardownInternals();
@@ -147,7 +147,7 @@ describe('Scene', () => {
     expect(leaf.destroyed).toBe(true);
   });
 
-  // CONTRACT — do not weaken without an explicit identity decision.
+  // CONTRACT - do not weaken without an explicit identity decision.
   //
   // Scene.root is a structural ownership/traversal anchor. The
   // framework must never auto-render it. This test pins down the
@@ -181,7 +181,7 @@ describe('Scene', () => {
   });
 
   // Scene.app is a throwing non-null accessor (like Scene.inputs/tweens/
-  // loader), not `Application | null` — the framework guarantees attachment
+  // loader), not `Application | null` - the framework guarantees attachment
   // before any lifecycle hook, so scene code never needs a null guard.
   describe('app accessor', () => {
     test('throws when accessed before the scene is attached', () => {

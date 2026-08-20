@@ -5,7 +5,7 @@ import { NoopVoice } from '#audio/NoopVoice';
 import { Sound } from '#audio/Sound';
 
 // ---------------------------------------------------------------------------
-// Direct unit coverage of NoopVoice — the already-ended, inert Voice returned
+// Direct unit coverage of NoopVoice - the already-ended, inert Voice returned
 // for degenerate play calls (see the integration tests further below for the
 // real trigger paths in AudioGenerator/Sound).
 // ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ describe('NoopVoice', () => {
     const output = voice.output;
     expect(output).toBeDefined();
     expect(typeof (output as unknown as { connect: unknown }).connect).toBe('function');
-    // Lazily memoized — the same node is returned on subsequent reads.
+    // Lazily memoized - the same node is returned on subsequent reads.
     expect(voice.output).toBe(output);
 
     bus.destroy();

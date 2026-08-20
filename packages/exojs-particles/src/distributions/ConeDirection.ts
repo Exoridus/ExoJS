@@ -11,7 +11,7 @@ const tau = Math.PI * 2;
  * screen-down coordinates) and spans `±halfAngle` radians around it. Speed
  * is sampled uniformly in `[minSpeed, maxSpeed]`.
  *
- * Use for emission cones, explosions, fountain spread — anywhere the
+ * Use for emission cones, explosions, fountain spread - anywhere the
  * direction has a preferred axis with bounded variance.
  *
  * @example

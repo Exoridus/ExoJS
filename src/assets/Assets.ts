@@ -30,7 +30,7 @@ export type InferAssetsProperties<M extends Record<string, CatalogEntry>> = {
 // ---------------------------------------------------------------------------
 
 /**
- * Any typed catalog, whatever its definition record — the constraint
+ * Any typed catalog, whatever its definition record - the constraint
  * {@link Assets.compose} accepts its arguments under, and the one to write when
  * a generic API of your own takes an arbitrary catalog (`<C extends AnyAssets>`)
  * without pinning its definition record.
@@ -39,7 +39,7 @@ export type AnyAssets = AssetsImpl<Record<string, CatalogEntry>>;
 
 /**
  * The definition record a catalog was built from. Recovered by inference
- * through {@link Assets} — its mapped-property half makes `M` inferable, which
+ * through {@link Assets} - its mapped-property half makes `M` inferable, which
  * the bare `AssetsImpl<infer M>` class reference alone is not.
  */
 type DefinitionOf<C> = C extends Assets<infer M> ? M : never;
@@ -70,7 +70,7 @@ type IsIdentical<X, Y> = (<G>() => G extends X ? 1 : 2) extends <G>() => G exten
 
 /**
  * The shared keys that actually CONFLICT: a key contributed by several catalogs
- * is fine only while every one of them declares an identical entry — the
+ * is fine only while every one of them declares an identical entry - the
  * type-level approximation of a diamond, where the same catalog reaches the
  * composition twice. Keys whose declarations differ are a genuine ambiguity and
  * are reported. Two DIFFERENT catalogs declaring an identical entry are
@@ -96,7 +96,7 @@ interface ComposeConflict<K extends string> {
   // union occurrence independently, so a second `${K}` would blow a two-key
   // conflict up into a four-message cross product.
   readonly _assetsComposeError: `Assets.compose(): duplicate catalog key "${K}" — two catalogs define it, use Assets.extend() to override it deliberately.`;
-  /** The colliding keys, as the full union — one member per duplicated key. */
+  /** The colliding keys, as the full union - one member per duplicated key. */
   readonly _conflictingKeys: K;
 }
 
@@ -117,7 +117,7 @@ type ExtendResult<M extends Record<string, CatalogEntry>, E extends Record<strin
 
 /**
  * How a catalog came to be. Purely descriptive: it carries no ownership, no
- * claims and no residency state, and exists so composition stays traceable —
+ * claims and no residency state, and exists so composition stays traceable -
  * `keyOrigins` is what lets a diamond (the same catalog reaching a composition
  * along two paths) be told apart from two catalogs racing for one key.
  * @internal
@@ -136,14 +136,14 @@ export interface AssetsProvenance {
 /**
  * Provenance store, keyed by the catalog CALLERS hold (the dev Proxy, where
  * there is one). Module-private on purpose: provenance is bookkeeping, not part
- * of the catalog's surface, so it lives beside the catalog rather than on it —
+ * of the catalog's surface, so it lives beside the catalog rather than on it -
  * nothing reachable from a catalog object exposes `keyOrigins`, and a user
  * cannot mutate it.
  */
 const catalogProvenance = new WeakMap<AnyAssets, AssetsProvenance>();
 
 /**
- * Read a catalog's composition provenance. The single internal accessor —
+ * Read a catalog's composition provenance. The single internal accessor -
  * anything that needs to introspect composition goes through here.
  * @internal
  */
@@ -218,7 +218,7 @@ const ASSETS_DEV_PROXY_DUCK_TYPING_KEYS = new Set(['then', 'toJSON']);
 /**
  * Per-instance counter for the dev typo guard's warn-once key (below). Two
  * unrelated catalogs missing the SAME key name must each get their own
- * diagnostic — a global dedup key would silently swallow the second
+ * diagnostic - a global dedup key would silently swallow the second
  * catalog's warning after the first one fires, defeating the point of the
  * guard.
  */
@@ -237,7 +237,7 @@ export class AssetsImpl<M extends Record<string, CatalogEntry>> {
       // A bare path string, an already-constructed Asset (which carries its
       // `_config`), or a plain config all normalize to `{ type, source, ...opts }`,
       // then to a meta-stamped handle-hybrid leaf. An already-constructed Asset is
-      // CONVERTED to a leaf — it is no longer passed through by reference (pre-1.0
+      // CONVERTED to a leaf - it is no longer passed through by reference (pre-1.0
       // breaking change).
       entries[key] = createEntryLeaf(value);
     }
@@ -248,8 +248,8 @@ export class AssetsImpl<M extends Record<string, CatalogEntry>> {
 
 /**
  * Install materialized leaves on a catalog instance: direct typed properties,
- * the `entries` record, and the composition provenance. Every catalog — built
- * by `new Assets(...)`/`from()`, `compose()` or `extend()` — goes through here,
+ * the `entries` record, and the composition provenance. Every catalog - built
+ * by `new Assets(...)`/`from()`, `compose()` or `extend()` - goes through here,
  * so all three shapes are indistinguishable to the loader.
  *
  * `keyOrigins` carries the origins inherited from the input catalogs; any key
@@ -280,7 +280,7 @@ function installCatalog<M extends Record<string, CatalogEntry>>(
   });
 
   // A typo'd or dynamic catalog-key read (`bag.logoo`, `bag[computedKey]`)
-  // is otherwise a silent `undefined` — warn once per key in dev instead.
+  // is otherwise a silent `undefined` - warn once per key in dev instead.
   // __DEV__-gated: zero cost and no Proxy indirection in production.
   let catalog = instance as Assets<M>;
 
@@ -305,7 +305,7 @@ function installCatalog<M extends Record<string, CatalogEntry>>(
     }) as Assets<M>;
   }
 
-  // Origins name the catalog CALLERS hold — the dev Proxy, where there is one —
+  // Origins name the catalog CALLERS hold - the dev Proxy, where there is one -
   // so identity comparisons against a passed-in catalog line up. Any key without
   // an inherited origin is declared here.
   for (const key of Object.keys(leaves)) {
@@ -335,7 +335,7 @@ function adoptCatalog(
   return installCatalog(instance, leaves, kind, sources, overrides, keyOrigins);
 }
 
-/** The catalog a key was originally declared by — itself, for a `from()` catalog. */
+/** The catalog a key was originally declared by - itself, for a `from()` catalog. */
 function originOf(catalog: AnyAssets, key: string): AnyAssets {
   return catalogProvenance.get(catalog)?.keyOrigins.get(key) ?? catalog;
 }
@@ -361,7 +361,7 @@ function assertIsCatalog(value: unknown, context: string): asserts value is AnyA
  * @example
  * ```ts
  * const TitleAssets = Assets.from({
- *   logo:   'sprites/logo.png', // bare path — type inferred from suffix
+ *   logo:   'sprites/logo.png', // bare path - type inferred from suffix
  *   config: { type: 'json', source: '/title.json' },
  * });
  *
@@ -385,7 +385,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * (e.g. `'ship.png'`) so the file suffix can be classified. Without it, under
    * a `strictNullChecks: false` tsconfig (e.g. the examples config) the literal
    * widens to `string`, `KindByPath<string>` collapses to `never`, and every
-   * leaf degrades to `unknown` (surfacing as `{}`) — see the strict:false type
+   * leaf degrades to `unknown` (surfacing as `{}`) - see the strict:false type
    * test `test/type-tests/assets-strict-false.type-test.ts`.
    *
    * @remarks Catalogs are values, not identities. Two calls with an identical
@@ -395,13 +395,13 @@ type AssetsFacade = AssetsConstructorFn & {
    * Assets.from({ hero: 'hero.png' }) === Assets.from({ hero: 'hero.png' }); // false
    * ```
    *
-   * The *payload* is still shared — the loader keys on type and source, so
+   * The *payload* is still shared - the loader keys on type and source, so
    * `hero.png` is fetched once and both catalogs resolve to the same resource.
    * What is not shared is the claim bookkeeping: releasing one catalog does not
    * release the other's claim. Build a catalog once and pass it around when
    * that matters, rather than rebuilding an equal one at each call site.
    *
-   * The same holds for {@link AssetsFacade.one} — a per-chunk descriptor built
+   * The same holds for {@link AssetsFacade.one} - a per-chunk descriptor built
    * in a streaming loop is a fresh object each time, which is fine for the
    * fetch (dedup still applies) but means it cannot be used as a lookup key.
    */
@@ -409,7 +409,7 @@ type AssetsFacade = AssetsConstructorFn & {
 
   /**
    * Build a single meta-stamped leaf (a usable placeholder resource or an
-   * `AssetRef`) from ONE descriptor — the explicit single-asset alternative to
+   * `AssetRef`) from ONE descriptor - the explicit single-asset alternative to
    * wrapping it in a one-field {@link from} catalog. Accepts
    * the same descriptor set as a catalog field: a bare path, an `Asset.type(...)`
    * descriptor, or an explicit `{ type, source, ...opts }` config. The leaf
@@ -455,15 +455,15 @@ type AssetsFacade = AssetsConstructorFn & {
 
   /**
    * Combine several existing catalogs into one typed catalog. The result is an
-   * ordinary `Assets` object — same direct typed properties, same `entries`,
-   * same load/release behaviour — that SHARES its inputs' leaves rather than
+   * ordinary `Assets` object - same direct typed properties, same `entries`,
+   * same load/release behaviour - that SHARES its inputs' leaves rather than
    * re-materializing them: `Forest.logo === Shared.logo`, so loading the
    * composition heals the very handles the input catalogs already handed out.
    * Composition is descriptive only; it introduces no ownership and no claims.
    *
-   * Two DIFFERENT catalogs may not declare the same key — that ambiguity is
+   * Two DIFFERENT catalogs may not declare the same key - that ambiguity is
    * rejected at compile time (for keys whose declarations differ) as a
-   * diagnostic type naming them — which no loader input accepts — and always as
+   * diagnostic type naming them - which no loader input accepts - and always as
    * a throw at runtime. The same catalog reaching the composition twice along
    * different paths (a diamond) is NOT a conflict and deduplicates. To
    * re-declare a key on purpose, derive with {@link extend} instead.
@@ -481,7 +481,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * re-declares existing ones. The result is an ordinary `Assets` object; `base`
    * is never mutated, and the keys it keeps stay the same leaf instances.
    *
-   * An overridden key is re-declared BY the derived catalog — composing the
+   * An overridden key is re-declared BY the derived catalog - composing the
    * derived catalog back together with its base therefore conflicts on that key,
    * exactly as two independent declarations would.
    *
@@ -516,7 +516,7 @@ type AssetsFacade = AssetsConstructorFn & {
       const origin = originOf(catalog, key);
       const claimed = keyOrigins.get(key);
 
-      // Same declaring catalog reaching the composition twice (a diamond) —
+      // Same declaring catalog reaching the composition twice (a diamond) -
       // dedup instead of colliding with itself. Identity, not shape: two
       // catalogs that happen to declare the same source are still two
       // declarations, and stay a conflict.
@@ -545,7 +545,7 @@ type AssetsFacade = AssetsConstructorFn & {
 (AssetsImpl as unknown as { extend: unknown }).extend = function extend(base: AnyAssets, entries: Record<string, CatalogEntry>): AnyAssets {
   assertIsCatalog(base, 'Assets.extend(base, ...)');
 
-  // Copy — the base catalog is never mutated, and the keys it keeps stay the
+  // Copy - the base catalog is never mutated, and the keys it keeps stay the
   // SAME leaf instances (a derived catalog is a view, not a re-materialization).
   const leaves: Record<string, object> = { ...(base.entries as Record<string, object>) };
   const keyOrigins = new Map<string, AnyAssets>(catalogProvenance.get(base)?.keyOrigins);
@@ -580,7 +580,7 @@ type AssetsFacade = AssetsConstructorFn & {
     // `group()` is a same-type helper: an entry may not carry its own `type`.
     // Reject it instead of letting `{ type, ...base, ...entry }` silently
     // override the group type. This also rejects a nested group's output
-    // (whose values are type-carrying configs) — combine groups by spreading
+    // (whose values are type-carrying configs) - combine groups by spreading
     // each into `Assets.from(...)`, not by nesting.
     if (typeof entry !== 'string' && Object.hasOwn(entry, 'type')) {
       throw new Error(

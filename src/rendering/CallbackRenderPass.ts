@@ -32,7 +32,7 @@ export interface CallbackRenderPassOptions extends RenderPassOptions {
  * `new CallbackRenderPass((pass) => pass.backend.execute(myBackendPass))`.
  *
  * `view`/`target`/`clear` are fixed at construction; the off-screen redirect is built once and reused every frame
- * (no per-frame allocation). `execute` is not re-entrant — a callback must not re-run the same pass instance; the
+ * (no per-frame allocation). `execute` is not re-entrant - a callback must not re-run the same pass instance; the
  * reentrancy guard keeps the redirect's active context from being clobbered. If your callback closes over owned GPU
  * resources, subclass {@link RenderPass} instead so you can override `destroy()`.
  * @advanced

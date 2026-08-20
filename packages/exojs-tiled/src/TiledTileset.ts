@@ -5,7 +5,7 @@ import type { TiledObjectAlignment, TiledPointData, TiledPropertyData, TiledTile
 /**
  * Loader-resolved resources for a {@link TiledTileset}: the absolute image
  * URL(s) and the {@link Texture} instance(s) loaded for them. All textures
- * are owned by the `Loader` cache — a {@link TiledTileset} never destroys
+ * are owned by the `Loader` cache - a {@link TiledTileset} never destroys
  * them.
  */
 export interface TiledTilesetResources {
@@ -20,7 +20,7 @@ export interface TiledTilesetResources {
 }
 
 /**
- * A parsed Tiled tileset — either embedded inline in a map's `tilesets`
+ * A parsed Tiled tileset - either embedded inline in a map's `tilesets`
  * array, or parsed from an external `.tsj` file referenced by it.
  *
  * {@link firstGid} and {@link lastGid} define the inclusive range of global
@@ -50,7 +50,7 @@ export class TiledTileset {
   /**
    * Where a tile object's stored position sits within its bounding box.
    * `undefined` (and `'unspecified'`) means Tiled's orientation-dependent
-   * default — resolve it with
+   * default - resolve it with
    * {@link import('./objectAlignment').resolveTiledObjectAlignment}.
    */
   public readonly objectAlignment?: TiledObjectAlignment | undefined;

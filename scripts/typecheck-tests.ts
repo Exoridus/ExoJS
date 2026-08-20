@@ -3,7 +3,7 @@
  *
  * The root `tsconfig.json` includes `src/**` only, so until now no compiler
  * ever looked at the test tree. Vitest does not typecheck and esbuild only
- * strips annotations, which means a test can misuse an API and still pass —
+ * strips annotations, which means a test can misuse an API and still pass -
  * the mock swallows the call, and the test protects nothing while looking like
  * protection.
  *
@@ -11,7 +11,7 @@
  * ratchet instead: every file that still has errors carries its accepted count
  * in `test-typecheck-baseline.json`, and the numbers may only go down. A file
  * absent from the baseline must be clean. The ratchet turns in both
- * directions — an unrecorded improvement fails too, otherwise the recorded
+ * directions - an unrecorded improvement fails too, otherwise the recorded
  * numbers drift away from reality and stop being a budget. Run
  * `pnpm typecheck:test:update-baseline` to record a decrease.
  *

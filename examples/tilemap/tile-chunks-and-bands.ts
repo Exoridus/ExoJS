@@ -8,7 +8,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //   - Chunked rendering: the map is much bigger than the viewport (48x32
 //     tiles == 3072x2048px). TileLayer stores tiles in 16x16-tile chunks;
 //     TileLayerNode renders one instanced draw call per non-empty *visible*
-//     chunk, culling the rest by their local bounds every frame — nothing in
+//     chunk, culling the rest by their local bounds every frame - nothing in
 //     this example does that culling manually.
 //   - TileMapView + bands: `map.createView({ bands })` groups the map's
 //     layers into named TileMapBands. Placing `actorLayer` between the
@@ -16,7 +16,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //     canopy tiles and over the ground tiles, without either layer knowing
 //     the actor exists.
 //   - PixelSnapMode: cycle through None / Position / Geometry on the
-//     view — it cascades to every TileLayerNode and chunk (see the "Pixel
+//     view - it cascades to every TileLayerNode and chunk (see the "Pixel
 //     snapping" guide for what each mode does).
 
 const TILE = 64;
@@ -52,7 +52,7 @@ class TileChunksAndBandsScene extends Scene {
         });
 
         // 16x16-tile chunks (smaller than the 32x32 default) so a 48x32 map
-        // spans a visible 3x2 chunk grid per layer — six TileChunkNodes each.
+        // spans a visible 3x2 chunk grid per layer - six TileChunkNodes each.
         const ground = new TileLayer({ id: 1, name: 'ground', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset], chunkWidth: 16, chunkHeight: 16 });
         const canopy = new TileLayer({ id: 2, name: 'canopy', width: COLUMNS, height: ROWS, tileWidth: TILE, tileHeight: TILE, tilesets: [tileset], chunkWidth: 16, chunkHeight: 16 });
 

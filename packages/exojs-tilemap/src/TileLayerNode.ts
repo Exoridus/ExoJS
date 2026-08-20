@@ -34,13 +34,13 @@ export interface TileLayerNodeOptions {
  *
  * A `parallax` factor other than `1` makes this node's rendered position
  * camera-dependent, resolved per frame in {@link _collectContent} by patching
- * the node position against the camera centre, then restoring it — the cull
+ * the node position against the camera centre, then restoring it - the cull
  * test runs before that patch, so a bounded layer with parallax would be
  * culled at its static base-offset bounds while actually rendering elsewhere.
  * Such a layer therefore opts out of view culling (`cullable = false`), same
  * as an unbounded layer (exactly like {@link import('./ImageLayerNode').ImageLayerNode}).
  *
- * The node references — but never owns — the {@link TileLayer}: destroying it
+ * The node references - but never owns - the {@link TileLayer}: destroying it
  * frees its chunk nodes and their cached geometry but leaves the layer, map,
  * and Loader-owned textures intact.
  *
@@ -66,7 +66,7 @@ export class TileLayerNode extends Container {
   /**
    * Bound once so `TileLayer._addStructuralListener`/`_removeStructuralListener`
    * add and remove the SAME function reference. Incrementally adds/removes
-   * the `TileChunkNode` child for exactly the chunk that changed — never
+   * the `TileChunkNode` child for exactly the chunk that changed - never
    * triggers a full {@link refresh}, so every other chunk node's
    * revision-cached geometry survives untouched.
    */
@@ -184,7 +184,7 @@ export class TileLayerNode extends Container {
     const bounds = this._localBounds;
 
     // Reading the pixel extents directly (rather than gating on `bounded`)
-    // is what narrows them to numbers — `bounded` is a plain boolean getter.
+    // is what narrows them to numbers - `bounded` is a plain boolean getter.
     const { pixelHeight, pixelWidth } = this._layer;
 
     if (pixelWidth !== undefined && pixelHeight !== undefined) {
@@ -273,7 +273,7 @@ export class TileLayerNode extends Container {
   }
 
   /**
-   * Construct one configured {@link TileChunkNode} for `chunk` — shared by
+   * Construct one configured {@link TileChunkNode} for `chunk` - shared by
    * the initial bulk build ({@link _buildChunkNodes}) and the incremental
    * structural-listener handler, so a future constructor argument or
    * per-node setting only needs to be added in one place.
@@ -302,7 +302,7 @@ export class TileLayerNode extends Container {
    * Compute and apply this layer's live tint (opacity as alpha, `tintColor`
    * as RGB multiply) to a single chunk node. Used both by {@link _syncTint}'s
    * bulk pass and by the structural-listener handler for a freshly-added
-   * node — a node added between two "nothing changed" full syncs must still
+   * node - a node added between two "nothing changed" full syncs must still
    * receive the current tint, which a change-detection-guarded bulk pass
    * alone would skip.
    */

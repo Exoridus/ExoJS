@@ -32,8 +32,8 @@ const ccdEmbed = 0.05;
 const ccdRestitutionThreshold = 1;
 
 /**
- * `true` when a static/kinematic body — an island boundary, never an island
- * member — is being driven this step, either through its velocity or by a
+ * `true` when a static/kinematic body - an island boundary, never an island
+ * member - is being driven this step, either through its velocity or by a
  * {@link PhysicsBody.setTransform} teleport. Speed is deliberately not compared
  * against the sleep thresholds: a platform creeping along at 1 px/s still has to
  * push its passengers, and it is exactly that sub-threshold case where nothing
@@ -44,7 +44,7 @@ const isMovingBoundary = (body: PhysicsBody): boolean =>
 
 /**
  * {@link PhysicsWorld.attach}'s default `position`: `node`'s current WORLD
- * translation, duck-typed the same way `AudioListener` reads a follow target —
+ * translation, duck-typed the same way `AudioListener` reads a follow target -
  * real {@link SceneNode}s expose `getWorldTransform()`, test doubles that omit
  * it fall back to `(0, 0)` (the previous, surprising default).
  */
@@ -63,7 +63,7 @@ function worldPositionOf(node: SceneNode): VectorLike {
 /**
  * {@link PhysicsWorld.attach}'s default `angle` (radians): `node`'s current
  * WORLD rotation, decomposed from `getWorldTransform()`'s linear part
- * (`atan2(-c, a)` — `SceneNode.updateTransform` builds its rotation block as
+ * (`atan2(-c, a)` - `SceneNode.updateTransform` builds its rotation block as
  * `[[cosθ, sinθ], [-sinθ, cosθ]]`, i.e. `b = sinθ`/`c = -sinθ`, matching the
  * radians ⇄ degrees round-trip `PhysicsBinding.sync` already relies on).
  * Falls back to `0` for a duck-typed node without `getWorldTransform`.
@@ -92,7 +92,7 @@ export interface PhysicsWorldOptions {
    * TGS-Soft sub-steps per fixed step (the solver's stiffness scales with this,
    * not iteration count). Default `4`. Must be ≥ 1. Values below `2` visibly
    * degrade tall-stack stability (a 10-box tower jitters at `1`), so the default
-   * is load-bearing — do not lower it for performance.
+   * is load-bearing - do not lower it for performance.
    */
   subStepCount?: number;
   /** Soft-contact stiffness in Hz (the contact behaves as a damped spring at this frequency). Default `30`. */
@@ -161,21 +161,21 @@ export interface AttachOptions {
  * touching this public surface.
  *
  * **Operating envelope.** The soft solver trades a little accuracy for
- * robustness, so it has a few documented limits — each stays finite/stable and
+ * robustness, so it has a few documented limits - each stays finite/stable and
  * each is pinned by a gate in `dynamics.test.ts`:
- * - **Mass ratio** — resting stacks are slop-accurate up to ~100:1. Beyond that
+ * - **Mass ratio** - resting stacks are slop-accurate up to ~100:1. Beyond that
  *   the velocity-capped soft push-out (`maxBiasVelocity`) lets the lighter body
  *   settle progressively deeper (≈6px at 500:1, fully through a thin floor by
- *   ~5000:1) — always finite, never exploding.
- * - **CCD is opt-in and translation-only** — detection runs once per fixed
+ *   ~5000:1) - always finite, never exploding.
+ * - **CCD is opt-in and translation-only** - detection runs once per fixed
  *   step, so an ordinary body that travels farther than an obstacle's thickness
  *   in one step tunnels straight through it (it stays finite). Flag fast
  *   projectiles with {@link PhysicsBody.isBullet}: each of the body's colliders
  *   is then shape-cast along the step's motion (an exact translation-only sweep
  *   of the full shape, not just the centre) and clamped at the first impact.
- *   Rotation over the step is not swept — a long body spinning fast enough to
+ *   Rotation over the step is not swept - a long body spinning fast enough to
  *   sweep past an obstacle within one step can still miss it.
- * - **{@link PhysicsWorldOptions.subStepCount}** — the default `4` is
+ * - **{@link PhysicsWorldOptions.subStepCount}** - the default `4` is
  *   load-bearing for tall-stack stability; lowering it below `2` visibly
  *   degrades stacking, so do not reduce it for performance.
  * - **Broad phase is a dynamic AABB tree** (`AabbTreeBroadPhase`), stateful
@@ -184,7 +184,7 @@ export interface AttachOptions {
  *   outside their margin trigger a tree update and a local re-query for new
  *   neighbours. Detection still walks every live collider once per step (a
  *   cheap containment check for each), so there is a small linear floor, but
- *   the dominant cost — reinsertion and neighbour discovery — is driven by
+ *   the dominant cost - reinsertion and neighbour discovery - is driven by
  *   how much actually moved, not by the total live collider count; sleeping
  *   bodies skip that dominant cost entirely. Scales to tens of thousands of
  *   simultaneously-live colliders, including dense clusters that would
@@ -232,7 +232,7 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _islandParent: number[] = [];
   /** Pooled per-island minimum sleep time, indexed by union-find root. */
   private readonly _islandMinSleep: number[] = [];
-  /** Pooled scratch for the CCD pass (clamp target, per-pair sweep hit, best hit, swept AABB) — keeps the sweep allocation-free. */
+  /** Pooled scratch for the CCD pass (clamp target, per-pair sweep hit, best hit, swept AABB) - keeps the sweep allocation-free. */
   private readonly _ccdClampPosition = { x: 0, y: 0 };
   private readonly _ccdSweepHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
   private readonly _ccdBestHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
@@ -245,19 +245,19 @@ export class PhysicsWorld implements BodyOwner {
    * rejected by the swept-AABB prune never count, so slow bullets far from any
    * geometry keep this at zero (the cheap path).
    *
-   * @internal — test/diagnostic hook.
+   * @internal - test/diagnostic hook.
    */
   public _ccdSweepTests = 0;
 
   /**
-   * Colliders the CCD pass pulled out of the broad phase since world creation —
+   * Colliders the CCD pass pulled out of the broad phase since world creation -
    * the size of the candidate set the swept-AABB prune and the narrow-phase
    * sweep then work on. Counted separately from {@link _ccdSweepTests} because
    * the two measure different halves: this is what the pass looks at, that is
    * what it actually sweeps. Stays proportional to the geometry near the
    * bullets, not to the world's collider count.
    *
-   * @internal — test/diagnostic hook.
+   * @internal - test/diagnostic hook.
    */
   public _ccdBroadPhaseCandidates = 0;
 
@@ -305,7 +305,7 @@ export class PhysicsWorld implements BodyOwner {
    * Add a body to the world: allocates the body and its collider ids, registers
    * the colliders, computes the mass model and tracks the body for stepping.
    * Construct the body freely first (`new PhysicsBody({ … })`), then add it.
-   * Safe to call inside an event callback — the body push is deferred to the end
+   * Safe to call inside an event callback - the body push is deferred to the end
    * of the step, exactly like collider registration. Returns the body.
    *
    * @throws if the body has already been added to a world.
@@ -338,7 +338,7 @@ export class PhysicsWorld implements BodyOwner {
    *
    * When `options.position`/`options.angle` are omitted, the body starts at
    * `node`'s current WORLD position/rotation (via `getWorldTransform()`,
-   * composed through any transform-group boundary) rather than `(0, 0)` —
+   * composed through any transform-group boundary) rather than `(0, 0)` -
    * otherwise a body attached to an already-placed node would visibly "teleport"
    * to the origin on the next step. Pass `position`/`angle` explicitly to override.
    */
@@ -437,19 +437,19 @@ export class PhysicsWorld implements BodyOwner {
    * **Prefer registering the world as a system instead**
    * (`app.systems.add(world, { order: SystemOrder.Physics })` or the scene
    * equivalent) so {@link fixedUpdate} drives stepping directly from the
-   * engine's own fixed-timestep scheduler — one call per fixed step, no
+   * engine's own fixed-timestep scheduler - one call per fixed step, no
    * accumulator duplication. `step` remains available here for manual/advanced
    * driving (e.g. a fixed-but-non-standard rate, or stepping outside the
    * normal frame loop entirely): pass any delta and this accumulator converts
    * it into the right number of fixed sub-steps (0, 1, or several, clamped by
    * {@link PhysicsWorldOptions.maxSubSteps}).
    *
-   * Either way the simulation is frame-rate independent and deterministic —
+   * Either way the simulation is frame-rate independent and deterministic -
    * the same sequence of deltas replays identically. `timeStepper.alpha`
    * (`[0, 1)`) is the leftover sub-step fraction after this call, for callers
    * that want to interpolate a bound node's rendered position between the last
    * two fixed states instead of snapping to the latest one (bindings do not do
-   * this automatically — {@link bind} always writes the latest fixed-step
+   * this automatically - {@link bind} always writes the latest fixed-step
    * transform verbatim).
    */
   public step(frameDeltaSeconds: number): void {
@@ -482,12 +482,12 @@ export class PhysicsWorld implements BodyOwner {
    * Advance by exactly one fixed step, driven directly by the engine's own
    * fixed-timestep scheduler when this world is registered as a `System`
    * (`app.systems.add(world, { order: SystemOrder.Physics })` or the scene
-   * equivalent) — bypasses {@link timeStepper}'s variable-delta accumulator
+   * equivalent) - bypasses {@link timeStepper}'s variable-delta accumulator
    * entirely, since the caller has already decided exactly when a fixed step
    * occurs. Prefer this over manual {@link step} once the world is
    * system-registered; `step` remains available for advanced manual driving.
    * Always advances by exactly {@link timeStepper}'s configured `fixedDelta`,
-   * regardless of the caller's actual fixed-step interval — if the engine's
+   * regardless of the caller's actual fixed-step interval - if the engine's
    * `Application.fixedTimeStep` doesn't match this world's `fixedDelta`, the
    * simulation stays deterministic but runs at the wrong wall-clock speed
    * relative to real time.
@@ -546,7 +546,7 @@ export class PhysicsWorld implements BodyOwner {
 
       // Warm-start every sub-step (Box2D-v3 soft step): the relax pass leaves
       // each contact's normal velocity at zero, so re-applying the
-      // accumulated impulse re-balances exactly this sub-step's gravity — the
+      // accumulated impulse re-balances exactly this sub-step's gravity - the
       // impulse converges to the per-sub-step load (m·h·g), not the per-frame
       // load, which is what keeps tall stacks from pumping energy.
       this._backend.warmStart();
@@ -592,7 +592,7 @@ export class PhysicsWorld implements BodyOwner {
 
   /**
    * Link a body to a scene node; the node tracks the body after each step.
-   * Destroying the node is enough to end the link — the next step drops it
+   * Destroying the node is enough to end the link - the next step drops it
    * rather than writing into the node's released transform, so an explicit
    * {@link unbind} is only needed to stop tracking a node that stays alive.
    *
@@ -756,7 +756,7 @@ export class PhysicsWorld implements BodyOwner {
     // Union dynamic↔dynamic solid contacts into islands. A dynamic body touching
     // a MOVING static/kinematic body has its sleep timer reset instead: those
     // types are island boundaries, not members, so nothing else would keep the
-    // passenger of a slow-moving platform awake — and the solver skips a contact
+    // passenger of a slow-moving platform awake - and the solver skips a contact
     // whose dynamic side is asleep, letting the platform drive straight through it.
     for (const contact of this._backend.contactGraph.solidContacts) {
       const bodyA = contact.a.body;
@@ -882,7 +882,7 @@ export class PhysicsWorld implements BodyOwner {
    * earliest impact and resolve it about the surface normal (a slide for a
    * non-bouncy body, an elastic reflection as restitution → 1) so it cannot
    * tunnel. The sweep is an exact translation-only cast of the full shapes
-   * (Minkowski ray for circles, swept SAT for polygon pairs) — the step's
+   * (Minkowski ray for circles, swept SAT for polygon pairs) - the step's
    * rotation is applied before the sweep, not swept through. Pairs already
    * overlapping at the start of the step are skipped: the discrete solver owns
    * them (that hand-off is what lets a landed bullet rest on real contacts).
@@ -917,7 +917,7 @@ export class PhysicsWorld implements BodyOwner {
       }
 
       // Clamp the step's translation at the impact, overshooting by a small
-      // embed along the motion (a pure translation — the rotation is already
+      // embed along the motion (a pure translation - the rotation is already
       // applied) so the next step's detection forms a real discrete contact.
       const best = this._ccdBestHit;
       const clampDistance = Math.min(distance, best.t * distance + ccdEmbed);
@@ -953,7 +953,7 @@ export class PhysicsWorld implements BodyOwner {
    * Find the earliest impact for a bullet whose colliders translated by
    * `(dx, dy)` this step. Each of the bullet's colliders queries the broad
    * phase with its swept AABB, so the pass costs what the geometry around the
-   * bullet's path costs — not one iteration per collider in the world. Returns
+   * bullet's path costs - not one iteration per collider in the world. Returns
    * the blocking collider (with the impact written into {@link _ccdBestHit}),
    * or `null` when nothing blocks the motion.
    */
@@ -981,7 +981,7 @@ export class PhysicsWorld implements BodyOwner {
       swept.maxY = dy < 0 ? aabb.maxY - dy : aabb.maxY;
 
       // Tree hits are keyed on the leaves' fat AABBs, so the candidate set is a
-      // conservative superset — the exact `aabbOverlap` below still decides.
+      // conservative superset - the exact `aabbOverlap` below still decides.
       // A backend without a spatial index falls back to the full collider list.
       const candidates = spatialIndex === undefined ? this._colliders : spatialIndex.queryAabb(swept, this._ccdCandidates);
 
@@ -1050,7 +1050,7 @@ export class PhysicsWorld implements BodyOwner {
     const index = this._bodies.indexOf(body);
 
     if (index === -1) {
-      // Never added (created and destroyed within the same dispatch) — still
+      // Never added (created and destroyed within the same dispatch) - still
       // tear down its colliders and mark it dead.
       this._teardownBody(body);
 
@@ -1092,7 +1092,7 @@ export class PhysicsWorld implements BodyOwner {
    * the world. A sleeping body's sleep timer is frozen, so the island pass alone
    * can never re-open its sleep decision: losing the support it rested on just
    * removes a contact, and the island (now smaller, or a lone body) still reports
-   * a long-expired timer and is put straight back to sleep — a stack whose floor,
+   * a long-expired timer and is put straight back to sleep - a stack whose floor,
    * platform or bottom box is destroyed would hang in mid-air forever. Kinematic
    * and static supports are the sharp edge, since they are island boundaries
    * rather than nodes and so are invisible to wake propagation, but the same hole
@@ -1113,7 +1113,7 @@ export class PhysicsWorld implements BodyOwner {
       }
 
       // Only reached for a collider that is part of a live contact, so it is
-      // attached and `body` cannot throw — a free-standing collider (a body
+      // attached and `body` cannot throw - a free-standing collider (a body
       // destroyed before it was ever stepped) has no contacts to match.
       if (other.body.type === 'dynamic') {
         other.body.wake();

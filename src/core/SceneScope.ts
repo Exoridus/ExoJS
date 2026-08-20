@@ -30,12 +30,12 @@ const frameHookRemedy =
 /**
  * Internal owner of one {@link Scene} activation: constructs and attaches the
  * scene's facilities, runs `load()`/`init()` (ending in {@link
- * SceneState.Ready} — a cold checkpoint before any facility produces an
+ * SceneState.Ready} - a cold checkpoint before any facility produces an
  * application-wide effect), commits `Ready`/`Suspended` → `Active` via
  * {@link SceneScope.activate}/{@link SceneScope.restore}, gates per-frame
  * dispatch by {@link SceneState}, supports retention ({@link
  * SceneScope.suspend}/{@link SceneScope.restore}), and runs permanent
- * teardown in the normative order. Not exported from the package root —
+ * teardown in the normative order. Not exported from the package root -
  * `Scene` and `SceneDirector` are the public surface; this class is their
  * shared internal implementation detail.
  * @internal
@@ -79,18 +79,18 @@ export class SceneScope<Data = unknown> {
     return this._state;
   }
 
-  /** `true` while the scene is paused — only meaningful while {@link SceneScope.state} is `Active`. See {@link SceneScope.pause}/{@link SceneScope.resume}. */
+  /** `true` while the scene is paused - only meaningful while {@link SceneScope.state} is `Active`. See {@link SceneScope.pause}/{@link SceneScope.resume}. */
   public get paused(): boolean {
     return this._paused;
   }
 
   /**
    * Run `load()` then `init()`. Leaves the scope
-   * in `Ready` on success — a cold checkpoint that produces no
+   * in `Ready` on success - a cold checkpoint that produces no
    * application-wide effect yet. The caller commits
    * the switch and calls {@link SceneScope.activate} once the previous scene
    * has been disposed. Throws the original `load()`/`init()` error, or a
-   * lifecycle error when `init()` returns a thenable — in every build, not
+   * lifecycle error when `init()` returns a thenable - in every build, not
    * only in development (it must be synchronous).
    */
   public async prepare(data: Data): Promise<void> {
@@ -168,9 +168,9 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Resume this scope: undoes {@link SceneScope.pause} — including the
+   * Resume this scope: undoes {@link SceneScope.pause} - including the
    * tweens/audio `when` policy (see {@link SceneTweens.resume}/
-   * {@link SceneAudio.resume}) — and dispatches {@link Scene.onResume}. Same
+   * {@link SceneAudio.resume}) - and dispatches {@link Scene.onResume}. Same
    * error-guarding contract as {@link SceneScope.pause}. Returns whether the
    * flag actually changed.
    */
@@ -196,10 +196,10 @@ export class SceneScope<Data = unknown> {
    * Suspend this scope for retention: `Active` → `Suspended`. The `paused`
    * flag is left untouched, so a paused scene restores paused and an
    * unpaused one restores unpaused. Suspends every facility except the
-   * loader — claims are never suspended, so background
+   * loader - claims are never suspended, so background
    * asset loading continues. Also detaches the scene's own automatic root
    * and (if materialized) UI from interaction dispatch, so a retained scene
-   * stops receiving pointer events alongside whichever scope is now active —
+   * stops receiving pointer events alongside whichever scope is now active -
    * the same detachment {@link SceneScope.destroy} performs, just reversible
    * via {@link SceneScope.restore}. Every facility call is individually
    * guarded; a single facility's failure never blocks the state transition
@@ -270,7 +270,7 @@ export class SceneScope<Data = unknown> {
    * Forward one fixed step to the scene and its systems, gated to `Active`
    * and unpaused (`fixedUpdate` never runs while paused,
    * unlike {@link SceneScope.draw}). Throws in every build if
-   * `Scene.fixedUpdate` returns a thenable — the hook must be synchronous.
+   * `Scene.fixedUpdate` returns a thenable - the hook must be synchronous.
    */
   public preUpdate(delta: Time): void {
     if (this._state !== SceneState.Active || this._paused) {
@@ -306,7 +306,7 @@ export class SceneScope<Data = unknown> {
   /**
    * Forward one frame's update to the scene and its systems, gated to
    * `Active` and unpaused. Throws in every build if `Scene.update` returns a
-   * thenable — the hook must be synchronous.
+   * thenable - the hook must be synchronous.
    */
   public update(delta: Time): void {
     if (this._state !== SceneState.Active || this._paused) {
@@ -328,10 +328,10 @@ export class SceneScope<Data = unknown> {
   }
 
   /**
-   * Forward one frame's draw to the scene, its systems, then the UI layer —
+   * Forward one frame's draw to the scene, its systems, then the UI layer -
    * gated to `Active` regardless of `paused` (a paused scene keeps rendering
    * while simulation is frozen). Throws in every build if `Scene.draw`
-   * returns a thenable — the hook must be synchronous.
+   * returns a thenable - the hook must be synchronous.
    */
   public draw(context: RenderingContext): void {
     if (this._state !== SceneState.Active) {
@@ -366,7 +366,7 @@ export class SceneScope<Data = unknown> {
   /**
    * Failed-activation cleanup: aborts {@link Scene.lifecycleSignal}, destroys
    * every engine-managed registration this scope created, releases loader
-   * claims, and invokes `scene.destroy()` — but never `scene.unload()`, since
+   * claims, and invokes `scene.destroy()` - but never `scene.unload()`, since
    * the scene never completed activation. Never throws; cleanup failures are
    * reported through the application error pipeline. Idempotent.
    */
@@ -413,7 +413,7 @@ export class SceneScope<Data = unknown> {
       return;
     }
 
-    // Before anything that can await — `unload()` is the first such stage, and
+    // Before anything that can await - `unload()` is the first such stage, and
     // a scene watching the signal has to see it aborted by the time its own
     // teardown hook runs, not afterwards.
     this.scene._abortLifecycle();

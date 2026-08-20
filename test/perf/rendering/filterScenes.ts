@@ -51,7 +51,7 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import type { AllocationArchetype, AllocationScene } from './allocationScenes';
 import { makeTextures, scatterInView } from './fixtures';
 
-/** Viewport the probes render through — matches the harness default. */
+/** Viewport the probes render through - matches the harness default. */
 const VIEW = { w: 1280, h: 720 } as const;
 
 /**
@@ -79,7 +79,7 @@ const buildDecoratedSprites = (count: number, decorate: (sprite: Sprite, index: 
   return { root, teardown: () => root.destroy() };
 };
 
-/** One filtered container over `count` plain sprites — the opposite extreme from one filter per sprite. */
+/** One filtered container over `count` plain sprites - the opposite extreme from one filter per sprite. */
 const buildFilteredContainer = (count: number, filters: readonly Filter[], cacheAsTexture: boolean): AllocationScene => {
   const [texture] = makeTextures(1);
   const root = new Container();
@@ -111,7 +111,7 @@ const colorFilterScene = (count: number, filtersPerNode: number): AllocationScen
 
 /**
  * The probe catalog. Unlike `ALLOCATION_ARCHETYPES` the ORDER carries no
- * meaning — every entry is measured in its own process.
+ * meaning - every entry is measured in its own process.
  */
 export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
   // ── BARRIER only: a rect clip takes the barrier path with no target ──────
@@ -206,7 +206,7 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
   // Filtered sprites parked OUTSIDE the view but inside the inflated capture
   // rect (`RETAINED_CULL_MARGIN_RATIO` = 1/16, so 80 px horizontally on a
   // 1280-wide view). A capturing collect admits them, so their barriers run and
-  // their composites are issued — while the enclosing frame never shows them.
+  // their composites are issued - while the enclosing frame never shows them.
   // This is the one place where "the effect path only draws what it already
   // decided to draw" is not obviously true, so it is measured rather than
   // argued: the structural counters here must not move.
@@ -220,7 +220,7 @@ export const FILTER_ARCHETYPES: readonly AllocationArchetype[] = [
 
       // Half in view, half in the margin. A root whose whole subtree sits
       // outside is culled at the root and never reaches the barrier path at
-      // all, so the visible half is what keeps the root — and the capture —
+      // all, so the visible half is what keeps the root - and the capture -
       // alive for the other half to be admitted by the inflated rect.
       for (let i = 0; i < 100; i++) {
         const sprite = new Sprite(texture!);

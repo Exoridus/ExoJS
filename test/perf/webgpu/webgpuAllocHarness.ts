@@ -3,7 +3,7 @@
  *
  * Deliberately NOT a port of `test/perf/rendering/harness.ts`: that one wires
  * the WebGL2 backend to a recording fake context in Node, and a fake context is
- * exactly what this measurement must not have — the question is what the real
+ * exactly what this measurement must not have - the question is what the real
  * `WebGpuBackend` allocates against a real `GPUDevice`, and a stub would either
  * invent allocations of its own or skip the paths under audit.
  *
@@ -160,7 +160,7 @@ const instrument = (device: GPUDevice): { counters: WebGpuWorkCounters; reset: (
   return { counters, reset };
 };
 
-/** `null` when this browser has no adapter at all — a measurement result, not a failure. */
+/** `null` when this browser has no adapter at all - a measurement result, not a failure. */
 export const createWebGpuHarness = async (options: { instrument?: boolean } = {}): Promise<WebGpuHarness | null> => {
   if (typeof navigator.gpu === 'undefined') return null;
 
@@ -216,7 +216,7 @@ export const renderOnce = (harness: WebGpuHarness, root: RenderNode, beforeFrame
 };
 
 /**
- * A real, sampleable texture. The Node fixtures build source-less `Texture`s —
+ * A real, sampleable texture. The Node fixtures build source-less `Texture`s -
  * enough for a fake context, rejected outright by the WebGPU backend, which
  * requires a valid source before it will upload.
  */

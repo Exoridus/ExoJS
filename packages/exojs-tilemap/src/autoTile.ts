@@ -13,7 +13,7 @@ export interface AutoTileOptions {
    *
    * If omitted, group membership defaults to {@link WangSet.isMember} on the
    * cell's `localTileId` (and a matching `tilesetIndex`). That default is
-   * *variant-stable* — every autotiled variant counts as a member — which is
+   * *variant-stable* - every autotiled variant counts as a member - which is
    * what makes {@link refreshCell} correct. If you supply a `matchFn` for use
    * with `refreshCell`, it MUST likewise be variant-stable (independent of the
    * currently-rendered variant), e.g. keyed on a separate logical-terrain grid
@@ -152,7 +152,7 @@ function applyVariant(
  *
  * **Edge mode bitmask (bit positions):** Top=1, Right=2, Bottom=4, Left=8.
  *
- * @throws If `layer` is unbounded (no fixed width/height) — there is no
+ * @throws If `layer` is unbounded (no fixed width/height) - there is no
  * "whole layer" to sweep. Use {@link refreshCell} to autotile an unbounded
  * layer incrementally, one edited cell at a time.
  */
@@ -221,8 +221,8 @@ export function autoTile(layer: TileLayer, wangSet: WangSet, options?: AutoTileO
  *
  * A cell's blob/edge mask depends only on its immediate neighbours, so painting
  * or erasing cell `(x, y)` can change the variant of that cell and of the (up
- * to) eight cells that have it as a neighbour — but nothing further out. This
- * recomputes exactly that 3×3 neighbourhood, touching only the 1–4 chunks it
+ * to) eight cells that have it as a neighbour - but nothing further out. This
+ * recomputes exactly that 3×3 neighbourhood, touching only the 1-4 chunks it
  * spans (and rebuilding geometry only for chunks whose tiles actually change).
  * For a paint operation this is O(1) work versus `autoTile`'s O(width·height).
  *

@@ -89,7 +89,7 @@ describe('SceneScope', () => {
 
       expect(events).toEqual(['load:start', 'load:end', 'init']);
       expect(scope.state).toBe(SceneState.Ready);
-      // Roots/onActivate are deferred to activate() — the Ready checkpoint
+      // Roots/onActivate are deferred to activate() - the Ready checkpoint
       // itself produces no application-wide effect.
       expect(app.interaction.attachRoot).not.toHaveBeenCalled();
     });
@@ -253,7 +253,7 @@ describe('SceneScope', () => {
       expect(destroySpy).toHaveBeenCalledTimes(1);
       expect(unload).not.toHaveBeenCalled();
       expect(scope.state).toBe(SceneState.Destroyed);
-      // roots were never attached (prepare() never got that far) — nothing to detach.
+      // roots were never attached (prepare() never got that far) - nothing to detach.
       expect(app.interaction.detachRoot).not.toHaveBeenCalled();
     });
 

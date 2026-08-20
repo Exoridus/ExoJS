@@ -104,7 +104,7 @@ export abstract class AbstractWebGl2BatchedRenderer extends AbstractWebGl2Render
     // attribute / uniform extraction) until shader.sync(). With
     // KHR_parallel_shader_compile the driver may service compile on
     // a worker thread in parallel with the buffer setup that follows.
-    // Once we need attribute locations (createVao), we sync — at which
+    // Once we need attribute locations (createVao), we sync - at which
     // point compile is hopefully already finished and the eventual
     // blocking status query becomes a no-op.
     this.shader.connect(createWebGl2ShaderProgram(gl));

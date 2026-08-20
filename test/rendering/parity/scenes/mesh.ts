@@ -48,7 +48,7 @@ export const meshScenes: readonly Scene[] = [
     build: () => quadAt(8, 8, IDENTITY_UVS),
   },
   {
-    // Deliberately mirrored UVs. Both backends must mirror *identically* — the
+    // Deliberately mirrored UVs. Both backends must mirror *identically* - the
     // point is not that the image is right, but that neither backend quietly
     // flips it back. A solid texture could not tell the two apart at all.
     name: 'mesh/mirrored-uvs',

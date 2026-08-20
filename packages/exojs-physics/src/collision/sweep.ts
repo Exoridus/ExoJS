@@ -22,8 +22,8 @@ const eps = 1e-9;
 // Module-local scratch circle proxy used for the start-overlap pre-check of the
 // circle↔polygon sweeps (it borrows the real circle's shape, so no per-call
 // allocation). Like the narrow-phase clip scratch, the sweep is single-threaded
-// and non-reentrant — the world's CCD pass calls `sweepProxies` strictly
-// sequentially — so module-global scratch is safe.
+// and non-reentrant - the world's CCD pass calls `sweepProxies` strictly
+// sequentially - so module-global scratch is safe.
 const _circleStart: Mutable2D = { x: 0, y: 0 };
 const _circleProxy: { shape: AnyShape; worldCenter: Mutable2D; worldVertices: number[]; worldNormals: number[] } = {
   shape: new CircleShape(1),
@@ -36,12 +36,12 @@ const _circleProxy: { shape: AnyShape; worldCenter: Mutable2D; worldVertices: nu
  * Translation-only shape cast of `moving` against a static `target`: `moving`
  * is given at its **end-of-motion** pose (its cached world geometry) and is
  * swept from `pose − (dx, dy)` to `pose`. Rotation over the motion is not swept
- * — the moving shape keeps its end orientation for the whole cast, matching the
+ * - the moving shape keeps its end orientation for the whole cast, matching the
  * bullet CCD model (the step's rotation is applied before the sweep).
  *
  * Returns `true` with the first time of impact and the target-surface normal
  * written into `out`. Pairs already overlapping (or exactly touching) at the
- * start of the motion return `false` — they cannot tunnel within this motion
+ * start of the motion return `false` - they cannot tunnel within this motion
  * and the discrete solver owns them. Allocation-free.
  */
 export const sweepProxies = (moving: CollisionProxy, dx: number, dy: number, target: CollisionProxy, out: SweepHit): boolean => {
@@ -78,7 +78,7 @@ const sweepCircleCircle = (moving: CollisionProxy, dx: number, dy: number, targe
   const c = mx * mx + my * my - rsum * rsum;
 
   if (b >= 0) {
-    // Moving away (or tangential) — no entry within the motion.
+    // Moving away (or tangential) - no entry within the motion.
     return false;
   }
 
@@ -122,7 +122,7 @@ const sweepCirclePolygon = (moving: CollisionProxy, dx: number, dy: number, targ
 /**
  * Moving polygon vs static circle, solved in the polygon's frame: the circle
  * sweeps backward (`−d`) from a start displaced by `+d`, against the polygon's
- * end-pose geometry — the same relative motion, so the same time of impact.
+ * end-pose geometry - the same relative motion, so the same time of impact.
  */
 const sweepPolygonCircle = (moving: CollisionProxy, dx: number, dy: number, target: CollisionProxy, out: SweepHit): boolean => {
   const r = radiusOf(target);
@@ -152,7 +152,7 @@ const sweepPolygonCircle = (moving: CollisionProxy, dx: number, dy: number, targ
 
 /**
  * Cast the point `(ox, oy)` along `(dx, dy)` (t ∈ [0, 1]) against `polygon`
- * inflated by `r`: offset faces plus vertex arcs — the exact swept-circle
+ * inflated by `r`: offset faces plus vertex arcs - the exact swept-circle
  * geometry. Writes the earliest hit into `out`; the normal points from the
  * polygon surface toward the circle.
  */
@@ -345,8 +345,8 @@ const sweptSatAxes = (
     }
 
     if (dn > -eps && dn < eps) {
-      // No relative motion along this axis: separated — or exactly touching,
-      // which the discrete narrow phase already treats as no contact — here
+      // No relative motion along this axis: separated - or exactly touching,
+      // which the discrete narrow phase already treats as no contact - here
       // means never in contact.
       if (maxA <= minB || maxB <= minA) {
         return false;

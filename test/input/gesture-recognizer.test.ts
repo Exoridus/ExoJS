@@ -1,11 +1,11 @@
 /**
  * Direct unit tests for GestureRecognizer (long-press timing, two-touch
- * pinch/rotate derivation). Constructed standalone — no InputManager/DOM
- * involved — for precise control over pointer positions and elapsed time.
+ * pinch/rotate derivation). Constructed standalone - no InputManager/DOM
+ * involved - for precise control over pointer positions and elapsed time.
  *
  * The long-press hold runs on ENGINE time: the recognizer accumulates the
  * frame deltas handed to `update()` and never reads a wall clock, so these
- * tests advance it by calling `update()` — deliberately NOT with
+ * tests advance it by calling `update()` - deliberately NOT with
  * `vi.useFakeTimers()`, which would only prove that a `setTimeout` still
  * exists. The pause behaviour that engine time buys lives one level up, in
  * InputManager (see test/input/gesture-journal-ordering.test.ts).
@@ -14,7 +14,7 @@
  * the `_enqueue` callback supplied at construction (in production, that
  * pushes onto InputManager's frame journal). These tests capture that
  * callback into a plain array and assert directly on the emitted
- * `GestureJournalEvent` objects — the same path production actually runs,
+ * `GestureJournalEvent` objects - the same path production actually runs,
  * rather than a parallel test-only dispatch fallback.
  */
 
@@ -145,7 +145,7 @@ describe('GestureRecognizer — long press', () => {
     expect(firedFor).not.toContain(1);
     expect(firedFor).toContain(2);
 
-    // Baseline was reset — a lone remaining touch pointer moving cannot
+    // Baseline was reset - a lone remaining touch pointer moving cannot
     // resume two-touch processing (size < 2 now).
     recognizer.onPointerMove(asPointer(pB), distanceThreshold);
     expect(pinches(events)).toHaveLength(0);
@@ -239,7 +239,7 @@ describe('GestureRecognizer — long press', () => {
 
     recognizer.onPointerDown(asPointer({ id: 1, x: 0, y: 0, type: 'touch' }));
 
-    // Real time passes with no frames at all — the state a stopped
+    // Real time passes with no frames at all - the state a stopped
     // application, a backgrounded tab, or a paused scene leaves the
     // recognizer in. A `setTimeout`-based hold would have matured by now.
     await new Promise(resolve => setTimeout(resolve, 20));
@@ -382,7 +382,7 @@ describe('GestureRecognizer — two-touch gestures', () => {
     recognizer.onPointerDown(asPointer(pB));
     recognizer.onPointerMove(asPointer(pB), distanceThreshold); // baseline
 
-    // Re-dispatch with the exact same positions — well within the 0.0001 epsilon.
+    // Re-dispatch with the exact same positions - well within the 0.0001 epsilon.
     recognizer.onPointerMove(asPointer(pB), distanceThreshold);
 
     expect(pinches(events)).toHaveLength(0);
@@ -402,7 +402,7 @@ describe('GestureRecognizer — two-touch gestures', () => {
     recognizer.onPointerMove(asPointer(pB), distanceThreshold); // baseline
     recognizer.onPointerUp(asPointer(pA));
 
-    // Only pB remains tracked — a lone touch moving must not attempt
+    // Only pB remains tracked - a lone touch moving must not attempt
     // two-touch processing (size < 2 now that pA was lifted).
     pB.x = 40;
     recognizer.onPointerMove(asPointer(pB), distanceThreshold);
@@ -475,7 +475,7 @@ describe('GestureRecognizer — rotation shortest-signed-arc normalization', () 
  *
  * These tests mutate all pointer positions and then issue a single
  * `onPointerMove`. That is sound because the recognizer stores the live pointer
- * objects and recomputes the whole set on each move — production sends one move
+ * objects and recomputes the whole set on each move - production sends one move
  * per pointer, which would only split the same total delta across several
  * events.
  */
@@ -571,7 +571,7 @@ describe('GestureRecognizer — three or more touches', () => {
     rotateAround([pA, pB], 90);
     recognizer.onPointerMove(asPointer(pA), distanceThreshold);
 
-    // Averaged over the two touches that have an angle — not diluted to 60° by
+    // Averaged over the two touches that have an angle - not diluted to 60° by
     // counting the centre touch as a zero delta.
     expect(rotates(events)).toHaveLength(1);
     expect(toDeg(rotates(events)[0]!.angleDelta)).toBeCloseTo(90, 5);
@@ -600,7 +600,7 @@ describe('GestureRecognizer — three or more touches', () => {
     recognizer.onPointerUp(asPointer(pB));
     recognizer.onPointerMove(asPointer(pD), distanceThreshold);
 
-    // Nothing was emitted while the set was changing — no jump from the
+    // Nothing was emitted while the set was changing - no jump from the
     // four-finger spread down to the remaining pair.
     expect(pinches(events)).toHaveLength(0);
     expect(rotates(events)).toHaveLength(0);

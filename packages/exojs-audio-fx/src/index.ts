@@ -1,4 +1,4 @@
-// @codexo/exojs-audio-fx — side-effect-free root entry.
+// @codexo/exojs-audio-fx - side-effect-free root entry.
 // A peer-dependency library on top of @codexo/exojs: effects, DSP, beat
 // detection and analysis. Insert effects on a bus or voice via addEffect().
 

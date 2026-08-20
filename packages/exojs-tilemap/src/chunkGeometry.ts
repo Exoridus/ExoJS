@@ -9,7 +9,7 @@ import { unpackTile } from './types';
  * One textured tile quad in chunk-local pixel space.
  *
  * `u0/v0/u1/v1` are the raw (min/max) source UV bounds of the tile within its
- * tileset texture — flip/orientation is **not** baked here; it travels in
+ * tileset texture - flip/orientation is **not** baked here; it travels in
  * {@link TileQuad.orient} and is applied by the per-backend renderer (flipX/Y
  * via UV-corner swap, diagonal via an axis swap in the shader). Keeping the
  * geometry orientation-neutral lets both backends share one CPU builder.
@@ -52,7 +52,7 @@ export function orientCode(transform: TileTransform): number {
 }
 
 // Test/perf-only instrumentation: counts CPU chunk-geometry rebuilds. A rebuild
-// happens once per {@link buildChunkPages} call — i.e. when a chunk node sees a
+// happens once per {@link buildChunkPages} call - i.e. when a chunk node sees a
 // changed `chunk.revision`. Lets benchmarks/regression tests assert that a camera
 // pan rebuilds nothing and a single tile mutation rebuilds exactly one chunk.
 // Near-zero cost (one integer increment on the already-expensive rebuild path).
@@ -73,13 +73,13 @@ export function resetTileGeometryRebuildCount(): void {
  *
  * Iterates the chunk's packed cells in deterministic row-major order, skipping
  * empties, out-of-range tilesets, and out-of-range local tile ids (all treated
- * as empty — this is the renderer's half of the G-GID contract). Each surviving
+ * as empty - this is the renderer's half of the G-GID contract). Each surviving
  * cell is resolved to its source UV rect (from `tileset.getTileRect` + the
  * tileset `TextureRegion`) and a chunk-local destination rect (bottom-left
  * aligned per Tiled orthogonal semantics, so tilesets whose tiles are taller
  * than the map grid extend upward).
  *
- * Allocation happens here only — the result is cached on the owning
+ * Allocation happens here only - the result is cached on the owning
  * {@link import('./TileChunkNode').TileChunkNode} keyed by `chunk.revision`, so
  * unchanged chunks never rebuild and the per-frame path stays allocation-free.
  *
@@ -145,8 +145,8 @@ export function buildChunkPages(
       // the tileset atlas (the typical pixel-art case). Under LINEAR/mipmap
       // filtering an atlas WITHOUT extrusion padding can bleed neighbouring
       // tiles at the edges; author tilesets with extruded margins for linear
-      // sampling. (Extrusion-aware tilemap UV insetting — already done on the
-      // NineSlice/RepeatingSprite geometry paths — is a v0.14 follow-up.)
+      // sampling. (Extrusion-aware tilemap UV insetting - already done on the
+      // NineSlice/RepeatingSprite geometry paths - is a v0.14 follow-up.)
       const u0 = sx / textureWidth;
       const v0 = sy / textureHeight;
       const u1 = (sx + rect.width) / textureWidth;

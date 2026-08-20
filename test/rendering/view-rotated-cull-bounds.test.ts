@@ -3,7 +3,7 @@ import { View } from '#rendering/View';
 /**
  * The world-space AABB of the four viewport corners, mapped through the view's
  * own `screenToWorld`. This is by definition the area the camera renders, so
- * the cull bounds must cover exactly it — whatever rotation, zoom or centre is
+ * the cull bounds must cover exactly it - whatever rotation, zoom or centre is
  * in play, and independent of how the projection composes them.
  */
 const visibleAreaFromCorners = (view: View): { left: number; top: number; right: number; bottom: number } => {

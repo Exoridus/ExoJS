@@ -1,5 +1,5 @@
 /**
- * WebGPU geometric (stencil) clipping browser tests — opt-in, capability-aware.
+ * WebGPU geometric (stencil) clipping browser tests - opt-in, capability-aware.
  *
  * The WebGPU backend supports Rectangle/bounds clipping (scissor parity with
  * WebGL2) AND geometric stencil clipping (phase 12E): a per-target
@@ -100,9 +100,9 @@ const createQuadMesh = (size: number, color: Color): Mesh => {
 };
 
 // A BitmapText whose single glyph 'A' fills the whole `size`×`size` atlas page,
-// placed at the line origin so its quad covers (0,0)–(size,size). The atlas page
+// placed at the line origin so its quad covers (0,0)-(size,size). The atlas page
 // is a solid-colour texture, so the colour-atlas shader (msdf = false) emits that
-// colour over the default white fill tint — deterministic pixels with no runtime
+// colour over the default white fill tint - deterministic pixels with no runtime
 // font rasterisation or atlas-upload timing.
 const createSolidBitmapText = (color: string, size: number): { text: BitmapText; texture: Texture } => {
   const texture = createSolidTexture(color, size);
@@ -120,7 +120,7 @@ const createSolidBitmapText = (color: string, size: number): { text: BitmapText;
 
 // Custom MeshMaterial WGSL honouring the mesh contract: group(0) auto-bound mesh
 // uniforms (projection, translation, tint). Compiled for real now that a
-// custom-material Mesh is supported under a Geometry stencil clip — its fragment
+// custom-material Mesh is supported under a Geometry stencil clip - its fragment
 // emits the premultiplied tint so the clipped/visible pixels are checkable.
 const customMeshWgsl = /* wgsl */ `
 struct MeshUniforms {
@@ -161,7 +161,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 // Custom SpriteMaterial fragment WGSL (the engine prepends the canonical sprite
 // material prologue exposing VertexOutput, the group(1) base-texture slot table
 // and `sampleBase`). Compiled for real now that a custom-material Sprite is supported
-// under a Geometry stencil clip — it tints the white base texture by the user
+// under a Geometry stencil clip - it tints the white base texture by the user
 // `color` uniform so the clipped/visible pixels are checkable.
 const customSpriteWgsl = `
 struct UserUniforms { color: vec4<f32> };

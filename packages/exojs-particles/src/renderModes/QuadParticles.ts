@@ -32,7 +32,7 @@ export const quadParticleWgsl: string = quadParticleWgslModule;
  *
  * {@link build} fills the shared 40-byte per-instance layout described by
  * {@link instanceAttributes}. UVs are baked per-particle so the system can
- * carry an atlas of frames — `system.frames` declares the rectangles and each
+ * carry an atlas of frames - `system.frames` declares the rectangles and each
  * particle's `textureIndex` selects one, resolved to UVs once per particle per
  * frame; no per-instance shader-side indexing needed.
  *
@@ -45,8 +45,8 @@ export class QuadParticles extends ParticleRenderMode {
   public readonly instanced = true;
 
   /**
-   * The quad's four corners are derived in the shader — from `gl_VertexID` on
-   * WebGL2 and from `vertex_index` on WebGPU — so this mode declares no
+   * The quad's four corners are derived in the shader - from `gl_VertexID` on
+   * WebGL2 and from `vertex_index` on WebGPU - so this mode declares no
    * per-vertex geometry and its layout carries the indices that address those
    * four corner slots.
    */

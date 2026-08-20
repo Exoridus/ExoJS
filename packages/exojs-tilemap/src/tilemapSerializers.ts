@@ -19,20 +19,20 @@ const pixelSnapModeFromName: Record<string, PixelSnapMode> = {
 };
 
 /**
- * Scene serializer for {@link TileMapNode} — the convenience node that renders a
+ * Scene serializer for {@link TileMapNode} - the convenience node that renders a
  * whole {@link TileMap}.
  *
  * Captures the **map reference** (its Loader source key) plus the render-only
  * `pixelSnapMode`; the per-layer / per-chunk nodes are derived from the map and
  * rebuilt on construction, so they are never written. The referenced `TileMap`
  * must be pre-loaded into the target Loader (e.g. `loader.load(Asset.type('tileMap', 'world.tmj'))`)
- * before deserialize — procedurally-built maps have no source key and cannot be
+ * before deserialize - procedurally-built maps have no source key and cannot be
  * referenced.
  *
  * Standalone `TileLayerNode` / `TileMapBand` placement (the actor-interleaving
  * cases) is not yet covered.
  *
- * @internal — registered via {@link tilemapExtension}'s `serializers` binding.
+ * @internal - registered via {@link tilemapExtension}'s `serializers` binding.
  */
 export const tileMapNodeSerializer: NodeSerializer<TileMapNode> = {
   write(node, ctx) {

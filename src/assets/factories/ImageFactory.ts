@@ -19,7 +19,7 @@ export interface ImageFactoryOptions {
  * other browser-supported raster image formats and produces a decoded image.
  *
  * When `createImageBitmap` is available (all modern browsers) the factory
- * returns an {@link ImageBitmap} — a zero-copy GPU-upload path that avoids
+ * returns an {@link ImageBitmap} - a zero-copy GPU-upload path that avoids
  * the HTMLImageElement render-pipeline overhead. On older environments it
  * falls back to an {@link HTMLImageElement}.
  *

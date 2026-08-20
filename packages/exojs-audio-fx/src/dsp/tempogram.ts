@@ -64,7 +64,7 @@ export interface TempoScoringOptions {
   topK?: number;
 }
 
-/** Prior centre — geometric mean of the 100–200 BPM "precise" band. */
+/** Prior centre - geometric mean of the 100-200 BPM "precise" band. */
 export const defaultPriorMu = 140;
 /** Prior width: ≈ ±1 octave at ~0.6 weight. */
 export const defaultPriorSigma = Math.log(2) * 0.9;
@@ -79,7 +79,7 @@ export const candidateEdgeTolerance = 0.05;
 export const combWeightFundamental = 1;
 export const combWeightHalf = 0.5;
 export const combWeightThird = 0.3;
-/** Super-harmonic penalty weights (2f, 3f) — strong evidence the candidate is a sub-harmonic. */
+/** Super-harmonic penalty weights (2f, 3f) - strong evidence the candidate is a sub-harmonic. */
 export const combPenaltyDouble = 1;
 export const combPenaltyTriple = 0.5;
 
@@ -131,14 +131,14 @@ export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): 
 export function computeAcfInto(flux: Float32Array, n: number, minLag: number, maxLag: number, out: Float32Array): void {
   const lagCount = maxLag - minLag + 1;
 
-  // Window mean — subtracted before correlation to remove the DC pedestal.
+  // Window mean - subtracted before correlation to remove the DC pedestal.
   let mean = 0;
   for (let t = 0; t < n; t++) {
     mean += flux[t]!;
   }
   mean = n > 0 ? mean / n : 0;
 
-  // Zero-lag energy (variance) of the centred signal — the normaliser.
+  // Zero-lag energy (variance) of the centred signal - the normaliser.
   let zeroLag = 0;
   for (let t = 0; t < n; t++) {
     const c = flux[t]! - mean;
@@ -224,7 +224,7 @@ export function findTempoPeaks(
     peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[0]!, lag });
   }
 
-  // Interior local maxima — refined to a fractional lag for sub-hop BPM resolution.
+  // Interior local maxima - refined to a fractional lag for sub-hop BPM resolution.
   for (let i = 1; i < last; i++) {
     if (acf[i]! > acf[i - 1]! && acf[i]! > acf[i + 1]! && acf[i]! > 0) {
       const lag = minLag + i + parabolicPeakOffset(acf[i - 1]!, acf[i]!, acf[i + 1]!);
@@ -334,7 +334,7 @@ export function computeTempoCandidates(
 }
 
 /**
- * True when `bpm` is a metrically-related multiple of `reference` — a ½×, 2×, 3× or ⅓×
+ * True when `bpm` is a metrically-related multiple of `reference` - a ½×, 2×, 3× or ⅓×
  * octave, OR a 3:2 / 2:3 (dotted ↔ triple) relative. Switching across any of these needs the
  * stronger hysteresis margin: they are the same beat counted at a different metrical level
  * (e.g. 180 BPM kick vs the 120 BPM "dotted" grouping its 8th-note subdivisions create), not

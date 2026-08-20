@@ -47,7 +47,7 @@ export interface ReadonlyTileChunk {
  * laid out row-major. Each cell is a packed tile word (0 = empty).
  * Chunk coordinates are signed to support future infinite maps.
  *
- * The backing array is **private** — external code cannot mutate storage
+ * The backing array is **private** - external code cannot mutate storage
  * directly. All mutation must flow through {@link TileLayer} public APIs,
  * which call the package-internal `_setRawAt` method.
  *
@@ -67,19 +67,19 @@ export class TileChunk implements ReadonlyTileChunk {
   /** Height of this chunk in tiles. */
   public readonly height: number;
 
-  /** Packed tile storage (row-major). Private — never exposed directly. */
+  /** Packed tile storage (row-major). Private - never exposed directly. */
   private readonly _tiles: Uint32Array;
 
   /** Whether every cell in this chunk is empty (0). Lazy-computed. */
   private _empty: boolean | null = null;
 
-  /** Monotonic revision counter — incremented on every mutation. */
+  /** Monotonic revision counter - incremented on every mutation. */
   private _revision = 0;
 
   /**
    * Render-node-owned callbacks notified whenever `_revision` advances.
    * `TileChunkNode.pages` caches geometry against `revision`, but that cache
-   * is only consulted from `render()` — a call the engine skips entirely for
+   * is only consulted from `render()` - a call the engine skips entirely for
    * a content-clean subtree under a `RetainedContainer`. Without
    * this push, an in-place tile edit after capture would replay stale cached
    * geometry forever. Package-internal; not part of {@link ReadonlyTileChunk}.
@@ -130,7 +130,7 @@ export class TileChunk implements ReadonlyTileChunk {
           `TileChunk source length ${source.length} != ${size}.`,
         );
       }
-      // Defensive copy — caller mutation of source array will not affect storage.
+      // Defensive copy - caller mutation of source array will not affect storage.
       this._tiles = new Uint32Array(source);
     } else {
       this._tiles = new Uint32Array(size);
@@ -187,7 +187,7 @@ export class TileChunk implements ReadonlyTileChunk {
 
   /**
    * Package-internal access to the underlying tile storage.
-   * Returns the actual mutable `Uint32Array` — DO NOT USE publicly.
+   * Returns the actual mutable `Uint32Array` - DO NOT USE publicly.
    *
    * Provided for the future tilemap renderer (same package) so it can
    * read chunk data efficiently without a full `cloneTiles()` copy per frame.
@@ -201,7 +201,7 @@ export class TileChunk implements ReadonlyTileChunk {
 
   /**
    * Validate a packed tile value before storing.
-   * Accepts any finite integer — `Uint32Array` stores via unsigned 32-bit
+   * Accepts any finite integer - `Uint32Array` stores via unsigned 32-bit
    * truncation (`ToUint32`). Negative values produced by JavaScript's
    * signed bitwise ops (e.g. when the transform bits set bit 31) are valid.
    * @throws If the value is NaN, Infinity, or non-integer.
@@ -265,7 +265,7 @@ export class TileChunk implements ReadonlyTileChunk {
   /**
    * Register a callback invoked synchronously whenever this chunk's revision
    * advances. Multiple listeners are supported (a chunk may back more than one
-   * `TileChunkNode` — e.g. two `TileLayerNode`s over the same `TileLayer`).
+   * `TileChunkNode` - e.g. two `TileLayerNode`s over the same `TileLayer`).
    * Package-internal: called by `TileChunkNode` to push mutations onto the
    * scene-node content-revision chain (see the `_dirtyListeners` field).
    * @internal

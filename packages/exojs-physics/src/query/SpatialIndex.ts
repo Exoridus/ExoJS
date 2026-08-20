@@ -12,7 +12,7 @@ export interface SpatialIndex {
    * (insert new leaves, reinsert moved ones) before a query. The underlying
    * tree is normally kept in sync once per physics step (via the broad
    * phase's own detection pass); a caller that queries before the world's
-   * first `step()` — or between steps, after adding/moving colliders — has
+   * first `step()` - or between steps, after adding/moving colliders - has
    * no such guarantee, so {@link QueryEngine} calls this before every
    * narrowed query. A leaf whose tight AABB stays inside its stored fat AABB
    * costs nothing to re-sync, so calling this redundantly (e.g. right after

@@ -9,7 +9,7 @@ import { Application, ApplicationState } from '#core/Application';
 import { Time } from '#core/Time';
 
 // ---------------------------------------------------------------------------
-// Backend stubs — keep WebGL2 / WebGPU out of jsdom.
+// Backend stubs - keep WebGL2 / WebGPU out of jsdom.
 // The factory functions must be inline because vi.mock() is hoisted before
 // any variable declarations in the file.
 // ---------------------------------------------------------------------------
@@ -45,7 +45,7 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
       execute: vi.fn().mockReturnThis(),
-      // Stand-in for the backend's live clear colour — identity is all the
+      // Stand-in for the backend's live clear colour - identity is all the
       // auto-clear specs below compare, so a plain object is enough.
       clearColor: { red: 100, green: 149, blue: 237, alpha: 1 },
       clear: vi.fn().mockReturnThis(),
@@ -89,7 +89,7 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
       setView: vi.fn().mockReturnThis(),
       draw: vi.fn().mockReturnThis(),
       execute: vi.fn().mockReturnThis(),
-      // Stand-in for the backend's live clear colour — identity is all the
+      // Stand-in for the backend's live clear colour - identity is all the
       // auto-clear specs below compare, so a plain object is enough.
       clearColor: { red: 100, green: 149, blue: 237, alpha: 1 },
       clear: vi.fn().mockReturnThis(),
@@ -385,7 +385,7 @@ describe('Application.update() — loop timing', () => {
       });
 
       // Charge the frame's own processing cost to the timeline from inside the
-      // frame body, after the delta has been read — this is the cost that must
+      // frame body, after the delta has been read - this is the cost that must
       // not be subtracted from the next frame's delta.
       app.onFrame.add(() => {
         timeline.advance(frameProcessingMs);
@@ -419,7 +419,7 @@ describe('Application.update() — loop timing', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Regression — existing behavior unaffected
+  // Regression - existing behavior unaffected
   // -------------------------------------------------------------------------
 
   describe('Regression — normal frame flow', () => {
@@ -508,7 +508,7 @@ describe('Application.update() — loop timing', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Fixed timestep — accumulator-driven fixedUpdate / onFixedFrame / frameAlpha
+  // Fixed timestep - accumulator-driven fixedUpdate / onFixedFrame / frameAlpha
   // -------------------------------------------------------------------------
 
   describe('Fixed timestep', () => {

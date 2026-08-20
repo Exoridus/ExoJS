@@ -36,7 +36,7 @@ describe('idle load state', () => {
   it('an idle resource leaf is still a usable placeholder', () => {
     const assets = Assets.from({ ship: 'sprites/ship.png' });
 
-    // idle does not mean unusable — the placeholder is a real, renderable Texture.
+    // idle does not mean unusable - the placeholder is a real, renderable Texture.
     expect(assets.ship).toBeInstanceOf(Texture);
   });
 

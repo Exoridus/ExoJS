@@ -4,19 +4,19 @@
  * Wraps the hot collect-path methods on their prototypes and tallies how many
  * times each is invoked while rendering a single frame. Unlike the allocation
  * sampler (statistical) or wall-clock timing (machine-dependent), these are
- * exact integers that depend only on the CPU-side algorithm — identical on
- * every machine and every run — so they can be pinned with `toBe(n)` and act as
+ * exact integers that depend only on the CPU-side algorithm - identical on
+ * every machine and every run - so they can be pinned with `toBe(n)` and act as
  * a hard regression gate on the *shape* of the collect walk.
  *
  * The wrapped methods mirror the four sub-phases the collect-phase benchmark
  * (`test/perf/collect-phase-benchmark.ts`) attributes build() time to:
- *   - `RenderNode._collect`               — node visits entering the cull/emit gate
- *   - `SceneNode._inCullRectUsingBounds`  — view-frustum cull checks
- *   - `SceneNode.getGlobalTransform`   — world-transform resolutions (build + play)
- *   - `Drawable._getOrComputeMaterialKey` — per-draw material-key resolutions
+ *   - `RenderNode._collect`               - node visits entering the cull/emit gate
+ *   - `SceneNode._inCullRectUsingBounds`  - view-frustum cull checks
+ *   - `SceneNode.getGlobalTransform`   - world-transform resolutions (build + play)
+ *   - `Drawable._getOrComputeMaterialKey` - per-draw material-key resolutions
  *
  * A rising count means the collect path is doing more per-node work than the
- * pinned baseline — e.g. a retained-skip fast path stopped engaging and the walk
+ * pinned baseline - e.g. a retained-skip fast path stopped engaging and the walk
  * regressed from O(1) splice back to O(n) re-collect.
  *
  * @internal Test/perf-only.
@@ -29,35 +29,35 @@ import type { WebGl2Harness } from './harness';
 
 /** Exact per-frame algorithmic counts for the collect/play pipeline. */
 export interface CollectCounters {
-  /** `RenderNode._collect` calls — nodes visited by the collect walk. */
+  /** `RenderNode._collect` calls - nodes visited by the collect walk. */
   collect: number;
   /**
-   * `SceneNode._inCullRectUsingBounds` calls — view-frustum cull checks
+   * `SceneNode._inCullRectUsingBounds` calls - view-frustum cull checks
    * performed.
    *
    * Wraps the shared bottom of the rule rather than one of its entrances, so a
    * check counts exactly once however it was reached: `inView` delegates to
    * `_inCullRect`, which delegates to this, and the persistent-source scan calls
    * it directly with bounds it already holds. Counting an entrance instead would
-   * make the number drop whenever a caller switched entrances — reading as "the
+   * make the number drop whenever a caller switched entrances - reading as "the
    * frame stopped culling" when nothing about the culling changed.
    */
   inView: number;
-  /** `SceneNode.getGlobalTransform` calls — world-transform resolutions (build + play). */
+  /** `SceneNode.getGlobalTransform` calls - world-transform resolutions (build + play). */
   globalTransform: number;
-  /** `Drawable._getOrComputeMaterialKey` calls — per-draw material-key resolutions. */
+  /** `Drawable._getOrComputeMaterialKey` calls - per-draw material-key resolutions. */
   materialKey: number;
 }
 
 /** Counters plus the deterministic per-frame `RenderStats` totals. */
 export interface FrameCounters extends CollectCounters {
-  /** Drawables submitted (post-cull draw commands) — `RenderStats.submittedNodes`. */
+  /** Drawables submitted (post-cull draw commands) - `RenderStats.submittedNodes`. */
   submittedNodes: number;
-  /** Nodes skipped by culling — `RenderStats.culledNodes`. */
+  /** Nodes skipped by culling - `RenderStats.culledNodes`. */
   culledNodes: number;
-  /** GPU draw calls issued — `RenderStats.drawCalls`. */
+  /** GPU draw calls issued - `RenderStats.drawCalls`. */
   drawCalls: number;
-  /** Draw batches flushed — `RenderStats.batches`. */
+  /** Draw batches flushed - `RenderStats.batches`. */
   batches: number;
 }
 
@@ -85,7 +85,7 @@ const installCounters = (): Installed => {
   };
 
   // `_collect` is defined on RenderNode; RetainedContainer/Video override it but
-  // call `super._collect`, which resolves to this wrapped implementation — so a
+  // call `super._collect`, which resolves to this wrapped implementation - so a
   // single wrap here counts every node visit regardless of subclass.
   wrap(RenderNode.prototype, '_collect', 'collect');
   wrap(SceneNode.prototype, '_inCullRectUsingBounds', 'inView');

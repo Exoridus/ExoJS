@@ -145,7 +145,7 @@ describe('RetainedPlanCache', () => {
     // The pooled record survives for reuse; only its drawable reference is
     // dropped, so a child evicted from the container is not kept alive by a
     // cache that no longer describes it. Same contract the fragment's draw pool
-    // has — both go through `releasePooledDrawables` now.
+    // has - both go through `releasePooledDrawables` now.
     expect(pooledSlot.drawable).toBeUndefined();
 
     cache._beginCapture();
@@ -267,7 +267,7 @@ describe('RenderPlanBuilder._peekCurrentScopeEntries / _replayRetainedDraw', () 
 
     expect(plan.passes).toHaveLength(1);
     // `root` is a Container, so RenderPlanBuilder.build wraps it in its own
-    // Group scope (RenderPlanBuilder.emitNode's non-drawable-node path) — the
+    // Group scope (RenderPlanBuilder.emitNode's non-drawable-node path) - the
     // outer plan root holds one GroupEntry pointing at that scope, and the
     // replayed Draw entry lives inside it.
     const outerEntries = plan.passes[0]!.root.entries;

@@ -30,7 +30,7 @@ interface MockVideoElement {
 /**
  * Builds a `<video>` element with the read-only DOM properties Video reads
  * (`videoWidth`/`videoHeight`/`duration`/`volume`/`playbackRate`/`loop`/`muted`)
- * made controllable, plus a directly-settable `paused` flag — jsdom's stubbed
+ * made controllable, plus a directly-settable `paused` flag - jsdom's stubbed
  * `play()`/`pause()` (see `test/setup-env.vitest.ts`) never actually flip the
  * real `paused` property, so tests drive it explicitly to exercise both the
  * "was already playing/paused" and "state changed" branches deterministically.
@@ -106,7 +106,7 @@ const createMockVideoElement = (options: MockVideoElementOptions = {}): MockVide
   };
 };
 
-/** A minimal `RenderPlanBuilder` fake — just enough surface for `RenderNode._collect`. */
+/** A minimal `RenderPlanBuilder` fake - just enough surface for `RenderNode._collect`. */
 const createBuilder = (): {
   view: View;
   cullRect: Rectangle;
@@ -133,7 +133,7 @@ const createBuilder = (): {
 describe('Video', () => {
   // Video defers its audio-node setup until the AudioContext exists. Since AU2,
   // merely constructing audio components no longer eagerly spawns a live context
-  // (that waits for the first user gesture), so create it explicitly here — the
+  // (that waits for the first user gesture), so create it explicitly here - the
   // global mock starts 'running', standing in for an already-unlocked context.
   beforeAll(() => {
     getAudioContext();
@@ -384,7 +384,7 @@ describe('Video', () => {
       video.pause();
       expect(stopSpy).toHaveBeenCalledTimes(1);
 
-      // Already paused — pause() is a no-op.
+      // Already paused - pause() is a no-op.
       mockVideo.setPaused(true);
       video.pause();
       expect(stopSpy).toHaveBeenCalledTimes(1);
@@ -569,7 +569,7 @@ describe('Video', () => {
       const texture = video.texture!;
       const sourceSpy = vi.spyOn(texture, 'updateSource');
 
-      // currentTime is unchanged — the playback-advance branch stays false and
+      // currentTime is unchanged - the playback-advance branch stays false and
       // the frame is not re-uploaded.
       video._collect(builder as unknown as RenderPlanBuilder);
 
@@ -690,7 +690,7 @@ describe('Video', () => {
       (video as unknown as { _cancelVideoFrameCallback(): void })._cancelVideoFrameCallback();
       expect(mockVideo.cancelVideoFrameCallback).toHaveBeenCalledTimes(1);
 
-      // Handle is already null — a second cancel call must not call through again.
+      // Handle is already null - a second cancel call must not call through again.
       (video as unknown as { _cancelVideoFrameCallback(): void })._cancelVideoFrameCallback();
       expect(mockVideo.cancelVideoFrameCallback).toHaveBeenCalledTimes(1);
 

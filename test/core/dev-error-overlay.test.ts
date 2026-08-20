@@ -1,5 +1,5 @@
 /**
- * Render-fail surface (S3 diagnostics, minimal slice) — contract 9:
+ * Render-fail surface (S3 diagnostics, minimal slice) - contract 9:
  *
  *  9. Banner: showDevErrorOverlay creates one element per canvas, updates in
  *     place (×2), dismiss removes it, hideDevErrorOverlay is idempotent.

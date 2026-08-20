@@ -67,7 +67,7 @@ export interface PlatformWindowEventMap {
  * focus, cursor, touch-action and geometry, pointer capture, gamepad polling,
  * document visibility, frame scheduling, and the delivery of input events.
  *
- * One adapter serves the whole {@link Application} — `app.platform` — and both
+ * One adapter serves the whole {@link Application} - `app.platform` - and both
  * the {@link InputManager} and the {@link InteractionManager} read it from
  * there, so there is exactly one seam between the engine and its host.
  * {@link BrowserPlatform} is the default; pass your own through
@@ -99,7 +99,7 @@ export interface PlatformAdapter {
   /** Set the cursor shown over the surface. Empty string restores the default. */
   setCursor(value: string): void;
 
-  /** Set the surface's touch-action policy — `'none'` keeps native pan/zoom out of the way. */
+  /** Set the surface's touch-action policy - `'none'` keeps native pan/zoom out of the way. */
   setTouchAction(value: string): void;
 
   /** Route all further events for `pointerId` to the surface. Best-effort. */
@@ -119,7 +119,7 @@ export interface PlatformAdapter {
 
   /**
    * Schedule `callback` for the next display frame and return a handle for
-   * {@link PlatformAdapter.cancelFrame}. One-shot — the frame loop reschedules
+   * {@link PlatformAdapter.cancelFrame}. One-shot - the frame loop reschedules
    * itself every frame.
    */
   requestFrame(callback: () => void): number;
@@ -128,8 +128,8 @@ export interface PlatformAdapter {
   cancelFrame(handle: number): void;
 
   /**
-   * Subscribe to a surface event. Which events are listened for — and whether
-   * one is suppressed — stays an input-policy decision made above this seam,
+   * Subscribe to a surface event. Which events are listened for - and whether
+   * one is suppressed - stays an input-policy decision made above this seam,
    * so the adapter only wires up the delivery.
    */
   onSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(

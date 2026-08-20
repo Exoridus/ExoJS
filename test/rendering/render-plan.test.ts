@@ -533,7 +533,7 @@ describe('render plan', () => {
             entries: [firstEntry, secondEntry],
             hasMixedZ: false,
             // The two draws really do use different materials, so the material
-            // pass must be allowed to run — otherwise this asserts nothing.
+            // pass must be allowed to run - otherwise this asserts nothing.
             hasMixedPipeline: true,
           },
         },

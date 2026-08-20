@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * Coordinated-release driver — the local/CI entrypoint for the two-stage,
+ * Coordinated-release driver - the local/CI entrypoint for the two-stage,
  * build-once release pipeline.
  *
  *   tsx scripts/release/run.ts prepare   [--build] [--skip-attw] [--skip-consumers] [--skip-zip]
@@ -12,7 +12,7 @@
  * rebuilding them, hashes them into `release-manifest.json` + `checksums.sha256`,
  * runs attw and the external-consumer smoke against those exact tarballs, and
  * assembles the Full GitHub Release ZIP. `publish` consumes only the prepared
- * artifacts — it re-hashes them (build-once guard) and never builds. The real
+ * artifacts - it re-hashes them (build-once guard) and never builds. The real
  * publish is gated behind `--execute`; the default is a dry-run.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';

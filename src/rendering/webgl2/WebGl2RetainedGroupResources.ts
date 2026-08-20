@@ -36,11 +36,11 @@ export interface WebGl2RetainedNodeIndexRange {
 
 /**
  * Record-time state of one texture slot, parallel to a payload's `textures`
- * list (collect-time validation — the WebGPU view-identity guard's
+ * list (collect-time validation - the WebGPU view-identity guard's
  * WebGL2 counterpart). The recorded per-instance UV words are normalized
  * against the texture size with the flipY swap baked in
  * (`WebGl2SpriteRenderer._packInstance`), and a resize bumps only the texture
- * VERSION — never a node revision — so the fragment stays clean and only
+ * VERSION - never a node revision - so the fragment stays clean and only
  * `_validateRetainedInstructionSet` can force the recapture. Same-size
  * content updates stay replayable (textures are re-bound live at replay).
  * @internal
@@ -60,7 +60,7 @@ export interface WebGl2RecordedTextureState {
  * node-index stream, never the geometry bytes. Absent (`geometry` omitted /
  * `null`) for the self-contained instance-stream renderers (sprite / nine-
  * slice / repeating), whose batch VAO carries no index buffer and draws with
- * `drawArraysInstanced` — the existing path, unchanged.
+ * `drawArraysInstanced` - the existing path, unchanged.
  * @internal
  */
 export interface WebGl2RetainedGeometryRef {
@@ -125,7 +125,7 @@ export interface WebGl2RetainedBatchPayload {
   /**
    * Per-batch VAO with attribute pointers pre-based at {@link byteOffset}
    * (WebGL2 has no baseInstance). Assigned at capture end; `null` only for a
-   * capture that failed to finalize — replay then skips the draw, and the
+   * capture that failed to finalize - replay then skips the draw, and the
    * generation mechanism keeps such a set from ever validating.
    */
   vao: WebGl2VertexArrayObject | null;
@@ -162,7 +162,7 @@ export interface WebGl2RetainedBatchReplayer {
  * Resources are grow-only per group and reused across recaptures (no realloc
  * churn under motion-stop/start). The {@link generation} counter bumps on
  * every capture rewrite, on device restore, and on growth (subsumed by the
- * rewrite bump) — a plan-level instruction whose recorded generation no
+ * rewrite bump) - a plan-level instruction whose recorded generation no
  * longer matches is rejected at collect time and degrades to entry replay
  * (belt-and-braces).
  *
@@ -265,7 +265,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   }
 
   /**
-   * Start rewriting the bundle for a fresh capture. Bumps the generation —
+   * Start rewriting the bundle for a fresh capture. Bumps the generation -
    * the contents recorded by any previous capture are about to be replaced,
    * so instructions referencing them (including an OUTER group's set holding
    * this bundle's batches verbatim) must stop validating.
@@ -352,14 +352,14 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   /**
    * Fast patch: overwrite one group-local transform row in place with
    * `floats` and mark ONLY that row's sub-range for upload. Deliberately does
-   * NOT bump the generation — the recorded instance bytes reference this row by
+   * NOT bump the generation - the recorded instance bytes reference this row by
    * index and stay valid; only the transform behind the index moved. Tint is not
-   * touched (a moved node's tint doesn't change — see
+   * touched (a moved node's tint doesn't change - see
    * {@link RetainedContainer._tryPatchTransformRow}). Out-of-range rows are
    * ignored (a stale queue entry after a recapture shrank the store).
    *
-   * `floats` is exactly one row — `TRANSFORM_FLOATS_PER_ROW` (8 = 2 rgba32f
-   * texels, the {@link TransformBuffer} row layout) — so it is copied whole. It
+   * `floats` is exactly one row - `TRANSFORM_FLOATS_PER_ROW` (8 = 2 rgba32f
+   * texels, the {@link TransformBuffer} row layout) - so it is copied whole. It
    * is deliberately NOT narrowed with `subarray()` first: this runs once per
    * moved node per frame, and a view per patch was the single largest per-node
    * allocation on the transform-patch path.
@@ -376,7 +376,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
     }
 
     // One logical row never straddles a texture line, so this stays a
-    // single-row texel span whatever the row's index — the O(k) patch keeps its
+    // single-row texel span whatever the row's index - the O(k) patch keeps its
     // upload size.
     const rect = transformTextureRect(this._transformLayout, localRow, 1, this._rectScratch);
 
@@ -390,7 +390,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
    * row live (Text on WebGL2, the confirmed ANGLE/D3D11 vertex-texel-fetch
    * workaround). Overwrite `floats.length` words at `wordOffset` in the
    * instance store and upload just that sub-range. Deliberately does NOT bump
-   * the generation — the recorded byte LAYOUT is unchanged, only the baked
+   * the generation - the recorded byte LAYOUT is unchanged, only the baked
    * position values move. Out-of-range writes are ignored (a stale patch after
    * a recapture shrank the store).
    */
@@ -456,7 +456,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
 
   /**
    * Drop all device-side resources and bump the generation. Called on GL
-   * context restore (the old handles died with the lost context) — every
+   * context restore (the old handles died with the lost context) - every
    * instruction set referencing this bundle stops validating and re-records,
    * recreating the resources against the restored context.
    */
@@ -519,7 +519,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   }
 
   /**
-   * Per-bundle buffer runtime — same shape as the sprite renderer's, with the
+   * Per-bundle buffer runtime - same shape as the sprite renderer's, with the
    * GL handle owned by this bundle so the buffer survives across frames.
    */
   private _createBufferRuntime(gl: WebGL2RenderingContext): WebGl2RenderBufferRuntime {
@@ -553,7 +553,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
   }
 
   /**
-   * Per-VAO runtime — one GL vertex-array handle per recorded batch, pointer
+   * Per-VAO runtime - one GL vertex-array handle per recorded batch, pointer
    * application identical to the sprite renderer's VAO runtime (version-gated
    * re-apply after `clear()` + attribute re-add on recapture).
    */
@@ -594,7 +594,7 @@ export class WebGl2RetainedGroupResources implements RetainedGroupBundle {
           // into this VAO is what lets replay use drawElements(Instanced).
           // Sprite/nine-slice/repeating VAOs have no index buffer, so this is a
           // no-op for them (drawArrays path). Each renderer's `addIndex` call
-          // stamps the matching element type (`vao.indexType`, read below) —
+          // stamps the matching element type (`vao.indexType`, read below) -
           // mesh's Uint16 geometry and Text's Uint32 glyph pattern share this
           // one runtime but never assume each other's width.
           vao.indexBuffer?.bind();

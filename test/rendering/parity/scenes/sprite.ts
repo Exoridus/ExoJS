@@ -1,7 +1,7 @@
 /**
  * Sprite scenes over a coordinate-encoding texture.
  *
- * Each is drawn 1:1 — one screen pixel per texel — so a sample point never
+ * Each is drawn 1:1 - one screen pixel per texel - so a sample point never
  * lands on a texel boundary and every output pixel has exactly one correct
  * source texel.
  */

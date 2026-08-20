@@ -7,7 +7,7 @@
  * go through the PUBLIC package specifier so the contracts cover exactly what
  * consumers see.
  *
- * The schema is a developer promise — there is no runtime validation — so these
+ * The schema is a developer promise - there is no runtime validation - so these
  * tests assert only the *static* narrowing of `properties` for byType / where
  * and the geometry discriminant narrowing for byKind, plus that the default
  * (un-schematised) form preserves the original untyped behaviour.
@@ -65,7 +65,7 @@ describe('ObjectLayer typed accessors (schema is opt-in)', () => {
 
   it('byType rejects a type key absent from the schema', () => {
     const layer = new ObjectLayer<LevelObjects>({ id: 1 });
-    // @ts-expect-error — 'enemy' is not a key of LevelObjects
+    // @ts-expect-error - 'enemy' is not a key of LevelObjects
     layer.byType('enemy');
   });
 

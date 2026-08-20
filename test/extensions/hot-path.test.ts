@@ -73,7 +73,7 @@ describe('hot-path spy tests', () => {
     for (let i = 0; i < 5; i++) {
       snapshots.push(buildSnapshot([]));
     }
-    // buildSnapshot([]) must not allocate per call — every app that
+    // buildSnapshot([]) must not allocate per call - every app that
     // selects nothing shares one frozen instance.
     const first = snapshots[0];
     for (const snap of snapshots.slice(1)) {

@@ -2,9 +2,9 @@
  * Runtime smoke test for the playground example catalog.
  *
  * For every entry in `examples/examples.json` this loads the example the same
- * way the playground does — through `preview.html` (which registers the
+ * way the playground does - through `preview.html` (which registers the
  * `@codexo/exojs` / `@examples/runtime` import map) with the example source
- * injected as a module script — and checks that it boots without an uncaught
+ * injected as a module script - and checks that it boots without an uncaught
  * runtime error and renders a `<canvas>`.
  *
  * It serves the built site (`site/dist`) over a throwaway static server, so it
@@ -74,7 +74,7 @@ const MIME: Record<string, string> = {
 };
 
 // Mirrors EditorPreview._isRecoverablePreviewError: backend-unsupported
-// failures are environment limits, not example bugs — they are skipped.
+// failures are environment limits, not example bugs - they are skipped.
 const RECOVERABLE = [
     // WebGL unsupported (Chromium + Firefox variants)
     'does not support webgl',
@@ -179,7 +179,7 @@ function captureErrors(): void {
 }
 
 async function detectWebGpu(browser: Browser, baseUrl: string): Promise<boolean> {
-    // Navigate to a real origin rather than about:blank — some Chromium builds
+    // Navigate to a real origin rather than about:blank - some Chromium builds
     // refuse to expose navigator.gpu on opaque origins.
     const page = await browser.newPage();
     try {
@@ -248,7 +248,7 @@ async function runExample(
                 const w = window as unknown as { __EXAMPLE_META__?: unknown; assets?: unknown };
                 w.__EXAMPLE_META__ = meta;
                 // Install the global typed asset catalog (resolved paths) before the
-                // example evaluates — examples use the `assets` global, not an import.
+                // example evaluates - examples use the `assets` global, not an import.
                 try {
                     const catalog = (await import('./assets/catalog.js')) as { assets?: unknown };
                     w.assets = catalog.assets ?? {};
@@ -356,7 +356,7 @@ async function main(): Promise<void> {
         });
     } else {
         // channel:'chromium' is required for the WebGPU adapter to be
-        // available in headless mode — without it Chromium's GPU process
+        // available in headless mode - without it Chromium's GPU process
         // does not initialize properly and requestAdapter() returns null.
         // This mirrors the browser-webgpu vitest project's launchOptions.
         //

@@ -6,7 +6,7 @@
 // The hash fragment is used so the site remains safe on GitHub Pages without
 // requiring server-side rewrites.  No `.js` suffix appears in the URL; it is
 // stripped on write and restored on read.  Slashes in the example path are
-// preserved as-is — no `%2F` encoding.
+// preserved as-is - no `%2F` encoding.
 
 const VERSION_STORAGE_KEY = 'exojs-examples:selected-version';
 
@@ -91,7 +91,7 @@ export function buildExampleHref(examplePath: string, versionId: string | null):
 }
 
 // Best-effort persistence of the user's last-picked version.  Defaults do not
-// get persisted — storage only records an explicit selection so wiping the
+// get persisted - storage only records an explicit selection so wiping the
 // key returns users to the latest-stable default.
 export function loadStoredVersion(): string | null {
     try {

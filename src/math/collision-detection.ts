@@ -308,7 +308,7 @@ const intersectionPolyPoly = (polygonA: Polygon, polygonB: Polygon): boolean => 
  * rectangles. Returns `null` when they do not overlap.
  *
  * `projectionN` is the unit normal of the minimum-penetration axis;
- * `projectionV` is the minimum-translation vector — moving `rectA` by
+ * `projectionV` is the minimum-translation vector - moving `rectA` by
  * `projectionV` separates the two rectangles with the smallest possible
  * displacement.
  */
@@ -324,7 +324,7 @@ const getCollisionRectangleRectangle = (rectA: Rectangle, rectB: Rectangle): Col
   const overlapX = Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left);
   const overlapY = Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top);
 
-  // Pick the axis with the smaller overlap as the MTV — pushing along that
+  // Pick the axis with the smaller overlap as the MTV - pushing along that
   // axis separates the rectangles with the least displacement. Sign is
   // determined by whether rectB's center is right/below or left/above of
   // rectA's center.
@@ -499,7 +499,7 @@ const getCollisionEllipseRectangle = (ellipse: Ellipse, rect: Rectangle, swap = 
     const boundary = 1 / Math.sqrt((normalX * normalX) / (ellipse.rx * ellipse.rx) + (normalY * normalY) / (ellipse.ry * ellipse.ry));
     overlap = boundary - distance;
   } else {
-    // Ellipse center is inside the rect — push along the smaller exit
+    // Ellipse center is inside the rect - push along the smaller exit
     // axis and use the corresponding ellipse half-radius as the overlap
     // contribution.
     const exitLeft = ellipse.x - rect.left;
@@ -561,7 +561,7 @@ const getCollisionEllipseCircle = (ellipse: Ellipse, circle: Circle, swap = fals
     const ellipseBoundary = 1 / Math.sqrt((normalX * normalX) / (ellipse.rx * ellipse.rx) + (normalY * normalY) / (ellipse.ry * ellipse.ry));
     overlap = ellipseBoundary + circle.radius - distance;
   } else {
-    // Coincident centers — use the smaller ellipse axis as the push direction.
+    // Coincident centers - use the smaller ellipse axis as the push direction.
     if (ellipse.rx <= ellipse.ry) {
       normalX = 1;
       normalY = 0;
@@ -712,7 +712,7 @@ const getCollisionPolygonCircle = (polygon: Polygon, circle: Circle, swap = fals
  * ellipse's exact boundary distance along that direction via the formula
  * `sqrt((nx·rx)² + (ny·ry)²)`.  This is exact when the minimum-penetration
  * axis coincides with the centre axis (e.g. circles, concentric ellipses) and
- * a good approximation otherwise — equivalent in quality to the axis-projection
+ * a good approximation otherwise - equivalent in quality to the axis-projection
  * approach used for ellipse-vs-circle and ellipse-vs-rectangle.
  */
 const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): CollisionResponse | null => {
@@ -733,7 +733,7 @@ const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): Colli
     const boundaryB = Math.sqrt((normalX * ellipseB.rx) ** 2 + (normalY * ellipseB.ry) ** 2);
     overlap = boundaryA + boundaryB - distance;
   } else {
-    // Coincident centres — push along the smaller axis of ellipseA
+    // Coincident centres - push along the smaller axis of ellipseA
     if (ellipseA.rx <= ellipseA.ry) {
       normalX = 1;
       normalY = 0;
@@ -766,8 +766,8 @@ const getCollisionEllipseEllipse = (ellipseA: Ellipse, ellipseB: Ellipse): Colli
  * edge normals from both shapes and computes the minimum-translation axis.
  * Returns `null` when they do not overlap.
  *
- * `projectionN` points from `shapeA` toward `shapeB` — the same orientation the
- * shape-specific responses use — so moving `shapeB` by `projectionV`, or
+ * `projectionN` points from `shapeA` toward `shapeB` - the same orientation the
+ * shape-specific responses use - so moving `shapeB` by `projectionV`, or
  * `shapeA` by its negation, pulls the pair apart.
  */
 const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionResponse | null => {
@@ -782,7 +782,7 @@ const getCollisionSat = (shapeA: Collidable, shapeB: Collidable): CollisionRespo
   let overlap = Infinity;
   // Edge normals only describe an axis orientation, never a side: a shape hands
   // out both `n` and `-n`, so the winning axis on its own cannot tell where
-  // shapeB sits and mirrored layouts collapse onto one direction — pushing one
+  // shapeB sits and mirrored layouts collapse onto one direction - pushing one
   // of the two pairs deeper instead of apart. Record whether the chosen axis has
   // to be flipped to keep pointing from shapeA toward shapeB, deciding by
   // projection midpoint (kept doubled as `min + max` to skip the halving).

@@ -5,7 +5,7 @@ import { RenderPlanBuilder } from './RenderPlanBuilder';
 import { RenderPlanOptimizer } from './RenderPlanOptimizer';
 import { RenderPlanPlayer } from './RenderPlanPlayer';
 
-/** @internal — single source of truth for plan build→optimize→play. */
+/** @internal - single source of truth for plan build→optimize→play. */
 export function playRenderTree(node: RenderNode, backend: RenderBackend): void {
   const builder = RenderPlanBuilder.acquire();
 

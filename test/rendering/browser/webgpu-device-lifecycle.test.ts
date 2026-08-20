@@ -1,14 +1,14 @@
 /**
- * WebGPU device-lifecycle regression tests — real adapter, real devices.
+ * WebGPU device-lifecycle regression tests - real adapter, real devices.
  *
  * A `GPUDevice` is backed by a driver-side device (on D3D12: a command queue)
- * and the driver keeps only a small number of them alive at once — measured at
+ * and the driver keeps only a small number of them alive at once - measured at
  * 64 on the Windows/D3D12 machine this regression was found on, after which
  * `requestDevice()` rejects with
  * `D3D12 create command queue failed with E_OUTOFMEMORY`. Dropping the last JS
  * reference merely makes the wrapper collectable, so before `destroy()`
  * released the device explicitly the whole browser lane depended on garbage
- * collection running often enough — which is exactly why it failed
+ * collection running often enough - which is exactly why it failed
  * intermittently across files while every file passed in isolation.
  *
  * The cycle test therefore keeps every device wrapper referenced: garbage
@@ -76,7 +76,7 @@ const createBackend = async (): Promise<WebGpuBackend> => {
 describe('WebGPU device lifecycle', () => {
   test('destroy() releases the device without relying on garbage collection', { timeout: 300_000 }, async () => {
     const scene = buildScene();
-    // Holding these is the point of the test — see the file header.
+    // Holding these is the point of the test - see the file header.
     const devices: GPUDevice[] = [];
 
     for (let cycle = 0; cycle < cycles; cycle++) {
@@ -119,7 +119,7 @@ describe('WebGPU device lifecycle', () => {
     expect((await device.lost).reason).toBe('destroyed');
 
     // Recovery would re-request an adapter and dispatch onDeviceRestored (or,
-    // once every retry failed, an onRenderError) — neither may happen for a
+    // once every retry failed, an onRenderError) - neither may happen for a
     // teardown the caller asked for.
     await new Promise<void>(resolve => {
       setTimeout(resolve, 250);

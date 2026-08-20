@@ -11,7 +11,7 @@ export type SceneTransitionOperation = 'change' | 'restore' | 'unload';
 
 /**
  * Immutable, read-only description of the navigation a {@link SceneTransition}
- * is being asked to run for — passed to {@link SceneTransition.getRequirements}
+ * is being asked to run for - passed to {@link SceneTransition.getRequirements}
  * and into the {@link SceneTransitionEnvironment} handed to
  * {@link SceneTransition.beginSession}. Never mutates over a session's
  * lifetime; construct a fresh one per navigation.
@@ -38,7 +38,7 @@ export interface SceneTransitionRequirements {
 
 /**
  * Handed to {@link SceneTransition.beginSession}. `commitRequested`/`committed`
- * are live views — they reflect state at read time, not a snapshot taken when
+ * are live views - they reflect state at read time, not a snapshot taken when
  * this object was constructed.
  */
 export interface SceneTransitionEnvironment {
@@ -49,10 +49,10 @@ export interface SceneTransitionEnvironment {
   readonly committed: boolean;
   /**
    * Request the scene switch. May be called synchronously from
-   * `createSession()`, `update()`, or `render()`. Exactly once per session —
+   * `createSession()`, `update()`, or `render()`. Exactly once per session -
    * a second call is a dev-mode lifecycle error ({@link SceneTransitionLifecycleError},
    * reason `'commit-reentrant'`) and a production no-op. Never swaps the
-   * active scene reentrantly from inside the caller's own callback — the
+   * active scene reentrantly from inside the caller's own callback - the
    * Director processes the actual switch only after the current callback
    * has fully returned control.
    */
@@ -64,7 +64,7 @@ export interface SceneTransitionEnvironment {
  * See each field below for the exact non-null conditions it holds under.
  */
 export interface SceneTransitionFrame {
-  /** Non-null only when `outgoingFrame: 'snapshot'` was requested and an outgoing scene existed. The same texture for the entire session — never reallocated mid-session. Borrowed — do not retain or destroy it. */
+  /** Non-null only when `outgoingFrame: 'snapshot'` was requested and an outgoing scene existed. The same texture for the entire session - never reallocated mid-session. Borrowed - do not retain or destroy it. */
   readonly outgoing: RenderTexture | null;
   /** Non-null only when `currentFrame: 'texture'` was requested and there is a live surface to show. Before commit: the outgoing scene. After commit: the incoming scene, or `null` for an unload with no incoming scene. */
   readonly current: RenderTexture | null;
@@ -73,7 +73,7 @@ export interface SceneTransitionFrame {
 }
 
 /**
- * One navigation's worth of mutable transition state — created fresh per
+ * One navigation's worth of mutable transition state - created fresh per
  * navigation by {@link SceneTransition.beginSession}, driven by the Director
  * until {@link SceneTransitionSession.done}, then destroyed. Never reused
  * across navigations.
@@ -92,7 +92,7 @@ export interface SceneTransitionSession {
 }
 
 /**
- * Reusable, immutable transition definition — construct once, use across
+ * Reusable, immutable transition definition - construct once, use across
  * arbitrarily many navigations (even concurrently, across multiple
  * `Application`s). All per-navigation mutable state lives on the
  * {@link SceneTransitionSession} a call to {@link SceneTransition.beginSession}
@@ -104,7 +104,7 @@ export abstract class SceneTransition {
   public abstract getRequirements(context: SceneTransitionContext): SceneTransitionRequirements;
 
   /**
-   * Called by the Director — do not call directly. Dispatches to
+   * Called by the Director - do not call directly. Dispatches to
    * {@link SceneTransition.createSession}, which is `protected` so it does
    * not clutter a beginner's view of a transition subclass while still being
    * callable from Director code that does not share this class's hierarchy.
@@ -120,14 +120,14 @@ export abstract class SceneTransition {
 /**
  * Thrown when a {@link SceneTransitionSession} or {@link SceneTransitionEnvironment}
  * violates the transition lifecycle contract:
- * - `'commit-reentrant'` — {@link SceneTransitionEnvironment.commit} was called
+ * - `'commit-reentrant'` - {@link SceneTransitionEnvironment.commit} was called
  *   a second time on the same session. Dev-mode only; a production build
  *   no-ops the second call instead of throwing.
- * - `'done-before-commit'` — the session reported {@link SceneTransitionSession.done}
+ * - `'done-before-commit'` - the session reported {@link SceneTransitionSession.done}
  *   `true` while {@link SceneTransitionEnvironment.committed} was still
- *   `false`. Always thrown, dev and production — the navigation aborts and
+ *   `false`. Always thrown, dev and production - the navigation aborts and
  *   the session is destroyed.
- * - `'aborted'` — the owning `SceneDirector` was destroyed while this
+ * - `'aborted'` - the owning `SceneDirector` was destroyed while this
  *   session was still active. Always thrown.
  */
 export class SceneTransitionLifecycleError extends Error {

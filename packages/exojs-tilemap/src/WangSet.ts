@@ -7,9 +7,9 @@ export interface WangSetOptions {
   /**
    * Map from Wang bitmask to local tile ID within the tileset.
    *
-   * For blob mode (8-neighbor), keys are 0–255; the 47 valid combinations
+   * For blob mode (8-neighbor), keys are 0-255; the 47 valid combinations
    * of the blob encoding must be covered at minimum.
-   * For edge mode (4-neighbor), keys are 0–15.
+   * For edge mode (4-neighbor), keys are 0-15.
    *
    * Accepts either a {@link ReadonlyMap} or a plain `Record<number, number>`.
    */
@@ -23,7 +23,7 @@ export interface WangSetOptions {
    * Membership is what {@link autoTile} / `refreshCell` use to decide whether a
    * neighbouring cell is "part of the terrain". Because every value in
    * `blobMap` is itself a member, group membership stays stable no matter which
-   * variant a cell currently shows — that is what makes incremental
+   * variant a cell currently shows - that is what makes incremental
    * `refreshCell` correct. Add the *base* tile ID you paint with here if it is
    * not already one of the blobMap variants.
    */
@@ -45,7 +45,7 @@ export interface WangSetOptions {
  * - Bit 7 (128): Bottom-right
  *
  * Diagonal (corner) bits are only set when both adjacent cardinal directions
- * are also set — reducing 256 raw combinations to 47 meaningful blob states.
+ * are also set - reducing 256 raw combinations to 47 meaningful blob states.
  *
  * Edge bitmask bit layout:
  * - Bit 0 (1): Top

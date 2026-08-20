@@ -38,7 +38,7 @@ export interface GridLayout {
   readonly cellHeight: number;
 }
 
-/** A world-space point — the camera centre, or one leaf's resting position. */
+/** A world-space point - the camera centre, or one leaf's resting position. */
 export interface WorldPoint {
   /** World-space x coordinate. */
   readonly x: number;
@@ -101,7 +101,7 @@ export const worldExtent = (spec: ArchetypeSpec, viewportWidth: number, viewport
  * Triangle wave: `value` folded back and forth inside `[0, span]`.
  *
  * A reflecting path rather than a wrapping one, because a wrap teleports the
- * camera by a full span in one frame — a single frame of total re-collection
+ * camera by a full span in one frame - a single frame of total re-collection
  * that has nothing to do with the scroll rate under study. Reflection keeps the
  * speed constant and the path continuous, so the only discontinuity in the whole
  * run is the direction flip at each wall.
@@ -124,8 +124,8 @@ const reflect = (value: number, span: number): number => {
  * having to synchronise any state.
  *
  * The camera travels the diagonal at {@link ArchetypeSpec.cameraSpeed} world
- * units per frame — equal per-axis components of a unit diagonal, so the SPEED
- * is the archetype's parameter, not the per-axis rate — and reflects off the
+ * units per frame - equal per-axis components of a unit diagonal, so the SPEED
+ * is the archetype's parameter, not the per-axis rate - and reflects off the
  * world edges. The two axes have different travel spans whenever the viewport is
  * not square (1280x720 gives 1280 and 720), so the reflections desync and the
  * path never degenerates into retracing one line.
@@ -149,7 +149,7 @@ export const cameraCenterAt = (spec: ArchetypeSpec, frame: number, viewportWidth
 };
 
 /**
- * Number of leaves whose quad intersects the view rect at `frame` — the
+ * Number of leaves whose quad intersects the view rect at `frame` - the
  * archetype's on-screen node count, computed from the same layout and camera
  * path the adapters use.
  *

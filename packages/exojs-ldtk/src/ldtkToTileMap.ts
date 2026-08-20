@@ -32,7 +32,7 @@ export interface LdtkToTileMapOptions {
    *
    * When provided, tile layers are populated with tile data from
    * `gridTiles` / `autoLayerTiles`. Without this map, tile layers are created
-   * with the correct dimensions but no tiles are placed — only entity and
+   * with the correct dimensions but no tiles are placed - only entity and
    * object layers carry data.
    *
    * Populate via {@link import('./loadLdtkMap').loadLdtkMap} for asset-loading
@@ -46,7 +46,7 @@ export interface LdtkToTileMapOptions {
  * one runtime {@link TileMap} per LDtk level.
  *
  * Tile layers (`Tiles` / `AutoLayer`) become renderable `TileLayer`s. IntGrid
- * layers become dimension-correct `TileLayer`s — tile data is placed only when
+ * layers become dimension-correct `TileLayer`s - tile data is placed only when
  * the layer carries `autoLayerTiles`. Entity layers become data-only
  * `ObjectLayer`s with entity position, size, and scalar field properties.
  *
@@ -54,7 +54,7 @@ export interface LdtkToTileMapOptions {
  * conversion (useful in unit tests that do not need textures).
  *
  * Transparently handles both LDtk root shapes via {@link getLdtkLevelEntries}:
- * single-world (`data.levels`) and multi-world (`data.worlds[].levels`) — in
+ * single-world (`data.levels`) and multi-world (`data.worlds[].levels`) - in
  * the latter case every converted level's `TileMap.properties` is additionally
  * tagged with its owning world's iid under the reserved `ldtkWorldIid` key.
  */
@@ -93,7 +93,7 @@ function convertLevel(
 
   for (const layerInst of layerInstances) {
     // Layer IDs must be unique within a TileMap (= one level).
-    // Use layerDefUid directly — it is unique per layer definition in the file.
+    // Use layerDefUid directly - it is unique per layer definition in the file.
     const layerId = layerInst.layerDefUid;
     const parallax = resolveLdtkLayerParallax(data, layerInst);
 
@@ -125,7 +125,7 @@ function convertLevel(
     objectLayers: runtimeObjectLayers,
     // Convert user-defined level fields first, then apply the reserved keys
     // last so a same-named user field can never clobber them. ldtkWorldIid is
-    // only added for multi-world documents (worldIid !== undefined) — a
+    // only added for multi-world documents (worldIid !== undefined) - a
     // single-world document's properties must stay exactly as they were
     // before multi-world support existed.
     properties: {
@@ -274,7 +274,7 @@ export const ldtkIntGridCsvProperty = 'ldtkIntGridCsv';
 /**
  * Reserved {@link TileLayer.properties} key holding the JSON-encoded
  * {@link LdtkIntGridValueDef} array for a `TileLayer` converted from an LDtk
- * `IntGrid` layer instance — the raw-int → named/coloured mapping declared on
+ * `IntGrid` layer instance - the raw-int → named/coloured mapping declared on
  * the owning layer definition (`data.defs.layers[].intGridValues`).
  * Prefer {@link getLdtkIntGridValueAt} over reading this directly.
  */
@@ -287,7 +287,7 @@ export const ldtkIntGridValuesProperty = 'ldtkIntGridValues';
  *
  * {@link TileLayer.properties} values are scalar-only, so the raw CSV array
  * and the value-definition mapping are JSON-encoded into two reserved string
- * properties rather than stored as nested structures — the same
+ * properties rather than stored as nested structures - the same
  * `properties`-bag mechanism the Tiled adapter already uses for per-layer
  * metadata, just serialized to fit its scalar-only value type.
  */
@@ -319,7 +319,7 @@ interface ParsedIntGridData {
  *
  * Keyed by the `TileLayer` instance itself (`WeakMap`), so an entry is
  * naturally garbage-collected once the layer it was derived from is no
- * longer referenced — no manual invalidation needed since
+ * longer referenced - no manual invalidation needed since
  * {@link TileLayer.properties} is frozen and copied at construction time and
  * can never change afterwards.
  */
@@ -356,7 +356,7 @@ function getParsedIntGridData(layer: TileLayer): ParsedIntGridData | undefined {
  * via {@link ldtkIntGridCsvProperty} / {@link ldtkIntGridValuesProperty}).
  *
  * The underlying JSON-encoded CSV/value-defs properties are parsed once per
- * layer and cached (see {@link getParsedIntGridData}) — safe to call from a
+ * layer and cached (see {@link getParsedIntGridData}) - safe to call from a
  * hot path (e.g. per-cell or per-frame collision/classification checks).
  */
 export function getLdtkIntGridValueAt(
@@ -366,7 +366,7 @@ export function getLdtkIntGridValueAt(
 ): LdtkIntGridValueDef | undefined {
   // `inBounds()` is unconditionally true for an unbounded layer (it has no
   // fixed grid to be out of), but the flat IntGrid CSV this function reads
-  // is inherently a bounded-grid concept — LDtk itself only ever produces
+  // is inherently a bounded-grid concept - LDtk itself only ever produces
   // bounded layers today, but `layer` is typed generically, so guard here
   // rather than let `layer.width` narrow away from `number | undefined`.
   if (!layer.inBounds(x, y) || layer.width === undefined) return undefined;
@@ -404,7 +404,7 @@ function convertEntityLayer(
 
 function convertEntity(entity: LdtkEntityInstance, id: number): TileMapObject {
   // entity.px is the pivot-adjusted anchor, not the bounding box's top-left
-  // corner — undo the pivot offset to recover the corner TileMapObject expects.
+  // corner - undo the pivot offset to recover the corner TileMapObject expects.
   const x = entity.px[0] - entity.width * entity.__pivot[0];
   const y = entity.px[1] - entity.height * entity.__pivot[1];
   return {
@@ -536,7 +536,7 @@ function mapLdtkFieldValue(typeName: string, value: unknown): TilePropertyValue 
 
     default:
       // Unknown/unsupported array element type (e.g. a future LDtk type
-      // inside Array<T>) — skip rather than throw, since this path is not
+      // inside Array<T>) - skip rather than throw, since this path is not
       // compiler-exhaustive (element types are plain runtime strings).
       return undefined;
   }

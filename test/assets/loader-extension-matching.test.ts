@@ -77,7 +77,7 @@ describe('compound extension matching', () => {
     expectTypeOf<KindByPath<'assets/v1.2/ship.png'>>().toEqualTypeOf<'texture'>();
     // Compound key wins over its shorter suffix.
     expectTypeOf<KindByPath<'hero.mock.json'>>().toEqualTypeOf<'json'>();
-    // A non-leaf resource type has no bare-path inference — name it with Asset.type().
+    // A non-leaf resource type has no bare-path inference - name it with Asset.type().
     expectTypeOf<KindByPath<'fonts/ui.fnt'>>().toEqualTypeOf<never>();
     // Unregistered suffix resolves to never → LeafForPath falls back to unknown.
     expectTypeOf<KindByPath<'theme.custom'>>().toEqualTypeOf<never>();

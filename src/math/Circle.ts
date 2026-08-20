@@ -167,7 +167,7 @@ export class Circle implements ShapeLike {
   /**
    * Returns the edge normals for the approximated collision polygon.
    *
-   * The returned array is cached and reused across calls — the same array
+   * The returned array is cached and reused across calls - the same array
    * reference is returned on consecutive calls when nothing has changed.
    * This matches the `Sprite.getNormals()` behaviour introduced in 0.6.19.
    *

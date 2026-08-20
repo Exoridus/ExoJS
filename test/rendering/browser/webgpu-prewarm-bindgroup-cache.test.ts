@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 /**
- * WebGPU prewarm + flush-path caching for the instanced/text renderers — real
+ * WebGPU prewarm + flush-path caching for the instanced/text renderers - real
  * device. Companion to the structural Node tests in
  * test/rendering/webgpu-instanced-flush-caching.test.ts and the prewarm
  * cache-key tests in test/rendering/webgpu-pipeline-prewarm.test.ts, this suite
@@ -12,7 +12,7 @@
  *   non-empty pipeline cache (prewarm compiled the no-clip variants), and
  * - a second, byte-identical static frame creates ZERO new GPU bind groups for
  *   the nine-slice / repeating texture group(1) and issues ZERO projection
- *   (FrameUniforms) writes for text — while still drawing and passing WebGPU
+ *   (FrameUniforms) writes for text - while still drawing and passing WebGPU
  *   validation.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
@@ -54,7 +54,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
   const backend = new WebGpuBackend(makeApp(canvas));
 
   // Register the core renderers BEFORE initialize (as Application.createBackend
-  // does in production) so the init-path pipeline prewarm actually covers them —
+  // does in production) so the init-path pipeline prewarm actually covers them -
   // wiring after initialize would run prewarm against an empty registry.
   wireCoreRenderers(backend);
   await backend.initialize();

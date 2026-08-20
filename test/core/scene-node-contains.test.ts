@@ -8,7 +8,7 @@ import { SceneNode } from '#core/SceneNode';
 // node.contains (broad phase stays AABB via the quadtree), this over-reported
 // picks on rotated nodes. contains() now maps the point into local space with
 // the inverse of the global transform and tests the untransformed local bounds
-// — a true oriented-box test — while keeping the cheap AABB path for
+// - a true oriented-box test - while keeping the cheap AABB path for
 // axis-aligned nodes.
 
 /** A SceneNode with a fixed 100x40 local-space rectangle for hit testing. */

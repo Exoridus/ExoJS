@@ -16,7 +16,7 @@ export function configureUrls(config: { baseUrl: string; iframeUrl?: string; pub
 
 // Derive the site base URL (origin + base path) from the current location by
 // stripping everything from the locale segment (`en`/`de`) onward, so URL
-// builders resolve correctly on any page — not only where an ExampleBrowser
+// builders resolve correctly on any page - not only where an ExampleBrowser
 // has already configured them. Falls back to `fallbackBase` when no locale
 // segment is present (or there is no `window`, e.g. during SSR).
 export function resolveSiteBaseUrl(fallbackBase = '/'): string {
@@ -37,7 +37,7 @@ export function resolveSiteBaseUrl(fallbackBase = '/'): string {
 }
 
 // Configure the URL builders with the standard playground layout, resolving the
-// base URL from the current location. Idempotent — safe to call from every
+// base URL from the current location. Idempotent - safe to call from every
 // component that embeds a live preview (ExampleBrowser, GuideExamplePreview),
 // so a preview works whether or not another host has configured URLs first.
 export function configureUrlsFromLocation(fallbackBase = '/'): void {
@@ -81,7 +81,7 @@ export function buildExampleUrl(path: string, params?: UrlParams): string {
 // Resolves to the example source on raw.githubusercontent.com at the matching
 // release tag (e.g. v0.5.1). Used for non-current versions; the current
 // development build is served locally via `buildExampleUrl`. The repo root
-// path is hardcoded — it has not changed since the project's pre-1.0 line and
+// path is hardcoded - it has not changed since the project's pre-1.0 line and
 // changing it would be a deliberate architectural move.
 export function buildGithubRawExampleUrl(versionId: string, filePath: string, params?: UrlParams): string {
     const url = new URL(`https://raw.githubusercontent.com/Exoridus/ExoJS/v${versionId}/examples/${filePath}`);

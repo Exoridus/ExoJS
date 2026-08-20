@@ -15,7 +15,7 @@ class TypeA {}
 
 const fakeLoader = {} as Loader;
 
-/** Binds TypeA to a bindAsset handler whose load() routes through context.fetchText — the
+/** Binds TypeA to a bindAsset handler whose load() routes through context.fetchText - the
  * replacement for the removed `register()`-based factory path used to make a bare
  * constructor "loadable" for these AssetResidency-level tests. */
 function bindTypeA(typeRegistry: AssetTypeRegistry): void {
@@ -122,7 +122,7 @@ describe('AssetResidency', () => {
       expect(residency._peekResource(canonical(TypeA, 'a.png').key)).toBeNull();
 
       // The first `_getSeamless(...)` call above already started (and completed) a
-      // fetch, so `requests` is already non-empty by this point — snapshot the count
+      // fetch, so `requests` is already non-empty by this point - snapshot the count
       // right before the re-claim so the assertion below can only pass if the
       // re-claim itself drove a NEW fetch, not just the original one.
       const requestsBeforeReclaim = requests.length;
@@ -242,7 +242,7 @@ describe('AssetResidency', () => {
 
       expect(stored).toBe(handleA);
       expect(adapter.fill).toHaveBeenCalledWith(handleB, donor);
-      // The signals boundary — onLoaded dispatches with the REPRESENTATIVE handle
+      // The signals boundary - onLoaded dispatches with the REPRESENTATIVE handle
       // (handleA), the same value _storeResource returned above, not the raw donor.
       expect(onLoaded.dispatch).toHaveBeenCalledWith(TypeA, 'a.png', handleA);
     });
@@ -305,7 +305,7 @@ describe('AssetResidency', () => {
 
       expect(requests).toHaveLength(1);
       expect(residency._peekResource(canonical(TypeA, 'bg.png').key)).toBe('bg-value');
-      // The signals boundary — onProgress dispatches the (loaded, total) counts as
+      // The signals boundary - onProgress dispatches the (loaded, total) counts as
       // the single queued entry completes.
       expect(onProgress.dispatch).toHaveBeenCalledWith(1, 1);
     });

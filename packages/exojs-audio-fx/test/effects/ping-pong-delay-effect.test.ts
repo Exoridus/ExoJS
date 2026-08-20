@@ -196,7 +196,7 @@ describe('PingPongDelayEffect', () => {
       const ctx = getAudioContext();
       const { inputGain, delayL, delayR, gainSpy, delaySpy, pannerSpy } = wireAll(ctx);
       const effect = new PingPongDelayEffect();
-      // Input must seed only the left delay — symmetric seeding collapses L/R to identical mono
+      // Input must seed only the left delay - symmetric seeding collapses L/R to identical mono
       expect(inputGain.connect).toHaveBeenCalledWith(delayL);
       expect(inputGain.connect).not.toHaveBeenCalledWith(delayR);
       effect.destroy();

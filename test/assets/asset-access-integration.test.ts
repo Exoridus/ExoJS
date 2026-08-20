@@ -35,7 +35,7 @@ const mockFetchMixed = (jsonPayload: unknown): void => {
 // End-to-end acceptance gate for the S2 asset-access surface: bare-string
 // inference + Asset.type() descriptors in Assets.from, loader-free usable leaves, the
 // status channel, heal-in-place on adopt+load, and bare-path get() for a value
-// kind — all together on one loader.
+// kind - all together on one loader.
 describe('S2 asset-access surface (integration)', () => {
   beforeEach(() => {
     vi.stubGlobal(
@@ -56,7 +56,7 @@ describe('S2 asset-access surface (integration)', () => {
       level: Asset.type<{ hp: number }>('json', 'levels/1.json'), // .of → AssetRef
     });
 
-    // Constructed in a field-initializer position — NO loader involved yet.
+    // Constructed in a field-initializer position - NO loader involved yet.
     expect(assets.ship).toBeInstanceOf(Texture);
     expect(assets.config).toBeInstanceOf(AssetRef);
     expect(assets.level).toBeInstanceOf(AssetRef);
@@ -84,7 +84,7 @@ describe('S2 asset-access surface (integration)', () => {
     await assets.ship.loaded;
     await assets.level.loaded;
 
-    // Same object, now ready — healed in place, not replaced.
+    // Same object, now ready - healed in place, not replaced.
     expect(assets.ship).toBe(ship);
     expect(assets.ship.state).toBe('ready');
     expect(assets.ship.ready).toBe(true);

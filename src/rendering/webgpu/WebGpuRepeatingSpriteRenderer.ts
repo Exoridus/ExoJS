@@ -30,7 +30,7 @@ import geoPathEntriesModule from './wgsl/repeating-sprite-geo-path.wgsl';
 import shaderPathEntriesModule from './wgsl/repeating-sprite-shader-path.wgsl';
 
 // ---------------------------------------------------------------------------
-// Shared WGSL declarations — structs, bindings, and output struct used by
+// Shared WGSL declarations - structs, bindings, and output struct used by
 // both the shader path and the geometry path entry points.
 // ---------------------------------------------------------------------------
 
@@ -38,14 +38,14 @@ import shaderPathEntriesModule from './wgsl/repeating-sprite-shader-path.wgsl';
 export const commonWgsl: string = commonWgslModule;
 
 // ---------------------------------------------------------------------------
-// Shader path WGSL — one quad per sprite, UVs computed in vertex shader.
+// Shader path WGSL - one quad per sprite, UVs computed in vertex shader.
 // ---------------------------------------------------------------------------
 
 /** WGSL entry points for the shader (one-quad-per-sprite) repeating-sprite path. @internal */
 export const shaderPathEntries: string = shaderPathEntriesModule;
 
 // ---------------------------------------------------------------------------
-// Geometry path WGSL — N quads per sprite, UVs pre-computed in CPU.
+// Geometry path WGSL - N quads per sprite, UVs pre-computed in CPU.
 // ---------------------------------------------------------------------------
 
 /** WGSL entry points for the geometry (N-quads-per-sprite) repeating-sprite path. @internal */
@@ -82,7 +82,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
    * renderer's batch shape exactly, so it records and replays through the
    * same generalized seam. The SHADER path (bare Texture source) uses a
    * distinct 40-byte stride AND a per-batch wrap-mode sampler that the
-   * generalized instruction payload carries no metadata for — a shader-path
+   * generalized instruction payload carries no metadata for - a shader-path
    * draw inside a capture window POISONS it instead, degrading the group to
    * the (correct) entry-replay tier rather than replaying with the wrong
    * sampler. Pixel-snapped draws are excluded for the same reason the sprite
@@ -92,7 +92,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   public readonly _supportsRetainedBatches = true;
 
   /**
-   * Veto the SHADER path at collect time — `resolvedStrategy` is derived from
+   * Veto the SHADER path at collect time - `resolvedStrategy` is derived from
    * the source type alone, so it is decidable per drawable, and a shader-path
    * draw would otherwise poison the capture on every frame for a recording the
    * group can never use.
@@ -111,7 +111,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
   private readonly _projData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   // Projection-uniform skip state: a matching (view identity, view.updateId,
   // group-matrix content) triple means the shared UBO already holds this
-  // flush's projection, so the 128-byte write is skipped — static frames issue
+  // flush's projection, so the 128-byte write is skipped - static frames issue
   // zero projection uploads. Mirrors the sprite renderer's redundant-write skip.
   private _writtenView: View | null = null;
   private _writtenViewUpdateId = -1;
@@ -140,7 +140,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
   // Frame-scoped append arena shared by both paths: a single flush only ever
   // draws one path (render() flushes on a path change), so consecutive batch
-  // flushes accumulate into one open pass at distinct byte offsets — the frame
+  // flushes accumulate into one open pass at distinct byte offsets - the frame
   // submits once instead of once per flush. CPU staging stays per-path (the two
   // layouts differ in stride).
   private readonly _instanceArena = new WebGpuPassArena('repeating-sprite:instance-buffer', initialBatchCapacity * shaderStrideBytes);
@@ -293,7 +293,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     // cannot change after that verdict was cached (readonly source), so this is
     // unreachable through the public API and stays only as a structural safety
     // net: were it to fire, a shader-path draw inside an active capture window
-    // cannot be replayed from group-owned resources, so poison the window — the
+    // cannot be replayed from group-owned resources, so poison the window - the
     // group falls back to entry replay (correct, never stale) instead of a
     // replay missing the wrap-mode sampler. Both pixel-snap modes are resolved
     // in-shader and stay recordable.
@@ -449,7 +449,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     // ProjectionUniforms layout: mat4x4 projection + mat4x4 group + vec4 snap
     // viewport, packed via the shared canonical (non-transposed) column order.
     // The write is skipped when the UBO already holds this exact (view,
-    // updateId, group bytes, snap-rect) state — static frames then issue zero
+    // updateId, group bytes, snap-rect) state - static frames then issue zero
     // projection uploads.
     const view = backend.view;
     const viewportChanged = packSnapViewport(backend, this._projData, 32);
@@ -494,7 +494,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
       // Resolving the transform storage may reallocate (and free) its GPU buffer;
       // end the pass first when earlier batches in it still reference the old
-      // one — again from any renderer sharing this pass, not only ours.
+      // one - again from any renderer sharing this pass, not only ours.
       if (coordinator.passHasDraws && backend._transformStorageWouldGrow(needCount)) {
         active = this._reopenPass(coordinator);
       }
@@ -610,7 +610,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     backend.stats.drawCalls++;
 
     // Retained recording: while a capture window is open,
-    // hand the exact packed geometry-path bytes of this flush to the backend —
+    // hand the exact packed geometry-path bytes of this flush to the backend -
     // byte-identical to what just drew. A single base texture binds to group(1),
     // so the recorded slot list is one entry. Shader-path batches never reach
     // here (render() poisoned the window if one appeared).
@@ -633,8 +633,8 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
   // Only geometry-path batches ever reach here (see _supportsRetainedBatches).
-  // Their 32-byte (8-word) layout puts the node index at word 7 — the same
-  // position WebGpuSpriteRenderer uses — so scan/rebase mirror it exactly.
+  // Their 32-byte (8-word) layout puts the node index at word 7 - the same
+  // position WebGpuSpriteRenderer uses - so scan/rebase mirror it exactly.
 
   /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
   public _scanRetainedNodeIndexRange(bytes: Uint8Array, range: WebGpuRetainedNodeIndexRange): void {
@@ -668,7 +668,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
    * Replay one recorded geometry-path batch from its group-owned bundle into
    * the OPEN pass. All STATE is resolved live (pipeline via the existing
    * `_getPipeline('geo', ...)` cache, texture bind group(1) via the existing
-   * texture-bind-group cache — resolving re-syncs dirty texture content, the
+   * texture-bind-group cache - resolving re-syncs dirty texture content, the
    * group's 128-byte UBO written only when its content changed) and only DATA
    * is cached (instance bytes, group transform storage). Mirrors
    * {@link WebGpuSpriteRenderer._replayRecordedSpriteBatch}.
@@ -683,7 +683,7 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
       return;
     }
 
-    // Drain any pending live batch into the open pass first (defensive — the
+    // Drain any pending live batch into the open pass first (defensive - the
     // group boundary already flushed; flush() never ends the pass on the geo
     // default path and guards its own shared-UBO hazards).
     this.flush();
@@ -715,8 +715,8 @@ export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<Repeat
     }
 
     // In-bounds: the geometry path records exactly one base texture (slot 0).
-    // Geometry path uses the backend's default (clamp) sampler — same as the
-    // live flush — so resolving through getTextureBinding reuses the live cache.
+    // Geometry path uses the backend's default (clamp) sampler - same as the
+    // live flush - so resolving through getTextureBinding reuses the live cache.
     const texture = payload.textures[0]!;
     const binding = backend.getTextureBinding(texture);
     const textureBindGroup = this._getOrCreateTextureBindGroup(device, texture, binding.view, binding.sampler, 'repeating-sprite:texture-bind-group:geo');

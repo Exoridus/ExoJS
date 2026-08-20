@@ -27,7 +27,7 @@ import type { View } from './View';
  * scissor-stack and alpha-mask compositing primitives used by
  * {@link RenderNode}'s `mask` machinery.
  *
- * Application code rarely calls this directly — high-level code submits
+ * Application code rarely calls this directly - high-level code submits
  * drawables via the scene graph and reads `app.backend.stats` for
  * per-frame counters. Custom backend passes (implementations of
  * {@link BackendRenderPass}) interact with the interface directly.
@@ -41,7 +41,7 @@ export interface RenderBackend {
   readonly stats: RenderStats;
   /**
    * The colour the canvas root target is cleared to each frame. Mutable in
-   * place (`backend.clearColor.copy(...)`) — the new value takes effect on the
+   * place (`backend.clearColor.copy(...)`) - the new value takes effect on the
    * next frame. Both backends initialise it from `app.options.clearColor`.
    */
   readonly clearColor: Color;
@@ -70,7 +70,7 @@ export interface RenderBackend {
 
   /**
    * Dispatched when the backend detects a GPU error that does not surface as a
-   * synchronous exception — WGSL compilation errors, WebGPU uncaptured
+   * synchronous exception - WGSL compilation errors, WebGPU uncaptured
    * validation/OOM/internal errors. Synchronous failures (WebGL2 shader
    * compile/link) throw {@link RenderError} from `flush()` instead and are
    * caught by the Application frame guard. Deduplicated per unique message.
@@ -104,7 +104,7 @@ export interface RenderBackend {
    * `Geometry` `clipShape` path on {@link RenderNode.clip}.
    *
    * Composes freely with the scissor stack. Both backends implement this
-   * with matching pixel-level behavior — WebGL2 via a stencil renderbuffer,
+   * with matching pixel-level behavior - WebGL2 via a stencil renderbuffer,
    * WebGPU via a shared `depth24plus-stencil8` attachment and stencil-enabled
    * pipeline variants.
    */
@@ -126,7 +126,7 @@ export interface RenderBackend {
   /**
    * Borrow a temporary {@link RenderTexture} of exactly `width × height` from
    * the backend's pool, allocating one if no pooled entry matches. Hand it back
-   * with {@link releaseRenderTexture} — destroying a borrowed texture instead
+   * with {@link releaseRenderTexture} - destroying a borrowed texture instead
    * corrupts the pool.
    */
   acquireRenderTexture(width: number, height: number): RenderTexture;
@@ -143,7 +143,7 @@ export interface RenderBackend {
   /**
    * Destroy every render texture currently sitting in the backend's reuse
    * pool and empty it, freeing the VRAM they hold. The pool itself keeps
-   * working afterwards — {@link acquireRenderTexture} /
+   * working afterwards - {@link acquireRenderTexture} /
    * {@link releaseRenderTexture} behave exactly as before, they just start
    * from empty and re-allocate whatever intermediates are asked for next.
    *
@@ -152,7 +152,7 @@ export interface RenderBackend {
    * time those sizes are needed, so call it at a point where you actually
    * want that trade: a memory-pressure signal from the platform, a long idle
    * pause, or tearing down a level whose filter/mask intermediates won't
-   * recur at the same sizes. Do not call it on every scene change — that
+   * recur at the same sizes. Do not call it on every scene change - that
    * would defeat the pool and reintroduce the allocation churn it exists to
    * avoid.
    */

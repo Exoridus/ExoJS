@@ -81,7 +81,7 @@ function makeBoundaryLayer(tileset: TileSet, opts: BoundaryLayerOpts = {}): Tile
   return layer;
 }
 
-/** An empty 4×4 layer — constructible, but produces zero chunk nodes. */
+/** An empty 4×4 layer - constructible, but produces zero chunk nodes. */
 function makeEmptyLayer(tileset: TileSet, id = 1, name = 'empty'): TileLayer {
   return new TileLayer({ id, name, width: 4, height: 4, tileWidth: 32, tileHeight: 32, tilesets: [tileset] });
 }
@@ -413,7 +413,7 @@ describe('TileMapView.pixelSnapMode', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// Render-only contract — purely visual, never a data/geometry mutation
+// Render-only contract - purely visual, never a data/geometry mutation
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('pixelSnapMode render-only contract', () => {

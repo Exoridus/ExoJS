@@ -75,7 +75,7 @@ export class Texture {
 
   /**
    * Shared 8×8 magenta/black checkerboard shown in place of assets that failed
-   * to load — a visible error beats an invisible hole, in production too.
+   * to load - a visible error beats an invisible hole, in production too.
    * Lazily created; every access returns the same instance.
    */
   public static get missing(): Texture {
@@ -92,7 +92,7 @@ export class Texture {
   private _isDestroyed = false;
   private readonly _destroyListeners: Set<() => void> = new Set<() => void>();
   private readonly _releaseListeners: Set<() => void> = new Set<() => void>();
-  /** @internal — load lifecycle, driven by the Loader's seamless pipeline. */
+  /** @internal - load lifecycle, driven by the Loader's seamless pipeline. */
   public readonly _loadState = new LoadState<Texture>();
   private _scaleMode: ScaleModes;
   private _wrapMode: WrapModes;
@@ -234,7 +234,7 @@ export class Texture {
   }
 
   /**
-   * Promise that settles with this texture once its payload has loaded —
+   * Promise that settles with this texture once its payload has loaded -
    * resolved immediately for `'ready'` textures, rejected with the load error
    * for `'failed'` ones. Re-materialized when a failed load is retried, so
    * read it fresh from this getter rather than caching it across load cycles.
@@ -245,7 +245,7 @@ export class Texture {
 
   /**
    * Increment the version counter so backends re-upload on the next frame.
-   * @internal — for subclasses (e.g. {@link DataTexture}) that mutate texture
+   * @internal - for subclasses (e.g. {@link DataTexture}) that mutate texture
    * data through paths the base setters don't cover.
    */
   protected _bumpVersion(): void {
@@ -271,7 +271,7 @@ export class Texture {
   /**
    * Register a callback fired when {@link releaseGpu} runs. Distinct from
    * {@link addDestroyListener}: the handle stays alive and bindable
-   * afterwards, ready for a later {@link setSource} to re-upload — used by
+   * afterwards, ready for a later {@link setSource} to re-upload - used by
    * seamless asset eviction, which drops the payload but keeps the handle's
    * identity so a later fill can heal every consumer in place.
    * @internal
@@ -351,7 +351,7 @@ export class Texture {
     return this;
   }
 
-  /** `true` once {@link destroy} has run — a destroyed texture must not be bound. */
+  /** `true` once {@link destroy} has run - a destroyed texture must not be bound. */
   public get destroyed(): boolean {
     return this._isDestroyed;
   }
@@ -379,7 +379,7 @@ export class Texture {
   /**
    * Free this texture's GPU-side payload right now instead of waiting for a
    * backend to notice on its next bind. `setSource(null)` alone only bumps
-   * {@link version} — a backend re-uploads (and so frees the old payload)
+   * {@link version} - a backend re-uploads (and so frees the old payload)
    * only when it next binds this exact handle, which may never happen for a
    * texture nothing is currently drawing. Call this immediately after
    * dropping the source to reclaim the memory without depending on a future

@@ -4,7 +4,7 @@
  * Wraps the shared test-backend helpers with the one thing a scene may need on
  * top of them: registering renderers that live outside the core binding set.
  * Every property goes through here, so a scene declaring `wireRenderers` is
- * honoured identically in all of them — putting that call in each property
+ * honoured identically in all of them - putting that call in each property
  * instead would mean three places to forget it in.
  */
 

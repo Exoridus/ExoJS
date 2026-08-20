@@ -299,7 +299,7 @@ describe('DynamicAabbTree', () => {
           const actual = new Set<number>();
 
           // Query hits are over FAT AABBs (a superset of the tight ones tracked
-          // here in `live`) — assert zero false negatives, not exact equality.
+          // here in `live`) - assert zero false negatives, not exact equality.
           tree.query(q.minX, q.minY, q.maxX, q.maxY, payload => actual.add(payload));
 
           for (const id of expected) {
@@ -387,7 +387,7 @@ describe('DynamicAabbTree', () => {
       tree.insert(30, -2, 32, 2, 1);
       tree.insert(50, -2, 52, 2, 2);
 
-      // A dense cluster far off the ray line — the ray must reach none of them.
+      // A dense cluster far off the ray line - the ray must reach none of them.
       for (let i = 0; i < 40; i++) {
         tree.insert(1000 + i, 1000, 1002 + i, 1002, 100 + i);
       }
@@ -412,7 +412,7 @@ describe('DynamicAabbTree', () => {
 
       tree.query(-100, -100, 100, 100, payload => {
         outer.push(payload);
-        // Nested rayCast on the SAME instance — uses a separate stack, so it must
+        // Nested rayCast on the SAME instance - uses a separate stack, so it must
         // not corrupt the outer query's still-live traversal.
         tree.rayCast(-100, 5, 1, 0, Infinity, p => nested.push(p));
       });
@@ -457,7 +457,7 @@ describe('DynamicAabbTree', () => {
         const actual = new Set<number>();
         tree.rayCast(ox, oy, dx, dy, maxDistance, payload => actual.add(payload));
 
-        // Hits are over FAT AABBs (a superset of the tight boxes tracked here) —
+        // Hits are over FAT AABBs (a superset of the tight boxes tracked here) -
         // assert zero false negatives, not exact equality.
         for (const id of expected) {
           expect(actual.has(id)).toBe(true);
@@ -471,7 +471,7 @@ describe('DynamicAabbTree', () => {
 // (orientation-based segment/edge crossing) than the tree's own slab test, so a
 // shared conceptual flaw can't hide in both. Exact for a finite `maxDistance`;
 // for `Infinity` the ray is clamped to a segment long enough to reach the whole
-// test region — a farther box it would nonetheless cross is simply under-reported
+// test region - a farther box it would nonetheless cross is simply under-reported
 // (weakening the check, never over-reporting), which keeps `expected ⊆ actual`
 // sound: every box the oracle claims is one the ray truly enters.
 const orient = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): number => Math.sign((bx - ax) * (cy - ay) - (by - ay) * (cx - ax));

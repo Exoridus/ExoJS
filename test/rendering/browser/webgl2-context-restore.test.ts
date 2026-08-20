@@ -2,8 +2,8 @@
  * WebGL2 real context lose/restore browser test.
  *
  * Drives a genuine GL context-loss cycle through the `WEBGL_lose_context`
- * extension — `loseContext()` fires `webglcontextlost`, `restoreContext()`
- * fires `webglcontextrestored` — and asserts that rendering RESUMES with valid
+ * extension - `loseContext()` fires `webglcontextlost`, `restoreContext()`
+ * fires `webglcontextrestored` - and asserts that rendering RESUMES with valid
  * resources afterwards by reading back pixels. This is the end-to-end proof for
  * the finding: synthetic signal-only tests passed while a real reset left the
  * backend drawing with dangling GL handles. After the fix, the backend evicts
@@ -26,7 +26,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader mocks (see webgl2-sprite-solid-color.test.ts — the registry compiles
+// Shader mocks (see webgl2-sprite-solid-color.test.ts - the registry compiles
 // every core renderer's program on connect, so all core shaders need real GLSL).
 // ---------------------------------------------------------------------------
 
@@ -97,7 +97,7 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
  * Force a real GL context loss and wait for the backend's `onContextRestored`
  * to fire. `WEBGL_lose_context.loseContext()` dispatches `webglcontextlost`
  * (which the backend cancels with preventDefault); the backend then calls
- * `restoreContext()`, which dispatches `webglcontextrestored` on a later task —
+ * `restoreContext()`, which dispatches `webglcontextrestored` on a later task -
  * so we await the backend signal rather than assuming synchronous delivery.
  */
 const loseAndRestoreContext = async (backend: WebGl2Backend): Promise<void> => {
@@ -154,7 +154,7 @@ describe('WebGL2 real context lose/restore', () => {
 
       expect(backend.context.isContextLost()).toBe(false);
 
-      // The same scene must render the same pixels — proving the backend
+      // The same scene must render the same pixels - proving the backend
       // rebuilt its textures / buffers / VAOs / shader programs against the
       // fresh context instead of drawing with dangling handles.
       render(backend, root);

@@ -5,7 +5,7 @@
  * The evidence rows are the point: a passing test proves something, and the
  * matrix is the record of *which* something. A combination that never runs
  * leaves a row saying so, which is how the matrix can show absence of
- * verification — the thing a suite of green tests structurally cannot.
+ * verification - the thing a suite of green tests structurally cannot.
  */
 
 import { afterAll, describe, expect, test } from 'vitest';
@@ -37,7 +37,7 @@ const BACKENDS = ['webgl2', 'webgpu'] as const;
 /**
  * Registers the tests for one catalog.
  *
- * Call at module top level from a spec file — the `describe`/`test` calls have
+ * Call at module top level from a spec file - the `describe`/`test` calls have
  * to happen during collection, so scenes and properties must be known
  * statically rather than discovered mid-run.
  */

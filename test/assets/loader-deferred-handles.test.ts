@@ -130,7 +130,7 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
 
     await forceGc();
 
-    // FinalizationRegistry pruned the emptied entry — no unbounded growth.
+    // FinalizationRegistry pruned the emptied entry - no unbounded growth.
     expect(deferredHas(loader, key)).toBe(false);
     expect(evictedHas(loader, key)).toBe(false);
   });

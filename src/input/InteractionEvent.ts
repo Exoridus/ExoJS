@@ -21,7 +21,7 @@ export type InteractionEventType =
 
 /**
  * DOM-Event-shaped envelope dispatched by {@link InteractionManager} to
- * interactive scene nodes. Bubbles up the *entire* parent chain — `target`
+ * interactive scene nodes. Bubbles up the *entire* parent chain - `target`
  * stays pinned to the hit-deepest node while `currentTarget` advances to each
  * ancestor, whether or not that ancestor is itself interactive. Handlers may
  * call {@link InteractionEvent.stopPropagation} to halt the bubble.
@@ -30,7 +30,7 @@ export type InteractionEventType =
  * are frame-synchronous and outlive the platform event they came from. It
  * does have {@link InteractionEvent.preventDefault}, but only for suppressing
  * this event's own engine-level default (currently: the automatic
- * drag-candidate creation a `pointerdown` would otherwise start — see that
+ * drag-candidate creation a `pointerdown` would otherwise start - see that
  * method's own doc comment). It never suppresses a *browser*-native default
  * (touch scrolling, text selection, the native context menu, ...); those are
  * handled separately and synchronously at the `InputManager` platform-event
@@ -44,10 +44,10 @@ export class InteractionEvent {
   public currentTarget: RenderNode;
   public readonly pointer: Pointer;
   /**
-   * Coordinates in `target`'s own rendering layer — **not** a single fixed
+   * Coordinates in `target`'s own rendering layer - **not** a single fixed
    * space. A hit inside the scene's UI layer reads in screen space (the same
    * space `RenderingContext.screenView` maps into); a hit against the world
-   * tree reads in camera/world space (post pan/zoom/rotate — identical to
+   * tree reads in camera/world space (post pan/zoom/rotate - identical to
    * screen space only at the default centered camera). This matches the
    * space `target.position`/`target.contains()` already operate in for
    * whichever layer `target` lives in, so the two always agree; it is
@@ -84,14 +84,14 @@ export class InteractionEvent {
   }
 
   /**
-   * Suppress this event's own default engine behavior — currently
+   * Suppress this event's own default engine behavior - currently
    * meaningful only for `pointerdown`, where it suppresses the automatic
    * creation (and so promotion) of a drag candidate for {@link target}, on
    * a node whose own `draggable` would otherwise start one. Independent of
    * {@link InteractionEvent.stopPropagation}: propagation still bubbles
    * normally unless that is also called. Also independent of the browser's
    * own native default (e.g. touch scrolling, text selection, the native
-   * context menu) — those are suppressed synchronously in `InputManager`,
+   * context menu) - those are suppressed synchronously in `InputManager`,
    * at the platform-event boundary, before this engine-level event is even
    * constructed; calling this method has no effect on them.
    */

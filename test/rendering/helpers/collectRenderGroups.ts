@@ -8,7 +8,7 @@ import type { GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
  *
  * The optimizer ({@link RenderPlanOptimizer}) stamps this grouping implicitly
  * onto each {@link DrawCommand.groupIndex}; a `RenderGroup` makes that batch unit
- * explicit as a value. The plan player no longer materializes these per frame —
+ * explicit as a value. The plan player no longer materializes these per frame -
  * it walks `groupIndex` adjacency over `scope.entries` inline. This
  * collector survives only as a **test helper**: render-plan tests assert grouping
  * structure against it without re-deriving the adjacency rule, and the upload-
@@ -36,7 +36,7 @@ interface MutableRenderGroup {
  * Consecutive draw commands that share a defined `groupIndex` coalesce into one
  * group; any non-draw entry (a nested group or barrier) breaks the run, and a
  * draw whose `groupIndex` is still `undefined` (i.e. the plan has not been
- * optimized) forms its own singleton group — mirroring the adjacency semantics
+ * optimized) forms its own singleton group - mirroring the adjacency semantics
  * the plan player walks inline and the mesh renderers rely on.
  *
  * @internal Test-only.
@@ -81,7 +81,7 @@ export const collectRenderGroups = (scope: GroupScope): RenderGroup[] => {
  * Iterate the draw commands of the group range `[startIndex, startIndex + count)`
  * the refactored plan-player hooks pass. Every entry in a group range is a draw,
  * so this is the read-only equivalent of looping a materialized group's
- * `instructions` — letting the upload-boundary mocks pack exactly the same
+ * `instructions` - letting the upload-boundary mocks pack exactly the same
  * commands while the production player passes only an entries range.
  *
  * @internal Test-only.

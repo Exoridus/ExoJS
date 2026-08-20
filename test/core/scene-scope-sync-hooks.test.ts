@@ -46,7 +46,7 @@ const readSource = (rel: string): string => readFileSync(resolve(rootDir, rel), 
 
 /**
  * Blanks out block and line comments, preserving line structure. The
- * production-parity checks below are about executable code — prose that
+ * production-parity checks below are about executable code - prose that
  * *mentions* `__DEV__` (this contract's documentation does, at length) must not
  * read as a guard.
  */
@@ -76,7 +76,7 @@ const guardCallSites = (source: ts.SourceFile): ts.CallExpression[] => {
 };
 
 /**
- * Whether `node` sits inside anything `__DEV__` can switch off — an
+ * Whether `node` sits inside anything `__DEV__` can switch off - an
  * `if (__DEV__)` branch, a `__DEV__ && …` short-circuit, or a `__DEV__ ? …`
  * conditional. A neighbouring `if (__DEV__) Perf.mark(…)` statement is
  * correctly *not* a gate, which is why this walks the AST instead of nearby

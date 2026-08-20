@@ -65,7 +65,7 @@ const WINDOWS = 5;
 
 /**
  * Below this per-frame rate a percentage band is the wrong instrument. These
- * scenes now sit AT the harness's own floor — every one of them is within
+ * scenes now sit AT the harness's own floor - every one of them is within
  * ~1.6 KB/frame of the `empty` scene, so a 15% band would be ±0.2 KB, i.e.
  * pure Poisson jitter, while a genuine regression in a fully-retained frame is
  * never a few percent (see {@link FIXED_HEADROOM_KB}). They get a fixed
@@ -78,7 +78,7 @@ const NOISE_FLOOR_KB = 50;
  * median spread on those scenes is ≤0.4% (see the table on {@link BASELINE_KB}),
  * so nearly the whole 15% is headroom for cross-machine drift. `filtered/100` is
  * the only scene left above the floor, and the CI runner (Node v24.19.0
- * linux/x64) reads it about 7.6% above this dev box — measured as 329.89 against
+ * linux/x64) reads it about 7.6% above this dev box - measured as 329.89 against
  * 306.55 before the effect path stopped nesting a plan per pass. The band is
  * stated as a RATIO for that reason: the absolute pair moves with every ratchet,
  * the cross-machine factor does not, and half the band is still free at it while
@@ -93,22 +93,22 @@ const TOLERANCE_LARGE = 1.15;
  * the rule that a ratchet never runs backwards.
  * TOLERATE: the widest fresh-process spread measured over five processes is
  * 0.13 KB/frame (`deep-hierarchy`), and the widest in-suite pass-to-pass median
- * spread is 0.21 KB — an order of magnitude below this, which is the margin the
+ * spread is 0.21 KB - an order of magnitude below this, which is the margin the
  * platform floor itself needs. Measured across the two platforms that run this
  * gate, the floor moves together: the CI runner (Node v24.19.0 linux/x64) reads
  * `empty` 0.96 / `static` 1.03 / `nested` 0.59 against 0.99 / 1.07 / 0.65 here,
  * every scene inside the headroom. What does NOT move together is
- * instrumentation — see {@link INSTRUMENTED}, and do not mistake one for the
+ * instrumentation - see {@link INSTRUMENTED}, and do not mistake one for the
  * other.
  * CATCH: a regression in a retained frame arrives per node, per batch or per
- * scope, so it lands as a multiple of these baselines, not a percentage — one
+ * scope, so it lands as a multiple of these baselines, not a percentage - one
  * 32-byte object per sprite is +32 KB/frame in `sprite/1000 static` against a
  * 1.2 KB baseline, and the tightest case in the catalog (one object per MOVED
  * node in `sprite/10000 transform-only 1%`, k=100) is still +3.2 KB against a
  * 3.9 KB budget. Both fail the gate; neither needs a tighter band.
  * NEVER LOOSEN: 1.25 is also the largest round value at which no budget in the
  * table comes out above the one it replaces. At 2 KB, `nested/1000 d4` would
- * have gone from 2.57 to 3.20 KB — a scene whose measured rate FELL would have
+ * have gone from 2.57 to 3.20 KB - a scene whose measured rate FELL would have
  * been handed a wider budget, which is the one thing a ratchet must not do.
  */
 const FIXED_HEADROOM_KB = 1.25;
@@ -120,12 +120,12 @@ const FIXED_HEADROOM_KB = 1.25;
  * Each entry is the HIGHER of two independently measured medians, because the
  * two disagree in both directions and the budget must survive either:
  *
- *   FRESH-PROCESS — one archetype per node process, five processes, median.
+ *   FRESH-PROCESS - one archetype per node process, five processes, median.
  *     This is the source-of-truth number and the only one whose CALLSITE
  *     attribution is trustworthy: V8's optimisation state carries across scenes
  *     inside a process, so a scene measured after nine others is measured in a
  *     state no real frame is in (`run-allocation-cell.ts` exists for this).
- *   IN-SUITE — what this gate itself produces, five windows in one process, in
+ *   IN-SUITE - what this gate itself produces, five windows in one process, in
  *     THIS archetype order. Lower than fresh for every retained scene (the JIT
  *     arrives warm) and higher for `filtered/100`.
  *
@@ -145,7 +145,7 @@ const FIXED_HEADROOM_KB = 1.25;
  *
  * Spread, i.e. what the budget has to absorb: ≤0.13 KB across the five fresh
  * processes and ≤0.21 KB across six in-suite passes on every scene but
- * `filtered/100`, which holds 0.9% (101.9–102.1 fresh, 102.1–103.0 across four
+ * `filtered/100`, which holds 0.9% (101.9-102.1 fresh, 102.1-103.0 across four
  * in-suite passes).
  *
  * `scrolling-world/10000` is measured the same way but stays out of the gate:
@@ -154,7 +154,7 @@ const FIXED_HEADROOM_KB = 1.25;
  *
  * ── Ratchet history ─────────────────────────────────────────────
  * 2026-08-16c: `filtered/100` ONLY, 229.59 → 102.98, after the effect path's
- * control plane stopped being rebuilt per frame — the redirect pass and its
+ * control plane stopped being rebuilt per frame - the redirect pass and its
  * descriptor, the clip/mask continuation closures, the barrier scope and its
  * effect descriptor, and the scissor stack's per-push rectangle and vectors.
  * Same rule as the entry below it: one row, no global re-baseline.
@@ -165,11 +165,11 @@ const FIXED_HEADROOM_KB = 1.25;
  * outside the barrier path, every other scene re-measured identical, and a
  * ratchet that moves rows a slice did not affect is how a table drifts away
  * from what it is supposed to prove. The filter work continues, so this row is
- * expected to ratchet again — each landed slice protects its own gain rather
+ * expected to ratchet again - each landed slice protects its own gain rather
  * than leaving the next one to collect them all.
  *
  * 2026-08-16: whole table re-measured after the steady-state allocation track
- * closed, and every budget moved down again — by two to three ORDERS of
+ * closed, and every budget moved down again - by two to three ORDERS of
  * magnitude on the scenes the track actually hit (`mesh/1000` 574.69 → 0.68,
  * `blend/1000 alternating` 235.70 → 1.19, `sprite/1000 moving` 211.21 → 1.37,
  * `sprite/10000 transform-only 1%` 24.35 → 2.61). Nine of the ten gated scenes now
@@ -178,7 +178,7 @@ const FIXED_HEADROOM_KB = 1.25;
  * partly the same track and partly the harness: `fakeWebGl2`'s two texture-
  * upload entry points took a rest parameter, so every upload call allocated an
  * argument array that the profiler then attributed to the ENGINE function that
- * called into the fake — ~76 KB/frame of the old number was the measurement.
+ * called into the fake - ~76 KB/frame of the old number was the measurement.
  *
  * 2026-08-15: previous whole-table re-measure (from baselines that predated the
  * retained render path and carried up to 205x headroom), and the pass that
@@ -209,7 +209,7 @@ const median = (values: readonly number[]): number => {
 /**
  * Re-baselining mode: measure and log every archetype but assert nothing, so a
  * fresh table can be read off one run instead of bisecting failures. Opt-in via
- * `EXOJS_ALLOC_MEASURE=1` only — never set in CI, and every run says loudly
+ * `EXOJS_ALLOC_MEASURE=1` only - never set in CI, and every run says loudly
  * that it gated nothing.
  */
 const MEASURE_ONLY = process.env['EXOJS_ALLOC_MEASURE'] === '1';
@@ -220,7 +220,7 @@ const MEASURE_ONLY = process.env['EXOJS_ALLOC_MEASURE'] === '1';
  * Read off a `src` function's own text rather than a global, because that is the
  * thing that actually matters: coverage instrumentation only distorts the
  * numbers for the files it rewrote, and `src/**` is what the include list
- * covers. A counter probe per statement is not the problem — losing V8's escape
+ * covers. A counter probe per statement is not the problem - losing V8's escape
  * analysis is. Instrumented, the plan walk stops scalar-replacing what it
  * otherwise would and `mesh/1000` reads 71 KB/frame against 0.65 plain, on one
  * machine with one Node build. Every baseline in {@link BASELINE_KB} is a plain
@@ -233,7 +233,7 @@ const INSTRUMENTED = /\bcov_[0-9a-z]+\b/u.test(String(RenderPlanPlayer.play));
 
 /**
  * Budget in bytes/frame for an archetype: a relative band above the noise
- * floor, a fixed absolute headroom below it. `empty` is no longer special —
+ * floor, a fixed absolute headroom below it. `empty` is no longer special -
  * with every retained scene sitting at the harness floor, the floor sanity and
  * the ratcheted budgets are the same rule.
  */
@@ -283,7 +283,7 @@ describe('render-plan allocation gate', () => {
     const harness = createWebGl2Harness();
     const { root } = buildSpriteScene({ count: 0, textures: makeTextures(1) });
 
-    // JSON.parse is opaque to V8's optimizer — it cannot scalar-replace or
+    // JSON.parse is opaque to V8's optimizer - it cannot scalar-replace or
     // dead-code the resulting 1000-object array, so the allocation is real and
     // immediately dead (the sink is overwritten each frame).
     const junkJson = `[${'{"a":1,"b":2},'.repeat(999)}{"a":1,"b":2}]`;
@@ -300,7 +300,7 @@ describe('render-plan allocation gate', () => {
     root.destroy();
     harness.destroy();
 
-    // 1000 small objects ≈ 32–56 B each. If the sampler discarded GC'd garbage
+    // 1000 small objects ≈ 32-56 B each. If the sampler discarded GC'd garbage
     // this delta would collapse toward 0 (measured ~0.1 B/obj without the flags).
     const bytesPerObject = (withJunk.bytesPerFrame - base.bytesPerFrame) / 1000;
     expect(bytesPerObject).toBeGreaterThan(20);

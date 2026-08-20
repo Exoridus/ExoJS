@@ -1,5 +1,5 @@
 /**
- * WebGPU browser tests for renderTo — opt-in, capability-aware.
+ * WebGPU browser tests for renderTo - opt-in, capability-aware.
  *
  * The WebGPU backend supports all operations used by renderTo
  * (setRenderTarget, clear, draw, flush) so the facade delegates correctly.
@@ -102,7 +102,7 @@ describe('RenderTo WebGPU browser', () => {
       expect(clearError && `rgba32f clear: ${clearError.message}`).toBeNull();
 
       // rgba16f: a full engine draw exercises the real render pipeline built for a
-      // float target format — the pipeline's color format must match the pass's.
+      // float target format - the pipeline's color format must match the pass's.
       device.pushErrorScope('validation');
       const half = new RenderTexture(32, 32, { format: TextureFormat.Rgba16F });
       const green = new Graphics();

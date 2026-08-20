@@ -6,7 +6,7 @@
  *
  * The {@link AudioListener} does not: it is virtual, and the real WebAudio
  * listener stays pinned at the origin, so listener motion reaches the mix as
- * part of each voice's relative position and is smoothed there — see
+ * part of each voice's relative position and is smoothed there - see
  * {@link SpatialSmoothingSettings.teleportThreshold} for the one place that
  * distinction is observable.
  *
@@ -27,7 +27,7 @@
  * settings object with distance/panning defaults.
  */
 
-/** Time constant (seconds) for `setTargetAtTime`. 20 ms — see module docs. */
+/** Time constant (seconds) for `setTargetAtTime`. 20 ms - see module docs. */
 export const DEFAULT_SPATIAL_SMOOTHING = 0.02;
 
 /** Position jump (world units) treated as a teleport → snap instead of ramp. */
@@ -47,7 +47,7 @@ export const POSITION_EPSILON = 0.01;
 export interface SpatialSmoothingSettings {
   /**
    * Time constant (seconds) passed to `setTargetAtTime` when ramping a moving
-   * position toward its target. `0` (or negative) disables ramping — positions
+   * position toward its target. `0` (or negative) disables ramping - positions
    * snap each frame. Default {@link DEFAULT_SPATIAL_SMOOTHING} (20 ms).
    */
   smoothing: number;
@@ -57,7 +57,7 @@ export interface SpatialSmoothingSettings {
    * {@link DEFAULT_TELEPORT_THRESHOLD}.
    *
    * Measured on the **source-to-listener offset**, not on either absolute
-   * position — voices are panned relative to their own application's
+   * position - voices are panned relative to their own application's
    * {@link AudioListener}, which is virtual. Practically: warping the listener
    * is a teleport for every spatial voice at once (each snaps its own panner),
    * and a source that warps *together with* the listener does not cross the
@@ -74,7 +74,7 @@ export interface SpatialSmoothingSettings {
   panningModel: PanningModelType;
   /**
    * Doppler pitch-shift strength multiplier. `0` (default) disables Doppler
-   * entirely — even when velocity data is available on a voice or the
+   * entirely - even when velocity data is available on a voice or the
    * listener, no `playbackRate` modulation is applied unless this is set
    * above zero. `1` is physically scaled (relative to {@link speedOfSound});
    * many games deliberately exaggerate beyond `1` for player feedback.
@@ -84,7 +84,7 @@ export interface SpatialSmoothingSettings {
    * Reference speed (world units per second) used to scale the Doppler
    * effect. World units have no fixed physical scale across different
    * games (pixels, meters, tiles), so this is a tunable, not a physical
-   * constant — pick a value where your game's typical emitter/listener
+   * constant - pick a value where your game's typical emitter/listener
    * speeds produce a noticeable but not extreme shift.
    */
   speedOfSound: number;
@@ -113,7 +113,7 @@ export class SmoothedAudioParam {
    * / ramp according to `settings`.
    */
   public write(param: AudioParam, value: number, now: number, settings: SpatialSmoothingSettings): void {
-    // Reject NaN/±Infinity outright — never scheduled on the live AudioParam
+    // Reject NaN/±Infinity outright - never scheduled on the live AudioParam
     // (a real browser throws on `setTargetAtTime(NaN, …)`) and never recorded
     // as `_last`, so an invalid tick can't poison every subsequent write.
     if (!Number.isFinite(value)) return;
@@ -144,7 +144,7 @@ export class SmoothedAudioParam {
  * Floor applied to the elapsed time between two velocity samples (seconds).
  * Guards {@link deriveVelocity} against a divide-by-zero (or a near-infinite
  * velocity spike) when two samples land on the same `AudioContext.currentTime`
- * — which is not just a test artifact: an explicit `voice.position = …`
+ * - which is not just a test artifact: an explicit `voice.position = …`
  * write immediately followed by `AudioManager.update()`'s per-frame tick can
  * genuinely both land inside the same audio-render quantum, before
  * `currentTime` has advanced at all.
@@ -154,7 +154,7 @@ const MIN_VELOCITY_DT = 1e-3;
 /**
  * Rolling velocity-sample state for one tracked point (a {@link BaseVoice}'s
  * position, or the {@link AudioListener}'s). Owned and mutated in place by
- * {@link deriveVelocity} — `x`/`y` are the last derived velocity components.
+ * {@link deriveVelocity} - `x`/`y` are the last derived velocity components.
  */
 export interface VelocitySample {
   lastPosition: { x: number; y: number } | null;
@@ -173,12 +173,12 @@ export const createVelocitySample = (): VelocitySample => ({ lastPosition: null,
  * "auto-derived velocity" the same way.
  *
  * Below {@link POSITION_EPSILON} of movement, the sample is treated as
- * stationary and is skipped entirely — the previously derived velocity is
+ * stationary and is skipped entirely - the previously derived velocity is
  * retained rather than snapped to zero, mirroring {@link SmoothedAudioParam}'s
  * own stationary-skip. This means a source that stops moving keeps its last
  * Doppler shift for one more tick instead of instantly zeroing it, and it
  * means a real movement is never lost to a same-timestamp sample (see
- * {@link MIN_VELOCITY_DT}) — the *next* distinctly-different position still
+ * {@link MIN_VELOCITY_DT}) - the *next* distinctly-different position still
  * measures its delta against the last position that was actually recorded.
  */
 export function deriveVelocity(sample: VelocitySample, x: number, y: number, now: number): void {
@@ -196,7 +196,7 @@ export function deriveVelocity(sample: VelocitySample, x: number, y: number, now
     if (now > sample.lastTime) {
       sample.x = 0;
       sample.y = 0;
-      // Mutate the existing point in place (never null on this branch —
+      // Mutate the existing point in place (never null on this branch -
       // the null-seed case returns above) instead of allocating a fresh
       // `{ x, y }` on what is the common per-frame path for every
       // stationary spatial voice.

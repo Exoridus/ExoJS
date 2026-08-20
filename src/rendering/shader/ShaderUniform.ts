@@ -69,6 +69,6 @@ export class ShaderUniform {
   }
 
   public destroy(): void {
-    // no-op — value container only
+    // no-op - value container only
   }
 }

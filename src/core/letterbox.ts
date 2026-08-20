@@ -6,11 +6,11 @@
 
 /** Result of fitting a fixed design space into a parent for letterbox sizing. @internal */
 export interface LetterboxLayout {
-  /** CSS width of the centered canvas — the design-aspect content area. */
+  /** CSS width of the centered canvas - the design-aspect content area. */
   contentWidthCss: number;
   /** CSS height of the centered canvas. */
   contentHeightCss: number;
-  /** Backing-store width (`content × pixelRatio`) — the crisp native resolution. */
+  /** Backing-store width (`content × pixelRatio`) - the crisp native resolution. */
   backingWidth: number;
   /** Backing-store height. */
   backingHeight: number;
@@ -18,7 +18,7 @@ export interface LetterboxLayout {
 
 /**
  * Fit a `designWidth × designHeight` space into a parent of the given CSS size,
- * preserving aspect ratio (letterbox — never crop, never stretch). Returns the
+ * preserving aspect ratio (letterbox - never crop, never stretch). Returns the
  * centered content rectangle's CSS size and its native backing-store size at
  * `pixelRatio`. The larger axis of the parent becomes the bars.
  * @internal

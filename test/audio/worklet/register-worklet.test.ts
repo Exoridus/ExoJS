@@ -79,7 +79,7 @@ describe('registerAudioWorkletProcessor', () => {
     addModule.mockRejectedValueOnce(new Error('load failed')).mockResolvedValueOnce(undefined);
 
     await expect(registerAudioWorkletProcessor(ctx, 'proc-fail', '/* source */')).rejects.toThrow('load failed');
-    // After failure, pending is cleared — retry should succeed
+    // After failure, pending is cleared - retry should succeed
     await expect(registerAudioWorkletProcessor(ctx, 'proc-fail', '/* source */')).resolves.toBeUndefined();
     expect(addModule).toHaveBeenCalledTimes(2);
   });

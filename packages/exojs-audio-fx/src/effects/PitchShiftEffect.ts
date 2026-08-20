@@ -16,10 +16,10 @@ export interface PitchShiftEffectOptions {
 }
 
 /**
- * Real-time pitch shifter (WorkletEffect) using SOLA — synchronized
+ * Real-time pitch shifter (WorkletEffect) using SOLA - synchronized
  * overlap-add. Each synthesis grain is realigned by waveform cross-correlation,
  * so grain restarts stay phase coherent and the output pitch tracks the `pitch`
- * ratio exactly across the whole 0.25x–4.0x range (a naive granular delay drifts
+ * ratio exactly across the whole 0.25x-4.0x range (a naive granular delay drifts
  * the pitch instead).
  *
  * Quality: clean, in-tune shifting for tonal material. As with any time-domain

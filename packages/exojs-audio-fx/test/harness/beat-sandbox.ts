@@ -3,7 +3,7 @@
  *
  * Mirrors the pattern established by pitch-shift-processor.test.ts:
  *   1. Stub AudioWorkletProcessor / registerProcessor / sampleRate / currentFrame.
- *   2. eval(beatDetectorWorkletSource) — captures the real production class.
+ *   2. eval(beatDetectorWorkletSource) - captures the real production class.
  *   3. Restore globals.
  *   4. Instantiate and drive process() in configurable block sizes.
  *   5. Capture all port.postMessage output synchronously.
@@ -11,7 +11,7 @@
  * Why this works:
  *   - The worklet reads sampleRate + currentFrame only in the constructor.
  *   - process() drives everything off per-sample _hopAccum / _sampleCount.
- *   - All messages are sent synchronously during process() — no macrotask race.
+ *   - All messages are sent synchronously during process() - no macrotask race.
  *   - Block-size independence: _hopAccum counts individual samples regardless of
  *     block boundaries, so hops fire at the same positions for any block size.
  */
@@ -89,7 +89,7 @@ type BeatProcessorCtor = new (options: {
   processorOptions?: Record<string, unknown>;
 }) => BeatProcessorLike;
 
-// ── Module-level cache — eval runs once per test session ───────────────────────
+// ── Module-level cache - eval runs once per test session ───────────────────────
 
 let _processorCtor: BeatProcessorCtor | null = null;
 
@@ -128,7 +128,7 @@ export function buildBeatProcessor(): BeatProcessorCtor {
     klass = cls;
   };
 
-  // Eval the real worklet source — captures the class via registerProcessor
+  // Eval the real worklet source - captures the class via registerProcessor
   eval(beatDetectorWorkletSource);
 
   // Restore globals
@@ -153,7 +153,7 @@ export function buildBeatProcessor(): BeatProcessorCtor {
  * Run the BeatDetectorProcessor on `samples` and return every port.postMessage
  * call as an ordered WorkletMessage array.
  *
- * Each message is annotated with `_audioTimeSec` — the approximate audio time
+ * Each message is annotated with `_audioTimeSec` - the approximate audio time
  * (seconds from fixture start) at which the message was posted, computed from
  * the block start position. Accuracy: ±blockSize/sampleRate (e.g. ±2.7ms at
  * blockSize=128). Sufficient for lock-time measurements.

@@ -668,7 +668,7 @@ describe('ShaderFilter on WebGPU', () => {
     extraTex.destroy();
   });
 
-  // 16. _ensureConnected is idempotent — second apply() reuses the pipeline
+  // 16. _ensureConnected is idempotent - second apply() reuses the pipeline
   test('second apply() reuses the already-created pipeline (no new createRenderPipeline call)', () => {
     const backend = makeWebGpuBackend(env);
     const filter = new ShaderFilter({ wgsl: minimalFragSrc });

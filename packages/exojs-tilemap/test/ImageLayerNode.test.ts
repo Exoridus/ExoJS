@@ -30,14 +30,14 @@ function makeLayer(opts: Partial<ImageLayerOptions> = {}): ImageLayer {
 /**
  * A minimal stand-in for `RenderPlanBuilder`, mirroring exactly what
  * `Container._collectContent` and the drawable-child collect path read:
- *  - `view.center`         — the parallax patch source,
- *  - `view.getBounds()`    — the repeat-coverage span (Rectangle-like),
- *  - `view.updateId`       — the retained-plan revision key,
- *  - `_isViewCullSuppressed: true` — makes the child `_collect` skip the
+ *  - `view.center`         - the parallax patch source,
+ *  - `view.getBounds()`    - the repeat-coverage span (Rectangle-like),
+ *  - `view.updateId`       - the retained-plan revision key,
+ *  - `_isViewCullSuppressed: true` - makes the child `_collect` skip the
  *    `inView` frustum test and go straight to `emitNode` (no cull machinery),
- *  - `emitNode` / `_peekCurrentScopeEntries` + `_peekCurrentScopeEntryCount` — the
+ *  - `emitNode` / `_peekCurrentScopeEntries` + `_peekCurrentScopeEntryCount` - the
  *    no-slot capture bookkeeping,
- *  - `backend`             — stored verbatim by the retained-plan cache commit.
+ *  - `backend`             - stored verbatim by the retained-plan cache commit.
  */
 function mockBuilder(options: {
   center?: { x: number; y: number };
@@ -69,7 +69,7 @@ function spriteOf(node: ImageLayerNode): RepeatingSprite {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// ImageLayerNode — construction
+// ImageLayerNode - construction
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('ImageLayerNode construction', () => {
@@ -120,7 +120,7 @@ describe('ImageLayerNode construction', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// ImageLayerNode — parallax (mirrors nodes.test.ts TileLayerNode cases)
+// ImageLayerNode - parallax (mirrors nodes.test.ts TileLayerNode cases)
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('ImageLayerNode parallax', () => {
@@ -129,7 +129,7 @@ describe('ImageLayerNode parallax', () => {
       makeLayer({ offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5 }),
     );
 
-    // Construction must NOT apply a parallax shift — the shift is render-time only.
+    // Construction must NOT apply a parallax shift - the shift is render-time only.
     expect(node.x).toBe(10);
     expect(node.y).toBe(20);
   });
@@ -171,7 +171,7 @@ describe('ImageLayerNode parallax', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// ImageLayerNode — repeat coverage (the core math)
+// ImageLayerNode - repeat coverage (the core math)
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('ImageLayerNode repeat coverage', () => {
@@ -312,7 +312,7 @@ describe('ImageLayerNode repeat coverage', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// ImageLayerNode — repeat coverage cache
+// ImageLayerNode - repeat coverage cache
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('ImageLayerNode repeat coverage cache', () => {
@@ -329,7 +329,7 @@ describe('ImageLayerNode repeat coverage cache', () => {
     const setPositionSpy = vi.spyOn(sprite, 'setPosition');
 
     // Same view span and (unpatched, since parallax is 1) origin as the first
-    // collect — the cache comparison in `_updateRepeatCoverage` should hit and
+    // collect - the cache comparison in `_updateRepeatCoverage` should hit and
     // skip rebuilding the child's geometry entirely.
     collect(node, builder);
 
@@ -339,7 +339,7 @@ describe('ImageLayerNode repeat coverage cache', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// ImageLayerNode — pixelSnapMode
+// ImageLayerNode - pixelSnapMode
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('ImageLayerNode pixelSnapMode', () => {

@@ -7,7 +7,7 @@ import { TileSet } from '../src/TileSet';
 import { TILE_TRANSFORM_IDENTITY, unpackTile } from '../src/types';
 import { createWorkerSampledChunkSource } from '../src/WorkerSampledChunkSource';
 
-// jsdom implements neither `Worker` nor `URL.createObjectURL` (verified empirically —
+// jsdom implements neither `Worker` nor `URL.createObjectURL` (verified empirically -
 // both are `undefined` in a fresh JSDOM window). createWorkerSampledChunkSource calls
 // `new Blob(...)`, `URL.createObjectURL(...)`, and `new Worker(...)` unconditionally at
 // construction time, so all three must be stubbed before any test in this file runs.

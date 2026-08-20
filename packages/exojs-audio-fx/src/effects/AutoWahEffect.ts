@@ -47,7 +47,7 @@ interface AutoWahEffectSetup {
  * bandpass filter, creating the characteristic "wah" sweep driven by the
  * loudness of the input signal.
  *
- * The envelope follower is built entirely from native Web Audio nodes — no
+ * The envelope follower is built entirely from native Web Audio nodes - no
  * `ScriptProcessor` or `AudioWorklet` required:
  *
  * 1. A `WaveShaperNode` rectifier approximates `|x|` (full-wave rectification),
@@ -64,7 +64,7 @@ interface AutoWahEffectSetup {
  *            │                                        ├── outputGain
  *            └─ wahFilter(bandpass) ─── wetGain ──────┘
  *
- * Envelope (control) path — parallel off inputGain, sums into wahFilter.frequency:
+ * Envelope (control) path - parallel off inputGain, sums into wahFilter.frequency:
  * inputGain → rectifier(WaveShaper,|x|) → smoothingLowpass(BiquadFilter,lowpass)
  *           → sensitivityGain → wahFilter.frequency (AudioParam)
  * ```
@@ -300,7 +300,7 @@ export class AutoWahEffect extends AudioEffect {
     wahFilter.connect(wetGain);
     wetGain.connect(outputGain);
 
-    // Envelope (control) path — parallel off inputGain, drives wahFilter.frequency.
+    // Envelope (control) path - parallel off inputGain, drives wahFilter.frequency.
     // The rectified+smoothed signal is scaled by sensitivityGain and summed into
     // the wahFilter frequency AudioParam, sweeping the filter with input loudness.
     inputGain.connect(rectifier);

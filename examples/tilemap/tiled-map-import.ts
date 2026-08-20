@@ -6,14 +6,14 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // Loading a Tiled `.tmj` map through @codexo/exojs-tiled's *advanced*
 // parsed-source path, then querying its object layer.
 //
-//   - `loader.load(Asset.type('tiledSource', url))` returns a `TiledMap` — the
+//   - `loader.load(Asset.type('tiledSource', url))` returns a `TiledMap` - the
 //     fully parsed, diagnostic-friendly source model (map/tileset/layer
 //     metadata, custom properties, `.getProperty()`). This is the same file
 //     the common-case `Asset.type('tileMap', url)` binding loads internally.
 //   - `TiledMap.toTileMap()` converts it, synchronously, to the generic
 //     runtime `TileMap` that `TileMapNode` renders.
 //   - `ObjectLayer.query(filter)` finds objects by `type`, `kind`, or a
-//     custom `property`/`value` pair — the same object-layer data a "Tiled
+//     custom `property`/`value` pair - the same object-layer data a "Tiled
 //     collision layer -> physics colliders" bridge would walk (see the
 //     Physics chapter's "Tiled Map + Physics Actor" example), here just
 //     queried and outlined instead of turned into colliders.

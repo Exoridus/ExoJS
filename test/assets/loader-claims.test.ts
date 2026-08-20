@@ -17,7 +17,7 @@ function createCoreLoader(options?: LoaderOptions): Loader {
 
 // SoundFactory.create() decodes bytes via the shared OfflineAudioContext
 // (`decodeAudioData` from '#audio/audio-context'). jsdom has no real audio
-// decoder, so the module is mocked wholesale — mirroring the `{ duration }`
+// decoder, so the module is mocked wholesale - mirroring the `{ duration }`
 // AudioBuffer stub used by test/assets/sound-factory.test.ts. `vi.mock`
 // factories are hoisted above imports, so the mock function must be created
 // via `vi.hoisted()` to be referenced safely inside the factory below.
@@ -118,7 +118,7 @@ describe('refcount / claims', () => {
 
   test('a not-yet-started background entry is dropped from the queue at refcount 0', () => {
     // Hanging fetch: 'a.ogg' stays in flight (never settles), so 'b'/'c' remain
-    // queued behind the cap — no background fetch settles past the synchronous
+    // queued behind the cap - no background fetch settles past the synchronous
     // assertions (avoids an unhandled rejection after the test tears the mock down).
     global.fetch = vi.fn((): Promise<Response> => new Promise<Response>(() => {})) as unknown as typeof fetch;
     // Concurrency 1: only 'a.ogg' goes in flight; 'b'/'c' stay queued so the
@@ -165,7 +165,7 @@ describe('refcount / claims', () => {
     const captured = handle.loaded;
 
     // Release before load settles: hits _evictKey's leave-it branch (deferred
-    // !== undefined) — it must NOT re-arm or drop the in-flight fetch.
+    // !== undefined) - it must NOT re-arm or drop the in-flight fetch.
     owner.release(handle);
 
     // §4.7 free-on-arrival: the running fetch completes and settles the captured

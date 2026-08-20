@@ -31,7 +31,7 @@ export interface ColliderOptions {
  * Geometry attached to a {@link PhysicsBody}: a {@link Shape} plus a body-local
  * offset/rotation, material (friction/restitution/density) and a collision
  * filter. A body may own several colliders (compound). The collider also caches
- * its world-space geometry — refreshed by {@link synchronize} — which the broad
+ * its world-space geometry - refreshed by {@link synchronize} - which the broad
  * phase, narrow phase and queries read directly.
  *
  * Material fields and the filter are mutable; the shape and local placement are
@@ -66,12 +66,12 @@ export class Collider {
   private _destroyed = false;
 
   /**
-   * @internal — proxy id in the physics world's broad-phase spatial tree; `-1`
+   * @internal - proxy id in the physics world's broad-phase spatial tree; `-1`
    * when not inserted. Like `PhysicsBody._islandIndex`/`_sleepTime`, this is a
    * single-owner slot: exactly ONE `AabbTreeBroadPhase` may track this collider
    * at a time (in production, the world's own broad phase for the collider's
    * whole lifetime). A second broad phase over the same collider would clobber
-   * this value and corrupt the first's tree — never do that.
+   * this value and corrupt the first's tree - never do that.
    */
   public _treeProxy = -1;
 
@@ -205,7 +205,7 @@ export class Collider {
     this._aabb.maxY = maxY;
   }
 
-  /** @internal — bind this collider to its body and id (called when the body joins a world). */
+  /** @internal - bind this collider to its body and id (called when the body joins a world). */
   public _attach(body: PhysicsBody, id: number): void {
     this._body = body;
     this._id = id;

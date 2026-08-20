@@ -190,7 +190,7 @@ describe('Easing', () => {
     });
 
     test('f(0.8) hits the third bounce segment (t in [2/d1, 2.5/d1))', () => {
-      // d1 = 2.75; 2/d1 ≈ 0.727, 2.5/d1 ≈ 0.909 — 0.8 falls in that range,
+      // d1 = 2.75; 2/d1 ≈ 0.727, 2.5/d1 ≈ 0.909 - 0.8 falls in that range,
       // which none of the other bounce tests exercise.
       expect(Ease.bounceOut(0.8)).toBeCloseTo(0.94, 3);
     });

@@ -6,7 +6,7 @@
  *
  * The store's four per-slot buffers are `storage` bindings, so each one is
  * bounded by `min(maxBufferSize, maxStorageBufferBindingSize)` of the GRANTED
- * device limits — not the adapter's. A device requested without `requiredLimits`
+ * device limits - not the adapter's. A device requested without `requiredLimits`
  * for either is granted exactly the spec defaults, which puts the ceiling at
  * 4 194 304 slots (32 bytes of transform row) no matter what the hardware could
  * offer. Past it `createBuffer` still succeeds and `createBindGroup` does not,
@@ -20,7 +20,7 @@
 
 import { persistentSlotGrowthCapacity, WebGpuPersistentSlotStore } from '#rendering/webgpu/WebGpuPersistentSlotStore';
 
-/** WebGPU's spec defaults — what a device gets when nothing higher is requested. */
+/** WebGPU's spec defaults - what a device gets when nothing higher is requested. */
 const DEFAULT_MAX_BUFFER_SIZE = 2 ** 28; // 256 MiB
 const DEFAULT_MAX_STORAGE_BUFFER_BINDING_SIZE = 2 ** 27; // 128 MiB
 
@@ -95,7 +95,7 @@ describe('WebGpuPersistentSlotStore device limits', () => {
       expect(store.canRepresent(DEFAULT_SLOT_CEILING - 1, 1)).toBe(true);
 
       // Exactly on the boundary: the binding is `maxStorageBufferBindingSize`
-      // bytes, which the limit ADMITS — a refusal here would cost the fast path
+      // bytes, which the limit ADMITS - a refusal here would cost the fast path
       // a capacity the device can serve.
       expect(store.canRepresent(DEFAULT_SLOT_CEILING, 1)).toBe(true);
 
@@ -112,7 +112,7 @@ describe('WebGpuPersistentSlotStore device limits', () => {
 
       // Four bytes an entry rather than 32, so the order buffer's own ceiling is
       // eight times further out. It can never be the first buffer to break in a
-      // sprite store — order entries never outnumber slots — which is exactly
+      // sprite store - order entries never outnumber slots - which is exactly
       // why it needs its own assertion.
       expect(store.canRepresent(INITIAL_CAPACITY, DEFAULT_ORDER_CEILING)).toBe(true);
       expect(store.canRepresent(INITIAL_CAPACITY, DEFAULT_ORDER_CEILING + 1)).toBe(false);

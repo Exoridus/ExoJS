@@ -5,7 +5,7 @@
  * `colour-modified`: the sprite still lands on exactly the right pixels, but
  * the channels now carry a product of texel and tint instead of coordinates,
  * so no pixel can be traced back. The runner caps them at `frame-equal`
- * accordingly — the geometry is exact, the provenance is not.
+ * accordingly - the geometry is exact, the provenance is not.
  *
  * They are worth measuring precisely because colour maths is where the two
  * backends run genuinely different code: fixed-function blend state on WebGL2
@@ -46,7 +46,7 @@ export const colourScenes: readonly Scene[] = [
     build: () => tinted(new Color(128, 128, 128, 1)),
   },
   {
-    // Additive blending over an opaque backdrop — the classic case where a
+    // Additive blending over an opaque backdrop - the classic case where a
     // premultiply mismatch between backends shows up as a brighter or darker
     // overlap while each sprite alone looks correct.
     name: 'blend/additive-overlap',

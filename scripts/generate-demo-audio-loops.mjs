@@ -1,9 +1,9 @@
 /**
  * Generates three short loopable demo audio tracks as OGG files.
  *
- * Loop A  — bright major chord pulse (G major, higher register)
- * Loop B  — calm minor chord drone (D minor, lower register)
- * Loop Main — mid-range ambient chord (C major)
+ * Loop A  - bright major chord pulse (G major, higher register)
+ * Loop B  - calm minor chord drone (D minor, lower register)
+ * Loop Main - mid-range ambient chord (C major)
  *
  * Requires: ffmpeg on PATH
  * Run: node scripts/generate-demo-audio-loops.mjs
@@ -67,7 +67,7 @@ function writeWav(samples) {
 
 const TWO_PI = Math.PI * 2;
 
-/** Sum of sine harmonics — gives a richer, less harsh tone than a bare sine. */
+/** Sum of sine harmonics - gives a richer, less harsh tone than a bare sine. */
 function osc(freq, t) {
   return (
     Math.sin(TWO_PI * freq * t) * 0.55 +
@@ -109,7 +109,7 @@ function generateChordLoop({ freqs, durationS, tremoloHz, tremoloDepth, masterVo
 const LOOPS = [
   {
     name: 'demo-loop-a',
-    // G major: G4 B4 D5 — bright, upper register
+    // G major: G4 B4 D5 - bright, upper register
     freqs: [392.0, 493.88, 587.33],
     durationS: 5,
     tremoloHz: 3.5, // faster pulse → energetic
@@ -118,7 +118,7 @@ const LOOPS = [
   },
   {
     name: 'demo-loop-b',
-    // D minor: D3 F3 A3 — darker, lower register
+    // D minor: D3 F3 A3 - darker, lower register
     freqs: [146.83, 174.61, 220.0],
     durationS: 6,
     tremoloHz: 1.2, // slow pulse → calm
@@ -127,7 +127,7 @@ const LOOPS = [
   },
   {
     name: 'demo-loop-main',
-    // C major: C3 E3 G3 — neutral, mid-range
+    // C major: C3 E3 G3 - neutral, mid-range
     freqs: [130.81, 164.81, 196.0],
     durationS: 5,
     tremoloHz: 2.0, // moderate pulse → background-friendly

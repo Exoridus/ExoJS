@@ -121,9 +121,9 @@ export interface TextStyleOptions {
  *
  * Every setter marks the style dirty with a {@link StyleChangeHint} so that
  * the owning node can batch-rebuild efficiently on the next frame:
- * - `'tint'`  — only updates `Mesh.tint`, no atlas work
- * - `'layout'` — rebuilds the glyph mesh, reuses cached atlas glyphs
- * - `'font'`  — atlas lookup + full mesh rebuild
+ * - `'tint'`  - only updates `Mesh.tint`, no atlas work
+ * - `'layout'` - rebuilds the glyph mesh, reuses cached atlas glyphs
+ * - `'font'`  - atlas lookup + full mesh rebuild
  *
  * Call {@link consumeDirty} at the start of each frame to get the accumulated
  * hint and clear the flag.
@@ -299,7 +299,7 @@ export class TextStyle {
     this._markDirty('tint');
   }
 
-  /** Outline color — used by BitmapText/SDF rendering as a shader uniform. */
+  /** Outline color - used by BitmapText/SDF rendering as a shader uniform. */
   public get outlineColor(): Color {
     return this._outlineColor;
   }

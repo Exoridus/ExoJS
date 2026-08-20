@@ -14,7 +14,7 @@ const defaultStoreName = '__kv_store';
  * {@link KeyValueStore} over IndexedDB (via {@link IndexedDbStore}), using the
  * **structured-clone** algorithm.
  *
- * Unlike {@link WebStorageStore}, values are stored *directly* — no
+ * Unlike {@link WebStorageStore}, values are stored *directly* - no
  * `JSON.stringify`. So `Blob`s, `ArrayBuffer`s, typed arrays and nested objects
  * round-trip natively, and there is no string-size ceiling beyond the (large)
  * IndexedDB quota. Use this for binary or large saves; use `WebStorageStore` for

@@ -24,7 +24,7 @@ const toU16 = (value: unknown): Uint16Array => (Array.isArray(value) ? new Uint1
 const toU32 = (value: unknown): Uint32Array => (Array.isArray(value) ? new Uint32Array(value.map(Number)) : new Uint32Array());
 const num = (value: unknown): number | undefined => (typeof value === 'number' && Number.isFinite(value) ? value : undefined);
 
-/** Read a {@link NineSliceInsets} from JSON, defaulting any missing/invalid edge to 0 (never `undefined` — `slices` is required and `undefined` would crash `normalizeInsets`). */
+/** Read a {@link NineSliceInsets} from JSON, defaulting any missing/invalid edge to 0 (never `undefined` - `slices` is required and `undefined` would crash `normalizeInsets`). */
 const readInsets = (value: unknown): NineSliceInsets => {
   const source = asObject(value);
 
@@ -104,7 +104,7 @@ const meshSerializer: NodeSerializer<Mesh> = {
 // ── Graphics ───────────────────────────────────────────────────────────────
 // Graphics is immediate-mode: its authored result is the baked Mesh children it
 // accumulates. Round-trips the rendered geometry (gradient fills, drawn via
-// runtime DataTextures, degrade to their vertex colours — texture refs are
+// runtime DataTextures, degrade to their vertex colours - texture refs are
 // unkeyed and dropped). The pen state is transient and not serialized.
 
 const graphicsSerializer: NodeSerializer<Graphics> = {

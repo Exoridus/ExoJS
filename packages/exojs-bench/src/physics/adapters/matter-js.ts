@@ -5,7 +5,7 @@ import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsStructuralCounters } 
 import { describePhysicsScene } from './scene';
 
 /**
- * matter.js (`matter-js`) arm of the physics benchmark — the "attach a
+ * matter.js (`matter-js`) arm of the physics benchmark - the "attach a
  * general-purpose 2D physics library" comparison against staying on native
  * `@codexo/exojs-physics`.
  *
@@ -16,7 +16,7 @@ import { describePhysicsScene } from './scene';
  * exojs arm and the rapier arm do, and the perturbed selection is asserted
  * cross-arm through {@link PhysicsAdapter.mutationSignature}.
  *
- * UNIT MAPPING (the crux of a fair matter comparison — matter's units are NOT
+ * UNIT MAPPING (the crux of a fair matter comparison - matter's units are NOT
  * SI):
  * - Gravity. matter integrates gravity as `accel = gravity.value * gravity.scale`
  *   per second², with the default `scale` of `0.001`. The archetype gravity is in
@@ -24,25 +24,25 @@ import { describePhysicsScene } from './scene';
  *   field the exojs arm integrates (empirically verified: default `y=1` ⇒
  *   ≈1000 px/s²).
  * - Timestep. `Engine.update` takes MILLISECONDS, so each `step(dt)` calls it with
- *   `dt * 1000` — the same fixed `1/60 s` sub-step as the native arm.
+ *   `dt * 1000` - the same fixed `1/60 s` sub-step as the native arm.
  * - Velocity. matter's body velocity is px-per-STEP, not px/s, so a perturbation
  *   of `v` px/s is applied as `v * dt` via `Body.setVelocity`.
  *
- * DISCLOSED NON-EQUIVALENCE (each engine measured at its own sensible default —
+ * DISCLOSED NON-EQUIVALENCE (each engine measured at its own sensible default -
  * these are the legitimate engine differences the benchmark exists to surface):
  * - Solver iterations: matter's constraint solver defaults (position 6 / velocity
  *   4 / constraint 2) differ from exojs's TGS-Soft 4-substep and rapier's 4
  *   solver iterations.
  * - Sleeping: matter does NOT deactivate resting bodies by default
- *   (`enableSleeping=false`), whereas exojs and rapier do — so a settled matter
+ *   (`enableSleeping=false`), whereas exojs and rapier do - so a settled matter
  *   stack keeps paying full solve cost. Kept at matter's default and disclosed.
  * - `frictionAir` is set to `0` (matter's default `0.01` applies a per-step linear
  *   drag that neither exojs nor rapier apply by default) so all three arms
- *   integrate the SAME pure-gravity force field — matching the SCENE, while the
+ *   integrate the SAME pure-gravity force field - matching the SCENE, while the
  *   solver differences above are left to be measured.
  * - Contact count is matter's active colliding-pair count (`engine.pairs
- *   .collisionActive`), a pair-level proxy comparable to — but not semantically
- *   identical to — exojs's solid-contact count.
+ *   .collisionActive`), a pair-level proxy comparable to - but not semantically
+ *   identical to - exojs's solid-contact count.
  *
  * `matter-js` is a CommonJS default export loaded lazily via dynamic `import()`,
  * so a checkout that never ran `bench:setup` (the competitor library is not
@@ -139,7 +139,7 @@ export const createMatterJsAdapter = async (): Promise<PhysicsAdapter | null> =>
 
       return {
         bodyCount: M.Composite.allBodies(engine.world).length,
-        // Active colliding pairs on the last step — matter's pair-level contact proxy.
+        // Active colliding pairs on the last step - matter's pair-level contact proxy.
         contactCount: engine.pairs.collisionActive.length,
       };
     },

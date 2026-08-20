@@ -4,9 +4,9 @@
  * The WebGPU render pass survives a renderer switch, so a frame that alternates
  * sprites and text contains SEVERAL text flushes inside one pass. The text
  * renderer used to rewrite its shared vertex / index / node-data buffers from
- * offset 0 on every flush — `queue.writeBuffer` is ordered against the submit,
+ * offset 0 on every flush - `queue.writeBuffer` is ordered against the submit,
  * not against the individual draws inside the pass, so flush k+1's bytes would
- * land under the draws flush k had already recorded — and it ended (submitted)
+ * land under the draws flush k had already recorded - and it ended (submitted)
  * the pass unconditionally at the tail of every flush to paper over that. Cost:
  * one pass and one submit PER TEXT FLUSH, i.e. linear in the alternation count.
  *
@@ -16,7 +16,7 @@
  *
  * Distinct fill colours AND distinct rows per text node are what make an
  * aliasing regression visible: a flush whose vertex bytes or node rows were
- * overwritten by a later one paints the later node's colour — or nothing at all,
+ * overwritten by a later one paints the later node's colour - or nothing at all,
  * leaving its band at the black clear. Collapsing the passes while corrupting the
  * offsets therefore fails the probes, not just the counters.
  *
@@ -24,7 +24,7 @@
  * rewrite is a pass boundary here, so the skip state has to compare group
  * CONTENT rather than the backend's monotonic group-transform id. A retained
  * group entered and left around text restores byte-identical group bytes while
- * that id advances twice — under an id comparison every boundary split the
+ * that id advances twice - under an id comparison every boundary split the
  * frame, at one extra pass and submit per boundary.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -144,7 +144,7 @@ const countSubmits = (backend: WebGpuBackend, body: () => void): number => {
 /**
  * The most strongly covered glyph pixel inside one band. Glyph edges are
  * antialiased, so the fill colour is only reproduced exactly where coverage
- * saturates — the brightest pixel of a thick stem. Returns `null` for a band
+ * saturates - the brightest pixel of a thick stem. Returns `null` for a band
  * that holds no ink at all (which is itself a failure: the flush was dropped or
  * drew somewhere else).
  */
@@ -241,7 +241,7 @@ describe('WebGPU text single-pass frame', () => {
       const submits = countSubmits(backend, renderAlternating);
 
       // One draw call per sprite flush and per text flush, plus the trailing
-      // sprite — so the text renderer really did flush `flushes` times.
+      // sprite - so the text renderer really did flush `flushes` times.
       expect(backend.stats.drawCalls).toBe(flushes * 2 + 1);
       expect(backend.stats.renderPasses).toBe(1);
       expect(submits).toBe(1);
@@ -282,7 +282,7 @@ describe('WebGPU text single-pass frame', () => {
     }
 
     // A group sitting at the origin with no transform of its own composes to the
-    // identity — the same matrix the ungrouped draws around it are projected
+    // identity - the same matrix the ungrouped draws around it are projected
     // with. Entering and leaving it therefore restores BYTE-IDENTICAL group
     // bytes while the backend's group-transform id advances twice, which is
     // exactly the case the projection skip state must not read as a change: a
@@ -318,7 +318,7 @@ describe('WebGPU text single-pass frame', () => {
       const groupIdBefore = backend.renderGroupTransformId;
       const submits = countSubmits(backend, renderGrouped);
 
-      // The frame really crossed two group boundaries — without this the
+      // The frame really crossed two group boundaries - without this the
       // counters below would pass for a frame that never entered a group.
       expect(backend.renderGroupTransformId - groupIdBefore).toBe(2);
       // One draw call per text flush (each group boundary drains the pending

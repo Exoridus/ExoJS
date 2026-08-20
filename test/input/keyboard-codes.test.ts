@@ -138,7 +138,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
 
   test('a punctuation key maps by position, not by the glyph the layout prints', () => {
     // On QWERTZ the physical `Semicolon` key prints "ö"; on AZERTY it prints
-    // "m". Neither changes the channel — the member is named for the US-QWERTY
+    // "m". Neither changes the channel - the member is named for the US-QWERTY
     // legend of that position, not for the character produced.
     const { im } = createFocusedInputManager();
 
@@ -232,7 +232,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
 
     release({ code: 'ControlLeft', key: 'Control', keyCode: 17 });
 
-    // Right Control is still held — the aggregate must stay active.
+    // Right Control is still held - the aggregate must stay active.
     expect(ch(im, Keyboard.ControlLeft)).toBe(0);
     expect(ch(im, Keyboard.ControlRight)).toBe(1);
     expect(ch(im, Keyboard.Control)).toBe(1);
@@ -308,7 +308,7 @@ describe('Keyboard enum stability', () => {
   // regression guard: a serialized numeric binding (a persisted rebinding
   // profile, say) must keep resolving to the exact same Keyboard member it
   // always did. New side-specific channels occupy previously-unused slots
-  // only — no existing member's value may ever move.
+  // only - no existing member's value may ever move.
   const preexisting: Record<string, number> = {
     Backspace: 8,
     Tab: 9,

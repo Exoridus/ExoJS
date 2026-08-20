@@ -1,5 +1,5 @@
 /**
- * WebGPU renderer-matrix browser tests — RetainedContainer under ROTATION
+ * WebGPU renderer-matrix browser tests - RetainedContainer under ROTATION
  * (pixel gate for the per-group matrix).
  *
  * A retained group routes its matrix to the GPU as the
@@ -7,15 +7,15 @@
  * mat3x3). A transposed packing of that matrix is invisible for the
  * translation-only group moves the existing cells exercise, but flips every
  * ROTATED group. These cells rotate a RetainedContainer over a sprite, a
- * single (CPU-baked) mesh, an instanced static-geometry mesh pair — the path
- * whose group mat3x3 used to be packed transposed — and bitmap text, and
+ * single (CPU-baked) mesh, an instanced static-geometry mesh pair - the path
+ * whose group mat3x3 used to be packed transposed - and bitmap text, and
  * assert the canonical world positions. Expected pixels are mirrored 1:1 in
  * webgl2-rotated-retained-group.test.ts for cross-backend equality.
  *
  * Group transform: SceneNode.setRotation(θ) builds (a, b, c, d) =
  * (cosθ, sinθ, -sinθ, cosθ), so position (32, 32) + rotation 90° maps
  * child-local (x, y) to world (32 + y, 32 - x); the TRANSPOSED application
- * would map it to (32 - y, 32 + x) — the black-checked artifact positions.
+ * would map it to (32 - y, 32 + x) - the black-checked artifact positions.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -82,7 +82,7 @@ const createSolidTexture = (color: string, size: number): Texture => {
 };
 
 // A BitmapText whose single glyph 'A' fills the whole `size`×`size` atlas
-// page at the line origin, so its quad covers (0,0)–(size,size) before any
+// page at the line origin, so its quad covers (0,0)-(size,size) before any
 // node/group transform (same fixture as webgpu-retained-container.test.ts).
 const createSolidBitmapText = (color: string, size: number): { text: BitmapText; texture: Texture } => {
   const texture = createSolidTexture(color, size);
@@ -99,7 +99,7 @@ const createSolidBitmapText = (color: string, size: number): { text: BitmapText;
 
 // A solid-color quad (two triangles) in local space with vertex colors; the
 // default mesh path samples the 1×1 white texture, so the output is the
-// vertex color. usage defaults to 'static' — the instanced-batch requirement.
+// vertex color. usage defaults to 'static' - the instanced-batch requirement.
 const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaTuple): Geometry => {
   const stride = 12;
   const corners: ReadonlyArray<readonly [number, number]> = [
@@ -265,7 +265,7 @@ describe('WebGPU renderer matrix: rotated RetainedContainer cells', () => {
       }
 
       // Two same-geometry/same-material static meshes inside one group merge
-      // into a single instanced draw — the exact WGSL slot-math + group
+      // into a single instanced draw - the exact WGSL slot-math + group
       // mat3x3 path under test.
       expect(backend.stats.drawCalls).toBe(1);
 

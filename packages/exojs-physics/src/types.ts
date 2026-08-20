@@ -10,10 +10,10 @@ export interface VectorLike {
 /**
  * Simulation role of a {@link PhysicsBody}.
  *
- * - `dynamic` — fully simulated (finite mass); moved by the solver once
+ * - `dynamic` - fully simulated (finite mass); moved by the solver once
  *   dynamics ship, and by `setTransform` meanwhile.
- * - `static` — never moves; infinite mass. Ground, walls, level geometry.
- * - `kinematic` — moved only by `setTransform` (game-driven); infinite mass,
+ * - `static` - never moves; infinite mass. Ground, walls, level geometry.
+ * - `kinematic` - moved only by `setTransform` (game-driven); infinite mass,
  *   unaffected by contacts. Platforms, doors.
  */
 export type BodyType = 'dynamic' | 'static' | 'kinematic';

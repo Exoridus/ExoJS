@@ -5,7 +5,7 @@
  * BETWEEN two `TileMapView` bands composites in document order: it draws over
  * the band below it and under the band above it. The "actor" here is a
  * distinctly-coloured single-tile node standing in for any application
- * `RenderNode` — interleaving is a document-order property of sibling subtrees,
+ * `RenderNode` - interleaving is a document-order property of sibling subtrees,
  * independent of the actor's concrete type, and uses only the tilemap renderer
  * (no core-renderer wiring, no shader mocks).
  *
@@ -71,9 +71,9 @@ const BLUE: RgbaTuple = [0, 0, 255, 255];
 /**
  * Build the interleave scene:
  *   worldRoot
- *    ├─ ground band   (red,   screen 0..16)      — drawn first  (bottom)
- *    ├─ actor         (green, screen 8..24)      — app-owned sibling (middle)
- *    └─ roof band     (blue,  screen 16..32)     — drawn last   (top)
+ *    ├─ ground band   (red,   screen 0..16)      - drawn first  (bottom)
+ *    ├─ actor         (green, screen 8..24)      - app-owned sibling (middle)
+ *    └─ roof band     (blue,  screen 16..32)     - drawn last   (top)
  * The three overlap diagonally so each pairwise overlap reveals draw order.
  */
 const makeInterleaveScene = () => {

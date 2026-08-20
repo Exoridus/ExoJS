@@ -210,7 +210,7 @@ describe('TileAnimator', () => {
 
   it('ignores an animation whose frames reference an out-of-range local tile id', () => {
     const ts = makeTileset256();
-    // localTileId 999 exceeds the 256-tile tileset — malformed data.
+    // localTileId 999 exceeds the 256-tile tileset - malformed data.
     ts._setDefinition(0, {
       animation: [
         { localTileId: 0, duration: 100 },
@@ -289,7 +289,7 @@ describe('TileAnimator', () => {
 
     expect(animator.animatedCellCount).toBe(0);
     expect(animator.elapsedMs).toBe(0);
-    // The layer itself is untouched by destroy — only the registry is dropped.
+    // The layer itself is untouched by destroy - only the registry is dropped.
     expect(layer.destroyed).toBe(false);
   });
 

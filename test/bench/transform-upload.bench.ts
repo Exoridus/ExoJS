@@ -1,4 +1,4 @@
-// CPU-STUB backend, no GPU submission — MEASUREMENT ONLY, never a CI gate.
+// CPU-STUB backend, no GPU submission - MEASUREMENT ONLY, never a CI gate.
 // Not comparable to the real WebGL2/WebGPU backend, nor to the GPU-baseline
 // suite (`test/perf/baseline/`, `pnpm perf:baseline`).
 // Sub-30% deltas between runs are noise, not signal.
@@ -82,7 +82,7 @@ const buildCommands = (nonConsumingEvery: number): DrawCommand[] => {
 };
 
 // Faithful reproduction of the WebGL2 group-upload boundary: write the rows of
-// consuming commands, skip the rest, then commit a snapshot — once per frame.
+// consuming commands, skip the rest, then commit a snapshot - once per frame.
 const packFrame = (buffer: TransformBuffer, commands: DrawCommand[]): void => {
   buffer.begin(NODE_COUNT);
 
@@ -109,7 +109,7 @@ describe('transform-upload', () => {
     }
   });
 
-  // Half the nodes opt out — their per-draw writes must be skipped, not packed.
+  // Half the nodes opt out - their per-draw writes must be skipped, not packed.
   // A regression that reintroduces per-draw writes for non-consuming renderers
   // would close the gap between these two cases.
   bench('half-non-consuming (4k nodes, 240 frames)', () => {

@@ -1,5 +1,5 @@
 // Source-of-truth for the version dropdown. Reads released versions from
-// the npm registry — the canonical "what's installable" list. The "current"
+// the npm registry - the canonical "what's installable" list. The "current"
 // entry is a virtual id for whatever HEAD-of-main the playground was built
 // from. Released versions load their library bundle from jsDelivr (which
 // serves the same npm tarballs) and their example sources from
@@ -118,7 +118,7 @@ function writeCache(catalog: VersionCatalog): void {
         const payload: CachedCatalog = { storedAt: Date.now(), catalog };
         window.localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
     } catch {
-        // localStorage quota or disabled — silently ignore; a fresh fetch on the
+        // localStorage quota or disabled - silently ignore; a fresh fetch on the
         // next reload is acceptable.
     }
 }

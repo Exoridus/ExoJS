@@ -20,7 +20,7 @@ export const apiParamSchema = z.object({
 /**
  * One lexical piece of a rendered signature. `kind` drives the color class;
  * `text` is the literal characters. A `type` token whose `text` matches a
- * documented symbol name becomes a cross-link at render time — the generator
+ * documented symbol name becomes a cross-link at render time - the generator
  * marks what is a type from the AST, the page decides what actually has a page.
  */
 export const apiTokenSchema = z.object({
@@ -50,7 +50,7 @@ export const apiLinkSchema = z.object({
 });
 
 /**
- * A page section. Heterogeneous on purpose — mirrors what the API page renders
+ * A page section. Heterogeneous on purpose - mirrors what the API page renders
  * today: the Import section carries `importLine` + `paragraphs` (the class
  * description), member sections carry `members`, the Source section carries
  * `sourceLink`. Fields not relevant to a section are empty/null.

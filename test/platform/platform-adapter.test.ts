@@ -9,7 +9,7 @@ import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAd
 
 /**
  * `Application` with a stubbed render backend. jsdom has no WebGL context, so
- * the real backend cannot even be torn down — and none of this file's subject
+ * the real backend cannot even be torn down - and none of this file's subject
  * matter involves rendering.
  */
 const loadApplication = async (): Promise<typeof import('#core/Application').Application> => {
@@ -44,7 +44,7 @@ const loadApplication = async (): Promise<typeof import('#core/Application').App
   return (await import('#core/Application')).Application;
 };
 
-/** A recording adapter — enough surface for construction and a frame or two. */
+/** A recording adapter - enough surface for construction and a frame or two. */
 const createRecordingPlatform = (): PlatformAdapter & { readonly calls: string[]; visible: boolean; emitVisibility: (visible: boolean) => void } => {
   const calls: string[] = [];
   const visibilityListeners = new Set<(visible: boolean) => void>();

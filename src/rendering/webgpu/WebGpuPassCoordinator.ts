@@ -36,7 +36,7 @@ export interface WebGpuActiveRenderPass {
    * shared projection uniform into a still-open pass: a bump means the same View
    * object was mutated (e.g. a camera pan with no identity change) between two
    * merged flushes, which would retroactively re-project batches already
-   * recorded here — so the renderer ends the pass first.
+   * recorded here - so the renderer ends the pass first.
    */
   readonly viewUpdateId: number;
   readonly stencilEnabled: boolean;
@@ -128,7 +128,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   private _stencilRef = 0;
   private _active: WebGpuActiveRenderPass | null = null;
   private _passHasDraws = false;
-  /** Reused render-pass descriptor and its colour-attachment list — see {@link acquirePass}. */
+  /** Reused render-pass descriptor and its colour-attachment list - see {@link acquirePass}. */
   private readonly _colorAttachments: Array<GPURenderPassColorAttachment | null> = [null];
   private readonly _passDescriptor: ReusablePassDescriptor = {
     label: 'pass-coordinator:render-pass',
@@ -157,7 +157,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   }
 
   /**
-   * Whether the open pass holds draws recorded by anyone — this renderer or
+   * Whether the open pass holds draws recorded by anyone - this renderer or
    * another one. The pass survives a renderer switch, so a renderer's own
    * cursors no longer answer "would mutating a resource now retroactively
    * change a draw already in this pass": the draw may belong to a renderer that
@@ -165,7 +165,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
    *
    * The contract deliberately stops at a boolean. Guards against a *shared*
    * resource being mutated under recorded draws (the transform storage buffer,
-   * managed texture content) need only "does this pass hold any draw" — never
+   * managed texture content) need only "does this pass hold any draw" - never
    * "whose". Every "is it mine" question is answered locally, by comparing
    * against {@link activePass} by identity.
    * @internal
@@ -203,8 +203,8 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
   /**
    * Open (or return the already-open) GPU render pass for the backend's current
    * target/view. Resolves colour load/clear via {@link createColorAttachment},
-   * counts the pass, applies the active scissor, and — when a stencil clip is in
-   * effect — attaches the per-target depth/stencil buffer and sets the reference.
+   * counts the pass, applies the active scissor, and - when a stencil clip is in
+   * effect - attaches the per-target depth/stencil buffer and sets the reference.
    */
   public acquirePass(): WebGpuActiveRenderPass {
     if (this._active !== null) {
@@ -218,7 +218,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
     // has to survive the call. An effect-heavy frame opens hundreds of passes
     // (501 on `filter/color 100`), where a fresh descriptor plus a fresh
     // one-element array per pass is a measurable per-pass cost. The `_active`
-    // record below is deliberately NOT pooled — renderers compare it by
+    // record below is deliberately NOT pooled - renderers compare it by
     // identity to decide whether their draws are in the open pass.
     const descriptor = this._passDescriptor;
 
@@ -267,7 +267,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
    *
    * Leaving `_active` set is the failure this exists to prevent. The coordinator
    * instance outlives a device-loss recovery, and {@link acquirePass}
-   * short-circuits on an already-open pass — so a pass left open across the
+   * short-circuits on an already-open pass - so a pass left open across the
    * teardown would be handed back to the RESTORED device, which would then
    * record every later frame into the dead device's encoder, silently and for
    * the rest of the session. Operations on a lost device do not throw, so
@@ -466,7 +466,7 @@ export class WebGpuPassCoordinator implements RenderPassCoordinator {
    * Apply the active view's normalized (0..1) viewport as the GPU viewport, so
    * split-screen / pip / minimap views render into their framebuffer region.
    * WebGPU's framebuffer origin is top-left (y-down), so `viewport.y` maps
-   * directly — no flip (unlike WebGL2's bottom-left `gl.viewport`). A full
+   * directly - no flip (unlike WebGL2's bottom-left `gl.viewport`). A full
    * viewport is left at the pass default to avoid a redundant call.
    */
   private _applyViewport(pass: GPURenderPassEncoder): void {

@@ -29,7 +29,7 @@ import type { Destroyable, Synchronous } from './types';
  *       override draw(context: RenderingContext): void { ... }
  *   }
  *
- * `Data` is this scene's activation-data type — the value passed to
+ * `Data` is this scene's activation-data type - the value passed to
  * {@link Scene.load} and {@link Scene.init}. Scenes that need no activation
  * data use the default:
  *
@@ -56,7 +56,7 @@ import type { Destroyable, Synchronous } from './types';
  * Scene-bound facilities ({@link Scene.systems}, {@link Scene.loader},
  * {@link Scene.inputs}, {@link Scene.interaction}, {@link Scene.tweens},
  * {@link Scene.audio}) are unavailable during construction and class-field
- * initialization — they become available once the scene is attached and
+ * initialization - they become available once the scene is attached and
  * remain available through {@link Scene.load}, {@link Scene.init}, the frame
  * hooks, {@link Scene.unload}, and {@link Scene.destroy}.
  * @stable
@@ -65,7 +65,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
    * Type-only marker that keeps `Data` in the class's structural type so it
    * survives inference through a zero-argument constructor (used by scene
-   * navigation typing). `declare`d — erased at runtime, never assigned, and
+   * navigation typing). `declare`d - erased at runtime, never assigned, and
    * not part of authored code or autocomplete.
    */
   declare private readonly _sceneData?: Data;
@@ -74,7 +74,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   protected readonly _root = new Container();
 
   /**
-   * Dispatched after this scene becomes `Active` — a fresh activation
+   * Dispatched after this scene becomes `Active` - a fresh activation
    * (`Ready` → `Active`) or a retention restore (`Suspended` → `Active`).
    * Exceptions thrown by a listener are isolated: reported through
    * {@link Application.onError}, never propagated back to whatever
@@ -108,12 +108,12 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   private readonly _lifecycle = new AbortController();
 
   /**
-   * Aborted the moment this scene's permanent teardown begins — before
+   * Aborted the moment this scene's permanent teardown begins - before
    * {@link Scene.unload} is called, and also on the paths where `unload()`
    * never runs at all (a failed activation, a preload cancelled before it was
    * ever consumed, {@link Application.destroy}).
    *
-   * Pass it to anything that takes an `AbortSignal` — `fetch()` above all —
+   * Pass it to anything that takes an `AbortSignal` - `fetch()` above all -
    * so work started in {@link Scene.load} stops when the scene goes away
    * instead of resolving into a torn-down scene. The abort reason is the
    * standard `AbortError` `DOMException`, so a `fetch()` given this signal
@@ -139,7 +139,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
    * The {@link Application} this scene is attached to. The framework attaches a
    * scene before any lifecycle hook (`load`/`init`/`update`/`draw`) runs, so scene
-   * code can read `this.app` inside those hooks without a null guard — consistent
+   * code can read `this.app` inside those hooks without a null guard - consistent
    * with {@link Scene.inputs}/{@link Scene.tweens}/{@link Scene.loader}.
    *
    * Throws if accessed before the scene is attached (e.g. in a constructor). Use
@@ -154,7 +154,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
     return this._app;
   }
 
-  /** `true` once the scene is attached to an {@link Application} — a non-throwing lifecycle probe (see {@link Scene.app}). */
+  /** `true` once the scene is attached to an {@link Application} - a non-throwing lifecycle probe (see {@link Scene.app}). */
   public get attached(): boolean {
     return this._app !== null;
   }
@@ -165,7 +165,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * `Scene.root` is an **ownership and traversal anchor**, not an
    * automatic render-authoritative root. The framework never calls
    * `root.render(backend)` for you. `Scene.draw(context)` is the
-   * explicit orchestration point — see {@link Scene.draw}.
+   * explicit orchestration point - see {@link Scene.draw}.
    *
    * The root exists eagerly so `addChild` / `removeChild` can proxy
    * to a known container, and so transform/bounds traversal has a
@@ -180,7 +180,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * Scene-bound system registry. Add tickable {@link System}s (e.g. a physics
    * world) via `this.systems.add(world)`; each participates in the scheduler
    * phases it implements (`fixedUpdate`/`update`/`draw`, ascending `order`)
-   * and is destroyed with the scene — no manual `step()` / `destroy()`
+   * and is destroyed with the scene - no manual `step()` / `destroy()`
    * wiring.
    *
    * Throws if accessed before the scene is attached to an {@link Application}.
@@ -192,7 +192,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   /**
    * Scene-scoped claim view over the application {@link Loader}. Assets
    * claimed via `this.loader.get/load(...)` are held under this scene's own
-   * claim scope and released automatically when the scene ends permanently —
+   * claim scope and released automatically when the scene ends permanently -
    * scene-private assets are evicted on unload with zero manual bookkeeping.
    * App-lifetime assets stay on `app.loader`.
    *
@@ -204,7 +204,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   /**
    * Scene-bound input facade. Bindings created via `this.inputs.onTrigger(...)`
-   * etc. are automatically unbound when the scene ends permanently — no manual
+   * etc. are automatically unbound when the scene ends permanently - no manual
    * cleanup required.
    *
    * Throws if accessed before the scene is attached to an {@link Application}.
@@ -227,7 +227,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   /**
    * Scene-bound tween facade. Tweens created via `this.tweens.create(...)`
-   * are automatically stopped when the scene ends permanently — no manual
+   * are automatically stopped when the scene ends permanently - no manual
    * cleanup required.
    *
    * Throws if accessed before the scene is attached to an {@link Application}.
@@ -238,7 +238,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   /**
    * Scene-bound audio facade. Playback started via `this.audio.play(...)` is
-   * automatically stopped when the scene ends permanently — no manual
+   * automatically stopped when the scene ends permanently - no manual
    * cleanup required.
    *
    * Throws if accessed before the scene is attached to an {@link Application}.
@@ -248,7 +248,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   /**
-   * This scene's current lifecycle state. Read-only — state changes only in
+   * This scene's current lifecycle state. Read-only - state changes only in
    * response to director-driven lifecycle events, never by direct
    * assignment.
    *
@@ -259,9 +259,9 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
   }
 
   /**
-   * `true` while this scene is paused — only meaningful while {@link
+   * `true` while this scene is paused - only meaningful while {@link
    * Scene.state} is `Active`; freezes `fixedUpdate`/`update` but not `draw`.
-   * Read-only — see {@link SceneDirector.pause}/{@link SceneDirector.resume}.
+   * Read-only - see {@link SceneDirector.pause}/{@link SceneDirector.resume}.
    *
    * Throws if accessed before the scene is attached to an {@link Application}.
    */
@@ -285,7 +285,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * (after {@link Scene.draw}). Lazily created and destroyed with the scene;
    * add widgets via `this.ui.addChild(...)`.
    *
-   * Unlike {@link Scene.root}, the UI layer **is** auto-rendered each frame — a
+   * Unlike {@link Scene.root}, the UI layer **is** auto-rendered each frame - a
    * first-class overlay that always sits above the world. Its children live in
    * screen space (origin top-left, `0..width` × `0..height`); pointer and
    * keyboard input route to them ahead of the world layer.
@@ -304,7 +304,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
     return this._ui;
   }
 
-  /** @internal — the UI layer if materialized, else `null` (no lazy allocation). */
+  /** @internal - the UI layer if materialized, else `null` (no lazy allocation). */
   public _peekUI(): UIRoot | null {
     return this._ui;
   }
@@ -326,7 +326,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * {@link SerializedScene} descriptor.
    *
    * Captures **data, not behaviour**: structure, transforms, visuals and asset
-   * references — never update logic, signal handlers, tweens or systems. When
+   * references - never update logic, signal handlers, tweens or systems. When
    * the scene is attached to an {@link Application}, texture/asset references
    * resolve to their {@link Loader} source keys. Reattach behaviour in code
    * after {@link Scene.deserialize}.
@@ -399,10 +399,10 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   /**
    * Per-frame logic hook. Receives the time elapsed since the previous
-   * frame. The scene-graph transforms are still authoritative — mutate
+   * frame. The scene-graph transforms are still authoritative - mutate
    * positions, advance timers, drive AI here. Override in subclass.
    *
-   * Must be synchronous — see {@link Scene.init} for the contract and
+   * Must be synchronous - see {@link Scene.init} for the contract and
    * {@link Synchronous} for why. The frame path never awaits a hook result,
    * so an `async` override would drop its timing and swallow its errors.
    */
@@ -412,7 +412,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   /**
    * Pre-simulation hook, called once per frame before this frame's fixed
-   * steps — and therefore before {@link Scene.fixedUpdate} and
+   * steps - and therefore before {@link Scene.fixedUpdate} and
    * {@link Scene.update}. Runs after the engine's own core systems, so this
    * frame's input snapshot is already current here.
    *
@@ -421,7 +421,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * consumes them. Ordinary gameplay belongs in {@link Scene.update}, which
    * runs after the simulation. Default is a no-op. Override in subclass.
    *
-   * Must be synchronous — see {@link Scene.update}.
+   * Must be synchronous - see {@link Scene.update}.
    */
   public preUpdate(_delta: Time): Synchronous {
     // override in subclass
@@ -435,7 +435,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * purely visual work in {@link Scene.update}. Default is a no-op. Override in
    * subclass.
    *
-   * Must be synchronous — see {@link Scene.update}.
+   * Must be synchronous - see {@link Scene.update}.
    */
   public fixedUpdate(_step: Time): Synchronous {
     // override in subclass
@@ -449,12 +449,12 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * automatically traverse {@link Scene.root}. Auto-rendering the
    * full hierarchy would conflict with ExoJS's "explicit instead of
    * implicit" identity. Users decide which subtree(s) render each
-   * frame — `context.render(this.root)` is the recommended high-level
+   * frame - `context.render(this.root)` is the recommended high-level
    * path, but selective rendering (e.g. `context.render(world)` while
    * skipping `ui` for a given frame) is equally valid and intentionally
    * supported.
    *
-   * Must be synchronous — see {@link Scene.update}. An `async` draw() would
+   * Must be synchronous - see {@link Scene.update}. An `async` draw() would
    * present incomplete frames.
    *
    * @see Scene.root for why root is structural, not render-authoritative.
@@ -477,9 +477,9 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   /**
    * Optional synchronous cleanup hook for ordinary objects created directly
-   * by the scene and not managed by a scene facility (facility-tracked work —
+   * by the scene and not managed by a scene facility (facility-tracked work -
    * systems, loader claims, input bindings, interaction observations, tweens,
-   * audio playback — is cleaned up automatically). Engine-owned scene
+   * audio playback - is cleaned up automatically). Engine-owned scene
    * internals are torn down separately; subclasses never need
    * `super.destroy()`. Override in subclass.
    */
@@ -493,7 +493,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * start of activation.
    *
    * `app`'s parameter type stays the bare {@link Application} (not
-   * `AppLike`) because `SceneScope` — this method's only caller — is not
+   * `AppLike`) because `SceneScope` - this method's only caller - is not
    * itself parametrized over `AppLike`. The cast below reflects a
    * construction invariant the framework guarantees (a scene is always
    * attached to the actual `Application` instance it runs under; `AppLike`
@@ -508,7 +508,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
 
   /**
    * Abort {@link Scene.lifecycleSignal}. Called by `SceneScope` at the top of
-   * every teardown path, before any hook that could await. Idempotent — a
+   * every teardown path, before any hook that could await. Idempotent - a
    * second abort on an already-aborted controller is a no-op, which matters
    * because more than one path can reach the same scope (a cancelled preload
    * that is then disposed, say).

@@ -32,7 +32,7 @@ export interface TilePropertyPoint {
 
 /**
  * A reference to another object/entity. `id` is the referenced object's
- * identity — Tiled's numeric object id, or LDtk's `entityIid`. The extra
+ * identity - Tiled's numeric object id, or LDtk's `entityIid`. The extra
  * fields are LDtk-only navigation context (`undefined` for Tiled-sourced
  * refs) that lets a consumer resolve the reference without searching the
  * whole level tree.
@@ -57,7 +57,7 @@ export interface TilePropertyTileRef {
 
 /**
  * Union of legal tile-property value types in the generic runtime.
- * Format-neutral; adapters map their native property systems into this set —
+ * Format-neutral; adapters map their native property systems into this set -
  * including the structured {@link TilePropertyPoint}, {@link TilePropertyObjectRef},
  * and {@link TilePropertyTileRef} variants, arrays of any of the above, and
  * nested property bags (e.g. Tiled `class`-typed properties).
@@ -80,8 +80,8 @@ export type TilePropertyValue =
  * a caller-owned mutable object.
  *
  * Declared as an interface (not a `Record<...>` type alias) so it can
- * mutually recurse with {@link TilePropertyValue} — a nested-bag member of
- * that union — without TypeScript's "circularly references itself" alias
+ * mutually recurse with {@link TilePropertyValue} - a nested-bag member of
+ * that union - without TypeScript's "circularly references itself" alias
  * restriction; structurally it behaves exactly like
  * `Readonly<Record<string, TilePropertyValue>>`.
  * @advanced
@@ -137,7 +137,7 @@ export function tileTransformLabel(t: TileTransform): string {
  * 0 means "empty cell". Any non-zero value encodes localTileId, tilesetIndex,
  * and flip bits according to the bit-layout constants below.
  *
- * A `PackedTile` is **not** a source-format GID — it is a fully resolved
+ * A `PackedTile` is **not** a source-format GID - it is a fully resolved
  * internal compact representation. Use {@link packTile} / {@link unpackTile}
  * to convert between packed form and a {@link ResolvedTile} if writing
  * adapters.
@@ -264,7 +264,7 @@ export interface TileAnimationFrame {
 // ── TileDefinition ────────────────────────────────────────────────────────
 
 /**
- * Optional per-tile metadata in a {@link TileSet}. Sparse — only defined
+ * Optional per-tile metadata in a {@link TileSet}. Sparse - only defined
  * tiles carry a definition.
  * @advanced
  */
@@ -344,7 +344,7 @@ export function validateInteger(value: number, label: string): void {
 
 /**
  * Validate a `width`/`height` pair that must be provided together (bounded)
- * or omitted together (unbounded) — shared by {@link import('./TileLayer').TileLayer}
+ * or omitted together (unbounded) - shared by {@link import('./TileLayer').TileLayer}
  * and {@link import('./TileMap').TileMap}. When both are provided, each is
  * validated as a positive integer via {@link validatePositiveInteger}.
  *

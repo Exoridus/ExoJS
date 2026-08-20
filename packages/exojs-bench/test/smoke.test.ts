@@ -4,12 +4,12 @@
 //
 // Drives the REAL driver against one tiny cell (static-heavy, 1k nodes, WebGL2,
 // 5 timed frames) on the actual GPU and asserts the harness genuinely rendered a
-// frame. It asserts NO timing threshold — only that real work happened.
+// frame. It asserts NO timing threshold - only that real work happened.
 //
 // SKIP GUARD (whole file): this launches a real headless Chromium via Playwright
 // and needs a real, non-software GPU. It self-skips when the browser cannot
 // launch, when the single WebGL2 result does not come back `ok`, or when the
-// adapter is a software rasterizer — so it can never become a flaky required
+// adapter is a software rasterizer - so it can never become a flaky required
 // check on a GPU-less lane (the jsdom `exojs` project runs in `pnpm test`, which
 // has no real GPU). On a real-GPU dev box it runs and passes.
 
@@ -52,7 +52,7 @@ describe('baseline harness smoke', () => {
   test('renders a tiny static-heavy WebGL2 cell on a real GPU', async ctx => {
     const outcome = await runSmoke();
 
-    // Skip — never fail — where no real-GPU browser is available. This is a
+    // Skip - never fail - where no real-GPU browser is available. This is a
     // runtime capability guard, not a disabled test, so the lint rule that hunts
     // for `.skip` on suites/tests is a false positive here.
     if (outcome.error !== null || outcome.result === undefined || outcome.software !== false || outcome.result.status !== 'ok') {

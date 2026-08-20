@@ -5,7 +5,7 @@ import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 
 const createFrames = (): Rectangle[] => [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16), new Rectangle(32, 0, 16, 16)];
 
-/** A three-frame clip at 10fps — one frame advance per 100ms. */
+/** A three-frame clip at 10fps - one frame advance per 100ms. */
 const createSprite = (): AnimatedSprite => new AnimatedSprite(null, { walk: { frames: createFrames(), fps: 10 } });
 
 const frame = (milliseconds: number): Time => new Time(milliseconds);

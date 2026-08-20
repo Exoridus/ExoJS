@@ -1,5 +1,5 @@
 /**
- * WebGPU sprite transform-storage browser tests — opt-in, capability-aware.
+ * WebGPU sprite transform-storage browser tests - opt-in, capability-aware.
  *
  * The WebGPU {@link WebGpuSpriteRenderer} fetches each instance's world
  * transform from the shared transform storage buffer keyed by `nodeIndex`
@@ -230,7 +230,7 @@ describe('WebGPU sprite transform storage', () => {
     const d = new Sprite(textureB);
 
     try {
-      // Two pairs — each pair shares a texture but has a distinct blend mode,
+      // Two pairs - each pair shares a texture but has a distinct blend mode,
       // forcing at least two renderer flushes: Normal group and Additive group.
       // The Additive sprites carry higher nodeIndices so the second flush
       // requests a buffer sized for max(nodeIndex)+1. Pre-reservation ensures
@@ -273,7 +273,7 @@ describe('WebGPU sprite transform storage', () => {
   test('sprites in separate render groups (different z-indices) coalesce into one draw call', async ctx => {
     // Different z-indices cause the optimizer to assign different groupIndices,
     // but the sprite renderer coalesces them into a single instanced draw
-    // because it tracks blend-mode / texture / material — not render-group
+    // because it tracks blend-mode / texture / material - not render-group
     // boundaries. Each sprite fetches its own transform row independently via
     // its stable nodeIndex, so non-contiguous slots are handled correctly.
     const backend = await setupBackend();

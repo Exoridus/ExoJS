@@ -4,7 +4,7 @@ let globalTick = 0;
  * Advance and return the shared monotonic revision counter stamped onto
  * {@link NodeRevision} instances across the whole scene graph. A single
  * process-wide source of truth means two stamped values only ever need a
- * `!==` comparison — no per-node clock to keep in sync.
+ * `!==` comparison - no per-node clock to keep in sync.
  * @internal
  */
 export const nextNodeRevision = (): number => ++globalTick;
@@ -13,7 +13,7 @@ export const nextNodeRevision = (): number => ++globalTick;
  * Per-node content/structure/transform revision triple. Bumped at the
  * mutation site and propagated up the parent chain by
  * {@link SceneNode._markContentDirty} / `_markStructureDirty` /
- * `_markTransformDirty` — see SceneNode.ts. `content` covers tint/visual-source
+ * `_markTransformDirty` - see SceneNode.ts. `content` covers tint/visual-source
  * changes; `structure` covers child add/remove/reorder and visibility; a
  * structure change also stamps `content` (conservative: whoever consumes a
  * cached fragment must treat a structural change as content-dirty too).

@@ -18,7 +18,7 @@ import type { MembershipBits, VisibilityQueryStats } from './SourceVisibilityInd
  * both live here, the grid is the default, and the scan stays the reference the
  * grid is pinned against.
  *
- * The membership-set shape — rather than cut 1's per-item predicate — is what
+ * The membership-set shape - rather than cut 1's per-item predicate - is what
  * the delta needs. A predicate answers one item at a time in recorded order,
  * which forces the caller to visit every item; a set lets an index answer "what
  * does this rect contain" and lets the caller diff two answers word-wise.
@@ -35,7 +35,7 @@ export interface RenderItemVisibility {
  *
  * The reference implementation and the fallback. It reads `cullable` and
  * `cullArea` live from every node on every query, so it is correct under any
- * mutation the source is not keyed on — which is exactly why it is the thing the
+ * mutation the source is not keyed on - which is exactly why it is the thing the
  * grid is tested against rather than an implementation detail that was replaced.
  */
 export class FlatScanVisibility implements RenderItemVisibility {
@@ -65,8 +65,8 @@ export class FlatScanVisibility implements RenderItemVisibility {
       bounds.width = maxX[i]! - bounds.x;
       bounds.height = maxY[i]! - bounds.y;
 
-      // Same rule, same implementation — `_inCullRect` IS this call with
-      // `getBounds()` filled in — so `cullable` and a live-mutated `cullArea` are
+      // Same rule, same implementation - `_inCullRect` IS this call with
+      // `getBounds()` filled in - so `cullable` and a live-mutated `cullArea` are
       // still honoured and no second culling semantics exists to drift.
       if (drawables[i]!._inCullRectUsingBounds(rect, bounds)) {
         bits.set(i);

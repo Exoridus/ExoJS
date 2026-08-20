@@ -252,7 +252,7 @@ describe('RenderNode.mask — MaskSource union', () => {
 
       expect(composeCalls).toHaveLength(1);
       // The mask passed to compose is an intermediate RT, NOT the
-      // sprite — proving the mask node was rendered into a texture
+      // sprite - proving the mask node was rendered into a texture
       // first.
       expect(composeCalls[0].mask).toBeInstanceOf(RenderTexture);
       expect(composeCalls[0].mask).not.toBe(tex);
@@ -302,7 +302,7 @@ describe('RenderNode.mask — MaskSource union', () => {
       const drawable = new TestDrawable();
       const bare = new SceneNode();
 
-      // @ts-expect-error — bare SceneNode is not assignable to MaskSource.
+      // @ts-expect-error - bare SceneNode is not assignable to MaskSource.
       drawable.mask = bare;
 
       // Reset to null so the runtime path does not try to compose the

@@ -40,7 +40,7 @@ export interface ImageLayerOptions {
 
 /**
  * A data-only image layer: a single image (texture + resolved URL) placed as a
- * background or foreground layer. The layer itself holds no scene-graph state —
+ * background or foreground layer. The layer itself holds no scene-graph state -
  * it is rendered by an {@link import('./ImageLayerNode').ImageLayerNode}, which
  * {@link import('./TileMapNode').TileMapNode} and
  * {@link import('./TileMapView').TileMapView} generate and interleave with tile

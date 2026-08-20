@@ -130,7 +130,7 @@ describe('own-transform dirty seam (_markOwnTransformDirty)', () => {
 
     // The flip: a transform move no longer content-dirties (so a retained
     // fragment stays valid), but it does stamp the transform channel and
-    // cascade the bounds flag — the parent's world bounds pick up the move.
+    // cascade the bounds flag - the parent's world bounds pick up the move.
     expect(node._contentRevision).toBe(contentBefore);
     expect(node._transformRevision).toBeGreaterThan(transformBefore);
     expect(node.getBounds().x).toBe(10); // world bounds recomputed after the move

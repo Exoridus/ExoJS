@@ -1,15 +1,15 @@
 /**
- * WebGPU group matrix — projection UBO extension browser test.
+ * WebGPU group matrix - projection UBO extension browser test.
  *
  * The group matrix joins the existing group(0) projection uniform data instead
  * of a dynamic-offset binding: `WebGpuBackend._setRenderGroupTransform` sets a
  * backend-level transform that all vertex stages compose as
- * `projection * group * (existing math)`. This is purely additive — identity
- * until a caller sets a group — so a single scenario (offset, then clear back
+ * `projection * group * (existing math)`. This is purely additive - identity
+ * until a caller sets a group - so a single scenario (offset, then clear back
  * to identity) is sufficient to prove the wiring end to end through the real
  * sprite pipeline.
  *
- * WebGPU shaders are real inline WGSL — no mocks. A struct/size mismatch
+ * WebGPU shaders are real inline WGSL - no mocks. A struct/size mismatch
  * between the TS-side buffer layout and the WGSL struct surfaces as a GPU
  * validation error inside `renderScene`'s pushErrorScope.
  *

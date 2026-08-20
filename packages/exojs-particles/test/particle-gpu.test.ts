@@ -606,7 +606,7 @@ describe('ParticleSystem._collect backend-change detection', () => {
     const gpuStateAfterCompile = system.gpuState;
     expect(gpuStateAfterCompile).not.toBeNull();
 
-    // Same backend reference again — must not touch the existing GPU state.
+    // Same backend reference again - must not touch the existing GPU state.
     system._collect(builderA);
     expect(system.gpuState).toBe(gpuStateAfterCompile);
 
@@ -635,13 +635,13 @@ describe('ParticleSystem._compile pre-existing dead slots', () => {
     const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
 
     // Two slots spawned in dense CPU fashion before any update() call (the
-    // system is still in CPU mode at this point — _compile() hasn't run).
+    // system is still in CPU mode at this point - _compile() hasn't run).
     const a = system._spawnSlot();
     const b = system._spawnSlot();
 
     system._storage.lifetime[a] = 10;
     system._storage.lifetime[b] = 10;
-    // Kill slot b directly, bypassing recycling — it's still within
+    // Kill slot b directly, bypassing recycling - it's still within
     // [0, liveCount) when _compile() runs on the first update().
     system._storage.alive[b] = 0;
 
@@ -681,7 +681,7 @@ describe('ParticleSystem._spawnGpu wrap-around search', () => {
     system.update(tick(0));
     expect(system.gpuMode).toBe(true);
 
-    // Fill all 4 slots — the round-robin hint wraps back to 0.
+    // Fill all 4 slots - the round-robin hint wraps back to 0.
     const a = system._spawnSlot();
     const b = system._spawnSlot();
     const c = system._spawnSlot();
@@ -689,7 +689,7 @@ describe('ParticleSystem._spawnGpu wrap-around search', () => {
 
     expect([a, b, c, d]).toEqual([0, 1, 2, 3]);
 
-    // Free slot 2 — found by the forward-scan first loop, hint becomes 3.
+    // Free slot 2 - found by the forward-scan first loop, hint becomes 3.
     system._storage.alive[2] = 0;
     expect(system._spawnSlot()).toBe(2);
 
@@ -740,7 +740,7 @@ describe('ParticleSystem._updateGpu dead-slot skipping', () => {
     system.update(tick(0));
     expect(system.gpuMode).toBe(true);
 
-    // Kill b directly — not via natural expiry — while it's still within
+    // Kill b directly - not via natural expiry - while it's still within
     // [0, liveCount).
     system._storage.alive[b] = 0;
     system.update(tick(0.1));
@@ -1247,9 +1247,9 @@ describe('ParticleGpuState prelude deduplication', () => {
     const env = makeMockDevice();
     const system = new ParticleSystem(makeTexture(), { capacity: 4, device: env.device });
 
-    // Two Turbulence instances share the same wgsl() `key` ("Turbulence") —
+    // Two Turbulence instances share the same wgsl() `key` ("Turbulence") -
     // documented as unsupported ("Two ApplyForce instances on one system
-    // aren't supported — combine into one", WgslContribution.key) but not
+    // aren't supported - combine into one", WgslContribution.key) but not
     // rejected at runtime. This is the only way to reach the prelude
     // deduplication branch, so we use it purely to exercise that path.
     system.addUpdateModule(new Turbulence(50));
@@ -1344,7 +1344,7 @@ describe('SpawnOnDeath into a GPU-mode target system', () => {
 
     death.onDeath(parent, parent._storage.snapshot(parentSlot));
 
-    // The spawn refilled the hole, so liveCount is unchanged — the signal the
+    // The spawn refilled the hole, so liveCount is unchanged - the signal the
     // old count-diff heuristic relied on never fires here.
     expect(target.liveCount).toBe(liveCountBefore);
     expect(target._storage.alive[1]).toBe(1);

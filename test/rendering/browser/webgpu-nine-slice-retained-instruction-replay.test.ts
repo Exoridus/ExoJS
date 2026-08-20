@@ -1,5 +1,5 @@
 /**
- * WebGPU renderer-matrix browser tests — NineSlice retained instruction-set
+ * WebGPU renderer-matrix browser tests - NineSlice retained instruction-set
  * replay.
  *
  * The nine-slice counterpart of `webgpu-retained-instruction-replay.test.ts`.
@@ -168,7 +168,7 @@ describe('WebGPU renderer matrix: NineSlice retained instruction replay cells', 
         return;
       }
 
-      // F2: clean entry replay + record — this IS the slow path's output.
+      // F2: clean entry replay + record - this IS the slow path's output.
       if (!(await renderScene(ctx, backend, scene.root))) {
         return;
       }
@@ -187,7 +187,7 @@ describe('WebGPU renderer matrix: NineSlice retained instruction replay cells', 
         expectPixelNear(slowPixels[i]!, hexToRgba(probes[i]![2]));
       }
 
-      // F3: instruction replay — must be identical to the record frame.
+      // F3: instruction replay - must be identical to the record frame.
       if (!(await renderScene(ctx, backend, scene.root))) {
         return;
       }
@@ -223,7 +223,7 @@ describe('WebGPU renderer matrix: NineSlice retained instruction replay cells', 
       expectPixelNear(readPixel(16, 32), [255, 0, 0, 255]);
 
       // Pan the camera 16px right: replayed content must appear 16px further
-      // left — projection is resolved live at replay.
+      // left - projection is resolved live at replay.
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
 
       if (!(await renderScene(ctx, backend, scene.root))) {

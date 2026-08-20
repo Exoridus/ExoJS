@@ -11,12 +11,12 @@ import type { Destroyable } from '#core/types';
 export interface SceneTweenOptions {
   /**
    * Availability relative to {@link SceneDirector.pause}/{@link SceneDirector.resume}.
-   * `'always'` (default) ignores scene pause entirely — today's behavior.
+   * `'always'` (default) ignores scene pause entirely - today's behavior.
    * `'active'` freezes the moment the scene pauses, resumes when it resumes.
    * `'paused'` is the mirror image: runs only while the scene is paused.
    *
    * Applied only at the scene's pause/resume transitions, not re-checked at
-   * creation time — an item created while the scene is already paused starts
+   * creation time - an item created while the scene is already paused starts
    * running immediately and is only corrected at the next pause/resume cycle.
    */
   when?: SceneAvailability;
@@ -31,11 +31,11 @@ export interface SceneTweenOptions {
  * `Suspended`), `create()`/`createSequencer()` construct their result
  * without attaching it to the application-wide `TweenManager` at all, so a
  * synchronous `.start()` call made while dormant produces zero
- * application-wide effect — the manager only begins
+ * application-wide effect - the manager only begins
  * driving it once the scope becomes `Active` and this facade flushes it in.
  * `add()` (which may be handed an already-live tween) instead pauses it
  * immediately if needed, resuming it on activation only if it is still in
- * the exact state this left it in — the same idiom already used by
+ * the exact state this left it in - the same idiom already used by
  * {@link SceneTweens.suspend}/{@link SceneTweens.restore} for retention.
  */
 export class SceneTweens implements Destroyable {
@@ -60,7 +60,7 @@ export class SceneTweens implements Destroyable {
    * Create a {@link Tween} targeting `target`, tracked for scene-lifetime
    * cleanup. While the owning scope is not `Active`, the tween is
    * constructed directly (not through `app.tweens.create`) so it is never
-   * attached to the application-wide manager until activation — see the
+   * attached to the application-wide manager until activation - see the
    * class doc.
    */
   public create<T extends object>(target: T, options?: SceneTweenOptions): Tween<T> {
@@ -85,7 +85,7 @@ export class SceneTweens implements Destroyable {
   /**
    * Track an already-created {@link Tween} (e.g. built via
    * `app.tweens.create(...)`) for scene-lifetime cleanup. Passing a tween
-   * that is already running transfers runtime ownership to this facade —
+   * that is already running transfers runtime ownership to this facade -
    * while the owning scope is not `Active`, that means pausing it
    * immediately (mirrors {@link SceneTweens.suspend}'s own pattern),
    * resumed on activation only if it is still in the exact state this left
@@ -107,7 +107,7 @@ export class SceneTweens implements Destroyable {
 
   /**
    * Create a {@link TweenSequencer}, tracked for scene-lifetime cleanup
-   * exactly like {@link SceneTweens.create} — auto-stopped on scene
+   * exactly like {@link SceneTweens.create} - auto-stopped on scene
    * teardown and suspended/restored across retention. While the owning
    * scope is not `Active`, constructed without a manager (same reasoning as
    * {@link SceneTweens.create}) and bound to the real one at activation.
@@ -162,15 +162,15 @@ export class SceneTweens implements Destroyable {
   }
 
   /**
-   * Called by `SceneScope` whenever this scope becomes `Active` — a fresh
+   * Called by `SceneScope` whenever this scope becomes `Active` - a fresh
    * activation flushing whatever was created while `Ready` (or a still-cold
    * `Suspended` registration), or a retention restore reinstating whatever
    * {@link SceneTweens.suspend} paused. Both converge on the same
    * operation: hand every cold tween/sequencer over to the app-wide manager
-   * (in whatever state it's currently in — one already running or paused
+   * (in whatever state it's currently in - one already running or paused
    * while dormant is entered into the update list, one still idle is bound
    * only and enters on its own `start()`), then resume exactly the set
-   * `suspend()` paused and exactly the set `add()` paused while dormant —
+   * `suspend()` paused and exactly the set `add()` paused while dormant -
    * each only if still in the exact state this facade left it in.
    * @internal
    */
@@ -218,7 +218,7 @@ export class SceneTweens implements Destroyable {
 
   /**
    * Alias for {@link SceneTweens.restore}, used by `SceneScope.activate()`
-   * for the fresh-activation edge (`Ready`/`Suspended` → `Active`) — kept as
+   * for the fresh-activation edge (`Ready`/`Suspended` → `Active`) - kept as
    * a distinctly-named entry point so call sites read naturally regardless
    * of which transition triggered them; both do the identical work. @internal
    */
@@ -231,7 +231,7 @@ export class SceneTweens implements Destroyable {
    * `'active'` items currently running are frozen; `'paused'` items
    * currently frozen are woken up early (they exist specifically for the
    * paused state). Called by {@link SceneScope.pause}. Does not touch a
-   * `'paused'` item that happens to already be running — see the `when`
+   * `'paused'` item that happens to already be running - see the `when`
    * option's own doc, a documented, accepted limitation.
    * @internal
    */
@@ -271,7 +271,7 @@ export class SceneTweens implements Destroyable {
 
   /**
    * Undo {@link SceneTweens.pause}: resumes everything it froze, re-freezes
-   * everything it woke up early — each only if still in the state this
+   * everything it woke up early - each only if still in the state this
    * facade left it in, so a tween/sequencer the caller paused or resumed
    * manually in between is left alone. Called by {@link SceneScope.resume}.
    * @internal

@@ -54,7 +54,7 @@ const square = (x: number, y: number, size: number): Polygon =>
 // A diamond (rotated square) whose edge normals point along the diagonals
 // instead of the cardinal axes. Used to exercise SAT paths where the
 // separating axis only shows up among one shape's own normals, not the
-// other's — the classic reason SAT must test both shapes' edge normals.
+// other's - the classic reason SAT must test both shapes' edge normals.
 const diamond = (cx: number, cy: number, r: number): Polygon =>
   new Polygon([new Vector(cx + r, cy), new Vector(cx, cy + r), new Vector(cx - r, cy), new Vector(cx, cy - r)]);
 
@@ -208,7 +208,7 @@ describe('intersectionLineCircle', () => {
   test('closest point falls outside the segment bounds → no intersection', () => {
     // Segment from (10, 10) to (20, 10) is horizontal; the circle at origin's
     // closest approach along the infinite line is at x=0, which lies outside
-    // the segment — so despite the infinite line passing near, the segment doesn't.
+    // the segment - so despite the infinite line passing near, the segment doesn't.
     expect(intersectionLineCircle(line(10, 10, 20, 10), circle(0, 0, 5))).toBe(false);
   });
 
@@ -505,7 +505,7 @@ describe('intersectionSat', () => {
   test("a separating axis found only among the second shape's normals is still detected", () => {
     // The square's own axes (X/Y) show overlap for both shapes' bounding
     // extents, but the diamond's diagonal edge normals reveal a true
-    // separating axis — this can only be found by testing shapeB's normals
+    // separating axis - this can only be found by testing shapeB's normals
     // (the second loop), which is the entire point of testing both shapes.
     expect(intersectionSat(square(0, 0, 10), diamond(14, -3, 5))).toBe(false);
   });
@@ -982,7 +982,7 @@ describe('getCollisionSat', () => {
 
   test('shapeAinB stays true through every axis of the first shape, then flips false in the second loop', () => {
     // Along the square's own axes (X/Y), the diamond's projection always
-    // contains the square's — so shapeAinB survives the entire first loop.
+    // contains the square's - so shapeAinB survives the entire first loop.
     // Only the diamond's own (diagonal) axes reveal that containment doesn't
     // actually hold, flipping shapeAinB to false inside the second loop.
     const response = getCollisionSat(square(0, 0, 10), diamond(5, 5, 10));
@@ -995,7 +995,7 @@ describe('getCollisionSat', () => {
   test('shapeBinA stays true through every axis of the first shape, then flips false in the second loop', () => {
     // Two irregular overlapping polygons (found by search) where containment
     // "survives" every axis of the first shape but is disproved by one of the
-    // second shape's own axes — the mirror image of the case above.
+    // second shape's own axes - the mirror image of the case above.
     const shapeA = new Polygon(
       [
         [12.3, 0],

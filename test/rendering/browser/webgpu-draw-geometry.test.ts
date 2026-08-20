@@ -1,5 +1,5 @@
 /**
- * WebGPU immediate-draw browser tests — opt-in, capability-aware.
+ * WebGPU immediate-draw browser tests - opt-in, capability-aware.
  *
  * Exercises {@link RenderingContext.drawGeometry}: a node-free immediate draw of
  * a {@link Geometry} through the pooled mesh path and the synthetic (non-plan)
@@ -56,7 +56,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 };
 
 // A solid-color quad (two triangles) in world space. Layout: position f32x2 @0,
-// color u8x4-norm @8, stride 12. No texcoord — the default mesh path samples the
+// color u8x4-norm @8, stride 12. No texcoord - the default mesh path samples the
 // 1×1 white texture, so the output is the vertex color × tint.
 const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaTuple): Geometry => {
   const stride = 12;
@@ -98,7 +98,7 @@ const screenView = (): View => new View(canvasSize / 2, canvasSize / 2, canvasSi
 
 // The immediate batch path keeps one render pass open across `drawBatch` calls,
 // but the shared buffers each batch slices (node indices, instanced uniform
-// slots) only ratchet up to a frame's worth of batches over the first frames —
+// slots) only ratchet up to a frame's worth of batches over the first frames -
 // growing them mid-pass would free buffers earlier draws still bind, so the
 // renderer splits the pass instead and sizes up for next time. Steady state is
 // what the pass count is asserted on, so run the same frame a few times first.
@@ -275,7 +275,7 @@ describe('WebGPU RenderingContext.drawGeometry', () => {
     // distinct sub-ranges of the one shared node-index buffer. Both draws land
     // in the same open pass and therefore the same submit, and
     // `queue.writeBuffer` is ordered against that submit rather than against the
-    // individual draws inside it — so writing both index ranges at offset 0
+    // individual draws inside it - so writing both index ranges at offset 0
     // would make the first batch render the second's transforms, and this test
     // is what catches it.
     const first = new RenderBatch(geometry).add(new Matrix(1, 0, 0, 0, 1, 0), new Color(255, 0, 0));

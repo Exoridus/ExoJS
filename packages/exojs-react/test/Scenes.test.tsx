@@ -80,7 +80,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     const view = render(<Tree app={app} active="title" />);
     await view.findByTestId('active');
 
-    // A real SceneTransition instance — the wrapper only forwards it to the
+    // A real SceneTransition instance - the wrapper only forwards it to the
     // director's change(), so its concrete behavior is irrelevant here.
     const transition = new FadeSceneTransition({ duration: 300 });
     view.rerender(<Tree app={app} active="game" transition={transition} />);
@@ -103,7 +103,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
 
     view.rerender(<Tree app={app} active="does-not-exist" />);
 
-    // No public API clears the director mid-lifetime — the
+    // No public API clears the director mid-lifetime - the
     // last-active scene keeps running underneath; only the React-rendered
     // overlay is cleared.
     await waitFor(() => expect(view.queryByTestId('hud')).toBeNull());
@@ -120,7 +120,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     const view = render(<Tree app={app} active="title" />);
 
     await waitFor(() => expect(onError).toHaveBeenCalledWith(failure));
-    // The overlay never appears — no active scene was ever installed.
+    // The overlay never appears - no active scene was ever installed.
     expect(view.queryByTestId('hud')).toBeNull();
   });
 
@@ -177,7 +177,7 @@ describe('<Scenes> / <Scene> / useActiveScene', () => {
     const view = render(<Tree app={app} active="title" />);
     expect(app.start).toHaveBeenCalledTimes(1);
 
-    // Unmount before the pending start() promise settles — the effect's
+    // Unmount before the pending start() promise settles - the effect's
     // cleanup already ran (cancelled = true) by the time it resolves below.
     view.unmount();
     resolveStart(app);

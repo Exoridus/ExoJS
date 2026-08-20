@@ -395,7 +395,7 @@ describe('AudioGenerator', () => {
   // ---- _pruneEndedVoices() defensive scan ----
   //
   // In practice, a pooled voice is removed from `_activeVoices` synchronously
-  // the moment it ends (its `onEnd` handler splices it out immediately — see
+  // the moment it ends (its `onEnd` handler splices it out immediately - see
   // `_createVoice`), so `_pruneEndedVoices`'s scan never actually finds an
   // ended-but-still-tracked entry through the public API. This test forges
   // that (otherwise unreachable) state directly to exercise the defensive

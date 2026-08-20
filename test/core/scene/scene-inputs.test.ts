@@ -20,7 +20,7 @@ const createEmptySample = (): ActionSample => ({
 
 /**
  * Write `value` to `channel` on `sample`, also logging it as its own atomic
- * `ChannelEventBatch` — mirrors what `InputManager._recordChannelChanges`
+ * `ChannelEventBatch` - mirrors what `InputManager._recordChannelChanges`
  * does for a single-channel real write. A bare `sample.values[channel] =
  * value` is not enough: `ButtonAction._update` replays `sample.batches`, not
  * `values`, to detect its threshold-crossing edges in true order.
@@ -32,7 +32,7 @@ const setChannel = (sample: ActionSample, channel: number, value: number): void 
   (sample.batches as ChannelEventBatch[]).push({ channels: [{ channel, value }], sequence, timestamp: sequence });
 };
 
-/** Close the frame on `sample` — clears its batch log and bumps `frameId`, mirroring `InputManager.update()`. */
+/** Close the frame on `sample` - clears its batch log and bumps `frameId`, mirroring `InputManager.update()`. */
 const advanceFrame = (sample: ActionSample): void => {
   (sample.batches as ChannelEventBatch[]).length = 0;
   sample.frameId++;
@@ -60,7 +60,7 @@ interface AppStubResult {
    * One entry per `SceneInputs.onXxx()` call, in call order. `SceneInputs`
    * always constructs its underlying binding via a single `app.input.onStart`
    * anchor call (see `SceneInputs.ts`'s `_bind()` doc comment) regardless of
-   * which factory the caller used — so every stub binding's full four-signal
+   * which factory the caller used - so every stub binding's full four-signal
    * surface lives here, not split across per-kind arrays.
    */
   bindings: StubBinding[];
@@ -70,7 +70,7 @@ interface AppStubResult {
 /**
  * Stubs `app.input.onStart` to hand back a fresh stub binding whose four
  * Signals the test drives directly (mirroring how the real InputBinding
- * dispatches onStart/onActive/onStop/onTrigger from raw channel samples) —
+ * dispatches onStart/onActive/onStop/onTrigger from raw channel samples) -
  * and stubs `app.scenes._transitionGateOpen`. `onActive`/`onStop`/
  * `onTrigger` are also stubbed (returning a fresh, unrelated binding) purely
  * so a direct, incorrect `app.input.onActive(...)`-style call from a future
@@ -157,7 +157,7 @@ describe('SceneInputs — when policy availability matrix', () => {
     inputs.onActive(1, onActive, { when });
 
     // Real InputBinding always fires onStart before onActive on the same
-    // hold — prime the edge state the same way before asserting.
+    // hold - prime the edge state the same way before asserting.
     bindings[0]!.onStart.dispatch(1);
     bindings[0]!.onActive.dispatch(1);
 
@@ -175,7 +175,7 @@ describe('SceneInputs — when policy availability matrix', () => {
 
     inputs.onStart(1, onStart, { when: SceneAvailability.Active, threshold: 500 });
 
-    // The `when` key must never reach app.input — only InputBindingOptions fields do.
+    // The `when` key must never reach app.input - only InputBindingOptions fields do.
     expect(app.input.onStart).toHaveBeenCalledWith(1, expect.any(Function), { threshold: 500 });
 
     bindings[0]!.onStart.dispatch(1);
@@ -603,7 +603,7 @@ describe('SceneInputs action maps — availability policy (when)', () => {
           return resyncSample;
         }),
         // Mirrors the real InputManager's live monotonic counter: "now", not a
-        // constant — a re-arm on regaining availability must exclude batches
+        // constant - a re-arm on regaining availability must exclude batches
         // already sitting in the log from before this exact moment (e.g. a
         // press/release that happened while disallowed), never replay them.
         _currentBatchSequence: vi.fn((): number => nextSequence - 1),
@@ -627,7 +627,7 @@ describe('SceneInputs action maps — availability policy (when)', () => {
 
   /**
    * Put `stub` into the allowed/disallowed condition for `mode` via the
-   * `SceneState`/`paused` axes alone — independent of `suspend()` and the
+   * `SceneState`/`paused` axes alone - independent of `suspend()` and the
    * transition gate, which have their own dedicated situations below.
    * `'always'` never reacts to `paused`, so its only lever is a gated state.
    */

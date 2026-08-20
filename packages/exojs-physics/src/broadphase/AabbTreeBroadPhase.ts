@@ -16,7 +16,7 @@ import type { BroadPhase, CandidatePair } from './BroadPhase';
  * motion stay inside the margin (skipping the sync phase's remove+reinsert),
  * small enough it doesn't inflate fat AABBs into spurious candidates for
  * densely packed scenes. Fixed per the design's v1 scope (no velocity-based
- * predictive expansion) — revisit if benchmarks want a different value.
+ * predictive expansion) - revisit if benchmarks want a different value.
  */
 const AABB_MARGIN = 4;
 
@@ -30,7 +30,7 @@ const byPairId = (p: CandidatePair, q: CandidatePair): number => p.a.id - q.a.id
  * Three phases per `computePairs` call: (1) sync every live collider (insert
  * new ones, reinsert moved ones, querying only around reinsertions to discover
  * NEW fat-overlap candidates); (2) one full pass over the persistent pair set
- * dropping any pair whose fat AABBs no longer overlap — cheap (O(1) per pair)
+ * dropping any pair whose fat AABBs no longer overlap - cheap (O(1) per pair)
  * and run every step regardless of movement, exactly mirroring Box2D's own
  * `b2ContactManager::Collide` (see the design's correctness argument for why a
  * single global pass, not a per-moved-leaf rescan, is both correct and the
@@ -39,13 +39,13 @@ const byPairId = (p: CandidatePair, q: CandidatePair): number => p.a.id - q.a.id
  * The persistent set is intentionally keyed on *fat* overlap so temporal
  * coherence carries across steps (a leaf that stays inside its fat AABB is
  * never re-discovered). Emitting is filtered to tight-AABB overlap so the
- * candidate set the caller sees is exact — the fat margin never leaks a false
+ * candidate set the caller sees is exact - the fat margin never leaks a false
  * positive downstream, and a fat-but-not-tight pair simply stays parked in the
  * set (costing one O(1) re-check per step) until the leaves separate.
  *
  * **Single-owner contract.** A collider's tree membership is tracked through its
- * `Collider._treeProxy` field, which — like `PhysicsBody._islandIndex` /
- * `_sleepTime` — is a single slot on the shared object. Exactly ONE
+ * `Collider._treeProxy` field, which - like `PhysicsBody._islandIndex` /
+ * `_sleepTime` - is a single slot on the shared object. Exactly ONE
  * `AabbTreeBroadPhase` instance may track a given collider at a time (in
  * production that is the world's own `_broadPhase`, for the collider's whole
  * lifetime until `removeCollider`). Do NOT stand up a second, throwaway
@@ -109,7 +109,7 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   /**
    * Insert every not-yet-tracked collider and reinsert every moved one (the
    * `computePairs` phase-1 loop, extracted so {@link queryAabb} callers can
-   * force it independently of a full detection pass — see {@link SpatialIndex.sync}).
+   * force it independently of a full detection pass - see {@link SpatialIndex.sync}).
    */
   public sync(colliders: readonly Collider[]): void {
     for (const collider of colliders) {

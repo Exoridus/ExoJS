@@ -4,17 +4,17 @@
 //
 // Drives the REAL driver (real headless Chromium, real GPU) against a handful of
 // `split-screen` cells and asserts on STRUCTURAL draw-call counters, never on
-// wall-clock timing — the claim under test ("multi-View replay of a retained
+// wall-clock timing - the claim under test ("multi-View replay of a retained
 // scene costs O(batches) per view, not O(nodes) per view") is a complexity
 // property, not an absolute-ms number. An absolute-ms head-to-head belongs on a
 // real GPU via a full `pnpm --filter @codexo/exojs-bench bench` run, measured
-// and reported by a human at a physical machine — these gates deliberately do
+// and reported by a human at a physical machine - these gates deliberately do
 // not claim one, mirroring the existing counter-gate pattern used for the
 // slice-4 transform-row patch (`test/perf/rendering/retained-transform-patch-scaling.test.ts`
 // at the repository root).
 //
 // SKIP GUARD (whole file): this launches a real headless Chromium via Playwright
-// and needs a real, non-software GPU — see `smoke.test.ts` for the identical
+// and needs a real, non-software GPU - see `smoke.test.ts` for the identical
 // rationale. It self-skips rather than failing when no real GPU is available, so
 // it can never become a flaky required check on a GPU-less lane.
 
@@ -52,7 +52,7 @@ const isUsable = (outcome: CellOutcome): outcome is CellOutcome & { result: Cell
 describe('split-screen structural gate', () => {
   test('rendering through 4 simultaneous Views multiplies draw calls by view count, not by node count', async ctx => {
     // `split-screen` is `static-heavy`'s exact scene shape (nestingDepth 4,
-    // 1 texture, 0 mutation — see `archetypes.ts`) plus 4 simultaneous Views
+    // 1 texture, 0 mutation - see `archetypes.ts`) plus 4 simultaneous Views
     // instead of 1 (`viewCount` on `ArchetypeSpec`). Comparing it against
     // `static-heavy` at the SAME node count isolates the view multiplier: both
     // cells retain the identical scene, so any draw-call difference between them
@@ -74,7 +74,7 @@ describe('split-screen structural gate', () => {
 
     // 4 views replaying the SAME recorded instruction set draw roughly 4x what
     // 1 view draws (each view is its own on-screen output, so this scaling is
-    // expected and correct — not the blowup this gate guards against). A wide
+    // expected and correct - not the blowup this gate guards against). A wide
     // band absorbs small structural differences between the two node counts'
     // culling/instance layout without hiding a genuine regression (e.g. a bug
     // that made each extra view re-walk and duplicate draws non-linearly).
@@ -106,7 +106,7 @@ describe('split-screen structural gate', () => {
 
     // Node count grew 100x; a genuine O(nodes)-per-view cost would grow draw
     // calls by roughly the same factor. Bounding the growth well below that
-    // (a generous 25x — the single-view retained static-heavy sweep measures
+    // (a generous 25x - the single-view retained static-heavy sweep measures
     // ~7x over the identical 100x node-count range) proves the multi-view
     // replay path stayed on the recorded-batch tier instead of falling back to
     // a per-view walk.

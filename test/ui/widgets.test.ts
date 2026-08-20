@@ -80,7 +80,7 @@ describe('Panel', () => {
 
   test('resizing to zero skips (re)drawing the background without throwing', () => {
     // Constructing directly at (0, 0) is a same-value no-op against the Widget
-    // default (_uiWidth/_uiHeight start at 0) and never runs _relayout — so the
+    // default (_uiWidth/_uiHeight start at 0) and never runs _relayout - so the
     // zero-size early return is only reachable via an explicit resize away
     // from a non-zero starting size.
     const panel = new Panel({ width: 100, height: 50 });
@@ -185,7 +185,7 @@ describe('Button', () => {
 
   test('resizing to zero skips (re)drawing the background without throwing', () => {
     // A Button constructed directly at (0, 0) is a same-value no-op against the
-    // Widget default (_uiWidth/_uiHeight start at 0) and never runs _relayout —
+    // Widget default (_uiWidth/_uiHeight start at 0) and never runs _relayout -
     // so the zero-size early return in _draw() is only reachable via an
     // explicit resize away from a non-zero starting size.
     const button = new Button();
@@ -250,7 +250,7 @@ describe('ProgressBar', () => {
     bar.value = 0.5;
     expect(bar.value).toBe(0.5);
 
-    // 2 clamps to the same 1 twice in a row — second assignment is the no-op branch.
+    // 2 clamps to the same 1 twice in a row - second assignment is the no-op branch.
     bar.value = 1;
     bar.value = 2;
     expect(bar.value).toBe(1);
@@ -272,7 +272,7 @@ describe('ProgressBar', () => {
 
   test('resizing the track to zero skips (re)drawing it without throwing', () => {
     // Constructing directly at (0, 0) is a same-value no-op against the Widget
-    // default (_uiWidth/_uiHeight start at 0) and never runs _relayout — so the
+    // default (_uiWidth/_uiHeight start at 0) and never runs _relayout - so the
     // zero-size early return in _drawTrack() is only reachable via an explicit
     // resize away from a non-zero starting size.
     const bar = new ProgressBar({ width: 200, height: 12 });
@@ -382,7 +382,7 @@ describe('Stack', () => {
     const stack = new Stack({ direction: 'row', spacing: 0 });
     const gfx = new Graphics();
 
-    // Graphics (unlike Widget) does not expose an explicit layout size — the
+    // Graphics (unlike Widget) does not expose an explicit layout size - the
     // `child instanceof Widget` branch in Stack.layout() falls back to
     // getLocalBounds() for it, which this stubs to a known non-zero size.
     vi.spyOn(gfx, 'getLocalBounds').mockReturnValue(new Rectangle(0, 0, 40, 20));
