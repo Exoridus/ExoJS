@@ -12,6 +12,8 @@ export * from './GamepadPromptLayouts';
 export * from './GenericDualAnalogGamepadMapping';
 export * from './InputBinding';
 export * from './InputManager';
+export type { InputToken } from './InputToken';
+export { inputChannelFromToken, inputToken } from './InputToken';
 export * from './InteractionEvent';
 export * from './InteractionManager';
 export * from './JoyConLeftGamepadMapping';
