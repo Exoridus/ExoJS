@@ -81,7 +81,41 @@ private workspace references, or machine-specific paths. Preserve durable
 technical rationale only.
 
 Developer-facing source documentation is English and uses ASCII punctuation;
-non-ASCII characters are allowed only when technically meaningful.
+non-ASCII characters are allowed only when technically meaningful. "ASCII
+punctuation" means the typographic variants are out - em dash, en dash, curly
+quotes, ellipsis - and nothing beyond that. Three kinds of non-ASCII character
+are meaningful here and stay:
+
+- **Mathematical and physical notation.** An engine documents forces, angles,
+  integration steps and tolerances, and the conventional symbol reads better
+  than a spelled-out name: `ω`, `θ`, `Δt`, `μ`, `ε`, `σ`, `π`, `∑`, `√`, `≤`,
+  `≥`, `≈`, `≠`, `∞`, `∂`, `∇`, `×`, `·`, `°`. Write `ω = Δθ / Δt`, not
+  `omega = delta-theta over delta-t`. Units keep their symbols: `µs`, `m/s²`,
+  `rad/s`. Use the notation the domain uses; do not invent a symbol where the
+  physics actually says a word.
+- **Letters carrying diacritics, in any language.** These are letters, not
+  punctuation, and are never transliterated: `Bézier`, `Möller-Trumbore`, a
+  contributor's name, a cited paper title. Never `Bezier`, never `Moeller`.
+- **Localized user-facing strings**, which this rule does not reach at all.
+
+Identifiers are the exception in the other direction. File names, exported
+symbols, type parameters, CSS class names and CLI flags stay ASCII, because
+imports and tooling depend on it: the variable is `angularVelocity`, and `ω`
+belongs in the doc comment that explains it.
+
+### Language of user-facing content
+
+`site/` is configured for `en` and `de` with English as the default locale
+(`site/astro.config.ts`). English is the source of truth and the fallback for
+anything untranslated.
+
+When German lands, the home page and the guides are translated, and they are
+written in natural German orthography with ä, ö, ü and ß. `ae`/`oe`/`ue`
+spellings are wrong there; they are not a safe fallback.
+
+API documentation and playground example code stay English in every locale. The
+symbols they describe are English, and a reader following an example has to type
+the identifiers exactly as shown.
 
 ## Performance and correctness
 
