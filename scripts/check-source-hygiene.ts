@@ -4,8 +4,9 @@
  * Comments are the one place where the working context of a change survives
  * into the shipped tree: a private planning-directory path, a machine-local
  * absolute path, a commit hash, a tracker ID, an issue or pull-request number,
- * or the name of whichever assistant happened to write the line. None of it
- * means anything to a reader six months later, and JSDoc is worse than a plain
+ * a section number pointing into a document that was never published, or the
+ * name of whichever assistant happened to write the line. None of it means
+ * anything to a reader six months later, and JSDoc is worse than a plain
  * comment here because it is reused verbatim in the generated API reference.
  * The durable technical rationale is worth keeping; how it was discovered is
  * not. See the source-comment section of `AGENTS.md` for the policy this gate
@@ -175,6 +176,14 @@ const RULES: readonly HygieneRule[] = [
   {
     name: 'unicode-dash',
     patterns: [/[–—][^\r\n]{0,32}/g],
+  },
+  {
+    name: 'typographic-punctuation',
+    patterns: [/[…•][^\r\n]{0,32}/g],
+  },
+  {
+    name: 'spec-reference',
+    patterns: [/§\s?\d[\d.]*/g],
   },
   {
     name: 'task-id',
@@ -389,19 +398,24 @@ function scanFile(repoPath: string, absolutePath: string, ranges: readonly LineR
 }
 
 /**
- * The typographic dashes, and the one transformation this gate can apply
- * without reading the prose. Both forms are punctuation alone here: the en dash
- * separates a numeric range or stands in for a minus sign, the em dash breaks a
- * sentence, and a hyphen carries either without losing meaning. The replacement
- * is one character wide, so line lengths and the surrounding formatting survive.
+ * The typographic punctuation this gate can normalize without reading the
+ * prose, and the ASCII it stands for. Each of these is punctuation alone: the
+ * en dash separates a numeric range or stands in for a minus sign, the em dash
+ * breaks a sentence, the bullet opens a list item, and the ellipsis elides. None
+ * of them is the correct notation for anything, which is what separates them
+ * from the mathematical and diagram characters the policy leaves alone.
  */
-const TYPOGRAPHIC_DASHES = /[–—]/g;
+const SAFE_PUNCTUATION: readonly (readonly [RegExp, string])[] = [
+  [/[–—]/g, '-'],
+  [/•/g, '-'],
+  [/…/g, '...'],
+];
 
 /**
- * Normalizes the typographic dashes inside one file's in-scope comments and
- * writes it back, returning how many were replaced.
+ * Normalizes the typographic punctuation inside one file's in-scope comments
+ * and writes it back, returning how many characters were replaced.
  *
- * Only comment trivia is rewritten, so a dash in a string literal, an
+ * Only comment trivia is rewritten, so punctuation in a string literal, an
  * identifier or JSX content is left alone.
  */
 function fixFile(absolutePath: string, ranges: readonly LineRange[] | null): number {
@@ -420,11 +434,18 @@ function fixFile(absolutePath: string, ranges: readonly LineRange[] | null): num
     if (!isInScope(sourceFile, comment, ranges)) continue;
 
     const text = source.slice(comment.pos, comment.end);
-    const hits = text.match(TYPOGRAPHIC_DASHES)?.length ?? 0;
+
+    let replaced = text;
+    let hits = 0;
+
+    for (const [pattern, ascii] of SAFE_PUNCTUATION) {
+      hits += replaced.match(pattern)?.length ?? 0;
+      replaced = replaced.replaceAll(pattern, ascii);
+    }
 
     if (hits === 0) continue;
 
-    result += source.slice(cursor, comment.pos) + text.replaceAll(TYPOGRAPHIC_DASHES, '-');
+    result += source.slice(cursor, comment.pos) + replaced;
     cursor = comment.end;
     fixed += hits;
   }
@@ -626,7 +647,8 @@ const scanLine = `lint:source-hygiene: scanned ${scanned.length} source file(s) 
 
 if (fixSafe) {
   console.log(
-    `${scanLine} Normalized ${dashesFixed} typographic dash(es) in ${filesFixed} file(s); ` + 're-run without --fix-safe for the findings that need a human.',
+    `${scanLine} Normalized ${dashesFixed} typographic character(s) in ${filesFixed} file(s); ` +
+      're-run without --fix-safe for the findings that need a human.',
   );
   process.exit(0);
 }
