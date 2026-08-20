@@ -37,3 +37,14 @@ export interface TextureUploadOptions {
 
 /** Full construction options of a texture: sampling state plus upload state. */
 export interface TextureOptions extends SamplerOptions, TextureUploadOptions {}
+
+/**
+ * Allocation-free cache key for a sampling state.
+ *
+ * Every scale and wrap mode is a GL enum well below `0x10000`, so both pack
+ * into one integer. Backends key their sampler caches on this instead of a
+ * template string because the value is recomputed for every bound texture of
+ * every draw.
+ * @internal
+ */
+export const samplerStateKey = (scaleMode: ScaleModes, wrapMode: WrapModes): number => scaleMode * 0x10000 + wrapMode;

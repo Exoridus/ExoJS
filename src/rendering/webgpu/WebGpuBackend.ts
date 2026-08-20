@@ -38,7 +38,7 @@ import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
-import type { SamplerOptions } from '#rendering/texture/TextureOptions';
+import { type SamplerOptions, samplerStateKey } from '#rendering/texture/TextureOptions';
 import type { BlendModes, ColorTextureFormat } from '#rendering/types';
 import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 import type { View } from '#rendering/View';
@@ -67,6 +67,12 @@ interface ManagedWebGpuTextureState {
   texture: GPUTexture;
   view: GPUTextureView;
   sampler: GPUSampler;
+  /**
+   * Sampling state `sampler` was resolved for. Tracked separately from
+   * `version` so a content re-upload does not re-resolve the sampler and a
+   * filter/wrap change does not force a re-upload.
+   */
+  samplerKey: number;
   version: number;
   width: number;
   height: number;
@@ -117,6 +123,12 @@ interface PixelClipBoundsState {
   width: number;
   height: number;
 }
+
+/**
+ * Key offset marking a non-filterable sampler. Sits above the packed scale/wrap
+ * enums so it cannot collide with a filterable state.
+ */
+const NON_FILTERABLE_SAMPLER_KEY_BIT = 0x1_0000_0000;
 
 const managedTextureFormat: GPUTextureFormat = 'rgba8unorm';
 // Managed content + render textures use rgba8unorm = 4 bytes/px.
@@ -180,8 +192,12 @@ export class WebGpuBackend implements RenderBackend {
   private readonly _textureStates: Map<Texture | RenderTexture, ManagedWebGpuTextureState> = new Map<Texture | RenderTexture, ManagedWebGpuTextureState>();
   private readonly _textureDestroyHandlers: Map<Texture | RenderTexture, () => void> = new Map<Texture | RenderTexture, () => void>();
   private readonly _textureReleaseHandlers: Map<Texture, () => void> = new Map<Texture, () => void>();
-  /** Device-local material sampler overrides, interned by effective filter/wrap state. */
-  private readonly _materialSamplers = new Map<string, GPUSampler>();
+  /**
+   * Device-local samplers, interned by sampling state. Shared by the managed
+   * texture path and by material sampler overrides so one state never yields
+   * two devices objects.
+   */
+  private readonly _samplers = new Map<number, GPUSampler>();
   private readonly _renderTargetDestroyHandlers: Map<RenderTarget, () => void> = new Map<RenderTarget, () => void>();
   private readonly _renderTexturePool: RenderTexturePool = new RenderTexturePool();
   /**
@@ -1035,7 +1051,7 @@ export class WebGpuBackend implements RenderBackend {
     this._passCoordinatorInstance?.discardPass();
     this.rendererRegistry.destroy();
     this._destroyManagedTextures();
-    this._materialSamplers.clear();
+    this._samplers.clear();
     this._renderTexturePool.destroy();
 
     this._clipPixelStack.length = 0;
@@ -1231,7 +1247,7 @@ export class WebGpuBackend implements RenderBackend {
       // fresh record costs nothing measurable; giving them the state's own
       // record would mean the default path and an override path could not be
       // resolved in the same batch.
-      return { view: state.view, sampler: this._getMaterialSampler(texture, samplerOverride) };
+      return { view: state.view, sampler: this._getSampler(samplerOverride.scaleMode, samplerOverride.wrapMode, this._isNonFilterable(texture)) };
     }
 
     // Refreshed in place: `_syncTexture` may have replaced the GPU texture (and
@@ -1245,14 +1261,16 @@ export class WebGpuBackend implements RenderBackend {
   }
 
   /**
-   * Build a fresh `GPUSampler` for `texture`'s current filter/wrap settings.
-   * Unlike {@link getTextureBinding}, this never touches texture content -
-   * no upload, no `_syncTexture` call. Callers that need a stable sampler
-   * across multiple frames must cache the result themselves; this method
-   * always creates a new one.
+   * The device sampler for `texture`'s current filter and wrap state.
+   *
+   * Unlike {@link getTextureBinding} this resolves sampling state only: it
+   * never synchronizes or uploads texture content, which makes it the correct
+   * source of a sampler for a draw that binds the pixels some other way (an
+   * imported external texture, for instance). The result is interned per
+   * sampling state and safe to hold across frames as long as the device lives.
    */
-  public createSamplerFor(texture: Texture | RenderTexture): GPUSampler {
-    return this._createSampler(texture);
+  public getTextureSampler(texture: Texture | RenderTexture): GPUSampler {
+    return this._getSampler(texture.scaleMode, texture.wrapMode, this._isNonFilterable(texture));
   }
 
   /**
@@ -2145,7 +2163,7 @@ export class WebGpuBackend implements RenderBackend {
     this._textureDestroyHandlers.clear();
     this._textureReleaseHandlers.clear();
     this._textureStates.clear();
-    this._materialSamplers.clear();
+    this._samplers.clear();
 
     // Recycled RenderTexture pool: drop entries - their backing GPUTexture
     // is gone with the dead device.
@@ -2364,12 +2382,15 @@ export class WebGpuBackend implements RenderBackend {
       const mipLevelCount = this._getMipLevelCount(texture);
 
       const view = gpuTexture.createView();
-      const sampler = this._createSampler(texture);
+      const nonFilterable = this._isNonFilterable(texture);
+      const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
+      const sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
 
       state = {
         texture: gpuTexture,
         view,
         sampler,
+        samplerKey,
         version: -1,
         width: texture.width,
         height: texture.height,
@@ -2586,6 +2607,13 @@ export class WebGpuBackend implements RenderBackend {
     const state = this._getTextureState(texture);
     const textureVersion = texture instanceof RenderTexture ? texture.textureVersion : texture.version;
     const mipLevelCount = this._getMipLevelCount(texture);
+    const nonFilterable = this._isNonFilterable(texture);
+    const samplerKey = this._samplerKey(texture.scaleMode, texture.wrapMode, nonFilterable);
+
+    if (state.samplerKey !== samplerKey) {
+      state.samplerKey = samplerKey;
+      state.sampler = this._getSampler(texture.scaleMode, texture.wrapMode, nonFilterable);
+    }
 
     if (state.version !== textureVersion) {
       if (state.width !== texture.width || state.height !== texture.height || state.mipLevelCount !== mipLevelCount) {
@@ -2611,8 +2639,6 @@ export class WebGpuBackend implements RenderBackend {
         // Free the previous storage before booking the new size (no transient spike).
         state.accountedBytes = this._accountant.reallocate(state.accountedBytes, this._estimateTextureBytes(texture, mipLevelCount));
       }
-
-      state.sampler = this._createSampler(texture);
 
       if (texture instanceof DataTexture) {
         // `instanceof DataTexture` narrows to `DataTexture<any>` (the generic is
@@ -2860,46 +2886,53 @@ export class WebGpuBackend implements RenderBackend {
     out.height = Math.max(0, bottom - top);
   }
 
-  private _createSampler(texture: Texture | RenderTexture): GPUSampler {
-    // Float32 textures (r32float, rgba32float) are non-filterable by default
-    // in WebGPU; force nearest filtering to avoid validation errors. Apps
-    // that need linear filtering on floats can opt into the
-    // 'float32-filterable' device feature and pass linear via textureOptions
-    // (not yet exposed).
-    const isFloatData = texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
-    const filter: GPUFilterMode = isFloatData ? 'nearest' : this._getFilterMode(texture.scaleMode);
-
-    return this.device.createSampler({
-      label: 'backend:sampler',
-      addressModeU: this._getAddressMode(texture.wrapMode),
-      addressModeV: this._getAddressMode(texture.wrapMode),
-      magFilter: filter,
-      minFilter: filter,
-      mipmapFilter: isFloatData ? 'nearest' : this._getMipmapFilterMode(texture.scaleMode),
-    });
+  /**
+   * Float32 textures (r32float, rgba32float) are non-filterable by default in
+   * WebGPU, so a linear sampler on one is a validation error. Apps that need
+   * linear filtering on floats can opt into the 'float32-filterable' device
+   * feature, which this backend does not expose yet.
+   */
+  private _isNonFilterable(texture: Texture | RenderTexture): boolean {
+    return texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
   }
 
-  private _getMaterialSampler(texture: Texture | RenderTexture, options: SamplerOptions): GPUSampler {
-    // Match the managed-texture path: float32 data textures are non-filterable
-    // unless an optional device feature is requested, which this backend does
-    // not currently expose.
-    const isFloatData = texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
-    const filter: GPUFilterMode = isFloatData ? 'nearest' : this._getFilterMode(options.scaleMode);
-    const addressMode = this._getAddressMode(options.wrapMode);
-    const key = `${filter}:${addressMode}`;
-    let sampler = this._materialSamplers.get(key);
+  /**
+   * Cache key covering everything {@link _getSampler} reads. The non-filterable
+   * flag is part of it because it overrides both filter fields, so two textures
+   * with the same modes but different formats need different samplers.
+   */
+  private _samplerKey(scaleMode: ScaleModes, wrapMode: WrapModes, nonFilterable: boolean): number {
+    return samplerStateKey(scaleMode, wrapMode) + (nonFilterable ? NON_FILTERABLE_SAMPLER_KEY_BIT : 0);
+  }
 
-    if (sampler === undefined) {
-      sampler = this.device.createSampler({
-        label: 'backend:material-sampler',
-        addressModeU: addressMode,
-        addressModeV: addressMode,
-        magFilter: filter,
-        minFilter: filter,
-        mipmapFilter: isFloatData ? 'nearest' : this._getMipmapFilterMode(options.scaleMode),
-      });
-      this._materialSamplers.set(key, sampler);
+  /**
+   * The device's sampler for one sampling state, created on first use.
+   *
+   * Sampling state is a small closed set, so every texture and every material
+   * override in a scene shares a handful of samplers. Deriving them here rather
+   * than per texture also keeps a texture that re-uploads every frame (video,
+   * a canvas redrawn per frame) from minting a sampler per frame.
+   */
+  private _getSampler(scaleMode: ScaleModes, wrapMode: WrapModes, nonFilterable: boolean): GPUSampler {
+    const key = this._samplerKey(scaleMode, wrapMode, nonFilterable);
+    const existing = this._samplers.get(key);
+
+    if (existing !== undefined) {
+      return existing;
     }
+
+    const filter: GPUFilterMode = nonFilterable ? 'nearest' : this._getFilterMode(scaleMode);
+    const addressMode = this._getAddressMode(wrapMode);
+    const sampler = this.device.createSampler({
+      label: 'backend:sampler',
+      addressModeU: addressMode,
+      addressModeV: addressMode,
+      magFilter: filter,
+      minFilter: filter,
+      mipmapFilter: nonFilterable ? 'nearest' : this._getMipmapFilterMode(scaleMode),
+    });
+
+    this._samplers.set(key, sampler);
 
     return sampler;
   }

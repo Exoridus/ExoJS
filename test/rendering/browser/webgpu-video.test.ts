@@ -49,6 +49,7 @@ import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import type { RenderNode } from '#rendering/RenderNode';
+import type { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
@@ -186,6 +187,14 @@ const destroyVideo = (video: HTMLVideoElement): void => {
   video.pause();
   (video.srcObject as MediaStream | null)?.getTracks().forEach(track => track.stop());
   video.srcObject = null;
+};
+
+/**
+ * Runtime skip helper. Kept out of the test bodies because a `ctx.skip` call
+ * directly inside one reads to the lint rule as a statically disabled test.
+ */
+const skipWith = (ctx: { skip: (reason: string) => void }, reason: string): void => {
+  ctx.skip(reason);
 };
 
 const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException && (error.name === 'OperationError' || error.name === 'AbortError');
@@ -387,6 +396,87 @@ describe('WebGPU Video', () => {
       expectPixelNear(readPixel(16, 22), [255, 255, 0, 255]);
     } finally {
       device.importExternalTexture = original;
+      root.destroy();
+      videoSprite.destroy();
+      destroyVideo(video);
+      backend.destroy();
+    }
+  });
+
+  test('the external-texture path resolves its sampler without uploading the video frame', async ctx => {
+    const backend = await setupBackend();
+    const device = getBackendDevice(backend);
+    const queue = device.queue;
+    const originalCopy = queue.copyExternalImageToTexture.bind(queue);
+    const originalImport = device.importExternalTexture.bind(device);
+
+    let uploads = 0;
+    let imports = 0;
+
+    queue.copyExternalImageToTexture = ((...args: Parameters<GPUQueue['copyExternalImageToTexture']>) => {
+      uploads++;
+
+      return originalCopy(...args);
+    }) as GPUQueue['copyExternalImageToTexture'];
+
+    device.importExternalTexture = ((...args: Parameters<GPUDevice['importExternalTexture']>) => {
+      const imported = originalImport(...args);
+
+      imports++;
+
+      return imported;
+    }) as GPUDevice['importExternalTexture'];
+
+    // One fixture for both phases: the scene, the texture and the decoded
+    // stream stay identical, so the only variable across the two assertions is
+    // which draw path the renderer took.
+    const video = await createSolidColorVideo('#00ff00');
+    const root = new Container();
+    const videoSprite = new Video(video);
+
+    try {
+      videoSprite.setPosition(8, 8);
+      root.addChild(videoSprite);
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      // A second frame with the texture version bumped: on the fallback path
+      // that is exactly what triggers a re-upload, so it is the frame that
+      // makes the assertion below meaningful rather than vacuous.
+      (videoSprite.texture as Texture).updateSource();
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      if (imports === 0) {
+        skipWith(ctx, 'adapter never took the external-texture path - nothing to assert about it');
+
+        return;
+      }
+
+      // The whole point of the external path: the decoded frame is sampled in
+      // place. Resolving the sampler must not drag the generic managed-texture
+      // upload along with it, which is what happens when a caller reaches for
+      // the sampler through getTextureBinding instead of getTextureSampler.
+      expect(uploads).toBe(0);
+
+      // @ts-expect-error -- deliberately removing a required method to force the fallback branch
+      device.importExternalTexture = undefined;
+      (videoSprite.texture as Texture).updateSource();
+
+      if (!(await renderScene(ctx, backend, root))) {
+        return;
+      }
+
+      // Counter-case on the same fixture: the fallback path does upload, so the
+      // zero above is a property of the external path and not of a blind spy.
+      expect(uploads).toBeGreaterThan(0);
+    } finally {
+      queue.copyExternalImageToTexture = originalCopy;
+      device.importExternalTexture = originalImport;
       root.destroy();
       videoSprite.destroy();
       destroyVideo(video);

@@ -3,7 +3,6 @@
 import { Matrix } from '#math/Matrix';
 import { affineMat4FloatCount, packAffineMat4, packedGroupChanged } from '#rendering/affinePacking';
 import { spriteFragmentMainWgsl, spriteSharedStorageWgsl, spriteVertexCoreWgsl } from '#rendering/sprite/spriteMaterialSources';
-import type { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
 import type { Video } from '#rendering/video/Video';
@@ -77,8 +76,6 @@ export class WebGpuVideoRenderer extends AbstractWebGpuRenderer<Video> {
   private _externalPipelineLayout: GPUPipelineLayout | null = null;
   private _externalShaderModule: GPUShaderModule | null = null;
   private readonly _externalPipelines = new WebGpuPipelineVariantCache<GPURenderPipeline>();
-  private _externalSamplerKey: string | null = null;
-  private _externalSampler: GPUSampler | null = null;
 
   private _uniformBuffer: GPUBuffer | null = null;
   private _indexBuffer: GPUBuffer | null = null;
@@ -192,8 +189,6 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     this._externalPipelineLayout = null;
     this._externalTextureBindGroupLayout = null;
     this._externalShaderModule = null;
-    this._externalSamplerKey = null;
-    this._externalSampler = null;
     this._device = null;
     this._pendingVideo = null;
     this._pendingTexture = null;
@@ -343,10 +338,10 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
           layout: this._externalTextureBindGroupLayout!,
           entries: [
             { binding: 0, resource: externalTexture },
-            // A locally-built, locally-cached sampler - NOT backend.getTextureBinding(texture),
-            // which unconditionally runs the backend's texture-sync (the very upload this branch
-            // exists to avoid). See createSamplerFor's doc comment.
-            { binding: 1, resource: this._getOrCreateExternalSampler(backend, texture) },
+            // Resolved through getTextureSampler, NOT getTextureBinding: the latter
+            // unconditionally runs the backend's texture sync, which is the very upload
+            // this branch exists to avoid.
+            { binding: 1, resource: backend.getTextureSampler(texture) },
           ],
         });
       } else {
@@ -542,27 +537,6 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`,
     } catch {
       return null;
     }
-  }
-
-  /**
-   * The sampler for the external-texture branch, built directly from
-   * `backend.createSamplerFor` rather than `backend.getTextureBinding` -
-   * the latter unconditionally re-syncs texture content, which would
-   * reintroduce the very copy-upload the external path exists to avoid.
-   * Cached per (scaleMode, wrapMode) pair and rebuilt only when that pair
-   * changes; safe to call every flush.
-   */
-  private _getOrCreateExternalSampler(backend: WebGpuBackend, texture: Texture | RenderTexture): GPUSampler {
-    const key = `${texture.scaleMode}:${texture.wrapMode}`;
-
-    if (this._externalSampler !== null && this._externalSamplerKey === key) {
-      return this._externalSampler;
-    }
-
-    this._externalSamplerKey = key;
-    this._externalSampler = backend.createSamplerFor(texture);
-
-    return this._externalSampler;
   }
 
   private _getExternalPipeline(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): GPURenderPipeline {

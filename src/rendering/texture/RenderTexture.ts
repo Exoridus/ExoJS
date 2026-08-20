@@ -114,7 +114,7 @@ export class RenderTexture extends RenderTarget {
   }
 
   public set generateMipMap(generateMipMap: boolean) {
-    this._generateMipMap = generateMipMap;
+    this.setGenerateMipMap(generateMipMap);
   }
 
   public get flipY(): boolean {
@@ -131,25 +131,29 @@ export class RenderTexture extends RenderTarget {
   }
 
   /**
-   * Monotonically increasing counter incremented whenever a sampler parameter changes
-   * or the source data is updated. Backends use this to detect stale GPU texture state.
+   * Monotonically increasing counter incremented whenever the source data or an
+   * upload parameter changes. Filter and wrap changes do not bump it - backends
+   * resolve sampling state separately.
    */
   public get textureVersion(): number {
     return this._textureVersion;
   }
 
   public setScaleMode(scaleMode: ScaleModes): this {
-    if (this._scaleMode !== scaleMode) {
-      this._scaleMode = scaleMode;
-      this._touchTexture();
-    }
+    this._scaleMode = scaleMode;
 
     return this;
   }
 
   public setWrapMode(wrapMode: WrapModes): this {
-    if (this._wrapMode !== wrapMode) {
-      this._wrapMode = wrapMode;
+    this._wrapMode = wrapMode;
+
+    return this;
+  }
+
+  public setGenerateMipMap(generateMipMap: boolean): this {
+    if (this._generateMipMap !== generateMipMap) {
+      this._generateMipMap = generateMipMap;
       this._touchTexture();
     }
 
