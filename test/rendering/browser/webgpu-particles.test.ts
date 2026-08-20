@@ -9,7 +9,7 @@
  * modules (which may use distributions) are entirely optional. These tests
  * bypass spawn modules altogether and write the SoA arrays
  * (`posX`/`posY`/`scaleX`/`scaleY`/`color`/`lifetime`) directly after calling
- * `system.spawn()`, then render without ever calling `system.update()` - so
+ * through `system.emit()`, then render without ever calling `system.update()` - so
  * `elapsed` stays at 0 and the particle never expires. This yields fully
  * deterministic, seed-free particle placement across runs.
  *
@@ -173,16 +173,7 @@ describe('WebGPU ParticleSystem — solid color', () => {
       // Deterministic placement: bypass spawn/update modules entirely and
       // write the SoA slot directly. `lifetime` only matters if `update()`
       // is called — it never is here, so the particle can't expire.
-      const slot = system.spawn();
-
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.rotations[slot] = 0;
-      system.color[slot] = 0xffffffff; // opaque white — no tint, texture color passes through
-      system.lifetime[slot] = 1;
-
+      system.emit();
       // Position the system itself so the particle (system-local quad
       // centered on 0,0, half-extent 8px for a 16x16 texture) lands at
       // (32, 32), well clear of the canvas edges.
@@ -216,15 +207,9 @@ describe('WebGPU ParticleSystem — solid color', () => {
     const system = new ParticleSystem(texture, { capacity: 4 });
 
     try {
-      const slot = system.spawn();
+      const particle = system.emit()!;
 
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.color[slot] = new Color(0, 255, 0).toRgba();
-      system.lifetime[slot] = 1;
-
+      particle.color = new Color(0, 255, 0).toRgba();
       system.setPosition(32, 32);
       root.addChild(system);
 
@@ -259,14 +244,10 @@ describe('WebGPU ParticleSystem — ribbon', () => {
       // Three particles on a horizontal line, system-local. The strip expands
       // ±6px around it, so at (32, 32) it covers x 16..48, y 26..38.
       for (const x of [-16, 0, 16]) {
-        const slot = system.spawn();
+        const particle = system.emit()!;
 
-        system.posX[slot] = x;
-        system.posY[slot] = 0;
-        system.scaleX[slot] = 1;
-        system.scaleY[slot] = 1;
-        system.color[slot] = new Color(0, 255, 0).toRgba();
-        system.lifetime[slot] = 1;
+        particle.position.x = x;
+        particle.color = new Color(0, 255, 0).toRgba();
       }
 
       system.setPosition(32, 32);
@@ -310,16 +291,7 @@ describe('WebGPU ParticleSystem — mesh', () => {
     const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
 
     try {
-      const slot = system.spawn();
-
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.rotations[slot] = 0;
-      system.color[slot] = 0xffffffff; // opaque white — texture color passes through
-      system.lifetime[slot] = 1;
-
+      system.emit();
       // At (32, 32) the triangle covers x 16..48, y 16..48 below the diagonal
       // running from (48, 16) to (16, 48).
       system.setPosition(32, 32);
@@ -358,16 +330,12 @@ describe('WebGPU ParticleSystem — mesh', () => {
     const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
 
     try {
-      const slot = system.spawn();
+      const particle = system.emit()!;
 
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 0.5;
-      system.scaleY[slot] = 0.5;
-      // 180° puts the right angle at the bottom-right instead of the top-left.
-      system.rotations[slot] = 180;
-      system.color[slot] = new Color(0, 255, 0).toRgba();
-      system.lifetime[slot] = 1;
+      particle.scale.set(0.5, 0.5);
+      // 180 degrees puts the right angle at the bottom-right instead of the top-left.
+      particle.rotation = 180;
+      particle.color = new Color(0, 255, 0).toRgba();
 
       system.setPosition(32, 32);
       root.addChild(system);
@@ -412,16 +380,10 @@ describe('WebGPU ParticleSystem — mesh on the GPU compute path', () => {
     try {
       system.addUpdateModule(new ApplyForce(0, 0));
 
-      const slot = system.spawn();
+      const particle = system.emit()!;
 
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.rotations[slot] = 0;
-      system.color[slot] = new Color(0, 255, 0).toRgba();
-      system.lifetime[slot] = 10;
-
+      particle.color = new Color(0, 255, 0).toRgba();
+      particle.lifetime = 10;
       system.setPosition(32, 32);
       root.addChild(system);
 

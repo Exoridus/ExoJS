@@ -23,6 +23,7 @@ import { materializeRendererBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import type { ParticleDeathContext } from '../../../packages/exojs-particles/src/index';
 import { DeathModule, particlesExtension, ParticleSystem } from '../../../packages/exojs-particles/src/index';
 import { wireCoreRenderers } from './_coreRenderers';
 
@@ -75,22 +76,34 @@ const createTexture = (size = 8): Texture => {
 
 const tick = (seconds: number): Time => Time.zero.clone().set(seconds * 1000);
 
-interface DeathRecord {
-  x: number;
-  y: number;
-  velocityX: number;
-}
+/**
+ * Runs frames until `settled` reports true, or gives up after `frames`.
+ *
+ * A GPU death is reported once its readback lands, which is a frame or two
+ * later depending on how far ahead the queue is running - so a test waits for
+ * the delivery rather than assuming a fixed number of frames.
+ */
+const runUntil = async (system: ParticleSystem, backend: WebGpuBackend, settled: () => boolean, budgetMs = 6000): Promise<void> => {
+  const deadline = performance.now() + budgetMs;
+
+  while (!settled() && performance.now() < deadline) {
+    // A macrotask rather than an animation frame: this lane runs headless with
+    // many suites in flight, where rAF is throttled well below the rate the
+    // readback lands at. The bound is wall-clock for the same reason - how many
+    // frames a delivery takes depends on how busy the device is.
+    await new Promise(resolve => setTimeout(resolve, 4));
+    system.update(tick(0.016));
+    system.render(backend);
+    backend.flush();
+  }
+};
 
 /** Records what the death context reported for every particle that expired. */
 class RecordDeaths extends DeathModule {
-  public readonly records: DeathRecord[] = [];
+  public readonly records: ParticleDeathContext[] = [];
 
-  public override onDeath(system: ParticleSystem, slot: number): void {
-    this.records.push({
-      x: system.posX[slot] ?? Number.NaN,
-      y: system.posY[slot] ?? Number.NaN,
-      velocityX: system.velX[slot] ?? Number.NaN,
-    });
+  public override onDeath(_system: ParticleSystem, death: ParticleDeathContext): void {
+    this.records.push(death);
   }
 }
 
@@ -108,15 +121,10 @@ describe('WebGPU particle death context', () => {
     system.render(backend);
     backend.flush();
 
-    const slot = system.spawn();
+    const particle = system.emit()!;
 
-    system.posX[slot] = 0;
-    system.posY[slot] = 0;
-    system.velX[slot] = 100;
-    system.scaleX[slot] = 1;
-    system.scaleY[slot] = 1;
-    system.color[slot] = Color.white.toRgba();
-    system.lifetime[slot] = 0.15;
+    particle.velocity.set(100, 0);
+    particle.lifetime = 0.15;
 
     system.update(tick(0));
     expect(system.gpuMode).toBe(true);
@@ -128,17 +136,104 @@ describe('WebGPU particle death context', () => {
       backend.flush();
     }
 
-    // The readback that carries a GPU death is asynchronous; drain a few frames
-    // so a backend-true context has landed before the assertion.
-    for (let frame = 0; frame < 4; frame++) {
-      await new Promise(resolve => requestAnimationFrame(resolve));
-      system.update(tick(0.016));
-      system.render(backend);
-      backend.flush();
-    }
+    await runUntil(system, backend, () => deaths.records.length > 0);
 
     expect(deaths.records).toHaveLength(1);
     expect(deaths.records[0]!.x).toBeGreaterThan(10);
     expect(deaths.records[0]!.velocityX).toBeCloseTo(100, 1);
+    // The lifetime is the CPU's own value; the device only ever saw the sentinel.
+    expect(deaths.records[0]!.lifetime).toBeCloseTo(0.15, 4);
+  });
+
+  test('the GPU reports the same death position the CPU path would', async () => {
+    const backend = await setupBackend();
+    const texture = createTexture();
+    const gpuSystem = new ParticleSystem(texture, { capacity: 8 });
+    const gpuDeaths = new RecordDeaths();
+
+    gpuSystem.addDeathModule(gpuDeaths);
+    gpuSystem.render(backend);
+    backend.flush();
+
+    const gpuParticle = gpuSystem.emit()!;
+
+    gpuParticle.velocity.set(100, -50);
+    gpuParticle.lifetime = 0.15;
+
+    gpuSystem.update(tick(0));
+    expect(gpuSystem.gpuMode).toBe(true);
+
+    for (let frame = 0; frame < 3; frame++) {
+      gpuSystem.update(tick(0.06));
+      gpuSystem.render(backend);
+      backend.flush();
+    }
+
+    await runUntil(gpuSystem, backend, () => gpuDeaths.records.length > 0);
+
+    // Same emission, same ticks, but never collected by a backend - so it runs
+    // the CPU pipeline and reports its death from CPU storage.
+    const cpuSystem = new ParticleSystem(texture, { capacity: 8 });
+    const cpuDeaths = new RecordDeaths();
+
+    cpuSystem.addDeathModule(cpuDeaths);
+
+    const cpuParticle = cpuSystem.emit()!;
+
+    cpuParticle.velocity.set(100, -50);
+    cpuParticle.lifetime = 0.15;
+
+    cpuSystem.update(tick(0));
+    expect(cpuSystem.gpuMode).toBe(false);
+
+    for (let frame = 0; frame < 3; frame++) {
+      cpuSystem.update(tick(0.06));
+    }
+
+    expect(cpuDeaths.records).toHaveLength(1);
+    expect(gpuDeaths.records).toHaveLength(1);
+    expect(gpuDeaths.records[0]!.x).toBeCloseTo(cpuDeaths.records[0]!.x, 2);
+    expect(gpuDeaths.records[0]!.y).toBeCloseTo(cpuDeaths.records[0]!.y, 2);
+    expect(gpuDeaths.records[0]!.velocityX).toBeCloseTo(cpuDeaths.records[0]!.velocityX, 2);
+    expect(gpuDeaths.records[0]!.velocityY).toBeCloseTo(cpuDeaths.records[0]!.velocityY, 2);
+  });
+
+  test('a slot reused before the readback lands does not rewrite the snapshot', async () => {
+    const backend = await setupBackend();
+    const texture = createTexture();
+    // One slot, so the emission after the death is guaranteed to recycle it.
+    const system = new ParticleSystem(texture, { capacity: 1 });
+    const deaths = new RecordDeaths();
+
+    system.addDeathModule(deaths);
+    system.render(backend);
+    backend.flush();
+
+    const first = system.emit()!;
+
+    first.velocity.set(100, 0);
+    first.lifetime = 0.15;
+
+    system.update(tick(0));
+    expect(system.gpuMode).toBe(true);
+
+    for (let frame = 0; frame < 3; frame++) {
+      system.update(tick(0.06));
+      system.render(backend);
+      backend.flush();
+    }
+
+    const reused = system.emit();
+
+    if (reused) {
+      reused.position.set(-999, -999);
+      reused.lifetime = 10;
+    }
+
+    await runUntil(system, backend, () => deaths.records.length > 0);
+
+    expect(deaths.records).toHaveLength(1);
+    expect(deaths.records[0]!.x).toBeGreaterThan(10);
+    expect(deaths.records[0]!.x).not.toBeCloseTo(-999, 0);
   });
 });

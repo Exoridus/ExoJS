@@ -378,10 +378,9 @@ describe('WebGL2 ParticleSystem — mesh', () => {
       const particle = system.emit()!;
 
       particle.scale.set(0.5, 0.5);
-      // 180° puts the right angle at the bottom-right instead of the top-left.
-      system.rotations[slot] = 180;
-      system.color[slot] = new Color(0, 255, 0).toRgba();
-      system.lifetime[slot] = 1;
+      // 180 degrees puts the right angle at the bottom-right instead of the top-left.
+      particle.rotation = 180;
+      particle.color = new Color(0, 255, 0).toRgba();
 
       system.setPosition(32, 32);
       root.addChild(system);

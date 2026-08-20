@@ -6,8 +6,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let dt = sim.dt;
 
     // Skip dead particles (lifetime sentinel < 0). Write zero-scale instance
-    // so the renderer doesn't accidentally draw them.
+    // so the renderer doesn't accidentally draw them. A sentinel of exactly -1
+    // is a death the CPU has just marked and nobody has captured yet; the
+    // death-report block (present only when the system has death modules)
+    // snapshots it here, where the particle's last integrated state still
+    // stands, and moves the sentinel to -2 so it reports once.
     if (timing[idx].y < 0.0) {
+{{deathReport}}
         let outBaseDead = idx * 10u;
         for (var k: u32 = 0u; k < 10u; k++) { instanceOutput[outBaseDead + k] = 0u; }
         return;
@@ -26,7 +31,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     // was never set already shows — `textureIndex` is zero-initialised.
     // Clamping to the last frame instead would be animation-hold semantics,
     // and this is a frame selector rather than an animation cursor.
-    let rawFrameIndex = textureIndex[idx];
+    let rawFrameIndex = u32(rotInfo[idx].z);
     let frameIndex = select(0u, rawFrameIndex, rawFrameIndex < {{frameCount}}u);
     let frameUvBounds = frameUv.frames[frameIndex];
 

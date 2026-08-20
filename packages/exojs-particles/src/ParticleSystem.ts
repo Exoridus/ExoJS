@@ -214,6 +214,13 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
    */
   private readonly _gpuDirtySlots = new Set<number>();
   /**
+   * Slot to spawn lifetime for the particles that expired in the dispatch whose
+   * death records have not been read back yet. The device's own record cannot
+   * carry it: by the time the shader sees the particle, the CPU has already
+   * overwritten its lifetime with the expiry sentinel.
+   */
+  private readonly _pendingDeathLifetimes = new Map<number, number>();
+  /**
    * Slots handed out by `spawn()` while a recording window is open, or `null`
    * when nothing is recording. Lets callers identify freshly spawned particles
    * without diffing `liveCount`, which cannot see a recycled GPU slot.
@@ -459,18 +466,36 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     return this;
   }
 
+  /**
+   * Registers an update module. Modules run in registration order, each seeing
+   * what the previous ones did.
+   *
+   * Modules may be added and removed at any time, including mid-flight: the
+   * next update rebuilds whatever the change invalidated. On the GPU path that
+   * is the compute program alone - live particles keep the state the device has
+   * been integrating. Adding a module without a `wgsl()` implementation to a
+   * running GPU system is the one change that cannot preserve them: the
+   * simulation moves to the CPU, which has no copy of the integrated state, so
+   * the system clears its live particles rather than continuing from stale
+   * values (see {@link clearParticles}).
+   */
   public addUpdateModule(mod: UpdateModule): this {
-    if (this._compiled) {
-      throw new Error('Cannot add update modules after the system has been compiled (first update). Register all modules before the first update().');
-    }
-
     this._updateModules.push(mod);
+    this._invalidateProgram();
 
     return this;
   }
 
   public addDeathModule(mod: DeathModule): this {
+    const hadNone = this._deathModules.length === 0;
+
     this._deathModules.push(mod);
+
+    // The GPU program only carries the death-reporting path when the system has
+    // a death module, so gaining the first one rebuilds it.
+    if (hadNone) {
+      this._invalidateProgram();
+    }
 
     return this;
   }
@@ -487,6 +512,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     for (const mod of this._updateModules) mod.destroy();
 
     this._updateModules.length = 0;
+    this._invalidateProgram();
 
     return this;
   }
@@ -495,6 +521,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     for (const mod of this._deathModules) mod.destroy();
 
     this._deathModules.length = 0;
+    this._invalidateProgram();
 
     return this;
   }
@@ -707,8 +734,39 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     this._textureFrame.destroy();
   }
 
+  /**
+   * Marks the compiled program stale. The next update decides what that costs:
+   * a GPU system that stays GPU-eligible rebuilds only its program, everything
+   * else follows the transition rules in {@link _compile}.
+   */
+  private _invalidateProgram(): void {
+    this._compiled = false;
+  }
+
   private _compile(): void {
     this._compiled = true;
+
+    const eligible = this._updateModules.every(m => typeof m.wgsl === 'function') && this._renderMode.gpuEligible;
+
+    // Already running on the GPU: keep the buffers the device has been
+    // integrating and swap the program, or - when the change made the system
+    // CPU-only - drop the state and the particles with it, because the CPU
+    // holds no copy of what the device computed.
+    if (this._gpuState !== null) {
+      if (eligible) {
+        this._gpuState.setProgram(this._updateModules, this._deathModules.length > 0);
+
+        return;
+      }
+
+      this._gpuState.destroy();
+      this._gpuState = null;
+      this._gpuMode = false;
+      this._gpuDirtySlots.clear();
+      this.clearParticles();
+
+      return;
+    }
 
     // Duck-typed `instanceof WebGpuBackend` - avoids importing the
     // backend class (which registers a renderer for ParticleSystem
@@ -721,13 +779,11 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       return;
     }
 
-    const allEligible = this._updateModules.every(m => typeof m.wgsl === 'function') && this._renderMode.gpuEligible;
-
-    if (!allEligible) {
+    if (!eligible) {
       return;
     }
 
-    this._gpuState = new ParticleGpuState(device, this.capacity, this._updateModules, this._frames, this._texture);
+    this._gpuState = new ParticleGpuState(device, this.capacity, this._updateModules, this._frames, this._texture, this._deathModules.length > 0);
     this._gpuMode = true;
 
     // Mark every currently-alive slot dirty so the initial upload
@@ -855,6 +911,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     const storage = this._storage;
     const { elapsed, lifetime, alive } = storage;
     const liveCount = storage.count;
+    const reportsDeaths = this._deathModules.length > 0;
 
     for (let i = 0; i < liveCount; i++) {
       if (alive[i] === 0) continue;
@@ -862,22 +919,23 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       elapsed[i] = elapsed[i]! + dt;
 
       if (elapsed[i]! >= lifetime[i]!) {
-        if (this._deathModules.length > 0) {
-          this._reportDeath(storage.snapshot(i));
+        // The lifetime is about to become the expiry sentinel, so keep the one
+        // the particle was spawned with: it is the CPU's own value, and the
+        // record the device appends carries only what the device integrated.
+        if (reportsDeaths) {
+          this._pendingDeathLifetimes.set(i, lifetime[i]!);
         }
 
         alive[i] = 0;
-        lifetime[i] = -1; // sentinel — GPU shader skips
-        this._gpuDirtySlots.add(i); // upload the sentinel so GPU sees the death
+        lifetime[i] = -1; // sentinel - the shader captures it, then skips
+
+        // Only the sentinel goes up. A full slot upload would overwrite the
+        // position and velocity the device integrated with the CPU's spawn-time
+        // copy, which is precisely the staleness the death record avoids.
+        this._gpuDirtySlots.delete(i);
+        this._gpuState!.uploadExpiry(i);
       }
     }
-
-    // Trim trailing dead slots.
-    let newLiveCount = storage.count;
-    while (newLiveCount > 0 && alive[newLiveCount - 1] === 0) {
-      newLiveCount--;
-    }
-    storage.count = newLiveCount;
 
     // Push dirty slots (new spawns + just-expired) to GPU. CPU is NOT
     // the source of truth for integrated position/velocity/etc. after
@@ -888,7 +946,48 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       this._gpuDirtySlots.clear();
     }
 
-    this._gpuState!.dispatch(this, dt);
+    // Dispatch over the pre-trim range: a slot that expired at the tail still
+    // has to be visited once, or its death record is never appended.
+    this._gpuState!.dispatch(dt, liveCount, this._pendingDeathLifetimes.size);
+
+    // Trim trailing dead slots for the next frame.
+    let newLiveCount = storage.count;
+    while (newLiveCount > 0 && alive[newLiveCount - 1] === 0) {
+      newLiveCount--;
+    }
+    storage.count = newLiveCount;
+
+    if (this._pendingDeathLifetimes.size > 0) {
+      void this._drainDeaths();
+    }
+  }
+
+  /**
+   * Delivers the deaths of the dispatch that just ran, once their readback has
+   * landed. Each record carries what the device integrated; the lifetime comes
+   * from the CPU, which is where it was written at spawn.
+   */
+  private async _drainDeaths(): Promise<void> {
+    const pending = new Map(this._pendingDeathLifetimes);
+
+    this._pendingDeathLifetimes.clear();
+
+    await this._gpuState?.readDeaths(records => {
+      for (const record of records) {
+        this._reportDeath({
+          x: record.x,
+          y: record.y,
+          velocityX: record.velocityX,
+          velocityY: record.velocityY,
+          rotation: record.rotation,
+          scaleX: record.scaleX,
+          scaleY: record.scaleY,
+          color: record.color,
+          elapsed: record.elapsed,
+          lifetime: pending.get(record.slot) ?? 0,
+        });
+      }
+    });
   }
 
 }

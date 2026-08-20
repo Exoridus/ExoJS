@@ -17,6 +17,59 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **Particles are addressed by channel, and a death is a snapshot.** The whole
+  particle SoA was public and the guide recommended mutating it, which made the
+  CPU/GPU packing a permanent contract — and on the GPU path it was not even
+  true: only the compute shader advances position, velocity, scale, rotation and
+  colour, nothing reads them back, so every CPU reader saw the values a particle
+  was born with. A sub-emitter fired at the parent's birthplace on WebGPU and at
+  its death place on WebGL2.
+
+  An update module and a render mode now receive a `ParticleBatch` — `position`,
+  `velocity`, `scale`, `rotation`, `timing`, `color`, `frame`, `count`,
+  `isAlive` — whose arrays are still the simulation's own storage, so bulk loops
+  keep their speed while the packing behind the names stays free to change.
+
+  ```ts
+  class Sway extends UpdateModule {
+    apply(particles: ParticleBatch, dt: number): void {
+      const { x: velX } = particles.velocity;
+      const { elapsed } = particles.timing;
+
+      for (let i = 0; i < particles.count; i++) {
+        velX[i] += Math.sin(elapsed[i] * 8) * 250 * dt;
+      }
+    }
+  }
+  ```
+
+  Particles come into existence through `system.emit()`, which returns a writer
+  for one particle at its spawn defaults — the one per-particle write that is
+  true on both backends. `liveCount` is read-only, `spawn()` and the raw arrays
+  are gone, and a spawn module fills what an emitter hands it rather than
+  writing slots.
+
+  A death module receives a `ParticleDeathContext` — position, velocity,
+  rotation, scale, colour, elapsed and lifetime at the moment of death — instead
+  of a slot. On the GPU path the compute shader appends a death record and the
+  system reads it back, so both backends report the same death state; the slot
+  is deliberately absent, because it may already hold a different particle by
+  the time the callback runs. Delivery is exactly once per expired particle, in
+  slot order, but no longer necessarily in the frame it expired: a GPU death
+  arrives with its readback, typically the next frame. A system without death
+  modules allocates no death buffer and reads nothing back.
+
+- **Particle modules can be changed while particles are in flight.**
+  `addUpdateModule` threw after the first `update()` and `clearUpdateModules`
+  left the system compiled, so there was no way to retune a running effect. The
+  simulation state and the compiled program are now separate lifetimes: changing
+  the module list rebuilds the program, and on the GPU path the live particles
+  keep the position and velocity the device has been integrating. Adding a
+  module without a `wgsl()` implementation to a running GPU system is the one
+  transition that cannot preserve them — the simulation moves to the CPU, which
+  has no copy of the device's state, so the system clears its particles rather
+  than continuing from stale values.
+
 - **`music` and `video` assets actually stream.** Both types downloaded the
   complete file into an `ArrayBuffer`, wrapped it in a blob and only then handed
   it to the media element, so "streaming" described the decode and nothing else -

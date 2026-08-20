@@ -37,17 +37,10 @@ export const particleScenes: readonly Scene[] = [
     build: () => {
       const root = new Container();
       const system = new ParticleSystem(buildCoordinateTexture(FIXTURE), { capacity: 4 });
-      const slot = system.spawn();
-
-      system.posX[slot] = 0;
-      system.posY[slot] = 0;
-      system.scaleX[slot] = 1;
-      system.scaleY[slot] = 1;
-      system.rotations[slot] = 0;
-      // Opaque white: no tint, so the coordinate texture reaches the frame intact.
-      system.color[slot] = 0xffffffff;
-      // Only consulted by update(), which this scene never calls.
-      system.lifetime[slot] = 1;
+      // Emission defaults are exactly what this scene wants: origin, unit
+      // scale, no rotation, opaque white so the coordinate texture reaches the
+      // frame intact, and a lifetime only update() would ever consult.
+      system.emit();
 
       // The quad is system-local and centred on the origin, so this puts it in
       // the middle of the canvas, clear of every edge.
