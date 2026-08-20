@@ -71,8 +71,8 @@ describe('asepriteBinding descriptor', () => {
     expect(typeof asepriteBinding.create(fakeLoader()).load).toBe('function');
   });
 
-  it('create() handler has no custom getIdentityKey (default source identity)', () => {
-    expect(asepriteBinding.create(fakeLoader()).getIdentityKey).toBeUndefined();
+  it('create() handler declares no identity discriminator (type + locator alone identify it)', () => {
+    expect(asepriteBinding.create(fakeLoader()).getIdentityDiscriminator).toBeUndefined();
   });
 });
 
