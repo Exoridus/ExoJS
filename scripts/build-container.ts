@@ -14,12 +14,12 @@
  *     ]
  *   }
  *
- * `source` is the logical, base-path-relative path the entry stands in for — the
+ * `source` is the logical, base-path-relative path the entry stands in for - the
  * same string a network load would use, so the packed asset and the loose one
  * are one identity. `file` is where the bytes are read from at build time.
  *
  * `type` is the loader type name (lowercase, e.g. `texture`/`sound`/`json`), the
- * same tag used by the config-map load path — not the constructor name. The
+ * same tag used by the config-map load path - not the constructor name. The
  * container is unpacked at runtime via `loader.loadContainer(url)`.
  *
  * Shares the format with the runtime reader through `encodeContainer`

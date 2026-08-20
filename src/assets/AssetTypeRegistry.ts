@@ -157,7 +157,7 @@ export class AssetTypeRegistry {
    * public `AssetHandler<Result, Options>` interface uses
    * `AssetLoadRequest<Options> = { source, options? }`. The `toRequest` helper
    * below is the only place the erased flat config is cast back to the typed
-   * request — justified by the `AssetBinding<Result, Options>` contract that
+   * request - justified by the `AssetBinding<Result, Options>` contract that
    * associates this handler's `Options` with the registered constructor.
    */
   private _createHandlerEntry<Result, Options>(handler: AssetHandler<Result, Options>, storageName: string | undefined): HandlerEntry {

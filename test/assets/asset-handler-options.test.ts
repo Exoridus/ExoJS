@@ -1,5 +1,5 @@
 /**
- * Phase 0B — Typed Declarative Asset Handlers & Identity
+ * Phase 0B - Typed Declarative Asset Handlers & Identity
  *
  * Type-level tests: verify that AssetLoadRequest, AssetHandler, and AssetBinding
  * generics behave as specified (options typing, result derivation, satisfies pattern).

@@ -170,7 +170,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
     await handle.loaded;
 
     // AssetResidency.unloadAll() is a deliberately-internal hard reset (NOT
-    // exposed on Loader — scope release and destroy are the only public
+    // exposed on Loader - scope release and destroy are the only public
     // teardown verbs) that forgets claim/handle bookkeeping entirely, the same
     // way existing tests reach it via direct residency access.
     (loader as unknown as { _residency: { unloadAll(): void } })._residency.unloadAll();

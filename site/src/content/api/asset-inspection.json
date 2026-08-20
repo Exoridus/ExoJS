@@ -1,16 +1,16 @@
 {
   "title": "AssetInspection",
-  "description": "One row of Loader.inspect's diagnostic snapshot: everything a developer needs to reason about a single claimed `(type, source)` key without reaching into `Loader`'s private residency bookkeeping — its lifecycle state, how many independent claim scopes hold it, and whether its fetch is queued, in flight, or settled. Every row is plain, frozen data: numbers, strings, booleans, and the asset's constructor token — never a `Set`, a claim symbol, or a live handle/ref object, so nothing returned here can be used to mutate residency state.",
+  "description": "",
   "symbol": "AssetInspection",
   "kind": "interface",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 9,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 7,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "One row of Loader.inspect's diagnostic snapshot: everything a developer needs to reason about a single claimed `(type, source)` key without reaching into `Loader`'s private residency bookkeeping — its lifecycle state, how many independent claim scopes hold it, and whether its fetch is queued, in flight, or settled. Every row is plain, frozen data: numbers, strings, booleans, and the asset's constructor token — never a `Set`, a claim symbol, or a live handle/ref object, so nothing returned here can be used to mutate residency state."
-      ],
+      "paragraphs": [],
       "importLine": "import { AssetInspection } from '@codexo/exojs'",
       "sourceLink": null
     },
@@ -28,6 +26,39 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "aliases",
+          "signature": "aliases: readonly string[]",
+          "signatureTokens": [
+            {
+              "text": "aliases",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Every source string seen for this key, sorted. Several spellings can name one canonical asset."
+        },
         {
           "name": "background",
           "signature": "background: boolean",
@@ -50,6 +81,27 @@
           "description": "true only while this key is genuinely parked in the low-priority background queue — always in lockstep with state === 'queued', and never true on a row whose state has already settled to 'ready' or 'failed'."
         },
         {
+          "name": "canonicalKey",
+          "signature": "canonicalKey: string",
+          "signatureTokens": [
+            {
+              "text": "canonicalKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The canonical key this row describes - the same key the claim, in-flight and resource maps use."
+        },
+        {
           "name": "claims",
           "signature": "claims: number",
           "signatureTokens": [
@@ -68,7 +120,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The number of distinct claim scopes currently holding this key — the same refcount Loader.release() decrements and that reaches zero to evict. This is a scope count, not a count of consumer handles/refs or get() calls: several handles sharing one scope, or several get() calls for the same source, still report 1 here."
+          "description": "The number of distinct claim scopes currently holding this key - the same refcount a release decrements and that reaches zero to evict. This is a scope count, not a count of consumer handles/refs or get() calls: several handles sharing one scope, or several get() calls for the same source, still report 1 here."
         },
         {
           "name": "inFlight",
@@ -92,11 +144,11 @@
           "description": "true while a fetch for this key is actively in flight (network request or handler load)."
         },
         {
-          "name": "key",
-          "signature": "key: string",
+          "name": "locator",
+          "signature": "locator: string",
           "signatureTokens": [
             {
-              "text": "key",
+              "text": "locator",
               "kind": "name"
             },
             {
@@ -110,14 +162,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The normalized (type, source) residency key this row describes — the same key Loader's internal claim/dedup maps use."
+          "description": "The canonicalized source this asset resolves to."
         },
         {
-          "name": "source",
-          "signature": "source: string",
+          "name": "owners",
+          "signature": "owners: readonly AssetOwnerInspection[]",
           "signatureTokens": [
             {
-              "text": "source",
+              "text": "owners",
               "kind": "name"
             },
             {
@@ -125,13 +177,25 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "readonly",
               "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetOwnerInspection",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The literal source/path this key was claimed under (an alias, not necessarily a URL)."
+          "description": "The scopes currently holding this key, sorted by id. Empty for a resident-but-unowned asset."
         },
         {
           "name": "state",
@@ -205,7 +269,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The asset type constructor this key was claimed under."
+          "description": "The asset type constructor this key was resolved under."
         }
       ],
       "paragraphs": [],

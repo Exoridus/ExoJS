@@ -27,13 +27,13 @@ let nextScopeId = 1;
  * An owner of asset claims with an explicit lifetime.
  *
  * Assets acquired through a scope stay resident for as long as that scope holds
- * them, and are freed when it releases them — but only if no other scope still
+ * them, and are freed when it releases them - but only if no other scope still
  * holds the same asset. Several scopes can own one asset independently: they
  * share a single fetch and a single resident payload, and one scope releasing
  * never invalidates another.
  *
  * Take a scope with {@link Loader.scope} whenever an asset's lifetime is shorter
- * than the application's — a level, a streamed chunk, a UI panel, a prefetch.
+ * than the application's - a level, a streamed chunk, a UI panel, a prefetch.
  * Assets acquired directly on the {@link Loader} are held for the application's
  * lifetime instead and are freed only when the loader is destroyed.
  *
@@ -124,7 +124,7 @@ export class LoaderScope implements Destroyable {
    * `(type, source)` pair. Releasing something this scope never claimed is a
    * no-op, and releasing twice is idempotent.
    *
-   * Throws only for an object that has no claim identity at all — a resolved
+   * Throws only for an object that has no claim identity at all - a resolved
    * non-leaf resource, or an object this loader has never issued. Release such a
    * resource through its descriptor or its `(type, source)` pair instead.
    */

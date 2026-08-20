@@ -141,7 +141,7 @@ describe('asset load cancellation', () => {
     const queueB = loader._loadClaimed(scopeB, 'same.png');
     await flush();
 
-    // Two names, two owners, one canonical asset — and therefore one request.
+    // Two names, two owners, one canonical asset - and therefore one request.
     expect(calls).toHaveLength(1);
 
     loader._release(key, scopeA);

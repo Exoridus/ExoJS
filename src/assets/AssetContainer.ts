@@ -44,7 +44,7 @@ export const CONTAINER_HEADER_SIZE = 12;
  */
 export interface ContainerEntry {
   /**
-   * The logical source this entry stands in for — the very same relative path a
+   * The logical source this entry stands in for - the very same relative path a
    * network load would use. The loader canonicalizes it with its own base path,
    * so an entry resolves to the same asset identity whether it arrived through
    * the container or over the network, and a container is never welded to the

@@ -17,6 +17,36 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **Asset ownership is explicit and safe for several consumers at once.**
+  `Loader.scope(name?)` returns a `LoaderScope` — an owner with `get`, `load`,
+  `release` and `destroy` whose lifetime you decide. Several scopes can hold the
+  same asset independently: they share one fetch and one resident payload, and
+  one scope releasing never invalidates another. Every call returns a fresh
+  owner, so a name is a label for `inspect()` and never a lookup key; two scopes
+  taken as `scope('world')` cannot free each other's assets. `SceneLoader` is now
+  such a scope, and scene teardown is unchanged.
+
+  ```ts
+  const level = app.loader.scope('level-1');
+  const hud = app.loader.scope('ui:hud');
+
+  const font = level.get('fonts/ui.png');
+  hud.get('fonts/ui.png'); // the same instance — one fetch, two owners
+
+  level.destroy(); // the font stays loaded: the HUD still owns it
+  ```
+
+  Each scope also reports its own foreground progress via `onLoadStart` /
+  `onLoadProgress` / `onLoadComplete` / `onLoadError`, while the loader keeps
+  reporting the aggregate, so a streamed chunk no longer interleaves with
+  unrelated work in one counter.
+
+- **`AssetLoaderContext.scope` owns an asset's sub-assets.** A handler that loads
+  dependencies — a bitmap font pulling its page textures, a Tiled map pulling its
+  tilesets — now loads them through `context.scope`, which lives exactly as long
+  as the asset being built. The claims drop when that asset loses its last owner,
+  and a dependency another consumer holds independently survives.
+
 - **Effects declare the bounds they produce.** A drawable's source bounds were
   assumed to be its final visual bounds, so an effect that reaches outside what
   it was handed had nowhere to put the result — a `BlurFilter` was clipped by its
@@ -362,6 +392,59 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING — one canonical identity is resolved before every fetch.** Residency
+  had two uncoordinated dedup layers: `get()`, bare paths and the background
+  queue keyed on `typeId:alias`, while the `Asset<T>` descriptor path keyed on a
+  separate identity map. Reaching one asset through both verbs concurrently
+  fetched and decoded it twice, and the alias-keyed store made the opposite
+  mistake — an identity-relevant option (a differing `mimeType`, a differing
+  Tiled format) was swallowed whenever the alias already held a payload, silently
+  handing the second caller the first one's decode.
+
+  A canonical key is now `typeId | locator` plus, where the type declares one, a
+  handler-supplied discriminator. The locator applies the base path, collapses
+  `.`/`..`, drops the fragment (never sent on a fetch) and keeps the query, so
+  `hero.png`, `./hero.png` and `a/../hero.png` are one asset and one request;
+  `blob:` and `data:` sources pass through untouched. The same resolution backs
+  the fetched URL and the cache key, so what is fetched cannot drift from what a
+  load is keyed by. Aliases, catalog keys and container entry names are names for
+  a canonical asset and no longer create residency entries of their own — loading
+  one `Asset` under several record keys stores it once, addressed by its source.
+
+  `AssetHandler.getIdentityKey` becomes `getIdentityDiscriminator` and is
+  narrowed: the core always owns type and locator, and a handler may only
+  contribute the additional identity-relevant part, so an extension cannot build
+  a parallel identity space. Core bindings declare their own — `mimeType` for the
+  decoded types, `family` for fonts. Sampler state, placeholder sizing and
+  playback settings stay out: they belong to a consumer, not to a resource. The
+  conflicting-options warning is gone with the ambiguity it reported.
+
+  Cache-store keys are now the resolved URL, which invalidates previously
+  persisted entries.
+
+- **BREAKING — asset containers claim through normal residency, `.exoa` is
+  version 2.** `loadContainer` stored each unpacked entry under the container's
+  own opaque alias and registered no claim at all: the payloads were resident but
+  invisible to `inspect()`, unreachable by `release`, and had no teardown short
+  of destroying the loader. Index entries now carry the logical `source` they
+  stand in for — the same relative path a network load uses — which the loader
+  canonicalizes like any descriptor. A packed asset and a loose one are therefore
+  one identity with one payload, and a container is no longer welded to the path
+  it was built at. `Loader.loadContainer(url)` resolves to the `LoaderScope` that
+  owns the entries, one ordinary claim each; `LoaderScope.loadContainer(url)`
+  claims them under an existing scope. Version 1 containers are rejected rather
+  than misread — rebuild them with `scripts/build-container`, whose manifest
+  field is renamed from `alias` to `source`.
+
+- **BREAKING — `inspect()` walks the residency, not the claim map.** The one
+  thing a diagnostic snapshot most needs to show — a payload resident with nobody
+  owning it — was exactly what it could not see. Rows now carry `canonicalKey`,
+  `locator`, `aliases` and `owners` (id, optional name, kind) in place of `key`
+  and `source`. A key that only remembers a handle identity for healing is
+  skipped rather than burying the rows that matter. `bytes` and `lastUsed` stay
+  out: there is no honest size for a GPU resource next to an `ArrayBuffer`, and a
+  last-used stamp would cost a write on every read.
+
 - **BREAKING — canvas compositing is one backend-neutral option.** How the
   finished frame composites against the page used to be spelled per backend:
   WebGL2 read it from `rendering.webglAttributes.alpha` /
@@ -575,6 +658,20 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   are unchanged and stay asynchronous.
 
 ### Removed
+
+- **BREAKING — `Loader.release()` is removed.** Claims were held per scope, but
+  the only scope a direct `app.loader` call could use was one shared symbol. Two
+  unrelated modules that both used `app.loader` therefore shared a single claim,
+  and the first `release()` evicted the payload for both — the second consumer's
+  live handle fell back to `'loading'` with no fetch in flight, and nothing
+  restarted it until someone called `get()` again. Ownership was safe only as
+  long as every consumer remembered it was not the only one.
+
+  Assets acquired on the loader itself are now application-lifetime by
+  construction and are freed only by `destroy()`, so no consumer can drop a claim
+  another one relies on. Anything meant to be freed later is acquired through
+  `scene.loader` or a scope from `loader.scope()`, and released with
+  `scope.release(...)` or `scope.destroy()`.
 
 - **BREAKING — playing a `Sound` before the autoplay unlock is now a no-op.**
   `SoundVoice` started its buffer source in its own constructor with

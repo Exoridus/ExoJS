@@ -85,7 +85,7 @@ export interface AssetLoaderContext {
   /**
    * The claim scope that owns whatever sub-assets this handler loads. It lives
    * exactly as long as the asset being built: when that asset is released by its
-   * last owner, everything loaded through this scope is released with it —
+   * last owner, everything loaded through this scope is released with it -
    * unless another owner still holds it independently.
    */
   readonly scope: LoaderScope;
@@ -359,8 +359,8 @@ export class Loader {
    * destroyed, rather than when the application ends.
    *
    * Every call returns an independent owner. Two scopes taken under the same
-   * name are still two owners — a name is a label for diagnostics, never a
-   * lookup key — so one consumer can never release another's claim.
+   * name are still two owners - a name is a label for diagnostics, never a
+   * lookup key - so one consumer can never release another's claim.
    *
    * Assets acquired directly on the loader are claimed for the application's
    * lifetime instead, and released only by {@link destroy}.
@@ -373,7 +373,7 @@ export class Loader {
    * const font = level.get('fonts/ui.png');
    * hud.get('fonts/ui.png'); // same instance, one fetch, two independent owners
    *
-   * level.destroy(); // the font stays resident — the HUD still owns it
+   * level.destroy(); // the font stays resident - the HUD still owns it
    * ```
    */
   public scope(name?: string): LoaderScope {
@@ -435,7 +435,7 @@ export class Loader {
    * A container is one file with an embedded index: its bytes are fetched once
    * (and cached cross-session like any asset), then each slice is unpacked
    * through its type's handler and stored under the entry's own logical source.
-   * A container is therefore a transport, not a second naming system — an entry
+   * A container is therefore a transport, not a second naming system - an entry
    * resolves to exactly the same asset identity as a network load of that
    * source, so both can hold it and the payload is fetched and decoded once.
    *
@@ -1002,7 +1002,7 @@ export class Loader {
    * The handle form resolves through an internal handle → key map populated only
    * for adopted seamless handles and value-refs. A materialized-but-never-adopted
    * catalog leaf is recognized by its meta stamp and stays an idempotent no-op,
-   * as does a handle this loader has EVER issued — that check is deliberately
+   * as does a handle this loader has EVER issued - that check is deliberately
    * independent of current claim state, so the same object never throws or not
    * depending on unrelated internal teardown ordering.
    * @internal

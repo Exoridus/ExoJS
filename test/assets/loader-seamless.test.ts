@@ -188,7 +188,7 @@ describe('Loader seamless get (Texture)', () => {
       const png = loader.get('ship.png', { mimeType: 'image/png' });
       const webp = loader.get('ship.png', { mimeType: 'image/webp' });
 
-      // mimeType decides the decode, so these are two resources — not one
+      // mimeType decides the decode, so these are two resources - not one
       // resource with a losing second opinion about how to read it.
       expect(webp).not.toBe(png);
       // The same identity-relevant option resolves back to the same handle.

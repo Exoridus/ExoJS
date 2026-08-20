@@ -33,7 +33,7 @@ function residencyOf(loader: Loader): ResidencyInternals {
 }
 
 /**
- * Hard-removes one canonical asset — the internal reset behaviour that
+ * Hard-removes one canonical asset - the internal reset behaviour that
  * `Loader.unload(asset)` used to expose publicly. Kept as a test helper so the
  * bookkeeping stays covered now that no public verb reaches it.
  */

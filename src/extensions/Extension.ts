@@ -15,7 +15,7 @@ import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
  * Per-load request passed to {@link AssetHandler.load} and
  * {@link AssetHandler.getIdentityDiscriminator}.
  *
- * `Options` is `undefined` by default — a handler without typed options receives
+ * `Options` is `undefined` by default - a handler without typed options receives
  * `request.options: undefined`. A handler with typed options receives
  * `request.options: Options | undefined` (options remain optional even when typed).
  * @advanced
@@ -47,10 +47,10 @@ export interface AssetHandler<Result = unknown, Options = undefined> {
    * Include every option that **changes the produced resource** (format, locale,
    * variant, color space, decoding mode, strictness when it affects output).
    * Exclude load policy (priority, `AbortSignal`, timeout) and per-consumer
-   * presentation options (sampler state, placeholder size) — neither changes the
+   * presentation options (sampler state, placeholder size) - neither changes the
    * bytes, and folding them in would fetch and decode the same resource twice.
    *
-   * Do **not** use `JSON.stringify(request.options)` — property-order instability,
+   * Do **not** use `JSON.stringify(request.options)` - property-order instability,
    * control-only field inclusion, and unbounded key size make it unsuitable.
    * Explicitly select the identity-relevant fields instead.
    *

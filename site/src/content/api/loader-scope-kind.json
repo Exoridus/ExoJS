@@ -1,0 +1,96 @@
+{
+  "title": "LoaderScopeKind",
+  "description": "What a claim scope represents, for diagnostics only. Ownership never varies by kind: every scope holds and releases claims identically. `'app'` is the loader's own application-lifetime scope, `'scene'` a scene's automatic scope, `'scope'` one taken explicitly via Loader.scope, `'container'` the entries an asset container unpacked, and `'dependency'` the sub-assets a single asset's own load pulled in.",
+  "symbol": "LoaderScopeKind",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a claim scope represents, for diagnostics only. Ownership never varies by kind: every scope holds and releases claims identically.",
+        "`'app'` is the loader's own application-lifetime scope, `'scene'` a scene's automatic scope, `'scope'` one taken explicitly via Loader.scope, `'container'` the entries an asset container unpacked, and `'dependency'` the sub-assets a single asset's own load pulled in."
+      ],
+      "importLine": "import { LoaderScopeKind } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "LoaderScopeKind",
+          "signature": "\"app\" | \"container\" | \"dependency\" | \"scene\" | \"scope\"",
+          "signatureTokens": [
+            {
+              "text": "\"app\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"container\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"dependency\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"scene\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"scope\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/LoaderScope.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/LoaderScope.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/LoaderScope.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/LoaderScope.ts"
+}

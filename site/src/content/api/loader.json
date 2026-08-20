@@ -6,10 +6,10 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 38,
+  "memberCount": 35,
   "counts": {
     "constructors": 1,
-    "methods": 27,
+    "methods": 24,
     "properties": 2,
     "events": 8
   },
@@ -1390,7 +1390,7 @@
         },
         {
           "name": "loadContainer",
-          "signature": "loadContainer(url: string): Promise<void>",
+          "signature": "loadContainer(url: string): Promise<LoaderScope>",
           "signatureTokens": [
             {
               "text": "loadContainer",
@@ -1429,8 +1429,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "LoaderScope",
+              "kind": "type"
             },
             {
               "text": ">",
@@ -1444,8 +1444,8 @@
               "optional": false
             }
           ],
-          "returnType": "Promise<void>",
-          "description": "Load every asset packed into a binary container (.exoa) in a **single request**. A container is one file with an embedded index: its bytes are fetched once (and cached cross-session like any asset), then each slice is unpacked through its type's handler and stored under the entry's alias — retrievable with get exactly as if it had been loaded individually. Each entry's asset type must support byte-source construction (AssetHandler.createFromBytes); the factory-backed core types (textures, audio, JSON, text, binary, …) do. Throws on a malformed container, an unknown type, or a type that cannot be built from bytes."
+          "returnType": "Promise<LoaderScope>",
+          "description": "Load every asset packed into a binary container (.exoa) in a **single request**, and return the scope that owns them. A container is one file with an embedded index: its bytes are fetched once (and cached cross-session like any asset), then each slice is unpacked through its type's handler and stored under the entry's own logical source. A container is therefore a transport, not a second naming system - an entry resolves to exactly the same asset identity as a network load of that source, so both can hold it and the payload is fetched and decoded once. The returned scope holds one ordinary claim per entry. Destroying it frees only the entries no other owner still holds, so unpacking a container can never pull an asset out from under a scene that also uses it. Use LoaderScope.loadContainer to claim the entries under an existing scope instead. Each entry's asset type must support byte-source construction (AssetHandler.createFromBytes); the factory-backed core types (textures, audio, JSON, text, binary, …) do. Throws on a malformed container, an unsupported format version, an unknown type, or a type that cannot be built from bytes."
         },
         {
           "name": "peek",
@@ -1822,11 +1822,11 @@
           "description": "Registers an extension→type override for bare-path resolution, scoped to **this Loader instance only**: it applies to bare paths passed to this loader's get(…) / load(…), and takes precedence over both the type declared by the bindAsset binding that claimed the suffix and the global defineAsset default. It does NOT affect loader-free catalog construction — Assets.from('level.json') has no loader to consult and always resolves through the global table. Use Asset.type(type, source) there instead. type is the string AssetDefinitions discriminator, not a constructor. This call does not install a handler; a core/extension binding must still provide the named type. Repeating the same pair is idempotent, while changing an existing explicit override to another type throws. Use Asset.type(...) for a one-off exception."
         },
         {
-          "name": "release",
-          "signature": "release(handle: object): void",
+          "name": "scope",
+          "signature": "scope(name?: string): LoaderScope",
           "signatureTokens": [
             {
-              "text": "release",
+              "text": "scope",
               "kind": "name"
             },
             {
@@ -1834,189 +1834,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "handle",
+              "text": "name",
               "kind": "param"
             },
             {
-              "text": ": ",
+              "text": "?",
               "kind": "punctuation"
-            },
-            {
-              "text": "object",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "handle",
-              "type": "object",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts the deferred handle / value-ref returned by get, an Asset descriptor, a whole Assets catalog, a catalog leaf, or the (type, source) pair. Releasing an unclaimed asset — a valid descriptor, catalog, or catalog leaf that was never adopted/loaded — is a no-op, and releasing twice is idempotent. The release(handle) form resolves the key via an internal handle → key map that is populated ONLY for adopted seamless handles and value-refs (i.e. a catalog leaf that has actually been adopted via get/load). A materialized-but-never-adopted catalog leaf is recognized by its meta stamp and stays an idempotent no-op. A handle this loader has EVER issued also stays a no-op even if its claim/key bookkeeping was separately forgotten by an internal hard reset — the fail-loud check is deliberately independent of that state, so the same handle never throws or not depending on unrelated internal teardown ordering. Anything else — a resolved non-leaf resource (one loaded with load(Asset.type('bmFont', …)), or unpacked by loadContainer), or an arbitrary object this loader has never seen — has no claim identity release() can resolve, and **throws** naming the supported forms instead of silently discarding the call. Use the release(asset) or release(type, source) form for a non-leaf resource. Only this loader's app-lifetime claim is dropped. A claim held by another scope — a scene's scene.loader, which releases on scene teardown — is never touched, so one owner can never free another owner's assets."
-        },
-        {
-          "name": "release",
-          "signature": "release(asset: Asset<T>): void",
-          "signatureTokens": [
-            {
-              "text": "release",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "asset",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Asset",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "T",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "asset",
-              "type": "Asset<T>",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts the deferred handle / value-ref returned by get, an Asset descriptor, a whole Assets catalog, a catalog leaf, or the (type, source) pair. Releasing an unclaimed asset — a valid descriptor, catalog, or catalog leaf that was never adopted/loaded — is a no-op, and releasing twice is idempotent. The release(handle) form resolves the key via an internal handle → key map that is populated ONLY for adopted seamless handles and value-refs (i.e. a catalog leaf that has actually been adopted via get/load). A materialized-but-never-adopted catalog leaf is recognized by its meta stamp and stays an idempotent no-op. A handle this loader has EVER issued also stays a no-op even if its claim/key bookkeeping was separately forgotten by an internal hard reset — the fail-loud check is deliberately independent of that state, so the same handle never throws or not depending on unrelated internal teardown ordering. Anything else — a resolved non-leaf resource (one loaded with load(Asset.type('bmFont', …)), or unpacked by loadContainer), or an arbitrary object this loader has never seen — has no claim identity release() can resolve, and **throws** naming the supported forms instead of silently discarding the call. Use the release(asset) or release(type, source) form for a non-leaf resource. Only this loader's app-lifetime claim is dropped. A claim held by another scope — a scene's scene.loader, which releases on scene teardown — is never touched, so one owner can never free another owner's assets."
-        },
-        {
-          "name": "release",
-          "signature": "release(assets: Assets<M>): void",
-          "signatureTokens": [
-            {
-              "text": "release",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "assets",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Assets",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "M",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "assets",
-              "type": "Assets<M>",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts the deferred handle / value-ref returned by get, an Asset descriptor, a whole Assets catalog, a catalog leaf, or the (type, source) pair. Releasing an unclaimed asset — a valid descriptor, catalog, or catalog leaf that was never adopted/loaded — is a no-op, and releasing twice is idempotent. The release(handle) form resolves the key via an internal handle → key map that is populated ONLY for adopted seamless handles and value-refs (i.e. a catalog leaf that has actually been adopted via get/load). A materialized-but-never-adopted catalog leaf is recognized by its meta stamp and stays an idempotent no-op. A handle this loader has EVER issued also stays a no-op even if its claim/key bookkeeping was separately forgotten by an internal hard reset — the fail-loud check is deliberately independent of that state, so the same handle never throws or not depending on unrelated internal teardown ordering. Anything else — a resolved non-leaf resource (one loaded with load(Asset.type('bmFont', …)), or unpacked by loadContainer), or an arbitrary object this loader has never seen — has no claim identity release() can resolve, and **throws** naming the supported forms instead of silently discarding the call. Use the release(asset) or release(type, source) form for a non-leaf resource. Only this loader's app-lifetime claim is dropped. A claim held by another scope — a scene's scene.loader, which releases on scene teardown — is never touched, so one owner can never free another owner's assets."
-        },
-        {
-          "name": "release",
-          "signature": "release(type: AssetConstructor, source: string): void",
-          "signatureTokens": [
-            {
-              "text": "release",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "type",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetConstructor",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "param"
             },
             {
               "text": ": ",
@@ -2035,24 +1858,19 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
-              "kind": "keyword"
+              "text": "LoaderScope",
+              "kind": "type"
             }
           ],
           "params": [
             {
-              "name": "type",
-              "type": "AssetConstructor",
-              "optional": false
-            },
-            {
-              "name": "source",
+              "name": "name",
               "type": "string",
-              "optional": false
+              "optional": true
             }
           ],
-          "returnType": "void",
-          "description": "Releases the app-lifetime claim on an asset. When the released claim is the last one on that key, the payload is evicted immediately: a seamless handle's payload is dropped in place (identity preserved, loadState → 'loading') so a later get heals every dangling consumer, and a not-yet-started background entry is dropped from the queue. Accepts the deferred handle / value-ref returned by get, an Asset descriptor, a whole Assets catalog, a catalog leaf, or the (type, source) pair. Releasing an unclaimed asset — a valid descriptor, catalog, or catalog leaf that was never adopted/loaded — is a no-op, and releasing twice is idempotent. The release(handle) form resolves the key via an internal handle → key map that is populated ONLY for adopted seamless handles and value-refs (i.e. a catalog leaf that has actually been adopted via get/load). A materialized-but-never-adopted catalog leaf is recognized by its meta stamp and stays an idempotent no-op. A handle this loader has EVER issued also stays a no-op even if its claim/key bookkeeping was separately forgotten by an internal hard reset — the fail-loud check is deliberately independent of that state, so the same handle never throws or not depending on unrelated internal teardown ordering. Anything else — a resolved non-leaf resource (one loaded with load(Asset.type('bmFont', …)), or unpacked by loadContainer), or an arbitrary object this loader has never seen — has no claim identity release() can resolve, and **throws** naming the supported forms instead of silently discarding the call. Use the release(asset) or release(type, source) form for a non-leaf resource. Only this loader's app-lifetime claim is dropped. A claim held by another scope — a scene's scene.loader, which releases on scene teardown — is never touched, so one owner can never free another owner's assets."
+          "returnType": "LoaderScope",
+          "description": "Takes a new claim scope: an owner whose assets are freed when it is destroyed, rather than when the application ends. Every call returns an independent owner. Two scopes taken under the same name are still two owners - a name is a label for diagnostics, never a lookup key - so one consumer can never release another's claim. Assets acquired directly on the loader are claimed for the application's lifetime instead, and released only by destroy."
         },
         {
           "name": "setConcurrency",

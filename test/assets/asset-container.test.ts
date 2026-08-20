@@ -78,7 +78,7 @@ describe('asset container format', () => {
     new DataView(buffer).setUint32(4, 1, true);
 
     // v1 indexed entries by an opaque alias, which cannot be resolved to an
-    // asset identity at all — there is nothing to read partially.
+    // asset identity at all - there is nothing to read partially.
     expect(() => parseContainer(buffer)).toThrow(/unsupported version 1/);
     expect(() => parseContainer(buffer)).toThrow(/build-container/);
   });

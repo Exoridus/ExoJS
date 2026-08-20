@@ -266,7 +266,7 @@ describe('Loader._adopt', () => {
     await Promise.all([a.loaded, b.loaded]);
 
     // mimeType decides how the bytes are decoded, so the two requests are two
-    // resources: each gets its own canonical key, fetch and residency row —
+    // resources: each gets its own canonical key, fetch and residency row -
     // where the old alias-keyed model silently handed the second the first's
     // decode and warned about it.
     expect(loader['_canonicalize'](Texture, 'x.png', { mimeType: 'image/png' }).key).not.toBe(
@@ -309,7 +309,7 @@ describe('Loader._adopt', () => {
     expect(leaf).not.toBe(stored); // filled in place, not swapped — identity preserved
 
     // Bug: _handleKeys was never registered for this branch, so release(handle)
-    // silently couldn't resolve the key and the claim leaked — release(handle)
+    // silently couldn't resolve the key and the claim leaked - release(handle)
     // must resolve the very key this scope claimed above.
     const key = loader['_canonicalize'](Texture, 'x.png').key;
     expect(loader['_residency']['_claims'].get(key)?.scopes.has(owner)).toBe(true);

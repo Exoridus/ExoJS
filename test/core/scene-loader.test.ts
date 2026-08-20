@@ -54,7 +54,7 @@ describe('SceneLoader', () => {
     await handle.loaded;
     expect(handle.audioBuffer).not.toBeNull();
 
-    // Another scope releasing must NOT free it — the scene holds its own claim,
+    // Another scope releasing must NOT free it - the scene holds its own claim,
     // and a scope can only ever drop the claim it took itself.
     other.release(handle);
     expect(handle.audioBuffer).not.toBeNull();

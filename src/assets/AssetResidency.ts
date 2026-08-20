@@ -36,10 +36,10 @@ export interface AssetResidencySignals {
 /**
  * One row of {@link Loader.inspect}'s diagnostic snapshot: everything a
  * developer needs to reason about a single canonical asset without reaching
- * into `Loader`'s private residency bookkeeping — its lifecycle state, how many
+ * into `Loader`'s private residency bookkeeping - its lifecycle state, how many
  * independent claim scopes hold it, and whether its fetch is queued, in flight,
  * or settled. Every row is plain, frozen data: numbers, strings, booleans, and
- * the asset's constructor token — never a `Set`, a claim symbol, or a live
+ * the asset's constructor token - never a `Set`, a claim symbol, or a live
  * handle/ref object, so nothing returned here can be used to mutate residency
  * state.
  */
@@ -52,7 +52,7 @@ export interface AssetOwnerInspection {
 }
 
 export interface AssetInspection {
-  /** The canonical key this row describes — the same key the claim, in-flight and resource maps use. */
+  /** The canonical key this row describes - the same key the claim, in-flight and resource maps use. */
   readonly canonicalKey: CanonicalAssetKey;
   /** The asset type constructor this key was resolved under. */
   readonly type: AssetConstructor;
@@ -79,7 +79,7 @@ export interface AssetInspection {
    */
   readonly state: 'idle' | 'queued' | 'loading' | 'ready' | 'failed';
   /**
-   * The number of distinct claim scopes currently holding this key — the same
+   * The number of distinct claim scopes currently holding this key - the same
    * refcount a release decrements and that reaches zero to evict.
    * This is a scope count, not a count of consumer handles/refs or `get()`
    * calls: several handles sharing one scope, or several `get()` calls for
@@ -134,7 +134,7 @@ export class AssetResidency {
   private readonly _abort = new Map<CanonicalAssetKey, SharedAbort>();
 
   // Every source string that has resolved to a given canonical key. Purely
-  // diagnostic — an alias never participates in identity or ownership.
+  // diagnostic - an alias never participates in identity or ownership.
   private readonly _aliases = new Map<CanonicalAssetKey, Set<string>>();
 
   // ── Seamless deferred handles ──────────────────────────────────────────────
@@ -209,7 +209,7 @@ export class AssetResidency {
 
       // A key that is neither resident, owned, fetching nor queued costs nothing
       // but a remembered handle identity kept for healing. Reporting those would
-      // bury the rows that matter — including the one case this walk exists for,
+      // bury the rows that matter - including the one case this walk exists for,
       // a payload resident with no owner left.
       if (!stored && !inFlight && !claimed && !backgroundKeys.has(key)) {
         continue;
@@ -397,7 +397,7 @@ export class AssetResidency {
    * the twin path in {@link _evictValueKey} instead.
    *
    * Only a payload that has already converged into `_resources` is dropped here.
-   * A fetch still in flight (nothing stored yet) has nothing to evict — it is
+   * A fetch still in flight (nothing stored yet) has nothing to evict - it is
    * CANCELLED instead: reaching refcount 0 means no claim scope is waiting for
    * its result any more, which is exactly the condition the key's
    * {@link SharedAbort} arms on. The value path is gated identically.
@@ -450,7 +450,7 @@ export class AssetResidency {
     }
     // A value payload may legitimately BE `null`/`undefined` (a JSON `null`, a
     // nullish payload from a `bindAsset`-bound custom type), so this asks the
-    // resource map where the seamless branch above can read the value itself —
+    // resource map where the seamless branch above can read the value itself -
     // for a seamless type the stored resource is always the handle object.
     else if (adapter === undefined && this._resources.has(key)) {
       this._evictValueKey(asset, stored);
@@ -474,14 +474,14 @@ export class AssetResidency {
    * Value twin of the seamless eviction in {@link _evictKey}: hand the stored
    * payload to the bound handler's per-resource `dispose` (a factory-backed
    * handler forwards it to `AssetFactory.dispose`), drop it from the resource
-   * map, and re-arm every live ref for the key in place — `AssetRef._begin()`
+   * map, and re-arm every live ref for the key in place - `AssetRef._begin()`
    * is exactly what `adapter.evict(handle)` is for a seamless handle: payload
    * dropped, state back to `'loading'`, identity kept, so the next claim heals
    * every consumer that already holds the ref.
    *
    * Re-arming is not cosmetic bookkeeping. A ref left holding its `_value`
    * would keep handing out the payload this method just disposed, and would pin
-   * it for as long as any consumer holds the ref — the eviction would free
+   * it for as long as any consumer holds the ref - the eviction would free
    * nothing at all.
    *
    * `dispose` is optional on the handler: most value types (parsed JSON, text,
@@ -617,8 +617,8 @@ export class AssetResidency {
         } else {
           // The payload is already resident, so there is nothing to refetch:
           // re-filling IS the retry here. The resource map and `_refs`
-          // legitimately diverge — a ref's own `parse()` can reject a payload
-          // that fetched fine — so re-running `parse()` against the stored
+          // legitimately diverge - a ref's own `parse()` can reject a payload
+          // that fetched fine - so re-running `parse()` against the stored
           // payload yields an honest re-failure or a success, where handling
           // this case by refetch alone would leave every re-armed ref in
           // 'loading' with no fetch in flight, forever. Mirrors
@@ -675,7 +675,7 @@ export class AssetResidency {
       // Another handle already holds this key and nothing is stored yet: join
       // the key's handle set so `_storeResource` fills THIS handle too
       // (multi-handle fill). The key's fetch may be in flight or may have ended
-      // in failure — the retry below covers the latter.
+      // in failure - the retry below covers the latter.
       this._addDeferredHandle(key, deferredEntry, handle);
     }
     // else: the SAME handle re-adopted, or already filled — a no-op.
@@ -809,7 +809,7 @@ export class AssetResidency {
 
   /**
    * Wire the reverse `handle → key` lookup and mark `handle` as a real,
-   * residency-issued handle/ref for the lifetime of the object — the latter
+   * residency-issued handle/ref for the lifetime of the object - the latter
    * (`_everRegisteredHandles`) is never cleared, unlike `_handleKeys`, which
    * {@link _forgetKey} (via {@link unloadAll}) deletes for a settled key. The
    * single choke point for every site that used to call `_handleKeys.set(...)`
@@ -988,7 +988,7 @@ export class AssetResidency {
 
   /**
    * Drop `key`'s interest in whatever fetch is running for it. Returns whether
-   * it was actually aborted — a fetch another holder still needs stays running.
+   * it was actually aborted - a fetch another holder still needs stays running.
    */
   private _abortInFlight(key: CanonicalAssetKey): boolean {
     if (this._abort.get(key)?.release(key) !== true) {
@@ -1155,7 +1155,7 @@ export class AssetResidency {
 
     // Seamless intercept: a deferred handle registered for this key absorbs the
     // fetched payload in place and becomes the stored resource, so every
-    // consumer — get() before or after load(), and load()'s own promise — sees
+    // consumer - get() before or after load(), and load()'s own promise - sees
     // exactly ONE instance per canonical asset.
     const deferredEntry = this._deferred.get(key);
     let filledDeferredHandle = false;
@@ -1180,7 +1180,7 @@ export class AssetResidency {
         // settle() must run from a re-armed state so `.loaded` re-materializes a
         // resolved promise; without begin() the handle would read 'ready' while
         // its cached `.loaded` stayed permanently rejected. Skip a handle
-        // already 'ready' (filled by an earlier producer) — filling twice is a
+        // already 'ready' (filled by an earlier producer) - filling twice is a
         // no-op at best.
         const state = adapter.stateOf(handle);
 
@@ -1390,7 +1390,7 @@ export class AssetResidency {
   /**
    * Hard, claim-forgetting reset of the resident store. If `type` is provided,
    * only that type's assets are cleared; otherwise all types are flushed.
-   * Does not cancel in-flight fetches — but forgets each key's claim/handle
+   * Does not cancel in-flight fetches - but forgets each key's claim/handle
    * bookkeeping so repeated load→reset cycles cannot accumulate stale entries.
    *
    * Deliberately NOT public on {@link Loader}: it discards every scope's claim,
@@ -1400,8 +1400,8 @@ export class AssetResidency {
    */
   public unloadAll(type?: AssetConstructor): void {
     if (type) {
-      // Route every resident asset — and any claim-tracked key of this type
-      // that never reached the resource map (in-flight / deferred-only) —
+      // Route every resident asset - and any claim-tracked key of this type
+      // that never reached the resource map (in-flight / deferred-only) -
       // through _unloadOne so the claim/handle maps are cleared, not just the
       // resource map.
       const assets = new Map<CanonicalAssetKey, CanonicalAsset>();
@@ -1463,14 +1463,14 @@ export class AssetResidency {
   }
 
   /**
-   * Drop a key's claim/handle bookkeeping for the hard `unloadAll` verb — a
+   * Drop a key's claim/handle bookkeeping for the hard `unloadAll` verb - a
    * global removal, unlike scope-aware {@link _release}: it forgets the claim
    * entirely (across every scope) so a stale claim can no longer hold
    * refcount > 0 and keep a key from ever evicting.
    *
    * A key with a genuine `liveFetch` keeps its deferred handle / value-ref so
    * the prevented store can fail it (and a later `get()` heals the SAME
-   * handle) — only a SETTLED key's handles are forgotten here.
+   * handle) - only a SETTLED key's handles are forgotten here.
    */
   private _forgetKey(key: CanonicalAssetKey, liveFetch: boolean): void {
     this._claims.delete(key);
@@ -1542,7 +1542,7 @@ export class AssetResidency {
 
   /**
    * Whether `handle` was ever registered as a live deferred handle / value-ref
-   * by this residency — regardless of whether its key has since been forgotten
+   * by this residency - regardless of whether its key has since been forgotten
    * by {@link _forgetKey} (which deletes from `_handleKeys` but never from this
    * WeakSet). Backs a release's fail-loud check: a handle `get()` once handed
    * out must stay a releasable no-op even after an unrelated internal hard

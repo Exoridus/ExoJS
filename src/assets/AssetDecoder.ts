@@ -120,7 +120,7 @@ export class AssetDecoder {
    *
    * `process` converts the raw `Response` to the storable intermediate form
    * (e.g. `r.text()`, `r.arrayBuffer()`, `r.json()`).  `create` is always the
-   * identity function — the cached value is returned unchanged.
+   * identity function - the cached value is returned unchanged.
    * @internal
    */
   public _contextFetch<T>(source: string, storageName: string, process: (response: Response) => Promise<T>, signal?: AbortSignal): Promise<T> {

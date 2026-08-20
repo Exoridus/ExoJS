@@ -1,6 +1,6 @@
 {
   "title": "AssetLoadRequest",
-  "description": "Per-load request passed to AssetHandler.load and AssetHandler.getIdentityKey. `Options` is `undefined` by default — a handler without typed options receives `request.options: undefined`. A handler with typed options receives `request.options: Options | undefined` (options remain optional even when typed).",
+  "description": "Per-load request passed to AssetHandler.load and AssetHandler.getIdentityDiscriminator. `Options` is `undefined` by default - a handler without typed options receives `request.options: undefined`. A handler with typed options receives `request.options: Options | undefined` (options remain optional even when typed).",
   "symbol": "AssetLoadRequest",
   "kind": "interface",
   "subsystem": "extensions",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Per-load request passed to AssetHandler.load and AssetHandler.getIdentityKey.",
-        "`Options` is `undefined` by default — a handler without typed options receives `request.options: undefined`. A handler with typed options receives `request.options: Options | undefined` (options remain optional even when typed)."
+        "Per-load request passed to AssetHandler.load and AssetHandler.getIdentityDiscriminator.",
+        "`Options` is `undefined` by default - a handler without typed options receives `request.options: undefined`. A handler with typed options receives `request.options: Options | undefined` (options remain optional even when typed)."
       ],
       "importLine": "import { AssetLoadRequest } from '@codexo/exojs/extensions'",
       "sourceLink": null
