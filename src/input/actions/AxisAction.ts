@@ -1,6 +1,9 @@
 import type { InputChannel } from '#input/InputBinding';
 import { resolveGamepadSlotChannel } from '#input/types';
 
+import type { GamepadSlot } from './ActionBase';
+import { ActionBase, channelFromToken, channelsFromTokens, tokensFromChannels } from './ActionBase';
+import type { SerializedActionBinding, SerializedAxisEntry } from './serialization';
 import type { ActionOptions, ActionSample, AtLeastOne, OneOrMany } from './types';
 import { sampleStrongest, toChannels } from './types';
 
@@ -24,7 +27,7 @@ interface ResolvedAxisBinding {
   readonly positive: readonly number[];
 }
 
-function resolveAxisBinding(binding: AxisBinding, slot: 0 | 1 | 2 | 3): ResolvedAxisBinding {
+function resolveAxisBinding(binding: AxisBinding, slot: GamepadSlot): ResolvedAxisBinding {
   const rebase = (channels: readonly number[]): readonly number[] => channels.map(channel => resolveGamepadSlotChannel(channel, slot));
 
   if (typeof binding === 'number') {
@@ -49,6 +52,37 @@ function evaluateAxis(buffer: Float32Array, binding: ResolvedAxisBinding): numbe
   return positive - negative;
 }
 
+function serializeEntry(binding: ResolvedAxisBinding): SerializedAxisEntry {
+  if (binding.direct.length > 0) {
+    return { direct: tokensFromChannels(binding.direct)[0]! };
+  }
+
+  return { negative: tokensFromChannels(binding.negative), positive: tokensFromChannels(binding.positive) };
+}
+
+function deserializeEntry(entry: unknown): AxisBinding {
+  if (entry === null || typeof entry !== 'object') {
+    throw new Error('AxisAction: every serialized binding entry must be an object.');
+  }
+
+  const { direct, negative, positive } = entry as SerializedAxisEntry;
+
+  if (direct !== undefined) {
+    return channelFromToken(direct);
+  }
+
+  const composite: AxisCompositeBinding = {
+    ...(negative !== undefined && { negative: channelsFromTokens(negative, 'an axis "negative" group') }),
+    ...(positive !== undefined && { positive: channelsFromTokens(positive, 'an axis "positive" group') }),
+  };
+
+  if (composite.negative === undefined && composite.positive === undefined) {
+    throw new Error('AxisAction: a serialized binding entry needs a "direct" token or a "negative"/"positive" group.');
+  }
+
+  return composite as AxisBinding;
+}
+
 /**
  * A named signed axis in -1..1, fed by a stick, by two opposing button groups,
  * or by several such bindings at once.
@@ -65,17 +99,17 @@ function evaluateAxis(buffer: Float32Array, binding: ResolvedAxisBinding): numbe
  * ]);
  * ```
  */
-export class AxisAction {
-  private readonly _bindings: readonly ResolvedAxisBinding[];
+export class AxisAction extends ActionBase<OneOrMany<AxisBinding>> {
+  public override readonly kind = 'axis' as const;
+
+  private _bindings: readonly ResolvedAxisBinding[] = [];
   private readonly _threshold: number;
   private _value = 0;
 
   public constructor(binding: OneOrMany<AxisBinding>, options: ActionOptions = {}) {
-    const slot = options.gamepadSlot ?? 0;
-    const list = Array.isArray(binding) ? (binding as readonly AxisBinding[]) : [binding as AxisBinding];
-
-    this._bindings = list.map(entry => resolveAxisBinding(entry, slot));
+    super(binding);
     this._threshold = options.threshold ?? 0;
+    this._rebind(null, 0);
   }
 
   /** Current axis value, clamped to -1..1. */
@@ -88,6 +122,30 @@ export class AxisAction {
     return Math.abs(this._value) > this._threshold;
   }
 
+  public override serialize(): SerializedActionBinding {
+    return { kind: 'axis', binding: this._bindings.map(serializeEntry) };
+  }
+
+  /** @internal */
+  public override _deserialize(data: SerializedActionBinding): OneOrMany<AxisBinding> {
+    if (data.kind !== 'axis') {
+      throw new Error(`AxisAction: cannot apply a "${data.kind}" binding.`);
+    }
+
+    if (!Array.isArray(data.binding)) {
+      throw new Error('AxisAction: a serialized axis binding must be an array of entries.');
+    }
+
+    return (data.binding as readonly unknown[]).map(deserializeEntry);
+  }
+
+  protected override _resolve(binding: OneOrMany<AxisBinding>, slot: GamepadSlot): void {
+    const list = Array.isArray(binding) ? (binding as readonly AxisBinding[]) : [binding as AxisBinding];
+
+    this._bindings = list.map(entry => resolveAxisBinding(entry, slot));
+    this._channels = [...new Set(this._bindings.flatMap(entry => [...entry.direct, ...entry.negative, ...entry.positive]))];
+  }
+
   /**
    * Sample the channel buffers for this frame. An axis has no frame-to-frame
    * edge memory to protect, unlike {@link ButtonAction} — a suspend/resume
@@ -96,11 +154,7 @@ export class AxisAction {
    *
    * @internal
    */
-  public _update(sample: ActionSample): void {
-    this._computeFrom(sample);
-  }
-
-  private _computeFrom(sample: ActionSample): void {
+  public override _update(sample: ActionSample): void {
     let winner = 0;
 
     for (const binding of this._bindings) {
@@ -115,7 +169,7 @@ export class AxisAction {
   }
 
   /** Clear all state, as if no source had ever been touched. @internal */
-  public _reset(): void {
+  public override _reset(): void {
     this._value = 0;
   }
 }

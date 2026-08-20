@@ -1,4 +1,9 @@
+import { resolveGamepadSlotChannel } from '#input/types';
+
+import type { GamepadSlot } from './ActionBase';
+import { ActionBase, channelsFromTokens, tokensFromChannels } from './ActionBase';
 import { type InputSequence, type NormalizedStep, normalizeSequence, type ValidatedSequenceBinding } from './pattern';
+import type { SerializedActionBinding } from './serialization';
 import type { ActionOptions, ActionSample } from './types';
 
 /**
@@ -75,17 +80,18 @@ export interface SequenceActionOptions extends ActionOptions {
  * const save = new SequenceAction('Control+K|Meta+K>S');
  * ```
  */
-export class SequenceAction<const Pattern extends SequenceBinding = SequenceBinding> {
+export class SequenceAction<const Pattern extends SequenceBinding = SequenceBinding> extends ActionBase<SequenceBinding> {
+  public override readonly kind = 'sequence' as const;
+
   /** One entry per step; each is one entry per alternative, each the channels that alternative requires together. */
-  private readonly _steps: readonly NormalizedStep[];
+  private _steps: readonly NormalizedStep[] = [];
   /** One entry per step — every channel across all of that step's alternatives, flattened and deduplicated, for "does this batch touch this step at all" checks. */
-  private readonly _stepChannels: ReadonlyArray<readonly number[]>;
-  private readonly _channels: readonly number[];
+  private _stepChannels: ReadonlyArray<readonly number[]> = [];
   private readonly _threshold: number;
   private readonly _maxGap: number;
   private readonly _timeout: number;
   private readonly _resetOnMismatch: boolean;
-  private readonly _values: Float32Array;
+  private _values: Float32Array = new Float32Array(0);
   private _seeded = false;
   private _step = 0;
   private _startedAt: number | null = null;
@@ -101,13 +107,43 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
    * {@link ValidatedSequenceBinding}.
    */
   public constructor(pattern: ValidatedSequenceBinding<Pattern>, options: SequenceActionOptions = {}) {
-    this._steps = normalizeSequence(pattern, options.gamepadSlot ?? 0, 'SequenceAction');
-    this._stepChannels = this._steps.map(step => [...new Set(step.flat())]);
-    this._channels = [...new Set(this._stepChannels.flat())];
+    super(pattern);
     this._threshold = options.threshold ?? 0;
     this._maxGap = Math.max(0, options.maxGap ?? 600);
     this._timeout = Math.max(0, options.timeout ?? 3000);
     this._resetOnMismatch = options.resetOnMismatch ?? true;
+    this._rebind(null, 0);
+  }
+
+  public override serialize(): SerializedActionBinding {
+    return { kind: 'sequence', binding: this._steps.map(step => step.map(tokensFromChannels)) };
+  }
+
+  /** @internal */
+  public override _deserialize(data: SerializedActionBinding): SequenceBinding {
+    if (data.kind !== 'sequence') {
+      throw new Error(`SequenceAction: cannot apply a "${data.kind}" binding.`);
+    }
+
+    if (!Array.isArray(data.binding)) {
+      throw new Error('SequenceAction: a serialized sequence binding must be an array of steps.');
+    }
+
+    return (data.binding as readonly unknown[]).map(step => {
+      if (!Array.isArray(step)) {
+        throw new Error('SequenceAction: every serialized step must be an array of alternatives.');
+      }
+
+      return (step as readonly unknown[]).map(alternative => channelsFromTokens(alternative, 'a sequence alternative'));
+    });
+  }
+
+  protected override _resolve(binding: SequenceBinding, slot: GamepadSlot): void {
+    const steps = normalizeSequence(binding, 'SequenceAction');
+
+    this._steps = steps.map(step => step.map(alternative => alternative.map(channel => resolveGamepadSlotChannel(channel, slot))));
+    this._stepChannels = this._steps.map(step => [...new Set(step.flat())]);
+    this._channels = [...new Set(this._stepChannels.flat())];
     this._values = new Float32Array(this._channels.length);
   }
 
@@ -134,7 +170,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     return this._step / this._steps.length;
   }
 
-  public _update(sample: ActionSample): void {
+  public override _update(sample: ActionSample): void {
     this._triggered = false;
 
     if (!this._seeded) {
@@ -197,7 +233,7 @@ export class SequenceAction<const Pattern extends SequenceBinding = SequenceBind
     this._expire(sample.timestamp);
   }
 
-  public _reset(): void {
+  public override _reset(): void {
     this._values.fill(0);
     this._seeded = false;
     this._triggered = false;

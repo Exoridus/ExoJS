@@ -1,5 +1,5 @@
 import type { InputChannel } from '#input/InputBinding';
-import { Keyboard, resolveGamepadSlotChannel } from '#input/types';
+import { Keyboard } from '#input/types';
 
 /**
  * One {@link SequenceAction} step requiring every listed channel
@@ -38,9 +38,8 @@ export type InputSequence = ReadonlyArray<InputChannel | InputChord | InputAlter
 type PatternOwner = 'ChordAction' | 'SequenceAction';
 
 /**
- * One normalized pattern step: one entry per alternative, each the resolved,
- * gamepad-slot-adjusted channel numbers that alternative's chord requires
- * together. A step with no `'|'` (the common case) normalizes to exactly one
+ * One normalized pattern step: one entry per alternative, each the slot-0
+ * channel numbers that alternative's chord requires together. A step with no `'|'` (the common case) normalizes to exactly one
  * entry, so the aggregate reduction below composes with the pre-alternation
  * behavior without a separate code path: strongest-of-one-alternative is
  * that alternative itself.
@@ -123,22 +122,16 @@ function parseStepText(stepText: string, stepIndex: number, chord: boolean, owne
  * Reduce one already-parsed step (a bare channel, an {@link InputChord}, an
  * {@link InputAlternation}, or one of `parseStepText`'s raw-number
  * equivalents) to a {@link NormalizedStep}: one entry per alternative, each
- * gamepad-slot-resolved and checked for an empty or duplicate channel. A
+ * checked for an empty or duplicate channel. A
  * step whose array entries are a mix of bare channels and nested arrays is
  * rejected — that shape can only ever be a copy/paste mistake, since neither
  * a chord nor an alternation is expressed that way.
  */
-function normalizeStep(
-  step: InputChannel | InputChord | InputAlternation,
-  stepIndex: number,
-  chord: boolean,
-  gamepadSlot: 0 | 1 | 2 | 3,
-  owner: PatternOwner,
-): NormalizedStep {
+function normalizeStep(step: InputChannel | InputChord | InputAlternation, stepIndex: number, chord: boolean, owner: PatternOwner): NormalizedStep {
   const where = chord ? 'the chord' : `step ${stepIndex + 1}`;
 
   if (!Array.isArray(step)) {
-    return [[resolveGamepadSlotChannel(step as InputChannel, gamepadSlot)]];
+    return [[step as InputChannel]];
   }
 
   if (step.length === 0) {
@@ -163,19 +156,20 @@ function normalizeStep(
       throw new Error(`${owner}: ${location} is empty.`);
     }
 
-    const resolved = alternative.map(channel => resolveGamepadSlotChannel(channel, gamepadSlot));
+    const channels = alternative.map(channel => channel);
 
-    if (new Set(resolved).size !== resolved.length) {
+    if (new Set(channels).size !== channels.length) {
       throw new Error(`${owner}: ${location} contains the same channel more than once.`);
     }
 
-    return resolved;
+    return channels;
   });
 }
 
 /**
- * Parse and validate a string or array pattern into raw, gamepad-slot-resolved
- * channel steps. Shared by {@link ChordAction} (always exactly one resulting
+ * Parse and validate a string or array pattern into raw, slot-0 channel steps.
+ * Rebasing onto a pad slot happens later, in the owning {@link ActionMap}.
+ * Shared by {@link ChordAction} (always exactly one resulting
  * step — enforced by its own constructor after this returns) and
  * {@link SequenceAction} (one or more). `owner` names the calling action kind
  * so every thrown message reads naturally for that caller — a `ChordAction`
@@ -186,7 +180,7 @@ function normalizeStep(
  * simultaneously within one alternative — `'A+B|C>D'` is "(A and B) or C,
  * then D".
  */
-export function normalizeSequence(input: string | InputSequence, gamepadSlot: 0 | 1 | 2 | 3, owner: PatternOwner): readonly NormalizedStep[] {
+export function normalizeSequence(input: string | InputSequence, owner: PatternOwner): readonly NormalizedStep[] {
   const chord = owner === 'ChordAction';
 
   const rawSteps: ReadonlyArray<InputChannel | InputChord | InputAlternation> =
@@ -201,7 +195,7 @@ export function normalizeSequence(input: string | InputSequence, gamepadSlot: 0 
     throw new Error(`${owner}: a pattern must contain at least one step.`);
   }
 
-  return rawSteps.map((step, index) => normalizeStep(step, index, chord, gamepadSlot, owner));
+  return rawSteps.map((step, index) => normalizeStep(step, index, chord, owner));
 }
 
 /*

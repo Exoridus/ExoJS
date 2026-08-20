@@ -802,13 +802,15 @@ describe('ActionMap × InputManager lifecycle', () => {
     map._reset();
     expect(map.jump.active).toBe(false);
 
-    // Resume: resync against the manager's live sample before re-tracking.
-    im._resyncActionMap(map);
-    im._trackActionMap(map);
+    // Resume: re-arm against the manager's live sample, exactly as
+    // `SceneInputs.resume` does, before the map is fed again.
+    map._armBaseline(im._currentBatchSequence(), im._snapshotActionChannels());
+    map._update(im._actionSample());
 
     expect(map.jump.active).toBe(true);
     expect(map.jump.pressed).toBe(false);
 
+    im.attach(map);
     im.preUpdate(0 as never);
     expect(map.jump.pressed).toBe(false); // still just held, no fresh edge
 

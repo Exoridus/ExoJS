@@ -3,6 +3,10 @@ import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneState } from '#core/SceneState';
 import type { Destroyable } from '#core/types';
 import type { ActionMap, ActionRecord } from '#input/actions/ActionMap';
+import type { InputScope } from '#input/actions/InputScope';
+import { ScopeLevel } from '#input/actions/ScopeLevel';
+import type { ActionSample } from '#input/actions/types';
+import type { Gamepad } from '#input/Gamepad';
 import type { InputBinding, InputBindingOptions, InputChannel } from '#input/InputBinding';
 
 /** Construction options for every {@link SceneInputs} factory method. */
@@ -60,7 +64,18 @@ type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
  */
 export class SceneInputs implements Destroyable {
   private readonly _bindings = new Set<InputBinding>();
-  private readonly _actionMaps = new Set<ActionMap>();
+  /**
+   * Maps attached directly with {@link SceneInputs.attach}. They sit BELOW
+   * every pushed scope, so ordinary gameplay controls need no wrapper scope for
+   * an overlay pushed on top of them to take priority.
+   */
+  private readonly _base = new ScopeLevel();
+  private readonly _scopes: InputScope[] = [];
+  private readonly _scopeLevels = new Map<InputScope, ScopeLevel>();
+  private readonly _scopeAvailability = new Map<InputScope, SceneAvailability>();
+  /** Reused across frames so a per-frame claim pass allocates nothing. */
+  private readonly _masked = new Set<number>();
+  private _tracked = false;
   private _suspended = false;
 
   public constructor(
@@ -69,6 +84,160 @@ export class SceneInputs implements Destroyable {
     private readonly _getPaused: () => boolean,
   ) {}
 
+  /** The four gamepad slot mailboxes, the same ones `app.input.gamepads` exposes. */
+  public get gamepads(): readonly [Gamepad, Gamepad, Gamepad, Gamepad] {
+    return this._app.input.gamepads;
+  }
+
+  /** Currently connected pads, in slot order. */
+  public get connectedGamepads(): readonly Gamepad[] {
+    return this._app.input.connectedGamepads;
+  }
+
+  /** One gamepad slot mailbox. The slot exists whether or not a pad is plugged in. */
+  public getGamepad(slot: 0 | 1 | 2 | 3): Gamepad {
+    return this._app.input.getGamepad(slot);
+  }
+
+  /** The input scope stack, bottom first. The last entry has priority. */
+  public get scopes(): readonly InputScope[] {
+    return this._scopes;
+  }
+
+  /**
+   * Put `scope` on top of this scene's scope stack.
+   *
+   * From now until it is popped, the controls its maps bind are invisible to
+   * every scope below it and to maps attached with {@link SceneInputs.attach}.
+   * Controls it does not bind still reach them.
+   *
+   * Its maps are attached here and detached on pop, so a scope's maps live and
+   * die with their place on the stack.
+   *
+   * @throws {Error} If `scope` is already on this stack.
+   */
+  public pushScope(scope: InputScope, options: SceneActionMapOptions = {}): InputScope {
+    if (this._scopeLevels.has(scope)) {
+      throw new Error('SceneInputs: this InputScope is already on the stack.');
+    }
+
+    this._scopes.push(scope);
+    this._scopeLevels.set(scope, new ScopeLevel());
+    this._scopeAvailability.set(scope, options.when ?? SceneAvailability.Active);
+    this._syncScope(scope);
+    this._track();
+
+    return scope;
+  }
+
+  /**
+   * Take `scope` — or the topmost one when omitted — off the stack and detach
+   * its maps. Returns the removed scope, or `null` when it was not on the
+   * stack.
+   *
+   * Every level that regains a control the scope was claiming re-baselines
+   * against the live channel state, so a button still held when a menu closes
+   * does not read as a fresh press underneath it.
+   */
+  public popScope(scope?: InputScope): InputScope | null {
+    const target = scope ?? this._scopes.at(-1);
+
+    if (target === undefined) {
+      return null;
+    }
+
+    const index = this._scopes.indexOf(target);
+
+    if (index === -1) {
+      return null;
+    }
+
+    this._scopes.splice(index, 1);
+
+    const level = this._scopeLevels.get(target);
+
+    this._scopeLevels.delete(target);
+    this._scopeAvailability.delete(target);
+
+    if (level !== undefined) {
+      for (const map of [...level.maps]) {
+        level.delete(map);
+        map.detach();
+      }
+    }
+
+    return target;
+  }
+
+  /**
+   * Sample every level of the stack for this frame, top first, masking each
+   * lower level with everything the levels above it claim.
+   *
+   * @internal
+   */
+  public _updateScopes(sample: ActionSample): void {
+    if (this._suspended) {
+      return;
+    }
+
+    const masked = this._masked;
+
+    masked.clear();
+
+    for (let i = this._scopes.length - 1; i >= 0; i--) {
+      const scope = this._scopes[i]!;
+
+      this._syncScope(scope);
+      this._scopeLevels.get(scope)?.update(this, sample, masked);
+      scope._claimChannels(masked);
+    }
+
+    this._base.update(this, sample, masked);
+  }
+
+  /**
+   * Attach maps that were added to `scope` after it was pushed, and drop maps
+   * that were removed from it. A scope is a live collection, so membership is
+   * reconciled rather than snapshotted at push time.
+   */
+  private _syncScope(scope: InputScope): void {
+    const level = this._scopeLevels.get(scope);
+
+    if (level === undefined) {
+      return;
+    }
+
+    const when = this._scopeAvailability.get(scope) ?? SceneAvailability.Active;
+
+    for (const map of scope.maps) {
+      if (!level.maps.has(map)) {
+        map._attach(this, () => this._allowedNow(when));
+        level.add(map);
+      }
+    }
+
+    for (const map of [...level.maps]) {
+      if (!scope.maps.includes(map)) {
+        level.delete(map);
+        map.detach();
+      }
+    }
+  }
+
+  /**
+   * Register with the one input clock, once, as soon as there is anything to
+   * sample. A facade that only creates `on*` bindings never reaches the clock
+   * at all — those are driven by the manager's own binding list.
+   */
+  private _track(): void {
+    if (this._tracked || this._suspended || (this._base.maps.size === 0 && this._scopes.length === 0)) {
+      return;
+    }
+
+    this._tracked = true;
+    this._app.input._trackScopeHost(this);
+  }
+
   /**
    * Update `map` for as long as this scene lives, then detach it. A suspended
    * scene stops feeding its maps and resets every action, so a key held across
@@ -76,20 +245,25 @@ export class SceneInputs implements Destroyable {
    */
   public attach<T extends ActionRecord>(map: ActionMap<T>, options: SceneActionMapOptions = {}): ActionMap<T> {
     const when = options.when ?? SceneAvailability.Active;
-    map._attach(this, () => this._allowedNow(when));
-    this._actionMaps.add(map);
 
-    if (!this._suspended) {
-      this._app.input._trackActionMap(map);
-    }
+    map._attach(this, () => this._allowedNow(when));
+    this._base.add(map);
+    this._track();
 
     return map;
   }
 
   /** Stop updating `map`. Called by {@link ActionMap.detach}. @internal */
   public _detachActionMap(map: ActionMap): void {
-    this._actionMaps.delete(map);
-    this._app.input._detachActionMap(map);
+    if (this._base.delete(map)) {
+      return;
+    }
+
+    for (const level of this._scopeLevels.values()) {
+      if (level.delete(map)) {
+        return;
+      }
+    }
   }
 
   /**
@@ -210,9 +384,15 @@ export class SceneInputs implements Destroyable {
   public suspend(): void {
     this._suspended = true;
 
-    for (const map of this._actionMaps) {
-      this._app.input._detachActionMap(map);
-      map._reset();
+    if (this._tracked) {
+      this._tracked = false;
+      this._app.input._detachScopeHost(this);
+    }
+
+    this._base.reset();
+
+    for (const level of this._scopeLevels.values()) {
+      level.reset();
     }
   }
 
@@ -224,11 +404,26 @@ export class SceneInputs implements Destroyable {
    */
   public resume(): void {
     this._suspended = false;
+    this._track();
 
-    for (const map of this._actionMaps) {
-      this._app.input._resyncActionMap(map);
-      this._app.input._trackActionMap(map);
+    if (!this._tracked) {
+      return;
     }
+
+    const sample = this._app.input._actionSample();
+    const masked = this._masked;
+
+    masked.clear();
+
+    for (let i = this._scopes.length - 1; i >= 0; i--) {
+      const scope = this._scopes[i]!;
+
+      this._syncScope(scope);
+      this._scopeLevels.get(scope)?.resync(this, sample, masked);
+      scope._claimChannels(masked);
+    }
+
+    this._base.resync(this, sample, masked);
   }
 
   /** Unbind every tracked binding. Called automatically when the owning scene ends permanently. */
@@ -237,12 +432,27 @@ export class SceneInputs implements Destroyable {
       binding.unbind();
     }
 
-    for (const map of [...this._actionMaps]) {
+    for (const map of [...this._base.maps]) {
       map.detach();
     }
 
+    for (const level of this._scopeLevels.values()) {
+      for (const map of [...level.maps]) {
+        map.detach();
+      }
+    }
+
+    if (this._tracked) {
+      this._tracked = false;
+      this._app.input._detachScopeHost(this);
+    }
+
     this._bindings.clear();
-    this._actionMaps.clear();
+    this._base.clear();
+    this._scopes.length = 0;
+    this._scopeLevels.clear();
+    this._scopeAvailability.clear();
+    this._masked.clear();
   }
 
   private _bind(

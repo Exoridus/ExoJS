@@ -41,6 +41,22 @@ export function resolveGamepadSlotChannel(channel: number, slot: 0 | 1 | 2 | 3):
 }
 
 /**
+ * Undo {@link resolveGamepadSlotChannel}: the slot-0 channel a rebased gamepad
+ * channel came from. Channels outside the gamepad category pass through
+ * unchanged.
+ *
+ * Serialization and conflict reporting both need this — a binding names a
+ * control, never the runtime pad slot it happens to be read from.
+ */
+export function slotZeroGamepadChannel(channel: number): number {
+  if (channel >= ChannelOffset.Gamepads && channel < ChannelOffset.Gamepads + ChannelSize.Category) {
+    return ChannelOffset.Gamepads + ((channel - ChannelOffset.Gamepads) % ChannelSize.Gamepad);
+  }
+
+  return channel;
+}
+
+/**
  * Channel indices for the buttons of the primary pointer (slot 0), named by
  * role rather than by mouse geometry so they read correctly for pen and touch
  * input too. These address fields 9..11 of the pointer slot layout written by

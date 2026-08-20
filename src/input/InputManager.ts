@@ -24,6 +24,14 @@ import { ChannelOffset, ChannelSize, maxPointers, pointerSlotSize, resolveGamepa
 
 const gamepadSlots = 4;
 
+/**
+ * A per-frame consumer that owns an ordered set of action maps of its own —
+ * currently a {@link SceneInputs} and its input scope stack. @internal
+ */
+export interface ActionScopeHost {
+  _updateScopes(sample: ActionSample): void;
+}
+
 // Approximate pixel-equivalents for `WheelEvent.deltaMode` units other than
 // `DOM_DELTA_PIXEL`. Firefox defaults to `DOM_DELTA_LINE` while most other
 // browsers default to `DOM_DELTA_PIXEL`, so without this conversion the
@@ -176,6 +184,7 @@ export class InputManager {
   private readonly gamepadsByBrowserIndex = new Map<number, Gamepad>();
   private readonly bindings: Set<InputBinding> = new Set<InputBinding>();
   private readonly actionMaps = new Set<ActionMap>();
+  private readonly scopeHosts = new Set<ActionScopeHost>();
   /**
    * Reused view over the channel buffers, handed to action maps each frame.
    * `frameId` is bumped once per {@link InputManager.update} — the mechanism an
@@ -497,20 +506,37 @@ export class InputManager {
     return map;
   }
 
-  /**
-   * Add `map` to the per-frame update set without claiming ownership of it.
-   * Used by {@link SceneInputs}, which owns its maps but delegates the actual
-   * sampling here so there is only ever one input clock.
-   *
-   * @internal
-   */
-  public _trackActionMap(map: ActionMap): void {
-    this.actionMaps.add(map);
-  }
-
   /** Stop updating `map`. Called by {@link ActionMap.detach}. @internal */
   public _detachActionMap(map: ActionMap): void {
     this.actionMaps.delete(map);
+  }
+
+  /**
+   * Add a scope host — a {@link SceneInputs} — to the per-frame update set.
+   *
+   * A host drives its own maps rather than registering each of them here,
+   * because a scope stack has to update its levels in priority order and mask
+   * each one with what the levels above it claim. This manager stays the one
+   * input clock: it owns the channel buffer, the batch log and the frame id,
+   * and simply hands them to each host once per frame.
+   *
+   * @internal
+   */
+  public _trackScopeHost(host: ActionScopeHost): void {
+    this.scopeHosts.add(host);
+  }
+
+  /** Stop driving `host`. @internal */
+  public _detachScopeHost(host: ActionScopeHost): void {
+    this.scopeHosts.delete(host);
+  }
+
+  /**
+   * The live per-frame sample, for a host that needs to re-seed its maps
+   * outside the normal update pass (a scene resume). @internal
+   */
+  public _actionSample(): ActionSample {
+    return this.actionSample;
   }
 
   /**
@@ -537,28 +563,6 @@ export class InputManager {
     // code. A spread would yield a plain `number[]`, which is why the rule's
     // suggestion does not apply to a typed array.
     return new Float32Array(this.channels);
-  }
-
-  /**
-   * Eagerly re-baseline `map` against this frame's real channel state,
-   * without treating a still-held source as a fresh press. Used by
-   * {@link SceneInputs.resume}, immediately after a preceding
-   * {@link ActionMap._reset} (from the matching suspend), so code running
-   * right after resume — not only the next real frame — already observes
-   * the correct state. `_update` forwards straight through here: with the
-   * map's ownership tracker already reset, it resolves to the SAME baseline
-   * path a fresh attach or a genuine handoff would (see
-   * {@link ButtonLikeAction._update}'s doc comment). Re-arms the watermark first
-   * (see {@link ActionMapBase._armBaseline}) since this map stays with the
-   * SAME owner across the suspend/resume cycle and so never goes through
-   * `_attach` again — without this, a resume triggered partway through the
-   * current real frame could replay batches that predate the resume.
-   *
-   * @internal
-   */
-  public _resyncActionMap(map: ActionMap): void {
-    map._armBaseline(this._batchSequence, this._snapshotActionChannels());
-    map._update(this.actionSample);
   }
 
   /**
@@ -665,6 +669,10 @@ export class InputManager {
 
     for (const map of this.actionMaps) {
       map._update(this.actionSample);
+    }
+
+    for (const host of this.scopeHosts) {
+      host._updateScopes(this.actionSample);
     }
 
     // Mature a pending long-press on ENGINE time, before the journal drains,
