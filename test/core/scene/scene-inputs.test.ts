@@ -394,6 +394,9 @@ describe('SceneInputs action maps', () => {
         _trackScopeHost: vi.fn((host: ActionScopeHost) => void hosts.add(host)),
         _detachScopeHost: vi.fn((host: ActionScopeHost) => void hosts.delete(host)),
         _detachActionMap: vi.fn(),
+        _retainActionMapCapture: vi.fn(),
+        _refreshActionMapCapture: vi.fn(),
+        _releaseActionMapCapture: vi.fn(),
         _actionSample: vi.fn((): ActionSample => resyncSample),
         _currentBatchSequence: vi.fn((): number => 0),
         _snapshotActionChannels: vi.fn((): Float32Array => resyncSample.values.slice()),
@@ -597,6 +600,9 @@ describe('SceneInputs action maps — availability policy (when)', () => {
         _trackScopeHost: vi.fn((host: ActionScopeHost) => void hosts.add(host)),
         _detachScopeHost: vi.fn((host: ActionScopeHost) => void hosts.delete(host)),
         _detachActionMap: vi.fn(),
+        _retainActionMapCapture: vi.fn(),
+        _refreshActionMapCapture: vi.fn(),
+        _releaseActionMapCapture: vi.fn(),
         _actionSample: vi.fn((): ActionSample => {
           resyncSample.values.set(snapshot);
 
