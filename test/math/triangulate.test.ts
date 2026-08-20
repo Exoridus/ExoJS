@@ -111,7 +111,7 @@ test('star (10 verts) → 8 triangles, all CCW', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 6. Collinear / degenerate — must not throw or hang
+// 6. Collinear / degenerate - must not throw or hang
 // ---------------------------------------------------------------------------
 
 test('collinear 3 points → does not throw, length is multiple of 3', () => {

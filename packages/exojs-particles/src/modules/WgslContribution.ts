@@ -13,7 +13,7 @@
  */
 export type WgslPrimitive = 'f32' | 'i32' | 'u32' | 'vec2<f32>' | 'vec4<f32>';
 
-/** A named uniform field within a module's struct. Order matters — defines memory layout. */
+/** A named uniform field within a module's struct. Order matters - defines memory layout. */
 export interface WgslUniformField {
   name: string;
   type: WgslPrimitive;
@@ -21,7 +21,7 @@ export interface WgslUniformField {
 
 /** A 1D texture binding (used by Curve / ColorGradient lookups). */
 export interface WgslTextureBinding {
-  /** Field name within the module — referenced in WGSL as `u_${moduleKey}_${name}`. */
+  /** Field name within the module - referenced in WGSL as `u_${moduleKey}_${name}`. */
   name: string;
   /** WGSL texture format. `r32float` for Curve, `rgba8unorm` for ColorGradient. */
   format: 'r32float' | 'rgba8unorm';
@@ -32,29 +32,29 @@ export interface WgslTextureBinding {
  * shader. `body` runs once per particle in the inner main function, with
  * these locals in scope:
  *
- * - `idx: u32` — the particle slot index (already gated on `< sim.liveCount`
+ * - `idx: u32` - the particle slot index (already gated on `< sim.liveCount`
  *   and skip-on-dead via `timing[idx].y < 0.0`).
- * - `dt: f32` — frame delta in seconds (mirrors `sim.dt`).
- * - **Packed SoA bindings** (see body of doc) — channels are packed into
+ * - `dt: f32` - frame delta in seconds (mirrors `sim.dt`).
+ * - **Packed SoA bindings** (see body of doc) - channels are packed into
  *   `vec2<f32>`-typed storage buffers to fit within WebGPU's default 8-buffer
  *   limit. Access x/y components for the per-axis values:
  *   - `positions[idx].x` / `.y` (was posX/posY)
  *   - `velocities[idx].x` / `.y` (was velX/velY)
  *   - `scales[idx].x` / `.y` (was scaleX/scaleY)
  *   - `rotInfo[idx].x` / `.y` (rotation, rotationSpeed)
- *   - `timing[idx].x` / `.y` (elapsed, lifetime — y is set to -1 when expired)
- *   - `color[idx]` — packed RGBA u32, single channel (no .x/.y)
- * - `sim: SimUniforms` — `{ dt: f32, liveCount: u32 }`.
- * - `modules.u_${key}: ${Key}Uniforms` — your module's uniform struct (if declared).
- * - `u_${key}_${textureName}` and `u_${key}_${textureName}_sampler` — texture bindings (if any).
+ *   - `timing[idx].x` / `.y` (elapsed, lifetime - y is set to -1 when expired)
+ *   - `color[idx]` - packed RGBA u32, single channel (no .x/.y)
+ * - `sim: SimUniforms` - `{ dt: f32, liveCount: u32 }`.
+ * - `modules.u_${key}: ${Key}Uniforms` - your module's uniform struct (if declared).
+ * - `u_${key}_${textureName}` and `u_${key}_${textureName}_sampler` - texture bindings (if any).
  *
  * The body should not declare new functions or top-level statements; it
  * runs inline in the main function. Use comments and parentheses generously
- * — composition concatenates several module bodies and any syntax mistake
+ * - composition concatenates several module bodies and any syntax mistake
  * surfaces only at pipeline-creation time.
  */
 export interface WgslContribution {
-  /** Unique key per module *class* (e.g. `'ApplyForce'`). Two ApplyForce instances on one system aren't supported — combine into one. */
+  /** Unique key per module *class* (e.g. `'ApplyForce'`). Two ApplyForce instances on one system aren't supported - combine into one. */
   key: string;
   uniforms?: readonly WgslUniformField[];
   textures?: readonly WgslTextureBinding[];
@@ -63,7 +63,7 @@ export interface WgslContribution {
    * scope before `main()`. Use this for noise/hash helpers or any
    * supporting function the {@link body} calls. Multiple modules can
    * declare preludes; they're concatenated in registration order. Naming
-   * collisions across modules are the author's problem — prefix helpers
+   * collisions across modules are the author's problem - prefix helpers
    * with the module key (e.g. `myModule_hash`) to avoid clashes.
    */
   prelude?: string;

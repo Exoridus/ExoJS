@@ -31,7 +31,7 @@ export interface WheelJointOptions {
   upperTranslation?: number;
 }
 
-/** Reused output sink — physics steps single-threaded, so a shared scratch is safe. */
+/** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
 const scratch: Mutable2D = { x: 0, y: 0 };
 
 /**
@@ -225,7 +225,7 @@ export class WheelJoint extends Joint {
     const bodyA = this.bodyA;
     const bodyB = this.bodyB;
 
-    // Rotation motor — drives the wheel's spin; rotation is otherwise free.
+    // Rotation motor - drives the wheel's spin; rotation is otherwise free.
     if (this.enableMotor) {
       const cdot = bodyB.angularVelocity - bodyA.angularVelocity - this.motorSpeed;
       const max = this.maxMotorTorque * this._h;

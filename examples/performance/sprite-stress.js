@@ -1,4 +1,4 @@
-// Auto-generated from sprite-stress.ts — edit the .ts source, not this file.
+// Auto-generated from sprite-stress.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 const GRID_COLUMNS = 56;
 const GRID_ROWS = 30;

@@ -25,7 +25,7 @@ function assertPixelRatio(value: number): number {
 }
 
 /**
- * Construction options for a {@link Text} node — a flat merge of visual
+ * Construction options for a {@link Text} node - a flat merge of visual
  * {@link TextStyleOptions} (appearance) and {@link LayoutOptions} (flow /
  * overflow), plus two construction-only flags. The two source interfaces share
  * no keys, so the flat shape is unambiguous.

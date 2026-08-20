@@ -104,7 +104,7 @@ describe('CompressorEffect', () => {
       // internal audio-context singleton starts in its virgin (not-ready)
       // state for this one test, regardless of what earlier tests in this
       // file already did with getAudioContext(). With no AudioContext created
-      // yet, construction cannot set up the node synchronously — it registers
+      // yet, construction cannot set up the node synchronously - it registers
       // `_onAudioContextReady` on the `onAudioContextReady` signal instead.
       vi.resetModules();
       const { CompressorEffect: FreshCompressorEffect } = await import('../../src/effects/CompressorEffect');
@@ -113,7 +113,7 @@ describe('CompressorEffect', () => {
 
       // Simulate the AudioContext becoming ready (e.g. after the first user
       // gesture) by invoking the deferred hook directly with a fresh mock
-      // AudioContext — this is exactly what onAudioContextReady.dispatch()
+      // AudioContext - this is exactly what onAudioContextReady.dispatch()
       // would call in production.
       const ctx = new AudioContext();
       (effect as unknown as { _onAudioContextReady: (ctx: AudioContext) => void })._onAudioContextReady(ctx);

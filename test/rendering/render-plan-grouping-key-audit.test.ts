@@ -331,7 +331,7 @@ describe('render plan grouping key audit', () => {
     test('different blend modes produce different groupIndices (pipelineKey encodes blendMode)', () => {
       // For the default path, pipelineKey = rendererId * 31 + blendMode.
       // Two sprites with different blend modes therefore get different
-      // pipelineKeys and must land in different groups — matching the
+      // pipelineKeys and must land in different groups - matching the
       // sprite renderer's flush-on-blendMode-change boundary.
       const { backend, destroy } = createBuildBackend();
 
@@ -361,7 +361,7 @@ describe('render plan grouping key audit', () => {
 
     test('different textures share a groupIndex (the batcher rotates slots without flushing)', () => {
       // For the default path, bindKey = rendererId * 31 + textureId, so different
-      // textures give different bindKeys — but the sprite renderer absorbs a
+      // textures give different bindKeys - but the sprite renderer absorbs a
       // texture change into one of its 16 slots and does not flush, so the two
       // draws stay in one group. Only slot exhaustion past 16 textures would
       // cost a draw call, and that remains renderer-owned.
@@ -380,7 +380,7 @@ describe('render plan grouping key audit', () => {
 
         expect(cmds).toHaveLength(2);
         expect(cmds[0].groupIndex).toBe(cmds[1].groupIndex);
-        // bindKey still encodes the texture identity — it just costs no flush.
+        // bindKey still encodes the texture identity - it just costs no flush.
         expect(cmds[0].material.bindKey).not.toBe(cmds[1].material.bindKey);
 
         texA.destroy();
@@ -465,7 +465,7 @@ describe('render plan grouping key audit', () => {
       // the same groupIndex.
       //
       // The sprite renderer absorbs a base-texture change into one of its
-      // custom-path slots and only flushes on slot exhaustion — that boundary
+      // custom-path slots and only flushes on slot exhaustion - that boundary
       // is renderer-owned, not optimizer-owned.
       const { backend, destroy } = createBuildBackend();
 
@@ -504,7 +504,7 @@ describe('render plan grouping key audit', () => {
     test('different material blend modes produce different groupIndices', () => {
       // material.pipelineKey is derived from shader identity + blend mode.
       // Two materials with different blendModes therefore produce different
-      // pipelineKeys and end up in different optimizer groups — matching the
+      // pipelineKeys and end up in different optimizer groups - matching the
       // sprite renderer's flush-on-blendMode-change boundary.
       const { backend, destroy } = createBuildBackend();
 
@@ -546,7 +546,7 @@ describe('render plan grouping key audit', () => {
       // groupIndex.
       //
       // The MaterialKey.blendMode field (drawable.blendMode) DOES record the
-      // sprite-level value, but groupKey() only uses pipelineKey:bindKey —
+      // sprite-level value, but groupKey() only uses pipelineKey:bindKey -
       // blendMode is not part of it. The renderer's blendMode state machine
       // flushes on this boundary independently of groupIndex.
       const { backend, destroy } = createBuildBackend();
@@ -569,7 +569,7 @@ describe('render plan grouping key audit', () => {
         expect(cmds).toHaveLength(2);
         // The MaterialKey.blendMode field records drawable.blendMode, so they differ.
         expect(cmds[0].material.blendMode).not.toBe(cmds[1].material.blendMode);
-        // pipelineKey is the same — it comes from material.pipelineKey (material.blendMode=Normal).
+        // pipelineKey is the same - it comes from material.pipelineKey (material.blendMode=Normal).
         expect(cmds[0].material.pipelineKey).toBe(cmds[1].material.pipelineKey);
         // Same groupIndex: sprite-level blendMode override is a renderer-owned boundary.
         expect(cmds[0].groupIndex).toBe(cmds[1].groupIndex);
@@ -590,7 +590,7 @@ describe('render plan grouping key audit', () => {
     test('same-material draws at different z-indices get different groupIndices', () => {
       // The mesh static-batch gate requires groupIndex equality, which
       // prevents cross-z batching and preserves draw order. For sprite
-      // renderers the z-split is harmless — their own state machine
+      // renderers the z-split is harmless - their own state machine
       // coalesces compatible sprites regardless of groupIndex boundaries.
       const a = new AuditDrawable();
       const b = new AuditDrawable();
@@ -711,7 +711,7 @@ describe('render plan grouping key audit', () => {
       // proven by the mesh renderer's own unit and browser tests).
       //
       // The optimizer's pipelineKey:bindKey groupKey guarantees that two draws
-      // in the same optimizer group always agree on pipelineKey and bindKey —
+      // in the same optimizer group always agree on pipelineKey and bindKey -
       // which are also in the mesh batch check. So the optimizer never groups
       // two draws whose pipeline state differs.
       const a = new AuditDrawable();

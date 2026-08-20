@@ -3,7 +3,7 @@
 /**
  * Owning wrapper around a `GPUBuffer` allocated with `UNIFORM | COPY_DST`,
  * plus any `extraUsage` flags passed at construction. Counterpart to
- * {@link WebGpuStorageBuffer} for the uniform-buffer case — deliberately
+ * {@link WebGpuStorageBuffer} for the uniform-buffer case - deliberately
  * simpler (no readback support): uniform buffers are CPU→GPU config data,
  * written every frame and read by shaders, essentially never read back.
  *

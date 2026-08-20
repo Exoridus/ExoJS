@@ -24,7 +24,7 @@ export interface BmFontData {
   /** Code-point → glyph metrics. */
   chars: Map<number, BmFontChar>;
   /**
-   * Kerning pairs — key `"${first},${second}"`, value = pixel adjustment.
+   * Kerning pairs - key `"${first},${second}"`, value = pixel adjustment.
    * Negative values pull glyphs together; positive push them apart.
    */
   kernings: Map<string, number>;
@@ -37,7 +37,7 @@ export interface BmFontData {
 /**
  * A loaded BMFont asset: the parsed descriptor plus all page textures.
  *
- * Loaded by the built-in BMFont factory — no extra setup required.
+ * Loaded by the built-in BMFont factory - no extra setup required.
  * Pass directly to {@link BitmapText}.
  *
  * ```ts

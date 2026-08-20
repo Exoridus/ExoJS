@@ -113,7 +113,7 @@ const descriptor = (
   stencil: StencilAttachmentMode = StencilAttachmentMode.None,
 ): RenderPassDescriptor => ({ target, view, load, clearColor, stencil });
 
-// A thin fake for the coordinator's own `WebGpuStencilClipper` dependency —
+// A thin fake for the coordinator's own `WebGpuStencilClipper` dependency -
 // the clipper itself is real GPU-pipeline code (out of scope here per the
 // task brief); this fake lets the coordinator's stencil bookkeeping
 // (depth/stack tracking, load-op transitions, endPass sequencing) run without
@@ -286,7 +286,7 @@ describe('WebGpuPassCoordinator', () => {
 
       const active = coordinator.acquirePass();
 
-      // A second acquire returns the same open pass — no extra GPU pass.
+      // A second acquire returns the same open pass - no extra GPU pass.
       expect(coordinator.acquirePass()).toBe(active);
       expect(beginRenderPass).toHaveBeenCalledTimes(1);
       expect(stats.renderPasses).toBe(1);
@@ -324,7 +324,7 @@ describe('WebGpuPassCoordinator', () => {
       coordinator.markPassDraws();
       expect(coordinator.passHasDraws).toBe(true);
 
-      // Ending clears it, and the next pass starts empty — this is what lets a
+      // Ending clears it, and the next pass starts empty - this is what lets a
       // renderer read "does the open pass hold anyone's draws" without knowing
       // which renderer split it.
       coordinator.endPass();
@@ -537,7 +537,7 @@ describe('WebGpuPassCoordinator', () => {
         coordinator.pushStencilClip(geometryStub, transform);
 
         // Synthetically desync the depth map from the stack to exercise the
-        // `?? 0` defensive fallback — depths and stacks are always kept in
+        // `?? 0` defensive fallback - depths and stacks are always kept in
         // sync by the public API, so this desync is not otherwise reachable.
         (coordinator as unknown as { _stencilDepths: Map<RenderTarget, number> })._stencilDepths.delete(root);
 
@@ -558,7 +558,7 @@ describe('WebGpuPassCoordinator', () => {
       installFakeStencil(coordinator, fakeStencil);
 
       try {
-        // Never connected — releasing is a pure bookkeeping no-op.
+        // Never connected - releasing is a pure bookkeeping no-op.
         coordinator.releaseStencilTarget(root);
         expect(fakeStencil.releaseAttachment).not.toHaveBeenCalled();
 
@@ -609,7 +609,7 @@ describe('WebGpuPassCoordinator', () => {
       installFakeStencil(coordinator, fakeStencil);
 
       try {
-        // Never connected — destroying is a no-op for the clipper itself.
+        // Never connected - destroying is a no-op for the clipper itself.
         coordinator.destroyStencil();
         expect(fakeStencil.disconnect).not.toHaveBeenCalled();
 

@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 /**
- * Render-fail surface (S3 diagnostics, minimal slice) — contracts 3, 4 and 5:
+ * Render-fail surface (S3 diagnostics, minimal slice) - contracts 3, 4 and 5:
  *
  *  3. A throwing frame: app.onError dispatched once with the error; RAF
  *     continues (frame N+1 runs); recentErrors grows.
@@ -24,7 +24,7 @@ vi.mock('#core/devErrorOverlay', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Backend stubs — keep WebGL2 / WebGPU out of jsdom.
+// Backend stubs - keep WebGL2 / WebGPU out of jsdom.
 // ---------------------------------------------------------------------------
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
@@ -149,7 +149,7 @@ describe('Application frame guard', () => {
   }
 
   // -------------------------------------------------------------------------
-  // Contract 3 — one throwing frame is reported and the loop survives
+  // Contract 3 - one throwing frame is reported and the loop survives
   // -------------------------------------------------------------------------
 
   describe('a throwing frame (contract 3)', () => {
@@ -231,7 +231,7 @@ describe('Application frame guard', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Contract 4 — three consecutive throwing frames halt the loop
+  // Contract 4 - three consecutive throwing frames halt the loop
   // -------------------------------------------------------------------------
 
   describe('three consecutive throwing frames (contract 4)', () => {
@@ -288,7 +288,7 @@ describe('Application frame guard', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Contract 5 — a successful frame resets the consecutive counter
+  // Contract 5 - a successful frame resets the consecutive counter
   // -------------------------------------------------------------------------
 
   describe('a successful frame resets the consecutive counter (contract 5)', () => {
@@ -310,7 +310,7 @@ describe('Application frame guard', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Backend wiring — onRenderError → Application error pipeline
+  // Backend wiring - onRenderError → Application error pipeline
   // -------------------------------------------------------------------------
 
   describe('async render-error wiring', () => {

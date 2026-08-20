@@ -91,14 +91,14 @@ const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
  * `KHR_parallel_shader_compile` note below); a compile or link failure at that
  * point throws a structured {@link RenderError} (`shader-compile` /
  * `shader-link`). `label` names the program in those errors (renderer name,
- * material label) — omit it when no cheap label is available.
+ * material label) - omit it when no cheap label is available.
  */
 export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: string): ShaderProgram {
   let program: WebGLProgram | null = null;
   let vertexShader: WebGLShader | null = null;
   let fragmentShader: WebGLShader | null = null;
   let pendingShader: Shader | null = null;
-  // Sources after include expansion — what the driver actually compiled, so a
+  // Sources after include expansion - what the driver actually compiled, so a
   // compile error's numbered excerpt lines up with the log's line numbers.
   let compiledVertexSource = '';
   let compiledFragmentSource = '';
@@ -186,8 +186,8 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
     pendingShader = null;
   }
 
-  // Indexed rather than `for…of`: this runs once per batch, so it is the one
-  // loop every scene in the catalog walks — and the array iterators V8 does not
+  // Indexed rather than `for...of`: this runs once per batch, so it is the one
+  // loop every scene in the catalog walks - and the array iterators V8 does not
   // scalar-replace here are the only allocation left in a fully retained frame.
   function syncUniforms(): void {
     for (let i = 0; i < managedUniforms.length; i++) {
@@ -222,7 +222,7 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
       // Bind the program before syncing uniforms. WebGl2Backend
       // does not call bindShader() on the active renderer's shader
       // during normal draw flow, so sync() is the first entry point
-      // that must establish program binding — otherwise uniform*
+      // that must establish program binding - otherwise uniform*
       // targets the wrong (or no) program and the subsequent draw
       // call fails with "no valid shader program in use".
       finalize();
@@ -263,7 +263,7 @@ function createCompileError(stage: 'vertex' | 'fragment', source: string, log: s
 }
 
 // compileShader / linkProgram intentionally do NOT query COMPILE_STATUS or
-// LINK_STATUS here — those queries block on driver completion. Status checks
+// LINK_STATUS here - those queries block on driver completion. Status checks
 // happen in finalize() at first bind, after the driver has had time to
 // compile in the background (especially with KHR_parallel_shader_compile).
 

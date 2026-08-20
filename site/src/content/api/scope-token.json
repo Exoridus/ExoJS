@@ -1,6 +1,6 @@
 {
   "title": "ScopeToken",
-  "description": "Opaque, stable identity for one scope pushed via InteractionManager.pushScope. Release exactly that scope — wherever it currently sits in the stack — through the matching InteractionManager.popScope call, regardless of whether other scopes were pushed (and are still active) above or below it. A token, not the scope's `root` node, is what identifies an entry: two scopes can legitimately share the same root (nesting a scope on a node that is already a scope root), and only a token distinguishes which of the two a given `popScope` call means to release.",
+  "description": "Opaque, stable identity for one scope pushed via InteractionManager.pushScope. Release exactly that scope - wherever it currently sits in the stack - through the matching InteractionManager.popScope call, regardless of whether other scopes were pushed (and are still active) above or below it. A token, not the scope's `root` node, is what identifies an entry: two scopes can legitimately share the same root (nesting a scope on a node that is already a scope root), and only a token distinguishes which of the two a given `popScope` call means to release.",
   "symbol": "ScopeToken",
   "kind": "type",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Opaque, stable identity for one scope pushed via InteractionManager.pushScope. Release exactly that scope — wherever it currently sits in the stack — through the matching InteractionManager.popScope call, regardless of whether other scopes were pushed (and are still active) above or below it.",
+        "Opaque, stable identity for one scope pushed via InteractionManager.pushScope. Release exactly that scope - wherever it currently sits in the stack - through the matching InteractionManager.popScope call, regardless of whether other scopes were pushed (and are still active) above or below it.",
         "A token, not the scope's `root` node, is what identifies an entry: two scopes can legitimately share the same root (nesting a scope on a node that is already a scope root), and only a token distinguishes which of the two a given `popScope` call means to release."
       ],
       "importLine": "import { ScopeToken } from '@codexo/exojs'",

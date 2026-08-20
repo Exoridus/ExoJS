@@ -40,7 +40,7 @@ describe('isAsepriteArrayData', () => {
   });
 });
 
-// ── AsepriteSheet.parse — array form ───────────────────────────────────────────
+// ── AsepriteSheet.parse - array form ───────────────────────────────────────────
 
 describe('AsepriteSheet.parse — array form', () => {
   it('returns an AsepriteSheet instance', () => {
@@ -77,7 +77,7 @@ describe('AsepriteSheet.parse — array form', () => {
   });
 });
 
-// ── AsepriteSheet.parse — clips from frameTags ─────────────────────────────────
+// ── AsepriteSheet.parse - clips from frameTags ─────────────────────────────────
 
 describe('AsepriteSheet.parse — clips from frameTags', () => {
   it('creates one clip per frame tag', () => {
@@ -120,7 +120,7 @@ describe('AsepriteSheet.parse — clips from frameTags', () => {
   });
 });
 
-// ── AsepriteSheet.parse — direction expansion ──────────────────────────────────
+// ── AsepriteSheet.parse - direction expansion ──────────────────────────────────
 
 describe('AsepriteSheet.parse — direction expansion', () => {
   function makeData(tag: { from: number; to: number; direction: AsepriteDirection }): AsepriteData {
@@ -213,7 +213,7 @@ describe('AsepriteSheet.parse — direction expansion', () => {
   });
 });
 
-// ── AsepriteSheet.parse — per-frame durations (hold frames) ────────────────────
+// ── AsepriteSheet.parse - per-frame durations (hold frames) ────────────────────
 
 describe('AsepriteSheet.parse — per-frame durations', () => {
   it('populates frameDurations with each expanded frame index real duration', () => {
@@ -294,7 +294,7 @@ describe('AsepriteSheet.parse — per-frame durations', () => {
   });
 });
 
-// ── AsepriteSheet.parse — trimmed-frame offsets ─────────────────────────────────
+// ── AsepriteSheet.parse - trimmed-frame offsets ─────────────────────────────────
 
 describe('AsepriteSheet.parse — trimmed-frame offsets', () => {
   it('populates frameOffsets from spriteSourceSize when any frame in the tag is trimmed', () => {
@@ -341,7 +341,7 @@ describe('AsepriteSheet.parse — trimmed-frame offsets', () => {
   });
 });
 
-// ── AsepriteSheet.parse — repeat (one-shot vs finite vs infinite) ──────────────
+// ── AsepriteSheet.parse - repeat (one-shot vs finite vs infinite) ──────────────
 
 describe('AsepriteSheet.parse — repeat', () => {
   function makeData(repeat: string | undefined): AsepriteData {
@@ -384,7 +384,7 @@ describe('AsepriteSheet.parse — repeat', () => {
   });
 });
 
-// ── AsepriteSheet.parse — slices ────────────────────────────────────────────────
+// ── AsepriteSheet.parse - slices ────────────────────────────────────────────────
 
 describe('AsepriteSheet.parse — slices', () => {
   it('populates the slices map keyed by slice name', () => {
@@ -428,7 +428,7 @@ describe('AsepriteSheet.parse — slices', () => {
   });
 });
 
-// ── AsepriteSheet.parse — layers ─────────────────────────────────────────────
+// ── AsepriteSheet.parse - layers ─────────────────────────────────────────────
 
 describe('AsepriteSheet.parse — layers', () => {
   const layerData = loadFixture('hero.layers.json');
@@ -475,7 +475,7 @@ describe('AsepriteSheet.parse — layers', () => {
   });
 });
 
-// ── AsepriteSheet.parse — fps averaging and fallbacks ──────────────────────────
+// ── AsepriteSheet.parse - fps averaging and fallbacks ──────────────────────────
 
 describe('AsepriteSheet.parse — fps derivation', () => {
   function makeData(durations: number[], tag: { from: number; to: number }): AsepriteData {
@@ -511,7 +511,7 @@ describe('AsepriteSheet.parse — fps derivation', () => {
   });
 });
 
-// ── AsepriteSheet.parse — frame-index edge cases ───────────────────────────────
+// ── AsepriteSheet.parse - frame-index edge cases ───────────────────────────────
 
 describe('AsepriteSheet.parse — frame-index handling in tags', () => {
   function makeData(tag: { from: number; to: number }): AsepriteData {
@@ -548,7 +548,7 @@ describe('AsepriteSheet.parse — frame-index handling in tags', () => {
   });
 });
 
-// ── AsepriteSheet.parse — missing frameTags ────────────────────────────────────
+// ── AsepriteSheet.parse - missing frameTags ────────────────────────────────────
 
 describe('AsepriteSheet.parse — no frame tags', () => {
   it('produces an empty clips map when meta.frameTags is absent', () => {
@@ -577,7 +577,7 @@ describe('AsepriteSheet.parse — no frame tags', () => {
   });
 });
 
-// ── AsepriteSheet.parse — hash form ────────────────────────────────────────────
+// ── AsepriteSheet.parse - hash form ────────────────────────────────────────────
 
 describe('AsepriteSheet.parse — hash form', () => {
   it('produces the same frame count and index-string keys as the array form', () => {

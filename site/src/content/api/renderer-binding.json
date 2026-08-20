@@ -1,6 +1,6 @@
 {
   "title": "RendererBinding",
-  "description": "Binds one or more drawable constructors to a renderer factory. Pure descriptor — no active renderer, no GPU resources, no side effects until `create` is called once per backend during Application construction. `targets` must contain at least one entry. All targets share the single renderer instance produced by `create`. Returning `undefined` from `create` means the backend is unsupported; the entire binding is skipped for that backend.",
+  "description": "Binds one or more drawable constructors to a renderer factory. Pure descriptor - no active renderer, no GPU resources, no side effects until `create` is called once per backend during Application construction. `targets` must contain at least one entry. All targets share the single renderer instance produced by `create`. Returning `undefined` from `create` means the backend is unsupported; the entire binding is skipped for that backend.",
   "symbol": "RendererBinding",
   "kind": "interface",
   "subsystem": "extensions",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Binds one or more drawable constructors to a renderer factory. Pure descriptor — no active renderer, no GPU resources, no side effects until `create` is called once per backend during Application construction.",
+        "Binds one or more drawable constructors to a renderer factory. Pure descriptor - no active renderer, no GPU resources, no side effects until `create` is called once per backend during Application construction.",
         "`targets` must contain at least one entry. All targets share the single renderer instance produced by `create`. Returning `undefined` from `create` means the backend is unsupported; the entire binding is skipped for that backend."
       ],
       "importLine": "import { RendererBinding } from '@codexo/exojs/extensions'",

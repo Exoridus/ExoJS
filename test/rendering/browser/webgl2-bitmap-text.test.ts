@@ -5,17 +5,17 @@
  * exercises the BitmapText / BmFont-adapter code path with a real pixel
  * readback (see the "BitmapText renders inside a Geometry stencil clip" test
  * in `webgpu-stencil-clip.test.ts`), but no WebGL2 browser test constructed a
- * `BitmapText` at all — the WebGL2 text browser suite
+ * `BitmapText` at all - the WebGL2 text browser suite
  * (`webgl2-text-layout.test.ts`, `webgl2-glyph-sdf.test.ts`) only drives the
  * runtime Canvas 2D / SDF `Text` node. `BitmapText` and `Text` share the same
  * renderer class (`WebGl2TextRenderer`), but BitmapText runs an entirely
  * different collection path (`_collectBitmapText` → the "color" shader,
- * `text-color.frag`, sampling an offline BMFont atlas page directly — no
+ * `text-color.frag`, sampling an offline BMFont atlas page directly - no
  * runtime rasterisation, no shared `GlyphAtlasPool`).
  *
  * This file renders `BitmapText` nodes backed by a programmatically built
  * `BmFont` whose atlas page is a single solid-colour texture, so each glyph's
- * quad paints a deterministic, exactly-known colour — the same technique
+ * quad paints a deterministic, exactly-known colour - the same technique
  * `webgpu-stencil-clip.test.ts`'s `createSolidBitmapText` helper uses.
  *
  * ## Regression guard: first-flush uniforms (WebGl2TextRenderer)
@@ -25,7 +25,7 @@
  * `u_projection` / `u_texture` / `u_nodeData` / `u_pageSize` uniforms. Because
  * `ShaderUniform.setValue()` only marks a uniform dirty for the *next* `sync()`,
  * the first flush of each text shaderType drew with a stale zero `u_projection`
- * — degenerate, so nothing rasterized. It self-healed from the second frame on
+ * - degenerate, so nothing rasterized. It self-healed from the second frame on
  * (the values are frame-constant), so no continuous-rendering test caught it,
  * but any genuine single-shot render (screenshot / render-to-texture pre-bake /
  * first frame) drew nothing. Fixed by moving `sync()` after the uniform writes,
@@ -109,9 +109,9 @@ const createSolidTexture = (color: string, size: number): Texture => {
 };
 
 // A BitmapText whose single glyph 'A' fills the whole `size`×`size` atlas page,
-// placed at the line origin so its quad covers (0,0)–(size,size) before any
+// placed at the line origin so its quad covers (0,0)-(size,size) before any
 // node transform. The atlas page is a solid-colour texture, so the
-// colour-atlas shader (msdf = false) emits that colour directly — deterministic
+// colour-atlas shader (msdf = false) emits that colour directly - deterministic
 // pixels with no runtime font rasterisation or atlas-upload timing.
 const createSolidBitmapText = (color: string, size: number): { text: BitmapText; texture: Texture } => {
   const texture = createSolidTexture(color, size);
@@ -146,7 +146,7 @@ describe('BitmapText WebGL2 browser', () => {
       // Inside the 32×32 glyph quad, anchored at (8, 8).
       expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 38, 38), [255, 0, 0, 255]);
-      // Outside the glyph quad — untouched clear color.
+      // Outside the glyph quad - untouched clear color.
       expectPixelNear(readWebGl2Pixel(backend, 2, 2), [0, 0, 0, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 56, 56), [0, 0, 0, 255]);
     } finally {
@@ -190,7 +190,7 @@ describe('BitmapText WebGL2 browser', () => {
       render(backend, text);
 
       expectPixelNear(readWebGl2Pixel(backend, 48, 48), [255, 0, 0, 255]);
-      // The origin — where the glyph would sit without the transform — stays clear.
+      // The origin - where the glyph would sit without the transform - stays clear.
       expectPixelNear(readWebGl2Pixel(backend, 8, 8), [0, 0, 0, 255]);
     } finally {
       text.destroy();

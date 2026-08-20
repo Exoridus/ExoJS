@@ -1,4 +1,4 @@
-// Auto-generated from resolver.ts — edit the .ts source, not this file.
+// Auto-generated from resolver.ts - edit the .ts source, not this file.
 export function createAssetUrl(path, baseUrl = '/assets/') {
     const normalizedBase = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`;
     const normalizedPath = path.startsWith('/') ? path.slice(1) : path;

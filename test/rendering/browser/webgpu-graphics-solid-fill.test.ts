@@ -1,5 +1,5 @@
 /**
- * WebGPU Graphics plain solid-fill browser tests — opt-in, capability-aware.
+ * WebGPU Graphics plain solid-fill browser tests - opt-in, capability-aware.
  *
  * The Graphics gradient/stencil suites cover gradient rasterization and
  * clipping, but not an isolated plain solid-color fill (the simplest

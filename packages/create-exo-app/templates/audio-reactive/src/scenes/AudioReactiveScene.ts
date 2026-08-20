@@ -31,7 +31,7 @@ export class AudioReactiveScene extends Scene {
       this._started = true;
       this._prompt.visible = false;
 
-      // Use the shared audio context — the pointer gesture unlocks it.
+      // Use the shared audio context - the pointer gesture unlocks it.
       const ctx = getAudioContext();
 
       // Sawtooth oscillator as an always-on audio source for the analyser.

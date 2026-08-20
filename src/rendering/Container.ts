@@ -22,7 +22,7 @@ import { RenderNode } from './RenderNode';
  * ancestor chain so further-up containers also rebuild on next read.
  *
  * Subclassed by {@link Sprite}, {@link Mesh}, {@link Graphics}, {@link Text},
- * etc. — the base `Container` is a non-drawing grouping node.
+ * etc. - the base `Container` is a non-drawing grouping node.
  * @stable
  */
 export class Container extends RenderNode {
@@ -39,7 +39,7 @@ export class Container extends RenderNode {
    * paint-order/child-index caches derived from it are invalidated by the
    * mutation methods below, so a subclass splicing the array directly would
    * leave all three silently stale. Unlike {@link children} this is the array
-   * itself — no copy, no freeze — so reading it in a hot path costs nothing.
+   * itself - no copy, no freeze - so reading it in a hot path costs nothing.
    * Go through `addChild`/`removeChild`/`setChildIndex` to change it.
    */
   protected get _children(): readonly RenderNode[] {
@@ -47,11 +47,11 @@ export class Container extends RenderNode {
   }
 
   /**
-   * Snapshot of the current children in document order. Frozen and cached —
+   * Snapshot of the current children in document order. Frozen and cached -
    * repeated reads return the same array reference until the next
    * structural change (`addChild`/`removeChild`/`setChildIndex`/
    * `swapChildren`/etc.), which invalidates it. A reference to a previous
-   * snapshot is unaffected by later changes — it keeps reflecting the child
+   * snapshot is unaffected by later changes - it keeps reflecting the child
    * list as it was at the time of the read. Mutating methods (`push`,
    * `splice`, ...) throw in normal (strict-mode) usage; go through
    * `addChild`/`removeChild` instead so parent linkage, stage propagation,
@@ -83,7 +83,7 @@ export class Container extends RenderNode {
   }
 
   /**
-   * Invalidate only the paint-order view — for a child's `zIndex` write, which
+   * Invalidate only the paint-order view - for a child's `zIndex` write, which
    * reorders painting but leaves document order and every child index exactly
    * as they were, so the {@link children} snapshot stays valid (and keeps its
    * documented reference stability).
@@ -95,7 +95,7 @@ export class Container extends RenderNode {
 
   /**
    * Iterate the same frozen, cached document-order snapshot {@link children}
-   * returns — mutating the container after obtaining this iterator does not
+   * returns - mutating the container after obtaining this iterator does not
    * change what it yields (see {@link children}'s doc comment for the full
    * snapshot/invalidation contract).
    */
@@ -106,7 +106,7 @@ export class Container extends RenderNode {
   /**
    * Rendered width of the whole subtree, in the node's global-transform space.
    *
-   * Unlike {@link Sprite.width} — which scales an unscaled texture frame — a
+   * Unlike {@link Sprite.width} - which scales an unscaled texture frame - a
    * container has no intrinsic local size, so this reads the aggregate bounds
    * directly. Those are already scaled, so multiplying by `scale` again would
    * count it twice. Writing rescales `scale.x` to make the subtree render at
@@ -120,7 +120,7 @@ export class Container extends RenderNode {
     this._rescaleToFit('x', value, this.getBounds().width);
   }
 
-  /** Rendered height of the whole subtree — see {@link width}. */
+  /** Rendered height of the whole subtree - see {@link width}. */
   public get height(): number {
     return this.getBounds().height;
   }
@@ -135,8 +135,8 @@ export class Container extends RenderNode {
    *
    * `current` is a world-space measurement and therefore already linear in
    * `scale[axis]`, so the new scale is the old one times the ratio. Dividing
-   * `target` by `current` instead — as if `current` were an unscaled local
-   * size — makes the assigned value relate quadratically to the rendered
+   * `target` by `current` instead - as if `current` were an unscaled local
+   * size - makes the assigned value relate quadratically to the rendered
    * result. Going through the ratio also preserves a negative (mirrored)
    * scale, which an absolute division would silently flip.
    */
@@ -163,17 +163,17 @@ export class Container extends RenderNode {
     return this.getBounds().left;
   }
 
-  /** Topmost edge of the subtree — see {@link left}. */
+  /** Topmost edge of the subtree - see {@link left}. */
   public get top(): number {
     return this.getBounds().top;
   }
 
-  /** Rightmost edge of the subtree — see {@link left}. */
+  /** Rightmost edge of the subtree - see {@link left}. */
   public get right(): number {
     return this.getBounds().right;
   }
 
-  /** Bottommost edge of the subtree — see {@link left}. */
+  /** Bottommost edge of the subtree - see {@link left}. */
   public get bottom(): number {
     return this.getBounds().bottom;
   }
@@ -210,7 +210,7 @@ export class Container extends RenderNode {
   /**
    * Shared insert path for {@link addChild} and {@link addChildAt}. A `null`
    * index means "append", and the position is resolved only after the child is
-   * detached from its previous parent — that detach dispatches focus and
+   * detached from its previous parent - that detach dispatches focus and
    * interaction callbacks, i.e. arbitrary user code that can grow or shrink
    * this container's list while the insert is still in flight.
    */
@@ -221,7 +221,7 @@ export class Container extends RenderNode {
 
     // Attaching an already-destroyed node used to be silent in production: it
     // rendered nothing (the collect dev-guard skips it) or replayed freed
-    // state, and only a __DEV__-only warning ever fired — the check evaporated
+    // state, and only a __DEV__-only warning ever fired - the check evaporated
     // in production builds while the node was linked into the tree regardless.
     // pre-1.0 favours a clean break over a use-after-destroy that half-works,
     // so this is an always-on rejection (like the cycle guard below), not a
@@ -364,7 +364,7 @@ export class Container extends RenderNode {
     removeArrayItems(this._childList, index, 1);
     // Invalidate the children-view cache immediately after the array write,
     // before any of the notify calls below can run user code (e.g. an
-    // onBlur handler) that reads `container.children` — otherwise that read
+    // onBlur handler) that reads `container.children` - otherwise that read
     // would observe a stale snapshot still containing `child`.
     this._invalidateChildOrder();
 
@@ -429,7 +429,7 @@ export class Container extends RenderNode {
   }
 
   /**
-   * @internal — whether `child` (a DIRECT child of this container) opts out of
+   * @internal - whether `child` (a DIRECT child of this container) opts out of
    * this container's transform-group boundary and resolves world-space
    * transforms. Always `false` on plain containers; {@link RetainedContainer}
    * overrides it with its revision-keyed deep-barrier branch-escape set.
@@ -441,7 +441,7 @@ export class Container extends RenderNode {
     return false;
   }
 
-  /** @internal — propagate the owning stage down the whole subtree. */
+  /** @internal - propagate the owning stage down the whole subtree. */
   public override _setStage(stage: Stage | null): void {
     if (this._stage === stage) {
       return;
@@ -455,7 +455,7 @@ export class Container extends RenderNode {
   }
 
   /**
-   * @internal — a grouping node handed to `render()` gets the automatic
+   * @internal - a grouping node handed to `render()` gets the automatic
    * persistent render representation. Two exclusions: a transform-group
    * boundary ({@link RetainedContainer}) already owns the group-level retention
    * tier, and wrapping a second one around the same scope would fight it over
@@ -479,7 +479,7 @@ export class Container extends RenderNode {
       // replaying a slot would allocate exactly the pooled `DrawCommand` and
       // transform row the discovery invariant forbids, and capturing one would
       // key this cache against a scope that never received the entries it peeks
-      // for — throwing away a valid capture in the process.
+      // for - throwing away a valid capture in the process.
       for (let index = 0; index < this._childList.length; index++) {
         // In-bounds: index < length.
         this._childList[index]!._collect(builder, index);
@@ -564,7 +564,7 @@ export class Container extends RenderNode {
 
       sawSlotCandidate = true;
 
-      // The scope is still open, so its entry COUNT is the collected length —
+      // The scope is still open, so its entry COUNT is the collected length -
       // the array itself may run past it (see `_peekCurrentScopeEntries`).
       const beforeCount = builder._peekCurrentScopeEntryCount();
 
@@ -623,8 +623,8 @@ export class Container extends RenderNode {
       this._bounds.addRect(localBounds, this.getGlobalTransform());
     }
 
-    // Indexed rather than `for…of`: this runs once per container per frame from
-    // the cull walk, and V8 does not scalar-replace the array iterator here —
+    // Indexed rather than `for...of`: this runs once per container per frame from
+    // the cull walk, and V8 does not scalar-replace the array iterator here -
     // the iterator result objects show up as the single largest steady-state
     // allocation of a scene whose transforms are dirty every frame.
     for (let i = 0; i < this._childList.length; i++) {
@@ -637,7 +637,7 @@ export class Container extends RenderNode {
     }
 
     // Nothing contributed an extent. Fall back to the degenerate local rect so
-    // the aggregate stays a real rectangle at this container's own transform —
+    // the aggregate stays a real rectangle at this container's own transform -
     // handing out the untouched accumulator would leak its Infinity/-Infinity
     // seed into width/height and every edge accessor.
     if (!hasContent) {
@@ -672,7 +672,7 @@ export class Container extends RenderNode {
     this.removeChildren();
 
     for (const child of children) {
-      // A child the caller already destroyed stays destroyed — re-entering its
+      // A child the caller already destroyed stays destroyed - re-entering its
       // teardown would double-release resources it no longer owns.
       if (!child.destroyed) {
         child.destroy();

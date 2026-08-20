@@ -1,17 +1,17 @@
 /**
- * WebGL2 renderer-matrix browser tests — Text retained instruction-set replay.
+ * WebGL2 renderer-matrix browser tests - Text retained instruction-set replay.
  *
  * The WebGL2 counterpart of `webgpu-text-retained-instruction-replay.test.ts`.
  * Text is the retained renderer that opts OUT of the shared `TransformBuffer`
  * (`_consumesSharedTransform === false`) AND, on WebGL2 only, keeps its world
- * transform CPU-baked into the recorded vertex bytes — the shipped `text.vert`
+ * transform CPU-baked into the recorded vertex bytes - the shipped `text.vert`
  * reads no per-node transform, because a vertex-stage texelFetch of the RGBA32F
  * data texture collapses the draw on ANGLE/D3D11 whenever a glyph atlas is
  * co-bound (see `webgl2-text-vertex-shader-regression.test.ts`). So the group
  * replay path is: recorded baked vertex bytes drawn with `drawElements`, the
  * per-node STYLE resolved live from a group-owned RGBA32F texture, and an
  * own-transform move re-baked on the CPU (there is no shared-row rebase to get
- * wrong here — the node index addresses the group-owned style texture — but
+ * wrong here - the node index addresses the group-owned style texture - but
  * there IS a real risk of stale baked positions or a wrong style texture if the
  * record/replay/patch logic is broken).
  *
@@ -37,7 +37,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader wiring — REAL shipped text GLSL via `?raw` (the stub plugin only
+// Shader wiring - REAL shipped text GLSL via `?raw` (the stub plugin only
 // rewrites bare `.vert`/`.frag` ids), plus minimal valid Sprite/Mesh mocks so
 // `wireCoreRenderers()` can eagerly compile the whole registry.
 // ---------------------------------------------------------------------------
@@ -122,7 +122,7 @@ const buildScene = (): { root: Container; group: RetainedContainer; text: Text }
   return { root, group, text };
 };
 
-/** Sum of all channels over the whole canvas — a total-ink measure. */
+/** Sum of all channels over the whole canvas - a total-ink measure. */
 const totalInk = (frame: Uint8Array): number => {
   let sum = 0;
 
@@ -256,7 +256,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
 
       render(backend, scene.root);
 
-      // The CPU patch rewrote the moved node's baked vertex range in place — no
+      // The CPU patch rewrote the moved node's baked vertex range in place - no
       // full re-record (a re-record would run `_beginRetainedCapture` again),
       // and the SAME recorded instruction still replays on the fast tier.
       expect(beginSpy).not.toHaveBeenCalled();
@@ -348,7 +348,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
 
       // Neuter the patch so it claims success but writes NOTHING: the recording
       // stays valid (return true), so replay keeps splicing the stale baked
-      // bytes — the glyph is frozen at its old position instead of moving.
+      // bytes - the glyph is frozen at its old position instead of moving.
       WebGl2TextRenderer.prototype._patchOwnTransformRow = function (): boolean {
         return true;
       };
@@ -359,7 +359,7 @@ describe('WebGL2 renderer matrix: Text retained instruction-set replay cells', (
       // Frozen: byte-identical to the pre-move frame despite the move.
       expect(readCanvas(backend)).toEqual(preMove);
 
-      // Contrast: restore the patch, apply a fresh move — the glyph now relocates
+      // Contrast: restore the patch, apply a fresh move - the glyph now relocates
       // and the frame diverges from the frozen (stale) one.
       WebGl2TextRenderer.prototype._patchOwnTransformRow = original;
       scene.text.setPosition(44, 4);

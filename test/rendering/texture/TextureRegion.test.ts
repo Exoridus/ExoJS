@@ -130,7 +130,7 @@ describe('TextureRegion — immutability', () => {
     const input = { left: 1, top: 2, right: 3, bottom: 4 };
     const region = new TextureRegion(tex, { x: 16, y: 16, width: 64, height: 32, extrusion: input });
 
-    // The caller's object was NOT stored — a copy was made
+    // The caller's object was NOT stored - a copy was made
     expect(region.extrusion).not.toBe(input);
     // Values were preserved
     expect(region.extrusion).toEqual(input);

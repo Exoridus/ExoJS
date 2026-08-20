@@ -65,7 +65,7 @@ import {
 import { WebGl2StencilClipper } from './WebGl2StencilClipper';
 import type { WebGl2VertexArrayObject } from './WebGl2VertexArrayObject';
 
-// Inline GL debug helpers — replaces the webgl-debug vendor lib.
+// Inline GL debug helpers - replaces the webgl-debug vendor lib.
 // Used only in dev builds when renderingOptions.debug = true (see __DEV__ gates below).
 const glEnumToString = (gl: WebGL2RenderingContext, value: number): string => {
   const ctor = gl.constructor as unknown as Record<string, unknown>;
@@ -187,14 +187,14 @@ interface RetainedCaptureFrame {
    * This frame's own batch instructions, created with the unstamped
    * generation sentinel and stamped at capture end via the official
    * plan-layer seam (after the bundle finalize; a capture that never
-   * finalizes — context loss — leaves them unstamped and the set invalid).
+   * finalizes - context loss - leaves them unstamped and the set invalid).
    */
   readonly instructions: RetainedBatchInstruction[];
 }
 
 // Scratch texture unit used to sync a RenderTexture target's color texture
 // (see _prepareRenderTarget). _syncTexture binds on the active unit and only
-// the ACTIVE unit is restored afterwards — the binding itself stays. The unit
+// the ACTIVE unit is restored afterwards - the binding itself stays. The unit
 // must therefore be one no shader program ever samples: units 0..15 are the
 // sprite batcher's base-texture slots and unit 16 hosts the shared transform
 // buffer texture, so the scratch unit sits above them at 17 (WebGL2 guarantees
@@ -205,13 +205,13 @@ const renderTargetTextureSyncUnit = 17;
 
 /**
  * Row length (in channels) from which packing a rectangular texture region
- * switches from a plain element loop to `set(subarray(…))`.
+ * switches from a plain element loop to `set(subarray(...))`.
  *
  * `set` copies natively but needs a view per row, and below roughly this length
  * the call overhead outweighs the copy: measured per pack, 8x8 rows 74 ns
- * (loop) vs 421 ns (set) and 32x32 rows 1.20 us vs 1.66 us, flipping at 48–64
+ * (loop) vs 421 ns (set) and 32x32 rows 1.20 us vs 1.66 us, flipping at 48-64
  * to 4.5 us vs 3.9 us at 64x64 and 10.5 us vs 6.0 us at 96x96. Glyph-atlas
- * updates — the only rectangular region the engine itself produces — sit on the
+ * updates - the only rectangular region the engine itself produces - sit on the
  * small side, where the loop is both faster AND allocation-free (a 32x32 pack
  * allocated 3.3 KB of row views).
  */
@@ -231,7 +231,7 @@ const nativeRowCopyThreshold = 48;
  * schedules a `webglcontextrestored` event; on restore every device-bound GL
  * object (texture / framebuffer / renderbuffer handles, renderer buffers, VAOs
  * and shader programs, the shared transform texture, compositors and retained
- * bundles) is evicted and rebuilt against the fresh context — mirroring the
+ * bundles) is evicted and rebuilt against the fresh context - mirroring the
  * WebGPU backend's `_teardownDeviceState`. See {@link _reinitializeDeviceState}.
  */
 export class WebGl2Backend implements RenderBackend {
@@ -241,8 +241,8 @@ export class WebGl2Backend implements RenderBackend {
   public readonly onContextRestored = new Signal();
   /**
    * See {@link RenderBackend.onRenderError}. WebGL2 currently dispatches
-   * nothing here — its shader compile/link failures surface as synchronous
-   * {@link RenderError} throws from `flush()` — but the signal satisfies the
+   * nothing here - its shader compile/link failures surface as synchronous
+   * {@link RenderError} throws from `flush()` - but the signal satisfies the
    * backend interface and gives custom passes a stable reporting surface.
    */
   public readonly onRenderError = new Signal<[RenderError]>();
@@ -264,7 +264,7 @@ export class WebGl2Backend implements RenderBackend {
    * `_clipDepth - 1`.
    *
    * Grow-only and reused: the entries are plain mutable records rewritten on
-   * push, and {@link _clipDepth} — not `length` — says how many are live. A
+   * push, and {@link _clipDepth} - not `length` - says how many are live. A
    * clip push happens once per clipped or masked barrier per frame, so
    * allocating the record (plus the intersection's) there put four objects per
    * barrier on the steady-state path for a stack that never gets deep.
@@ -316,8 +316,8 @@ export class WebGl2Backend implements RenderBackend {
   private _blendMode: BlendModes | null = null;
   // What GL currently has bound to TEXTURE_2D on each texture unit, indexed by
   // unit. Keyed on the `WebGLTexture` handle rather than the user-side
-  // `Texture`, so a releaseGpu / re-upload cycle — which hands the same
-  // `Texture` a brand new handle — can never match a stale slot. A hole
+  // `Texture`, so a releaseGpu / re-upload cycle - which hands the same
+  // `Texture` a brand new handle - can never match a stale slot. A hole
   // (`undefined`) means "unit never touched", which reads as a miss and binds.
   private readonly _boundHandles: Array<WebGLTexture | null> = [];
   private _textureUnit = 0;
@@ -329,7 +329,7 @@ export class WebGl2Backend implements RenderBackend {
   private readonly _transformBuffer = new TransformBuffer();
   /**
    * Live persistent slot stores, so a device loss can invalidate every one of
-   * them — their textures and buffers belong to the context that just went away.
+   * them - their textures and buffers belong to the context that just went away.
    */
   private readonly _persistentStores = new Set<WebGl2PersistentSlotStore>();
   private _transformTexture: DataTexture<TextureFormat.Rgba32F> | null = null;
@@ -388,7 +388,7 @@ export class WebGl2Backend implements RenderBackend {
 
     // Grab the lose-context extension up front so a later restore can act on the
     // live instance (see the field comment). `null` on backends that don't
-    // expose it — the recovery path then simply relies on the browser's own
+    // expose it - the recovery path then simply relies on the browser's own
     // automatic restoration.
     this._loseContextExtension = this._context.getExtension('WEBGL_lose_context');
 
@@ -523,7 +523,7 @@ export class WebGl2Backend implements RenderBackend {
   /** @internal */
   public _beginDrawPlan(_nodeCount: number): void {
     this._renderPlanEpoch++;
-    // Do NOT reset the transform buffer here — it is frame-scoped (reset in
+    // Do NOT reset the transform buffer here - it is frame-scoped (reset in
     // resetStats). The builder already based this plan's node indices at the
     // current buffer count, so writes land in fresh frame-global slots and
     // batches survive across render() calls. Remember this plan's base so a
@@ -547,7 +547,7 @@ export class WebGl2Backend implements RenderBackend {
     // Pack the whole render group's world transforms (+ tint) into the shared
     // transform buffer at the group's upload boundary, keyed by each draw
     // command's stable nodeIndex. Every draw the player will submit for this
-    // group is covered here, before the group's first draw — so the per-draw
+    // group is covered here, before the group's first draw - so the per-draw
     // write previously done in `_prepareDrawCommand` is no longer needed and
     // the buffer is filled one contiguous group slice at a time.
     //
@@ -555,7 +555,7 @@ export class WebGl2Backend implements RenderBackend {
     // entry in it is a draw, so the player no longer materializes a group array.
     //
     // Renderers that pack their own per-node data (Text, Particle) never read
-    // the shared buffer, so their commands are skipped — no consuming draw ever
+    // the shared buffer, so their commands are skipped - no consuming draw ever
     // references their slots (nodeIndex is unique per command).
     const end = startIndex + count;
 
@@ -582,7 +582,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * The backend's own check is narrow: every item in the source must resolve to
    * ONE renderer, and that renderer must implement the indexed path. Everything
-   * beyond that — materials, blend modes, the texture table — is the renderer's
+   * beyond that - materials, blend modes, the texture table - is the renderer's
    * rule, so the decision is delegated rather than duplicated here.
    *
    * Called once per built source. A refusal is remembered by the caller, so the
@@ -663,7 +663,7 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * Write a single draw command's world transform (+ tint) into the shared
    * transform buffer at its `nodeIndex` slot. Used for draws that do not arrive
-   * through a render-group upload boundary — currently the mesh renderer's
+   * through a render-group upload boundary - currently the mesh renderer's
    * synthetic, non-plan instanced path.
    * @internal
    */
@@ -678,7 +678,7 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /**
-   * Device-pixel viewport rect last applied via `gl.viewport` — origin `(x, y)`
+   * Device-pixel viewport rect last applied via `gl.viewport` - origin `(x, y)`
    * and size `(width, height)` in actual framebuffer pixels (GL bottom-left
    * origin). The core vertex shaders read this (as `u_viewport`) to project a
    * drawable's clip-space origin into device pixels for GPU-side position
@@ -693,7 +693,7 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * Stage the device-pixel viewport rect into `shader`'s `u_viewport` uniform
    * (a no-op when the program doesn't declare it). Staged unconditionally per
-   * flush alongside `u_group` — a vec4 uniform set is cheap — so every core
+   * flush alongside `u_group` - a vec4 uniform set is cheap - so every core
    * vertex shader can snap a drawable's device origin whenever its transform-row
    * flag is set.
    * @internal
@@ -717,7 +717,7 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * Append a drawable's world transform (+ tint) to the shared transform buffer
    * and return the slot it was written to. Used by instanced renderers for draws
-   * that arrive without a render-group upload boundary — i.e. a direct
+   * that arrive without a render-group upload boundary - i.e. a direct
    * `backend.draw(drawable)` outside the plan player (`activeDrawCommand === null`),
    * where no stable `nodeIndex` was assigned. Unlike {@link _writeTransformCommand}
    * (fixed slot) this allocates a fresh slot, so a batch of synthetic draws does
@@ -725,7 +725,7 @@ export class WebGl2Backend implements RenderBackend {
    * @internal
    */
   public _pushTransform(drawable: Drawable): number {
-    // Raw global transform — the vertex shaders snap the origin (see
+    // Raw global transform - the vertex shaders snap the origin (see
     // {@link _writeTransformCommand}).
     return this._transformBuffer.push(drawable.getGlobalTransform(), drawable.tint, drawable.pixelSnapMode);
   }
@@ -789,7 +789,7 @@ export class WebGl2Backend implements RenderBackend {
     // Belt-and-braces for retained recording: the recordability
     // predicate keeps non-capable renderers from ever arming a capture. If
     // one still draws inside an open capture window, poison the recording so
-    // the set never validates — entry replay instead of missing draws.
+    // the set never validates - entry replay instead of missing draws.
     if (this._retainedCaptures.length > 0 && (renderer as RetainedBatchCapableRenderer)._supportsRetainedBatches !== true) {
       this._poisonRetainedCaptures();
     }
@@ -820,7 +820,7 @@ export class WebGl2Backend implements RenderBackend {
     this._setActiveRenderer(renderer);
 
     // Write each instance's (transform, tint) into a fresh, contiguous transform
-    // slot — before the renderer's draw uploads the buffer (write-before-bind) —
+    // slot - before the renderer's draw uploads the buffer (write-before-bind) -
     // then draw the geometry once over [startNodeIndex, startNodeIndex + count).
     // In-bounds: `i < count <= transforms.length` and `<= tints.length` (guarded above).
     const startNodeIndex = this._transformBuffer.push(transforms[0]!, tints[0]!);
@@ -1094,7 +1094,7 @@ export class WebGl2Backend implements RenderBackend {
     if (this._vao !== vao) {
       if (vao) {
         // Binding a VAO implicitly replaces the previous binding. Only when
-        // switching to "no VAO" do we explicitly unbind — unbinding the old VAO
+        // switching to "no VAO" do we explicitly unbind - unbinding the old VAO
         // *after* binding the new one would leave the GL default (null) VAO
         // bound and silently break the next draw (a renderer/clip VAO switch).
         vao.bind();
@@ -1138,7 +1138,7 @@ export class WebGl2Backend implements RenderBackend {
 
     // `_syncTexture` performs the bind itself (through the same per-unit cache)
     // because its parameter and upload calls act on whatever is bound to the
-    // active unit — binding a second time here would only duplicate GL work.
+    // active unit - binding a second time here would only duplicate GL work.
     this._syncTexture(texture);
 
     return this;
@@ -1182,7 +1182,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * Renderers that bind a *raw* `WebGLTexture` to a unit (e.g. the text
    * renderer's private node-data texture) must route the unit switch through
-   * here instead of calling `gl.activeTexture` directly — otherwise the cache
+   * here instead of calling `gl.activeTexture` directly - otherwise the cache
    * goes stale and a later {@link bindTexture} can skip its own `activeTexture`
    * call, binding to the wrong unit. Bind the handle itself with
    * {@link bindRawTexture} rather than `gl.bindTexture`, so the per-unit bind
@@ -1199,7 +1199,7 @@ export class WebGl2Backend implements RenderBackend {
    * Bind a raw `WebGLTexture` (or `null`) to the active texture unit through
    * the backend's per-unit bind cache.
    *
-   * For renderer-private handles that have no user-side {@link Texture} — the
+   * For renderer-private handles that have no user-side {@link Texture} - the
    * text renderer's node-data texture is the only one today. Going through here
    * instead of `gl.bindTexture` keeps the cache coherent: the backend both
    * skips a redundant re-bind of this handle and still re-binds when a managed
@@ -1207,7 +1207,7 @@ export class WebGl2Backend implements RenderBackend {
    *
    * A raw handle deleted behind the cache's back needs no notification: GL
    * unbinds it everywhere, and a deleted `WebGLTexture` can never be handed out
-   * again, so a slot still naming it can only ever cost one redundant bind —
+   * again, so a slot still naming it can only ever cost one redundant bind -
    * never suppress a needed one.
    * @internal
    */
@@ -1225,7 +1225,7 @@ export class WebGl2Backend implements RenderBackend {
     // coordinate: the store scales to `rowsPerLine * MAX_TEXTURE_SIZE` rows
     // instead of stopping dead at MAX_TEXTURE_SIZE. Throws (rather than
     // rendering black off an incomplete texture) if even that is exceeded.
-    // Rebuilt only when the buffer's capacity changes — this runs per flush.
+    // Rebuilt only when the buffer's capacity changes - this runs per flush.
     let layout = this._transformTextureLayout;
 
     if (layout?.rowCapacity !== this._transformBuffer.capacity) {
@@ -1252,7 +1252,7 @@ export class WebGl2Backend implements RenderBackend {
 
     // Tint's capacity always grows in lockstep with the transform buffer (see
     // TransformBuffer._ensureCapacity), so the same capacity check catches
-    // both a first bind and a growth — no separate dirty-hash tracking needed;
+    // both a first bind and a growth - no separate dirty-hash tracking needed;
     // both textures upload from the one dirty-range consumption below.
     const tintTexture = this._tintTexture;
 
@@ -1277,13 +1277,13 @@ export class WebGl2Backend implements RenderBackend {
 
     // A skipped flush (all three guards false) leaves the dirty range uncleared
     // until the next begin(). Safe: every write() mixes its slot into _frameHash,
-    // so a non-empty dirty range always coincides with snapshot.changed = true —
+    // so a non-empty dirty range always coincides with snapshot.changed = true -
     // the upload branch is always taken before any dirty rows could be stale.
     if (snapshot.changed || snapshot.count !== this._transformTextureCount || snapshot.hash !== this._transformTextureHash) {
       // Upload only the rows actually written since the last upload (delta), so
       // barrier-heavy frames don't re-upload the whole growing buffer. A reused
       // slot below the high-water mark is in the dirty range, so it re-uploads.
-      // Single consumption feeds BOTH textures — consumeDirtyRange clears the
+      // Single consumption feeds BOTH textures - consumeDirtyRange clears the
       // range as a side effect, so it must only be called once per flush.
       const { firstRow, rowCount } = this._transformBuffer.consumeDirtyRange(snapshot.count);
 
@@ -1458,7 +1458,7 @@ export class WebGl2Backend implements RenderBackend {
 
   /**
    * Playback hook (RenderPlanPlayer): enter/leave a retained transform group.
-   * A group is a flush boundary by design — the pending batch must
+   * A group is a flush boundary by design - the pending batch must
    * drain under the OLD group matrix before the new one takes effect.
    * @internal
    */
@@ -1499,7 +1499,7 @@ export class WebGl2Backend implements RenderBackend {
    * Playback hook (RenderPlanPlayer): a retained group scope starts
    * recording. The pending live batch is flushed first (contract: no batch
    * spans into the capture window), the set's group bundle is (re)used or
-   * created, and its contents are rewritten — which bumps the generation, so
+   * created, and its contents are rewritten - which bumps the generation, so
    * instructions recorded by any previous capture stop validating.
    * @internal
    */
@@ -1572,7 +1572,7 @@ export class WebGl2Backend implements RenderBackend {
 
     // A group whose every recorded batch opts out of the shared transform
     // buffer (Text bakes world positions into its own instance bytes and reads
-    // its style from a private per-node texture — `_consumesSharedTransform ===
+    // its style from a private per-node texture - `_consumesSharedTransform ===
     // false`) leaves the range empty: there is nothing to rebase or store, but
     // the instance bytes and per-batch VAOs still need finalizing below.
     // Connect first: the group's transform store sizes its textures against the
@@ -1599,7 +1599,7 @@ export class WebGl2Backend implements RenderBackend {
 
     // Resources are final: stamp this frame's instructions with the bundle's
     // generation (official plan-layer seam). Skipped by the early returns
-    // above (context loss, empty range) — unstamped instructions keep the
+    // above (context loss, empty range) - unstamped instructions keep the
     // set invalid, which is exactly the wanted failure mode there.
     for (const instruction of frame.instructions) {
       stampRetainedBatchGeneration(instruction);
@@ -1673,7 +1673,7 @@ export class WebGl2Backend implements RenderBackend {
     // Generation is stamped at capture end (official plan-layer seam). On
     // WebGL2 the generation is stable for the whole capture (_beginCapture
     // bumps once, growth is CPU-staged), so end-stamping yields the same
-    // value — but a capture that never finalizes (context loss) now leaves
+    // value - but a capture that never finalizes (context loss) now leaves
     // the sentinel behind and the set can never validate.
     const instruction: RetainedBatchInstruction = {
       kind: RetainedInstructionKind.Batch,
@@ -1694,12 +1694,12 @@ export class WebGl2Backend implements RenderBackend {
 
   /**
    * Invalidate every open capture window by appending an instruction whose
-   * recorded generation can never match its bundle — the resulting sets fail
+   * recorded generation can never match its bundle - the resulting sets fail
    * collect-time validation forever and the group stays on the (correct)
    * entry-replay tier.
    *
    * Most callers are belt-and-braces for draws the collect-time recordability
-   * predicate already excluded, and those never fire on a healthy frame — a
+   * predicate already excluded, and those never fire on a healthy frame - a
    * renderer whose non-recordable draws are decidable PER DRAWABLE states that
    * through `_admitsRetainedRecording` so the capture is never opened at all
    * (mesh geometry storage, the repeating sprite's shader path).
@@ -1707,7 +1707,7 @@ export class WebGl2Backend implements RenderBackend {
    * One caller is not defensive and DOES fire on healthy frames: the Text
    * renderer poisons when a flush is not a single recordable batch, or when a
    * SECOND Text flush lands in the same window. Neither is a property of any
-   * one drawable — both depend on how the frame's draws compose into flushes —
+   * one drawable - both depend on how the frame's draws compose into flushes -
    * so no per-drawable predicate can pre-empt them, and a perfectly ordinary
    * scene reaches this (two overlapping Text nodes split by a sprite in between
    * force two Text flushes into one window, on every frame). Such a group
@@ -1735,12 +1735,12 @@ export class WebGl2Backend implements RenderBackend {
 
   /**
    * Collect-time backend validation on top of the plan-level
-   * generation check — the WebGPU view-identity guard's WebGL2 counterpart:
+   * generation check - the WebGPU view-identity guard's WebGL2 counterpart:
    * every recorded batch's textures must still have their record-time size
    * and flipY orientation. The per-instance UV words baked into the group
    * instance buffer are normalized against the record-time texture size
    * (with the flipY swap applied at pack time), and a texture resize bumps
-   * only the texture VERSION — never a node revision — so the fragment stays
+   * only the texture VERSION - never a node revision - so the fragment stays
    * clean and replaying would sample a stale region. A failed check also
    * DROPS the recording (`set.invalidate()`, the sanctioned drop-&-re-record
    * mode), so the group entry-replays live and re-records on this same
@@ -1753,8 +1753,8 @@ export class WebGl2Backend implements RenderBackend {
       return false;
     }
 
-    // Indexed rather than `for…of`: the inner texture-state loop next to it is
-    // already indexed for the same reason — every retained set is validated
+    // Indexed rather than `for...of`: the inner texture-state loop next to it is
+    // already indexed for the same reason - every retained set is validated
     // once per frame, and the array iterator's per-step result object is the
     // kind of steady-state garbage a fully retained frame must not produce.
     const instructions = set.instructions;
@@ -1799,7 +1799,7 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * Playback hook (RenderPlanPlayer): replay one recorded batch for a spliced
    * group scope. The pending live batch drains first (in practice the group
-   * boundary's transform switch already flushed it — hook contract), then the
+   * boundary's transform switch already flushed it - hook contract), then the
    * owning renderer re-issues the batch from group-owned resources with all
    * state resolved live. Stats are bumped from the descriptor so the spliced
    * tier stays comparable with the entry tiers (batches / drawCalls /
@@ -1934,7 +1934,7 @@ export class WebGl2Backend implements RenderBackend {
   private _restoreContext(): void {
     // Schedule the extension-driven restore on a fresh task. A synchronous
     // `restoreContext()` call from inside the `webglcontextlost` handler is
-    // silently ignored by Chromium — the browser only honours it once the lost
+    // silently ignored by Chromium - the browser only honours it once the lost
     // event has finished processing. Deferring is also correct for a real GPU
     // loss: `restoreContext()` only affects extension-triggered losses, so it
     // is a harmless no-op there (the browser auto-restores because we called
@@ -1980,7 +1980,7 @@ export class WebGl2Backend implements RenderBackend {
 
   private _onContextLost(event: Event): void {
     // WebGL only fires `webglcontextrestored` if the `webglcontextlost`
-    // default action is cancelled — without this the context stays dead
+    // default action is cancelled - without this the context stays dead
     // forever after a real GPU reset (mobile tab-switch, driver TDR) and the
     // canvas goes permanently blank. This is separate from the synthetic
     // `WEBGL_lose_context.restoreContext()` call below, which only drives the
@@ -2008,7 +2008,7 @@ export class WebGl2Backend implements RenderBackend {
    * Drop every device-bound GL object cached against the lost context and
    * rebuild the pieces needed to draw against the fresh one. User-facing
    * handles ({@link Texture}, {@link RenderTexture}, {@link RenderTarget})
-   * keep their identity — their GPU-side state is recreated lazily on next
+   * keep their identity - their GPU-side state is recreated lazily on next
    * use. Mirrors the WebGPU backend's `_teardownDeviceState`.
    */
   private _reinitializeDeviceState(): void {
@@ -2024,7 +2024,7 @@ export class WebGl2Backend implements RenderBackend {
     this._transformTextureLayout = null;
 
     // Evict all managed texture / render-target state (deletes the now-dead
-    // handles — harmless on the fresh context — frees the resource accountant,
+    // handles - harmless on the fresh context - frees the resource accountant,
     // and detaches destroy listeners). The maps are repopulated lazily with
     // fresh handles on next access. Clears `_stencilStates` too (each entry is
     // dropped when its render target is evicted).
@@ -2068,7 +2068,7 @@ export class WebGl2Backend implements RenderBackend {
     // drop them and bump the generations so all recorded instruction sets
     // fail collect-time validation and re-record against the restored
     // context. Any capture in flight is
-    // abandoned — its instructions keep the sentinel generation.
+    // abandoned - its instructions keep the sentinel generation.
     for (const bundle of this._retainedBundles) {
       bundle._invalidateDeviceResources();
     }
@@ -2082,7 +2082,7 @@ export class WebGl2Backend implements RenderBackend {
       store.invalidateDeviceResources();
     }
 
-    // Reset the cached GL bind state — every handle these tracked is dead, so
+    // Reset the cached GL bind state - every handle these tracked is dead, so
     // the next bind must run unconditionally rather than short-circuiting on a
     // stale identity match.
     this._boundFramebuffer = null;
@@ -2136,7 +2136,7 @@ export class WebGl2Backend implements RenderBackend {
 
   /**
    * Re-book a managed texture's GPU storage with the resource accountant after a
-   * full `texImage2D` (re)allocation: frees the previously booked size (if any —
+   * full `texImage2D` (re)allocation: frees the previously booked size (if any -
    * e.g. on resize) and allocates the new `width · height · bytesPerPixel`
    * footprint, including the mip chain when the texture generates mips.
    */
@@ -2206,7 +2206,7 @@ export class WebGl2Backend implements RenderBackend {
    * The creation half lives in {@link _createTextureState} for one reason: its
    * eviction handlers are closures over `texture`, and V8 allocates the scope
    * that backs them when the function is ENTERED, not when the branch that
-   * builds them is taken. Keeping them here cost every cache hit ~45 bytes —
+   * builds them is taken. Keeping them here cost every cache hit ~45 bytes -
    * and this runs once per bound texture per draw, so a 762-draw blend-churn
    * scene paid 107 KB/frame (3.5 MB/frame at 25 000 draws) for closures it
    * never created.
@@ -2315,7 +2315,7 @@ export class WebGl2Backend implements RenderBackend {
    * Free a texture's GPU-side state. `unsubscribeDestroy` is `false` only
    * when called from a {@link Texture.releaseGpu} listener: the handle isn't
    * actually destroyed there, so the destroy subscription must survive for a
-   * real, later `destroy()`. The release subscription is always dropped —
+   * real, later `destroy()`. The release subscription is always dropped -
    * `_getTextureState` re-subscribes it fresh if the handle is bound again.
    */
   private _evictTexture(texture: Texture | RenderTexture, unsubscribeDestroy = true): void {
@@ -2351,7 +2351,7 @@ export class WebGl2Backend implements RenderBackend {
       const height = Math.max(0, Math.round(viewport.height * scaleY));
       // `viewport.y` is top-left (the View / RenderTarget convention); GL's viewport
       // origin is bottom-left, so flip it. A full viewport (y = 0, height = full) maps
-      // to y = 0 unchanged — only partial viewports (split-screen / pip / minimap) were
+      // to y = 0 unchanged - only partial viewports (split-screen / pip / minimap) were
       // affected, landing at the wrong edge before this flip.
       const backingHeight = target.root ? this._canvas.height : target.height;
       const y = backingHeight - (Math.floor(viewport.y * scaleY) + height);
@@ -2511,13 +2511,13 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * Return the packing scratch for `state`, at least `length` elements long
    * (grown on demand, never shrunk, kind-matched to `source`). It is NOT
-   * narrowed to `length`: the caller passes it to the `(…, srcData, srcOffset)`
+   * narrowed to `length`: the caller passes it to the `(..., srcData, srcOffset)`
    * overload, which reads exactly the rectangle's worth of elements from the
-   * offset — so a longer buffer uploads the same bytes as an exact-length view
+   * offset - so a longer buffer uploads the same bytes as an exact-length view
    * would, without allocating one per pack. Reusing this buffer across every
    * `DataTexture` upload that
-   * has to be packed at all — instead of allocating a fresh temporary array
-   * per sync — is what keeps a barrier-heavy scene's per-frame CPU garbage
+   * has to be packed at all - instead of allocating a fresh temporary array
+   * per sync - is what keeps a barrier-heavy scene's per-frame CPU garbage
    * flat instead of scaling with flush count: each flush's transform (and now
    * separate tint) sync would otherwise allocate its own throwaway packing
    * buffer. Full-width regions never reach here: their rows are already
@@ -2546,7 +2546,7 @@ export class WebGl2Backend implements RenderBackend {
    * the upload function's frame cost ~45 B each even when every branch in it
    * was skipped (measured: 107 KB/frame on a 762-draw blend-churn scene, 3.5
    * MB/frame at 25 000 draws, with a matching 19x difference in scavenge count
-   * — the bytes are real, not a profiler artefact). Keeping the hot path in a
+   * - the bytes are real, not a profiler artefact). Keeping the hot path in a
    * small function of its own removes that entirely.
    */
   private _syncTexture(texture: Texture | RenderTexture): ManagedTextureState {
@@ -2608,7 +2608,7 @@ export class WebGl2Backend implements RenderBackend {
       // Our DataTexture buffers are tightly packed (no per-row padding), but
       // WebGL defaults UNPACK_ALIGNMENT to 4. For single-byte (r8) data a
       // sub-region upload whose width isn't a multiple of 4 would be misread
-      // — or rejected with INVALID_OPERATION for height > 1 — leaving the
+      // - or rejected with INVALID_OPERATION for height > 1 - leaving the
       // region un-uploaded. That is exactly what corrupts a partial glyph-
       // atlas upload when new glyphs first appear after the initial full
       // upload (e.g. switching to a scene with new characters). Force tight
@@ -2627,8 +2627,8 @@ export class WebGl2Backend implements RenderBackend {
 
         // A region is already contiguous and tightly packed in the row-major
         // buffer when it spans full rows, and equally when it is a single row
-        // (however narrow — one row never straddles a gap). Both let the
-        // `(…, srcData, srcOffset)` overload read straight out of the texture
+        // (however narrow - one row never straddles a gap). Both let the
+        // `(..., srcData, srcOffset)` overload read straight out of the texture
         // buffer at an element offset, with nothing to pack. Between them they
         // cover every shape the engine's own uploads take: full-width bands
         // (ring-buffer style writes, a whole transform store) and single-row
@@ -2651,7 +2651,7 @@ export class WebGl2Backend implements RenderBackend {
         } else {
           // The rows are no longer contiguous, so lift the sub-region out of
           // the row-major buffer into a reusable scratch view (grown once,
-          // never reallocated per call — see `_acquirePartialUploadScratch`)
+          // never reallocated per call - see `_acquirePartialUploadScratch`)
           // that gl.texSubImage2D can read as one tightly packed block.
           const subRowChannels = region.width * channels;
           const subView = this._acquirePartialUploadScratch(state, texture.buffer, region.width * region.height * channels);
@@ -2729,7 +2729,7 @@ export class WebGl2Backend implements RenderBackend {
     return state;
   }
 
-  /** Writes into `out` and returns it — see {@link _clipPixelStack} for why nothing here allocates. */
+  /** Writes into `out` and returns it - see {@link _clipPixelStack} for why nothing here allocates. */
   private _toClipPixels(bounds: Rectangle, out: PixelClipBoundsState): PixelClipBoundsState {
     const topLeft = this._renderTarget._mapCoordsToPixelInPlace(this._clipPointA.set(bounds.left, bounds.top));
     const bottomRight = this._renderTarget._mapCoordsToPixelInPlace(this._clipPointB.set(bounds.right, bounds.bottom));
@@ -2818,7 +2818,7 @@ type WebGl2DataTextureFormatTable = Readonly<Record<DataTextureFormat | ColorTex
 let formatTableSource: unknown = null;
 let formatTable: WebGl2DataTextureFormatTable | null = null;
 
-// Only the descriptors are frozen — they are what leaves this module, so they
+// Only the descriptors are frozen - they are what leaves this module, so they
 // are what a call site could otherwise mutate. The table holding them stays a
 // plain object: `Object.freeze` on the container buys nothing here (it never
 // escapes) and would only risk pushing the per-call keyed lookup out of V8's
@@ -2834,7 +2834,7 @@ function buildWebgl2DataTextureFormatTable(gl: typeof WebGL2RenderingContext): W
 }
 
 // Handles both DataTexture (single- and four-channel) and RenderTexture
-// (four-channel color attachment) formats — the four-channel entries overlap.
+// (four-channel color attachment) formats - the four-channel entries overlap.
 function webgl2DataTextureFormat(format: DataTextureFormat | ColorTextureFormat): WebGl2DataTextureFormatInfo {
   const gl = WebGL2RenderingContext;
   let table = formatTable;

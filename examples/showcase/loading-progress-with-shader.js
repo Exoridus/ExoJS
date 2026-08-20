@@ -1,4 +1,4 @@
-// Auto-generated from loading-progress-with-shader.ts — edit the .ts source, not this file.
+// Auto-generated from loading-progress-with-shader.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, ShaderFilter, Sprite, Text } from '@codexo/exojs';
 const glsl = `#version 300 es
 precision mediump float; uniform float uProgress; in vec2 vUv; out vec4 fragColor;

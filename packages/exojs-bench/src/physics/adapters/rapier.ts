@@ -4,7 +4,7 @@ import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsStructuralCounters } 
 import { describePhysicsScene } from './scene';
 
 /**
- * rapier (`@dimforge/rapier2d-compat`) arm of the physics benchmark — the
+ * rapier (`@dimforge/rapier2d-compat`) arm of the physics benchmark - the
  * "attach a Rust/WASM physics engine" comparison against staying on native
  * `@codexo/exojs-physics`.
  *
@@ -37,7 +37,7 @@ import { describePhysicsScene } from './scene';
  *   coordinates gets. Kept at the default and disclosed rather than silently
  *   retuned.
  * - Contact count is the number of collider pairs whose narrow-phase manifold has
- *   at least one solid contact point (`numContacts() > 0`), deduped — a
+ *   at least one solid contact point (`numContacts() > 0`), deduped - a
  *   touching-pair count directly comparable to exojs's solid-contact count. It is
  *   gathered once after the timed window, so its O(pairs) cost never taints a
  *   step timing.
@@ -53,7 +53,7 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter | null> => {
   try {
     R = (await import('@dimforge/rapier2d-compat')) as typeof RAPIER;
     // One-time WASM initialisation, before any world is constructed. The bundled
-    // glue prints a harmless upstream deprecation notice here — it is not an error.
+    // glue prints a harmless upstream deprecation notice here - it is not an error.
     await R.init();
   } catch {
     console.warn(
@@ -131,7 +131,7 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter | null> => {
         created.createCollider(colliderDesc, body);
 
         if (desc.perturb) {
-          // rapier linear velocity is world-units/s — the px/s impulse carries over unchanged.
+          // rapier linear velocity is world-units/s - the px/s impulse carries over unchanged.
           body.setLinvel({ x: desc.perturb.vx, y: desc.perturb.vy }, true);
         }
       }

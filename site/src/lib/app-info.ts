@@ -3,7 +3,7 @@
 // the bundle; negligible for a one-off module that runs once at startup.
 //
 //  - Library identity (name, version, license, repo) comes from the root
-//    `package.json` — that is the thing users install and deploy against.
+//    `package.json` - that is the thing users install and deploy against.
 //  - Author info falls back to the examples app's own `package.json` when
 //    the root does not declare one.
 import rootPkgRaw from '../../../package.json?raw';

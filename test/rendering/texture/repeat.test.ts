@@ -209,7 +209,7 @@ describe('RepeatPlanner — repeat + round', () => {
 });
 
 // =============================================================================
-// Mirror repeat — clip
+// Mirror repeat - clip
 // =============================================================================
 
 describe('RepeatPlanner — mirror-repeat + clip', () => {
@@ -273,7 +273,7 @@ describe('RepeatPlanner — mirror-repeat + clip', () => {
 });
 
 // =============================================================================
-// Mirror repeat — round
+// Mirror repeat - round
 // =============================================================================
 
 describe('RepeatPlanner — mirror-repeat + round', () => {
@@ -430,7 +430,7 @@ describe('RepeatPlanner — precision & boundaries', () => {
 
   test('very large segment count does not cause errors', () => {
     // source = 0.0001, dest = 1000 → ~10M segments
-    // This is a stress test — the planner should be mathematically correct
+    // This is a stress test - the planner should be mathematically correct
     const plan = planRepeat(0.0001, 10, 'repeat', 'clip');
     expectExactDestinationBoundary(plan, 10);
   });

@@ -188,7 +188,7 @@ describe('textureSeamlessAdapter.evict', () => {
 
     textureSeamlessAdapter.evict(handle);
 
-    // The drop must actually free the source and reset the size — these fail on a no-op evict.
+    // The drop must actually free the source and reset the size - these fail on a no-op evict.
     expect(handle.source).toBeNull();
     expect(handle.width).toBe(0);
     expect(handle.height).toBe(0);

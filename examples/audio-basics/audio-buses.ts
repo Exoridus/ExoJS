@@ -38,10 +38,10 @@ class AudioBusesScene extends Scene {
         this.rowY = rows.map((_, i) => height * 0.34 + i * 90);
         this.sfxButton = { x: width / 2 - 150, y: height * 0.74, w: 300, h: 36 };
 
-        // AudioStream has no seamless adapter — await it explicitly.
+        // AudioStream has no seamless adapter - await it explicitly.
         const music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
         this.music = music;
-        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // Path-only get() infers Sound from the .ogg extension - sidesteps a
         // compile-time overload ambiguity between Sound and the Json token form
         // (both have zero-arg-constructible instance types) when passing the
         // Sound token explicitly.

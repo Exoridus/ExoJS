@@ -67,14 +67,14 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
    * GEOMETRY path (TextureRegion source) is recorded: its 32-byte instance
    * layout matches the sprite/NineSlice batch shape (node index at word 7 of
    * the 8-word instance), so it records and replays exactly like the sprite
-   * renderer — a mixed group of sprites and geometry-path repeating sprites
+   * renderer - a mixed group of sprites and geometry-path repeating sprites
    * shares one bundle and one group transform texture.
    *
    * The SHADER path (bare {@link Texture} source) uses a distinct 40-byte
    * stride AND a per-batch wrap-mode sampler; the generalized instruction
    * seam carries no per-batch metadata channel for the path discriminant or
    * the wrap modes, so a shader-path draw inside a capture window POISONS it
-   * — the group degrades to the (correct) entry-replay tier, exactly as it
+   * - the group degrades to the (correct) entry-replay tier, exactly as it
    * did before this renderer opted in. Pixel-snapped draws are excluded for
    * the same reason the sprite renderer excludes them (view-dependent
    * instance words).
@@ -84,7 +84,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   /**
    * Veto the SHADER path at collect time. `resolvedStrategy` is derived from the
-   * source type alone, so it is decidable per drawable — and a shader-path draw
+   * source type alone, so it is decidable per drawable - and a shader-path draw
    * would otherwise poison the capture on every frame, leaving the group on the
    * entry-replay tier it can reach for free.
    *
@@ -130,7 +130,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   /**
    * Sampler cache keyed by wrapS/wrapT/scaleMode packed into one number. A
-   * template-string key would be rebuilt on every shader-path flush — measured
+   * template-string key would be rebuilt on every shader-path flush - measured
    * at ~146 B per flush, which a blend-churn frame pays once per sprite.
    */
   private _samplers = new Map<number, WebGLSampler>();
@@ -460,7 +460,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     backend.stats.drawCalls++;
 
     // Retained recording: while a capture window is open,
-    // hand the exact packed geometry-path words of this flush to the backend —
+    // hand the exact packed geometry-path words of this flush to the backend -
     // byte-identical to what just drew. A single base texture binds to unit 0,
     // so the recorded slot list is one entry. Shader-path batches are never
     // recorded (render() poisoned the window if one appeared).
@@ -485,8 +485,8 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
 
   // ── Retained-batch record/replay ──────────────────────────────────────────
   // Only geometry-path batches reach here (see _supportsRetainedBatches). Their
-  // 32-byte layout puts the node index at word 7 of the 8-word instance — the
-  // same position the sprite renderer uses — so scan/rebase mirror it exactly.
+  // 32-byte layout puts the node index at word 7 of the 8-word instance - the
+  // same position the sprite renderer uses - so scan/rebase mirror it exactly.
 
   /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
   public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
@@ -574,7 +574,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     backend.bindTexture(payload.textures[0]!, 0);
 
     // The group-owned transform texture replaces the shared frame buffer on the
-    // SAME unit/sampler — zero GLSL changes. The next live flush
+    // SAME unit/sampler - zero GLSL changes. The next live flush
     // re-binds the shared texture via bindTransformBufferTexture.
     backend.bindTexture(transformTexture, transformTextureUnit);
 
@@ -653,7 +653,7 @@ export class WebGl2RepeatingSpriteRenderer extends AbstractWebGl2Renderer<Repeat
     this._geoPathShader.connect(createWebGl2ShaderProgram(gl));
 
     // sync() triggers finalize() which compiles the shaders and populates the
-    // attributes/uniforms maps — must happen before any getAttribute() call.
+    // attributes/uniforms maps - must happen before any getAttribute() call.
     this._shaderPathShader.sync();
     this._geoPathShader.sync();
 

@@ -2,7 +2,7 @@
  * WebGPU nine-slice / repeating-sprite flush hot-path caching.
  *
  * Both instanced renderers used to create a fresh single-texture bind group and
- * rewrite the 128-byte projection/group uniform on EVERY batch flush — per-frame
+ * rewrite the 128-byte projection/group uniform on EVERY batch flush - per-frame
  * GPU object churn that scales with flush count even for completely static
  * scenes. These tests drive the REAL WebGpuBackend + renderers against a mock
  * device (see webgpuMockEnvironment) and require, after warmup:

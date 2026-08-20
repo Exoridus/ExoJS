@@ -37,7 +37,7 @@ import type { ParticleBufferLayout } from './ParticleBufferLayout';
 export abstract class ParticleRenderMode {
   /**
    * Layout of the buffer {@link build} fills each frame: attributes, stride,
-   * upload hint, and — when this mode declares no {@link vertexGeometry} — the
+   * upload hint, and - when this mode declares no {@link vertexGeometry} - the
    * topology and index list the draw uses.
    *
    * Named after {@link data}, the buffer it describes. It holds per-instance
@@ -48,7 +48,7 @@ export abstract class ParticleRenderMode {
 
   /**
    * Fixed per-vertex geometry this mode instances, or `null` when it derives
-   * its vertices in the shader from the vertex index — which is what
+   * its vertices in the shader from the vertex index - which is what
    * `QuadParticles` and `RibbonParticles` do.
    *
    * When set, it supplies the topology, index list and index count for the draw
@@ -80,7 +80,7 @@ export abstract class ParticleRenderMode {
    * onto the CPU path, silently and observably via `ParticleSystem.gpuMode`.
    *
    * A GPU-eligible mode's layout must match what the compute pipeline emits
-   * into `gpuState.instanceBuffer` — the shared 40-byte per-instance layout
+   * into `gpuState.instanceBuffer` - the shared 40-byte per-instance layout
    * (`instanceAttributes`). `QuadParticles` and `MeshParticles` both declare
    * exactly that layout and differ only in the shape they expand it into,
    * which is why both are eligible without the compute shader knowing either.

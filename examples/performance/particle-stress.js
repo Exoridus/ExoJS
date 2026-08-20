@@ -1,4 +1,4 @@
-// Auto-generated from particle-stress.ts — edit the .ts source, not this file.
+// Auto-generated from particle-stress.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Texture } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, Constant, Curve, particlesExtension, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, UpdateModule, VectorRange, } from '@codexo/exojs-particles';
 class TintCycle extends UpdateModule {
@@ -122,8 +122,8 @@ class ParticleStressScene extends Scene {
     }
     destroySystems() {
         // The particle systems are registered via `this.systems.add(...)`
-        // (see `buildSystem`), so `SystemRegistry.destroy()` — invoked
-        // automatically during scene teardown — destroys each of them; no
+        // (see `buildSystem`), so `SystemRegistry.destroy()` - invoked
+        // automatically during scene teardown - destroys each of them; no
         // manual destroy loop needed here.
         this.particleSystems = null;
         this.sharedTexture = null;

@@ -200,7 +200,7 @@ describe('Pointer channel buffer — slot reuse', () => {
 
     // Pointer 1 leaves → its channel slot zeroes immediately, but the slot
     // itself (and the Pointer object) stays reserved until update() dispatches
-    // the Leave phase and _finishInteractionFrame() actually retires it —
+    // the Leave phase and _finishInteractionFrame() actually retires it -
     // releasing it any earlier would let a same-flush pointerover for a
     // DIFFERENT pointerId steal the slot while this one's Leave is still
     // undispatched.
@@ -238,7 +238,7 @@ describe('Pointer channel buffer — 16 pointer maximum', () => {
       expect(ch(im, Pointer.Slot0Active + s * 16)).toBe(1);
     }
 
-    // 17th pointer — should be silently ignored (no crash, no slot written).
+    // 17th pointer - should be silently ignored (no crash, no slot written).
     expect(() => {
       pointerOver(canvas, { pointerId: 17, pointerType: 'touch', clientX: 170, clientY: 10, isPrimary: false });
     }).not.toThrow();
@@ -407,7 +407,7 @@ describe('Gesture — long press', () => {
 
     expect(longPressSpy).not.toHaveBeenCalled();
 
-    // Frames without a delta advance the hold by nothing at all — the hold is
+    // Frames without a delta advance the hold by nothing at all - the hold is
     // measured in engine time, so a frame boundary on its own cannot mature it.
     im.preUpdate(Time.zero);
 
@@ -447,7 +447,7 @@ describe('Gesture — long press', () => {
 // ---------------------------------------------------------------------------
 
 describe('Pointer coordinate mapping — scaled canvas', () => {
-  // Backing store 800x600, but displayed (CSS) at 400x300 — e.g. object-fit
+  // Backing store 800x600, but displayed (CSS) at 400x300 - e.g. object-fit
   // contain or transform: scale(0.5). getBoundingClientRect reflects the
   // displayed (CSS) size; raw pointer coordinates must map into design space
   // (here pixelRatio=1 so design == backing store) so picking matches node
@@ -479,7 +479,7 @@ describe('Pointer coordinate mapping — scaled canvas', () => {
     const canvas = createScaledCanvas();
     const im = createInputManager(canvas);
 
-    // Display center (200,150) → design center (400,300) — 2x, since the canvas
+    // Display center (200,150) → design center (400,300) - 2x, since the canvas
     // is shown at half its size and design == backing store at pixelRatio 1.
     pointerOver(canvas, { pointerId: 1, pointerType: 'mouse', clientX: 200, clientY: 150, isPrimary: true });
 
@@ -564,7 +564,7 @@ describe('Pointer coordinate mapping — pixelRatio > 1', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 12. Direct Pointer unit tests — construct the class standalone (bypassing
+// 12. Direct Pointer unit tests - construct the class standalone (bypassing
 //     InputManager) for precise control over getters, defensive branches,
 //     and destroy()/handleEnter() paths that InputManager never exercises.
 // ---------------------------------------------------------------------------

@@ -1,8 +1,8 @@
 /**
- * WebGPU renderer-matrix browser tests — retained instruction-set replay.
+ * WebGPU renderer-matrix browser tests - retained instruction-set replay.
  *
- * Drives the real backend through the retained fallback ladder — F1 dirty
- * collect, F2 clean entry replay + record, F3+ instruction replay — and
+ * Drives the real backend through the retained fallback ladder - F1 dirty
+ * collect, F2 clean entry replay + record, F3+ instruction replay - and
  * asserts the REPLAY tier reproduces the slow path's pixels exactly:
  *
  * 1. multi-batch replay (9 textures → 2 recorded batches) is pixel-identical
@@ -15,7 +15,7 @@
  *    recorded batch instructions stay identical),
  * 5. tint change inside the group is never served stale (recapture path),
  * 6. a texture resize fails the backend's view-identity validation and falls
- *    back cleanly — fresh content, correct UVs, no stale frame — then the
+ *    back cleanly - fresh content, correct UVs, no stale frame - then the
  *    fast tier resumes.
  *
  * CI guarantees a real WebGPU adapter; tests only skip when the software
@@ -181,7 +181,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
         return;
       }
 
-      // F2: clean entry replay + record — this IS the slow path's output.
+      // F2: clean entry replay + record - this IS the slow path's output.
       if (!(await renderScene(ctx, backend, root))) {
         return;
       }
@@ -205,7 +205,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
         expectPixelNear(slowPixels[i]!, hexToRgba(probes[i]![2]));
       }
 
-      // F3: instruction replay — identical pixels.
+      // F3: instruction replay - identical pixels.
       if (!(await renderScene(ctx, backend, root))) {
         return;
       }
@@ -298,7 +298,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
       expectPixelNear(readPixel(16, 16), [255, 0, 0, 255]);
 
       // Pan the camera 16px right: the replayed sprite must appear 16px
-      // further left — projection is resolved live at replay.
+      // further left - projection is resolved live at replay.
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
 
       if (!(await renderScene(ctx, backend, root))) {
@@ -382,7 +382,7 @@ describe('WebGPU renderer matrix: retained instruction replay cells', () => {
 
       expectPixelNear(readPixel(8, 8), [255, 255, 255, 255]);
 
-      // Tint is baked into the recorded instance bytes — the revision bump
+      // Tint is baked into the recorded instance bytes - the revision bump
       // must recapture, and the next frames (recapture, re-record, replay)
       // must all show the tinted output.
       sprite.setTint(new Color(255, 0, 0));

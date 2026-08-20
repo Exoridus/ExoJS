@@ -1,4 +1,4 @@
-// Auto-generated from mesh-deformed-grid.ts — edit the .ts source, not this file.
+// Auto-generated from mesh-deformed-grid.ts - edit the .ts source, not this file.
 import { Application, Color, Mesh, Scene } from '@codexo/exojs';
 const COLS = 16;
 const ROWS = 16;

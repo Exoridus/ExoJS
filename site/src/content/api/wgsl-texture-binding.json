@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Field name within the module — referenced in WGSL as u_${moduleKey}_${name}."
+          "description": "Field name within the module - referenced in WGSL as u_${moduleKey}_${name}."
         }
       ],
       "paragraphs": [],

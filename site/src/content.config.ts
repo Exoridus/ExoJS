@@ -19,7 +19,7 @@ const guide = defineCollection({
 // The API reference is generated as typed, structured JSON (one file per
 // symbol) by site/scripts/build-api.ts. The schema lives in ./lib/api-schema
 // so the generator validates its own output against the exact shape the pages
-// consume via `entry.data` — no MDX body, no regex re-parse, no escape dance.
+// consume via `entry.data` - no MDX body, no regex re-parse, no escape dance.
 const api = defineCollection({
     loader: glob({ base: './src/content/api', pattern: '**/*.json' }),
     schema: apiSymbolSchema,

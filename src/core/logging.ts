@@ -17,7 +17,7 @@ export enum LogSeverity {
  *   `Debug`/`Info`/`Warning` calls a production build strips cost nothing and
  *   never shadow a later `error()` that reuses the key. The set of claimed
  *   keys is retained for the lifetime of the {@link Logger} and never
- *   evicted — that permanence is the guarantee `once` exists to provide, so
+ *   evicted - that permanence is the guarantee `once` exists to provide, so
  *   keep keys drawn from a bounded, per-callsite vocabulary rather than from
  *   unbounded runtime data.
  */
@@ -44,7 +44,7 @@ export type LogSink = (entry: LogEntry) => void;
  * Engine-wide log dispatcher. Below `LogSeverity.Error`, calls are dropped
  * outright in production builds (`__DEV__` is `false`); `error()` always
  * reaches every registered sink. In development a {@link createConsoleSink}
- * is installed by default — see {@link logger}.
+ * is installed by default - see {@link logger}.
  */
 export class Logger {
   private readonly _sinks: LogSink[] = [];
@@ -107,7 +107,7 @@ export class Logger {
     };
   }
 
-  /** @internal — clears the {@link LogOptions.once} dedup set. For unit tests only. */
+  /** @internal - clears the {@link LogOptions.once} dedup set. For unit tests only. */
   public _resetOnce(): void {
     this._seenOnce.clear();
   }
@@ -121,7 +121,7 @@ const consolePrefixStyle = 'color:#7dd3fc;font-weight:bold;';
  * Create the default browser console {@link LogSink}: renders a `%c`-styled
  * `[ExoJS]` (or `[ExoJS][source]`) badge ahead of the message, routing to
  * `console.error`/`console.warn`/`console.log` by severity and forwarding
- * `entry.error`/`entry.data` as extra arguments. Browser-targeted only — no
+ * `entry.error`/`entry.data` as extra arguments. Browser-targeted only - no
  * Node/Deno console detection.
  */
 export function createConsoleSink(): LogSink {
@@ -151,7 +151,7 @@ let _helloShown = false;
 /**
  * Print a one-time `%c`-styled startup banner (`ExoJS v{version}`, plus the
  * render backend when known). No-op outside development builds and no-op
- * after the first call in a process — safe to call unconditionally from
+ * after the first call in a process - safe to call unconditionally from
  * {@link Application} startup. Opt out via `new Application({ hello: false })`.
  * @internal
  */
@@ -167,7 +167,7 @@ export function hello(info?: { backend?: string }): void {
   console.log(`%cExoJS v${__VERSION__}${suffix}`, consolePrefixStyle);
 }
 
-/** @internal — clears the {@link hello} one-time latch. For unit tests only. */
+/** @internal - clears the {@link hello} one-time latch. For unit tests only. */
 export function _resetHello(): void {
   _helloShown = false;
 }

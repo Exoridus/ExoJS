@@ -17,7 +17,7 @@ interface Destroyable {
  * caused it. Stripping the check in production would remove it from exactly the
  * builds where the resulting bug is hardest to trace.
  *
- * This matches what the rest of the engine already does — `Sprite.setTexture()`
+ * This matches what the rest of the engine already does - `Sprite.setTexture()`
  * and `Container.addChildAt()` both throw unconditionally on a destroyed input.
  *
  * Cost is a single branch on a path that already binds GPU state, so it does

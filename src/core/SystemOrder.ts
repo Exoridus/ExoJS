@@ -1,7 +1,7 @@
 /**
  * Named tick-order constants for {@link SystemRegistry.add}'s `order` option.
- * Purely conventional — the registry only compares numbers, and `order`
- * accepts any of them — but shared names keep unrelated systems from picking
+ * Purely conventional - the registry only compares numbers, and `order`
+ * accepts any of them - but shared names keep unrelated systems from picking
  * colliding magic numbers. Not a larger phase taxonomy: pick any number,
  * these are just common reference points.
  */

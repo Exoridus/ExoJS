@@ -18,7 +18,7 @@ const canvasSize = 64;
 // INCR/REPLACE are silently no-ops) when the context is single-sampled
 // (antialias:false), even though STENCIL_BITS reports 8 and the stencil TEST +
 // clear work. With a multisampled context, stencil writes work correctly.
-// This is a SwiftShader limitation, not an engine issue — real browsers/GPUs
+// This is a SwiftShader limitation, not an engine issue - real browsers/GPUs
 // honor stencil writes regardless of antialias (the production backend forces
 // `stencil:true` and is unaffected). Axis-aligned clip shapes keep MSAA edges
 // crisp so pixel assertions stay exact away from the boundary.
@@ -308,7 +308,7 @@ describe('WebGL2 stencil clipping', () => {
 
       render(backend, root);
 
-      // STENCIL_TEST is inert without a clip — the plain sprite is unchanged.
+      // STENCIL_TEST is inert without a clip - the plain sprite is unchanged.
       expectPixelNear(readWebGl2Pixel(backend, 16, 16), [255, 0, 0, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 40, 40), [0, 0, 0, 255]);
     } finally {

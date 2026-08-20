@@ -149,7 +149,7 @@ describe('AabbTreeBroadPhase', () => {
     const out: CandidatePair[] = [];
 
     for (let step = 0; step < 40; step++) {
-      // Move a random subset each step — exercises both the sync phase's
+      // Move a random subset each step - exercises both the sync phase's
       // no-op fast path (colliders that stay put) and real reinsertions.
       for (const collider of colliders) {
         if (rng.next() < 0.4) {

@@ -31,7 +31,7 @@ export interface RenderToOptions {
  *
  * Every verb operates on the *active* target and never resets the active view,
  * so it is safe inside a pass redirect. Use {@link backend} only for raw draws
- * or GPU state — never to switch target/view/clear, which would bypass the
+ * or GPU state - never to switch target/view/clear, which would bypass the
  * coordinator's clear-vs-load handling.
  * @stable
  */
@@ -46,6 +46,6 @@ export interface DrawContext {
   drawGeometry(geometry: Geometry, transform: Matrix, options?: DrawGeometryOptions): void;
   /** Immediately draw an instanced batch. */
   drawBatch(batch: RenderBatch, options?: DrawBatchOptions): void;
-  /** @advanced Raw backend — draws/state only; do NOT switch target/view/clear here. */
+  /** @advanced Raw backend - draws/state only; do NOT switch target/view/clear here. */
   readonly backend: RenderBackend;
 }

@@ -16,7 +16,7 @@ export enum TweenState {
 
 /**
  * Callback fired at one of the tween lifecycle points (start, complete,
- * each repeat cycle). No arguments — use a closure to access related state.
+ * each repeat cycle). No arguments - use a closure to access related state.
  */
 export type TweenLifecycleCallback = () => void;
 

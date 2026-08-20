@@ -7,23 +7,23 @@ import type { ComputeBinding } from './WebGpuComputePipeline';
  * a WGSL compute shader's own `@group(N) @binding(M)` declarations, instead of hand-writing a
  * parallel `ComputeBinding[][]` that has to be kept in sync with the shader text by hand.
  *
- * Deliberately narrow — this is NOT a general WGSL parser. No expression/statement parsing, no
+ * Deliberately narrow - this is NOT a general WGSL parser. No expression/statement parsing, no
  * auto-assignment of group/binding numbers (unlike e.g. PlayCanvas's WGSL processor, which lets
  * shaders omit `@group`/`@binding` entirely and assigns them itself), no uniform-buffer member
- * byte-offset computation (that stays a JS-side concern — see `WgslContribution`/
+ * byte-offset computation (that stays a JS-side concern - see `WgslContribution`/
  * `wgslUniformByteSize` in `@codexo/exojs-particles`). It only reads resource declarations that
  * already carry explicit `@group`/`@binding` attributes, the convention every ExoJS-authored
  * compute shader already follows.
  *
  * `f32`-sampled textures (`texture_1d<f32>`, `texture_2d<f32>`, ...) and plain `sampler`
- * bindings are ambiguous between WebGPU's filterable and non-filterable variants — that
+ * bindings are ambiguous between WebGPU's filterable and non-filterable variants - that
  * distinction depends on the actual `GPUTextureFormat` bound at runtime (e.g. `r32float` is
  * unfilterable, `rgba8unorm` is not), which isn't expressible in the WGSL declaration itself.
  * Defaults to filterable (`'float'` / `'filtering'`); pass `nonFilteringResources` (a set of the
  * WGSL variable names involved) to override per-resource.
  *
  * Comments are stripped before matching. Block-comment stripping is NOT nesting-aware (WGSL
- * technically permits nested `/*` `*` `/` comments) — fine for engine-generated shader text,
+ * technically permits nested `/*` `*` `/` comments) - fine for engine-generated shader text,
  * which never nests comments; a hand-authored shader that does would need manual
  * `ComputeBinding[][]` instead.
  */
@@ -93,7 +93,7 @@ const storageAccessFor = (accessToken: string): GPUStorageTextureAccess => {
 
 const stripComments = (source: string): string => source.replaceAll(/\/\/.*$/gm, '').replaceAll(/\/\*[\s\S]*?\*\//g, '');
 
-// Buffer declarations never need their WGSL type text — only the storage class matters for a
+// Buffer declarations never need their WGSL type text - only the storage class matters for a
 // `ComputeBinding`, so these stop at `:` rather than chasing the type through to `;`.
 const uniformBufferDecl = /@group\((\d+)\)\s*@binding\((\d+)\)\s*var\s*<uniform>\s*(\w+)\s*:/g;
 const storageBufferDecl = /@group\((\d+)\)\s*@binding\((\d+)\)\s*var\s*<storage\s*,\s*(read_write|read)\s*>\s*(\w+)\s*:/g;

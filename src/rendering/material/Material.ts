@@ -10,7 +10,7 @@ import type { ShaderSource } from './ShaderSource';
  * Value accepted by a material uniform. Scalars and small tuples
  * auto-marshal to the appropriate `Float32Array`/`Int32Array` for the
  * backend's uniform call. `Texture`/`RenderTexture` values are bound to
- * texture slots starting at slot 1 — slot 0 is reserved for the drawable's
+ * texture slots starting at slot 1 - slot 0 is reserved for the drawable's
  * own `texture`.
  */
 export type UniformValue =
@@ -72,8 +72,8 @@ export interface MaterialOptions {
 let nextMaterialId = 1;
 
 /**
- * Describes the look of a renderable — shader, uniforms, textures, blend
- * mode, and sampling state — independent of its geometry.
+ * Describes the look of a renderable - shader, uniforms, textures, blend
+ * mode, and sampling state - independent of its geometry.
  *
  * A `Material` can be shared across many drawables; renderers cache
  * compiled programs/pipelines keyed on {@link pipelineKey} and reuse
@@ -84,7 +84,7 @@ let nextMaterialId = 1;
  *
  * Both keys are derived live from the current material state, so they stay
  * stable across repeated reads and change exactly when the relevant state
- * changes — even when {@link uniforms}, {@link textures}, {@link blendMode},
+ * changes - even when {@link uniforms}, {@link textures}, {@link blendMode},
  * or {@link sampler} are mutated in place.
  * @advanced
  */
@@ -217,7 +217,7 @@ export abstract class Material {
   /**
    * Release GPU resources cached against this material on every backend
    * that has compiled it. Safe to call multiple times. After destroy, the
-   * material can still be re-used — renderers recompile on next draw — but
+   * material can still be re-used - renderers recompile on next draw - but
    * typical usage is to drop the reference.
    */
   public destroy(): void {

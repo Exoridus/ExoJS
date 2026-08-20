@@ -41,7 +41,7 @@ export enum TweenSequencerState {
  * The sequencer integrates with {@link TweenManager} via
  * {@link TweenManager.addTicker} so it is driven automatically each frame.
  * It can also be used stand-alone by calling {@link TweenSequencer.update}
- * manually — in that mode the sequencer also advances its child tweens.
+ * manually - in that mode the sequencer also advances its child tweens.
  *
  * @example
  * ```ts
@@ -84,7 +84,7 @@ export class TweenSequencer {
   }
 
   /**
-   * Attach this sequencer to a manager after construction — used by
+   * Attach this sequencer to a manager after construction - used by
    * `SceneTweens` to bind a cold (buffered) sequencer, constructed without
    * a manager while its owning scope was dormant, once the scope becomes
    * `Active`. Mirrors {@link Tween._attachManager}.
@@ -292,7 +292,7 @@ export class TweenSequencer {
     if (stage.type === 'tweens') {
       for (const tween of stage.tweens) {
         if (this._manager !== null) {
-          // Bind only — a stage tween may have been built stand-alone and know
+          // Bind only - a stage tween may have been built stand-alone and know
           // no manager yet. The `start()` below is what enters it into the
           // update list, so the manager ticks it each frame.
           tween._attachManager(this._manager);

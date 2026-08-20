@@ -124,7 +124,7 @@
             }
           ],
           "returnType": "Promise<ArrayBuffer>",
-          "description": "Returns the raw buffer unchanged — no further transformation is applied."
+          "description": "Returns the raw buffer unchanged - no further transformation is applied."
         },
         {
           "name": "createObjectUrl",

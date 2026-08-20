@@ -1,4 +1,4 @@
-// Auto-generated from parallax-starfield.ts — edit the .ts source, not this file.
+// Auto-generated from parallax-starfield.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene } from '@codexo/exojs';
 const speeds = [0.15, 0.35, 0.6];
 const counts = [120, 80, 48];

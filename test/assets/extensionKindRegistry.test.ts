@@ -27,7 +27,7 @@ describe('extensionKindRegistry', () => {
     expect(() => registerExtensionKind('png', 'texture')).not.toThrow();
   });
 
-  it('throws a loud conflict naming both kinds + the escape hatches on a clashing bare-suffix reregistration (§5.1)', () => {
+  it('throws a loud conflict naming both kinds + the escape hatches on a clashing bare-suffix reregistration', () => {
     registerExtensionKind('json', 'json');
     expect(() => registerExtensionKind('json', 'texture')).toThrow(/json/);
     expect(() => registerExtensionKind('json', 'texture')).toThrow(/texture/);

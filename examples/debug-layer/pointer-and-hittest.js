@@ -1,4 +1,4 @@
-// Auto-generated from pointer-and-hittest.ts — edit the .ts source, not this file.
+// Auto-generated from pointer-and-hittest.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 class PointerAndHittestScene extends Scene {

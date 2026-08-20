@@ -3,7 +3,7 @@
  *
  * The asset pipeline deduplicates loads: several consumers asking for the same
  * asset attach to a single in-flight fetch. Cancellation therefore cannot be a
- * plain "abort the controller" — the fetch must keep running for as long as ANY
+ * plain "abort the controller" - the fetch must keep running for as long as ANY
  * holder still needs its result, and only be aborted once the last one leaves.
  *
  * Holders are identified by string (the residency key of whoever joined), so
@@ -39,7 +39,7 @@ export class SharedAbort {
     return this._holders.size;
   }
 
-  /** Join as a holder — the operation cannot be aborted while this holder stays. Idempotent. */
+  /** Join as a holder - the operation cannot be aborted while this holder stays. Idempotent. */
   public retain(holder: string): void {
     if (this._settled) {
       return;

@@ -130,7 +130,7 @@ describe('GamepadDefinitions', () => {
   test('GameCube adapter product IDs carry no built-in definition and fall through to the generic catch-all', () => {
     // Chromium's Nintendo device tables do not normalise 057e:0337 (the WUP-028
     // adapter) or 057e:2073 at all, and the official adapter does not present as
-    // an HID gamepad on Windows without a third-party driver — so there is
+    // an HID gamepad on Windows without a third-party driver - so there is
     // nothing device-specific to claim about either.
     for (const id of ['Vendor: 057e Product: 0337', 'Vendor: 057e Product: 2073']) {
       const resolved = resolveGamepadDefinition(createGamepad(id));

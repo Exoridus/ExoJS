@@ -124,7 +124,7 @@ describe('WebGL2 tilemap pixel snapping — chunk seam', () => {
 
       // The chunk seam is between tile x=1 and x=2, i.e. near screen x=32.
       // Scan a horizontal strip covering both chunks; every pixel must carry the
-      // tile colour (red) — a gap would appear as the black clear colour.
+      // tile colour (red) - a gap would appear as the black clear colour.
       for (let x = 4; x <= 59; x++) {
         const pixel = readWebGl2Pixel(backend, x, 8);
 

@@ -3,7 +3,7 @@ import { Sound } from '#audio/Sound';
 
 // SoundFactory.create() decodes bytes via the shared OfflineAudioContext
 // (`decodeAudioData` from '#audio/audio-context'). jsdom has no real audio
-// decoder, so the module is mocked wholesale — mirroring the `{ duration }`
+// decoder, so the module is mocked wholesale - mirroring the `{ duration }`
 // AudioBuffer stub used by test/audio/sound.test.ts, which is all `Sound`'s
 // constructor actually reads. `vi.mock` factories are hoisted above imports,
 // so the mock function must be created via `vi.hoisted()` to be referenced
@@ -73,7 +73,7 @@ describe('SoundFactory', () => {
       sprites: { hit: { start: 0, end: 1 } },
     });
 
-    // Sprites don't expose a public getter — exercised indirectly by asserting
+    // Sprites don't expose a public getter - exercised indirectly by asserting
     // construction with a valid sprite definition does not throw, and that an
     // out-of-range sprite (end exceeds the decoded 2s buffer) does.
     expect(sound).toBeInstanceOf(Sound);

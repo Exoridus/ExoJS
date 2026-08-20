@@ -23,7 +23,7 @@ export interface RetainedDrawData {
 
 /**
  * The writable half of {@link RetainedDrawData}: what a pooled record exposes to
- * the code that fills it. `material` stays readonly here on purpose — the key
+ * the code that fills it. `material` stays readonly here on purpose - the key
  * object is pooled with its record and rewritten field by field
  * ({@link copyRetainedDrawData}), never replaced.
  * @internal
@@ -49,7 +49,7 @@ export interface MutableRetainedDrawData {
  *
  * The contract is what makes a steady-state recapture allocation-free.
  * {@link rewind} declares the previous capture's records reusable without
- * dropping them, and {@link acquire} hands the next one back — constructing one
+ * dropping them, and {@link acquire} hands the next one back - constructing one
  * only the first time a capture ever reaches that depth. So a subtree that keeps
  * its shape allocates on its first capture and never again, however often it is
  * invalidated and re-taken.
@@ -118,8 +118,8 @@ export const releasePooledDrawables = <T extends { drawable: Drawable }>(pool: R
 };
 
 /**
- * Copy the eight fields every captured draw shares — the drawable, its
- * `(zIndex, seq)` placement, its material key and its snapshotted screen AABB —
+ * Copy the eight fields every captured draw shares - the drawable, its
+ * `(zIndex, seq)` placement, its material key and its snapshotted screen AABB -
  * out of a live command into a pooled record.
  *
  * One function rather than two identical field lists, because these are the

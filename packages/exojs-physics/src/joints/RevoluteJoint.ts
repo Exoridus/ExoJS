@@ -19,7 +19,7 @@ export interface RevoluteJointOptions {
   enableMotor?: boolean;
   /** Target relative angular velocity in rad/s when the motor is enabled. Default `0`. */
   motorSpeed?: number;
-  /** Maximum motor torque — clamps the per-step motor impulse. Default `0`. */
+  /** Maximum motor torque - clamps the per-step motor impulse. Default `0`. */
   maxMotorTorque?: number;
   /** Enable the angle limit (keeps the relative angle in `[lowerAngle, upperAngle]`). Default `false`. */
   enableLimit?: boolean;
@@ -29,7 +29,7 @@ export interface RevoluteJointOptions {
   upperAngle?: number;
 }
 
-/** Reused output sink — physics steps single-threaded, so a shared scratch is safe. */
+/** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
 const scratch: Mutable2D = { x: 0, y: 0 };
 
 /**

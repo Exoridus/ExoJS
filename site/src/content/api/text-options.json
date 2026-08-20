@@ -1,6 +1,6 @@
 {
   "title": "TextOptions",
-  "description": "Construction options for a Text node — a flat merge of visual TextStyleOptions (appearance) and LayoutOptions (flow / overflow), plus two construction-only flags. The two source interfaces share no keys, so the flat shape is unambiguous. ```ts const label = new Text('Hello', { fillColor, fontSize: 24, maxWidth: 360 }); ```",
+  "description": "Construction options for a Text node - a flat merge of visual TextStyleOptions (appearance) and LayoutOptions (flow / overflow), plus two construction-only flags. The two source interfaces share no keys, so the flat shape is unambiguous. ```ts const label = new Text('Hello', { fillColor, fontSize: 24, maxWidth: 360 }); ```",
   "symbol": "TextOptions",
   "kind": "interface",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Construction options for a Text node — a flat merge of visual TextStyleOptions (appearance) and LayoutOptions (flow / overflow), plus two construction-only flags. The two source interfaces share no keys, so the flat shape is unambiguous.",
+        "Construction options for a Text node - a flat merge of visual TextStyleOptions (appearance) and LayoutOptions (flow / overflow), plus two construction-only flags. The two source interfaces share no keys, so the flat shape is unambiguous.",
         "```ts const label = new Text('Hello', { fillColor, fontSize: 24, maxWidth: 360 }); ```"
       ],
       "importLine": "import { TextOptions } from '@codexo/exojs'",
@@ -135,7 +135,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Text direction. Defaults to 'ltr'. 'rtl' reverses each line's glyphs visually after wrapping, which is correct for uniformly right-to-left text. Full bidi (mixed LTR/RTL runs), Arabic contextual shaping, and direction-relative alignment are not implemented — align stays literal in both directions."
+          "description": "Text direction. Defaults to 'ltr'. 'rtl' reverses each line's glyphs visually after wrapping, which is correct for uniformly right-to-left text. Full bidi (mixed LTR/RTL runs), Arabic contextual shaping, and direction-relative alignment are not implemented - align stays literal in both directions."
         },
         {
           "name": "fillColor",
@@ -467,7 +467,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Vertical boundary in pixels. Only whole lines that fit within it are kept. Has no effect on its own — pair it with an overflow policy."
+          "description": "Vertical boundary in pixels. Only whole lines that fit within it are kept. Has no effect on its own - pair it with an overflow policy."
         },
         {
           "name": "maxWidth",
@@ -583,7 +583,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "What to do with lines that do not fit maxHeight. Defaults to 'visible'. - 'visible' — Keep every line; maxHeight is ignored. - 'clip' — Drop the lines that do not fit. - 'ellipsis' — Drop them and mark the last visible line with …, shortening it so it still fits maxWidth when one is set."
+          "description": "What to do with lines that do not fit maxHeight. Defaults to 'visible'. - 'visible' - Keep every line; maxHeight is ignored. - 'clip' - Drop the lines that do not fit. - 'ellipsis' - Drop them and mark the last visible line with ..., shortening it so it still fits maxWidth when one is set."
         },
         {
           "name": "pixelRatio",
@@ -799,7 +799,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whitespace handling mode: - 'normal' — Consecutive spaces collapse to one; \\n becomes a space (standard wrap). - 'pre' — Spaces and newlines preserved verbatim. - 'pre-line' — Spaces collapse; \\n preserved (default when no explicit mode). Defaults to 'pre-line' (current historical behaviour)."
+          "description": "Whitespace handling mode: - 'normal' - Consecutive spaces collapse to one; \\n becomes a space (standard wrap). - 'pre' - Spaces and newlines preserved verbatim. - 'pre-line' - Spaces collapse; \\n preserved (default when no explicit mode). Defaults to 'pre-line' (current historical behaviour)."
         }
       ],
       "paragraphs": [],

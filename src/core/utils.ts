@@ -57,7 +57,7 @@ const getCanvasContext = (): CanvasRenderingContext2D => {
   return internalCanvasContext;
 };
 
-/** Empty function literal — useful as a default callback that does nothing. */
+/** Empty function literal - useful as a default callback that does nothing. */
 export const noop = (): void => {
   /* empty function */
 };
@@ -79,7 +79,7 @@ export const supportsPointerEvents: boolean = typeof PointerEvent !== 'undefined
 
 /**
  * Whether a user-agent string identifies a browser running on WebKit: Safari,
- * and every iOS browser regardless of brand — Chrome, Firefox and Edge on iOS
+ * and every iOS browser regardless of brand - Chrome, Firefox and Edge on iOS
  * are all WebKit underneath and inherit its rendering defects, so they belong
  * on the same side of this test as Safari does.
  *
@@ -87,10 +87,10 @@ export const supportsPointerEvents: boolean = typeof PointerEvent !== 'undefined
  * that token alone decides nothing. `Chrome`/`Chromium`/`Edg/` mark real Blink
  * (their iOS builds say `CriOS`/`EdgiOS` instead and are correctly left in).
  * Requiring `Safari/` additionally excludes non-browser consumers of the same
- * string — jsdom, for one, reports `AppleWebKit` with no `Safari/` token.
+ * string - jsdom, for one, reports `AppleWebKit` with no `Safari/` token.
  *
  * A UA test rather than a capability probe, used only where a defect has no
- * feature to detect — see `Application.canUseWebGpu`, which keeps WebKit off a
+ * feature to detect - see `Application.canUseWebGpu`, which keeps WebKit off a
  * WebGPU implementation that renders incorrectly without reporting an error.
  *
  * @param userAgent - The UA string to classify.
@@ -189,7 +189,7 @@ export const supportsCodec = (...codecs: string[]): boolean => codecs.some(codec
 
 /**
  * Resolve the natural pixel dimensions of any `CanvasImageSource`. Returns
- * a {@link Size.temp} scratch instance — copy if you need to retain the
+ * a {@link Size.temp} scratch instance - copy if you need to retain the
  * value. Returns {@link Size.zero} when the source has no resolvable size.
  */
 export const getCanvasSourceSize = (source: CanvasImageSource): Size => {
@@ -220,7 +220,7 @@ export const getCanvasSourceSize = (source: CanvasImageSource): Size => {
 
 /**
  * Resolve the natural pixel dimensions of a {@link TextureSource}, treating
- * `null` as zero. Same caveats as {@link getCanvasSourceSize} — shared
+ * `null` as zero. Same caveats as {@link getCanvasSourceSize} - shared
  * scratch instance.
  */
 export const getTextureSourceSize = (source: TextureSource): Size => {

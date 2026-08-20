@@ -36,7 +36,7 @@ const STAGE_HEIGHT = 720;
  *
  * Each cell gets its OWN canvas rather than reusing one shared element. Some
  * engines own their canvas/context lifecycle and do not reliably re-initialise
- * on a canvas whose context a previous cell created and then destroyed —
+ * on a canvas whose context a previous cell created and then destroyed -
  * Pixi.js, for instance, HANGS on its second `Application.init` against a reused
  * canvas. A fresh element per cell fully isolates cells (and arms) from each
  * other: every `init` starts from a clean context, exactly as a standalone run
@@ -47,14 +47,14 @@ const STAGE_HEIGHT = 720;
 const freshStageCanvas = (): HTMLCanvasElement => {
   const previous = document.getElementById('stage');
 
-  // Removing the canvas element does NOT free its WebGL context — that waits on
+  // Removing the canvas element does NOT free its WebGL context - that waits on
   // GC, which is non-deterministic. Across the ~90-cell WebGL2 matrix the orphaned
   // contexts pile up past the browser's live-context cap (~16) and a later cell's
   // init/renderFrame wedges indefinitely (the observed cell-87 freeze: the excalibur
   // arm's `engine.dispose()` drops references but never loses the GL context, so
-  // each excalibur cell leaked one). Force-lose the PREVIOUS cell's context here —
+  // each excalibur cell leaked one). Force-lose the PREVIOUS cell's context here -
   // one cell after it ran, so the driver's post-first-ok-cell provenance read
-  // (`readRendererInPage`) still finds a live context — which deterministically
+  // (`readRendererInPage`) still finds a live context - which deterministically
   // frees that context's GPU resources regardless of what the arm's teardown did.
   // webgl2 and webgl1 (Phaser renders WebGL1) are both handled; a webgpu cell has
   // no webgl context here and is skipped.
@@ -83,7 +83,7 @@ const freshStageCanvas = (): HTMLCanvasElement => {
 /** Fixed RNG seed shared by every cell so both benchmark arms select the same mutation set. */
 const SEED = 0xc0ffee;
 /**
- * A timed frame slower than this is a candidate abort — a runaway node count,
+ * A timed frame slower than this is a candidate abort - a runaway node count,
  * not a datapoint. Warmup-frame count is per-cell (see `spec.warmupFrames`,
  * {@link warmupFramesFor}); it scales up with node count.
  */
@@ -91,30 +91,30 @@ const FRAME_BUDGET_MS = 200;
 /**
  * Number of trailing timed samples the abort check looks at.
  * Aborting on a SINGLE slow frame lets one GC pause or OS scheduling blip
- * mistake an otherwise-valid cell for a runaway one — the exact failure that
+ * mistake an otherwise-valid cell for a runaway one - the exact failure that
  * produced the `13.4x` WebGPU headline from an `n=1` aborted cell (
  * `results.md:98`, median==p95 because only one frame ever ran). Requiring the
  * MEDIAN of the last `ABORT_WINDOW` frames to exceed the budget means a lone
- * spike cannot trip the abort — only a sustained slowdown can — and guarantees
+ * spike cannot trip the abort - only a sustained slowdown can - and guarantees
  * any cell that DOES abort reports a median over at least `ABORT_WINDOW`
  * samples, never a bogus single-frame "median".
  */
 const ABORT_WINDOW = 3;
 /**
  * Wall-clock cap on the synchronous warmup phase (ms). Warmup runs
- * `spec.warmupFrames` — scaled UP with node count — to settle
+ * `spec.warmupFrames` - scaled UP with node count - to settle
  * shader-compile / texture-upload / JIT before timing, but that frame COUNT
  * assumes cheap frames. A pathological cell (a weak arm under 25k full-viewport
  * overdraw renders multi-second frames) turned a 25-frame warmup into a 10+
  * minute stall with no bound: the timed loop has `shouldAbort`, warmup had
- * nothing. Cap warmup by TIME instead — an engine is fully warm within a few
+ * nothing. Cap warmup by TIME instead - an engine is fully warm within a few
  * frames, and once cumulative warmup passes this budget the cell is either
  * already deep into cheap frames (so it hit `warmupFrames` first and this never
- * bound) or rendering multi-second frames (so it will abort in the timed phase —
+ * bound) or rendering multi-second frames (so it will abort in the timed phase -
  * more warmup is wasted work). Set well above the worst TRUSTED warmup
  * (`warmupFrames` × `FRAME_BUDGET_MS` ≈ 8s at the abort edge), so a cell that
  * produces a trusted timing never has its warmup truncated; only catastrophic
- * cells are cut short — to a single frame, since one such frame alone blows the
+ * cells are cut short - to a single frame, since one such frame alone blows the
  * budget.
  */
 const WARMUP_BUDGET_MS = 10_000;
@@ -122,8 +122,8 @@ const WARMUP_BUDGET_MS = 10_000;
  * Single-frame hard-abort threshold for the timed loop (10× `FRAME_BUDGET_MS`).
  * `shouldAbort`'s median-of-last-`ABORT_WINDOW` rule deliberately never aborts on
  * ONE slow frame (a lone GC/scheduler spike must not fake a runaway).
- * But a frame at 10× the budget is not a spike — no realistic blip turns a
- * sub-200ms cell into a 2s frame — it is a catastrophically slow cell that WILL
+ * But a frame at 10× the budget is not a spike - no realistic blip turns a
+ * sub-200ms cell into a 2s frame - it is a catastrophically slow cell that WILL
  * abort regardless. Aborting after the first such frame, rather than waiting for
  * three, cuts a weak arm's heaviest cells from minutes to seconds with the SAME
  * `exceeded` verdict; the median rule still governs every borderline case.
@@ -169,11 +169,11 @@ const noopStructuralProbe: StructuralProbe = {
 
 /**
  * Attach the structural probe and a per-frame GPU timer for a cell. The WebGL2
- * context is recoverable from the canvas — `getContext('webgl2')` returns the
- * same object the engine created — but the WebGPU device is not, so it comes from
+ * context is recoverable from the canvas - `getContext('webgl2')` returns the
+ * same object the engine created - but the WebGPU device is not, so it comes from
  * the adapter. WebGL2 uses a hardware `EXT_disjoint_timer_query_webgl2` timer when
  * present; WebGPU has no externally-wireable hardware timestamp, so it uses the
- * submit-to-done wall clock (see {@link createWebGpuGpuTimer}) — a de-vsynced
+ * submit-to-done wall clock (see {@link createWebGpuGpuTimer}) - a de-vsynced
  * measure of GPU work that replaces the old vsync-bound rAF delta.
  */
 const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvasElement): { probe: StructuralProbe; gpuTimer: GpuFrameTimer; structuralNote: string | null } => {
@@ -182,7 +182,7 @@ const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvas
 
     // A WebGPU arm should expose its GPUDevice via `gpuDevice()` so the
     // structural probe (and the submit→done GPU timer) can attach. When it does
-    // not — some third-party renderers do not surface the device — DEGRADE
+    // not - some third-party renderers do not surface the device - DEGRADE
     // GRACEFULLY rather than aborting the whole run (the failure mode that lost
     // every completed cell): keep the CPU timing and the rAF-delta frame time,
     // but skip the structural counters and the zero-draw self-check for this
@@ -207,7 +207,7 @@ const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvas
     // WebGLRenderer creates a `'webgl'` (WebGL1) context by default
     // (`canvas.getContext('webgl')`, WebGLRenderer.js:709), and once a `'webgl'`
     // context owns the element `getContext('webgl2')` returns null. Degrade
-    // gracefully — the same policy as the WebGPU no-device path: keep the CPU
+    // gracefully - the same policy as the WebGPU no-device path: keep the CPU
     // timing and the rAF frame delta, skip the WebGL2 structural probe (and its
     // zero-draw self-check, which the non-null `structuralNote` suppresses), and
     // DISCLOSE why in the cell note. Never fabricate counters, never throw away
@@ -239,7 +239,7 @@ const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvas
  * Frame time prefers a real GPU timer: the WebGL2 hardware query, or the WebGPU
  * submit-to-done wall clock (de-vsynced GPU work). Only when no GPU
  * timer resolved samples does it fall back to the rAF delta, reported with
- * {@link NO_GPU_TIMER_NOTE} — a GPU number is never fabricated. The CPU timer
+ * {@link NO_GPU_TIMER_NOTE} - a GPU number is never fabricated. The CPU timer
  * still brackets exactly `mutate` + `renderFrame` (the primary metric); the GPU
  * bracket sits outside it so the restructuring does not change what CPU time
  * measures.
@@ -263,7 +263,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     // only if every arm wobbles the IDENTICAL leaf set for a given (archetype,
     // nodeCount, seed). Rather than compare arms pairwise (fragile), assert each
     // arm against the CANONICAL selection derived from the neutral archetype spec
-    // — which transitively guarantees all arms agree. An arm that draws its RNG
+    // - which transitively guarantees all arms agree. An arm that draws its RNG
     // differently (the exact failure the fairness contract warns about) fails
     // loudly HERE instead of silently producing an incomparable result. Arms that
     // do not report a signature (optional method) are skipped with a warning.
@@ -298,7 +298,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     // ── measurement boundary ────────────────────────────────────────────────
     // Warmup runs unpaced, so on a backend whose frame time is a queue-completion
     // wall clock (WebGPU, see `createWebGpuGpuTimer`) it can still have work in
-    // flight here — and that work would resolve INSIDE the first timed frames'
+    // flight here - and that work would resolve INSIDE the first timed frames'
     // brackets, which is how a 1M-node cell reported 133ms on a frame that did
     // 0.9ms of work. Wait it out once, before the timed window opens. This runs
     // outside every reported metric: `cpuMs*` brackets only `mutate` +
@@ -384,13 +384,13 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     // Structural-probe self-check. The probe monkeypatches the live graphics
     // context AFTER engine init (the device/context does not exist earlier), so an
     // engine that cached its draw/bind method references at init would bypass the
-    // wrappers and silently report zero — an undercount masquerading as truth.
+    // wrappers and silently report zero - an undercount masquerading as truth.
     // Every archetype places drawable, on-screen sprites, so a non-empty cell MUST
     // issue at least one draw; a zero here means the probe was bypassed, not that
     // the scene drew nothing. Fail loudly rather than report the undercount.
     // (Pre-wrapping the WebGL2 context BEFORE init was rejected: creating the
     // context early would freeze the attributes the engine sets on its first
-    // getContext — e.g. antialias — changing what is measured.)
+    // getContext - e.g. antialias - changing what is measured.)
     if (structuralNote === null && spec.nodeCount > 0 && probe.counters.drawCalls === 0) {
       throw new Error(
         `Structural probe recorded 0 draw calls for a non-empty ${spec.backend} scene (engine='${spec.engine}' config='${spec.config}' archetype='${spec.archetype}' n=${spec.nodeCount}); the probe wrappers were bypassed — counts are untrustworthy.`,
@@ -405,7 +405,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
     const frameMsMedian = frameSamplesMs.length > 0 ? median(frameSamplesMs) : null;
     const frameMsP95 = frameSamplesMs.length > 0 ? percentile(frameSamplesMs, 95) : null;
     // Second, backend-specific series: WebGPU's queue-occupancy upper bound. It
-    // is reported BESIDE the frame time, never as it — the two measure different
+    // is reported BESIDE the frame time, never as it - the two measure different
     // things and only one of them (this one) can see `queue.writeBuffer` cost.
     const queueSamplesMs = gpuSamples.queueMs;
     const queueMsMedian = queueSamplesMs.length > 0 ? median(queueSamplesMs) : null;
@@ -416,7 +416,7 @@ export const runCell = async (adapter: EngineAdapter, spec: CellSpec, canvas: HT
       structuralNote,
       gpuUsable ? gpuTimer.note : NO_GPU_TIMER_NOTE,
       // A non-empty queue series means a live WebGPU device WAS wrapped, so an
-      // unusable frame time here is specifically the missing hardware clock —
+      // unusable frame time here is specifically the missing hardware clock -
       // distinct from the no-device path, which reports its own reason.
       !gpuUsable && queueSamplesMs.length > 0 ? WEBGPU_NO_TIMESTAMP_NOTE : null,
       queueSamplesMs.length > 0 ? WEBGPU_QUEUE_NOTE : null,
@@ -447,7 +447,7 @@ const adapterKey = (engine: string, config: string): string => `${engine} ${conf
 /**
  * Lazily construct the engine arm for one `(engine, config)` pair, caching each
  * instance so repeated `__runBaselineCell` calls reuse it across the backend's
- * cells (the adapter is stateless between cells — every cell's `runCell` fully
+ * cells (the adapter is stateless between cells - every cell's `runCell` fully
  * `init`s and `teardown`s it).
  *
  * Each competitor arm (Pixi, Phaser, Excalibur) is imported dynamically ON FIRST
@@ -516,7 +516,7 @@ const runBaselineCell = async (cell: CellSpec): Promise<CellResult> => {
  * Split-phase entry points used ONLY by the CPU-profiling mode
  * (`driver.ts::profileCell`). `runCell` is unusable for profiling because a
  * single `page.evaluate` covers engine init, scene construction, warmup, the
- * timed frames AND teardown — a profile taken across it is dominated by
+ * timed frames AND teardown - a profile taken across it is dominated by
  * one-shot setup cost and says nothing about the per-frame path. Splitting the
  * cell into `setup` / `frames` / `dispose` lets the Node driver start the CDP
  * sampler between setup and frames, so the captured profile contains the frame
@@ -525,7 +525,7 @@ const runBaselineCell = async (cell: CellSpec): Promise<CellResult> => {
  * Frames run SYNCHRONOUSLY here (a straight loop, no `requestAnimationFrame`)
  * on purpose: rAF pacing would inject idle time between frames and dilute the
  * sample density over exactly the code under study. This makes the phase
- * unsuitable for wall-clock reporting — it is never used for one — but ideal
+ * unsuitable for wall-clock reporting - it is never used for one - but ideal
  * for attributing self time.
  */
 const profileState: { adapter: EngineAdapter | null; frame: number } = { adapter: null, frame: 0 };

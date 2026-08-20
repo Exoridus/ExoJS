@@ -82,7 +82,7 @@ afterEach(_resetDefaultSerializers);
 
 /**
  * Minimal {@link Loader} stand-in implementing only the two methods the
- * serialization context calls — keeps the round-trip tests free of real asset
+ * serialization context calls - keeps the round-trip tests free of real asset
  * loading while exercising the exact asset-reference wiring.
  */
 function fakeLoader(entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader {
@@ -268,7 +268,7 @@ describe('serialization — Text', () => {
   });
 
   // `TextOptions` is a flat merge of style and layout options, so the node has
-  // to split them itself — otherwise `fontSize` and a live `Color` end up
+  // to split them itself - otherwise `fontSize` and a live `Color` end up
   // inside a `layout` block that claims a structure the type does not have.
   it('writes a layout block holding layout keys only, never style keys', () => {
     const text = new Text('Wrapped', {
@@ -286,7 +286,7 @@ describe('serialization — Text', () => {
 
     expect(data.layout).toEqual({ maxWidth: 120, letterSpacing: 3, whiteSpace: 'pre' });
 
-    // The style half is not lost — it is written where it belongs.
+    // The style half is not lost - it is written where it belongs.
     expect(data.style).toMatchObject({ fontSize: 24, outlineWidth: 2 });
 
     const restored = deserializeTree(data) as Text;
@@ -916,7 +916,7 @@ describe('serialization — UI widgets', () => {
     expect(data.scrollX).toBe(120);
     expect(data.scrollY).toBe(340);
     expect(data.enabled).toBe(false);
-    // The internal content Container is not an entry of its own — only what the user put inside it.
+    // The internal content Container is not an entry of its own - only what the user put inside it.
     expect(data.children).toHaveLength(1);
     expect((data.children as SerializedNode[])[0]?.type).toBe('Panel');
 

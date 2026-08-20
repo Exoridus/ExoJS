@@ -11,7 +11,7 @@ import { getLdtkLevelEntries } from './ldtkLevelEntries';
  * convertible to a format-independent `TileMap`; access them via
  * {@link levels} (by document order) or by name via {@link getLevelByName}.
  *
- * Construction is cheap — the runtime `TileMap[]` is supplied externally
+ * Construction is cheap - the runtime `TileMap[]` is supplied externally
  * (built by {@link import('./ldtkToTileMap').ldtkToTileMap}). The map does
  * **not** own tileset textures; those remain in the Loader cache.
  */
@@ -22,11 +22,11 @@ export class LdtkMap {
   /** The raw parsed LDtk document. */
   public readonly data: LdtkData;
   /**
-   * Runtime TileMaps — one per LDtk level, in document order.
+   * Runtime TileMaps - one per LDtk level, in document order.
    *
    * The index here corresponds to
    * {@link import('./ldtkLevelEntries').getLdtkLevelEntries}`(data)[i]`, not
-   * `data.levels[i]` — the latter is empty for multi-world documents, where
+   * `data.levels[i]` - the latter is empty for multi-world documents, where
    * levels live under `data.worlds[].levels` instead. `loadLdtkMap` fully
    * resolves external `.ldtkl` levels before conversion, so every entry here
    * is always a fully converted `TileMap`.
@@ -45,7 +45,7 @@ export class LdtkMap {
    *
    * Searches across {@link import('./ldtkLevelEntries').getLdtkLevelEntries}'s
    * flattened level set rather than `data.levels` directly, so this works for
-   * both single-world and multi-world documents — `data.levels` alone is
+   * both single-world and multi-world documents - `data.levels` alone is
    * empty for the latter.
    *
    * The lookup is O(n) in the number of levels.
@@ -62,7 +62,7 @@ export class LdtkMap {
    * Destroy all owned runtime TileMaps.
    *
    * Is idempotent. Does NOT destroy tileset textures (Loader-owned) or any
-   * SceneNodes — the application is responsible for those.
+   * SceneNodes - the application is responsible for those.
    */
   public destroy(): void {
     for (const level of this.levels) {

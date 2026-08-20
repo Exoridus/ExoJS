@@ -61,7 +61,7 @@ export function getWebGpuBlendState(blendMode: BlendModes): GPUBlendState {
         },
       };
     default:
-      // Modes 5–17 (Darken, Lighten, Overlay, …, Luminosity) are compositor-handled
+      // Modes 5-17 (Darken, Lighten, Overlay, ..., Luminosity) are compositor-handled
       // (backdrop-aware shader path). Inside the barrier texture capture they render
       // as Normal so the captured sprite is pristine premultiplied RGBA; the actual
       // W3C blend happens in WebGpuBackdropBlendCompositor. All other unrecognised

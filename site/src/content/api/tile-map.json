@@ -1,6 +1,6 @@
 {
   "title": "TileMap",
-  "description": "A generic, format-independent tile map. Owns a finite grid of TileLayers and a shared set of TileSets. Tile data is stored in compact chunked arrays — no per-tile heap objects. The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children — see import('./TileMapNode').TileMapNode, which owns those. Multiple tilesets are supported: each cell stores a packed tileset index and local tile ID, so different tilesets may have different tile dimensions.",
+  "description": "A generic, format-independent tile map. Owns a finite grid of TileLayers and a shared set of TileSets. Tile data is stored in compact chunked arrays - no per-tile heap objects. The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children - see import('./TileMapNode').TileMapNode, which owns those. Multiple tilesets are supported: each cell stores a packed tileset index and local tile ID, so different tilesets may have different tile dimensions.",
   "symbol": "TileMap",
   "kind": "class",
   "subsystem": "tilemap",
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "A generic, format-independent tile map.",
-        "Owns a finite grid of TileLayers and a shared set of TileSets. Tile data is stored in compact chunked arrays — no per-tile heap objects.",
-        "The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children — see import('./TileMapNode').TileMapNode, which owns those.",
+        "Owns a finite grid of TileLayers and a shared set of TileSets. Tile data is stored in compact chunked arrays - no per-tile heap objects.",
+        "The map does NOT own tileset textures (those are Loader-owned) and does NOT own SceneNode children - see import('./TileMapNode').TileMapNode, which owns those.",
         "Multiple tilesets are supported: each cell stores a packed tileset index and local tile ID, so different tilesets may have different tile dimensions."
       ],
       "importLine": "import { TileMap } from '@codexo/exojs-tilemap'",
@@ -413,7 +413,7 @@
             }
           ],
           "returnType": "TileMapView",
-          "description": "Create a new TileMapView that groups this map's layers into independently placeable band / layer scene nodes for interleaving application actors between tile layers. Each call returns a fresh, independent view — the map does **not** cache a single global view, so multiple coexisting views of the same map are allowed. The view references this map but never owns it: destroying the view frees only its generated layer/band nodes — never the map, its layers, tileset textures, or any application actors."
+          "description": "Create a new TileMapView that groups this map's layers into independently placeable band / layer scene nodes for interleaving application actors between tile layers. Each call returns a fresh, independent view - the map does **not** cache a single global view, so multiple coexisting views of the same map are allowed. The view references this map but never owns it: destroying the view frees only its generated layer/band nodes - never the map, its layers, tileset textures, or any application actors."
         },
         {
           "name": "destroy",
@@ -619,7 +619,7 @@
             }
           ],
           "returnType": "ObjectLayer<S> | undefined",
-          "description": "Get an object layer by name (first match in insertion order), or undefined. Supply an ObjectSchema type argument S to obtain a typed view of the layer — getObjectLayer<LevelObjects>('Entities') returns an ObjectLayer<LevelObjects> whose ObjectLayer.byType / ObjectLayer.where accessors narrow properties. The schema is a static developer promise only; no runtime validation is performed and the call remains fully back-compatible when omitted."
+          "description": "Get an object layer by name (first match in insertion order), or undefined. Supply an ObjectSchema type argument S to obtain a typed view of the layer - getObjectLayer<LevelObjects>('Entities') returns an ObjectLayer<LevelObjects> whose ObjectLayer.byType / ObjectLayer.where accessors narrow properties. The schema is a static developer promise only; no runtime validation is performed and the call remains fully back-compatible when omitted."
         },
         {
           "name": "getObjectLayerById",

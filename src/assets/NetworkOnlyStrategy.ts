@@ -14,7 +14,7 @@ import { fetchAsset } from './fetchAsset';
  * URL, the HTTP status (when one arrived) and the original rejection as
  * `cause`; a cancelled load still rejects with the platform `AbortError`.
  *
- * Returns the fully constructed resource — callers do not need to call
+ * Returns the fully constructed resource - callers do not need to call
  * `request.factory.create` again.
  */
 export class NetworkOnlyStrategy implements CacheStrategy {

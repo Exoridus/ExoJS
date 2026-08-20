@@ -6,7 +6,7 @@ export interface CrossFadeOptions {
   /** Volume to fade the `to` voice up to. Range [0, 1]. Default 1. */
   toVolume?: number;
   /**
-   * Stop the `from` voice once the fade completes (default `true`) — the right
+   * Stop the `from` voice once the fade completes (default `true`) - the right
    * choice for a one-shot transition, since it frees the outgoing voice. Pass
    * `false` to leave `from` playing at volume 0, e.g. when you crossfade back
    * and forth between two looping tracks.
@@ -19,7 +19,7 @@ export interface CrossFadeOptions {
  *
  * Ramps `to` up to `toVolume` and `from` down to silence. By default `from` is
  * stopped when the fade finishes; pass `stopAfter: false` to keep it alive.
- * Both voices must already be playing — start the incoming voice (typically at
+ * Both voices must already be playing - start the incoming voice (typically at
  * volume 0) before calling:
  *
  * ```ts

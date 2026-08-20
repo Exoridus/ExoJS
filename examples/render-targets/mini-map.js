@@ -1,4 +1,4 @@
-// Auto-generated from mini-map.ts — edit the .ts source, not this file.
+// Auto-generated from mini-map.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, View } from '@codexo/exojs';
 class MiniMapScene extends Scene {
     worldContainer;
@@ -37,7 +37,7 @@ class MiniMapScene extends Scene {
         // 220×160 minimap texture so the entire grid stays visible.
         this.miniView = new View(width / 2, height / 2, width, height);
         // Every stage is a RenderNodePass so the off-screen target redirect and
-        // its clear stay inside the pass machinery — mixing in a manual
+        // its clear stay inside the pass machinery - mixing in a manual
         // `context.backend.clear()` (immediate-mode) here leaks the off-screen
         // pass's clear onto the canvas and leaves the texture empty.
         this.pipeline = new RenderPipeline()

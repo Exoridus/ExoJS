@@ -24,7 +24,7 @@ export interface GlyphProvider {
   /**
    * Return the kerning adjustment (in pixels) between two adjacent characters.
    * Positive values add space; negative values pull glyphs together.
-   * Optional — callers treat a missing method as zero kerning.
+   * Optional - callers treat a missing method as zero kerning.
    */
   getKerning?(prev: string, next: string, fontSize: number): number;
 }
@@ -40,7 +40,7 @@ export interface TextPageQuads {
   readonly vertices: Float32Array;
   /** UV coordinates: [u, v] × 4 vertices × quadCount. */
   readonly uvs: Float32Array;
-  /** Index buffer: 6 indices × quadCount. `Uint32` — a single node's own glyph count can exceed 16384 quads. */
+  /** Index buffer: 6 indices × quadCount. `Uint32` - a single node's own glyph count can exceed 16384 quads. */
   readonly indices: Uint32Array;
   readonly quadCount: number;
 }
@@ -90,7 +90,7 @@ export interface GlyphInfo {
 }
 
 /**
- * Advance extent of a laid-out text string in pixels — where the cursor ends
+ * Advance extent of a laid-out text string in pixels - where the cursor ends
  * up, not how far the glyphs reach. See {@link TextLayoutResult} for the
  * difference between the two measures.
  */
@@ -103,22 +103,22 @@ export interface TextSize {
  * Result of a full text layout pass: quad placements plus both extents.
  *
  * Text has two honest sizes and they are not interchangeable. The advance is
- * what a layout wants — it answers "how much room does this string take up in
- * the flow". The ink is what the GPU wants — it answers "which rectangle do
+ * what a layout wants - it answers "how much room does this string take up in
+ * the flow". The ink is what the GPU wants - it answers "which rectangle do
  * these glyphs actually cover", padding, outline reach and all.
  */
 export interface TextLayoutResult {
   /** Per-glyph quad placements in local text space. */
   readonly placements: readonly GlyphPlacement[];
   /**
-   * Advance extent — where the cursor ends up. Width is the widest line's
+   * Advance extent - where the cursor ends up. Width is the widest line's
    * advance (letterSpacing and kerning included, no trailing gap), height is
    * `lineCount * (fontSize * lineHeight + leading)`. This is the measure a
    * caller wants for layout, panel sizing and caret placement.
    */
   readonly advance: TextSize;
   /**
-   * Ink extent — the union of the glyph quads, in the same local space as
+   * Ink extent - the union of the glyph quads, in the same local space as
    * `placements`. Carries SDF padding and therefore outline/shadow reach, and
    * its minimum is not necessarily zero. This is the node's local bounds.
    */

@@ -28,7 +28,7 @@ function strongestOf(values: Float32Array): number {
 
 /**
  * A named on/off input, fed by one source or by several interchangeable ones.
- * Sources may be digital (a key) or analog (a trigger) — the action reports
+ * Sources may be digital (a key) or analog (a trigger) - the action reports
  * the strongest of them and compares it against its own threshold.
  *
  * @example

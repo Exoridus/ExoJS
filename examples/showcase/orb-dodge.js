@@ -1,4 +1,4 @@
-// Auto-generated from orb-dodge.ts — edit the .ts source, not this file.
+// Auto-generated from orb-dodge.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;

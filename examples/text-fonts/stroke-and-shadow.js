@@ -1,4 +1,4 @@
-// Auto-generated from stroke-and-shadow.ts — edit the .ts source, not this file.
+// Auto-generated from stroke-and-shadow.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Text } from '@codexo/exojs';
 class StrokeAndShadowScene extends Scene {
     title;

@@ -152,7 +152,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Rotation in degrees, clockwise, about (x, y) — except on a TileObject, whose pivot stays at the source format's own anchor and is generally not (x, y). See TileObject for why."
+          "description": "Rotation in degrees, clockwise, about (x, y) - except on a TileObject, whose pivot stays at the source format's own anchor and is generally not (x, y). See TileObject for why."
         },
         {
           "name": "type",

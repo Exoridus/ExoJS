@@ -1,5 +1,5 @@
 /**
- * WebGL2 AnimatedSprite browser test — v0.16 renderer-matrix follow-up.
+ * WebGL2 AnimatedSprite browser test - v0.16 renderer-matrix follow-up.
  *
  * {@link AnimatedSprite} reuses the normal Sprite renderer but swaps the
  * texture-frame UV sub-region per animation frame. This asserts that swap
@@ -145,7 +145,7 @@ describe('WebGL2 AnimatedSprite — frame-region UV swap', () => {
 
       render(backend, root);
 
-      // Same screen position now samples cell 1 (blue) — proves the UV
+      // Same screen position now samples cell 1 (blue) - proves the UV
       // sub-rect swap, not just a re-render of the same frame.
       expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 255, 255]);
     } finally {

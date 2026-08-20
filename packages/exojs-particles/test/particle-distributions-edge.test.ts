@@ -22,7 +22,7 @@ describe('Curve non-monotonic sampling', () => {
 
     // Advance the internal segment cache forward first.
     expect(curve.evaluate(0.9)).toBeCloseTo(36);
-    // Then jump backwards — exercises the `t < keys[segment].t` reset branch.
+    // Then jump backwards - exercises the `t < keys[segment].t` reset branch.
     expect(curve.evaluate(0.1)).toBeCloseTo(4);
     // And forward again, to confirm the cache still tracks correctly afterwards.
     expect(curve.evaluate(0.6)).toBeCloseTo(24);
@@ -70,7 +70,7 @@ describe('ColorGradient non-monotonic sampling', () => {
     const forward = gradient.evaluate(0.9);
     expect(forward.r).toBeGreaterThan(150);
 
-    // Jump backwards — exercises the segment-cache reset branch.
+    // Jump backwards - exercises the segment-cache reset branch.
     const backward = gradient.evaluate(0.1);
     expect(backward.r).toBeLessThan(50);
   });

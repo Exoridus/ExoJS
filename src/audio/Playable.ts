@@ -16,20 +16,20 @@ import type { AudioManager } from './AudioManager';
  *
  * Concrete voices mix in the capability interfaces ({@link Seekable},
  * {@link Pausable}, {@link Loopable}, {@link RatePitched}) for whatever their
- * backing Web Audio node actually supports — narrow with a capability check
+ * backing Web Audio node actually supports - narrow with a capability check
  * (`'seek' in voice`) before using one.
  *
  * {@link Spatializable} is not one of those: every voice carries it. The
  * panner is inserted lazily, so a voice that is never positioned costs
  * nothing, and {@link PlayOptions} already accepts the full spatial set at
- * play time — a returned voice must be able to keep steering what the play
+ * play time - a returned voice must be able to keep steering what the play
  * call was allowed to start.
  */
 export interface Voice extends Spatializable {
   /**
    * Stop playback and release this voice's resources. Pass `fadeMs` to ramp
    * the volume to zero over that many milliseconds before stopping; omit (or
-   * pass `0`) to stop immediately. Idempotent — calling again is a no-op.
+   * pass `0`) to stop immediately. Idempotent - calling again is a no-op.
    */
   stop(fadeMs?: number): void;
   /** Playback volume in the range [0, 1]. Bus volume (0..2) can amplify beyond this. */
@@ -44,7 +44,7 @@ export interface Voice extends Spatializable {
   /** Fires once when this voice ends (natural end or {@link Voice.stop}). */
   readonly onEnd: Signal;
   /**
-   * The voice's output node — the last node before the {@link AudioBus}. Use it
+   * The voice's output node - the last node before the {@link AudioBus}. Use it
    * as a parallel tap for an analyser, or (later) as the insertion point for
    * per-voice effects.
    */
@@ -95,11 +95,11 @@ export interface RatePitched {
  * Distance-attenuation model used by spatial sounds.
  *
  * Mirrors Web Audio's `PannerNode.distanceModel`:
- * - `'linear'` — `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`,
+ * - `'linear'` - `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`,
  *   clamped to [0, 1]. Reaches silence at `maxDistance`.
- * - `'inverse'` — `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`.
+ * - `'inverse'` - `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`.
  *   Physically realistic; never reaches absolute silence.
- * - `'exponential'` — `v = (d / refDistance) ^ -rolloffFactor`. Steepest near
+ * - `'exponential'` - `v = (d / refDistance) ^ -rolloffFactor`. Steepest near
  *   the listener; useful for very intimate sources.
  */
 export type DistanceModel = 'linear' | 'inverse' | 'exponential';
@@ -108,7 +108,7 @@ export type DistanceModel = 'linear' | 'inverse' | 'exponential';
 export interface Spatializable {
   /** World-space position of the source, or `null` when not spatialized. */
   get position(): Vector | null;
-  /** Accepts any `{ x, y }` point — implementations copy the values. */
+  /** Accepts any `{ x, y }` point - implementations copy the values. */
   set position(value: Vector | { x: number; y: number } | null);
   /**
    * Track a {@link SceneNode}: the voice reads the node's global translation
@@ -130,13 +130,13 @@ export interface Spatializable {
    */
   panningModel: PanningModelType | null;
   /**
-   * Facing direction for cone attenuation, in degrees — same convention as
+   * Facing direction for cone attenuation, in degrees - same convention as
    * `SceneNode.rotation` (0° = local +X / "east", clockwise-positive on a
    * Y-down screen). Has no audible effect unless `coneInnerAngle`/
    * `coneOuterAngle` are narrowed below 360°. Default `0`.
    */
   orientation: number;
-  /** Full-gain cone half-angle in degrees. Default `360` (omnidirectional — no cone). */
+  /** Full-gain cone half-angle in degrees. Default `360` (omnidirectional - no cone). */
   coneInnerAngle: number;
   /** Falloff-to-`coneOuterGain` cone half-angle in degrees. Default `360`. */
   coneOuterAngle: number;
@@ -144,13 +144,13 @@ export interface Spatializable {
   coneOuterGain: number;
   /**
    * World-space velocity of the source (world units/second), or `null`.
-   * Feeds the Doppler calculation (`app.audio.spatial.dopplerFactor`) —
+   * Feeds the Doppler calculation (`app.audio.spatial.dopplerFactor`) -
    * has no other effect. Explicit; when `null` and `follow(node)` is
    * active, velocity is auto-derived each frame from the tracked node's
    * position delta instead.
    */
   get velocity(): Vector | null;
-  /** Accepts any `{ x, y }` point — implementations copy the values. */
+  /** Accepts any `{ x, y }` point - implementations copy the values. */
   set velocity(value: Vector | { x: number; y: number } | null);
 }
 
@@ -172,7 +172,7 @@ export interface PlayOptions {
   time?: number;
   /** Start muted (volume 0). */
   muted?: boolean;
-  /** Initial spatial position — equivalent to setting `voice.position` right after play. */
+  /** Initial spatial position - equivalent to setting `voice.position` right after play. */
   position?: { x: number; y: number } | Vector;
   /** Initial distance-attenuation model. Default `'linear'`. */
   distanceModel?: DistanceModel;
@@ -201,7 +201,7 @@ export interface PlayOptions {
  * {@link AudioGenerator}) to support manager-driven playback via
  * {@link AudioManager.play}.
  *
- * Assets are **data descriptors** — they hold the audio data and default
+ * Assets are **data descriptors** - they hold the audio data and default
  * playback parameters. The playback machinery lives in the {@link Voice}
  * returned by `_createVoice`; the manager is injected at play time, so assets
  * never reach for a global.

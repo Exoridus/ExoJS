@@ -1,5 +1,5 @@
 /**
- * WebGL2 persistent-indexed selection — real pixels.
+ * WebGL2 persistent-indexed selection - real pixels.
  *
  * The tier draws a render root out of slot-addressed stores rather than a
  * streamed instance buffer, so nothing about it is provable from a plan-level
@@ -7,7 +7,7 @@
  * in slot order instead of `(zIndex, seq)` order all produce a correct-looking
  * plan and wrong pixels. Every assertion here is therefore a framebuffer read
  * taken after the tier has demonstrably engaged (`drawCalls === 1` for the whole
- * root — the live path would need one per batch).
+ * root - the live path would need one per batch).
  *
  * Run via:  pnpm test:browser:webgl
  */
@@ -168,7 +168,7 @@ describe('WebGL2 persistent-indexed selection', () => {
 
       expect(backend.stats.drawCalls).toBe(1);
       // The stayer's rows were written once, several selections ago, and have
-      // not been touched since — a store that lost them would read black here.
+      // not been touched since - a store that lost them would read black here.
       // It now sits at screen x 8..24, so the read lands inside it.
       expectPixelNear(readWebGl2Pixel(backend, 12, 8), red);
     } finally {
@@ -182,7 +182,7 @@ describe('WebGL2 persistent-indexed selection', () => {
     const root = new Container();
     // `first` is admitted alone at the start, so it takes slot 0; `second`
     // enters later and takes a higher slot. They overlap exactly, and `second`
-    // is recorded after `first`, so `second` must win — which is the opposite of
+    // is recorded after `first`, so `second` must win - which is the opposite of
     // what a draw issued in slot order would produce only if the slots
     // disagreed, so the setup below makes them disagree on purpose.
     const first = new Sprite(solidTexture('#0000ff'));
@@ -195,7 +195,7 @@ describe('WebGL2 persistent-indexed selection', () => {
       root.addChild(second);
       settle(backend, root);
 
-      // Move `second` under `first` — a content change, so the source rebuilds
+      // Move `second` under `first` - a content change, so the source rebuilds
       // and both are admitted together, `second` on the slot it already holds.
       second.setPosition(0, 0);
       settle(backend, root);

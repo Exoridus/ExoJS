@@ -1,6 +1,6 @@
 {
   "title": "InteractionObservation",
-  "description": "Handle returned by SceneInteraction.observe. Detaches the observed root from interaction dispatch — call InteractionObservation.release (or InteractionObservation.destroy, an alias) when the root no longer needs pointer/focus routing. Idempotent; also released automatically when the owning scene ends permanently.",
+  "description": "Handle returned by SceneInteraction.observe. Detaches the observed root from interaction dispatch - call InteractionObservation.release (or InteractionObservation.destroy, an alias) when the root no longer needs pointer/focus routing. Idempotent; also released automatically when the owning scene ends permanently.",
   "symbol": "InteractionObservation",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Handle returned by SceneInteraction.observe. Detaches the observed root from interaction dispatch — call InteractionObservation.release (or InteractionObservation.destroy, an alias) when the root no longer needs pointer/focus routing. Idempotent; also released automatically when the owning scene ends permanently."
+        "Handle returned by SceneInteraction.observe. Detaches the observed root from interaction dispatch - call InteractionObservation.release (or InteractionObservation.destroy, an alias) when the root no longer needs pointer/focus routing. Idempotent; also released automatically when the owning scene ends permanently."
       ],
       "importLine": "import { InteractionObservation } from '@codexo/exojs'",
       "sourceLink": null

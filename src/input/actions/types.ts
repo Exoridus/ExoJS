@@ -2,7 +2,7 @@ import type { InputChannel } from '#input/InputBinding';
 
 /**
  * A single value or a list of alternatives. Actions accept one binding
- * directly and several as an array — there are no variadic constructors, so
+ * directly and several as an array - there are no variadic constructors, so
  * the options object always stays an unambiguous second parameter.
  */
 export type OneOrMany<T> = T | readonly T[];
@@ -16,7 +16,7 @@ export type AtLeastOne<T> = { [K in keyof T]-?: Required<Pick<T, K>> & Partial<O
 /** Options shared by every action. */
 export interface ActionOptions {
   /**
-   * Magnitude a channel's value must exceed to count as active — see the
+   * Magnitude a channel's value must exceed to count as active - see the
    * concrete action kind's own `active`/`pressed`/`triggered` semantics (for
    * example {@link ButtonAction.active}). Defaults to `0`. Distinct from a
    * gamepad's device-level deadzone, which is applied before the value ever
@@ -33,24 +33,24 @@ export interface ChannelEvent {
 
 /**
  * Every channel a single real-world source event wrote TOGETHER, in one
- * atomic group — one keyboard key, one pointer event's co-written slot
+ * atomic group - one keyboard key, one pointer event's co-written slot
  * channels, or one gamepad poll's changed buttons/axes. An action evaluates
  * its aggregate state only once per batch, after every channel in it has
- * been applied — never mid-batch — so two channels that changed as part of
+ * been applied - never mid-batch - so two channels that changed as part of
  * the SAME real event can never be observed as two sequential, independent
  * transitions with a transient (never-actually-true) state in between. See
  * {@link ButtonAction._update}.
  *
  * `sequence` is a globally monotonic counter stamped by the owning
- * {@link InputManager} when the batch is pushed — never reset alongside the
+ * {@link InputManager} when the batch is pushed - never reset alongside the
  * per-frame batch log itself. It is the watermark an {@link ActionOwnership}
  * or a fresh {@link InputBinding} uses to tell a batch that predates the
  * moment it started observing (still sitting in the same real frame's shared
- * log from earlier, unrelated activity) apart from one that arrived after —
+ * log from earlier, unrelated activity) apart from one that arrived after -
  * see {@link ActionOwnership.arm}.
  *
  * `timestamp` is the monotonic (`performance.now()`-based) real-world time
- * the underlying source event occurred — NOT the later, unrelated moment a
+ * the underlying source event occurred - NOT the later, unrelated moment a
  * consumer happens to replay this batch. A binding or action that measured
  * its tap/trigger window against replay time instead would see an
  * arbitrarily short (or long) elapsed time whenever several batches queued
@@ -70,7 +70,7 @@ export interface ChannelEventBatch {
  * Per-frame channel state an action samples.
  *
  * `values` holds what the channels read right now. `batches` is the ordered
- * log of every atomic channel-write batch since the previous frame closed —
+ * log of every atomic channel-write batch since the previous frame closed -
  * the smallest representation that lets an action replay its bound
  * channels' true transition order, batch by whole batch, rather than
  * reconstructing it from independent, unordered per-channel bits. Without
@@ -79,17 +79,17 @@ export interface ChannelEventBatch {
  * twice) cannot be told apart from one that simply changed once.
  *
  * `frameId` is bumped once per real frame by the owning {@link InputManager}.
- * Combined with this very `ActionSample` object's own identity — one
- * instance per manager, reused for its entire lifetime — {@link ActionOwnership}
- * (held once per {@link ActionMap}, not per action — each action belongs to
+ * Combined with this very `ActionSample` object's own identity - one
+ * instance per manager, reused for its entire lifetime - {@link ActionOwnership}
+ * (held once per {@link ActionMap}, not per action - each action belongs to
  * exactly one map) uses it to tell apart the same owner's next real frame
  * (replay this frame's batches normally) from a genuinely different owner
- * (a map that just moved to a different `InputManager`/`SceneInputs` — its
+ * (a map that just moved to a different `InputManager`/`SceneInputs` - its
  * channel buffer is unrelated to the old owner's, so baseline against the
  * live values instead of replaying batches that belong to someone else's
  * buffer). Two DIFFERENT managers' `frameId` counters can coincidentally
  * read the same number; their sample objects never can, which is why
- * identity — not the number alone — decides ownership.
+ * identity - not the number alone - decides ownership.
  *
  * @internal
  */
@@ -99,7 +99,7 @@ export interface ActionSample {
   frameId: number;
   /**
    * Monotonic (`performance.now()`-based) time this frame was sampled, on the
-   * same clock as {@link ChannelEventBatch.timestamp} — set once per real frame
+   * same clock as {@link ChannelEventBatch.timestamp} - set once per real frame
    * by the owning {@link InputManager} alongside `frameId`.
    *
    * `batches` alone cannot express "time passed and nothing happened", which is
@@ -113,7 +113,7 @@ export interface ActionSample {
 }
 
 /**
- * Ownership bookkeeping held once per {@link ActionMap} — not per action,
+ * Ownership bookkeeping held once per {@link ActionMap} - not per action,
  * since every action now belongs to exactly one map (enforced at
  * construction; see `ActionMap`'s own doc comment) and therefore always
  * shares its owning map's sample identity.
@@ -126,23 +126,23 @@ export class ActionOwnership {
   private _watermark = 0;
   /**
    * Full channel-buffer snapshot captured at the moment this ownership was
-   * last armed — consumed exactly once by {@link takeBaselineSample}. See
+   * last armed - consumed exactly once by {@link takeBaselineSample}. See
    * {@link arm}'s doc comment for why a watermark alone is not enough.
    */
   private _baselineValues: Float32Array | null = null;
 
   /**
    * Resolve `sample` against whichever owner last drove this map.
-   * `'duplicate'` — this exact owner's this exact frame was already
-   * processed; the caller should skip. `'baseline'` — either the very first
+   * `'duplicate'` - this exact owner's this exact frame was already
+   * processed; the caller should skip. `'baseline'` - either the very first
    * sample this map has ever seen, or a different, previously-established
    * owner is now driving it (the map moved to a different `InputManager`/
-   * `SceneInputs`, a legitimate operation — see {@link ActionMap}'s doc
+   * `SceneInputs`, a legitimate operation - see {@link ActionMap}'s doc
    * comment). Either way the caller should baseline against the live
    * channel state rather than replay batches: a first-ever attach has no
    * batch recording a channel's already-current value, and a genuinely
    * different owner's channel buffer is unrelated to the old one's.
-   * `'frame'` — a fresh real frame from the same owner as before; the
+   * `'frame'` - a fresh real frame from the same owner as before; the
    * caller should replay this frame's batches normally.
    */
   public resolve(sample: ActionSample): 'duplicate' | 'baseline' | 'frame' {
@@ -163,15 +163,15 @@ export class ActionOwnership {
   }
 
   /**
-   * Record the batch-sequence watermark — and, when the owner can supply one
+   * Record the batch-sequence watermark - and, when the owner can supply one
    * (see {@link ActionMapOwner._snapshotActionChannels}), a full channel
-   * snapshot — as of the moment this map started (or resumed) observing its
+   * snapshot - as of the moment this map started (or resumed) observing its
    * current owner. Called from {@link ActionMapBase._attach} and from
    * `InputManager._resyncActionMap`. The next `resolve()` call that returns
    * `'baseline'` uses the watermark, via {@link filterBatches}, to replay
    * only batches pushed at-or-after this moment, discarding anything still
    * sitting in the same real frame's shared log from BEFORE this map started
-   * watching — see {@link ChannelEventBatch}'s doc comment. `baselineValues`
+   * watching - see {@link ChannelEventBatch}'s doc comment. `baselineValues`
    * is consumed once, via {@link takeBaselineSample}, to seed every action's
    * true attach-moment state BEFORE those filtered batches are replayed on
    * top of it: a watermark alone tells an action which batches to skip, but
@@ -199,8 +199,8 @@ export class ActionOwnership {
   /**
    * Consume (single-use) the channel snapshot this ownership was last armed
    * with, as a synthetic, batch-free `ActionSample` sharing `sample`'s
-   * `frameId`. Returns `null` when no snapshot was supplied — a stub/legacy
-   * owner without {@link ActionMapOwner._snapshotActionChannels} — in which
+   * `frameId`. Returns `null` when no snapshot was supplied - a stub/legacy
+   * owner without {@link ActionMapOwner._snapshotActionChannels} - in which
    * case the caller falls back to the pre-existing watermark-only behavior.
    */
   public takeBaselineSample(sample: ActionSample): ActionSample | null {
@@ -214,7 +214,7 @@ export class ActionOwnership {
   /**
    * `sample` with its batches restricted to those pushed after this
    * ownership's current watermark. Called only on a `'baseline'`
-   * resolution — a `'frame'` resolution's batches are, by construction,
+   * resolution - a `'frame'` resolution's batches are, by construction,
    * always newer than any watermark that could still be relevant, so
    * filtering them would be a no-op performed every single frame.
    */

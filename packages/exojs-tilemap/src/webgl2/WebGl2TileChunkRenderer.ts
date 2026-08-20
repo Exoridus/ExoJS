@@ -281,7 +281,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     backend.stats.drawCalls++;
 
     // Retained recording: while a capture window is open, hand the
-    // exact packed instance words of this flush to the backend — byte-
+    // exact packed instance words of this flush to the backend - byte-
     // identical to what just drew. A batch always binds a single tileset
     // texture (slot 0); a pixel-snapped node already poisoned the capture in
     // render().
@@ -308,7 +308,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   /**
    * Stage `u_projection` (live view) and `u_group` (live composed group
    * matrix) on the shader, guarded by cached view/group stamps. Shared by the
-   * live flush path and retained-batch replay — replay resolves exactly the
+   * live flush path and retained-batch replay - replay resolves exactly the
    * same live state a slow-path flush would.
    */
   private _stageViewUniforms(backend: WebGl2Backend): void {
@@ -336,7 +336,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   // The bundle stores raw instance bytes; this renderer owns the 32-byte
   // layout (tile word at word 7: transform row in bits 0..28, diagonal flip in
   // bit 29), so the layout-aware finalize steps (node-index scan/rebase, VAO
-  // attribute wiring) and the replay dispatch live here — mirroring
+  // attribute wiring) and the replay dispatch live here - mirroring
   // WebGl2NineSliceSpriteRenderer's seam.
 
   /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
@@ -347,7 +347,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     for (let i = 0; i < payload.instanceCount; i++) {
       // In-bounds: the payload's word range was appended to the bundle store.
       // The tile word is the last word of the 32-byte (8-word) instance
-      // layout; only the low 29 bits address the transform buffer row — the
+      // layout; only the low 29 bits address the transform buffer row - the
       // diagonal-flip flag (bit 29) is orientation, not a row index.
       const row = words[start + i * wordsPerInstance + 7]! & TILE_ROW_MASK;
 
@@ -404,10 +404,10 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
   }
 
   /**
-   * Replay one recorded batch: all STATE is resolved live — blend mode via
+   * Replay one recorded batch: all STATE is resolved live - blend mode via
    * the backend's dedup, `u_projection`/`u_group` from the live view + live
    * composed group matrix (the camera-pan / group-move win), the single
-   * tileset texture bound to unit 0 by recorded slot order — and only the
+   * tileset texture bound to unit 0 by recorded slot order - and only the
    * DATA is cached: the instance bytes in the bundle buffer (bound through
    * the per-batch VAO) and the group-owned transform texture on the shared
    * transform unit. The backend hook flushed any pending live batch before
@@ -452,7 +452,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     this._shader.getUniform('u_texture').setValue(this._baseTextureUnitScratch);
 
     // The group-owned transform store replaces the shared frame buffer on the
-    // SAME unit/sampler — zero GLSL changes. The next live flush re-binds the
+    // SAME unit/sampler - zero GLSL changes. The next live flush re-binds the
     // shared texture through bindTransformBufferTexture.
     backend.bindTexture(transformTexture, transformTextureUnit);
     this._shader.getUniform('u_transforms').setValue(this._transformUnitScratch);

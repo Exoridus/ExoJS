@@ -1,20 +1,20 @@
 /**
- * WebGPU pipeline prewarm — cache-key parity between prewarm and lookup.
+ * WebGPU pipeline prewarm - cache-key parity between prewarm and lookup.
  *
  * `prewarmPipelines` compiles every (blendMode × format) render pipeline
  * asynchronously at init so the first draw never blocks on synchronous WGSL
  * compilation. That only works when the prewarm stores its pipelines under
  * EXACTLY the keys the hot-path lookup queries: a key mismatch silently turns
- * the whole prewarm into dead weight — the async machinery runs, the cache
+ * the whole prewarm into dead weight - the async machinery runs, the cache
  * fills with unreachable entries, and every first draw still compiles
- * synchronously — the sprite prewarm used to key
+ * synchronously - the sprite prewarm used to key
  * `${blend}:${format}` while lookups query `${blend}:${format}:${s|n}`.
  *
  * These tests run the real prewarm against a stub device, then perform the
  * real lookup for every prewarmed combination and require ZERO synchronous
  * pipeline creations. A second sweep asserts no unreachable (suffix-less) keys
  * remain in the caches that are still keyed by a built string. The sprite
- * renderer's cache no longer is — it keys on `(format, packed variant)` — so
+ * renderer's cache no longer is - it keys on `(format, packed variant)` - so
  * its second test asserts the same property behaviourally instead.
  */
 
@@ -116,7 +116,7 @@ describe('WebGpuSpriteRenderer pipeline prewarm', () => {
   // blend-mode/stencil variant) rather than by a built string, so there is no
   // key spelling left to assert. The property the string check stood for is
   // asserted behaviourally instead, and more strictly: the prewarmed set is hit
-  // without a synchronous compile, and the set outside it still compiles — so a
+  // without a synchronous compile, and the set outside it still compiles - so a
   // prewarm that filled the wrong variants would fail on one side or the other.
   test('prewarm fills exactly the non-stencil variants, and the stencil ones stay lazy', async () => {
     const { renderer, stub } = setup();

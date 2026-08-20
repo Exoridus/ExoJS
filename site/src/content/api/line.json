@@ -1,6 +1,6 @@
 {
   "title": "Line",
-  "description": "Mutable line segment defined by two endpoint positions. Implements ShapeLike for intersection tests against all shape types. Note: `collidesWith` always returns `null` — lines support boolean intersection only; SAT response is not implemented for line segments. `contains(x, y, threshold)` tests whether `(x, y)` lies on the segment within a configurable threshold (default `0.1`). `Line.temp` is a shared scratch instance.",
+  "description": "Mutable line segment defined by two endpoint positions. Implements ShapeLike for intersection tests against all shape types. Note: `collidesWith` always returns `null` - lines support boolean intersection only; SAT response is not implemented for line segments. `contains(x, y, threshold)` tests whether `(x, y)` lies on the segment within a configurable threshold (default `0.1`). `Line.temp` is a shared scratch instance.",
   "symbol": "Line",
   "kind": "class",
   "subsystem": "math",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Mutable line segment defined by two endpoint positions. Implements ShapeLike for intersection tests against all shape types.",
-        "Note: `collidesWith` always returns `null` — lines support boolean intersection only; SAT response is not implemented for line segments. `contains(x, y, threshold)` tests whether `(x, y)` lies on the segment within a configurable threshold (default `0.1`).",
+        "Note: `collidesWith` always returns `null` - lines support boolean intersection only; SAT response is not implemented for line segments. `contains(x, y, threshold)` tests whether `(x, y)` lies on the segment within a configurable threshold (default `0.1`).",
         "`Line.temp` is a shared scratch instance."
       ],
       "importLine": "import { Line } from '@codexo/exojs'",
@@ -231,7 +231,7 @@
             }
           ],
           "returnType": "CollisionResponse | null",
-          "description": "Always returns null. SAT collision response is not defined for line segments — use Line.intersectsWith for boolean intersection tests against any shape."
+          "description": "Always returns null. SAT collision response is not defined for line segments - use Line.intersectsWith for boolean intersection tests against any shape."
         },
         {
           "name": "contains",
@@ -502,7 +502,7 @@
             }
           ],
           "returnType": "Rectangle",
-          "description": "The axis-aligned bounding box of this object. Pass out to write into a rectangle you own — every implementer honours it, so this form is always safe to retain and never allocates. Without out, the ShapeLike shapes return a **fresh** rectangle, while a node or view that maintains a cached box (see SceneNode.getBounds) returns that cached instance, which the next invalidation overwrites."
+          "description": "The axis-aligned bounding box of this object. Pass out to write into a rectangle you own - every implementer honours it, so this form is always safe to retain and never allocates. Without out, the ShapeLike shapes return a **fresh** rectangle, while a node or view that maintains a cached box (see SceneNode.getBounds) returns that cached instance, which the next invalidation overwrites."
         },
         {
           "name": "getNormals",

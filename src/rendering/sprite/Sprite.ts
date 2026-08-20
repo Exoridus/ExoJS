@@ -41,7 +41,7 @@ export enum SpriteFlags {
  *
  * Vertex and normal data are computed lazily and cached until the transform
  * or frame changes, making repeated read access free after the first evaluation.
- * Collision helpers — `contains`, `getNormals`, `project` — are overridden to
+ * Collision helpers - `contains`, `getNormals`, `project` - are overridden to
  * operate on the exact rotated quad rather than the AABB.
  * @stable
  */
@@ -51,8 +51,8 @@ export class Sprite extends Drawable {
   private _material: SpriteMaterial | null = null;
   /**
    * Quad corner cache, built on the first {@link vertices} read. Nothing on the
-   * render path reads it — the renderers pack their own quad through
-   * {@link _packSourceQuad} — so only collision queries and direct API readers
+   * render path reads it - the renderers pack their own quad through
+   * {@link _packSourceQuad} - so only collision queries and direct API readers
    * pay for it. An eight-element Float32Array costs ~248 retained bytes: the
    * view, its buffer, and the backing store.
    */
@@ -75,7 +75,7 @@ export class Sprite extends Drawable {
 
   /**
    * Create a sprite for `texture`, or an empty one when the argument is omitted
-   * or `null` — a textureless sprite draws nothing until {@link setTexture} is
+   * or `null` - a textureless sprite draws nothing until {@link setTexture} is
    * called, which is the intended way to build a sprite whose texture is still
    * loading.
    */
@@ -99,12 +99,12 @@ export class Sprite extends Drawable {
   }
 
   /**
-   * @internal — the canonical quad record: local bounds, then the frame's UV
+   * @internal - the canonical quad record: local bounds, then the frame's UV
    * normalised against the texture with `flipY` already resolved, exactly as
    * both shipped sprite renderers pack it.
    *
    * Refuses when there is no texture (nothing to sample) or when the sprite
-   * carries its own material — a material switch is a hard batch boundary, so
+   * carries its own material - a material switch is a hard batch boundary, so
    * such a sprite is never served from a persistent slot store anyway.
    */
   public override _packSourceQuad(target: Float32Array, offset: number): boolean {
@@ -167,7 +167,7 @@ export class Sprite extends Drawable {
   public set width(value: number) {
     // A not-yet-loaded texture has a 0-wide frame; dividing by it would poison
     // scale with NaN (and, being NaN, never recover). Keep the current scale
-    // until real dimensions arrive — the load self-heal resets the frame.
+    // until real dimensions arrive - the load self-heal resets the frame.
     if (this._textureFrame.width !== 0) {
       this.scale.x = value / this._textureFrame.width;
     }
@@ -220,7 +220,7 @@ export class Sprite extends Drawable {
   /**
    * Packed UV coordinates for the four quad corners, encoded as two
    * 16-bit fixed-point values per element (low 16 bits = U, high 16 bits = V,
-   * each in the range 0–65535). Accounts for `Texture.flipY`. Throws if no
+   * each in the range 0-65535). Accounts for `Texture.flipY`. Throws if no
    * texture is assigned.
    */
   public get texCoords(): Uint32Array {
@@ -267,7 +267,7 @@ export class Sprite extends Drawable {
   public setTexture(texture: Texture | RenderTexture | null): this {
     // A destroyed texture samples freed GPU state or renders nothing, and the
     // sprite would keep it. That is a caller bug rather than a runtime
-    // condition, so it fails unconditionally — a dev-only warning would let
+    // condition, so it fails unconditionally - a dev-only warning would let
     // production take the texture anyway and fail silently there.
     invariant(
       texture === null || !('destroyed' in texture) || !texture.destroyed,
@@ -310,7 +310,7 @@ export class Sprite extends Drawable {
       return; // failed load shows Texture.missing; nothing to heal
     }
 
-    // Guard against a texture swap or destroy between scheduling and resolution —
+    // Guard against a texture swap or destroy between scheduling and resolution -
     // and against an explicit frame set in the meantime (a Spritesheet slicing
     // frames out of a still-loading atlas). The schedule-time reset above left a
     // 0×0 frame, so a non-empty frame here means someone chose one deliberately;
@@ -354,7 +354,7 @@ export class Sprite extends Drawable {
       this.height = height;
     }
 
-    // The local bounds changed size — re-derive the origin from the
+    // The local bounds changed size - re-derive the origin from the
     // fractional anchor, or an anchored sprite keeps the OLD bounds' pixel
     // origin and renders offset by the size difference (an anchored sprite
     // switching from the full atlas to its first animation frame used to
@@ -363,7 +363,7 @@ export class Sprite extends Drawable {
     // The zero-anchor skip is not an optimisation: a zero anchor means the
     // anchor does not drive the origin at all, so an origin set explicitly by
     // the caller has to survive a frame change. It cannot swallow a needed
-    // update either — the anchor-derived origin is a pure function of the
+    // update either - the anchor-derived origin is a pure function of the
     // anchor and the box SIZE, so a zero anchor always derives `(0, 0)`, which
     // is what an anchor-free sprite already has.
     if (this.anchor.x !== 0 || this.anchor.y !== 0) {

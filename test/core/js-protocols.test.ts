@@ -20,7 +20,7 @@ describe('JavaScript protocols', () => {
     const iterator = container[Symbol.iterator]();
     container.addChild(later);
 
-    // Identity checks, not `toEqual` — interchangeable blank `TestNode`
+    // Identity checks, not `toEqual` - interchangeable blank `TestNode`
     // instances are structurally identical, so a deep-equality assertion would
     // pass even if iteration silently yielded clones or the wrong nodes.
     const snapshot = [...iterator];
@@ -56,7 +56,7 @@ describe('JavaScript protocols', () => {
     dispose.call(binding);
     expect(detach).toHaveBeenCalledTimes(1);
 
-    // A manual `unbind()` after disposal — still a no-op.
+    // A manual `unbind()` after disposal - still a no-op.
     binding.unbind();
     expect(detach).toHaveBeenCalledTimes(1);
   });
@@ -85,7 +85,7 @@ describe('JavaScript protocols', () => {
 
     // An ActionMap is deliberately NOT iterable: an iterator yielding the
     // `Action` union has no member a consumer could use without narrowing.
-    // The backing array is internal for exactly that reason — see
+    // The backing array is internal for exactly that reason - see
     // `ActionMapBase._actions`. Actions are reached by name off the instance.
     expect(Symbol.iterator in map).toBe(false);
     expect(disposeKey in map).toBe(false);

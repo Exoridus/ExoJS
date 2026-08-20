@@ -18,7 +18,7 @@ const stencilContentFace: GPUStencilFaceState = {
  *
  * Returned fresh per call because `GPURenderPipelineDescriptor` consumers may
  * retain the object. Pipelines that omit this state (no active clip) must run in
- * a pass without a depth/stencil attachment — the two variants are never
+ * a pass without a depth/stencil attachment - the two variants are never
  * interchangeable, so callers key their pipeline cache on the stencil flag.
  * @internal
  */

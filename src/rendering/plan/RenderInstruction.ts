@@ -9,8 +9,8 @@ import type { GroupScope } from './RenderScope';
  * names the concept the plan player consumes and that the batching layer
  * reorders, independent of how the draw happens to be stored in the scope
  * tree. Future {@link TransformBuffer} slotting keys on each instruction's
- * stable {@link DrawCommand.nodeIndex}. Each index is frame-global —
- * `[frameBase, frameBase + plan.nodeCount)` — because the transform buffer
+ * stable {@link DrawCommand.nodeIndex}. Each index is frame-global -
+ * `[frameBase, frameBase + plan.nodeCount)` - because the transform buffer
  * is frame-scoped and the builder bases node indices at the current buffer
  * slot count (`frameBase`) so every plan in the frame occupies distinct
  * slots and can batch cross-call.
@@ -19,7 +19,7 @@ import type { GroupScope } from './RenderScope';
  * sharing GPU pipeline/bind state) are not materialized: the plan player walks
  * each instruction's {@link DrawCommand.groupIndex} adjacency directly over
  * `scope.entries`, and the upload-boundary hooks receive an entries
- * range rather than a collected group array — keeping playback allocation-free.
+ * range rather than a collected group array - keeping playback allocation-free.
  *
  * @internal
  */

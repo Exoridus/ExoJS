@@ -1,4 +1,4 @@
-// Auto-generated from resize-and-dpr.ts — edit the .ts source, not this file.
+// Auto-generated from resize-and-dpr.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite, Text } from '@codexo/exojs';
 class ResizeScene extends Scene {
     sprite;

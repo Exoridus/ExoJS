@@ -254,7 +254,7 @@ describe('PointerStackLayer', () => {
     layer.render(backend as unknown as Parameters<typeof layer.render>[0]);
 
     // The invisible node's own contains() is never reached, and its subtree is
-    // never walked — only the visible sibling contributes to the stack.
+    // never walked - only the visible sibling contributes to the stack.
     expect(invisibleNode.contains).not.toHaveBeenCalled();
     expect(invisibleChild.contains).not.toHaveBeenCalled();
     expect(visibleNode.contains).toHaveBeenCalledWith(10, 10);
@@ -284,7 +284,7 @@ describe('PointerStackLayer', () => {
   });
 
   test('a leaf node with no children property is not recursed into', () => {
-    // Plain leaf (no `children` key at all, as opposed to an empty array) —
+    // Plain leaf (no `children` key at all, as opposed to an empty array) -
     // exercises the Array.isArray(container.children) false branch in _collectContaining.
     const leaf = { visible: true, zIndex: 0, interactive: false, contains: vi.fn(() => true), constructor: { name: 'Leaf' } };
     const app = makeApp({ root: leaf as unknown as FakeNode, pointerPos: { x: 1, y: 1 } });

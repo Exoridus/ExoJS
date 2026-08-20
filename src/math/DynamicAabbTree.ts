@@ -33,7 +33,7 @@ export interface AabbLike {
  * free-list of freed slot indices for reuse. Insertion picks the sibling that
  * minimises the surface-area-heuristic (SAH) cost of the resulting subtree;
  * the ancestor chain is rebalanced on the way back to the root with AVL-style
- * rotations on the height-imbalance factor — both exactly as in Box2D's
+ * rotations on the height-imbalance factor - both exactly as in Box2D's
  * `b2DynamicTree`. All public methods are allocation-free after the pool has
  * grown to its working-set size.
  *
@@ -124,7 +124,7 @@ export class DynamicAabbTree<T> {
 
   public payloadOf(proxy: number): T {
     // Only ever called by a consumer holding a proxy id it received from
-    // `insert` and has not yet passed to `remove` — the slot is guaranteed live.
+    // `insert` and has not yet passed to `remove` - the slot is guaranteed live.
     return this._nodes[proxy]!.payload as T;
   }
 
@@ -151,7 +151,7 @@ export class DynamicAabbTree<T> {
   /**
    * Invoke `callback` for every leaf whose fat AABB overlaps the query AABB.
    * Allocation-free: traversal uses a persistent internal stack. Invocation
-   * ORDER is tree-shape-dependent — callers needing determinism must
+   * ORDER is tree-shape-dependent - callers needing determinism must
    * normalise their own output (physics does via its final id-sort).
    *
    * NOT re-entrant: because the traversal stack is a single persistent field
@@ -201,7 +201,7 @@ export class DynamicAabbTree<T> {
    * for an unbounded ray). A dumb AABB-pruning primitive mirroring `query`:
    * it slab-tests each subtree's fat AABB against the ray segment and skips
    * whole subtrees the segment misses, but performs no exact shape math and
-   * imposes no nearest-first order — the caller runs its own narrow phase and
+   * imposes no nearest-first order - the caller runs its own narrow phase and
    * decides nearest-vs-all. Invocation ORDER is tree-shape-dependent.
    *
    * NOT re-entrant with itself: the traversal uses a single persistent stack
@@ -469,7 +469,7 @@ export class DynamicAabbTree<T> {
 
   /**
    * Walk from `start` to the root. At each ancestor: recompute its AABB/height
-   * from its (already-correct) children FIRST, then balance — in that order,
+   * from its (already-correct) children FIRST, then balance - in that order,
    * because `_balance` decides whether to rotate by reading the node's OWN
    * height, which must already reflect its current children before that read
    * happens (a freshly-created parent's height is not valid until this runs).
@@ -519,7 +519,7 @@ export class DynamicAabbTree<T> {
    * takes `iA`'s place in the tree; `iA` becomes a child of `iHeavy`, paired
    * with whichever of `iHeavy`'s former children is shorter (the taller one
    * stays under `iHeavy`, keeping the subtree balanced). Fully fixes up both
-   * `iA`'s and `iHeavy`'s AABB/height — the caller (`_refitAncestors`) never
+   * `iA`'s and `iHeavy`'s AABB/height - the caller (`_refitAncestors`) never
    * revisits `iA` (it becomes a descendant) and never re-derives `iHeavy`'s
    * own values (it only reads `iHeavy`'s `.parent` next), so both must be
    * complete before this returns.
@@ -615,7 +615,7 @@ export class DynamicAabbTree<T> {
   }
 }
 
-/** Half-perimeter (width + height) of an AABB — a cheap 2D surface-area-heuristic proxy. */
+/** Half-perimeter (width + height) of an AABB - a cheap 2D surface-area-heuristic proxy. */
 const perimeter = (minX: number, minY: number, maxX: number, maxY: number): number => maxX - minX + (maxY - minY);
 
 /**

@@ -110,7 +110,7 @@ export function BottomSheet({ children, open, title, opener, onOpenChange }: Bot
     if (!mounted) return <></>;
 
     // Portaled to <body>: the sticky header uses backdrop-filter, which makes
-    // it the containing block for fixed-position descendants — rendered in
+    // it the containing block for fixed-position descendants - rendered in
     // place, the sheet would be trapped inside the 62px header strip.
     return createPortal(
         <div className={css(styles, 'host')} data-open={open ? 'true' : undefined}>

@@ -60,7 +60,7 @@ export class LoadingQueue<T> implements PromiseLike<T> {
    * request behind it. Idempotent.
    *
    * This is a claim-level operation, so the underlying fetch survives as long as
-   * anyone else needs it — a second scene loading the same texture keeps it
+   * anyone else needs it - a second scene loading the same texture keeps it
    * downloading, and only the last cancellation actually stops the request. The
    * queue then rejects with the platform's `AbortError`; a cancelled load is
    * deliberately NOT reported through `Loader.onError`, since nothing failed.

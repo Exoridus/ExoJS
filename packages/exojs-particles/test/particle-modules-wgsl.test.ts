@@ -15,7 +15,7 @@ import { wgslFieldLayout, wgslUniformByteSize } from '../src/modules/WgslContrib
 
 // These modules' `wgsl()` / `writeUniforms()` pair is CPU-side codegen: it
 // produces a WGSL source fragment (a string) and packs uniform bytes into a
-// DataView. Neither requires a real GPU — only `ParticleGpuState`'s actual
+// DataView. Neither requires a real GPU - only `ParticleGpuState`'s actual
 // pipeline compile/dispatch needs a browser, and that's covered (with a
 // mocked GPUDevice) by particle-gpu.test.ts. This file fills in module-level
 // wgsl()/writeUniforms() coverage that the existing CPU apply()-focused

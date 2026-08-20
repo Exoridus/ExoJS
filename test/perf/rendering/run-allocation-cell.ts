@@ -4,8 +4,8 @@
  * Measures ONE archetype in ONE node process, which is what the gate's
  * five-windows-in-one-process median cannot do: V8's optimisation state (and
  * therefore the sampling profiler's attribution) carries across scenes inside a
- * process, so any number that is meant to be a source-of-truth baseline — and
- * every callsite attribution — has to come from a process that rendered nothing
+ * process, so any number that is meant to be a source-of-truth baseline - and
+ * every callsite attribution - has to come from a process that rendered nothing
  * else. See the process-level bimodality documented on `scrolling-world/10000`
  * in `allocationScenes.ts` for the failure mode this avoids.
  *
@@ -15,8 +15,8 @@
  *
  * Prints one JSON object on stdout (last line) so a driver can collect runs;
  * `--profile` writes the callsite table to stderr, so it never mixes into it.
- * `--cpu` swaps the sampler for wall-clock timing — see the block below it.
- * `--structural` reports the frame's work units instead of its bytes — see the
+ * `--cpu` swaps the sampler for wall-clock timing - see the block below it.
+ * `--structural` reports the frame's work units instead of its bytes - see the
  * block below THAT, and read the two together: "3 KB per filter pass" and "3 KB
  * per drawable" are the same KB/frame and different bugs.
  *
@@ -57,7 +57,7 @@ if (id === undefined) {
 
 /**
  * `--id "reference/<count>"` builds the scrolling-world reference stage at that
- * node count instead of a catalog archetype — the size where the persistent
+ * node count instead of a catalog archetype - the size where the persistent
  * item source and the derived selection actually run, and the only place some
  * per-scope allocation is visible at all.
  *
@@ -81,7 +81,7 @@ if (archetype === undefined) {
   throw new Error(`unknown archetype '${id}'`);
 }
 
-/** Same lean frame the gate's sampler drives — no `FrameMetrics` object. */
+/** Same lean frame the gate's sampler drives - no `FrameMetrics` object. */
 const renderOnce = (harness: WebGl2Harness, root: RenderNode, beforeFrame?: () => void): void => {
   harness.backend.resetStats();
   harness.recorder.reset();
@@ -144,7 +144,7 @@ const frameLabel = (node: ProfileNode): string => {
  * Flatten the sampling tree into per-callsite rows, keyed by the function AND
  * its two nearest callers. Aggregating by function identity alone merges every
  * `next @ (native)` in the process into one row and then reports whichever
- * caller happened to be visited first — which is exactly the attribution this
+ * caller happened to be visited first - which is exactly the attribution this
  * runner exists to get right.
  */
 const collectCallsites = (head: ProfileNode): CallsiteRow[] => {
@@ -211,7 +211,7 @@ if (args.includes('--cpu')) {
  * warm-up, counting the frame's WORK instead of its bytes.
  *
  * A KB/frame number alone cannot tell "3 KB per filter pass" from "3 KB per
- * drawable" or "3 KB per acquired target" — they are the same rate and three
+ * drawable" or "3 KB per acquired target" - they are the same rate and three
  * different fixes. This prints the denominators: passes, draws, target
  * acquisitions, binds, uploads. It is also the guard on any fix that follows,
  * because trading JS allocation for an extra render pass or an extra texture
@@ -241,7 +241,7 @@ if (args.includes('--structural')) {
 
     // A texture this run has never seen before came from `new RenderTexture`,
     // not from the pool. Counted rather than inferred from a pool size, which
-    // the backend does not expose — and after warm-up a miss means a per-frame
+    // the backend does not expose - and after warm-up a miss means a per-frame
     // GPU allocation, which is a different and worse problem than a per-frame
     // JS one.
     if (seenTextures.has(texture)) {

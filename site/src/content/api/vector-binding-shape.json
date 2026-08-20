@@ -1,6 +1,6 @@
 {
   "title": "VectorBindingShape",
-  "description": "Sources for one two-dimensional binding. `x`/`y` take directly signed sources (stick axes); `up`/`down`/`left`/`right` take button groups. Both forms may appear in the same binding — per axis, whichever of the two deflects further wins.",
+  "description": "Sources for one two-dimensional binding. `x`/`y` take directly signed sources (stick axes); `up`/`down`/`left`/`right` take button groups. Both forms may appear in the same binding - per axis, whichever of the two deflects further wins.",
   "symbol": "VectorBindingShape",
   "kind": "interface",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Sources for one two-dimensional binding. `x`/`y` take directly signed sources (stick axes); `up`/`down`/`left`/`right` take button groups. Both forms may appear in the same binding — per axis, whichever of the two deflects further wins."
+        "Sources for one two-dimensional binding. `x`/`y` take directly signed sources (stick axes); `up`/`down`/`left`/`right` take button groups. Both forms may appear in the same binding - per axis, whichever of the two deflects further wins."
       ],
       "importLine": "import { VectorBindingShape } from '@codexo/exojs'",
       "sourceLink": null

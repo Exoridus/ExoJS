@@ -65,7 +65,7 @@ export function EditorPreview({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
     const canvasAttributeObserverRef = useRef<MutationObserver | null>(null);
     const currentCanvasRef = useRef({ width: 0, height: 0, zoom: 1 });
 
-    // Latest-value refs for the callbacks below — the iframe load handler and
+    // Latest-value refs for the callbacks below - the iframe load handler and
     // the imperative handle must see current props without re-subscribing when
     // they change. Written from an effect rather than during render: a
     // render-phase write is unsafe once a render can be discarded.
@@ -83,7 +83,7 @@ export function EditorPreview({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
         currentCanvasRef.current = { width: 0, height: 0, zoom: 1 };
         // NOTE: do NOT pre-set --canvas-w/--preview-zoom here. The zoom is
         // CSS `zoom` on the iframe, which rescales the iframe's inner layout
-        // viewport — applying it before the example loads makes preview.html
+        // viewport - applying it before the example loads makes preview.html
         // fit its 1280x720 stage against a distorted innerWidth and every
         // example renders shrunken into the top-left corner. The stable
         // pre-load height comes from the surface's aspect-ratio instead
@@ -168,7 +168,7 @@ export function EditorPreview({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
 
         // NB: a plain truthy check, NOT `instanceof HTMLCanvasElement`. The
         // canvas lives in the iframe's realm, so it is an instance of the
-        // iframe's `HTMLCanvasElement`, not this document's — a cross-realm
+        // iframe's `HTMLCanvasElement`, not this document's - a cross-realm
         // `instanceof` is always false and silently broke canvas-size detection
         // (the whole --canvas-w/h/zoom sizing never ran). `querySelector('canvas')`
         // is already typed `HTMLCanvasElement | null`, so a null check narrows fine.
@@ -240,7 +240,7 @@ export function EditorPreview({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
 // sitting at native size with empty gutters. The iframe itself is a fixed
 // 1280x720 stage that uniformly transform-scales its content (see
 // public/preview.html), so scaling the outer container up is crop-free and
-// keeps DOM overlays aligned — unlike engine-level `fill`, which would resize
+// keeps DOM overlays aligned - unlike engine-level `fill`, which would resize
 // the backing store and crop fixed coordinates. We measure the surrounding
 // `.preview-surface` (a layout-driven width, not the shrink-to-fit wrapper)
 // and allow upscaling past 1, capping height at ~72vh so a small native canvas

@@ -1,4 +1,4 @@
-// Auto-generated from minimap-with-mask.ts — edit the .ts source, not this file.
+// Auto-generated from minimap-with-mask.ts - edit the .ts source, not this file.
 import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 class MinimapWithMaskScene extends Scene {
     world;

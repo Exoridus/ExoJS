@@ -1,7 +1,7 @@
 /**
- * Collision benchmark — math / collision-detection CPU cost.
+ * Collision benchmark - math / collision-detection CPU cost.
  *
- * All computations are pure CPU — no rendering, no audio.
+ * All computations are pure CPU - no rendering, no audio.
  * Scenarios cover SAT polygon pairs, circle pairs, quadtree build/query,
  * and swept-rectangle queries.
  *
@@ -42,7 +42,7 @@ const rng = (seed: number) => {
 };
 
 // ---------------------------------------------------------------------------
-// Scenario 1 — SAT polygon vs polygon (1 000 pairs)
+// Scenario 1 - SAT polygon vs polygon (1 000 pairs)
 // ---------------------------------------------------------------------------
 
 const results: BenchmarkResult[] = [];
@@ -86,7 +86,7 @@ const results: BenchmarkResult[] = [];
 }
 
 // ---------------------------------------------------------------------------
-// Scenario 2 — Circle vs Circle (10 000 pairs, batched per iteration)
+// Scenario 2 - Circle vs Circle (10 000 pairs, batched per iteration)
 // ---------------------------------------------------------------------------
 
 {
@@ -126,7 +126,7 @@ const results: BenchmarkResult[] = [];
 }
 
 // ---------------------------------------------------------------------------
-// Scenario 3 — Quadtree build from 1 000 random rectangles
+// Scenario 3 - Quadtree build from 1 000 random rectangles
 // ---------------------------------------------------------------------------
 
 {
@@ -167,7 +167,7 @@ const results: BenchmarkResult[] = [];
 }
 
 // ---------------------------------------------------------------------------
-// Scenario 4 — Quadtree queryPoint (1 000-item tree, 10 000 queries)
+// Scenario 4 - Quadtree queryPoint (1 000-item tree, 10 000 queries)
 // ---------------------------------------------------------------------------
 
 {
@@ -210,7 +210,7 @@ const results: BenchmarkResult[] = [];
 }
 
 // ---------------------------------------------------------------------------
-// Scenario 5 — Swept rectangle vs static rectangles (1 000 queries)
+// Scenario 5 - Swept rectangle vs static rectangles (1 000 queries)
 // ---------------------------------------------------------------------------
 
 {

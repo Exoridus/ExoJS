@@ -80,7 +80,7 @@ export function showDevErrorOverlay(canvas: HTMLCanvasElement, message: string, 
   const suffix = count > 1 ? `  ×${count}` : '';
 
   // Rebuild the banner content: bold first line, a dismiss button, and the
-  // message body. textContent throughout — never innerHTML — so a driver log
+  // message body. textContent throughout - never innerHTML - so a driver log
   // can never inject markup.
   banner.replaceChildren();
 
@@ -121,7 +121,7 @@ export function showDevErrorOverlay(canvas: HTMLCanvasElement, message: string, 
 }
 
 /**
- * Remove the banner for `canvas` if present. Idempotent — safe to call when no
+ * Remove the banner for `canvas` if present. Idempotent - safe to call when no
  * banner exists. No-op in production builds and when `document` is unavailable.
  * @internal
  */

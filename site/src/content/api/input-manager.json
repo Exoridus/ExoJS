@@ -1,6 +1,6 @@
 {
   "title": "InputManager",
-  "description": "Owns the unified input pipeline for an Application: keyboard events, pointer (mouse/touch/pen) events with multi-touch slot management, gamepad polling with mapping detection, mouse-wheel events, canvas-focus tracking, and high-level gesture recognition (pinch / rotate / long-press). All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …). Driven each frame by Application.update's internal prepare stage (first, ahead of interaction/audio/tweens/rendering); constructed automatically — you do not instantiate this class yourself.",
+  "description": "Owns the unified input pipeline for an Application: keyboard events, pointer (mouse/touch/pen) events with multi-touch slot management, gamepad polling with mapping detection, mouse-wheel events, canvas-focus tracking, and high-level gesture recognition (pinch / rotate / long-press). All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, ...). Driven each frame by Application.update's internal prepare stage (first, ahead of interaction/audio/tweens/rendering); constructed automatically - you do not instantiate this class yourself.",
   "symbol": "InputManager",
   "kind": "class",
   "subsystem": "input",
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "Owns the unified input pipeline for an Application: keyboard events, pointer (mouse/touch/pen) events with multi-touch slot management, gamepad polling with mapping detection, mouse-wheel events, canvas-focus tracking, and high-level gesture recognition (pinch / rotate / long-press).",
-        "All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …).",
-        "Driven each frame by Application.update's internal prepare stage (first, ahead of interaction/audio/tweens/rendering); constructed automatically — you do not instantiate this class yourself."
+        "All raw inputs are written into a shared `Float32Array` channel buffer. Bind input listeners via the onTrigger / onActive / onStart / onStop factory methods (or via Gamepad.onTrigger-style methods on individual pads), or subscribe to the signal-style notifications (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, ...).",
+        "Driven each frame by Application.update's internal prepare stage (first, ahead of interaction/audio/tweens/rendering); constructed automatically - you do not instantiate this class yourself."
       ],
       "importLine": "import { InputManager } from '@codexo/exojs'",
       "sourceLink": null
@@ -429,7 +429,7 @@
             }
           ],
           "returnType": "InputBinding",
-          "description": "Register a callback fired every frame while any of channels is active. The callback is optional: with none, this just creates a binding, which is the idiomatic way to poll an input per frame — read InputBinding.active / InputBinding.value in your own update() instead of tracking held-state in a callback."
+          "description": "Register a callback fired every frame while any of channels is active. The callback is optional: with none, this just creates a binding, which is the idiomatic way to poll an input per frame - read InputBinding.active / InputBinding.value in your own update() instead of tracking held-state in a callback."
         },
         {
           "name": "onStart",
@@ -566,7 +566,7 @@
             }
           ],
           "returnType": "InputBinding",
-          "description": "Register a callback fired once when any of channels becomes active. Manual lifecycle — call .unbind() on the returned binding to detach."
+          "description": "Register a callback fired once when any of channels becomes active. Manual lifecycle - call .unbind() on the returned binding to detach."
         },
         {
           "name": "onStop",
@@ -887,7 +887,7 @@
             }
           ],
           "returnType": "void",
-          "description": "SystemMethods.preUpdate phase, registered on app.systems by the Application at SystemOrder.CoreInput — ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding. delta is also the clock a pending long-press matures on — see GestureRecognizer.update."
+          "description": "SystemMethods.preUpdate phase, registered on app.systems by the Application at SystemOrder.CoreInput - ahead of every other core system, so this frame's snapshot is current before anything simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel deltas into the channel buffer, fires the corresponding Signals, then evaluates each registered binding. delta is also the clock a pending long-press matures on - see GestureRecognizer.update."
         }
       ],
       "paragraphs": [],
@@ -1435,7 +1435,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires whenever the platform's single native contextmenu event fires — right-click, the keyboard context-menu key, Shift+F10, and (on most touch browsers) a long-press all funnel through that one event, so there is exactly one source to listen to here regardless of which of them the user used. Independent of whether the browser's own menu was suppressed — see InputApplicationOptions.allowNativeContextMenu. This is the engine-wide fallback: it fires unconditionally, with no regard for the scene graph, so it is the right place for an application-level menu that should appear no matter what — or nothing — was under the pointer. Fires even when the request has no pointer to attribute itself to (a keyboard-only session that has never moved a mouse) — see ContextMenuRequest's doc comment for why the request carries its own coordinates instead of forcing the contract onto a Pointer. A request over a specific interactive node additionally bubbles as a scene-graph contextmenu InteractionEvent (see InteractionManager), which only fires when a node is actually hit and can be stopped with InteractionEvent.stopPropagation; use that one for a per-node menu instead. Do not confuse either with GestureRecognizer.onLongPress — a separate, purely informational touch/mouse-hold signal that never triggers this one on its own."
+          "description": "Fires whenever the platform's single native contextmenu event fires - right-click, the keyboard context-menu key, Shift+F10, and (on most touch browsers) a long-press all funnel through that one event, so there is exactly one source to listen to here regardless of which of them the user used. Independent of whether the browser's own menu was suppressed - see InputApplicationOptions.allowNativeContextMenu. This is the engine-wide fallback: it fires unconditionally, with no regard for the scene graph, so it is the right place for an application-level menu that should appear no matter what - or nothing - was under the pointer. Fires even when the request has no pointer to attribute itself to (a keyboard-only session that has never moved a mouse) - see ContextMenuRequest's doc comment for why the request carries its own coordinates instead of forcing the contract onto a Pointer. A request over a specific interactive node additionally bubbles as a scene-graph contextmenu InteractionEvent (see InteractionManager), which only fires when a node is actually hit and can be stopped with InteractionEvent.stopPropagation; use that one for a per-node menu instead. Do not confuse either with GestureRecognizer.onLongPress - a separate, purely informational touch/mouse-hold signal that never triggers this one on its own."
         },
         {
           "name": "onGamepadConnected",
@@ -1640,7 +1640,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires when a pointer has been held without significant movement for ≥ 500 ms of ENGINE time — frame deltas summed across the frames this manager actually ran, not wall-clock time. A hold therefore freezes while the active scene is paused and while the application is stopped, and resumes from where it left off; it never completes in the background."
+          "description": "Fires when a pointer has been held without significant movement for ≥ 500 ms of ENGINE time - frame deltas summed across the frames this manager actually ran, not wall-clock time. A hold therefore freezes while the active scene is paused and while the application is stopped, and resumes from where it left off; it never completes in the background."
         },
         {
           "name": "onMouseWheel",
@@ -1746,7 +1746,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires on every two-touch-pointer move where the distance between them changed. scale > 1 = spreading, < 1 = pinching; the center is the midpoint between the two pointers, in the same coordinate space as Pointer.position. The center arrives as two numbers rather than a Vector on purpose — a shared instance would be overwritten by the next gesture entry in the same frame."
+          "description": "Fires on every two-touch-pointer move where the distance between them changed. scale > 1 = spreading, < 1 = pinching; the center is the midpoint between the two pointers, in the same coordinate space as Pointer.position. The center arrives as two numbers rather than a Vector on purpose - a shared instance would be overwritten by the next gesture entry in the same frame."
         },
         {
           "name": "onPointerCancel",
@@ -1917,7 +1917,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Every pointer signal below carries the phase's own (x, y) explicitly, in design pixels, alongside the pointer — an immutable snapshot rather than a temporary rewind of Pointer.position. pointer.x/ pointer.y always read the pointer's live, current position instead (see Pointer.position's doc comment); use the x/y parameters for the position a specific phase actually happened at."
+          "description": "Every pointer signal below carries the phase's own (x, y) explicitly, in design pixels, alongside the pointer - an immutable snapshot rather than a temporary rewind of Pointer.position. pointer.x/ pointer.y always read the pointer's live, current position instead (see Pointer.position's doc comment); use the x/y parameters for the position a specific phase actually happened at."
         },
         {
           "name": "onPointerLeave",
@@ -2259,7 +2259,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires on every two-touch-pointer move where the angle between them changed. angleDelta is in radians; the center is the midpoint between the two pointers — see onPinch for why it is not a Vector."
+          "description": "Fires on every two-touch-pointer move where the angle between them changed. angleDelta is in radians; the center is the midpoint between the two pointers - see onPinch for why it is not a Vector."
         }
       ],
       "paragraphs": [],

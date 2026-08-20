@@ -131,21 +131,21 @@ function isInScope(rel: string): boolean {
 const CHECKED_LANGS = new Set(['ts', 'tsx', 'typescript', 'js', 'javascript']);
 
 // Bare-method prefixes that indicate a snippet is a class method body shown
-// without its enclosing class — these snippets cannot be compiled standalone
+// without its enclosing class - these snippets cannot be compiled standalone
 // without a wrapper. This shape also matches control-flow fragments shown in
-// isolation (`if (pad.canVibrate) {`) — both are handled by the BARE path.
+// isolation (`if (pad.canVibrate) {`) - both are handled by the BARE path.
 const BARE_METHOD_RE = /^(?:async\s+|override\s+)?[a-zA-Z_$][a-zA-Z0-9_$]*\s*\(/;
 const TOPLEVEL_KEYWORD_RE = /^(?:class|function|const|let|var|export|type|interface|new|document|window)\b/;
 
 // JS/TS control-flow keywords: BARE_METHOD_RE also matches `if (...) {` etc.
-// (an identifier followed by "(") — these are raw statement fragments, not
+// (an identifier followed by "(") - these are raw statement fragments, not
 // method declarations, so they get wrapped in a synthetic method rather than
 // spliced verbatim as a class member.
 const CONTROL_KEYWORDS = new Set(['if', 'for', 'while', 'switch', 'try', 'catch', 'else', 'do', 'function', 'return', 'with']);
 
 // Variable names that guide authors typically reference from surrounding
 // prose context without re-declaring in the snippet itself.
-// Note: `backend` and `context` are intentionally excluded — they appear as
+// Note: `backend` and `context` are intentionally excluded - they appear as
 // named method parameters inside class bodies, not as external context vars.
 // `app` is included because standalone snippets always declare it explicitly
 // via `const app = new Application(...)`.
@@ -153,7 +153,7 @@ const CONTEXT_VAR_RE = /\b(loader|delta|texture|sheet|spritesheetJson|app)\b/g;
 
 // Reserved words and common ambient globals excluded when scanning BARE
 // blocks for free identifiers that need a fallback `var x;` declaration
-// (see `collectFreeIdentifiers`). Not exhaustive — false negatives here just
+// (see `collectFreeIdentifiers`). Not exhaustive - false negatives here just
 // mean an extra unused `var` that costs nothing; false positives (excluding
 // a name that DOES need a decl) would surface as a compile error, which is
 // easy to spot and add here.
@@ -303,7 +303,7 @@ function topLevelDeclaredNames(body: string): Set<string> {
   for (const line of body.split('\n')) {
     const m = line.match(/^(?:const|let|var)\s+(\{[^}]+\}|\[?[\w$]+)/);
     if (m) {
-      // Destructuring or simple binding — just add everything that looks like a name
+      // Destructuring or simple binding - just add everything that looks like a name
       for (const name of m[1].matchAll(/[\w$]+/g)) names.add(name[0]);
     }
     const fm = line.match(/^(?:function|class)\s+([\w$]+)/);
@@ -322,7 +322,7 @@ function topLevelDeclaredNames(body: string): Set<string> {
  *   2. Its first real code line is NOT a bare class method (`init(loader) {`),
  *      AND
  *   3. Its first real code line does NOT start with `this.` (top-level
- *      property reference — context only available inside a class method), AND
+ *      property reference - context only available inside a class method), AND
  *   4. It does NOT reference common lifecycle/context variables (like `loader`,
  *      `delta`, `texture`) that are never declared within the snippet itself.
  */
@@ -335,7 +335,7 @@ function isStandaloneSnippet(body: string): boolean {
   // Bare class method (e.g. `init(loader) {`).
   if (BARE_METHOD_RE.test(firstCodeLine) && !TOPLEVEL_KEYWORD_RE.test(firstCodeLine)) return false;
 
-  // Top-level `this.x` — property reference outside any class body.
+  // Top-level `this.x` - property reference outside any class body.
   if (firstCodeLine.startsWith('this.')) return false;
 
   // Uses a common lifecycle / context variable that isn't declared within the
@@ -344,7 +344,7 @@ function isStandaloneSnippet(body: string): boolean {
   // method parameters (e.g. `init(loader)`, `update(delta)`) are scoped
   // inside methods and are not external context variables.
   // Important: do NOT use CONTEXT_VAR_RE.test() + matchAll() on the same
-  // regex instance — the /g flag's lastIndex state causes missed matches.
+  // regex instance - the /g flag's lastIndex state causes missed matches.
   // body.matchAll() always starts from position 0 on a fresh copy.
   const hasClassBody = /\bclass\s+\w/.test(body);
   if (!hasClassBody) {
@@ -375,7 +375,7 @@ function isGenuineMethodDeclLine(firstCodeLine: string): boolean {
 }
 
 /** True when a no-import block is shaped like a bare class-method body or a
- * `this.*` / control-flow fragment shown without its enclosing class — the
+ * `this.*` / control-flow fragment shown without its enclosing class - the
  * gap this fix closes (see file header). */
 function isBareWrappable(firstCodeLine: string): boolean {
   if (TOPLEVEL_KEYWORD_RE.test(firstCodeLine)) return false;
@@ -397,10 +397,10 @@ function walkFiles(dir: string, predicate: (name: string) => boolean): string[] 
 }
 
 // ---------------------------------------------------------------------------
-// Core export names — a static scan of src/**/*.ts for `export`ed names, used
+// Core export names - a static scan of src/**/*.ts for `export`ed names, used
 // to decide whether a bare PascalCase identifier referenced by a BARE block
 // (`new Sprite(...)`, `Keyboard.Space`) should be imported for real (and thus
-// validated — catching a renamed/removed export) or declared `any` (covers
+// validated - catching a renamed/removed export) or declared `any` (covers
 // extension-package types like `BeatDetector` and guide-local placeholder
 // class names like `GameScene` that were never real exports).
 // ---------------------------------------------------------------------------
@@ -427,7 +427,7 @@ function computeCoreExportNames(): Set<string> {
 }
 
 // ---------------------------------------------------------------------------
-// SourceSnippet anchor resolution — finds a real, fully-typed class embedded
+// SourceSnippet anchor resolution - finds a real, fully-typed class embedded
 // via <SourceSnippet source=".." region=".."/> in the same MDX file, so bare
 // blocks can be spliced into it instead of a synthetic shell.
 // ---------------------------------------------------------------------------
@@ -449,7 +449,7 @@ const REGION_CLOSE_RE = /^[ \t]*\/\/ #endregion guide:(.+)$/;
 
 /** Local re-implementation of site/src/lib/source-snippets.ts#extractSnippetRegion
  * (kept independent so this Node-only script has no dependency on the Astro
- * site's module graph). Returns null instead of throwing on any failure —
+ * site's module graph). Returns null instead of throwing on any failure -
  * a guide build error there is loud and separate; here we just skip the
  * anchor and fall back to the synthetic shell. */
 function tryExtractSnippetRegion(filePath: string, region: string): string | null {
@@ -538,13 +538,13 @@ interface Anchor {
  *
  * Candidates come from every <SourceSnippet/> reference on the page: the
  * region text itself (when it is a whole class) plus every top-level class in
- * the referenced source file — the region a page embeds is not necessarily
+ * the referenced source file - the region a page embeds is not necessarily
  * the class its follow-up hook snippets narrate (build-orb-dodge embeds the
  * GameOverScene region while its bare blocks walk through PlayScene).
  * Among the candidates, the one covering the most `this.*` names referenced
  * by the bare blocks wins.
  *
- * Returns null when the page embeds no class at all — those pages get the
+ * Returns null when the page embeds no class at all - those pages get the
  * synthetic shell instead.
  */
 function findAnchor(mdxContent: string, thisRefs: Set<string>): Anchor | null {
@@ -619,13 +619,13 @@ function wrapFragment(body: string): string {
 /**
  * Splits a "genuine method declaration" block into one chunk per sibling
  * method. A fenced block can show more than one method back to back
- * (`async load(loader) {...}\n\ninit() {...}`) — but a *single* method body
+ * (`async load(loader) {...}\n\ninit() {...}`) - but a *single* method body
  * can just as easily contain its own internal blank line between statement
  * groups, so naively splitting on blank lines is wrong (it would slice a
  * method's body in half). Real parsing is required to tell the two apart:
  * wrap the block as a class body and let the TypeScript parser find the
  * actual member boundaries (it correctly handles chained calls spanning
- * multiple lines, nested braces, comments, etc. — none of which a
+ * multiple lines, nested braces, comments, etc. - none of which a
  * brace-depth or blank-line heuristic can fully get right).
  */
 function splitSiblingMethods(body: string): string[] {
@@ -656,7 +656,7 @@ function bareBlockToMembers(body: string, methodNames: Set<string>): string[] {
 /** Blanks out string literals, template literals, and comments so identifier
  * scans don't pick up prose words from comments (`// A/D and Left/Right`) or
  * string content. Regex-literal slashes can confuse the comment pass in
- * theory — harmless here, since the result is only used for name scans that
+ * theory - harmless here, since the result is only used for name scans that
  * tolerate both false negatives (an extra unused `var`) and rare false
  * positives (a missing one shows up as a clear compile error). */
 function stripStringsAndComments(text: string): string {
@@ -699,13 +699,13 @@ function collectFreeIdentifiers(memberTexts: string[]): Set<string> {
 // read in a bare block three paragraphs later (`this.detector.tempo`). The
 // bare blocks of a page are merged into one synthetic class, but assignments
 // that live in *standalone*, *no-check*, or *partial* blocks never reach that
-// class — so without mining, every such read would be a false positive.
+// class - so without mining, every such read would be a false positive.
 //
 // Mining scans EVERY ts/js fenced block on the page (regardless of how it is
 // otherwise handled) for `this.x = ...` assignments (plain, compound, and
 // array-destructuring forms) and declares each mined name as an `any` field
 // on the synthetic class. A field that is READ somewhere but ASSIGNED nowhere
-// on the page — the `this.bunny` class of staleness — is deliberately NOT
+// on the page - the `this.bunny` class of staleness - is deliberately NOT
 // mined and stays a hard error.
 // ---------------------------------------------------------------------------
 function mineAssignedFields(blockBodies: string[]): Set<string> {
@@ -763,8 +763,8 @@ for (const file of files) {
 
   let blockIndex = 0;
   const bareBodies: string[] = [];
-  // Every ts/js block on the page — including no-check, standalone, and
-  // partial ones — feeds the page-wide field mining (see mineAssignedFields).
+  // Every ts/js block on the page - including no-check, standalone, and
+  // partial ones - feeds the page-wide field mining (see mineAssignedFields).
   const allCodeBodies: string[] = [];
   bareMemberCounter = 0;
 
@@ -793,7 +793,7 @@ for (const file of files) {
       continue;
     }
 
-    // No import, and not shaped like a bare method/fragment either — a
+    // No import, and not shaped like a bare method/fragment either - a
     // partial snippet (object literal, mid-expression fragment, etc.) that
     // still cannot be usefully type-checked. Leave it skipped, as before.
     if (!/^import\s/m.test(body)) {
@@ -816,7 +816,7 @@ for (const file of files) {
   const bareMethodNames = new Set<string>();
   const memberTexts = bareBodies.flatMap(body => bareBlockToMembers(body, bareMethodNames));
 
-  // Distinct `this.x` names the bare blocks reference — used to pick the
+  // Distinct `this.x` names the bare blocks reference - used to pick the
   // best-matching anchor class.
   const thisRefs = new Set<string>();
   for (const m of stripStringsAndComments(memberTexts.join('\n')).matchAll(/this\.([A-Za-z_$][\w$]*)/g)) {
@@ -825,8 +825,8 @@ for (const file of files) {
 
   const anchor = findAnchor(content, thisRefs);
 
-  // Free identifiers to resolve: the bare members' own, plus — in the anchor
-  // case — whatever the spliced-in real class references from its module
+  // Free identifiers to resolve: the bare members' own, plus - in the anchor
+  // case - whatever the spliced-in real class references from its module
   // scope (module-level consts like CANVAS_WIDTH, sibling classes, ...).
   // The anchor class's own name declares itself.
   const freeIdentifiers = collectFreeIdentifiers(anchor ? [...memberTexts, anchor.classText] : memberTexts);
@@ -886,7 +886,7 @@ for (const file of files) {
   let classText: string;
   if (anchor) {
     // ANCHORED page: the bare blocks narrate a real, fully-typed example
-    // class — splice them into it (just before its final `}`) so every
+    // class - splice them into it (just before its final `}`) so every
     // `this.*` access is checked STRICTLY against the example's actual
     // shape. This is the F8/`this.bunny` bug class: a prose snippet that
     // contradicts the very example it explains.
@@ -908,7 +908,7 @@ for (const file of files) {
     // UNANCHORED page: no real example class to check against. Narrative
     // shorthand (`this.player`, `this.world`, ... introduced only in prose)
     // is pervasive and indistinguishable from a typo without an anchor, so
-    // `this.*` member EXISTENCE is not checked here — the index signature
+    // `this.*` member EXISTENCE is not checked here - the index signature
     // resolves any name to `any`. Everything else still is: engine imports
     // (a renamed/removed export fails), inherited Scene API used with real
     // types (`this.app`, `this.loader`, `this.inputs` keep their declared

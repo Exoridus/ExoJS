@@ -5,7 +5,7 @@ import { Vector } from '#math/Vector';
 import { View } from './View';
 
 /**
- * Renderable destination — either the on-screen canvas (the `root`
+ * Renderable destination - either the on-screen canvas (the `root`
  * target owned by the backend) or an offscreen texture (a
  * {@link RenderTexture}). Owns a default {@link View} that controls the
  * camera transform and viewport, and emits a destroy event so backends
@@ -89,7 +89,7 @@ export class RenderTarget {
 
   /**
    * `true` once {@link destroy} has run. A destroyed target must not be
-   * rendered into — the backend throws rather than drawing into released
+   * rendered into - the backend throws rather than drawing into released
    * GPU state.
    */
   public get destroyed(): boolean {
@@ -97,7 +97,7 @@ export class RenderTarget {
   }
 
   /**
-   * Subscribe to the moment this target (or any subclass — including
+   * Subscribe to the moment this target (or any subclass - including
    * {@link RenderTexture}) is destroyed. Backends use this to release
    * GPU-side resources (framebuffer + attached texture) tied to the
    * target. Listeners fire exactly once.
@@ -117,7 +117,7 @@ export class RenderTarget {
 
   /**
    * Point this target at `view`, or back at its own default view when passed
-   * `null`. The view is caller-owned — neither this call nor {@link destroy}
+   * `null`. The view is caller-owned - neither this call nor {@link destroy}
    * releases it.
    */
   public setView(view: View | null): this {
@@ -167,7 +167,7 @@ export class RenderTarget {
    * {@link mapCoordsToPixel} without the defensive copy: transforms `point` in
    * place and returns it.
    *
-   * The public method must not touch its argument, so it clones — and the clip
+   * The public method must not touch its argument, so it clones - and the clip
    * path calls it twice per scissor push, i.e. twice per clipped or masked
    * barrier per frame, always on a scratch vector the caller already owns and
    * is about to overwrite. Callers that own their point use this instead.
@@ -183,7 +183,7 @@ export class RenderTarget {
 
   public destroy(): void {
     // Idempotent by contract. Without this guard a second call would run the
-    // whole teardown again — `_defaultView`, `_viewport` and `_size` would each
+    // whole teardown again - `_defaultView`, `_viewport` and `_size` would each
     // take a second `destroy()`, and a listener re-registered after the first
     // call would fire against already-released GPU state.
     if (this._isDestroyed) {
@@ -199,7 +199,7 @@ export class RenderTarget {
     this._destroyListeners.clear();
 
     // Only the default view is ours. A view handed to `setView` stays
-    // caller-owned — the backend assigns the application's active camera to its
+    // caller-owned - the backend assigns the application's active camera to its
     // root target on every `setView`, so releasing it here would take that
     // camera down with the target.
     this._defaultView.destroy();

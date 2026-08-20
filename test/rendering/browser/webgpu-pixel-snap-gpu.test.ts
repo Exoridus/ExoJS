@@ -17,7 +17,7 @@
  * sides of the colour boundary), while an unsnapped fractional quad samples
  * between texels and blends the boundary column. Same intent, single-sample.
  *
- * Case 2 needs no such trick — it is a parity assert between the retained and
+ * Case 2 needs no such trick - it is a parity assert between the retained and
  * immediate render paths under a fractional camera pan, proving the shader
  * snaps the COMPOSED (group · local) device origin, not the group-local one.
  *
@@ -163,7 +163,7 @@ const readPixelFrom = (ctx: CanvasRenderingContext2D, x: number, y: number): Rgb
 };
 
 // ---------------------------------------------------------------------------
-// Case 1: Position snap lands the origin on an integer device pixel — every
+// Case 1: Position snap lands the origin on an integer device pixel - every
 // pixel centre samples exactly a texel centre, so the texture's internal
 // colour boundaries are hard single-pixel transitions even at a fractional
 // position.
@@ -217,13 +217,13 @@ describe('WebGPU GPU pixel snapping — Sprite position mode', () => {
   // the same origin snap. Before that snap block was ported into the custom
   // vertex module (and `viewport` added to its ProjectionUniforms), custom-
   // material sprites silently lost position snapping once the CPU seam was
-  // deleted — this pins the regression on the WebGPU side.
+  // deleted - this pins the regression on the WebGPU side.
   // -------------------------------------------------------------------------
   test('Case 1b: a custom-material Position sprite snaps identically to the default path', async ctx => {
     const backend = await setupBackend();
     const texture = createQuadrantTexture(10);
     // Fragment samples the base texture straight through, so the internal colour
-    // boundary is the same as Case 1 — only the vertex path (custom module vs
+    // boundary is the same as Case 1 - only the vertex path (custom module vs
     // built-in) differs.
     const material = new SpriteMaterial({
       shader: new ShaderSource({
@@ -265,16 +265,16 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
   });
 
   // -------------------------------------------------------------------------
-  // Case 4: Geometry mode under a FRACTIONAL zoom — the reason geometry snap
+  // Case 4: Geometry mode under a FRACTIONAL zoom - the reason geometry snap
   // exists. Position snap alone lands the ORIGIN on a device pixel but leaves
   // the far quad edge at a fractional device coordinate (device width =
   // 10 · 1.25 = 12.5 px), so under WebGPU's single-sample rasterizer (no MSAA
-  // path) the quad covers only floor(12.5) = 12 whole columns — its right edge
+  // path) the quad covers only floor(12.5) = 12 whole columns - its right edge
   // sits on a pixel centre and the top-left fill rule drops that column.
   // Geometry additionally rounds each local quad corner to the device grid IN
   // THE VERTEX SHADER, so the far edge lands on a whole device pixel and the
   // quad covers exactly round(12.5) = 13 columns. The contiguous run of fully
-  // covered columns therefore equals the snapped device width — one column
+  // covered columns therefore equals the snapped device width - one column
   // wider than position snap alone, the discriminator that flips this RED→GREEN.
   // -------------------------------------------------------------------------
   test('Case 4: a fractional Geometry sprite snaps its quad edges under fractional zoom', async ctx => {
@@ -328,7 +328,7 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
   // -------------------------------------------------------------------------
   // Case 3: the control. With snapping OFF the same scene samples BETWEEN
-  // texel centres, so the colour boundary column is a red/blue blend — proving
+  // texel centres, so the colour boundary column is a red/blue blend - proving
   // the snap branch is gated on the row flag (same position, opposite outcome).
   // -------------------------------------------------------------------------
   test('Case 3: PixelSnapMode.None leaves the colour boundary blended (flag-gated)', async ctx => {
@@ -393,7 +393,7 @@ describe('WebGPU GPU pixel snapping — NineSlice geometry seams', () => {
       root.addChild(panel);
 
       // Longest contiguous run of fully covered (green) columns over the panel's
-      // mid-band — the row with the longest run is interior (no top/bottom edge).
+      // mid-band - the row with the longest run is interior (no top/bottom edge).
       const longestGreenRun = (): number => {
         const pixels = snapshotCanvas(backend);
         let best = 0;
@@ -475,7 +475,7 @@ describe('WebGPU GPU pixel snapping — RepeatingSprite geometry', () => {
       tiled.setPosition(10.3, 10.7);
       root.addChild(tiled);
 
-      // Longest contiguous run of fully covered (blue) columns over any row — the
+      // Longest contiguous run of fully covered (blue) columns over any row - the
       // row with the longest run is interior (no top/bottom edge).
       const longestBlueRun = (): number => {
         const pixels = snapshotCanvas(backend);
@@ -533,7 +533,7 @@ describe('WebGPU GPU pixel snapping — RepeatingSprite geometry', () => {
 // ---------------------------------------------------------------------------
 // Case 2: retained vs immediate parity under a fractional camera pan. The
 // snapped origin of a group-relative sprite (group · local) must land on the
-// same device pixel as the equivalent world-space immediate sprite — i.e. the
+// same device pixel as the equivalent world-space immediate sprite - i.e. the
 // shader snaps the COMPOSED device origin, not the group-local one.
 // ---------------------------------------------------------------------------
 

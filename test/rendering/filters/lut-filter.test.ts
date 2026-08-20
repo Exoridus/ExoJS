@@ -70,7 +70,7 @@ afterAll(() => {
 
 // ---------------------------------------------------------------------------
 // Minimal backend mocks (mirrors the pattern in the WebGl2/WebGpu shader
-// filter test files — just enough surface for apply() to run end-to-end).
+// filter test files - just enough surface for apply() to run end-to-end).
 // ---------------------------------------------------------------------------
 
 function makeWebGl2Backend(): RenderBackend & WebGl2Backend {

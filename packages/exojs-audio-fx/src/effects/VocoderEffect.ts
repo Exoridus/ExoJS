@@ -3,7 +3,7 @@ import { type AudioBus, WorkletEffect } from '@codexo/exojs';
 import vocoderWorkletSource from '../worklets/vocoder.worklet.ts?worklet';
 
 export interface VocoderEffectOptions {
-  /** Modulator AudioBus — its output drives the spectral envelope.
+  /** Modulator AudioBus - its output drives the spectral envelope.
    *  Typically routed from a microphone or voice sample. */
   modulator: AudioBus;
   /** Number of frequency bands. More bands = better resolution, more CPU. Default 16. */

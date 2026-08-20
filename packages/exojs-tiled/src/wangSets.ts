@@ -8,7 +8,7 @@ import type { TiledWangSetData } from './data';
  *
  * ## Supported types
  *
- * - **`'corner'`** — Maps the four corner positions of each `wangtile` to the
+ * - **`'corner'`** - Maps the four corner positions of each `wangtile` to the
  *   four corner bits of the 8-bit blob mask and returns a `WangSet` of type
  *   `'blob'`. Only color index `> 0` in the Tiled wangid is treated as "this
  *   terrain"; color index `0` means unset (not this terrain).
@@ -24,7 +24,7 @@ import type { TiledWangSetData } from './data';
  *   the presence/absence of any color (> 0 = set) is used; which specific
  *   color is set is ignored.
  *
- * - **`'edge'`** — Maps the four edge positions to the 4-bit edge mask and
+ * - **`'edge'`** - Maps the four edge positions to the 4-bit edge mask and
  *   returns a `WangSet` of type `'edge'`.
  *
  *   Tiled edge wangid position → WangSet edge bit mapping:
@@ -33,7 +33,7 @@ import type { TiledWangSetData } from './data';
  *   - `wangid[4]` (bottom) → bit 2 (value 4)
  *   - `wangid[6]` (left)   → bit 3 (value 8)
  *
- * - **`'mixed'` / unknown** — Returns `null`; mixed wangsets interleave corner
+ * - **`'mixed'` / unknown** - Returns `null`; mixed wangsets interleave corner
  *   and edge semantics in a way that cannot be faithfully represented by
  *   a single blob or edge mask without additional heuristics.
  *

@@ -1,4 +1,4 @@
-// Auto-generated from graphics-primitives.ts — edit the .ts source, not this file.
+// Auto-generated from graphics-primitives.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
 class GraphicsPrimitivesScene extends Scene {
     sceneRoot;

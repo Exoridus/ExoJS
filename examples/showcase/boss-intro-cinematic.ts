@@ -103,7 +103,7 @@ class BossIntroCinematicScene extends Scene {
         app.tweens.create(this.view.center).to({ x: width * 0.55, y: height / 2 }, 2.0).start();
         // The boss looms larger as the camera arrives.
         app.tweens.create(this.boss.scale).to({ x: 2.1, y: 2.1 }, 1.8).delay(1.1).start();
-        // Typewriter title reveal — its onStart IS the reveal beat: punch a shake.
+        // Typewriter title reveal - its onStart IS the reveal beat: punch a shake.
         app.tweens
             .create(this.titleState)
             .to({ count: titleText.length }, 1.0)

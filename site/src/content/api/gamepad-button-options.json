@@ -76,7 +76,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Activation threshold in 0..1 — values at or below this read as 0 (deadzone). Default 0.2."
+          "description": "Activation threshold in 0..1 - values at or below this read as 0 (deadzone). Default 0.2."
         }
       ],
       "paragraphs": [],

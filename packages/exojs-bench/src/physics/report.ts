@@ -56,7 +56,7 @@ const toCsv = (data: PhysicsReportData): string =>
  * (a step-time number is only comparable if the CPU + Node + exojs-physics
  * version that produced it are on the record), the disclosed caveats, then one
  * table with the structural counters (bodies, contacts) sitting BESIDE the
- * timings — a fast step that came from fewer contacts must be visible in the
+ * timings - a fast step that came from fewer contacts must be visible in the
  * same row.
  */
 const toMarkdown = (data: PhysicsReportData): string => {
@@ -111,9 +111,9 @@ const toMarkdown = (data: PhysicsReportData): string => {
 
 /**
  * Writes the three physics report artifacts into `outDir`:
- * - `results.json` — full fidelity (provenance + every result field).
- * - `results.csv` — one row per cell, machine-parseable.
- * - `results.md` — provenance/caveats block plus a human-readable table.
+ * - `results.json` - full fidelity (provenance + every result field).
+ * - `results.csv` - one row per cell, machine-parseable.
+ * - `results.md` - provenance/caveats block plus a human-readable table.
  */
 export const writePhysicsReport = (data: PhysicsReportData, outDir: string): void => {
   writeReportArtifacts(outDir, {

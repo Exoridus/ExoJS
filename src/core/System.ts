@@ -22,7 +22,7 @@ export interface SystemMethods {
    * This is where per-frame state has to be brought in sync with the incoming
    * frame so the simulation sees it: the engine's own input, interaction,
    * audio, tween and rendering systems all run here. Anything that must be
-   * current *before* physics runs belongs in this phase — a system reading
+   * current *before* physics runs belongs in this phase - a system reading
    * input in {@link SystemMethods.update} would see the previous frame's
    * snapshot, because `update` runs after the fixed steps.
    */
@@ -37,7 +37,7 @@ export interface SystemMethods {
 
 /**
  * Rewrites `T` so that at least one of `Keys` is required while the others
- * stay optional — the rest of `T`'s properties are untouched. Used to require
+ * stay optional - the rest of `T`'s properties are untouched. Used to require
  * at least one {@link SystemMethods} phase without forcing all three.
  */
 type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyof T, Keys>> &
@@ -49,7 +49,7 @@ type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyo
  * A per-frame unit of simulation or rendering, owned by a {@link SystemRegistry}
  * (`app.systems` or `scene.systems`). A system is a class instance or plain
  * object that implements at least one of {@link SystemMethods.fixedUpdate},
- * {@link SystemMethods.update}, or {@link SystemMethods.draw} — it participates
+ * {@link SystemMethods.update}, or {@link SystemMethods.draw} - it participates
  * only in the phases it defines.
  *
  * ```ts

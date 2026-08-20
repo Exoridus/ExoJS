@@ -14,7 +14,7 @@ const createTextureStub = (): Texture =>
 /**
  * Frame delta helper. `AnimatedSprite.update()` takes SECONDS (matching
  * `Tween.update`), while clips are authored in milliseconds (`fps`,
- * `frameDurations`) — these specs are written against the clip's own ms
+ * `frameDurations`) - these specs are written against the clip's own ms
  * timings, so they convert at the call site.
  */
 const seconds = (milliseconds: number): number => milliseconds / 1000;
@@ -24,7 +24,7 @@ const createFrames = (): Rectangle[] => [new Rectangle(0, 0, 16, 16), new Rectan
 describe('AnimatedSprite', () => {
   test('update() reads its argument as seconds, not milliseconds', () => {
     // Regression: `update()` used to take `Time | number`, where the plain
-    // number was MILLISECONDS — the opposite unit to `Tween.update`, which is
+    // number was MILLISECONDS - the opposite unit to `Tween.update`, which is
     // always seconds. A caller who forwarded `delta.seconds` (or a manager
     // that did) advanced playback 1000x too slowly. The signature is now
     // seconds-only, matching Tween.
@@ -48,7 +48,7 @@ describe('AnimatedSprite', () => {
   test('play() snaps the sprite to the frame size while preserving user scale', () => {
     // Regression: the sprite starts out showing the full atlas texture
     // (128x64 stub). The first frame application used the keep-pixel-size
-    // path, which inflated scale by atlasWidth/frameWidth (128/16 = 8x) —
+    // path, which inflated scale by atlasWidth/frameWidth (128/16 = 8x) -
     // a setScale(3) sprite rendered at scale 24 and disappeared off-canvas.
     const sprite = new AnimatedSprite(createTextureStub(), {
       walk: { frames: createFrames(), fps: 10 },
@@ -71,7 +71,7 @@ describe('AnimatedSprite', () => {
   test('an anchored sprite stays anchored when play() applies the first frame', () => {
     // Regression: origin was derived from the anchor exactly once (at
     // setAnchor time, from the full 128x64 atlas bounds) and never re-derived
-    // when the texture frame changed — an anchor-0.5 sprite kept origin
+    // when the texture frame changed - an anchor-0.5 sprite kept origin
     // (64, 32) after switching to a 16x16 frame and rendered dozens (with
     // real atlases: hundreds) of pixels away from its position.
     const sprite = new AnimatedSprite(createTextureStub(), {
@@ -339,7 +339,7 @@ describe('AnimatedSprite', () => {
       sprite.play('triple');
 
       // Each cycle is 3 frames @ 10fps = 300ms. Advance through 2 full
-      // cycles first — playback should still be running, no onComplete yet.
+      // cycles first - playback should still be running, no onComplete yet.
       sprite.update(seconds(300));
       expect(sprite.playing).toBe(true);
       expect(completeSpy).not.toHaveBeenCalled();
@@ -366,7 +366,7 @@ describe('AnimatedSprite', () => {
       const sprite = new AnimatedSprite(null, {
         // No `repeat` set: defaults to -1 (infinite), same as before.
         infinite: { frames, fps: 10 },
-        // `repeat: 2` takes full precedence — stops after 2 cycles regardless
+        // `repeat: 2` takes full precedence - stops after 2 cycles regardless
         // of what an infinite default would otherwise do.
         finite: { frames, fps: 10, repeat: 2 },
       });
@@ -475,7 +475,7 @@ describe('AnimatedSprite', () => {
       expect(sprite.playing).toBe(true);
       expect(completeSpy).not.toHaveBeenCalled();
 
-      // ── Cycle 2 — same per-frame durations must apply again ──
+      // ── Cycle 2 - same per-frame durations must apply again ──
       sprite.update(seconds(100)); // frame 0 -> 1
       expect(sprite.currentFrame).toBe(1);
 
@@ -501,7 +501,7 @@ describe('AnimatedSprite', () => {
     // for single-frame clips (`frames.length <= 1`) before it ever reaches the
     // frame-wrap logic that counts cycles and dispatches `onComplete`. A
     // single-frame clip therefore never completes on its own, even with a
-    // finite `repeat` — `onComplete` only fires via the multi-frame wrap path.
+    // finite `repeat` - `onComplete` only fires via the multi-frame wrap path.
     test('a single-frame clip with a finite repeat never advances or completes (pre-existing early-return, not a repeat regression)', () => {
       const sprite = new AnimatedSprite(null, {
         still: {

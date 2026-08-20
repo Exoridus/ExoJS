@@ -123,7 +123,7 @@ describe('asset container format', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Raw (hand-built) index buffers — exercises readEntry()'s field-level
+  // Raw (hand-built) index buffers - exercises readEntry()'s field-level
   // validation guards directly, bypassing encodeContainer's own type safety.
   // -------------------------------------------------------------------------
 

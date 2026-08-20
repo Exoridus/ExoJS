@@ -126,7 +126,7 @@ describe('buildPlaygroundNavModel', () => {
     const catalogTotal = Object.values(EXAMPLES_CATALOG).reduce((sum, entries) => sum + entries.length, 0);
     expect(total).toBe(catalogTotal);
 
-    // Every example route is unique across the entire rendered model — this is
+    // Every example route is unique across the entire rendered model - this is
     // the property the old GUIDE_PARTS model violated (hello-world appeared in
     // two parts), which lit up multiple active links at once.
     const allPaths = model.flatMap(category => category.examples.map(e => e.path));

@@ -34,21 +34,21 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  * Instanced sprite renderer for WebGL2.
  *
  * Each batch issues a single `drawArraysInstanced(TRIANGLE_STRIP, 0, 4, N)`
- * with no per-vertex buffer — `gl_VertexID` 0..3 selects which corner of
+ * with no per-vertex buffer - `gl_VertexID` 0..3 selects which corner of
  * the quad each invocation is computing. All per-sprite data lives in a
  * single per-instance buffer (divisor = 1).
  *
  * Per-instance layout (32 bytes per sprite, 4 attributes):
  * ```
- *   localBounds    f32x4       (offset  0, 16 bytes)  — left, top, right, bottom
- *   uvBounds       u16x4 norm  (offset 16,  8 bytes)  — uMin, vMin, uMax, vMax
- *   textureSlot    u32         (offset 24,  4 bytes)  — multi-texture slot
- *   nodeIndex      u32         (offset 28,  4 bytes)  — row into the shared TransformBuffer
+ *   localBounds    f32x4       (offset  0, 16 bytes)  - left, top, right, bottom
+ *   uvBounds       u16x4 norm  (offset 16,  8 bytes)  - uMin, vMin, uMax, vMax
+ *   textureSlot    u32         (offset 24,  4 bytes)  - multi-texture slot
+ *   nodeIndex      u32         (offset 28,  4 bytes)  - row into the shared TransformBuffer
  * ```
  *
  * Neither the per-instance world transform nor the tint live in this buffer:
  * both are fetched in the vertex shader from the shared {@link TransformBuffer}
- * state, keyed by `a_nodeIndex`, exactly like the mesh renderer — the
+ * state, keyed by `a_nodeIndex`, exactly like the mesh renderer - the
  * transform (`u_transforms`, 2 texels/row) and the tint (`u_tintTexture`, its
  * own rgba8 texel/row) are separate textures, both written at the
  * render-group upload boundary at the draw command's stable `nodeIndex`, so
@@ -66,7 +66,7 @@ import { WebGl2VertexArrayObject, type WebGl2VertexArrayObjectRuntime } from './
  * rotate through `u_texture0..7` behind the engine-spliced `sampleBase(slot,
  * uv)` helper, and material uniforms/textures bind once per batch on the units
  * above them. A custom batch breaks on material instance, blend mode, base
- * slot exhaustion, or buffer capacity — no longer on every base-texture switch.
+ * slot exhaustion, or buffer capacity - no longer on every base-texture switch.
  */
 
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
@@ -89,7 +89,7 @@ const slotAttributeTextureUnit = 19;
 // Material texture bindings occupy the units above the custom path's base-slot
 // table (spriteMaterialTextureSlots..+6). The material CONTRACT stays at 7
 // extra textures, matching WebGl2MeshRenderer and the WebGPU sprite renderer.
-// Deliberately decoupled from maxBatchTextures — bumping the default-path
+// Deliberately decoupled from maxBatchTextures - bumping the default-path
 // batch capacity must not silently widen what materials may request. 8 base
 // slots + 7 material textures = 15 fragment units, inside the WebGL2
 // MAX_TEXTURE_IMAGE_UNITS >= 16 guarantee.
@@ -135,7 +135,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   private _slotCount = 0;
   // Effective base-texture slot cap for this context. Defaults to the compile-
   // time capacity and is clamped down at connect to the driver's reported
-  // MAX_TEXTURE_IMAGE_UNITS — a defensive floor that WebGL2's >= 16 guarantee
+  // MAX_TEXTURE_IMAGE_UNITS - a defensive floor that WebGL2's >= 16 guarantee
   // means should never actually reduce the batch below maxBatchTextures.
   private _maxTextureSlots = maxBatchTextures;
   // Effective base-texture slot cap for the CUSTOM path. Smaller than
@@ -197,7 +197,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     // The transform lives in the shared buffer, keyed by the draw command's
     // stable nodeIndex (already packed at the render-group upload boundary).
-    // A direct, non-plan `backend.draw(sprite)` has no command — push the
+    // A direct, non-plan `backend.draw(sprite)` has no command - push the
     // sprite's transform into the buffer and use the freshly-allocated slot.
     const command = backend.activeDrawCommand;
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
@@ -227,7 +227,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   // ── Persistent-indexed selection ──────────────────────────────────────────
   // A render root whose whole subtree this renderer can serve draws out of
   // slot-addressed stores instead of a streamed instance buffer. Same program
-  // family, same fragment stage, same batching rules — what changes is only
+  // family, same fragment stage, same batching rules - what changes is only
   // where the per-sprite record lives, which is what lets a camera step touch
   // just the items that entered or left.
 
@@ -274,7 +274,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
    *
    * One `drawArraysInstanced` for the whole root: the store's texture table is
    * bound once, and the stream is issued verbatim. Nothing here may reorder or
-   * split it — the stream IS the draw order the plan built.
+   * split it - the stream IS the draw order the plan built.
    * @internal
    */
   public _drawPersistentSlots(store: WebGl2PersistentSlotStore, order: Uint32Array, count: number, backend: WebGl2Backend): void {
@@ -373,7 +373,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     // Bind the shared transform buffer texture (one row per nodeIndex) on the
     // dedicated unit and point the sampler at it. Done for both the default and
-    // custom programs — both fetch the world transform via a_nodeIndex.
+    // custom programs - both fetch the world transform via a_nodeIndex.
     backend.bindTransformBufferTexture(transformTextureUnit, this._maxNodeIndex + 1);
 
     if (shader.uniforms.has('u_transforms')) {
@@ -419,7 +419,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
   /**
    * Stage `u_projection` (live view) and `u_group` (live composed group
    * matrix) on the default shader, guarded by the cached view/group stamps.
-   * Shared by the live flush path and retained-batch replay — replay resolves
+   * Shared by the live flush path and retained-batch replay - replay resolves
    * exactly the same live state a slow-path flush would.
    */
   private _stageDefaultViewUniforms(backend: WebGl2Backend): void {
@@ -510,9 +510,9 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
   /**
    * Replay one recorded default-path batch: all STATE is resolved
-   * live — blend mode via the backend's dedup, `u_projection` from the live
+   * live - blend mode via the backend's dedup, `u_projection` from the live
    * view, `u_group` from the live composed group matrix (the camera-pan /
-   * group-move win), texture bindings by recorded slot order — and only the
+   * group-move win), texture bindings by recorded slot order - and only the
    * DATA is cached: the instance bytes in the bundle buffer (bound through
    * the per-batch VAO) and the group-owned transform texture on the shared
    * transform unit. The backend hook flushed any pending live batch before
@@ -573,7 +573,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     }
 
     // The group-owned transform store replaces the shared frame buffer on the
-    // SAME unit/sampler — zero GLSL changes. The next live flush
+    // SAME unit/sampler - zero GLSL changes. The next live flush
     // re-binds the shared texture through bindTransformBufferTexture.
     backend.bindTexture(transformTexture, transformTextureUnit);
 
@@ -655,7 +655,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     // Pin the per-slot sampler uniforms to texture units 0..N-1. Strict on
     // purpose (getUniform throws on a missing name): every slot the batcher
-    // can reach must have its sampler in the program — a silently unpinned
+    // can reach must have its sampler in the program - a silently unpinned
     // sampler would default to unit 0 and sample the wrong texture without
     // any error. Test mocks must therefore declare all 16 samplers (see
     // test/rendering/browser/_spriteFragMock.ts).
@@ -763,7 +763,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
 
     this._currentMaterial = material;
 
-    // Resolve / assign texture slot, exactly as the default path does — the
+    // Resolve / assign texture slot, exactly as the default path does - the
     // spliced prologue's sampleBase() dispatches over it per fragment.
     let slot = this._textureSlots.get(texture);
 
@@ -783,7 +783,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
 
-    // localBounds: left, top, right, bottom (offset 0..3) — device-snapped in
+    // localBounds: left, top, right, bottom (offset 0..3) - device-snapped in
     // PixelSnapMode.Geometry, otherwise the logical local bounds.
     const bounds = this._activeBounds ?? sprite.getLocalBounds();
 
@@ -792,7 +792,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     f32[offset + 2] = bounds.right;
     f32[offset + 3] = bounds.bottom;
 
-    // uvBounds at offset 4 — 8 bytes = 2 u32 slots, normalised u16x4.
+    // uvBounds at offset 4 - 8 bytes = 2 u32 slots, normalised u16x4.
     // Pack (uMin, vMin, uMax, vMax) into two uint32s, with flipY swap
     // applied at pack time so the shader can stay flip-agnostic.
     const frame = sprite.textureFrame;
@@ -814,7 +814,7 @@ export class WebGl2SpriteRenderer extends AbstractWebGl2Renderer<Sprite> impleme
     // transform-buffer upload boundary wrote from this sprite's tint).
     u32[offset + 6] = slot;
 
-    // nodeIndex (u32) at word 7 — row into the shared transform buffer.
+    // nodeIndex (u32) at word 7 - row into the shared transform buffer.
     const node = nodeIndex >>> 0;
 
     u32[offset + 7] = node;

@@ -4,8 +4,9 @@
  * Comments are the one place where the working context of a change survives
  * into the shipped tree: a private planning-directory path, a machine-local
  * absolute path, a commit hash, a tracker ID, an issue or pull-request number,
- * or the name of whichever assistant happened to write the line. None of it
- * means anything to a reader six months later, and JSDoc is worse than a plain
+ * a section number pointing into a document that was never published, or the
+ * name of whichever assistant happened to write the line. None of it means
+ * anything to a reader six months later, and JSDoc is worse than a plain
  * comment here because it is reused verbatim in the generated API reference.
  * The durable technical rationale is worth keeping; how it was discovered is
  * not. See the source-comment section of `AGENTS.md` for the policy this gate
@@ -30,9 +31,13 @@
  * the cleanup), `--base` to compare against another ref, or explicit paths to
  * check those files end to end. Every run prints the scope it used, so a
  * line-scoped run cannot be mistaken for full coverage.
+ *
+ * `--json` writes the findings as one machine-readable array instead of the
+ * human report, and `--fix-safe` applies the transformations that are provably
+ * meaning-preserving. Everything else is left for a human to rewrite.
  */
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, statSync } from 'node:fs';
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -173,6 +178,14 @@ const RULES: readonly HygieneRule[] = [
     patterns: [/[–—][^\r\n]{0,32}/g],
   },
   {
+    name: 'typographic-punctuation',
+    patterns: [/[…•][^\r\n]{0,32}/g],
+  },
+  {
+    name: 'spec-reference',
+    patterns: [/§\s?\d[\d.]*/g],
+  },
+  {
     name: 'task-id',
     patterns: [/\b[A-Z]{1,4}-[A-Z]?\d{1,4}\b/g],
     allow: match => ALLOWED_TASK_IDS.has(match.toUpperCase()),
@@ -189,11 +202,21 @@ const RULES: readonly HygieneRule[] = [
   },
 ];
 
+/** Which flavour of comment a finding sits in, as a hint for how strictly to rewrite it. */
+type CommentKind = 'jsdoc' | 'block-comment' | 'line-comment';
+
 interface Violation {
   readonly file: string;
   readonly line: number;
   readonly rule: string;
+  readonly kind: CommentKind;
   readonly text: string;
+}
+
+function commentKind(text: string): CommentKind {
+  if (text.startsWith('/**')) return 'jsdoc';
+
+  return text.startsWith('/*') ? 'block-comment' : 'line-comment';
 }
 
 function fail(message: string): never {
@@ -361,11 +384,77 @@ function scanFile(repoPath: string, absolutePath: string, ranges: readonly LineR
     for (const match of dedupe(matches)) {
       const { line } = sourceFile.getLineAndCharacterOfPosition(comment.pos + match.start);
 
-      violations.push({ file: repoPath, line: line + 1, rule: match.rule, text: summarize(match.text) });
+      violations.push({
+        file: repoPath,
+        line: line + 1,
+        rule: match.rule,
+        kind: commentKind(text),
+        text: summarize(match.text),
+      });
     }
   }
 
   return violations;
+}
+
+/**
+ * The typographic punctuation this gate can normalize without reading the
+ * prose, and the ASCII it stands for. Each of these is punctuation alone: the
+ * en dash separates a numeric range or stands in for a minus sign, the em dash
+ * breaks a sentence, the bullet opens a list item, and the ellipsis elides. None
+ * of them is the correct notation for anything, which is what separates them
+ * from the mathematical and diagram characters the policy leaves alone.
+ */
+const SAFE_PUNCTUATION: readonly (readonly [RegExp, string])[] = [
+  [/[–—]/g, '-'],
+  [/•/g, '-'],
+  [/…/g, '...'],
+];
+
+/**
+ * Normalizes the typographic punctuation inside one file's in-scope comments
+ * and writes it back, returning how many characters were replaced.
+ *
+ * Only comment trivia is rewritten, so punctuation in a string literal, an
+ * identifier or JSX content is left alone.
+ */
+function fixFile(absolutePath: string, ranges: readonly LineRange[] | null): number {
+  const source = readFileSync(absolutePath, 'utf8');
+
+  if (isGenerated(source)) return 0;
+
+  const sourceFile = ts.createSourceFile(absolutePath, source, ts.ScriptTarget.Latest, true);
+  const comments = collectComments(sourceFile, source).sort((a, b) => a.pos - b.pos);
+
+  let result = '';
+  let cursor = 0;
+  let fixed = 0;
+
+  for (const comment of comments) {
+    if (!isInScope(sourceFile, comment, ranges)) continue;
+
+    const text = source.slice(comment.pos, comment.end);
+
+    let replaced = text;
+    let hits = 0;
+
+    for (const [pattern, ascii] of SAFE_PUNCTUATION) {
+      hits += replaced.match(pattern)?.length ?? 0;
+      replaced = replaced.replaceAll(pattern, ascii);
+    }
+
+    if (hits === 0) continue;
+
+    result += source.slice(cursor, comment.pos) + replaced;
+    cursor = comment.end;
+    fixed += hits;
+  }
+
+  if (fixed === 0) return 0;
+
+  writeFileSync(absolutePath, result + source.slice(cursor), 'utf8');
+
+  return fixed;
 }
 
 interface Scope {
@@ -478,16 +567,28 @@ function explicitScope(paths: readonly string[]): Scope {
   };
 }
 
-function parseArguments(argv: readonly string[]): { all: boolean; base?: string; paths: string[] } {
+function parseArguments(argv: readonly string[]): {
+  all: boolean;
+  base?: string;
+  fixSafe: boolean;
+  json: boolean;
+  paths: string[];
+} {
   const paths: string[] = [];
   let all = false;
   let base: string | undefined;
+  let fixSafe = false;
+  let json = false;
 
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index]!;
 
     if (argument === '--all') {
       all = true;
+    } else if (argument === '--fix-safe') {
+      fixSafe = true;
+    } else if (argument === '--json') {
+      json = true;
     } else if (argument === '--base') {
       base = argv[index + 1];
       index += 1;
@@ -496,23 +597,27 @@ function parseArguments(argv: readonly string[]): { all: boolean; base?: string;
     } else if (argument.startsWith('--base=')) {
       base = argument.slice('--base='.length);
     } else if (argument.startsWith('-')) {
-      fail(`lint:source-hygiene: unknown option '${argument}'. Usage: check-source-hygiene [--all] [--base <ref>] [paths...]`);
+      fail(`lint:source-hygiene: unknown option '${argument}'. ` + 'Usage: check-source-hygiene [--all] [--base <ref>] [--json] [--fix-safe] [paths...]');
     } else {
       paths.push(argument);
     }
   }
 
-  return { all, base, paths };
+  return { all, base, fixSafe, json, paths };
 }
 
-const { all, base, paths } = parseArguments(process.argv.slice(2));
+const { all, base, fixSafe, json, paths } = parseArguments(process.argv.slice(2));
 
 if (all && paths.length > 0) fail('lint:source-hygiene: --all and explicit paths are mutually exclusive.');
+if (fixSafe && json) fail('lint:source-hygiene: --fix-safe and --json are mutually exclusive.');
 
 const scope = paths.length > 0 ? explicitScope(paths) : all ? allScope() : changedScope(base ?? defaultBaseRef());
 
 const scanned: string[] = [];
 const violations: Violation[] = [];
+
+let dashesFixed = 0;
+let filesFixed = 0;
 
 for (const [repoPath, ranges] of [...scope.files].sort(([a], [b]) => a.localeCompare(b))) {
   if (!isScannable(repoPath)) continue;
@@ -523,10 +628,36 @@ for (const [repoPath, ranges] of [...scope.files].sort(([a], [b]) => a.localeCom
   if (!existsSync(absolutePath) || !statSync(absolutePath).isFile()) continue;
 
   scanned.push(repoPath);
+
+  if (fixSafe) {
+    const fixed = fixFile(absolutePath, ranges);
+
+    if (fixed > 0) {
+      dashesFixed += fixed;
+      filesFixed += 1;
+    }
+
+    continue;
+  }
+
   violations.push(...scanFile(repoPath, absolutePath, ranges));
 }
 
 const scanLine = `lint:source-hygiene: scanned ${scanned.length} source file(s) in scope: ${scope.description}.`;
+
+if (fixSafe) {
+  console.log(
+    `${scanLine} Normalized ${dashesFixed} typographic character(s) in ${filesFixed} file(s); ` +
+      're-run without --fix-safe for the findings that need a human.',
+  );
+  process.exit(0);
+}
+
+if (json) {
+  console.log(JSON.stringify(violations));
+  console.error(scanLine);
+  process.exit(violations.length === 0 ? 0 : 1);
+}
 
 if (violations.length === 0) {
   console.log(`${scanLine} No development provenance found.`);

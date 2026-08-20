@@ -94,7 +94,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
    * `dynamic`/`stream` geometry both re-pack into the renderer's own scratch
    * buffers every frame, so they take {@link _drawDynamicInstancedSingle} and
    * poison the capture there. Vetoing them at collect time is what keeps that
-   * poison the dead safety net its contract describes — without it a group of
+   * poison the dead safety net its contract describes - without it a group of
    * array meshes records and re-poisons on every single frame.
    *
    * The verdict is cached per capture, so it would go stale if this answer could
@@ -224,7 +224,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     // A batch reads its per-instance transform from the shared buffer via
     // a_nodeIndex; a shader that does not follow that contract has no other way
     // to reach it. The node path can quietly fall back to the legacy per-draw
-    // shader here (one node is one draw either way) — a batch cannot, because
+    // shader here (one node is one draw either way) - a batch cannot, because
     // the fallback would turn a single instanced draw into `count` draw calls
     // and only ever surface in a profiler.
     if (material !== null && !this._isInstancingCompatible(shader)) {
@@ -235,7 +235,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     // byte stream replays through the default shader, and a re-packed buffer is
     // not the stable, persistent one a retained batch references. If either
     // arrives inside an open capture, poison it so the group's set never
-    // validates and it degrades to entry replay instead of wrong pixels —
+    // validates and it degrades to entry replay instead of wrong pixels -
     // mirroring the sprite renderer's custom-material poison and
     // _drawDynamicInstancedSingle's dynamic-geometry poison.
     if ((material !== null || geometry.usage !== 'static') && backend._isRetainedCapturing) {
@@ -243,7 +243,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     }
 
     // The material owns its blend mode; the mesh's own blendMode overrides it
-    // when set away from the default (Normal) — same rule as the node path.
+    // when set away from the default (Normal) - same rule as the node path.
     const blendMode = material !== null && mesh.blendMode === BlendModes.Normal ? material.blendMode : mesh.blendMode;
     const texture = mesh.texture ?? Texture.white;
     const cacheEntry = this._getOrCreateGeometryEntry(geometry, mesh, connection);
@@ -271,7 +271,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     if (instances !== null) {
       // Upload exactly the packed instances, not the batch's whole (over-grown)
-      // storage — the VAO reads `count` strides from offset 0.
+      // storage - the VAO reads `count` strides from offset 0.
       connection.dynamicInstanceBuffer.upload(instances.data, 0, count * instances.strideFloats);
     }
 
@@ -438,7 +438,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   }
 
   private _drawDynamicInstancedSingle(draw: PendingMeshDraw, backend: WebGl2Backend, connection: MeshRendererConnection): void {
-    // A dynamic-geometry (non-static) mesh cannot be recorded — its geometry is
+    // A dynamic-geometry (non-static) mesh cannot be recorded - its geometry is
     // not the shared, persistent buffer a retained batch references, which is
     // why _admitsRetainedRecording keeps such a mesh from ever opening a
     // capture. A mesh's geometry cannot change after that verdict was cached
@@ -528,7 +528,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
     // Retained recording (mesh opt-in): while a capture window
     // is open, hand this flush's per-instance node-index stream and a reference
     // to the SHARED, persistent geometry to the backend. The geometry
-    // (vertex+index buffers) is NOT copied into the group bundle — only the
+    // (vertex+index buffers) is NOT copied into the group bundle - only the
     // node-index words are group-owned. `cacheEntry` is structurally a
     // WebGl2RetainedGeometryRef (vertexBuffer/indexBuffer/indexCount).
     if (backend._isRetainedCapturing) {
@@ -557,7 +557,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
 
     if (shader.uniforms.has('u_translation')) {
       // Invariant: a custom mesh vertex shader must not declare BOTH `u_group`
-      // and consume `u_translation` — that would apply the group transform
+      // and consume `u_translation` - that would apply the group transform
       // twice (once staged as `u_group`, once folded in here). This CPU-side
       // compose is the fallback for shaders WITHOUT `u_group`.
       const groupTransform = backend.renderGroupTransform;
@@ -656,7 +656,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   // the group bundle) plus a group-owned per-instance node-index stream (one
   // u32/instance in the bundle instance buffer). Only the node-index words are
   // group-local, so the layout-aware scan/rebase read word 0 of each 1-word
-  // instance — the mesh counterpart of the sprite's word-7-of-8 layout.
+  // instance - the mesh counterpart of the sprite's word-7-of-8 layout.
 
   /** @internal See {@link WebGl2RetainedBatchReplayer._scanRetainedNodeIndexRange}. */
   public _scanRetainedNodeIndexRange(payload: WebGl2RetainedBatchPayload, range: WebGl2RetainedNodeIndexRange): void {
@@ -720,9 +720,9 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   }
 
   /**
-   * Replay one recorded default-path mesh batch: all STATE is resolved live —
+   * Replay one recorded default-path mesh batch: all STATE is resolved live -
    * blend mode, `u_projection` from the live view, `u_group` from the live
-   * composed group matrix (the camera-pan / group-move win), the texture — and
+   * composed group matrix (the camera-pan / group-move win), the texture - and
    * only DATA is cached: the SHARED geometry (vertex+index buffers), the
    * group-owned node-index stream (through the per-batch VAO), and the
    * group-owned transform texture on the shared transform unit. Drawn indexed
@@ -840,7 +840,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   // Cold path: only runs when a batch is about to throw, so it re-derives the
   // individual conditions of _isInstancingCompatible rather than caching them.
   // Reflection reports the LINKED program, so a declared-but-unread uniform is
-  // legitimately absent here — such a shader really cannot be instanced.
+  // legitimately absent here - such a shader really cannot be instanced.
   private _describeInstancingGap(shader: Shader): string {
     const gaps: string[] = [];
 
@@ -973,7 +973,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
   ): WebGl2VertexArrayObject {
     // The divisor-1 free-attribute layout is a property of the BATCH, not of the
     // geometry or the shader, so two batches sharing both still need separate
-    // VAOs when their layouts differ — hence the second cache level.
+    // VAOs when their layouts differ - hence the second cache level.
     const layoutKey = instances?.layoutKey ?? '';
     let perLayout = entry.vaos.get(shader);
 
@@ -994,7 +994,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       throw new Error('Could not create vertex array object.');
     }
 
-    // a_nodeIndex is mandatory — it is how any instanced draw reaches its
+    // a_nodeIndex is mandatory - it is how any instanced draw reaches its
     // transform, and _isInstancingCompatible already rejects a custom shader
     // without it. The three geometry attributes are optional: GL strips
     // declared-but-unread inputs at link time, so a custom batch shader that
@@ -1021,7 +1021,7 @@ export class WebGl2MeshRenderer extends AbstractWebGl2Renderer<Mesh> implements 
       const strideBytes = instances.strideFloats * Float32Array.BYTES_PER_ELEMENT;
 
       for (const binding of instances.attributes) {
-        // Bound by name, like every other attribute here — a declared attribute
+        // Bound by name, like every other attribute here - a declared attribute
         // the linked program dropped is a mistake worth reporting, since the
         // caller explicitly asked for it.
         const attribute = shader.attributes.get(binding.name);

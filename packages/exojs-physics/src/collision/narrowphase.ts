@@ -205,8 +205,8 @@ const newClipPair = (): [ClipVertex, ClipVertex] => [
 
 // Module-local clip scratch reused across collidePolygons calls instead of
 // allocating a fresh pair per contact. The narrow phase is single-threaded and
-// non-reentrant — a world step calls `collide` strictly sequentially per pair,
-// with no nested self-call or async — so module-global scratch is safe and may
+// non-reentrant - a world step calls `collide` strictly sequentially per pair,
+// with no nested self-call or async - so module-global scratch is safe and may
 // be shared across worlds (world-isolation.test.ts guards the multi-world
 // invariant). The three pairs MUST stay separate: incident → clipped1 →
 // clipped2 are simultaneously live (each clip reads the previous clip's output).
@@ -404,7 +404,7 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
   // Reference-face tangent (the side-plane direction).
   let tx = v2x - v1x;
   let ty = v2y - v1y;
-  // sqrt(x²+y²) over Math.hypot — avoids hypot's variadic/internal-allocation
+  // sqrt(x²+y²) over Math.hypot - avoids hypot's variadic/internal-allocation
   // path on the narrow-phase hot path; the operands are bounded edge lengths,
   // so the overflow protection hypot adds is not needed here.
   const tl = Math.sqrt(tx * tx + ty * ty);

@@ -1,4 +1,4 @@
-// Auto-generated from game-loop.ts — edit the .ts source, not this file.
+// Auto-generated from game-loop.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 class GameLoopScene extends Scene {
     sprite;

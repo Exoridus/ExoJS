@@ -1,5 +1,5 @@
 /**
- * WebGL2 rotated-mesh browser tests — instanced vs. single-draw parity,
+ * WebGL2 rotated-mesh browser tests - instanced vs. single-draw parity,
  * mirroring webgpu-rotated-mesh.test.ts 1:1 (cross-backend gate).
  *
  * The WebGPU instanced-mesh path used to apply the per-node affine
@@ -70,7 +70,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
 };
 
 // A solid-color quad (two triangles) in local space. Layout: position f32x2
-// @0, color u8x4-norm @8, stride 12 — the default mesh path samples the 1×1
+// @0, color u8x4-norm @8, stride 12 - the default mesh path samples the 1×1
 // white texture, so the output is the vertex color.
 const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaTuple): Geometry => {
   const stride = 12;

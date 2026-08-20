@@ -492,7 +492,7 @@ describe('ldtkToTileMap — IntGrid value exposure', () => {
 
     const parseSpy = vi.spyOn(JSON, 'parse');
     try {
-      // Repeated lookups across the whole layer, several times over — a
+      // Repeated lookups across the whole layer, several times over - a
       // naive implementation would re-parse both JSON-encoded properties on
       // every single call.
       for (let pass = 0; pass < 5; pass++) {
@@ -514,7 +514,7 @@ describe('ldtkToTileMap — IntGrid value exposure', () => {
         });
       }
 
-      // One parse for the CSV array, one for the value-defs array — cached
+      // One parse for the CSV array, one for the value-defs array - cached
       // after the first lookup and reused for every subsequent call.
       expect(parseSpy).toHaveBeenCalledTimes(2);
     } finally {
@@ -1478,7 +1478,7 @@ describe('ldtkToTileMap — Entities layer fallback / defensive entries', () => 
 
   it('skips a hole (undefined entry) in entityInstances while keeping surrounding entities and their index-derived ids', () => {
     // entityInstances is typed as a dense array, but the conversion loop
-    // defensively guards against a sparse/holey array — construct one via a
+    // defensively guards against a sparse/holey array - construct one via a
     // cast to exercise that guard.
     const holeyInstances = [
       makeEntity('First'),
@@ -1508,7 +1508,7 @@ describe('ldtkToTileMap — Entities layer fallback / defensive entries', () => 
 
 describe('ldtkToTileMap — unrecognised field types (exhaustiveness guard)', () => {
   it('throws when a top-level field carries an unrecognised, non-Array __type', () => {
-    // Constructing this requires a cast — the LdtkFieldInstance union only
+    // Constructing this requires a cast - the LdtkFieldInstance union only
     // permits known __type values, so this exercises the runtime guard
     // against malformed/future LDtk data rather than a reachable-by-types path.
     const bogusField = {

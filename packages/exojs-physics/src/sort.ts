@@ -1,5 +1,5 @@
 /**
- * In-place heap sort — deterministic, O(n log n) regardless of input order, and
+ * In-place heap sort - deterministic, O(n log n) regardless of input order, and
  * allocation-free. `Array.prototype.sort` allocates an internal temp buffer in
  * V8's TimSort for arrays larger than ~10 elements; the broad-phase and contact
  * sorts run over ~1,000 elements every step, so that temp buffer is per-step
@@ -7,7 +7,7 @@
  *
  * Heap sort is not stable, but every physics comparator (`byMinX`, `byPairId`,
  * `byRecordPair`, `byColliderPair`, `bySensorPair`) breaks ties on collider id,
- * so no two elements ever compare equal — the ordering is total and therefore
+ * so no two elements ever compare equal - the ordering is total and therefore
  * bit-identical to the `Array.prototype.sort` it replaces (replay
  * determinism). Do not use this with a comparator that can return 0 for distinct
  * elements; the result order would then differ from a stable sort.
@@ -46,7 +46,7 @@ function siftDown<T>(array: T[], start: number, end: number, compare: (a: T, b: 
       child++;
     }
 
-    // Parent already dominates the larger child — heap property restored.
+    // Parent already dominates the larger child - heap property restored.
     if (compare(array[parent]!, array[child]!) >= 0) {
       break;
     }

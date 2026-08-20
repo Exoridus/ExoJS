@@ -282,7 +282,7 @@ describe('Voice — spatial (PannerNode)', () => {
     voice.maxDistance = 500;
     expect(voice.maxDistance).toBe(500);
     // maxDistance must stay positive (a non-positive value throws RangeError
-    // in a real browser). Clamped independently of refDistance — the two are
+    // in a real browser). Clamped independently of refDistance - the two are
     // NOT coupled, so this must not be compared against whatever refDistance
     // currently holds (see the dedicated decoupling test below).
     voice.maxDistance = -1;
@@ -306,7 +306,7 @@ describe('Voice — spatial (PannerNode)', () => {
     expect(voice.maxDistance).toBe(1000); // default
 
     // Raising refDistance above the current maxDistance must NOT bump
-    // maxDistance to match — the two are independently clamped. Forcing them
+    // maxDistance to match - the two are independently clamped. Forcing them
     // equal would create a maxDistance === refDistance state, which divides
     // by zero in the default 'linear' distance model.
     voice.refDistance = 2000;
@@ -514,7 +514,7 @@ describe('Voice — spatial (PannerNode)', () => {
     manager.preUpdate();
     voice.position = { x: 400, y: 0 }; // moved 100 units toward the listener
     manager.preUpdate();
-    // Exact rate value depends on the implementer's chosen formula (see plan Task 5 Step 3) —
+    // Exact rate value depends on the implementer's chosen formula (see plan Task 5 Step 3) -
     // assert direction (> 1, i.e. pitched up while approaching), not an exact number.
     const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
     const lastCallArgs = source.playbackRate.setTargetAtTime.mock.calls.at(-1);
@@ -696,7 +696,7 @@ describe('Voice — spatial parameter sanitization (NaN/±Infinity rejection)', 
     expect(panner.positionX.setValueAtTime).not.toHaveBeenCalled();
     expect(panner.positionX.setTargetAtTime).not.toHaveBeenCalled();
 
-    // A subsequent VALID write must still go through normally — the rejected
+    // A subsequent VALID write must still go through normally - the rejected
     // tick must not have poisoned the smoothing layer's last-known-good value.
     voice.position = { x: 50, y: 5 };
     expect(panner.positionX.setTargetAtTime).toHaveBeenCalledWith(50, expect.any(Number), expect.any(Number));

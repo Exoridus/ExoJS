@@ -40,7 +40,7 @@ describe('SceneNode.getGlobalTransform() — dirty-flag cache', () => {
     const combineSpy = vi.spyOn(node['_globalTransform'], 'combine');
     const copySpy = vi.spyOn(node['_globalTransform'], 'copy');
 
-    // 9 more reads — cache should be warm, no recomputation.
+    // 9 more reads - cache should be warm, no recomputation.
     for (let i = 0; i < 9; i++) {
       node.getGlobalTransform();
     }
@@ -195,7 +195,7 @@ describe('SceneNode.getBounds() — dirty-flag cache', () => {
 
     parent.setPosition(100, 200);
 
-    // Child is detached — global is identity (pos 0,0).
+    // Child is detached - global is identity (pos 0,0).
     child.setPosition(0, 0);
     const detachedGtX = child.getGlobalTransform().x;
 
@@ -260,7 +260,7 @@ describe('SceneNode.getBounds() — dirty-flag cache', () => {
     // ancestor; the short-circuit may only stop at an already-dirty one.
     leaf.setPosition(300, 400);
 
-    // Each level must report the moved bounds — none may be skipped. The leaf
+    // Each level must report the moved bounds - none may be skipped. The leaf
     // merely translates, and every structural container spans exactly its
     // children, so each ancestor rect must follow the leaf out to (300, 400).
     expect(leaf.getBounds().x).toBeCloseTo(300);

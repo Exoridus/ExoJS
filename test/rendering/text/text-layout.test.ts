@@ -37,7 +37,7 @@ function makeAtlas(advance = 10, width = 8, height = 16): GlyphAtlas {
 }
 
 // ---------------------------------------------------------------------------
-// Fake GlyphProvider — fixed advance per char, no atlas/canvas involved.
+// Fake GlyphProvider - fixed advance per char, no atlas/canvas involved.
 // ---------------------------------------------------------------------------
 
 function makeProvider(advance = 10): GlyphProvider {
@@ -221,7 +221,7 @@ describe('layoutText', () => {
     const placements = layoutText('the quick brown fox', style, {}, atlas).placements;
 
     // Without a wrap width every glyph stays on line 0 and x increases
-    // monotonically — the canonical "no wrap" behaviour.
+    // monotonically - the canonical "no wrap" behaviour.
     let prevX = -1;
     for (const placement of placements) {
       expect(placement.y).toBe(0);
@@ -303,14 +303,14 @@ describe('layoutText', () => {
     const style = new TextStyle({ fontSize: 16, align: 'justify' });
 
     // _wrapLine (maxWidth 30): "A B" (25px) fits on line 0; "CCCCC" (50px,
-    // over budget but unbreakable without breakWords) becomes line 1 — the
+    // over budget but unbreakable without breakWords) becomes line 1 - the
     // widest realized line, so line 0 has slack to distribute.
     const placements = layoutText('A B CCCCC', style, { maxWidth: 30 }, atlas).placements;
 
     const lineYs = [...new Set(placements.map(p => p.y))];
     expect(lineYs).toHaveLength(2);
 
-    // First line contains 'A', ' ', 'B' — the justified gap should stretch
+    // First line contains 'A', ' ', 'B' - the justified gap should stretch
     // "B" beyond its natural (unjustified) position of 15px.
     const firstLine = placements.filter(p => p.y === lineYs[0]);
     expect(firstLine).toHaveLength(3);
@@ -320,21 +320,21 @@ describe('layoutText', () => {
 
   test('align "justify" works with a uniform-advance (monospace) atlas', () => {
     // Word boundaries must be detected from the characters themselves, not by
-    // comparing advances against the space glyph — with a monospace atlas every
+    // comparing advances against the space glyph - with a monospace atlas every
     // glyph shares the space's advance, which used to defeat gap detection.
     const advance = 10;
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'justify' });
 
     // _wrapLine (maxWidth 30): "A B" (30px) fits on line 0; "CCCCC" (50px,
-    // over budget but unbreakable without breakWords) becomes line 1 — the
+    // over budget but unbreakable without breakWords) becomes line 1 - the
     // widest realized line, so line 0 has slack to distribute.
     const placements = layoutText('A B CCCCC', style, { maxWidth: 30 }, atlas).placements;
 
     const lineYs = [...new Set(placements.map(p => p.y))];
     expect(lineYs).toHaveLength(2);
 
-    // First line contains 'A', ' ', 'B' — the justified gap must stretch "B"
+    // First line contains 'A', ' ', 'B' - the justified gap must stretch "B"
     // beyond its natural position of 20px: extraPerGap = (50 - 30) / 1 = 20.
     const firstLine = placements.filter(p => p.y === lineYs[0]);
     expect(firstLine).toHaveLength(3);
@@ -347,7 +347,7 @@ describe('layoutText', () => {
     const atlas = makeAtlas(advance);
     const style = new TextStyle({ fontSize: 16, align: 'justify' });
 
-    // Single line (no wrap) — justify must behave like left-align since this
+    // Single line (no wrap) - justify must behave like left-align since this
     // is simultaneously the first and last line.
     const placements = layoutText('A B', style, {}, atlas).placements;
 
@@ -385,7 +385,7 @@ describe('layoutText', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Vertical overflow — maxHeight + overflow
+// Vertical overflow - maxHeight + overflow
 // ---------------------------------------------------------------------------
 
 describe('layoutText vertical overflow', () => {
@@ -509,7 +509,7 @@ describe('layoutText direction', () => {
 });
 
 // ---------------------------------------------------------------------------
-// layoutText() — the advance extent
+// layoutText() - the advance extent
 // ---------------------------------------------------------------------------
 
 describe('layoutText advance', () => {
@@ -595,14 +595,14 @@ describe('layoutText advance', () => {
 
     const size = layoutText('ABC', style, { letterSpacing: 5 }, provider).advance;
 
-    // 3 advances of 10 plus the 2 INTERIOR gaps — the gap after the last
+    // 3 advances of 10 plus the 2 INTERIOR gaps - the gap after the last
     // glyph is not part of the extent.
     expect(size.width).toBe(3 * 10 + 2 * 5);
   });
 });
 
 // ---------------------------------------------------------------------------
-// layoutText() — the ink extent
+// layoutText() - the ink extent
 // ---------------------------------------------------------------------------
 
 describe('layoutText ink', () => {

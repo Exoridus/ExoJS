@@ -1,6 +1,6 @@
 {
   "title": "Scene",
-  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type — the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } `AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it: class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle. Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization — they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
+  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type - the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } `AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it: class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle. Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
   "symbol": "Scene",
   "kind": "class",
   "subsystem": "core",
@@ -21,14 +21,14 @@
       "paragraphs": [
         "A scene's lifecycle host. Subclass to define scene behavior:",
         "class GameScene extends Scene { override init(): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } }",
-        "`Data` is this scene's activation-data type — the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default:",
+        "`Data` is this scene's activation-data type - the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default:",
         "class TitleScene extends Scene { ... }",
         "A scene that needs typed data declares it through the generic:",
         "interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... }",
         "`AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it:",
         "class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication",
         "For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle.",
-        "Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization — they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy."
+        "Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy."
       ],
       "importLine": "import { Scene } from '@codexo/exojs'",
       "sourceLink": null
@@ -216,7 +216,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Optional synchronous cleanup hook for ordinary objects created directly by the scene and not managed by a scene facility (facility-tracked work — systems, loader claims, input bindings, interaction observations, tweens, audio playback — is cleaned up automatically). Engine-owned scene internals are torn down separately; subclasses never need super.destroy(). Override in subclass."
+          "description": "Optional synchronous cleanup hook for ordinary objects created directly by the scene and not managed by a scene facility (facility-tracked work - systems, loader claims, input bindings, interaction observations, tweens, audio playback - is cleaned up automatically). Engine-owned scene internals are torn down separately; subclasses never need super.destroy(). Override in subclass."
         },
         {
           "name": "draw",
@@ -263,7 +263,7 @@
             }
           ],
           "returnType": "Synchronous",
-          "description": "Explicit per-frame rendering entry point. Override to choose what gets rendered. The default body is intentionally empty: Scene does not automatically traverse Scene.root. Auto-rendering the full hierarchy would conflict with ExoJS's \"explicit instead of implicit\" identity. Users decide which subtree(s) render each frame — context.render(this.root) is the recommended high-level path, but selective rendering (e.g. context.render(world) while skipping ui for a given frame) is equally valid and intentionally supported. Must be synchronous — see Scene.update. An async draw() would present incomplete frames."
+          "description": "Explicit per-frame rendering entry point. Override to choose what gets rendered. The default body is intentionally empty: Scene does not automatically traverse Scene.root. Auto-rendering the full hierarchy would conflict with ExoJS's \"explicit instead of implicit\" identity. Users decide which subtree(s) render each frame - context.render(this.root) is the recommended high-level path, but selective rendering (e.g. context.render(world) while skipping ui for a given frame) is equally valid and intentionally supported. Must be synchronous - see Scene.update. An async draw() would present incomplete frames."
         },
         {
           "name": "fixedUpdate",
@@ -310,7 +310,7 @@
             }
           ],
           "returnType": "Synchronous",
-          "description": "Fixed-timestep logic hook. Called zero or more times per frame with a constant delta (Application.fixedTimeStep) before Scene.update, so physics and deterministic gameplay advance at a frame-rate-independent rate. Put physicsWorld.step(delta) and movement here; leave camera, UI and purely visual work in Scene.update. Default is a no-op. Override in subclass. Must be synchronous — see Scene.update."
+          "description": "Fixed-timestep logic hook. Called zero or more times per frame with a constant delta (Application.fixedTimeStep) before Scene.update, so physics and deterministic gameplay advance at a frame-rate-independent rate. Put physicsWorld.step(delta) and movement here; leave camera, UI and purely visual work in Scene.update. Default is a no-op. Override in subclass. Must be synchronous - see Scene.update."
         },
         {
           "name": "init",
@@ -495,7 +495,7 @@
             }
           ],
           "returnType": "Synchronous",
-          "description": "Pre-simulation hook, called once per frame before this frame's fixed steps — and therefore before Scene.fixedUpdate and Scene.update. Runs after the engine's own core systems, so this frame's input snapshot is already current here. Use it for state the simulation must see this frame rather than next: feeding networked or replayed input, resolving intents before physics consumes them. Ordinary gameplay belongs in Scene.update, which runs after the simulation. Default is a no-op. Override in subclass. Must be synchronous — see Scene.update."
+          "description": "Pre-simulation hook, called once per frame before this frame's fixed steps - and therefore before Scene.fixedUpdate and Scene.update. Runs after the engine's own core systems, so this frame's input snapshot is already current here. Use it for state the simulation must see this frame rather than next: feeding networked or replayed input, resolving intents before physics consumes them. Ordinary gameplay belongs in Scene.update, which runs after the simulation. Default is a no-op. Override in subclass. Must be synchronous - see Scene.update."
         },
         {
           "name": "removeChild",
@@ -571,7 +571,7 @@
           ],
           "params": [],
           "returnType": "SerializedScene",
-          "description": "Serialize this scene's structural root subtree to a plain, JSON-able SerializedScene descriptor. Captures **data, not behaviour**: structure, transforms, visuals and asset references — never update logic, signal handlers, tweens or systems. When the scene is attached to an Application, texture/asset references resolve to their Loader source keys. Reattach behaviour in code after Scene.deserialize."
+          "description": "Serialize this scene's structural root subtree to a plain, JSON-able SerializedScene descriptor. Captures **data, not behaviour**: structure, transforms, visuals and asset references - never update logic, signal handlers, tweens or systems. When the scene is attached to an Application, texture/asset references resolve to their Loader source keys. Reattach behaviour in code after Scene.deserialize."
         },
         {
           "name": "track",
@@ -714,7 +714,7 @@
             }
           ],
           "returnType": "Synchronous",
-          "description": "Per-frame logic hook. Receives the time elapsed since the previous frame. The scene-graph transforms are still authoritative — mutate positions, advance timers, drive AI here. Override in subclass. Must be synchronous — see Scene.init for the contract and Synchronous for why. The frame path never awaits a hook result, so an async override would drop its timing and swallow its errors."
+          "description": "Per-frame logic hook. Receives the time elapsed since the previous frame. The scene-graph transforms are still authoritative - mutate positions, advance timers, drive AI here. Override in subclass. Must be synchronous - see Scene.init for the contract and Synchronous for why. The frame path never awaits a hook result, so an async override would drop its timing and swallow its errors."
         }
       ],
       "paragraphs": [],
@@ -756,7 +756,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The Application this scene is attached to. The framework attaches a scene before any lifecycle hook (load/init/update/draw) runs, so scene code can read this.app inside those hooks without a null guard — consistent with Scene.inputs/Scene.tweens/Scene.loader. Throws if accessed before the scene is attached (e.g. in a constructor). Use Scene.attached for the rare \"is it attached yet?\" check that must not throw."
+          "description": "The Application this scene is attached to. The framework attaches a scene before any lifecycle hook (load/init/update/draw) runs, so scene code can read this.app inside those hooks without a null guard - consistent with Scene.inputs/Scene.tweens/Scene.loader. Throws if accessed before the scene is attached (e.g. in a constructor). Use Scene.attached for the rare \"is it attached yet?\" check that must not throw."
         },
         {
           "name": "attached",
@@ -777,7 +777,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true once the scene is attached to an Application — a non-throwing lifecycle probe (see Scene.app)."
+          "description": "true once the scene is attached to an Application - a non-throwing lifecycle probe (see Scene.app)."
         },
         {
           "name": "audio",
@@ -798,7 +798,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound audio facade. Playback started via this.audio.play(...) is automatically stopped when the scene ends permanently — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+          "description": "Scene-bound audio facade. Playback started via this.audio.play(...) is automatically stopped when the scene ends permanently - no manual cleanup required. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "inputs",
@@ -819,7 +819,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound input facade. Bindings created via this.inputs.onTrigger(...) etc. are automatically unbound when the scene ends permanently — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+          "description": "Scene-bound input facade. Bindings created via this.inputs.onTrigger(...) etc. are automatically unbound when the scene ends permanently - no manual cleanup required. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "interaction",
@@ -861,7 +861,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Aborted the moment this scene's permanent teardown begins — before Scene.unload is called, and also on the paths where unload() never runs at all (a failed activation, a preload cancelled before it was ever consumed, Application.destroy). Pass it to anything that takes an AbortSignal — fetch() above all — so work started in Scene.load stops when the scene goes away instead of resolving into a torn-down scene. The abort reason is the standard AbortError DOMException, so a fetch() given this signal rejects exactly as it would for any other abort. This is what keeps teardown bounded: Application.destroy() waits a fixed grace period for scene teardown and then proceeds without it. A scene whose asynchronous work watches this signal settles well inside that window; one that ignores it can be abandoned mid-teardown."
+          "description": "Aborted the moment this scene's permanent teardown begins - before Scene.unload is called, and also on the paths where unload() never runs at all (a failed activation, a preload cancelled before it was ever consumed, Application.destroy). Pass it to anything that takes an AbortSignal - fetch() above all - so work started in Scene.load stops when the scene goes away instead of resolving into a torn-down scene. The abort reason is the standard AbortError DOMException, so a fetch() given this signal rejects exactly as it would for any other abort. This is what keeps teardown bounded: Application.destroy() waits a fixed grace period for scene teardown and then proceeds without it. A scene whose asynchronous work watches this signal settles well inside that window; one that ignores it can be abandoned mid-teardown."
         },
         {
           "name": "loader",
@@ -882,7 +882,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-scoped claim view over the application Loader. Assets claimed via this.loader.get/load(...) are held under this scene's own claim scope and released automatically when the scene ends permanently — scene-private assets are evicted on unload with zero manual bookkeeping. App-lifetime assets stay on app.loader. Throws if accessed before the scene is attached to an Application."
+          "description": "Scene-scoped claim view over the application Loader. Assets claimed via this.loader.get/load(...) are held under this scene's own claim scope and released automatically when the scene ends permanently - scene-private assets are evicted on unload with zero manual bookkeeping. App-lifetime assets stay on app.loader. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "paused",
@@ -903,7 +903,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true while this scene is paused — only meaningful while Scene.state is Active; freezes fixedUpdate/update but not draw. Read-only — see SceneDirector.pause/SceneDirector.resume. Throws if accessed before the scene is attached to an Application."
+          "description": "true while this scene is paused - only meaningful while Scene.state is Active; freezes fixedUpdate/update but not draw. Read-only - see SceneDirector.pause/SceneDirector.resume. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "root",
@@ -924,7 +924,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Structural root container for this scene's hierarchy. Scene.root is an **ownership and traversal anchor**, not an automatic render-authoritative root. The framework never calls root.render(backend) for you. Scene.draw(context) is the explicit orchestration point — see Scene.draw. The root exists eagerly so addChild / removeChild can proxy to a known container, and so transform/bounds traversal has a stable parent. Selecting what to render each frame remains the scene's responsibility."
+          "description": "Structural root container for this scene's hierarchy. Scene.root is an **ownership and traversal anchor**, not an automatic render-authoritative root. The framework never calls root.render(backend) for you. Scene.draw(context) is the explicit orchestration point - see Scene.draw. The root exists eagerly so addChild / removeChild can proxy to a known container, and so transform/bounds traversal has a stable parent. Selecting what to render each frame remains the scene's responsibility."
         },
         {
           "name": "state",
@@ -945,7 +945,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "This scene's current lifecycle state. Read-only — state changes only in response to director-driven lifecycle events, never by direct assignment. Throws if accessed before the scene is attached to an Application."
+          "description": "This scene's current lifecycle state. Read-only - state changes only in response to director-driven lifecycle events, never by direct assignment. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "systems",
@@ -966,7 +966,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound system registry. Add tickable Systems (e.g. a physics world) via this.systems.add(world); each participates in the scheduler phases it implements (fixedUpdate/update/draw, ascending order) and is destroyed with the scene — no manual step() / destroy() wiring. Throws if accessed before the scene is attached to an Application."
+          "description": "Scene-bound system registry. Add tickable Systems (e.g. a physics world) via this.systems.add(world); each participates in the scheduler phases it implements (fixedUpdate/update/draw, ascending order) and is destroyed with the scene - no manual step() / destroy() wiring. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "tweens",
@@ -987,7 +987,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound tween facade. Tweens created via this.tweens.create(...) are automatically stopped when the scene ends permanently — no manual cleanup required. Throws if accessed before the scene is attached to an Application."
+          "description": "Scene-bound tween facade. Tweens created via this.tweens.create(...) are automatically stopped when the scene ends permanently - no manual cleanup required. Throws if accessed before the scene is attached to an Application."
         },
         {
           "name": "ui",
@@ -1008,7 +1008,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Scene-bound UI layer, rendered screen-fixed on top of the scene content (after Scene.draw). Lazily created and destroyed with the scene; add widgets via this.ui.addChild(...). Unlike Scene.root, the UI layer **is** auto-rendered each frame — a first-class overlay that always sits above the world. Its children live in screen space (origin top-left, 0..width × 0..height); pointer and keyboard input route to them ahead of the world layer."
+          "description": "Scene-bound UI layer, rendered screen-fixed on top of the scene content (after Scene.draw). Lazily created and destroyed with the scene; add widgets via this.ui.addChild(...). Unlike Scene.root, the UI layer **is** auto-rendered each frame - a first-class overlay that always sits above the world. Its children live in screen space (origin top-left, 0..width × 0..height); pointer and keyboard input route to them ahead of the world layer."
         }
       ],
       "paragraphs": [],
@@ -1054,7 +1054,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Dispatched after this scene becomes Active — a fresh activation (Ready → Active) or a retention restore (Suspended → Active). Exceptions thrown by a listener are isolated: reported through Application.onError, never propagated back to whatever triggered the activation, and never able to block the remaining listeners or the activation itself."
+          "description": "Dispatched after this scene becomes Active - a fresh activation (Ready → Active) or a retention restore (Suspended → Active). Exceptions thrown by a listener are isolated: reported through Application.onError, never propagated back to whatever triggered the activation, and never able to block the remaining listeners or the activation itself."
         },
         {
           "name": "onPause",

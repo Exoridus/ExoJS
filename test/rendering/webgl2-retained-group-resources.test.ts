@@ -135,7 +135,7 @@ describe('WebGl2RetainedGroupResources: in-place transform-row patch', () => {
     expect(bundle.transformTexture!.buffer[1 * 8 + 4]).toBe(80);
     expect(bundle.transformTexture!.buffer[0 * 8 + 4]).toBe(10);
 
-    // Only row 1 is marked for upload — the headline O(k) sub-range property.
+    // Only row 1 is marked for upload - the headline O(k) sub-range property.
     // With 2 rows stored, all of them share one texture line, so local row 1
     // occupies texels 2..3 of line 0.
     const region = bundle.transformTexture!._consumeDirtyRegion();

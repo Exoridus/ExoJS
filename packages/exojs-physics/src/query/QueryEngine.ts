@@ -31,7 +31,7 @@ export interface RayHit {
  * reference to the world's collider array (kept world-synchronised on every
  * body move), so queries always see current placements. Array-returning queries
  * follow the three explicit allocation forms: fresh array, caller-owned `out`,
- * or an allocation-free callback — never a hidden shared buffer.
+ * or an allocation-free callback - never a hidden shared buffer.
  */
 export class QueryEngine {
   private readonly _colliders: readonly Collider[];
@@ -46,14 +46,14 @@ export class QueryEngine {
   }
 
   /**
-   * Colliders to scan for a query over `bounds` — the spatial index's narrowed
+   * Colliders to scan for a query over `bounds` - the spatial index's narrowed
    * result if one is wired, else every live collider. `sync` is called first so
    * colliders added/moved since the index's last detection pass (including
    * before the world's very first `step()`) are still found.
    *
    * `buffer` is the scratch array the spatial index writes candidates into
    * (cleared and refilled in place). Callers whose per-candidate loop can
-   * re-enter `_candidatesFor` — directly or via caller-supplied callback code —
+   * re-enter `_candidatesFor` - directly or via caller-supplied callback code -
    * must pass a buffer dedicated to them, so a nested call refilling its own
    * buffer can't truncate/corrupt an outer call's still-live iteration.
    */
@@ -117,7 +117,7 @@ export class QueryEngine {
    * buffer dedicated to this method, so it may safely call `queryPoint`,
    * `queryAabb`, or `overlapShape` on this same `PhysicsWorld`/`QueryEngine`
    * (they use a separate buffer and never invoke caller code mid-loop). It
-   * must NOT call `forEachAabbHit` again — directly or indirectly — on the
+   * must NOT call `forEachAabbHit` again - directly or indirectly - on the
    * same instance: the nested call would refill the same shared buffer this
    * traversal is still iterating, silently truncating/corrupting it. This
    * mirrors `DynamicAabbTree.query()`'s own non-reentrancy contract.
@@ -399,7 +399,7 @@ const makeProxy = (shape: AnyShape, x: number, y: number, angle: number): Collis
   return { shape, worldCenter: { x, y }, worldVertices, worldNormals };
 };
 
-/** Compute the world AABB of an already-built collision proxy (reuses its cached vertices/centre — no extra transform work). */
+/** Compute the world AABB of an already-built collision proxy (reuses its cached vertices/centre - no extra transform work). */
 const proxyAabb = (shape: AnyShape, proxy: CollisionProxy, out: Aabb): Aabb => {
   if (shape.type === 'circle') {
     const r = shape.radius;

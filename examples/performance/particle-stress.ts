@@ -174,8 +174,8 @@ class ParticleStressScene extends Scene {
 
     private destroySystems(): void {
         // The particle systems are registered via `this.systems.add(...)`
-        // (see `buildSystem`), so `SystemRegistry.destroy()` — invoked
-        // automatically during scene teardown — destroys each of them; no
+        // (see `buildSystem`), so `SystemRegistry.destroy()` - invoked
+        // automatically during scene teardown - destroys each of them; no
         // manual destroy loop needed here.
         this.particleSystems = null!;
         this.sharedTexture = null!;

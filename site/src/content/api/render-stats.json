@@ -215,7 +215,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Estimated bytes of live GPU memory: the sum over all resident textures (width · height · bytesPerPixel, including mip chains) plus all resident GPU buffers (byteLength). The GPU exposes no VRAM query, so the engine books every allocation and free itself; this is an upper-bound estimate of the engine-owned footprint, not a driver figure. Unlike the other counters this is a **running total**, not a per-frame accumulator: it is **not** zeroed by resetRenderStats — live resources outlive frames. It rises when textures/buffers are created and falls when they are destroyed."
+          "description": "Estimated bytes of live GPU memory: the sum over all resident textures (width · height · bytesPerPixel, including mip chains) plus all resident GPU buffers (byteLength). The GPU exposes no VRAM query, so the engine books every allocation and free itself; this is an upper-bound estimate of the engine-owned footprint, not a driver figure. Unlike the other counters this is a **running total**, not a per-frame accumulator: it is **not** zeroed by resetRenderStats - live resources outlive frames. It rises when textures/buffers are created and falls when they are destroyed."
         },
         {
           "name": "rawFrameDeltaMs",

@@ -1,6 +1,6 @@
 {
   "title": "AsepriteArrayData",
-  "description": "Aseprite JSON export in array mode — frames is an ordered array.",
+  "description": "Aseprite JSON export in array mode - frames is an ordered array.",
   "symbol": "AsepriteArrayData",
   "kind": "interface",
   "subsystem": "aseprite",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Aseprite JSON export in array mode — frames is an ordered array."
+        "Aseprite JSON export in array mode - frames is an ordered array."
       ],
       "importLine": "import { AsepriteArrayData } from '@codexo/exojs-aseprite'",
       "sourceLink": null

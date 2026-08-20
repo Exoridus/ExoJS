@@ -5,7 +5,7 @@ export type KeyEventType = 'keydown' | 'keyup';
 
 /**
  * Envelope dispatched by `app.interaction` to the focused {@link RenderNode}
- * for keyboard input, then bubbled up its entire parent chain — same
+ * for keyboard input, then bubbled up its entire parent chain - same
  * DOM-style shape as {@link InteractionEvent}: `target` stays pinned to the
  * focused node while `currentTarget` advances to each ancestor, whether or
  * not that ancestor is itself focusable. A handler may call
@@ -13,18 +13,18 @@ export type KeyEventType = 'keydown' | 'keyup';
  * listening for `Escape` from any of its focused descendants without each
  * one needing its own handler.
  *
- * `channel` is the input channel of the key — compare it with the `Keyboard`
+ * `channel` is the input channel of the key - compare it with the `Keyboard`
  * constants (e.g. `event.channel === Keyboard.Enter`).
  *
  * A handler may call {@link KeyEvent.preventDefault} to suppress ExoJS's own
  * built-in handling for this key (currently `Tab` focus traversal), letting
  * the focused widget consume the key itself. It affects engine behaviour only
- * — the browser's own default was already decided synchronously when the
+ * - the browser's own default was already decided synchronously when the
  * platform event arrived, long before this envelope was dispatched.
  */
 export class KeyEvent {
   public readonly type: KeyEventType;
-  /** Input channel of the key — compare with the `Keyboard.*` channel constants. */
+  /** Input channel of the key - compare with the `Keyboard.*` channel constants. */
   public readonly channel: number;
   /** The node that held focus when this event fired. Stable across the bubble. */
   public readonly target: RenderNode;

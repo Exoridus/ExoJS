@@ -10,7 +10,7 @@ import { readEngineVersion, startViteServer } from '../../shared/viteServer';
  * Serve the manual DPR / internal-render-target probe page so a real phone on
  * the same network can open it.
  *
- * There is no driver here on purpose (§1 of the brief): no result collector, no
+ * There is no driver here on purpose: no result collector, no
  * device farm, no remote control. This script starts the page and prints a URL;
  * everything else happens on the device, and the capture comes back through the
  * page's own `Copy JSON`.

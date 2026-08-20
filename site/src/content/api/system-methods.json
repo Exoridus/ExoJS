@@ -180,7 +180,7 @@
             }
           ],
           "returnType": "Synchronous",
-          "description": "Advance by the variable frame delta, *before* this frame's fixed steps. Called once per frame, ahead of every other phase. This is where per-frame state has to be brought in sync with the incoming frame so the simulation sees it: the engine's own input, interaction, audio, tween and rendering systems all run here. Anything that must be current *before* physics runs belongs in this phase — a system reading input in SystemMethods.update would see the previous frame's snapshot, because update runs after the fixed steps."
+          "description": "Advance by the variable frame delta, *before* this frame's fixed steps. Called once per frame, ahead of every other phase. This is where per-frame state has to be brought in sync with the incoming frame so the simulation sees it: the engine's own input, interaction, audio, tween and rendering systems all run here. Anything that must be current *before* physics runs belongs in this phase - a system reading input in SystemMethods.update would see the previous frame's snapshot, because update runs after the fixed steps."
         },
         {
           "name": "update",

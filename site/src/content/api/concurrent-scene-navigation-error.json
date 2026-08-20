@@ -1,6 +1,6 @@
 {
   "title": "ConcurrentSceneNavigationError",
-  "description": "Thrown when `change`/`restore` is called while another Scene switch, restore, or transition session is already in flight — navigation never queues.",
+  "description": "Thrown when `change`/`restore` is called while another Scene switch, restore, or transition session is already in flight - navigation never queues.",
   "symbol": "ConcurrentSceneNavigationError",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Thrown when `change`/`restore` is called while another Scene switch, restore, or transition session is already in flight — navigation never queues."
+        "Thrown when `change`/`restore` is called while another Scene switch, restore, or transition session is already in flight - navigation never queues."
       ],
       "importLine": "import { ConcurrentSceneNavigationError } from '@codexo/exojs'",
       "sourceLink": null

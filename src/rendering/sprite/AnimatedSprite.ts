@@ -25,7 +25,7 @@ export interface AnimatedSpriteClipDefinition {
    * Per-frame hold duration in milliseconds, indexed the same as `frames`.
    * When provided it is authoritative for playback timing and `fps` is
    * ignored while advancing frames (still accepted as a display-only
-   * average). Use this to preserve uneven hold-frames — e.g. an Aseprite
+   * average). Use this to preserve uneven hold-frames - e.g. an Aseprite
    * export where one frame intentionally lingers longer than the rest.
    */
   readonly frameDurations?: readonly number[];
@@ -33,7 +33,7 @@ export interface AnimatedSpriteClipDefinition {
    * Per-frame local translation in local (pre-scale) pixels, indexed the
    * same as `frames`, applied on top of the sprite's own position/origin.
    * Use this to keep frames anchored to a stable point when a source atlas
-   * trims frames to different sizes (Aseprite's `spriteSourceSize`) — without
+   * trims frames to different sizes (Aseprite's `spriteSourceSize`) - without
    * it, differently-trimmed frames would jitter around their own top-left.
    */
   readonly frameOffsets?: ReadonlyArray<{ readonly x: number; readonly y: number }>;
@@ -88,8 +88,8 @@ function assertValidRepeat(context: string, repeat: number): void {
  * itself: a playing sprite attached to an {@link Application}'s scene tree
  * registers with that application's {@link AnimationManager} and is ticked
  * once per frame, with no `update()` call of your own. A sprite that is never
- * attached to a tree — one drawn immediate-mode via `context.render(sprite)`,
- * say — has no owning application to reach, so drive it by calling
+ * attached to a tree - one drawn immediate-mode via `context.render(sprite)`,
+ * say - has no owning application to reach, so drive it by calling
  * {@link update} with the frame delta in **seconds** yourself.
  *
  * The `onFrame` signal fires on every frame advance and `onComplete` fires
@@ -374,7 +374,7 @@ export class AnimatedSprite extends Sprite {
   }
 
   /**
-   * Advance playback by `deltaSeconds` — seconds, the same unit as
+   * Advance playback by `deltaSeconds` - seconds, the same unit as
    * {@link Tween.update}, and the unit a `Time` delta reports through
    * `delta.seconds`. Clip authoring stays in its own units:
    * {@link AnimatedSpriteClipDefinition.frameDurations} is still milliseconds
@@ -382,7 +382,7 @@ export class AnimatedSprite extends Sprite {
    * seconds.
    *
    * Called automatically once per frame by the owning {@link AnimationManager}
-   * for a playing, attached sprite — call it yourself only for a sprite that
+   * for a playing, attached sprite - call it yourself only for a sprite that
    * is not part of an application's scene tree, or to step playback manually.
    * Dispatches `onFrame` for each frame boundary crossed and `onComplete` when
    * the clip completes its final {@link AnimatedSpriteClipDefinition.repeat}
@@ -412,7 +412,7 @@ export class AnimatedSprite extends Sprite {
 
     // The hold duration for the frame CURRENTLY displayed determines how long
     // it takes to advance past it. `frameDurations`, when present, overrides
-    // the clip's uniform `frameDurationMs` per frame — re-read after every
+    // the clip's uniform `frameDurationMs` per frame - re-read after every
     // index change below rather than cached once, since it depends on
     // `_currentFrameIndex`.
     let thresholdMs = clip.frameDurations?.[this._currentFrameIndex] ?? clip.frameDurationMs;
@@ -468,7 +468,7 @@ export class AnimatedSprite extends Sprite {
   }
 
   /**
-   * @internal — join or leave the owning application's {@link AnimationManager}
+   * @internal - join or leave the owning application's {@link AnimationManager}
    * as this sprite enters or leaves a scene tree. This is what makes
    * `play()`-before-`addChild()` work: playback state is kept on the sprite,
    * and the registration follows attachment.
@@ -482,7 +482,7 @@ export class AnimatedSprite extends Sprite {
   public override destroy(): void {
     this._playing = false;
     // Before `super.destroy()`, which detaches from the parent and would run
-    // the sync through `_setStage(null)` anyway — doing it here first also
+    // the sync through `_setStage(null)` anyway - doing it here first also
     // covers a sprite destroyed while already detached.
     this._syncManagerRegistration();
 
@@ -522,8 +522,8 @@ export class AnimatedSprite extends Sprite {
    * Reconcile this sprite's {@link AnimationManager} registration with the two
    * facts that decide it: whether playback is running, and which application
    * (if any) currently owns the tree this sprite is attached to. Called from
-   * every place either fact can change — `play`/`stop`/`pause`/`resume`, clip
-   * completion, attach/detach, and `destroy` — so there is exactly one rule
+   * every place either fact can change - `play`/`stop`/`pause`/`resume`, clip
+   * completion, attach/detach, and `destroy` - so there is exactly one rule
    * rather than a registration and a deregistration to keep in step.
    */
   private _syncManagerRegistration(): void {
@@ -552,7 +552,7 @@ export class AnimatedSprite extends Sprite {
    * A clip carries no explicit untrimmed size, so the box is derived from the
    * frames themselves: `width = max(offset.x + frame.width)` and
    * `height = max(offset.y + frame.height)` over every frame, anchored at the
-   * local origin `(0, 0)` — the point the offsets are expressed relative to.
+   * local origin `(0, 0)` - the point the offsets are expressed relative to.
    * That is the smallest canvas every frame of the clip fits on, it is
    * computed once per clip in {@link defineClip}, and it is identical for
    * every frame index. It can under-report an authored canvas whose right or
@@ -561,7 +561,7 @@ export class AnimatedSprite extends Sprite {
    *
    * A clip WITHOUT `frameOffsets` is not trimmed, so its frame rectangle is
    * its layout box and the base implementation already measures the right
-   * thing. It is used unchanged there — deriving a clip-wide box would be
+   * thing. It is used unchanged there - deriving a clip-wide box would be
    * actively wrong for it, because such a clip keeps its rendered pixel size
    * across differently-sized frames (see {@link _applyFrame}) and the
    * per-frame extent is what maps onto that constant rendered box.
@@ -583,7 +583,7 @@ export class AnimatedSprite extends Sprite {
 
   /**
    * Apply the clip's frame at `frameIndex` to the sprite's texture region,
-   * and — when the clip defines `frameOffsets` — translate the local quad by
+   * and - when the clip defines `frameOffsets` - translate the local quad by
    * that frame's `{x,y}` on top of the sprite's own position/origin. The
    * offset lives entirely in local (pre-scale) space via {@link getLocalBounds},
    * so it composes correctly under rotation/scale and never mutates the
@@ -599,7 +599,7 @@ export class AnimatedSprite extends Sprite {
       // First application: the sprite still shows the full source texture
       // (usually the whole atlas), so "keep the pixel size" would inflate the
       // scale by atlasSize/frameSize and the sprite would render blown up far
-      // beyond the canvas. Snap the logical size to the frame instead — while
+      // beyond the canvas. Snap the logical size to the frame instead - while
       // preserving the user's scale, which `resetSize` would reset to 1.
       const scaleX = this.scale.x;
       const scaleY = this.scale.y;

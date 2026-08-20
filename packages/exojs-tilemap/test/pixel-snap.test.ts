@@ -81,7 +81,7 @@ function makeBoundaryLayer(tileset: TileSet, opts: BoundaryLayerOpts = {}): Tile
   return layer;
 }
 
-/** An empty 4×4 layer — constructible, but produces zero chunk nodes. */
+/** An empty 4×4 layer - constructible, but produces zero chunk nodes. */
 function makeEmptyLayer(tileset: TileSet, id = 1, name = 'empty'): TileLayer {
   return new TileLayer({ id, name, width: 4, height: 4, tileWidth: 32, tileHeight: 32, tilesets: [tileset] });
 }
@@ -413,7 +413,7 @@ describe('TileMapView.pixelSnapMode', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// Render-only contract — purely visual, never a data/geometry mutation
+// Render-only contract - purely visual, never a data/geometry mutation
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('pixelSnapMode render-only contract', () => {
@@ -459,7 +459,7 @@ describe('pixelSnapMode render-only contract', () => {
 
     view.pixelSnapMode = PixelSnapMode.Geometry;
 
-    // Layer data and offsets are untouched …
+    // Layer data and offsets are untouched ...
     expect(layer.offsetX).toBe(64);
     expect(layer.offsetY).toBe(-32);
     expect(layer.getRawTileAt(31, 0)).toBe(rawBefore);
@@ -470,13 +470,13 @@ describe('pixelSnapMode render-only contract', () => {
     expect(tileAfter.tileset).toBe(tileBefore.tileset);
     expect(tileAfter.localTileId).toBe(tileBefore.localTileId);
 
-    // … logical node transforms stay logical …
+    // ... logical node transforms stay logical ...
     expect(node.x).toBe(64);
     expect(node.y).toBe(-32);
     expect(seamChunk.x).toBe(1024); // 1 chunk × 32 tiles × 32 px
     expect(seamChunk.y).toBe(0);
 
-    // … and the cached geometry plus culling bounds are unchanged.
+    // ... and the cached geometry plus culling bounds are unchanged.
     expect(seamChunk.pages).toBe(pagesBefore);
 
     const layerBounds = node.getLocalBounds();

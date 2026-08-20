@@ -30,15 +30,15 @@ const defaultStoreNames: readonly string[] = [
  * a custom `storeNames` list to restrict or extend the set.
  *
  * Schema migrations are handled in two modes:
- * - **Default** — the constructor-supplied `storeNames` list is diff'd
+ * - **Default** - the constructor-supplied `storeNames` list is diff'd
  *   against the existing stores and objects stores added/deleted accordingly.
- * - **Explicit** — a `migrations` map keyed by target version runs the
+ * - **Explicit** - a `migrations` map keyed by target version runs the
  *   corresponding callback for each version between `oldVersion` and
  *   `newVersion`, allowing precise schema evolution.
  *
  * Every failure rejects with an {@link AssetCacheError} that names the failed
  * {@link AssetCacheOperation}, the store and key involved, and carries the
- * originating `DOMException` as {@link Error.cause} — so a `QuotaExceededError`
+ * originating `DOMException` as {@link Error.cause} - so a `QuotaExceededError`
  * is distinguishable from a transaction or schema failure without parsing
  * message text. That holds for the parts of the IndexedDB API that throw
  * synchronously instead of failing a request (opening a transaction on an
@@ -92,9 +92,9 @@ export class IndexedDbDatabase implements Database {
    * throws converted to {@link AssetCacheError}.
    *
    * `transaction()`/`objectStore()` throw rather than failing a request: a
-   * `NotFoundError` for a store this database was never configured with — the
+   * `NotFoundError` for a store this database was never configured with - the
    * realistic case being a `bindAsset` handler whose `storageName` is missing
-   * from `storeNames` — and an `InvalidStateError` on a closing connection.
+   * from `storeNames` - and an `InvalidStateError` on a closing connection.
    * Both would otherwise escape as bare `DOMException`s and break the promise
    * this class makes about its failures. An already-typed error (from
    * {@link connect}) passes through unchanged so it keeps its own operation.
@@ -205,7 +205,7 @@ export class IndexedDbDatabase implements Database {
           }),
         ),
       );
-      // A `blocked` event carries no error object — another live connection is
+      // A `blocked` event carries no error object - another live connection is
       // holding the old version open, which is a state, not a failure cause.
       request.addEventListener('blocked', () =>
         reject(

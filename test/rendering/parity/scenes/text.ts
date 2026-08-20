@@ -3,14 +3,14 @@
  *
  * Text is its own subsystem: glyphs are rasterised into an SDF atlas at
  * runtime and sampled with a dedicated shader, so neither the fixture trick nor
- * nearest sampling applies. The claim here is narrower on purpose — both
+ * nearest sampling applies. The claim here is narrower on purpose - both
  * backends consume the same atlas and must turn it into the same frame.
  *
  * That still catches real divergence: the SDF shaders are written twice, once
  * in GLSL and once in WGSL, and a threshold or channel-swizzle difference
  * between them shows up as an edge that is a pixel fatter on one side.
  *
- * Font rasterisation differs between machines, which is fine — every property
+ * Font rasterisation differs between machines, which is fine - every property
  * compares within a single browser on a single run, never against a baseline.
  */
 

@@ -1,6 +1,6 @@
 {
   "title": "Collider",
-  "description": "Geometry attached to a PhysicsBody: a Shape plus a body-local offset/rotation, material (friction/restitution/density) and a collision filter. A body may own several colliders (compound). The collider also caches its world-space geometry — refreshed by synchronize — which the broad phase, narrow phase and queries read directly. Material fields and the filter are mutable; the shape and local placement are immutable (rebuild the collider to change geometry).",
+  "description": "Geometry attached to a PhysicsBody: a Shape plus a body-local offset/rotation, material (friction/restitution/density) and a collision filter. A body may own several colliders (compound). The collider also caches its world-space geometry - refreshed by synchronize - which the broad phase, narrow phase and queries read directly. Material fields and the filter are mutable; the shape and local placement are immutable (rebuild the collider to change geometry).",
   "symbol": "Collider",
   "kind": "class",
   "subsystem": "physics",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Geometry attached to a PhysicsBody: a Shape plus a body-local offset/rotation, material (friction/restitution/density) and a collision filter. A body may own several colliders (compound). The collider also caches its world-space geometry — refreshed by synchronize — which the broad phase, narrow phase and queries read directly.",
+        "Geometry attached to a PhysicsBody: a Shape plus a body-local offset/rotation, material (friction/restitution/density) and a collision filter. A body may own several colliders (compound). The collider also caches its world-space geometry - refreshed by synchronize - which the broad phase, narrow phase and queries read directly.",
         "Material fields and the filter are mutable; the shape and local placement are immutable (rebuild the collider to change geometry)."
       ],
       "importLine": "import { Collider } from '@codexo/exojs-physics'",
@@ -552,7 +552,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space polygon outward normals [x0, y0, …] (only meaningful for polygon shapes)."
+          "description": "World-space polygon outward normals [x0, y0, ...] (only meaningful for polygon shapes)."
         },
         {
           "name": "worldTransform",
@@ -618,7 +618,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space polygon vertices [x0, y0, …] (only meaningful for polygon shapes)."
+          "description": "World-space polygon vertices [x0, y0, ...] (only meaningful for polygon shapes)."
         }
       ],
       "paragraphs": [],

@@ -39,8 +39,8 @@ describe('Matrix.temp is safe to transform in place', () => {
   });
 
   // The tests above prove only that the scratch is gone. These pin the algebra
-  // itself against `combine()` with an explicit matrix — the definition the
-  // expanded forms were derived from — using a base whose homogeneous row is
+  // itself against `combine()` with an explicit matrix - the definition the
+  // expanded forms were derived from - using a base whose homogeneous row is
   // NOT `0, 0, 1`, so a dropped `e`/`f`/`z` term cannot hide.
   describe('the expanded forms equal an explicit combine', () => {
     const base = (): Matrix => new Matrix(2, 0.5, 5, -1, 3, 7, 0.25, -0.5, 2);

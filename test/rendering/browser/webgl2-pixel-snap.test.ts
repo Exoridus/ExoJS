@@ -9,7 +9,7 @@
  *
  * Note on single-frame pixel assertions: a solid quad's rasterised coverage is
  * already quantised to the device grid (pixel-centre rule), so a static
- * solid-colour frame cannot distinguish snapped from unsnapped — the snapping
+ * solid-colour frame cannot distinguish snapped from unsnapped - the snapping
  * benefit is sampling stability under motion. We therefore assert render
  * correctness, the render-only contract, and seam-freeness rather than a
  * snapped-vs-unsnapped solid-pixel diff.
@@ -97,7 +97,7 @@ const createSolidTexture = (color: string, width = 16, height = 16): Texture => 
 };
 
 // ---------------------------------------------------------------------------
-// Sprite — position snapping is render-only
+// Sprite - position snapping is render-only
 // ---------------------------------------------------------------------------
 
 describe('WebGL2 pixel snapping — Sprite position mode', () => {
@@ -181,7 +181,7 @@ describe('WebGL2 pixel snapping — Sprite position mode', () => {
 });
 
 // ---------------------------------------------------------------------------
-// NineSlice — geometry snapping is seam-free and downgrades under rotation
+// NineSlice - geometry snapping is seam-free and downgrades under rotation
 // ---------------------------------------------------------------------------
 
 describe('WebGL2 pixel snapping — NineSlice geometry mode', () => {
@@ -199,7 +199,7 @@ describe('WebGL2 pixel snapping — NineSlice geometry mode', () => {
       render(backend, root);
 
       // Scan a horizontal line well inside the panel: every pixel must be the
-      // solid panel colour — a snapping-induced seam would show as black.
+      // solid panel colour - a snapping-induced seam would show as black.
       for (let x = 10; x <= 44; x++) {
         const pixel = readWebGl2Pixel(backend, x, 26);
 

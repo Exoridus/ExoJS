@@ -1,4 +1,4 @@
-// Auto-generated from crossfade-tracks.ts — edit the .ts source, not this file.
+// Auto-generated from crossfade-tracks.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, crossFade, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const PEAK = 0.7;
@@ -74,7 +74,7 @@ class CrossfadeTracksScene extends Scene {
             this.toB = !this.toB;
         });
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — start both loops (B silent) so
+        // gesture, then starts automatically - start both loops (B silent) so
         // crossFade only has to ramp gains rather than start playback mid-fade.
         this.trackAVoice = app.audio.play(this.trackA, { loop: true, volume: PEAK });
         this.trackBVoice = app.audio.play(this.trackB, { loop: true, volume: 0 });

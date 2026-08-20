@@ -20,7 +20,7 @@ const makeMockAudioParam = (): Mocked<AudioParam> =>
 
 /**
  * An `AudioParam` from a browser that does not implement
- * `cancelAndHoldAtTime` — Firefox to this day.
+ * `cancelAndHoldAtTime` - Firefox to this day.
  */
 const makeLegacyAudioParam = (): Mocked<AudioParam> => {
   const param = makeMockAudioParam() as unknown as Record<string, unknown>;
@@ -120,13 +120,13 @@ describe('Envelope', () => {
 
     expect(param.cancelAndHoldAtTime).toHaveBeenCalledWith(atTime);
     // cancelScheduledValues would discard the in-flight ramp and snap the param
-    // back to the previous event's value — an audible click mid-attack.
+    // back to the previous event's value - an audible click mid-attack.
     expect(param.cancelScheduledValues).not.toHaveBeenCalled();
     expect(param.setTargetAtTime).toHaveBeenCalledWith(0, atTime, expect.any(Number));
   });
 
   // Firefox still ships no cancelAndHoldAtTime, so the analytical fallback is
-  // the path that actually runs there — not an optional extra.
+  // the path that actually runs there - not an optional extra.
   describe('release() without cancelAndHoldAtTime (browser fallback)', () => {
     test('releasing mid-attack holds the interpolated attack value', () => {
       const env = new Envelope({ attackMs: 100, decayMs: 100, sustainLevel: 0.5 });

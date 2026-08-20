@@ -5,7 +5,7 @@ import { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
  *
  * Mirrors the core `Drawable` setter's guard so the tilemap node passthroughs
  * (`TileMapView` / `TileMapNode` / `TileLayerNode`) reject JavaScript-invalid
- * values atomically — even for an empty layer that has no chunk drawable to
+ * values atomically - even for an empty layer that has no chunk drawable to
  * delegate the validation to. Kept local because the core guard is not part of
  * the public API surface.
  * @internal

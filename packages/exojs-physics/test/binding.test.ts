@@ -261,7 +261,7 @@ describe('BindingRegistry', () => {
 describe('NativePhysicsBackend', () => {
   it('exposes the latest broad-phase candidate pairs', () => {
     // A real PhysicsWorld is used only to attach + synchronize the colliders (assign
-    // ids, compute their AABBs) — the backend under test is a fresh, standalone instance,
+    // ids, compute their AABBs) - the backend under test is a fresh, standalone instance,
     // not the world's own backend.
     const world = new PhysicsWorld();
     const colliderA = new Collider({ shape: new BoxShape(10, 10) });

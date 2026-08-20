@@ -7,9 +7,9 @@
  * mobile GPUs (Mali/PowerVR) honour a reduced qualifier as genuine IEEE-754
  * half-float (5 exponent + 10 mantissa bits): near ±40k the ULP is 32 world
  * units, so a `mediump`/`lowp` position stage snaps or drops a sprite once
- * world coordinates get large — the bug this regression guard prevents.
+ * world coordinates get large - the bug this regression guard prevents.
  *
- * IMPORTANT — what actually reproduces here, and what does NOT:
+ * IMPORTANT - what actually reproduces here, and what does NOT:
  *
  * The required `browser-webgl-chromium` CI lane launches Chromium with
  * `--use-angle=swiftshader` (see `vitest.config.ts`). On that backend
@@ -21,7 +21,7 @@
  * qualifier in fp32. Empirically (measured in-session with a raw probe program)
  * `highp`, `mediump`, and `lowp` all render a far-flung vertex to the exact same
  * pixel, and a value beyond fp16's ~65504 max renders fine under `mediump` too.
- * So a render that collapses under real fp16 does NOT collapse here — no
+ * So a render that collapses under real fp16 does NOT collapse here - no
  * headless desktop backend available in CI actually truncates shader ARITHMETIC
  * to fp16. That is why the regression teeth below live in a static source check,
  * not in the pixel readback.
@@ -30,22 +30,22 @@
  *
  *  - Layer 1 (environment guard): on the collapsing-REPORTING backend
  *    (SwiftShader / native-GL ANGLE) `getShaderPrecisionFormat` must report
- *    vertex `mediump`/`lowp` as fp16 — confirming the required lane runs an
+ *    vertex `mediump`/`lowp` as fp16 - confirming the required lane runs an
  *    fp16-class backend, not a silently-swapped-in D3D11 full-fp32 one. Lenient
  *    (informational) on non-ANGLE backends (Firefox) so it never spuriously
  *    reds them.
  *
  *  - Layer 2 (source regression teeth): every position/UV vertex stage must
  *    declare `precision highp float` and must NOT declare `mediump`/`lowp`
- *    float — the 7 standalone `.vert` files (`sprite`, `mesh`, `particle`,
+ *    float - the 7 standalone `.vert` files (`sprite`, `mesh`, `particle`,
  *    `text`, `mask-compose`, `backdrop-blend`, `stencil-clip`) via a `?raw`
  *    import, PLUS the 3 vertex sources NineSlice/RepeatingSprite inline as
  *    template literals inside their renderer `.ts` files rather than separate
  *    `.vert` files (`WebGl2NineSliceSpriteRenderer.ts`'s `nineSliceVertexSource`,
  *    `WebGl2RepeatingSpriteRenderer.ts`'s `shaderPathVertSource` and
- *    `geoPathVertSource`) — extracted from the `.ts` source text by name, since
+ *    `geoPathVertSource`) - extracted from the `.ts` source text by name, since
  *    they aren't separately importable. This fails RED the instant someone
- *    reintroduces reduced precision on any of these 10 stages — proven during
+ *    reintroduces reduced precision on any of these 10 stages - proven during
  *    development: downgrading `sprite.vert` to `mediump` fails this layer
  *    immediately. This is the guard that catches the regression in required
  *    CI, since the render layer cannot (arithmetic is fp32 on SwiftShader).
@@ -58,7 +58,7 @@
  *    pipeline renders far-flung sprites correctly end-to-end. It ALSO fails RED
  *    on a real fp16-arithmetic device, and on ANY backend if the RGBA32F
  *    transform texture were regressed to RGBA16F (the coordinate would then
- *    collapse on upload, before the shader) — so it is not decorative, it simply
+ *    collapse on upload, before the shader) - so it is not decorative, it simply
  *    cannot catch the shader-qualifier regression on SwiftShader specifically.
  *
  * Run via:  pnpm test:browser:webgl
@@ -78,7 +78,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader wiring — substitute the REAL shipped sprite GLSL via `?raw` (the stub
+// Shader wiring - substitute the REAL shipped sprite GLSL via `?raw` (the stub
 // plugin only rewrites bare `.vert`/`.frag` ids), and hand-write valid mocks
 // for Mesh/Text because `WebGl2Backend#initialize` eagerly compiles the whole
 // renderer registry. This mirrors `webgl2-sprite-real-shader-tint.test.ts`.
@@ -174,7 +174,7 @@ const isFp16ReportingBackend = (renderer: string): boolean => /swiftshader|angle
 const positionVertStages = {
   'sprite.vert': () => import('../../../src/rendering/webgl2/glsl/sprite.vert?raw'),
   'mesh.vert': () => import('../../../src/rendering/webgl2/glsl/mesh.vert?raw'),
-  // Ships from `@codexo/exojs-particles`, not core — core carries no particle
+  // Ships from `@codexo/exojs-particles`, not core - core carries no particle
   // stage of its own, so guarding a copy under `src/` would guard nothing.
   'particle.vert': () => import('../../../packages/exojs-particles/src/renderers/glsl/particle.vert?raw'),
   'text.vert': () => import('../../../src/rendering/webgl2/glsl/text.vert?raw'),
@@ -190,7 +190,7 @@ const positionVertStages = {
 } as const;
 
 // ---------------------------------------------------------------------------
-// Layer 1 — the required CI backend must be an fp16-REPORTING one
+// Layer 1 - the required CI backend must be an fp16-REPORTING one
 // ---------------------------------------------------------------------------
 
 describe('WebGL2 mobile precision — Layer 1: environment reports reduced precision', () => {
@@ -216,7 +216,7 @@ describe('WebGL2 mobile precision — Layer 1: environment reports reduced preci
       // The required `browser-webgl-chromium` lane (--use-angle=swiftshader)
       // MUST land here: assert mediump/lowp are reported as genuine IEEE-754
       // half-float (~fp16: 5 exponent + 10 mantissa bits), NOT the fp32 a
-      // D3D11-style backend silently reports. This is the environment guard —
+      // D3D11-style backend silently reports. This is the environment guard -
       // if the lane's ANGLE backend ever flipped to full-fp32-reporting, this
       // catches it, so we know we are still testing a mobile-representative
       // precision profile.
@@ -225,7 +225,7 @@ describe('WebGL2 mobile precision — Layer 1: environment reports reduced preci
       expect(low.precision).toBeLessThanOrEqual(16);
       expect(low.rangeMax).toBeLessThanOrEqual(30);
 
-      // highp must stay real fp32 — the whole fix depends on it not collapsing.
+      // highp must stay real fp32 - the whole fix depends on it not collapsing.
       expect(high.rangeMax).toBeGreaterThanOrEqual(127);
     } else {
       // Firefox / ANGLE-D3D11 / a real desktop GPU: reduced precision is not
@@ -237,7 +237,7 @@ describe('WebGL2 mobile precision — Layer 1: environment reports reduced preci
 });
 
 // ---------------------------------------------------------------------------
-// Layer 2 — shipped position/UV vertex stages must stay highp (regression teeth)
+// Layer 2 - shipped position/UV vertex stages must stay highp (regression teeth)
 // ---------------------------------------------------------------------------
 
 describe('WebGL2 mobile precision — Layer 2: vertex position math stays highp', () => {
@@ -255,7 +255,7 @@ describe('WebGL2 mobile precision — Layer 2: vertex position math stays highp'
 });
 
 // ---------------------------------------------------------------------------
-// Layer 3 — real shipped sprite.vert renders a far-flung sprite correctly
+// Layer 3 - real shipped sprite.vert renders a far-flung sprite correctly
 // ---------------------------------------------------------------------------
 
 describe('WebGL2 mobile precision — Layer 3: large-world-coordinate render', () => {

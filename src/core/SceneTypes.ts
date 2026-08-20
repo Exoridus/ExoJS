@@ -11,7 +11,7 @@ import type { SceneTransition } from './SceneTransition';
 export type SceneConstructor<Data = void> = new () => Scene<Data>;
 
 /**
- * A {@link SceneConstructor} for any activation-data type — used for registry
+ * A {@link SceneConstructor} for any activation-data type - used for registry
  * storage and navigation targets whose `Data` is not statically known.
  *
  * Union of the `void` and `any` instantiations, not just `SceneConstructor<any>`
@@ -19,7 +19,7 @@ export type SceneConstructor<Data = void> = new () => Scene<Data>;
  * and TypeScript's structural check for a construct signature's return type does
  * not collapse `Readonly<any>` against a concrete subclass's `Readonly<void>`
  * parameter once that subclass has any of its own members (true of virtually
- * every real scene) — `SceneConstructor<any>` alone then silently rejects the
+ * every real scene) - `SceneConstructor<any>` alone then silently rejects the
  * single most common case, a plain `Scene` (`Data = void`) subclass. Including
  * the `void` arm explicitly gives every void-data scene an exact-match branch,
  * while `any` still covers every data-carrying scene.
@@ -32,10 +32,10 @@ export type InferSceneData<C> = C extends SceneConstructor<infer Data> ? Data : 
 
 /**
  * A `{ enter, exit }` pair of independently-authored {@link PhasedSceneTransition}
- * instances — a union of two variants requiring at
+ * instances - a union of two variants requiring at
  * least one of `{ enter, exit }`, never an interface with both fields
  * optional. An interface form would type-check `transition: {}` as valid,
- * which — since a call-site value fully replaces the registry default —
+ * which - since a call-site value fully replaces the registry default -
  * would silently suppress a scene's configured default
  * while looking like a no-op. Confirmed, TypeScript `--strict`: the union
  * form correctly rejects `{}` (see `test/type-tests/scene-transition-phases.type-test.ts`).
@@ -45,7 +45,7 @@ export type SceneTransitionPhases =
   | { readonly enter?: PhasedSceneTransition; readonly exit: PhasedSceneTransition };
 
 /**
- * The full set of values accepted for a `transition` option — call-site
+ * The full set of values accepted for a `transition` option - call-site
  * (`change()`/`restore()`/`unload()`) or registry-level default:
  * a single {@link SceneTransition} (or {@link PhasedSceneTransition}, which
  * is one), a `{ enter, exit }` pair to compose, or `false` (the explicit
@@ -56,7 +56,7 @@ export type SceneTransitionSelection = SceneTransition | SceneTransitionPhases |
 /**
  * A single `ApplicationOptions.scenes` registry entry: either a bare
  * {@link Scene} subclass constructor, or a descriptor pairing one with a
- * target-bound default transition. Both forms register identically —
+ * target-bound default transition. Both forms register identically -
  * `title: TitleScene` and `title: { scene: TitleScene }` are equivalent.
  */
 export type SceneRegistration<C extends AnySceneConstructor> =
@@ -73,11 +73,11 @@ export type SceneRegistration<C extends AnySceneConstructor> =
 /**
  * Structural constraint for an `ApplicationOptions.scenes` registry: every
  * value must be a {@link SceneRegistration}. A mapped-type constraint, not
- * `Record<string, SceneRegistration<AnySceneConstructor>>` — `Record<K, V>`
+ * `Record<string, SceneRegistration<AnySceneConstructor>>` - `Record<K, V>`
  * requires an index signature to structurally match, which a plain
  * `interface GameScenes { title: typeof TitleScene; ... }` does not have (a
  * `type` alias with the identical shape happens to satisfy it, an
- * `interface` does not — confirmed against this project's TypeScript
+ * `interface` does not - confirmed against this project's TypeScript
  * version, `--strict`: "Index signature for type 'string' is missing"). The
  * public API must not depend on which of the two a caller wrote; a
  * mapped-type constraint accepts both.
@@ -86,12 +86,12 @@ export type SceneRegistryShape<Registry> = {
   readonly [Key in keyof Registry]: SceneRegistration<AnySceneConstructor>;
 };
 
-/** Every string key registered in a `SceneRegistryShape` — the type of a valid `change()`/`restore()` key-based navigation target. */
+/** Every string key registered in a `SceneRegistryShape` - the type of a valid `change()`/`restore()` key-based navigation target. */
 export type RegistryKeyOf<Registry> = Extract<keyof Registry, string>;
 
 /**
  * Extracts the {@link Scene} subclass constructor a {@link SceneRegistration}
- * resolves to — unwraps the descriptor form, passes a bare constructor
+ * resolves to - unwraps the descriptor form, passes a bare constructor
  * through unchanged.
  */
 export type ConstructorOf<R extends SceneRegistration<AnySceneConstructor>> = R extends { scene: infer C } ? C : R;
@@ -101,7 +101,7 @@ export type ConstructorOf<R extends SceneRegistration<AnySceneConstructor>> = R 
  * `SceneDirector.restore()` accept as a *constructor* target (as opposed to
  * a registered string key): every registered constructor, unwrapping the
  * `{ scene, transition? }` descriptor form via {@link ConstructorOf}, when
- * `Registry` has at least one key — or any {@link AnySceneConstructor} when
+ * `Registry` has at least one key - or any {@link AnySceneConstructor} when
  * `Registry` is the empty default (`{}`, scene-less / registry-less use, the
  * default generic on `Application`/`SceneDirector`). Without this
  * conditional, an unconstrained `C extends AnySceneConstructor` accepted any
@@ -110,7 +110,7 @@ export type ConstructorOf<R extends SceneRegistration<AnySceneConstructor>> = R 
  * {@link UnregisteredSceneError} runtime check was the only guard).
  *
  * **Structural-typing caveat:** this rejects an unregistered constructor
- * only when it is structurally distinguishable from every registered one —
+ * only when it is structurally distinguishable from every registered one -
  * concretely, when it has a `Data` type (or other members) the registered
  * constructors lack. Two `Scene` subclasses that declare no members of
  * their own (the same shape as bare `Scene`) are structurally identical, so
@@ -127,7 +127,7 @@ export type NavigableSceneConstructor<Registry> = keyof Registry extends never
 /**
  * Anything that resolves to a concrete {@link Application} instance type: the
  * instance itself, its constructor, or `typeof` an already-typed instance.
- * {@link Scene}'s second generic accepts any of the three — see
+ * {@link Scene}'s second generic accepts any of the three - see
  * {@link ApplicationOf}.
  */
 export type ApplicationLike = Application<any> | (abstract new (...args: any[]) => Application<any>);
@@ -139,12 +139,12 @@ export type ApplicationLike = Application<any> | (abstract new (...args: any[]) 
  * interchangeably.
  *
  * `typeof someAppInstance` only works once the instance already has an
- * explicit, non-inferred type — a fully-inferred `const app = new
+ * explicit, non-inferred type - a fully-inferred `const app = new
  * Application({ scenes: {...} })` cannot be threaded through a
- * self-referential base-scene chain this way (confirmed: TS2506/TS7022 — the
+ * self-referential base-scene chain this way (confirmed: TS2506/TS7022 - the
  * inference cycle runs through the un-annotated `const`'s own initializer,
  * which ordinary lazy interface/type-alias resolution does not rescue).
- * Break the cycle with an explicit fixed point instead — a named
+ * Break the cycle with an explicit fixed point instead - a named
  * `Application` subclass with a hand-written registry type:
  *
  *   class GameApplication extends Application<GameScenes> {}
@@ -152,7 +152,7 @@ export type ApplicationLike = Application<any> | (abstract new (...args: any[]) 
  *   // in a second module:
  *   export abstract class AppScene<Data = void> extends Scene<Data, typeof app> {}
  *
- * The cross-file `import type` this introduces is a type-only module cycle —
+ * The cross-file `import type` this introduces is a type-only module cycle -
  * unproblematic, erased entirely at compile time.
  */
 export type ApplicationOf<T extends ApplicationLike> = T extends abstract new (...args: any[]) => infer Instance
@@ -167,8 +167,8 @@ export type ApplicationOf<T extends ApplicationLike> = T extends abstract new (.
 /**
  * Options for {@link SceneDirector.change}. Carries the
  * activation `data` (when `Data` is not `void`), `suspendCurrent`, and an
- * optional `transition` — a class-based `SceneTransition`/
- * `PhasedSceneTransition`, or an `{ enter, exit }` pair — resolved against
+ * optional `transition` - a class-based `SceneTransition`/
+ * `PhasedSceneTransition`, or an `{ enter, exit }` pair - resolved against
  * the target's registry-level default to drive the switch
  * through a {@link SceneTransitionSession}; see {@link SceneDirector.change}'s
  * doc comment for the full guarantee.
@@ -179,7 +179,7 @@ export type ChangeSceneOptions<Data> = ([Data] extends [void] ? { data?: never }
    * it (keyed by its constructor) for a later {@link SceneDirector.restore}
    * call. The same scene instance and its state are preserved; `load()`/
    * `init()` do not re-run on restore. Replaces the old `retainCurrent`
-   * name — same meaning, renamed to match the public state it produces
+   * name - same meaning, renamed to match the public state it produces
    * ({@link SceneState.Suspended}).
    */
   suspendCurrent?: boolean;
@@ -197,21 +197,21 @@ export type ChangeSceneOptions<Data> = ([Data] extends [void] ? { data?: never }
  * Tuple type for `change()`'s single options parameter: present-and-required
  * whenever `ChangeSceneOptions<Data>` has a required `data` field (`Data`
  * is not `void`), optional otherwise. There is no runtime data/options
- * ambiguity to resolve anymore — `data` always lives inside this one
+ * ambiguity to resolve anymore - `data` always lives inside this one
  * object, never as a separate positional argument (this
  * supersedes the deleted two-argument `SetSceneArgs`).
  */
 export type ChangeSceneArgs<Data> = [Data] extends [void] ? [options?: ChangeSceneOptions<Data>] : [options: ChangeSceneOptions<Data>];
 
 /**
- * Options for {@link SceneDirector.restore}. No `data` field — a restored
+ * Options for {@link SceneDirector.restore}. No `data` field - a restored
  * scope reuses whatever activation data it was originally prepared with;
  * `load()`/`init()` never run again for it.
  */
 export interface RestoreSceneOptions {
-  /** Suspend the currently active scene (if any) instead of ending it permanently — mirrors {@link ChangeSceneOptions.suspendCurrent}. */
+  /** Suspend the currently active scene (if any) instead of ending it permanently - mirrors {@link ChangeSceneOptions.suspendCurrent}. */
   suspendCurrent?: boolean;
-  /** Transition to drive this restore through — mirrors {@link ChangeSceneOptions.transition}; see its doc comment for the full guarantee. */
+  /** Transition to drive this restore through - mirrors {@link ChangeSceneOptions.transition}; see its doc comment for the full guarantee. */
   transition?: SceneTransitionSelection;
 }
 
@@ -221,10 +221,10 @@ export type SceneInstanceKind = 'active' | 'retained' | 'preloaded';
 /** Options passed to {@link SceneDirector.unload}. */
 export interface UnloadOptions {
   /**
-   * Only materializes for an active-scope match — a retained or preloaded
+   * Only materializes for an active-scope match - a retained or preloaded
    * match has nothing visible on screen to transition, and always runs the
    * direct (non-transitioned) teardown path regardless of this option. A
-   * {@link SceneTransitionSelection} — unlike `change()`/`restore()`,
+   * {@link SceneTransitionSelection} - unlike `change()`/`restore()`,
    * `unload()` never consults a target's registry-level default transition;
    * this option is the only source of a transition here.
    */
@@ -232,7 +232,7 @@ export interface UnloadOptions {
   /**
    * Disambiguates which candidate to discard when more than one exists for
    * the same constructor (active, retained, and/or preloaded can all
-   * coexist). Omit only when exactly one candidate exists — `'all'` discards
+   * coexist). Omit only when exactly one candidate exists - `'all'` discards
    * every one that does.
    */
   instance?: SceneInstanceKind | 'all';
@@ -240,14 +240,14 @@ export interface UnloadOptions {
 
 /**
  * Options passed to {@link SceneDirector.preload}. Unlike
- * {@link ChangeSceneOptions}, there is no `transition`/`suspendCurrent` —
+ * {@link ChangeSceneOptions}, there is no `transition`/`suspendCurrent` -
  * preloading never touches the active scope or visibly transitions anything.
  */
 export type PreloadOptions<Data> = [Data] extends [void] ? { data?: never } : { data: Readonly<Data> };
 
 /**
  * Tuple type for the variadic tail of `preload()` calls, after the target
- * constructor — mirrors {@link ChangeSceneArgs}'s conditional-arity trick:
+ * constructor - mirrors {@link ChangeSceneArgs}'s conditional-arity trick:
  * when `Data` is `void` the options argument itself is optional (nothing to
  * supply), otherwise it's required so a data-carrying scene can't be
  * preloaded without its data.
@@ -256,7 +256,7 @@ export type PreloadArgs<Data> = [Data] extends [void] ? [options?: PreloadOption
 
 /**
  * Resolve the erased-at-runtime options tail of a `preload()` call. Simpler
- * than `change()`'s data-vs-options disambiguation — `preload()` only ever
+ * than `change()`'s data-vs-options disambiguation - `preload()` only ever
  * takes zero or one argument, always an options object, never a bare data
  * value.
  * @internal
@@ -287,7 +287,7 @@ export class DuplicateSceneRegistrationError extends Error {
 
 /**
  * Thrown (dev builds only) when `ApplicationOptions.scenes` contains a value
- * that is not a {@link SceneRegistration} — neither a {@link Scene} subclass
+ * that is not a {@link SceneRegistration} - neither a {@link Scene} subclass
  * constructor nor a `{ scene, transition? }` descriptor whose `scene` is one.
  */
 export class InvalidSceneRegistrationError extends Error {
@@ -320,7 +320,7 @@ export class UnregisteredSceneError extends Error {
 
 /**
  * Thrown when `change`/`restore` is called while another Scene
- * switch, restore, or transition session is already in flight — navigation
+ * switch, restore, or transition session is already in flight - navigation
  * never queues.
  */
 export class ConcurrentSceneNavigationError extends Error {
@@ -336,7 +336,7 @@ export class ConcurrentSceneNavigationError extends Error {
  * Thrown to reject a `change()`/`restore()`/`unload()` call whose transition
  * session was still in flight when the {@link Application} frame loop
  * stopped (a fatal frame error, or `stop()`/`destroy()` called mid-transition)
- * — the session cannot progress without frame callbacks, so the navigation
+ * - the session cannot progress without frame callbacks, so the navigation
  * is aborted rather than left to hang forever. Any
  * claimed preload/retained entry is restored, not discarded.
  */
@@ -381,7 +381,7 @@ export class RetainedSceneNotFoundError extends Error {
 /**
  * Thrown when `unload(Target)` is called with `options.instance` omitted
  * while more than one activation (active, retained, and/or preloaded)
- * exists for `Target` — there is no priority order; the caller must specify
+ * exists for `Target` - there is no priority order; the caller must specify
  * which one via `{ instance: 'active' | 'retained' | 'preloaded' }`, or
  * `{ instance: 'all' }` to discard every one.
  */
@@ -421,12 +421,12 @@ export class SceneInstanceNotFoundError extends Error {
  * navigation checks (`change`'s registration/diagnostics lookups); `byKey`
  * backs key-based navigation (`change`/`restore` given a registered string
  * key); `defaultTransitions` backs registry-default transition resolution
- * (see {@link resolveSceneTransitionSelection}) — only constructors
+ * (see {@link resolveSceneTransitionSelection}) - only constructors
  * registered via the `{ scene, transition }` descriptor form with a
  * `transition` value have an entry; a bare-constructor registration, or a
  * descriptor with no `transition` field, has none. `Map.get()` returning
  * `undefined` for "not registered" is indistinguishable from, and equally
- * correct as, "no default" — {@link SceneTransitionSelection} never
+ * correct as, "no default" - {@link SceneTransitionSelection} never
  * legitimately includes `undefined` itself.
  * @internal
  */
@@ -441,11 +441,11 @@ const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySce
 
 /**
  * Validate and index an `ApplicationOptions.scenes` record: every value must
- * be a {@link SceneRegistration} — a function whose prototype chain includes
- * {@link Scene} (checked via `prototype instanceof Scene` — deliberately
+ * be a {@link SceneRegistration} - a function whose prototype chain includes
+ * {@link Scene} (checked via `prototype instanceof Scene` - deliberately
  * never constructs an instance, since construction may have user side
  * effects), or a `{ scene, transition? }` descriptor whose `scene` passes the
- * same check — and no resolved constructor may appear under more than one
+ * same check - and no resolved constructor may appear under more than one
  * key, in either form. Dev builds only; production builds skip validation.
  * @internal
  */

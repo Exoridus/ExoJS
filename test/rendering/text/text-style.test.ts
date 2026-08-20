@@ -188,7 +188,7 @@ describe('StyleChangeHint merging', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Individual setters — no-op vs. change branches
+// Individual setters - no-op vs. change branches
 // ---------------------------------------------------------------------------
 
 describe('setters', () => {

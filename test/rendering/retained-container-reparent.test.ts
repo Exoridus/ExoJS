@@ -15,7 +15,7 @@ import { RetainedContainer } from '#rendering/RetainedContainer';
 // Coverage for the "reparent across boundaries" hole: the transform space-flip
 // was only exercised via the barrier toggle, never via addChild/removeChild.
 // These tests move nodes IN, OUT, and BETWEEN RetainedContainer boundaries and
-// assert transforms, versions, and retained-state invalidation — including the
+// assert transforms, versions, and retained-state invalidation - including the
 // escaped-branch lifecycle (a deep-barrier branch reparented out/in/between).
 
 class LeafDrawable extends Drawable {

@@ -1,7 +1,7 @@
 const idbStorage = new Map<string, unknown>();
 
 // IndexedDbStore mock: a single namespaced Map standing in for the database.
-// It holds values *by reference* (no structured clone) — enough to prove the
+// It holds values *by reference* (no structured clone) - enough to prove the
 // KV store passes values through without a JSON layer; the real backend deep-
 // clones via structured clone.
 vi.mock('#assets/IndexedDbStore', () => {

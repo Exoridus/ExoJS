@@ -14,13 +14,13 @@ import type { MockInstance } from 'vitest';
 import { Color } from '#core/Color';
 import { Scene } from '#core/Scene';
 
-// SceneDirector is fully mocked in this file's harness (see loadHarness) —
+// SceneDirector is fully mocked in this file's harness (see loadHarness) -
 // its change() is a plain vi.fn() that never validates a registry, so any
 // Scene subclass constructor works as a start() target here.
 class DummyScene extends Scene {}
 
 // ---------------------------------------------------------------------------
-// ResizeObserver mock — jsdom does not implement it. Exposed as a class so
+// ResizeObserver mock - jsdom does not implement it. Exposed as a class so
 // individual tests can inspect `.instances` and manually fire `.trigger()`
 // instead of relying on a real layout engine.
 // ---------------------------------------------------------------------------
@@ -45,7 +45,7 @@ class MockResizeObserver implements ResizeObserver {
 }
 
 // ---------------------------------------------------------------------------
-// Harness — mirrors application.test.ts's loadApplicationHarness, extended
+// Harness - mirrors application.test.ts's loadApplicationHarness, extended
 // with override hooks for the failure-path and destroy-spy tests below.
 // ---------------------------------------------------------------------------
 
@@ -163,7 +163,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
   const sceneDirector = {
     update: vi.fn(),
     change: vi.fn().mockResolvedValue(undefined),
-    // Non-null stand-in — a real SceneDirector's currentScene is whatever
+    // Non-null stand-in - a real SceneDirector's currentScene is whatever
     // scene is active; most of this harness's tests don't drive an actual
     // scene through `change()`. stop() no longer branches on it (the
     // director's own stop-and-clear operation decides what to unload), but
@@ -504,7 +504,7 @@ describe('Application lifecycle / getters / sizing', () => {
     test('warns once and leaves the canvas unattached when the mount selector matches no element', async () => {
       const { Application } = await loadHarness();
       // `loadHarness()` calls `vi.resetModules()`, so `Application` resolved its
-      // `#core/logging` singleton fresh — grab THAT instance, not the one bound
+      // `#core/logging` singleton fresh - grab THAT instance, not the one bound
       // by this file's static top-level import.
       const { logger: freshLogger, LogSeverity: freshLogSeverity } = await import('#core/logging');
       const messages: string[] = [];
@@ -527,7 +527,7 @@ describe('Application lifecycle / getters / sizing', () => {
   });
 
   // -------------------------------------------------------------------------
-  // _applySizingMode — 'fit' / 'shrink' / 'fixed' (pure CSS, no observer)
+  // _applySizingMode - 'fit' / 'shrink' / 'fixed' (pure CSS, no observer)
   // -------------------------------------------------------------------------
 
   describe('_applySizingMode: CSS-only modes', () => {
@@ -565,7 +565,7 @@ describe('Application lifecycle / getters / sizing', () => {
 
   describe('_applySizingMode: "fill"', () => {
     test('breaks early when ResizeObserver is undefined, even with a parent present', async () => {
-      // No vi.stubGlobal here — ResizeObserver is undefined by default in jsdom.
+      // No vi.stubGlobal here - ResizeObserver is undefined by default in jsdom.
       expect(typeof ResizeObserver).toBe('undefined');
 
       const { Application } = await loadHarness();
@@ -708,7 +708,7 @@ describe('Application lifecycle / getters / sizing', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Sizing-mode CSS teardown — switching modes must not leave the outgoing
+  // Sizing-mode CSS teardown - switching modes must not leave the outgoing
   // mode's rules behind for the incoming one to fight with.
   // -------------------------------------------------------------------------
 
@@ -815,7 +815,7 @@ describe('Application lifecycle / getters / sizing', () => {
       const canvas = document.createElement('canvas');
 
       parent.style.overflow = 'scroll';
-      // A property the engine never writes — it must survive teardown untouched,
+      // A property the engine never writes - it must survive teardown untouched,
       // which a blanket `parent.style.cssText = ''` reset would not manage.
       parent.style.border = '2px solid rgb(0, 0, 0)';
       parent.appendChild(canvas);
@@ -1281,7 +1281,7 @@ describe('Application lifecycle / getters / sizing', () => {
 
         expect(sceneDirector._abortInFlightNavigation).toHaveBeenCalledTimes(1);
         expect(sceneDirector._stopAndClearActiveScene).toHaveBeenCalledTimes(1);
-        // The ordinary, lock-taking navigation path is never the stop path —
+        // The ordinary, lock-taking navigation path is never the stop path -
         // an interrupted navigation still holds the lock, and _clearScene()
         // would reject with ConcurrentSceneNavigationError against it.
         expect(sceneDirector._clearScene).not.toHaveBeenCalled();
@@ -1384,7 +1384,7 @@ describe('Application lifecycle / getters / sizing', () => {
       const app = new Application({ backend: { type: 'webgl2' } });
 
       // jsdom's default document.visibilityState is 'visible', matching the
-      // Application's default `_documentVisible = true` — so this event fires
+      // Application's default `_documentVisible = true` - so this event fires
       // with no actual change.
       expect(app.documentVisible).toBe(true);
 
@@ -1455,7 +1455,7 @@ describe('Application lifecycle / getters / sizing', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
 
         // The application unregisters its own core systems so that it, and
-        // not the registry, destroys them — a stale entry in that list would
+        // not the registry, destroys them - a stale entry in that list would
         // leave the live context to be destroyed from both sides.
         expect(destroyedContexts.filter(context => context === survivingRendering)).toHaveLength(1);
       } finally {

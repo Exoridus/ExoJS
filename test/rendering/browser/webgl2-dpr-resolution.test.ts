@@ -2,7 +2,7 @@
  * WebGL2 device-pixel-ratio / design-resolution browser tests.
  *
  * Verifies that when the canvas backing store is larger than the logical
- * (design) render-target size — i.e. `pixelRatio > 1` — the backend scales the
+ * (design) render-target size - i.e. `pixelRatio > 1` - the backend scales the
  * root viewport up to the full backing store. Content authored in logical
  * coordinates therefore fills every device pixel (crisp on HiDPI, no
  * upscale-blur, no rendering stuck in a logical-sized corner) and logical
@@ -31,7 +31,7 @@ const defaultWebGlAttributes: WebGLContextAttributes = {
 
 /**
  * Build a backend whose canvas backing store is `logical × pixelRatio` while
- * the render target stays at the logical size — exactly what Application does
+ * the render target stays at the logical size - exactly what Application does
  * for `pixelRatio > 1`.
  */
 const createBackend = async (logical: number, pixelRatio: number): Promise<WebGl2Backend> => {
@@ -119,7 +119,7 @@ describe('WebGL2 device-pixel-ratio resolution', () => {
       expectPixelNear(readPixel(backend, 60, 64), [255, 255, 255, 255]); // just left of the edge → white
       expectPixelNear(readPixel(backend, 68, 64), [0, 0, 0, 255]); // just right of the edge → black
 
-      // Content fills the FULL physical height — not stuck in a logical-sized
+      // Content fills the FULL physical height - not stuck in a logical-sized
       // corner (which would leave the top rows of the backing store empty).
       expectPixelNear(readPixel(backend, 32, 4), [255, 255, 255, 255]); // top
       expectPixelNear(readPixel(backend, 32, 124), [255, 255, 255, 255]); // bottom

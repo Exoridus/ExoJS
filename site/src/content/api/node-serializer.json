@@ -182,7 +182,7 @@
             }
           ],
           "returnType": "Record<string, unknown>",
-          "description": "Return the type-specific fields for node as a JSON-serialisable record. Do **not** include the type tag or common transform/visual fields — the framework adds those. Recurse into children via SerializeContext.writeNode."
+          "description": "Return the type-specific fields for node as a JSON-serialisable record. Do **not** include the type tag or common transform/visual fields - the framework adds those. Recurse into children via SerializeContext.writeNode."
         }
       ],
       "paragraphs": [],

@@ -1,4 +1,4 @@
-// Auto-generated from sound-pool.ts — edit the .ts source, not this file.
+// Auto-generated from sound-pool.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const POOL_SIZE = 12;
@@ -23,7 +23,7 @@ class SoundPoolScene extends Scene {
         const { width, height } = app;
         // impactHeavy is long enough (~0.5 s) that rapid fire actually overlaps -
         // a short click ends before the next shot and the pool never fills.
-        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // Path-only get() infers Sound from the .ogg extension - sidesteps a
         // compile-time overload ambiguity between Sound and the Json token form
         // when passing the Sound token explicitly.
         this.sound = this.loader.get(assets.demo.audio.impactHeavy);

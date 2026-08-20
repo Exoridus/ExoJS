@@ -1,6 +1,6 @@
 {
   "title": "AssetBinding",
-  "description": "Binds an asset type and its lookup keys to a loader-local handler factory. `create(loader)` is called once per Loader at Application construction, producing an AssetHandler instance that the Loader owns for its entire lifetime. The handler may hold loader-local state (Workers, WASM modules, parsed caches). `Result` is the produced asset instance type (e.g. `TileMap`). `Options` is the typed options object, defaulting to `undefined` (no options). The runtime `ctor` field must be a constructor that produces `Result`; the handler returned by `create` must also produce `Result` — both relationships are enforced by TypeScript. Use `satisfies AssetBinding<MyAsset, MyLoadOptions>` on an object literal to get typed options in the handler and enforce the result type without repeating it.",
+  "description": "Binds an asset type and its lookup keys to a loader-local handler factory. `create(loader)` is called once per Loader at Application construction, producing an AssetHandler instance that the Loader owns for its entire lifetime. The handler may hold loader-local state (Workers, WASM modules, parsed caches). `Result` is the produced asset instance type (e.g. `TileMap`). `Options` is the typed options object, defaulting to `undefined` (no options). The runtime `ctor` field must be a constructor that produces `Result`; the handler returned by `create` must also produce `Result` - both relationships are enforced by TypeScript. Use `satisfies AssetBinding<MyAsset, MyLoadOptions>` on an object literal to get typed options in the handler and enforce the result type without repeating it.",
   "symbol": "AssetBinding",
   "kind": "interface",
   "subsystem": "extensions",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Binds an asset type and its lookup keys to a loader-local handler factory. `create(loader)` is called once per Loader at Application construction, producing an AssetHandler instance that the Loader owns for its entire lifetime. The handler may hold loader-local state (Workers, WASM modules, parsed caches).",
-        "`Result` is the produced asset instance type (e.g. `TileMap`). `Options` is the typed options object, defaulting to `undefined` (no options). The runtime `ctor` field must be a constructor that produces `Result`; the handler returned by `create` must also produce `Result` — both relationships are enforced by TypeScript.",
+        "`Result` is the produced asset instance type (e.g. `TileMap`). `Options` is the typed options object, defaulting to `undefined` (no options). The runtime `ctor` field must be a constructor that produces `Result`; the handler returned by `create` must also produce `Result` - both relationships are enforced by TypeScript.",
         "Use `satisfies AssetBinding<MyAsset, MyLoadOptions>` on an object literal to get typed options in the handler and enforce the result type without repeating it."
       ],
       "importLine": "import { AssetBinding } from '@codexo/exojs/extensions'",
@@ -261,7 +261,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The AssetDefinitions key this binding produces. When present, the binding was built by defineAsset, which registered the type's placeholder strategy and suffix→type inference GLOBALLY at import (so loader-free Assets.from resolves it). materializeAssetBindings forwards it into Loader.bindAsset, which records it as the binding-declared type for every declared extension — the middle tier of AssetTypeRegistry.resolveExtensionType, below an explicit Loader.registerType override and above the global default."
+          "description": "The AssetDefinitions key this binding produces. When present, the binding was built by defineAsset, which registered the type's placeholder strategy and suffix→type inference GLOBALLY at import (so loader-free Assets.from resolves it). materializeAssetBindings forwards it into Loader.bindAsset, which records it as the binding-declared type for every declared extension - the middle tier of AssetTypeRegistry.resolveExtensionType, below an explicit Loader.registerType override and above the global default."
         },
         {
           "name": "typeNames",

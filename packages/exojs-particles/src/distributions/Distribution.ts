@@ -1,6 +1,6 @@
 ﻿/**
  * Value distribution sampled at particle spawn time. Each `sample()` call
- * may return a different value — used to randomize spawn properties
+ * may return a different value - used to randomize spawn properties
  * (lifetime, position, velocity, scale, tint, ...) without per-particle
  * subclassing.
  *
@@ -35,10 +35,10 @@ export interface Distribution<T> {
 /**
  * Lifetime-parameterised function that produces a deterministic `T` for a
  * given lifetime ratio `t` in `[0, 1]`. Used by per-frame update modules
- * that interpolate over particle lifetime — `ColorOverLifetime` (ColorGradient),
+ * that interpolate over particle lifetime - `ColorOverLifetime` (ColorGradient),
  * `ScaleOverLifetime` (Curve), etc.
  *
- * Mutable-target rule: same as {@link Distribution} — pass your own scratch
+ * Mutable-target rule: same as {@link Distribution} - pass your own scratch
  * via `out` for hot loops, omit for one-off calls.
  */
 export interface LifetimeFunction<T> {

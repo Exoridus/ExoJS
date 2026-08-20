@@ -356,7 +356,7 @@ function validateTiledTileLayerData(obj: Record<string, unknown>, base: TiledLay
   // Validation runs AFTER the async decode pass (`decodeLayerData.ts`), which
   // turns base64/gzip/zlib `data` into a plain GID array and strips these
   // markers. Reaching here with them still set means the data was not decoded
-  // (e.g. validate was called directly) — reject rather than mis-parse.
+  // (e.g. validate was called directly) - reject rather than mis-parse.
   if (obj.compression !== undefined) {
     throw new TiledFormatError(source, joinPath(path, 'compression'), `compressed tile layer data is not supported (compression: ${JSON.stringify(obj.compression)})`);
   }
@@ -524,7 +524,7 @@ function validateTiledWangSetData(raw: unknown, source: string, path: string): T
   const obj = expectObject(raw, source, path);
   return {
     name: expectString(obj.name, source, joinPath(path, 'name')),
-    // type is accepted as any string — unknown values are treated as-is per spec
+    // type is accepted as any string - unknown values are treated as-is per spec
     type: expectString(obj.type, source, joinPath(path, 'type')),
     tile: expectInteger(obj.tile, source, joinPath(path, 'tile')),
     colors: mapArray(obj.colors, source, joinPath(path, 'colors'), (item, itemPath) =>

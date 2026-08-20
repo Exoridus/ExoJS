@@ -1,6 +1,6 @@
 {
   "title": "GranularEffect",
-  "description": "Granular synthesis filter — slices input into small Hann-windowed grains and replays them with randomized parameters. Use cases: - Ambient texture: long grain (200ms+), low density (10-30/s), high spread, pitch range 0.5-1.5x. Creates evolving pad-like sounds. - Glitch: short grain (10-20ms), high density (100+/s), very high spread, pitch range 0.7-1.3x. Stuttering, lo-fi effects. - Time-stretch (low pitch with overlap): grain ~50ms, density 50/s, spread 0, pitch 1.0. Pseudo-stretches the input by buffering. - Pitch cloud: medium grain, medium density, pitchMin 0.5, pitchMax 2.0 gives a \"shimmer\" effect of overlapping pitches.",
+  "description": "Granular synthesis filter - slices input into small Hann-windowed grains and replays them with randomized parameters. Use cases: - Ambient texture: long grain (200ms+), low density (10-30/s), high spread, pitch range 0.5-1.5x. Creates evolving pad-like sounds. - Glitch: short grain (10-20ms), high density (100+/s), very high spread, pitch range 0.7-1.3x. Stuttering, lo-fi effects. - Time-stretch (low pitch with overlap): grain ~50ms, density 50/s, spread 0, pitch 1.0. Pseudo-stretches the input by buffering. - Pitch cloud: medium grain, medium density, pitchMin 0.5, pitchMax 2.0 gives a \"shimmer\" effect of overlapping pitches.",
   "symbol": "GranularEffect",
   "kind": "class",
   "subsystem": "audio",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Granular synthesis filter — slices input into small Hann-windowed grains and replays them with randomized parameters. Use cases:",
+        "Granular synthesis filter - slices input into small Hann-windowed grains and replays them with randomized parameters. Use cases:",
         "- Ambient texture: long grain (200ms+), low density (10-30/s), high spread, pitch range 0.5-1.5x. Creates evolving pad-like sounds. - Glitch: short grain (10-20ms), high density (100+/s), very high spread, pitch range 0.7-1.3x. Stuttering, lo-fi effects. - Time-stretch (low pitch with overlap): grain ~50ms, density 50/s, spread 0, pitch 1.0. Pseudo-stretches the input by buffering. - Pitch cloud: medium grain, medium density, pitchMin 0.5, pitchMax 2.0 gives a \"shimmer\" effect of overlapping pitches."
       ],
       "importLine": "import { GranularEffect } from '@codexo/exojs-audio-fx'",
@@ -112,7 +112,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Subclass hook — called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input)."
+          "description": "Subclass hook - called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input)."
         },
         {
           "name": "destroy",

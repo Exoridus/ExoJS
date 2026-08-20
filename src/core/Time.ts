@@ -7,7 +7,7 @@ import type { Cloneable, TimeInterval } from './types';
  *
  * Constants on the class hold canonical durations: {@link Time.zero},
  * {@link Time.oneMillisecond}, {@link Time.oneSecond}, {@link Time.oneMinute},
- * {@link Time.oneHour}. Each of those is `Object.freeze`d — they are shared
+ * {@link Time.oneHour}. Each of those is `Object.freeze`d - they are shared
  * process-wide, so a mutating call on one (e.g. `Time.zero.add(1)`) throws
  * instead of silently corrupting the shared instance for every other caller.
  * The {@link TimeInterval} multipliers used by the `factor` parameter
@@ -144,7 +144,7 @@ export class Time implements Cloneable<Time> {
   }
 
   public destroy(): void {
-    // no-op — pure value class, kept for Destroyable interface conformance
+    // no-op - pure value class, kept for Destroyable interface conformance
   }
 
   public static readonly milliseconds: TimeInterval = 1;
@@ -177,28 +177,28 @@ export class Time implements Cloneable<Time> {
     return new Time(value, Time.hours);
   }
 
-  /** Canonical zero duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
+  /** Canonical zero duration. Frozen - mutating methods throw instead of corrupting the shared instance. */
   public static readonly zero: Time = freezeTime(new Time(0));
-  /** Canonical one-millisecond duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
+  /** Canonical one-millisecond duration. Frozen - mutating methods throw instead of corrupting the shared instance. */
   public static readonly oneMillisecond: Time = freezeTime(new Time(1));
-  /** Canonical one-second duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
+  /** Canonical one-second duration. Frozen - mutating methods throw instead of corrupting the shared instance. */
   public static readonly oneSecond: Time = freezeTime(new Time(1, Time.seconds));
-  /** Canonical one-minute duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
+  /** Canonical one-minute duration. Frozen - mutating methods throw instead of corrupting the shared instance. */
   public static readonly oneMinute: Time = freezeTime(new Time(1, Time.minutes));
-  /** Canonical one-hour duration. Frozen — mutating methods throw instead of corrupting the shared instance. */
+  /** Canonical one-hour duration. Frozen - mutating methods throw instead of corrupting the shared instance. */
   public static readonly oneHour: Time = freezeTime(new Time(1, Time.hours));
 }
 
 // `Object.freeze<T>` is typed to return `Readonly<T>`, and TypeScript's
 // mapped-type expansion of a class with a private field loses that field's
-// nominal brand — `Readonly<Time>` structurally stops satisfying `Time`
+// nominal brand - `Readonly<Time>` structurally stops satisfying `Time`
 // (TS2741), even though the underlying object is still a real `Time` at
 // runtime. The cast is safe: `freezeTime` never changes the value's shape,
 // only its writability.
 //
 // Exported (rather than kept module-private) so other core modules that own
-// a shared, never-mutated `Time` scratch instance handed to user code — e.g.
-// `Application._fixedTime`, dispatched via `onFixedFrame` — can close the
+// a shared, never-mutated `Time` scratch instance handed to user code - e.g.
+// `Application._fixedTime`, dispatched via `onFixedFrame` - can close the
 // same "shared mutable Time reachable by user code" hole this fixes for the
 // canonical constants above. Not part of the public package surface: it is
 // not re-exported from the `#core` barrel, only reachable via a direct

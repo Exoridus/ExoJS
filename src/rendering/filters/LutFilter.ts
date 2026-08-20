@@ -145,7 +145,7 @@ export class LutFilter extends Filter {
    * (linear filtering, clamp-to-edge, no mipmaps).
    *
    * Accepts the standard LUT image conventions exported by Photoshop,
-   * DaVinci Resolve, OBS, and similar tools — typically a `289×17` or
+   * DaVinci Resolve, OBS, and similar tools - typically a `289×17` or
    * `1024×32` strip for 3D LUTs, or a `256×1` strip for 1D.
    */
   public static fromImage(image: HTMLImageElement | HTMLCanvasElement): Texture {

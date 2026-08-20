@@ -1,5 +1,5 @@
 /**
- * DebugLayer base-class tests — default viewMode and the no-op destroy(),
+ * DebugLayer base-class tests - default viewMode and the no-op destroy(),
  * exercised through a minimal concrete subclass since DebugLayer itself is
  * abstract. Concrete layers (BoundingBoxesLayer, PerformanceLayer, ...) all
  * override viewMode/destroy, so the base implementations are otherwise

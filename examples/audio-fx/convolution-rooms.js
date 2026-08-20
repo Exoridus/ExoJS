@@ -1,4 +1,4 @@
-// Auto-generated from convolution-rooms.ts — edit the .ts source, not this file.
+// Auto-generated from convolution-rooms.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
@@ -38,7 +38,7 @@ const ROOMS = [
     { file: 'AK-SROOMS_017', ms: 550 },
     { file: 'AK-SROOMS_016', ms: 593 },
 ];
-/** Rough label for a tail length — the same intuition a level designer works with. */
+/** Rough label for a tail length - the same intuition a level designer works with. */
 function character(ms) {
     if (ms < 10)
         return 'colouration only';
@@ -67,7 +67,7 @@ class ConvolutionRoomsScene extends Scene {
         const { width, height } = this.app;
         this.pad = { x: width / 2 - 240, y: height * 0.34, w: 480, h: 150 };
         this.impact = this.loader.get('audio/impact-light.ogg');
-        // No impulse yet — the effect passes audio through untouched until one
+        // No impulse yet - the effect passes audio through untouched until one
         // is set, so it is safe on the bus from the start.
         this.convolution = new ConvolutionEffect({ wet: 0.85 });
         this.app.audio.sound.addEffect(this.convolution);

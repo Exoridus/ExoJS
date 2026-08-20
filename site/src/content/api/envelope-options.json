@@ -49,7 +49,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Attack time in ms — gain ramps from 0 to peak (1.0). Default 10."
+          "description": "Attack time in ms - gain ramps from 0 to peak (1.0). Default 10."
         },
         {
           "name": "decayMs",
@@ -74,7 +74,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Decay time in ms — gain ramps from peak to sustain level. Default 100."
+          "description": "Decay time in ms - gain ramps from peak to sustain level. Default 100."
         },
         {
           "name": "releaseMs",
@@ -99,7 +99,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Release time in ms — gain ramps from current to 0 on release(). Default 200."
+          "description": "Release time in ms - gain ramps from current to 0 on release(). Default 200."
         },
         {
           "name": "sustainLevel",

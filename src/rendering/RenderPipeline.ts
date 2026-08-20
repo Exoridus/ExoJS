@@ -5,7 +5,7 @@ import { RenderPass, type RenderPassOptions } from './RenderPass';
  * An ordered list of {@link RenderPass} steps, played once per frame against a {@link RenderingContext}.
  *
  * A `RenderPipeline` is **itself a `RenderPass`**, so pipelines nest freely and a disabled pipeline skips its
- * whole subtree. It **owns** the passes added to it (exclusive ownership — a pass belongs to at most one
+ * whole subtree. It **owns** the passes added to it (exclusive ownership - a pass belongs to at most one
  * pipeline): {@link resize} and {@link destroy} cascade to them. It never owns scene nodes or caller
  * RenderTextures. Adding a pass that would create a direct or indirect cycle throws at add time.
  * @advanced
@@ -137,7 +137,7 @@ export class RenderPipeline extends RenderPass {
    * `execute` (before any teardown begins).
    *
    * Best-effort teardown: the pipeline is marked destroyed and detached from its passes up front, so it always
-   * ends in a single, consistent destroyed-and-empty state — every child gets a `destroy()` attempt and has its
+   * ends in a single, consistent destroyed-and-empty state - every child gets a `destroy()` attempt and has its
    * owner slot released even if an earlier child throws. If one or more children throw, the first error is
    * re-thrown after the cascade completes.
    */

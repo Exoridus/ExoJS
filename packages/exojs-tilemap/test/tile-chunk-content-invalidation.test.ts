@@ -13,13 +13,13 @@ import { TILE_TRANSFORM_IDENTITY } from '../src/types';
  * engine's content-revision contract: `RetainedContainer` skips walking (and
  * re-collecting) a content-CLEAN subtree entirely, splicing the previously
  * captured/recorded draw range instead. `TileChunkNode.pages` caches geometry
- * against `chunk.revision`, but that cache is only consulted from `render()` —
+ * against `chunk.revision`, but that cache is only consulted from `render()` -
  * a call the engine never makes on a content-clean frame. Without an explicit
  * push from the chunk's mutation site to `SceneNode._markContentDirty()`, an
  * in-place tile edit after a group capture would replay stale geometry
  * forever. These tests pin the wiring (`TileChunk._addDirtyListener` ->
  * `TileChunkNode.invalidateContent()`) directly, independent of a real GPU
- * backend — see the browser suites for the full retained-replay pixel proof.
+ * backend - see the browser suites for the full retained-replay pixel proof.
  */
 
 function fakeTexture(width = 512, height = 512): Texture {

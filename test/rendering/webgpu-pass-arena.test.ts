@@ -56,7 +56,7 @@ const setupGpuBufferUsage = (): (() => void) => {
   };
 };
 
-// A distinct pass identity — the arena only compares object references.
+// A distinct pass identity - the arena only compares object references.
 const makePass = (): WebGpuActiveRenderPass => ({}) as unknown as WebGpuActiveRenderPass;
 
 describe('WebGpuPassArena', () => {

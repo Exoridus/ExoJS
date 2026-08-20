@@ -59,7 +59,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Disambiguates which candidate to discard when more than one exists for the same constructor (active, retained, and/or preloaded can all coexist). Omit only when exactly one candidate exists — 'all' discards every one that does."
+          "description": "Disambiguates which candidate to discard when more than one exists for the same constructor (active, retained, and/or preloaded can all coexist). Omit only when exactly one candidate exists - 'all' discards every one that does."
         },
         {
           "name": "transition",
@@ -84,7 +84,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Only materializes for an active-scope match — a retained or preloaded match has nothing visible on screen to transition, and always runs the direct (non-transitioned) teardown path regardless of this option. A SceneTransitionSelection — unlike change()/restore(), unload() never consults a target's registry-level default transition; this option is the only source of a transition here."
+          "description": "Only materializes for an active-scope match - a retained or preloaded match has nothing visible on screen to transition, and always runs the direct (non-transitioned) teardown path regardless of this option. A SceneTransitionSelection - unlike change()/restore(), unload() never consults a target's registry-level default transition; this option is the only source of a transition here."
         }
       ],
       "paragraphs": [],

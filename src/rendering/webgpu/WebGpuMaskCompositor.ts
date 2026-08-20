@@ -28,7 +28,7 @@ const projectionUniformBytes = 64;
  *
  * Pipelines are cached per (target format, blend mode). The compositor is
  * not a {@link AbstractWebGpuRenderer} and never participates in renderer
- * registry dispatch — the manager invokes it directly.
+ * registry dispatch - the manager invokes it directly.
  */
 export class WebGpuMaskCompositor {
   private readonly _projectionData: Float32Array = new Float32Array(16);
@@ -172,7 +172,7 @@ export class WebGpuMaskCompositor {
     const targetFormat = manager.renderTargetFormat;
     // A geometric stencil clip can wrap the mask block (RenderEffectExecutor
     // pushes the clip outermost), so the compositor may draw into a
-    // stencil-enabled pass. Select the matching pipeline variant — a stencil-free
+    // stencil-enabled pass. Select the matching pipeline variant - a stencil-free
     // pipeline is incompatible with the pass's depth/stencil attachment.
     const stencil = manager._passCoordinator.stencilActive;
     const pipeline = this._getOrCreatePipeline(targetFormat, blendMode, stencil);

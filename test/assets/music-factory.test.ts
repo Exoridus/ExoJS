@@ -3,14 +3,14 @@ import type { MockInstance } from 'vitest';
 import { MusicFactory } from '#assets/factories/MusicFactory';
 import { AudioStream } from '#audio/AudioStream';
 
-// MP3-ish magic bytes ("ID3") — enough for determineMimeType()'s pattern match.
+// MP3-ish magic bytes ("ID3") - enough for determineMimeType()'s pattern match.
 const AUDIO_HEADER = new Uint8Array([0x49, 0x44, 0x33, 0x00]).buffer;
 
 // ---------------------------------------------------------------------------
 // <audio> element capture helper
 // ---------------------------------------------------------------------------
 //
-// jsdom's HTMLMediaElement never fires readiness/error events on its own —
+// jsdom's HTMLMediaElement never fires readiness/error events on its own -
 // spy on document.createElement to capture the exact <audio> element the
 // factory constructs internally, then dispatch events on it manually.
 
@@ -28,7 +28,7 @@ describe('MusicFactory', () => {
 
   beforeEach(() => {
     capturedAudioElements = [];
-    // Spy (rather than replace) so the real jsdom Blob-URL behavior still runs —
+    // Spy (rather than replace) so the real jsdom Blob-URL behavior still runs -
     // only the call history is inspected.
     vi.spyOn(URL, 'createObjectURL');
     revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL');
@@ -142,7 +142,7 @@ describe('MusicFactory', () => {
     vi.advanceTimersByTime(30);
 
     // 60ms have elapsed since the first "stalled" event, but the timer was
-    // reset by the second one at the 30ms mark — only 30ms have passed since,
+    // reset by the second one at the 30ms mark - only 30ms have passed since,
     // so the promise must not have rejected yet.
     let settled = false;
     promise.catch(() => {
@@ -165,7 +165,7 @@ describe('MusicFactory', () => {
     audio.dispatchEvent(new Event('canplay'));
     await expect(promise).resolves.toBeInstanceOf(AudioStream);
 
-    // Should be a no-op — asserted indirectly by not throwing/hanging.
+    // Should be a no-op - asserted indirectly by not throwing/hanging.
     expect(() => audio.dispatchEvent(new Event('stalled'))).not.toThrow();
     vi.advanceTimersByTime(50);
   });

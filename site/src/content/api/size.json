@@ -201,7 +201,7 @@
           ],
           "params": [],
           "returnType": "Size",
-          "description": "A plain, detached copy. Declared as Size rather than this so ObservableSize can hand back a value that carries no callback — a clone is a value, not a second observer of the original's owner."
+          "description": "A plain, detached copy. Declared as Size rather than this so ObservableSize can hand back a value that carries no callback - a clone is a value, not a second observer of the original's owner."
         },
         {
           "name": "copy",

@@ -5,7 +5,7 @@
  * retained Text batch on the renderer (see `_ensureRetainedQuadIndexBuffer`).
  * Growing it destroys the current buffer before allocating the larger one.
  * Since the pass-cursor sweep, the WebGPU render pass survives a renderer
- * switch and a retained replay no longer ends it — so an EARLIER retained
+ * switch and a retained replay no longer ends it - so an EARLIER retained
  * replay in the SAME still-open pass can have a draw bound to the buffer
  * being destroyed. Freeing it under that draw invalidates the whole merged
  * command buffer at the next submit: a WebGPU validation error.
@@ -16,8 +16,8 @@
  *
  * Two retained groups reproduce this deterministically: a small one whose
  * replay creates the shared buffer at its initial (small) capacity, and a
- * much larger one — rendered after it in the same tree, so its replay lands
- * in the same open pass — whose quad count forces a growth.
+ * much larger one - rendered after it in the same tree, so its replay lands
+ * in the same open pass - whose quad count forces a growth.
  *
  * Run via:  pnpm test:browser:webgpu
  */
@@ -103,7 +103,7 @@ describe('WebGPU retained text quad-index buffer growth', () => {
 
     // A small retained group: its replay is what first creates the shared
     // quad-index buffer, at whatever the renderer's initial (small) capacity
-    // is — the exact number doesn't matter, only that it is far below the
+    // is - the exact number doesn't matter, only that it is far below the
     // second group's quad count below.
     const groupA = new RetainedContainer();
     const textA = new Text('M', { fillColor: Color.white, fontSize: 16 });
@@ -129,7 +129,7 @@ describe('WebGPU retained text quad-index buffer growth', () => {
       expect(inkBeforeGrowth).not.toEqual([0, 0, 0, 255]);
 
       // A large retained group, added AFTER group A in the tree so its replay
-      // is recorded into the pass AFTER group A's — well beyond any plausible
+      // is recorded into the pass AFTER group A's - well beyond any plausible
       // initial quad-index capacity, so its first replay forces a growth
       // while group A's own replay draw from this same frame still sits,
       // unsubmitted, in the open pass.
@@ -141,7 +141,7 @@ describe('WebGPU retained text quad-index buffer growth', () => {
       groupB.setPosition(0, 0);
       root.addChild(groupB);
 
-      // F1 capture, F2 record for group B — group A keeps replaying normally
+      // F1 capture, F2 record for group B - group A keeps replaying normally
       // (no growth: its own quad count never exceeds the existing buffer).
       for (let frame = 0; frame < 2; frame++) {
         if (!(await renderGuarded(ctx, backend, () => renderFrame(backend, root)))) {
@@ -158,7 +158,7 @@ describe('WebGPU retained text quad-index buffer growth', () => {
 
       const readAfterGrowth = readWebGpuPixels(backend, canvasSize);
 
-      // Group A's content survived the growth — the fix submits its replay
+      // Group A's content survived the growth - the fix submits its replay
       // draw against the buffer it was actually bound to, not the grown one.
       expectPixelNear(readAfterGrowth(3, 10), inkBeforeGrowth);
     } finally {

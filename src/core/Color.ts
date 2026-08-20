@@ -9,11 +9,11 @@ const toChannel = (value: number): number => clamp(value, 0, 255) | 0;
  * 32-bit RGBA color value with channel-wise accessors. Red, green, and blue
  * are integers in 0..255; alpha is a float in 0..1. Out-of-range values are
  * saturated on assignment (RGB clamped to 0..255 and truncated to an integer,
- * alpha clamped to 0..1) — values outside the range no longer wrap around.
+ * alpha clamped to 0..1) - values outside the range no longer wrap around.
  *
  * The class predefines every CSS named color as a static readonly instance
- * (`Color.aliceBlue`, `Color.cornflowerBlue`, …). These shared instances are
- * intentionally shared — do not mutate them; clone first if you need to
+ * (`Color.aliceBlue`, `Color.cornflowerBlue`, ...). These shared instances are
+ * intentionally shared - do not mutate them; clone first if you need to
  * customize a starting color.
  *
  * Internally caches the packed RGBA32 representation and a normalized
@@ -103,7 +103,7 @@ export class Color implements Cloneable<Color> {
    * Return an RGBA `Float32Array` view backed by an internal cache. Pass
    * `normalized = true` to map RGB into 0..1 (typical for shader uploads);
    * default returns 0..255 RGB and 0..1 alpha. The returned array is the
-   * same instance across calls — copy it if you need a stable snapshot.
+   * same instance across calls - copy it if you need a stable snapshot.
    */
   public toArray(normalized = false): Float32Array {
     if (!this._array) {
@@ -127,7 +127,7 @@ export class Color implements Cloneable<Color> {
 
   /**
    * Return the RGB channels as a 6-digit hex string. Pass `prefixed = false`
-   * to omit the leading `#`. Alpha is not included — use {@link Color.toRgba}
+   * to omit the leading `#`. Alpha is not included - use {@link Color.toRgba}
    * for the full RGBA32 packed form.
    */
   public toString(prefixed = true): string {
@@ -137,7 +137,7 @@ export class Color implements Cloneable<Color> {
   /**
    * Return the color packed into a single 32-bit RGBA value (R in low byte,
    * A in high byte). Cached after first call until any channel is written. RGB
-   * is preserved at every alpha — a fully transparent red and a fully
+   * is preserved at every alpha - a fully transparent red and a fully
    * transparent black pack to different values.
    */
   public toRgba(): number {

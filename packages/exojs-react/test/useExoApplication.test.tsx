@@ -7,7 +7,7 @@ import { type ExoApplicationOptions, useExoApplication, type UseExoApplicationRe
 import { MockApplication } from './support/mock-application';
 
 // Replace ONLY the GPU-bound `Application`; every pure export (Color, Scene,
-// ApplicationState, …) stays real via `importActual`. The mock module is
+// ApplicationState, ...) stays real via `importActual`. The mock module is
 // imported INSIDE the factory because `vi.mock` is hoisted above the file's
 // imports, so top-level bindings are not yet initialised when it runs.
 vi.mock('@codexo/exojs', async importActual => {
@@ -19,7 +19,7 @@ vi.mock('@codexo/exojs', async importActual => {
 
 /**
  * Drives `useExoApplication` WITHOUT ever attaching the returned `canvasRef` to
- * an element — exercises the mount effect's early-return guard (`canvasRef.current`
+ * an element - exercises the mount effect's early-return guard (`canvasRef.current`
  * stays null, so no Application is constructed).
  */
 function NoCanvasHarness({ options, expose }: { options?: ExoApplicationOptions; expose: (result: UseExoApplicationResult) => void }): ReactElement {
@@ -37,7 +37,7 @@ interface HarnessProps {
 }
 
 /**
- * Drives `useExoApplication` and — crucially — attaches the returned `canvasRef`
+ * Drives `useExoApplication` and - crucially - attaches the returned `canvasRef`
  * to a real `<canvas>`, which is what makes the hook's mount effect create the
  * Application (it bails out when `canvasRef.current` is null). `expose` hands the
  * latest hook result back to the test on every render.

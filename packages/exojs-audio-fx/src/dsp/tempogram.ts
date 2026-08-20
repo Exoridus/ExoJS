@@ -14,7 +14,7 @@
  * Octave disambiguation (the core fix)
  * ------------------------------------
  * The ACF of a periodic onset train peaks at the beat lag `p` AND at every sub-harmonic
- * lag `2p, 3p, …` (every other beat also correlates). A naive "biggest peak" or additive
+ * lag `2p, 3p, ...` (every other beat also correlates). A naive "biggest peak" or additive
  * harmonic-comb picker therefore drifts down to the lowest in-range sub-harmonic. Three
  * mechanisms cooperate here to lock the true fundamental instead:
  *
@@ -25,9 +25,9 @@
  *      (`f`, `f/2`, `f/3` → lags `p, 2p, 3p`) MINUS a penalty for energy at its
  *      SUPER-harmonics (`2f`, `3f` → lags `p/2, p/3`). A true fundamental has no
  *      super-harmonic energy, so it keeps its full comb; a sub-harmonic candidate is
- *      demoted because its super-harmonic (the real beat) is strong. This realises the
- *      plan's stated goal - "metrical support reinforces the fundamental rather than a
- *      lone sub-harmonic peak" - over the `{f/2, f, 2f, 3f}` family.  [scoreTempoHypotheses]
+ *      demoted because its super-harmonic (the real beat) is strong. Metrical support
+ *      therefore reinforces the fundamental rather than a lone sub-harmonic peak, over
+ *      the `{f/2, f, 2f, 3f}` family.  [scoreTempoHypotheses]
  *
  *      The super-harmonic penalty is SUBDIVISION-AWARE: a candidate `kf` (k = 2, 3) only
  *      demotes `f` when `kf` could itself be the beat, i.e. `kf` lies within the tempo
@@ -50,7 +50,7 @@ export interface TempoCandidateResult {
   lag: number;
 }
 
-/** Tuning knobs for tempo-candidate scoring. Internal constants for now (see plan §4.5). */
+/** Tuning knobs for tempo-candidate scoring. Internal constants for now. */
 export interface TempoScoringOptions {
   /** Lowest BPM accepted as a candidate. */
   minBpm?: number;
@@ -64,7 +64,7 @@ export interface TempoScoringOptions {
   topK?: number;
 }
 
-/** Prior centre — geometric mean of the 100–200 BPM "precise" band. */
+/** Prior centre - geometric mean of the 100-200 BPM "precise" band. */
 export const defaultPriorMu = 140;
 /** Prior width: ≈ ±1 octave at ~0.6 weight. */
 export const defaultPriorSigma = Math.log(2) * 0.9;
@@ -79,7 +79,7 @@ export const candidateEdgeTolerance = 0.05;
 export const combWeightFundamental = 1;
 export const combWeightHalf = 0.5;
 export const combWeightThird = 0.3;
-/** Super-harmonic penalty weights (2f, 3f) — strong evidence the candidate is a sub-harmonic. */
+/** Super-harmonic penalty weights (2f, 3f) - strong evidence the candidate is a sub-harmonic. */
 export const combPenaltyDouble = 1;
 export const combPenaltyTriple = 0.5;
 
@@ -131,14 +131,14 @@ export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): 
 export function computeAcfInto(flux: Float32Array, n: number, minLag: number, maxLag: number, out: Float32Array): void {
   const lagCount = maxLag - minLag + 1;
 
-  // Window mean — subtracted before correlation to remove the DC pedestal.
+  // Window mean - subtracted before correlation to remove the DC pedestal.
   let mean = 0;
   for (let t = 0; t < n; t++) {
     mean += flux[t]!;
   }
   mean = n > 0 ? mean / n : 0;
 
-  // Zero-lag energy (variance) of the centred signal — the normaliser.
+  // Zero-lag energy (variance) of the centred signal - the normaliser.
   let zeroLag = 0;
   for (let t = 0; t < n; t++) {
     const c = flux[t]! - mean;
@@ -224,7 +224,7 @@ export function findTempoPeaks(
     peaks.push({ bpm: (60 * sampleRate) / (lag * hopSize), score: acf[0]!, lag });
   }
 
-  // Interior local maxima — refined to a fractional lag for sub-hop BPM resolution.
+  // Interior local maxima - refined to a fractional lag for sub-hop BPM resolution.
   for (let i = 1; i < last; i++) {
     if (acf[i]! > acf[i - 1]! && acf[i]! > acf[i + 1]! && acf[i]! > 0) {
       const lag = minLag + i + parabolicPeakOffset(acf[i - 1]!, acf[i]!, acf[i + 1]!);
@@ -261,7 +261,7 @@ export function tempoPrior(bpm: number, mu = defaultPriorMu, sigma = defaultPrio
  * super-harmonic (the real beat), so it is demoted; the true fundamental has no
  * super-harmonic energy and keeps its full comb.
  *
- * The penalty is gated to be SUBDIVISION-AWARE (see module header §2): a super-harmonic
+ * The penalty is gated to be SUBDIVISION-AWARE: a super-harmonic
  * `kf` only counts against `f` when `kf` is itself a plausible beat (`kf ≤ maxBpm`). Energy
  * at a super-harmonic above the tempo band is a subdivision (e.g. hats on 8th-notes over a
  * 180 BPM kick), not a competing fundamental, and must not demote the true beat. Returns
@@ -334,7 +334,7 @@ export function computeTempoCandidates(
 }
 
 /**
- * True when `bpm` is a metrically-related multiple of `reference` — a ½×, 2×, 3× or ⅓×
+ * True when `bpm` is a metrically-related multiple of `reference` - a ½×, 2×, 3× or ⅓×
  * octave, OR a 3:2 / 2:3 (dotted ↔ triple) relative. Switching across any of these needs the
  * stronger hysteresis margin: they are the same beat counted at a different metrical level
  * (e.g. 180 BPM kick vs the 120 BPM "dotted" grouping its 8th-note subdivisions create), not

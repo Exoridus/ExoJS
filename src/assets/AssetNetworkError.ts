@@ -6,13 +6,13 @@ export interface AssetNetworkErrorOptions {
   readonly message: string;
   /**
    * HTTP status code of the response, when one arrived. Explicitly `undefined`
-   * is accepted — a request that never produced a response has none.
+   * is accepted - a request that never produced a response has none.
    */
   readonly status?: number | undefined;
   /** HTTP status text of the response, when one arrived. */
   readonly statusText?: string | undefined;
   /**
-   * The underlying failure — the `TypeError` a failed `fetch` rejects with, or
+   * The underlying failure - the `TypeError` a failed `fetch` rejects with, or
    * anything a custom transport threw. Passed through as {@link Error.cause}.
    * Absent for an HTTP error status, where the response itself is the failure.
    */
@@ -21,7 +21,7 @@ export interface AssetNetworkErrorOptions {
 
 /**
  * Structured asset-network failure. Thrown by {@link CacheFirstStrategy} and
- * {@link NetworkOnlyStrategy} when the network leg of a load fails — either
+ * {@link NetworkOnlyStrategy} when the network leg of a load fails - either
  * because the request never completed (offline, DNS, CORS, TLS) or because the
  * server answered with a non-`ok` status.
  *
@@ -29,7 +29,7 @@ export interface AssetNetworkErrorOptions {
  * and read {@link AssetNetworkError.url} and {@link AssetNetworkError.status}
  * instead of matching on message text. {@link AssetNetworkError.status} being
  * `null` is itself the signal that no response arrived at all, which is what
- * separates "the server said 404" from "the request never left the machine" —
+ * separates "the server said 404" from "the request never left the machine" -
  * a distinction a flat `Error` could not express. For the transport case the
  * original rejection stays reachable through {@link Error.cause}.
  *
@@ -56,8 +56,8 @@ export class AssetNetworkError extends Error {
 
 /**
  * Append `<name>: <message>` for an `Error` cause. Without this the concrete
- * transport failure — the only thing that separates an offline device from a
- * CORS rejection — is invisible to any consumer that logs `error.message`
+ * transport failure - the only thing that separates an offline device from a
+ * CORS rejection - is invisible to any consumer that logs `error.message`
  * alone.
  */
 function appendCause(message: string, cause: unknown): string {

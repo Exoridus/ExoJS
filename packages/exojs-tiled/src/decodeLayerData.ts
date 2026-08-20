@@ -3,7 +3,7 @@
 // Tiled can store tile-layer GIDs as plain CSV (a JSON array), or as a base64
 // string that is optionally gzip/zlib/zstd compressed. The rest of the pipeline
 // (validation, `TiledMap`, `toTileMap`) only deals with the decoded `number[]`
-// GID array, so this pass runs first — during the async load phase — and
+// GID array, so this pass runs first - during the async load phase - and
 // rewrites any base64/compressed `data` (and infinite-map `chunks[].data`) into
 // plain GID arrays in place. After it runs, the document looks like a CSV map to
 // every downstream stage, which stays synchronous and unchanged.

@@ -3,7 +3,7 @@
 // @codexo/exojs application-facing rendering surface. Re-exported by the root
 // barrel (`src/index.ts`). Backend/renderer-author internals (abstract renderers,
 // concrete backend renderers, VAOs, shader programs, glyph/text layout helpers)
-// are intentionally NOT here — they live in their own modules under
+// are intentionally NOT here - they live in their own modules under
 // `#rendering/**` and, for the curated public author surface, in
 // `@codexo/exojs/renderer-sdk`.
 

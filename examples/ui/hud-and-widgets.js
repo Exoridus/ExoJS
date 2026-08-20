@@ -1,4 +1,4 @@
-// Auto-generated from hud-and-widgets.ts — edit the .ts source, not this file.
+// Auto-generated from hud-and-widgets.ts - edit the .ts source, not this file.
 import { Application, Button, Color, Label, Panel, ProgressBar, Scene, Stack } from '@codexo/exojs';
 /**
  * UI-Core showcase: a screen-fixed HUD and interactive widgets live on

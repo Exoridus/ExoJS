@@ -46,7 +46,7 @@ const getOrCreateOfflineAudioContext = (): OfflineAudioContext => {
 
   if (internalOfflineAudioContext === null) {
     // Derive the sample rate from an already-live context when one exists, but
-    // never CREATE one just to read `sampleRate` — decoding audio at load time
+    // never CREATE one just to read `sampleRate` - decoding audio at load time
     // (before any user gesture) must not spawn a suspended live AudioContext
     // (AU2). Buffers decoded at DEFAULT_SAMPLE_RATE resample transparently on
     // playback if the live context later runs at a different rate.
@@ -77,7 +77,7 @@ const dispatchReadyIfRunning = (): void => {
     return;
   }
 
-  // No gesture is needed while the context is running — drop the
+  // No gesture is needed while the context is running - drop the
   // interaction listeners unconditionally, including on a re-arm after a
   // later suspension (not just the very first time). `readyDispatched`
   // below only gates the public one-shot signal, not this cleanup.
@@ -94,9 +94,9 @@ const dispatchReadyIfRunning = (): void => {
 /**
  * Reacts to every native `statechange` transition of the global
  * `AudioContext`. On `'running'`, dispatches the (one-shot) public ready
- * signal if it has not fired yet. On any other state — most importantly a
+ * signal if it has not fired yet. On any other state - most importantly a
  * context that drops back to `'suspended'` after having been running before
- * (an iOS audio-session interruption, a bfcache restore, ...) — re-installs
+ * (an iOS audio-session interruption, a bfcache restore, ...) - re-installs
  * the interaction-gesture listeners so the next user gesture can resume it
  * again. Without this, every audio object constructed after such a
  * suspension would stay silent forever: `readyDispatched` was already
@@ -137,7 +137,7 @@ const ensureStateChangeListener = (audioContext: AudioContext): void => {
 };
 
 const ensureAudioContextReadyMonitoring = (): void => {
-  // Do NOT create a live AudioContext here — merely observing readiness must not
+  // Do NOT create a live AudioContext here - merely observing readiness must not
   // spawn a suspended context before the first user gesture (AU2). If a context
   // already exists (created explicitly via getAudioContext, or on the first
   // gesture) wire up its statechange listener and check whether it is running.
@@ -154,7 +154,7 @@ const ensureAudioContextReadyMonitoring = (): void => {
 };
 
 const onUserInteraction = (): void => {
-  // The first gesture is where the live context is finally created and resumed —
+  // The first gesture is where the live context is finally created and resumed -
   // the browser's autoplay policy requires resume() to run inside a user gesture.
   const audioContext = getOrCreateAudioContext();
   ensureStateChangeListener(audioContext);
@@ -247,7 +247,7 @@ export const isAudioContextReady = (): boolean => {
 /**
  * Return the shared singleton `OfflineAudioContext` used for audio decoding.
  * Its sample rate matches the live `AudioContext` when one already exists,
- * otherwise a 44.1 kHz default is used. Never creates a live `AudioContext` —
+ * otherwise a 44.1 kHz default is used. Never creates a live `AudioContext` -
  * decoding before the first user gesture must not spawn a suspended context
  * (AU2); buffers resample transparently on playback if the rates differ.
  */
@@ -256,11 +256,11 @@ export const getOfflineAudioContext = (): OfflineAudioContext => getOrCreateOffl
 /**
  * Decode raw audio bytes into an `AudioBuffer` using the shared
  * `OfflineAudioContext`. The context's sample rate matches the live
- * `AudioContext` when one exists, else defaults to 44.1 kHz — decoding never
+ * `AudioContext` when one exists, else defaults to 44.1 kHz - decoding never
  * forces a live context into existence.
  *
  * Note: on some older mobile WebKit versions `decodeAudioData` requires a
- * running (live) context — decoding may fail with a browser-level error rather
+ * running (live) context - decoding may fail with a browser-level error rather
  * than an ExoJS-shaped error in those environments.
  */
 export const decodeAudioData = async (arrayBuffer: ArrayBuffer): Promise<AudioBuffer> => getOrCreateOfflineAudioContext().decodeAudioData(arrayBuffer);

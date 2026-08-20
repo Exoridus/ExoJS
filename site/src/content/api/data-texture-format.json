@@ -1,6 +1,6 @@
 {
   "title": "DataTextureFormat",
-  "description": "Pixel format for DataTexture — the TextureFormat subset that can be uploaded from a typed array. Excludes `Rgba16F`, which has no matching JS buffer kind. Float formats are core in WebGL2 and WebGPU; no extension probe required.",
+  "description": "Pixel format for DataTexture - the TextureFormat subset that can be uploaded from a typed array. Excludes `Rgba16F`, which has no matching JS buffer kind. Float formats are core in WebGL2 and WebGPU; no extension probe required.",
   "symbol": "DataTextureFormat",
   "kind": "type",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Pixel format for DataTexture — the TextureFormat subset that can be uploaded from a typed array. Excludes `Rgba16F`, which has no matching JS buffer kind.",
+        "Pixel format for DataTexture - the TextureFormat subset that can be uploaded from a typed array. Excludes `Rgba16F`, which has no matching JS buffer kind.",
         "Float formats are core in WebGL2 and WebGPU; no extension probe required."
       ],
       "importLine": "import { DataTextureFormat } from '@codexo/exojs'",

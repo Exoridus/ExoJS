@@ -1,6 +1,6 @@
 {
   "title": "RenderBatch",
-  "description": "Explicit instanced draw submission: **one** Geometry + MeshMaterial drawn **once** with **N** per-instance `(transform, tint)` pairs — the general form of the engine's mesh-instancing model, surfaced for data-driven rendering (thousands of tiles, bullets, grass blades, procedural items as a single draw). Build it up with add, hand it to RenderingContext.drawBatch, and clear it to reuse the same instance across frames without reallocating — the per-instance transform/tint storage grows on demand and is retained across `clear()`, so a steady-state batch allocates nothing. Each add **copies** the transform and tint into internal storage, so the caller may mutate or reuse the passed `Matrix`/`Color` immediately afterwards without affecting the batch. This is the explicit instanced submission path — distinct from the internal automatic sprite batcher: every instance shares the one geometry and material, and the whole batch is a single instanced draw call.",
+  "description": "Explicit instanced draw submission: **one** Geometry + MeshMaterial drawn **once** with **N** per-instance `(transform, tint)` pairs - the general form of the engine's mesh-instancing model, surfaced for data-driven rendering (thousands of tiles, bullets, grass blades, procedural items as a single draw). Build it up with add, hand it to RenderingContext.drawBatch, and clear it to reuse the same instance across frames without reallocating - the per-instance transform/tint storage grows on demand and is retained across `clear()`, so a steady-state batch allocates nothing. Each add **copies** the transform and tint into internal storage, so the caller may mutate or reuse the passed `Matrix`/`Color` immediately afterwards without affecting the batch. This is the explicit instanced submission path - distinct from the internal automatic sprite batcher: every instance shares the one geometry and material, and the whole batch is a single instanced draw call.",
   "symbol": "RenderBatch",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,10 +19,10 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Explicit instanced draw submission: **one** Geometry + MeshMaterial drawn **once** with **N** per-instance `(transform, tint)` pairs — the general form of the engine's mesh-instancing model, surfaced for data-driven rendering (thousands of tiles, bullets, grass blades, procedural items as a single draw).",
-        "Build it up with add, hand it to RenderingContext.drawBatch, and clear it to reuse the same instance across frames without reallocating — the per-instance transform/tint storage grows on demand and is retained across `clear()`, so a steady-state batch allocates nothing.",
+        "Explicit instanced draw submission: **one** Geometry + MeshMaterial drawn **once** with **N** per-instance `(transform, tint)` pairs - the general form of the engine's mesh-instancing model, surfaced for data-driven rendering (thousands of tiles, bullets, grass blades, procedural items as a single draw).",
+        "Build it up with add, hand it to RenderingContext.drawBatch, and clear it to reuse the same instance across frames without reallocating - the per-instance transform/tint storage grows on demand and is retained across `clear()`, so a steady-state batch allocates nothing.",
         "Each add **copies** the transform and tint into internal storage, so the caller may mutate or reuse the passed `Matrix`/`Color` immediately afterwards without affecting the batch.",
-        "This is the explicit instanced submission path — distinct from the internal automatic sprite batcher: every instance shares the one geometry and material, and the whole batch is a single instanced draw call."
+        "This is the explicit instanced submission path - distinct from the internal automatic sprite batcher: every instance shares the one geometry and material, and the whole batch is a single instanced draw call."
       ],
       "importLine": "import { RenderBatch } from '@codexo/exojs'",
       "sourceLink": null
@@ -272,7 +272,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Append one instance. transform is the instance's world matrix (taken as the raw a,b,c,d,tx,ty), tint modulates the geometry's vertex colors (defaults to white). data supplies the free attributes declared via RenderBatchOptions.instanceAttributes, keyed by attribute name. Every declared attribute must be present. All three arguments are **copied** into the batch, so the caller may mutate and reuse them immediately — hoist one scratch object out of the loop rather than allocating a literal per instance, or a steady-state batch stops being allocation-free: ts const data = { a_offset: [0, 0] }; for (const item of items) { data.a_offset[0] = item.x; data.a_offset[1] = item.y; batch.add(item.transform, item.tint, data); } "
+          "description": "Append one instance. transform is the instance's world matrix (taken as the raw a,b,c,d,tx,ty), tint modulates the geometry's vertex colors (defaults to white). data supplies the free attributes declared via RenderBatchOptions.instanceAttributes, keyed by attribute name. Every declared attribute must be present. All three arguments are **copied** into the batch, so the caller may mutate and reuse them immediately - hoist one scratch object out of the loop rather than allocating a literal per instance, or a steady-state batch stops being allocation-free: ts const data = { a_offset: [0, 0] }; for (const item of items) { data.a_offset[0] = item.x; data.a_offset[1] = item.y; batch.add(item.transform, item.tint, data); } "
         },
         {
           "name": "clear",

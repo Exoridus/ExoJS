@@ -179,7 +179,7 @@ describe('segmentsIntersect', () => {
   // NOTE: the mirrored o4 branch (`o4 === 0 && pointOnSegment(a2, b1, b2)`) is
   // unreachable in practice. Reaching it requires o1, o2, and o3 to all fail
   // while o4 succeeds; for any collinear configuration, o1 === o2 === o3 === o4
-  // together (full collinearity is symmetric — see `orientation()`), so
+  // together (full collinearity is symmetric - see `orientation()`), so
   // whichever endpoint-containment check would satisfy o4 always also
   // satisfies one of the earlier o1/o2/o3 checks first (confirmed by an
   // exhaustive randomized search over collinear configurations finding no

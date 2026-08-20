@@ -37,7 +37,7 @@ const makeStubTween = (state: StubTween['state'] = 'active'): StubTween => ({
   }),
 });
 
-/** Mirrors `StubTween` — `TweenSequencerState` uses the same string values as `TweenState`. */
+/** Mirrors `StubTween` - `TweenSequencerState` uses the same string values as `TweenState`. */
 const makeStubSequencer = (state: StubTween['state'] = 'active'): StubTween => makeStubTween(state);
 
 describe('SceneTweens', () => {
@@ -166,9 +166,9 @@ describe('SceneTweens', () => {
       tweens.restore();
 
       // The second suspend() overwrote the recorded set with an empty one
-      // (the tween was already paused, so it didn't qualify) — restore()
+      // (the tween was already paused, so it didn't qualify) - restore()
       // therefore has nothing to restore. This matches SceneAudio's
-      // "already paused — not part of the suspended set" behavior exactly.
+      // "already paused - not part of the suspended set" behavior exactly.
       expect(tween.resume).not.toHaveBeenCalled();
     });
   });
@@ -366,7 +366,7 @@ describe('SceneTweens — activation against a real TweenManager', () => {
 
     const tween = tweens.create(target).to({ x: 100 }, 1).start();
 
-    // Started while dormant — the app-wide manager must not drive it yet.
+    // Started while dormant - the app-wide manager must not drive it yet.
     manager.preUpdate(sec(0.5));
     expect(target.x).toBe(0);
 

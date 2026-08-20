@@ -140,7 +140,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Re-derive origin from the fractional anchor and the CURRENT layout box. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose layout box changes after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored. The anchor measures against the drawable's declared LAYOUT BOX — its extent, taken from its own local origin — and never against where its AABB happens to start. Only the size term participates, so the mapping from anchor to origin is a pure function of the anchor and the box size: anchor = (0, 0) always means origin = (0, 0), whatever the anchor was set to before. Folding the bounds origin in would make it path-dependent instead — a drawable whose rectangle starts off-origin would keep that corner baked into its origin after returning to the default anchor. A drawable whose layout box is NOT its local bounds overrides this: text measures against its typographic advance, an AnimatedSprite against the untrimmed source frame rather than the per-frame trimmed rectangle."
+          "description": "Re-derive origin from the fractional anchor and the CURRENT layout box. Uses local (untransformed) bounds on purpose: the transform multiplies the origin by scale itself, so deriving from world bounds would double-apply scale whenever the anchor is set after scaling. Subclasses whose layout box changes after construction (e.g. a sprite switching to a texture sub-frame) must call this to keep an anchored node anchored. The anchor measures against the drawable's declared LAYOUT BOX - its extent, taken from its own local origin - and never against where its AABB happens to start. Only the size term participates, so the mapping from anchor to origin is a pure function of the anchor and the box size: anchor = (0, 0) always means origin = (0, 0), whatever the anchor was set to before. Folding the bounds origin in would make it path-dependent instead - a drawable whose rectangle starts off-origin would keep that corner baked into its origin after returning to the default anchor. A drawable whose layout box is NOT its local bounds overrides this: text measures against its typographic advance, an AnimatedSprite against the untrimmed source frame rather than the per-frame trimmed rectangle."
         },
         {
           "name": "addFilter",
@@ -368,7 +368,7 @@
             }
           ],
           "returnType": "boolean",
-          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds — i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
+          "description": "Hit-test the world-space point (x, y) against this node. For world-axis-aligned nodes (own and inherited rotation a multiple of 90° and no skew) the AABB equals the oriented box, so the cheap getBounds test is exact. For rotated or skewed nodes the point is mapped back into local space with the inverse of the global transform and tested against the untransformed getLocalBounds - i.e. a true oriented-box test. This is the exact inverse of the forward map that getBounds and the renderer use to place the node's corners, so picking matches the rendered quad instead of over-reporting hits in the empty AABB corners of a rotated node."
         },
         {
           "name": "destroy",
@@ -477,7 +477,7 @@
             }
           ],
           "returnType": "Rectangle",
-          "description": "Axis-aligned bounding box of this node in its GLOBAL-transform space. That is world space for ordinary nodes, but GROUP-LOCAL space for nodes inside an engaged RetainedContainer transform group (the group matrix is applied on the GPU, not here) — this is deliberate and matches the rendering convention. For a true world-space extent of such a node, lift this rect by the group's getWorldTransform matrix. Pass out to receive a copy you own. Without it the return value is this node's **cached** rectangle, rebuilt in place whenever the transform or the local extent changes — retaining it across frames hands you a value that silently moves. The cache is why the no-arg form does not allocate: this runs per node per frame for culling and hit-testing."
+          "description": "Axis-aligned bounding box of this node in its GLOBAL-transform space. That is world space for ordinary nodes, but GROUP-LOCAL space for nodes inside an engaged RetainedContainer transform group (the group matrix is applied on the GPU, not here) - this is deliberate and matches the rendering convention. For a true world-space extent of such a node, lift this rect by the group's getWorldTransform matrix. Pass out to receive a copy you own. Without it the return value is this node's **cached** rectangle, rebuilt in place whenever the transform or the local extent changes - retaining it across frames hands you a value that silently moves. The cache is why the no-arg form does not allocate: this runs per node per frame for culling and hit-testing."
         },
         {
           "name": "getGlobalTransform",
@@ -626,7 +626,7 @@
           ],
           "params": [],
           "returnType": "Matrix",
-          "description": "The node's TRUE world-space transform, composed through every transform-group boundary (RetainedContainer) in the ancestor chain. getGlobalTransform deliberately stops at the nearest engaged boundary (descendants resolve group-RELATIVE transforms; the renderer multiplies the group matrix back in on the GPU), so it is the right space for rendering but the wrong one for spatial queries. Use THIS accessor whenever a real world position/orientation is needed — picking, spatial audio, physics, world-space math against nodes outside the group. Without any engaged boundary ancestor it returns the exact getGlobalTransform matrix (same instance, no extra work). With one, it lazily caches groupLocal × groupWorld and revalidates on read via version/stamp compares — including runtime space flips such as RetainedContainer's deep-barrier sub-branch escape."
+          "description": "The node's TRUE world-space transform, composed through every transform-group boundary (RetainedContainer) in the ancestor chain. getGlobalTransform deliberately stops at the nearest engaged boundary (descendants resolve group-RELATIVE transforms; the renderer multiplies the group matrix back in on the GPU), so it is the right space for rendering but the wrong one for spatial queries. Use THIS accessor whenever a real world position/orientation is needed - picking, spatial audio, physics, world-space math against nodes outside the group. Without any engaged boundary ancestor it returns the exact getGlobalTransform matrix (same instance, no extra work). With one, it lazily caches groupLocal × groupWorld and revalidates on read via version/stamp compares - including runtime space flips such as RetainedContainer's deep-barrier sub-branch escape."
         },
         {
           "name": "intersectsWith",
@@ -731,7 +731,7 @@
           ],
           "params": [],
           "returnType": "this",
-          "description": "Mark this node's visual content dirty without going through a standard setter — e.g. a custom Drawable subclass backed by externally mutable data (the pattern TileChunkNode in @codexo/exojs-tilemap already uses via its own _chunk.revision compare). Call this after mutating such state so the Track-B retained-plan skip does not serve a stale frame for this node."
+          "description": "Mark this node's visual content dirty without going through a standard setter - e.g. a custom Drawable subclass backed by externally mutable data (the pattern TileChunkNode in @codexo/exojs-tilemap already uses via its own _chunk.revision compare). Call this after mutating such state so the Track-B retained-plan skip does not serve a stale frame for this node."
         },
         {
           "name": "inView",
@@ -1008,7 +1008,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Raw rendering entry point. Direct backend access — bypasses the RenderPlan pipeline machinery. Prefer the high-level RenderingContext.render path via the owning RenderingContext wherever possible."
+          "description": "Raw rendering entry point. Direct backend access - bypasses the RenderPlan pipeline machinery. Prefer the high-level RenderingContext.render path via the owning RenderingContext wherever possible."
         },
         {
           "name": "rotate",
@@ -1603,7 +1603,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Set destination size. Fails atomically — prior state is preserved on invalid input."
+          "description": "Set destination size. Fails atomically - prior state is preserved on invalid input."
         },
         {
           "name": "setSkew",
@@ -2015,7 +2015,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true and interactive is also true, this node will be automatically repositioned to follow the pointer during a drag gesture. The framework captures the pointer offset at drag-start so the node doesn't snap to the cursor position. Both interactive and draggable must be set for dragging to work — a draggable but non-interactive node will never receive pointerdown and therefore cannot start a drag."
+          "description": "When true and interactive is also true, this node will be automatically repositioned to follow the pointer during a drag gesture. The framework captures the pointer offset at drag-start so the node doesn't snap to the cursor position. Both interactive and draggable must be set for dragging to work - a draggable but non-interactive node will never receive pointerdown and therefore cannot start a drag."
         },
         {
           "name": "flags",
@@ -2069,7 +2069,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, this node can receive keyboard focus — via focus, Tab traversal, or app.interaction.focus(node) — and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do). A Widget additionally has to be enabled: disabling one takes it out of the Tab order and rejects programmatic focus, without touching this flag."
+          "description": "When true, this node can receive keyboard focus - via focus, Tab traversal, or app.interaction.focus(node) - and is delivered key events through onKeyDown / onKeyUp while focused, or while any of its descendants holds focus (key events bubble up the parent chain like pointer InteractionEvents do). A Widget additionally has to be enabled: disabling one takes it out of the Tab order and rejects programmatic focus, without touching this flag."
         },
         {
           "name": "name",
@@ -2140,7 +2140,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Normalized anchor in 0..1 along each axis that derives origin from this drawable's layout box. (0, 0) = top-left, (0.5, 0.5) = centre, (1, 1) = bottom-right. Updates origin whenever the anchor or the layout box changes. The mapping is a pure function of the anchor and the box size — the same anchor value always yields the same origin, whatever it was set to before — so (0, 0), the default, always means origin = (0, 0). Set origin directly instead when the pivot is not a fraction of the box."
+          "description": "Normalized anchor in 0..1 along each axis that derives origin from this drawable's layout box. (0, 0) = top-left, (0.5, 0.5) = centre, (1, 1) = bottom-right. Updates origin whenever the anchor or the layout box changes. The mapping is a pure function of the anchor and the box size - the same anchor value always yields the same origin, whatever it was set to before - so (0, 0), the default, always means origin = (0, 0). Set origin directly instead when the pivot is not a fraction of the box."
         },
         {
           "name": "blendMode",
@@ -2257,7 +2257,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null — clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle — clip to that world-space rectangle via scissor. - clipShape is a Geometry — clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
+          "description": "When true, descendants are geometrically clipped to clipShape. Unlike mask (which is alpha/visibility masking), clip is a hard geometric boundary: - clipShape === null - clip to this node's world-space bounds (getBounds), using the GPU scissor fast path. - clipShape is a Rectangle - clip to that world-space rectangle via scissor. - clipShape is a Geometry - clip to the geometry's silhouette via the stencil buffer (WebGL2). Only fragments inside the shape survive. Clipping wraps the node's final (filtered/masked) output and acts as a render barrier: draw commands are never reordered or batched across the clip boundary."
         },
         {
           "name": "clipShape",
@@ -3004,7 +3004,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fired when a pointer requests a context menu over this node — right-click, or a long-press/touch gesture that has an attributable pointer. Bubbles like the other pointer events, so a scene-wide fallback can listen on an ancestor. Carries no native event — whether the browser's own menu appears is decided by ApplicationOptions.input.allowNativeContextMenu, independently of this. Requires an attributable pointer: a pointerless keyboard-only request (the context-menu key, or Shift+F10, with no pointer ever having touched the surface — see ContextMenuRequest's doc comment) has nothing to hit-test or bubble with, so it never reaches this per-node event. It only ever reaches the engine-wide, scene-graph-independent app.input.onContextMenu."
+          "description": "Fired when a pointer requests a context menu over this node - right-click, or a long-press/touch gesture that has an attributable pointer. Bubbles like the other pointer events, so a scene-wide fallback can listen on an ancestor. Carries no native event - whether the browser's own menu appears is decided by ApplicationOptions.input.allowNativeContextMenu, independently of this. Requires an attributable pointer: a pointerless keyboard-only request (the context-menu key, or Shift+F10, with no pointer ever having touched the surface - see ContextMenuRequest's doc comment) has nothing to hit-test or bubble with, so it never reaches this per-node event. It only ever reaches the engine-wide, scene-graph-independent app.input.onContextMenu."
         },
         {
           "name": "onDrag",
@@ -3209,7 +3209,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fired for each key pressed while this node — or a descendant of it — holds focus. Bubbles; see KeyEvent."
+          "description": "Fired for each key pressed while this node - or a descendant of it - holds focus. Bubbles; see KeyEvent."
         },
         {
           "name": "onKeyUp",
@@ -3250,7 +3250,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fired for each key released while this node — or a descendant of it — holds focus. Bubbles; see KeyEvent."
+          "description": "Fired for each key released while this node - or a descendant of it - holds focus. Bubbles; see KeyEvent."
         },
         {
           "name": "onPointerDown",

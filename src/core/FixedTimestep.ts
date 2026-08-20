@@ -3,7 +3,7 @@
  * variable per-frame delta into a whole number of fixed-size steps, carrying the
  * sub-step remainder across frames as an interpolation {@link FixedTimestep.alpha}.
  *
- * Pure timing logic — no scene or signal coupling — so the loop can drive it and
+ * Pure timing logic - no scene or signal coupling - so the loop can drive it and
  * tests can exercise the step/alpha maths directly. The {@link maxSteps} cap is
  * the spiral-of-death guard: when a frame is so long it would need more than
  * `maxSteps` catch-up steps, the surplus whole-step backlog is dropped rather
@@ -28,7 +28,7 @@ export class FixedTimestep {
     return this._stepMs;
   }
 
-  /** Leftover fraction `[0, 1)` of a step — the render interpolation factor. */
+  /** Leftover fraction `[0, 1)` of a step - the render interpolation factor. */
   public get alpha(): number {
     return this._accumulatorMs / this._stepMs;
   }
@@ -51,7 +51,7 @@ export class FixedTimestep {
     // alpha stays in [0, 1) and the next frame does not replay the lost time.
     // The comparison is `>=`, not `>`: a backlog that is an exact multiple of
     // the step would otherwise be left untouched at exactly one whole step and
-    // report `alpha === 1`. The uncapped path never reaches here — the loop
+    // report `alpha === 1`. The uncapped path never reaches here - the loop
     // only exits below `stepMs - epsilon` unless `maxSteps` stopped it.
     if (this._accumulatorMs >= this._stepMs) {
       this._accumulatorMs %= this._stepMs;

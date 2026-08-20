@@ -12,7 +12,7 @@ const BLEND_MODES: Array<{ mode: BlendModes; name: string }> = [
     { mode: BlendModes.Subtract, name: 'Subtract' },
     { mode: BlendModes.Multiply, name: 'Multiply' },
     { mode: BlendModes.Screen, name: 'Screen' },
-    // Advanced (backdrop-aware) modes — correct coverage, work with alpha.
+    // Advanced (backdrop-aware) modes - correct coverage, work with alpha.
     { mode: BlendModes.Darken, name: 'Darken' },
     { mode: BlendModes.Lighten, name: 'Lighten' },
     { mode: BlendModes.Overlay, name: 'Overlay' },
@@ -37,10 +37,10 @@ class BlendmodesScene extends Scene {
     private hud!: ReturnType<typeof mountControls>;
     private cycle!: { set(value: number): void };
 
-    // Note: passing `options` as a 3rd argument to `loader.get(…)` or
-    // `loader.load(Asset.type('texture', …))` alongside a non-Json type currently mis-resolves
+    // Note: passing `options` as a 3rd argument to `loader.get(...)` or
+    // `loader.load(Asset.type('texture', ...))` alongside a non-Json type currently mis-resolves
     // the overload (falls through to the `Json` generic and types the result as
-    // `unknown`) — see the flagged deviation in the migration report. `load()`
+    // `unknown`) - see the flagged deviation in the migration report. `load()`
     // is awaited here purely to seed the fetch with `scaleMode: Nearest`; its
     // return value is intentionally unused. The subsequent 2-argument `get()`
     // calls for the same sources are unaffected and stay seamless.

@@ -3,7 +3,7 @@
  *
  * Two internal paths share one renderer: the shader path (bare Texture, one
  * instance per sprite, GPU sampler wrap) and the geometry path (TextureRegion,
- * Cartesian-product quads). Both are single-texture — like nine-slice, neither
+ * Cartesian-product quads). Both are single-texture - like nine-slice, neither
  * multi-texture-batches, so distinct textures flush per switch.
  */
 import { describe, expect, it } from 'vitest';

@@ -34,7 +34,7 @@ const queuedRows = (fragment: RetainedGroupFragment): RenderNode[] =>
 // F4: the enqueue seam is gated on a live committed recording (only the
 // recorded-instruction tier ever consumes a queued row), so tests that
 // exercise the enqueue MECHANICS (routing, dedup, re-arm) must arm one first
-// — otherwise every move is correctly skipped and there is nothing to observe.
+// - otherwise every move is correctly skipped and there is nothing to observe.
 const armRecording = (group: RetainedContainer, backend: RenderBackend): void => {
   const set = fragmentOf(group).instructionsForRecording();
 
@@ -264,7 +264,7 @@ const createTestBackend = (): RenderBackend => {
 
 // `build()` wraps a Container root in its own Group scope (see
 // retained-plan-cache.test.ts), so the draws for a scene never live at
-// `pass.root.entries` — they are nested one or more Group/Barrier scopes deep.
+// `pass.root.entries` - they are nested one or more Group/Barrier scopes deep.
 // Walk the scope tree in entry order to recover the true post-optimize paint
 // order.
 const gatherScopeDraws = (scope: GroupScope, out: DrawCommand[]): void => {
@@ -283,7 +283,7 @@ const gatherScopeDraws = (scope: GroupScope, out: DrawCommand[]): void => {
 // (see `RenderPlanBuilder.build`: `root._collect(this)` runs through the same
 // `emitNode` path as any other node), so a node's OWN Group entry is never a
 // direct child of `plan.passes[0].root.entries` unless that node was itself
-// passed as `build()`'s root — it is nested one or more Group/Barrier scopes
+// passed as `build()`'s root - it is nested one or more Group/Barrier scopes
 // deep. Search the whole scope tree for the entry whose `transformNode` is
 // the exact node under test (stronger than an unqualified "first Group entry"
 // find, and correct regardless of nesting depth).
@@ -743,7 +743,7 @@ describe('RetainedContainer: pooled fragment snapshot', () => {
 
     expect(fragment.entryCount).toBe(1);
     expect(fragment.entries[0]).toBe(firstRecord);
-    // The snapshot array keeps the slot the wider capture grew it to — that is
+    // The snapshot array keeps the slot the wider capture grew it to - that is
     // what makes the re-grow below allocation-free.
     expect(fragment.entries).toHaveLength(2);
 
@@ -771,7 +771,7 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
     collectDraws(root, backend);
 
     // A real pan (bumps View.updateId) small enough that the group's 0..16
-    // world AABB still overlaps the 800x600 view centered here — a large pan
+    // world AABB still overlaps the 800x600 view centered here - a large pan
     // would legitimately whole-group-cull it, which is a different
     // code path than the one this test pins.
     backend.view.setCenter(50, 50);
@@ -829,7 +829,7 @@ describe('RetainedContainer: invalidation gates and view independence', () => {
     root.addChild(group);
 
     collectDraws(root, backend);
-    // A transform move would be patched, not re-collected — use a genuine
+    // A transform move would be patched, not re-collected - use a genuine
     // content change (tint) to force the invalidate -> re-collect rung.
     leaf.setTint(new Color(200, 0, 0));
 
@@ -1080,7 +1080,7 @@ describe('RetainedContainer: alpha/tint staleness guard', () => {
 
     collectDraws(root, backend);
 
-    // A real re-collect happened — tint/alpha must never be served from a
+    // A real re-collect happened - tint/alpha must never be served from a
     // stale retained frame.
     expect(materialSpy).toHaveBeenCalled();
 
@@ -1127,7 +1127,7 @@ describe('RetainedContainer: capture suppression under thrash', () => {
     const captureSpy = vi.spyOn(fragmentOf(group), 'capture');
 
     for (let frame = 0; frame < 120; frame++) {
-      // A move is patched, not invalidating — thrash the CONTENT channel (a
+      // A move is patched, not invalidating - thrash the CONTENT channel (a
       // per-frame distinct tint) to exercise the suppression path.
       leaf.setTint(new Color((frame % 200) + 1, 0, 0));
       collectDraws(root, backend);
@@ -1136,7 +1136,7 @@ describe('RetainedContainer: capture suppression under thrash', () => {
     // F1 captures fresh; F2 recaptures once (single-shot grace, so a lone
     // mutation between replays keeps the recapture behavior); from F3 on
     // the fragment knows the captures are pure waste and every dirty frame is
-    // a plain collect. Bounded — NOT O(frames).
+    // a plain collect. Bounded - NOT O(frames).
     expect(captureSpy).toHaveBeenCalledTimes(2);
 
     captureSpy.mockRestore();
@@ -1147,12 +1147,12 @@ describe('RetainedContainer: capture suppression under thrash', () => {
   test('a descendant move during an ACTIVE suppression window is never queued (nitpick 5: no stale node reference can accumulate un-drained)', () => {
     // Before F4 gated the enqueue on a live recording, a move during a
     // continuing (already-suppressed) frame was queued unconditionally and
-    // only drained on the transition-into-suppression frame — a later move
+    // only drained on the transition-into-suppression frame - a later move
     // could sit in the queue, holding a strong node reference, until
     // suppression eventually lifted. `capture()` unconditionally invalidates
     // any recording, and suppression can only be entered after at least one
     // capture, so `hasRecording` is provably false for the whole suppressed
-    // window — the F4 gate now prevents the enqueue from ever happening here
+    // window - the F4 gate now prevents the enqueue from ever happening here
     // in the first place.
     const backend = createTestBackend();
     const root = new Container();
@@ -1213,7 +1213,7 @@ describe('RetainedContainer: capture suppression under thrash', () => {
     group.addChild(leaf);
     root.addChild(group);
 
-    // Per-instance spy — see the note in the thrash test above.
+    // Per-instance spy - see the note in the thrash test above.
     const captureSpy = vi.spyOn(fragmentOf(group), 'capture');
 
     for (let frame = 0; frame < 8; frame++) {
@@ -1256,7 +1256,7 @@ describe('RetainedContainer: capture suppression under thrash', () => {
     group.addChild(leaf);
     root.addChild(group);
 
-    // Per-instance spy — see the note in the thrash test above.
+    // Per-instance spy - see the note in the thrash test above.
     const captureSpy = vi.spyOn(fragmentOf(group), 'capture');
 
     // Steady replay-mutate-replay cadence: every dirty frame recaptures
@@ -1418,7 +1418,7 @@ describe('RetainedContainer: group-local bounds aggregate cache (F12)', () => {
     // NOTE: a visibility flip alone does not dirty bounds anywhere in the
     // engine (pre-existing SceneNode contract, plain Container included);
     // what the cache MUST NOT do is keep serving the hidden child once a
-    // bounds refresh does run — the structure revision keys the aggregate.
+    // bounds refresh does run - the structure revision keys the aggregate.
     far.visible = false;
     group.setPosition(10, 0);
 
@@ -1460,7 +1460,7 @@ describe('RetainedContainer: group-local bounds aggregate cache (F12)', () => {
 
     expect(outer.getBounds().right).toBe(16);
 
-    // Inner-group moves bump only its group-matrix version — the outer
+    // Inner-group moves bump only its group-matrix version - the outer
     // aggregate must not serve a stale rect for it.
     inner.setPosition(500, 0);
 
@@ -1490,7 +1490,7 @@ describe('RetainedContainer: deep-barrier escape scoped to the offending sub-bra
 
     collectDraws(root, backend);
 
-    // The group stays a live boundary — only the offending branch leaves it.
+    // The group stays a live boundary - only the offending branch leaves it.
     expect(group._isTransformGroupBoundary).toBe(true);
     expect(mid.getGlobalTransform().x).toBe(50); // escaped branch: world (40 + 10)
     expect(deepClipped.getGlobalTransform().x).toBe(50); // its subtree is world-space wholesale
@@ -1526,7 +1526,7 @@ describe('RetainedContainer: deep-barrier escape scoped to the offending sub-bra
 
     const frame2 = snapshot(collectDraws(root, backend)); // clean frame: splice
 
-    // The static sibling branch replays from the fragment — no walk, no
+    // The static sibling branch replays from the fragment - no walk, no
     // bounds, no material keys (the F13 cliff was losing exactly this).
     expect(staticCollectSpy).not.toHaveBeenCalled();
     expect(boundsSpyA).not.toHaveBeenCalled();
@@ -1757,7 +1757,7 @@ describe('RetainedContainer: destroyed-child eviction', () => {
     expect(fragmentOf(group).isClean(group._contentRevision, group._structureRevision, backend)).toBe(true);
 
     // The misuse: destroy WITHOUT removeChild. `destroy()` unlinks the child
-    // itself, which stamps the group structure-dirty — asserted on the fragment
+    // itself, which stamps the group structure-dirty - asserted on the fragment
     // key rather than on the draws, because that is the part production runs
     // (Vitest always compiles __DEV__ to `true`, so draw-level assertions alone
     // could not distinguish a real invalidation from a dev-only rescue).

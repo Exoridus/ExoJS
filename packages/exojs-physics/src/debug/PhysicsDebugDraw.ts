@@ -47,7 +47,7 @@ const colorSleeping = new Color(0.45, 0.45, 0.5, 0.7);
 const colorJoint = new Color(0.9, 0.5, 1, 0.8);
 
 /**
- * `DebugLayer` that visualises a {@link PhysicsWorld} — shapes, AABBs, contacts,
+ * `DebugLayer` that visualises a {@link PhysicsWorld} - shapes, AABBs, contacts,
  * normals, centres and broad-phase links. It reads the world's public state and
  * recomputes contacts/broad-phase locally only while visible, so it never
  * perturbs the simulation and works over any backend. Lives in the `./debug`
@@ -215,7 +215,7 @@ export class PhysicsDebugDraw extends DebugLayer {
 
   /**
    * Recomputes candidate pairs from scratch for the current frame via a plain
-   * brute-force AABB-overlap scan — deliberately NOT `AabbTreeBroadPhase`.
+   * brute-force AABB-overlap scan - deliberately NOT `AabbTreeBroadPhase`.
    * That class relies on `Collider._treeProxy`, a field shared on the
    * Collider object and valid only for whichever ONE broad phase currently
    * owns it (the world's own `NativePhysicsBackend`); a second instance here
@@ -223,7 +223,7 @@ export class PhysicsDebugDraw extends DebugLayer {
    * physics step interleave. Debug-only/opt-in (tree-shaken from production
    * bundles), recomputed from scratch every visible frame regardless, so an
    * O(n^2) scan is an appropriate, fully self-contained trade for
-   * correctness — it touches no state outside this method.
+   * correctness - it touches no state outside this method.
    */
   private _collectPairs(): void {
     const colliders = this._world.colliders;

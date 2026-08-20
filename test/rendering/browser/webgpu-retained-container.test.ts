@@ -67,9 +67,9 @@ const createSolidTexture = (color: string, size: number): Texture => {
 };
 
 // A BitmapText whose single glyph 'A' fills the whole `size`×`size` atlas page,
-// placed at the line origin so its quad covers (0,0)–(size,size) before any
+// placed at the line origin so its quad covers (0,0)-(size,size) before any
 // node transform. The atlas page is a solid-colour texture, so the
-// colour-atlas shader (msdf = false) emits that colour directly — deterministic
+// colour-atlas shader (msdf = false) emits that colour directly - deterministic
 // pixels with no runtime font rasterisation or atlas-upload timing. Copied
 // verbatim from webgpu-stencil-clip.test.ts's font fixture.
 const createSolidBitmapText = (color: string, size: number): { text: BitmapText; texture: Texture } => {
@@ -107,7 +107,7 @@ const isDeviceLoss = (error: unknown): boolean => error instanceof DOMException 
 
 // Render a scene through the real plan path inside a validation error scope.
 // Returns false when the device dropped mid-test (the caller should bail).
-// Every render call gets its own fresh scope — never more than one flush per
+// Every render call gets its own fresh scope - never more than one flush per
 // pushErrorScope.
 const renderScene = async (ctx: { skip: (reason: string) => void }, backend: WebGpuBackend, root: RenderNode): Promise<boolean> => {
   const device = getBackendDevice(backend);
@@ -305,7 +305,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
       expectPixelNear(readPixel(38, 38), [255, 0, 0, 255]);
 
       // Move the group by (16, 0): text bakes group-relative vertices, so the
-      // u_group uniform must lift them (text exception) — the glyph
+      // u_group uniform must lift them (text exception) - the glyph
       // now covers (24,8)-(56,40).
       group.setPosition(16, 0);
 
@@ -398,7 +398,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
       // CORRECT output, not a warning: the deep effect lands at its true
       // world position (16+8 -> 24..40) via the escaped world-space branch,
       // and the plain sibling stays group-local under the group uniform
-      // (16..32) — retention and the group transform survive for it (F13/R3).
+      // (16..32) - retention and the group transform survive for it (F13/R3).
       expectPixelNear(readPixel(36, 36), [255, 0, 0, 255]); // deep cached sprite only
       expectPixelNear(readPixel(18, 18), [0, 255, 0, 255]); // plain leaf only
       expectPixelNear(readPixel(8, 8), [0, 0, 0, 255]);
@@ -454,7 +454,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
       const first = readPixel(16, 16);
 
       if (!(await renderScene(ctx, backend, root))) {
-        // spliced frame — deterministic, no drift
+        // spliced frame - deterministic, no drift
         return;
       }
 
@@ -474,7 +474,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
 
   // Once the recording is ARMED (needs a clean record frame + a replay frame
   // first), a direct child move no longer drops the recording and re-records
-  // — it patches that one transform row in place via a single
+  // - it patches that one transform row in place via a single
   // queue.writeBuffer sub-range. Cell 3 above moves the child before the
   // recording exists (2 frames), so it records the moved position and never
   // exercises the patch; this cell arms first, then moves. The node test
@@ -520,7 +520,7 @@ describe('WebGPU renderer matrix: RetainedContainer cells', () => {
         return;
       }
 
-      // The recording is the SAME object and still armed — a fallback would
+      // The recording is the SAME object and still armed - a fallback would
       // have dropped it and re-recorded.
       expect(instructionsOf()).toBe(armed);
       expect(instructionsOf()?.hasRecording).toBe(true);

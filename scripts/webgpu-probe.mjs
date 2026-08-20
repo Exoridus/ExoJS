@@ -1,9 +1,9 @@
-// Ad-hoc WebGPU probe — render ONE playground example on REAL headless WebGPU
+// Ad-hoc WebGPU probe - render ONE playground example on REAL headless WebGPU
 // and report whether it draws, plus the adapter/device the run actually used.
 //
 // WHY THIS EXISTS: "WebGPU can't be tested headless" is FALSE and has been a
 // recurring wrong assumption. It IS testable headless on a real GPU. The two
-// traps that make it *look* broken — both baked into the correct config below:
+// traps that make it *look* broken - both baked into the correct config below:
 //   1. Use `channel: 'chromium'` (system Chromium, new headless). The
 //      playwright-BUNDLED chromium returns a null WebGPU adapter no matter the
 //      flags.
@@ -89,7 +89,7 @@ function startServer() {
 const { port, server } = await startServer();
 const baseUrl = `http://127.0.0.1:${port}`;
 
-// THE CORRECT WEBGPU HEADLESS CONFIG — see the file header for the two traps.
+// THE CORRECT WEBGPU HEADLESS CONFIG - see the file header for the two traps.
 const browser = await chromium.launch({
   headless: true,
   channel: 'chromium',

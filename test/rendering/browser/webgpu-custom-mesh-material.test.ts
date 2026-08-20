@@ -1,5 +1,5 @@
 /**
- * WebGPU custom-MeshMaterial browser test — opt-in, capability-aware.
+ * WebGPU custom-MeshMaterial browser test - opt-in, capability-aware.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe), so this test drives a

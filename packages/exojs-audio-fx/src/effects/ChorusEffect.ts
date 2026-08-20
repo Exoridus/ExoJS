@@ -98,7 +98,7 @@ export class ChorusEffect extends AudioEffect {
     }
   }
 
-  /** LFO oscillation rate in Hz. Typical chorus range is 0.1–5 Hz; 5–15 Hz produces a vibrato effect. Default 1.5. */
+  /** LFO oscillation rate in Hz. Typical chorus range is 0.1-5 Hz; 5-15 Hz produces a vibrato effect. Default 1.5. */
   public get rateHz(): number {
     return this._rateHz;
   }

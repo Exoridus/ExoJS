@@ -1,6 +1,6 @@
 {
   "title": "WgslUniformField",
-  "description": "A named uniform field within a module's struct. Order matters — defines memory layout.",
+  "description": "A named uniform field within a module's struct. Order matters - defines memory layout.",
   "symbol": "WgslUniformField",
   "kind": "interface",
   "subsystem": "particles",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A named uniform field within a module's struct. Order matters — defines memory layout."
+        "A named uniform field within a module's struct. Order matters - defines memory layout."
       ],
       "importLine": "import { WgslUniformField } from '@codexo/exojs-particles'",
       "sourceLink": null

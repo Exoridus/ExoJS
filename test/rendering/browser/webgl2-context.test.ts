@@ -2,7 +2,7 @@
  * Smoke-test: verifies that a real WebGL2RenderingContext can be obtained
  * in a headless Chromium environment via Playwright/SwiftShader.
  *
- * This test intentionally does NOT use any ExoJS code — it validates the
+ * This test intentionally does NOT use any ExoJS code - it validates the
  * test infrastructure itself (SwiftShader software renderer is active).
  */
 describe('WebGL2 context availability', () => {

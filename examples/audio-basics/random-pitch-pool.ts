@@ -30,7 +30,7 @@ class RandomPitchPoolScene extends Scene {
         this.trackY = height * 0.55;
         this.trackHalf = width * 0.38;
 
-        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // Path-only get() infers Sound from the .ogg extension - sidesteps a
         // compile-time overload ambiguity between Sound and the Json token form
         // when passing the Sound token explicitly.
         this.sound = this.loader.get(assets.demo.audio.impactLight);

@@ -122,7 +122,7 @@ describe('normalizeInsets', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildNineSliceQuads — all-stretch (default)
+// buildNineSliceQuads - all-stretch (default)
 // ---------------------------------------------------------------------------
 
 describe('buildNineSliceQuads — all-stretch (default)', () => {
@@ -175,7 +175,7 @@ describe('buildNineSliceQuads — all-stretch (default)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildNineSliceQuads — UV boundaries
+// buildNineSliceQuads - UV boundaries
 // ---------------------------------------------------------------------------
 
 describe('buildNineSliceQuads — UV boundaries', () => {
@@ -302,7 +302,7 @@ describe('buildNineSliceQuads — UV boundaries', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildNineSliceQuads — zero-center
+// buildNineSliceQuads - zero-center
 // ---------------------------------------------------------------------------
 
 describe('buildNineSliceQuads — zero-center', () => {
@@ -332,7 +332,7 @@ describe('buildNineSliceQuads — zero-center', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildNineSliceQuads — small-target compression
+// buildNineSliceQuads - small-target compression
 // ---------------------------------------------------------------------------
 
 describe('buildNineSliceQuads — small-target compression', () => {
@@ -356,7 +356,7 @@ describe('buildNineSliceQuads — small-target compression', () => {
     const slices = { left: 16, top: 16, right: 16, bottom: 16 };
     const border = { left: 30, top: 30, right: 30, bottom: 30 };
     const quads = buildNineSliceQuads(region, slices, border, 20, 20, undefined);
-    // All quads fit within [0,20]x[0,20] — only corners
+    // All quads fit within [0,20]x[0,20] - only corners
     for (const q of quads) {
       expect(q.x0).toBeGreaterThanOrEqual(0);
       expect(q.x1).toBeLessThanOrEqual(20 + 1e-9);
@@ -379,7 +379,7 @@ describe('buildNineSliceQuads — small-target compression', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildNineSliceQuads — repeat mode
+// buildNineSliceQuads - repeat mode
 // ---------------------------------------------------------------------------
 
 describe('buildNineSliceQuads — repeat mode', () => {
@@ -419,7 +419,7 @@ describe('buildNineSliceQuads — repeat mode', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildNineSliceQuads — zero size
+// buildNineSliceQuads - zero size
 // ---------------------------------------------------------------------------
 
 describe('buildNineSliceQuads — zero size', () => {
@@ -452,7 +452,7 @@ describe('buildNineSliceQuads — zero size', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildNineSliceQuads — mirror-repeat
+// buildNineSliceQuads - mirror-repeat
 // ---------------------------------------------------------------------------
 
 describe('buildNineSliceQuads — mirror-repeat', () => {
@@ -467,7 +467,7 @@ describe('buildNineSliceQuads — mirror-repeat', () => {
 });
 
 // ---------------------------------------------------------------------------
-// buildNineSliceQuads — per-edge mode overrides
+// buildNineSliceQuads - per-edge mode overrides
 // ---------------------------------------------------------------------------
 
 describe('buildNineSliceQuads — per-edge mode overrides', () => {

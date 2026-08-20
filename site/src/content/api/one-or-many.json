@@ -1,6 +1,6 @@
 {
   "title": "OneOrMany",
-  "description": "A single value or a list of alternatives. Actions accept one binding directly and several as an array — there are no variadic constructors, so the options object always stays an unambiguous second parameter.",
+  "description": "A single value or a list of alternatives. Actions accept one binding directly and several as an array - there are no variadic constructors, so the options object always stays an unambiguous second parameter.",
   "symbol": "OneOrMany",
   "kind": "type",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A single value or a list of alternatives. Actions accept one binding directly and several as an array — there are no variadic constructors, so the options object always stays an unambiguous second parameter."
+        "A single value or a list of alternatives. Actions accept one binding directly and several as an array - there are no variadic constructors, so the options object always stays an unambiguous second parameter."
       ],
       "importLine": "import { OneOrMany } from '@codexo/exojs'",
       "sourceLink": null

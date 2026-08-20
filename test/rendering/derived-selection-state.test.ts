@@ -4,8 +4,8 @@
  * The two properties this file exists to pin are the ones a wrong
  * implementation still renders plausibly for: that a STAY item keeps the slot it
  * had (so the backend's persistent stores stay valid without being rewritten),
- * and that the order stream reproduces the emit order EXACTLY — including nested
- * scopes at their recorded position — because that stream IS the draw order.
+ * and that the order stream reproduces the emit order EXACTLY - including nested
+ * scopes at their recorded position - because that stream IS the draw order.
  */
 import { describe, expect, it } from 'vitest';
 
@@ -58,7 +58,7 @@ const membership = (scopes: readonly SourceScope[], visible: ReadonlyArray<reado
     return bits;
   });
 
-/** The order stream as handles rather than slots — i.e. WHICH items were drawn, in order. */
+/** The order stream as handles rather than slots - i.e. WHICH items were drawn, in order. */
 const orderedHandles = (state: DerivedSelectionState): number[] => {
   const handles: number[] = [];
 
@@ -106,7 +106,7 @@ describe('DerivedSelectionState', () => {
 
       state.update(root, membership(scopes, [[1, 2, 3]]), first);
 
-      // 1 and 2 stayed: same slots, and NOT reported as entering — the backend
+      // 1 and 2 stayed: same slots, and NOT reported as entering - the backend
       // reads `entered` to decide what to write, so a stayer listed there would
       // rewrite data that never changed.
       expect(state.slotOf(1)).toBe(before[1]);
@@ -219,7 +219,7 @@ describe('DerivedSelectionState', () => {
       state.update(root, first, null);
 
       // Admitting 0..3 afterwards hands them the slots ABOVE the two already
-      // taken, so slot order and draw order now disagree — which is exactly the
+      // taken, so slot order and draw order now disagree - which is exactly the
       // case a physical-order draw would get wrong.
       state.update(root, membership(scopes, [[0, 1, 2, 3, 4, 5]]), first);
 
@@ -242,7 +242,7 @@ describe('DerivedSelectionState', () => {
       state.rebind(7);
       state.update(root, membership(scopes, [[0, 1, 2, 3], [4, 5, 6].map(h => h - 4)]), null);
 
-      // Root items 0,1 — then the nested scope's three — then root items 2,3.
+      // Root items 0,1 - then the nested scope's three - then root items 2,3.
       expect(orderedHandles(state)).toEqual([0, 1, 4, 5, 6, 2, 3]);
     });
 
@@ -266,7 +266,7 @@ describe('DerivedSelectionState', () => {
       );
 
       // Item 1 is not admitted, so the nested scope is reached at item 3 instead
-      // — still after every root item recorded before it, still before item 3.
+      // - still after every root item recorded before it, still before item 3.
       expect(orderedHandles(state)).toEqual([0, 4, 5, 3]);
     });
 

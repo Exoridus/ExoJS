@@ -3,7 +3,7 @@
  *
  * The real {@link WebGl2Backend} and its renderers are driven against this fake
  * context so the *actual* batching, multi-texture-slot, flush, and upload code
- * paths run in Node — no browser, no GPU. The fake records every structurally
+ * paths run in Node - no browser, no GPU. The fake records every structurally
  * relevant GL call (draw, bind, upload) into a {@link GlRecorder}; combined with
  * the backend's own `RenderStats`, that yields reproducible structural metrics
  * (draw calls, batches, texture binds, uploaded bytes, transform rows).
@@ -16,8 +16,8 @@
  *
  * Fidelity contract: the fake never executes shaders, so values returned from
  * reflection/queries only need to be *internally consistent*, not real WebGL2
- * constants. Method dispatch is by the WebGL2 naming convention — every API
- * method is camelCase, every enum constant is UPPER_SNAKE — which is exact for
+ * constants. Method dispatch is by the WebGL2 naming convention - every API
+ * method is camelCase, every enum constant is UPPER_SNAKE - which is exact for
  * WebGL2. Reflection is parsed from the real GLSL source the renderer compiles,
  * so attribute/uniform name lookups (`getAttribute('a_localBounds')`) resolve.
  *
@@ -132,17 +132,17 @@ export class GlRecorder {
   public instances = 0;
   public bufferUploads = 0;
   public bufferUploadBytes = 0;
-  /** `bufferData` calls — orphaning reallocations that discard the old store. */
+  /** `bufferData` calls - orphaning reallocations that discard the old store. */
   public bufferReallocations = 0;
-  /** `bufferSubData` calls — in-place updates of an existing store. */
+  /** `bufferSubData` calls - in-place updates of an existing store. */
   public bufferSubUpdates = 0;
   public textureBinds = 0;
   public textureUploads = 0;
   public textureUploadBytes = 0;
   public samplerBinds = 0;
-  /** Distinct consecutive `useProgram` bindings — WebGL2's pipeline-change proxy. */
+  /** Distinct consecutive `useProgram` bindings - WebGL2's pipeline-change proxy. */
   public programChanges = 0;
-  /** `blendFunc` calls — the backend only issues one per real blend-state change. */
+  /** `blendFunc` calls - the backend only issues one per real blend-state change. */
   public blendChanges = 0;
   public scissorChanges = 0;
   /** Transform rows uploaded this frame (rows span the store's texture lines). */
@@ -286,7 +286,7 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
 
   let activeUnit = 0;
   // Texture bound per unit, and the set of handles allocated as a transform row
-  // store — an upload is attributed by identity rather than by guessing from
+  // store - an upload is attributed by identity rather than by guessing from
   // the rectangle it writes. Per UNIT because the backend rebinds through a
   // scratch unit and restores the active one, so a single "last bound" would go
   // stale as soon as two textures are live at once.
@@ -372,7 +372,7 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
       recorder.drawCalls++;
     },
     // The WebGL2 `(srcData, srcOffset, length)` overloads upload a RANGE of the
-    // view, not all of it — `length` is in elements. Ignoring the extra
+    // view, not all of it - `length` is in elements. Ignoring the extra
     // arguments would over-count every partial upload (the mesh renderer's
     // per-draw vertex/index/node-index uploads are all partial).
     bufferData: (_target: number, data: unknown, _usage: number, srcOffset?: number, length?: number): void => {
@@ -392,7 +392,7 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
     // Explicit parameters, not a rest array: a rest parameter allocates a fresh
     // array on EVERY upload call, and at a few hundred uploads per frame that
     // harness garbage lands in the very allocation profile these scenes exist to
-    // measure — attributed to the engine function that called into the fake,
+    // measure - attributed to the engine function that called into the fake,
     // because V8 inlines the arrow. See `captureUploadArgs`.
     texImage2D: (a0: unknown, a1: unknown, a2: unknown, a3: unknown, a4: unknown, a5: unknown, a6: unknown, a7: unknown, a8: unknown, a9: unknown): void =>
       recordTextureUpload(captureUploadArgs(a0, a1, a2, a3, a4, a5, a6, a7, a8, a9), true),
@@ -429,7 +429,7 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
 
   // Transform rows pack several per texture line, so a transform upload is no
   // longer identifiable by a width of 2 and its row count is no longer the
-  // rectangle's height. Identify the store at ALLOCATION instead — the only
+  // rectangle's height. Identify the store at ALLOCATION instead - the only
   // rgba32f texture whose width is a power-of-two multiple of the row's texel
   // count, which the row stores guarantee by doubling their capacity from 16
   // (Text's own rgba32f node-data store is 10 texels per row, so it is excluded,
@@ -442,7 +442,7 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
    * itself allocates nothing per call. `argCount` is the real arity: the engine
    * never passes an explicit `undefined`, so the trailing-undefined scan
    * reproduces what a rest parameter's `length` reported. Non-reentrant by
-   * construction — a GL upload call cannot nest inside another one.
+   * construction - a GL upload call cannot nest inside another one.
    */
   const uploadArgs: unknown[] = [undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined, undefined];
   let uploadArgCount = 0;
@@ -536,7 +536,7 @@ export const createFakeWebGl2Context = (recorder: GlRecorder): WebGL2RenderingCo
 
       const first = prop.charCodeAt(0);
 
-      // UPPER_SNAKE (A–Z) → enum constant; everything else is a method name.
+      // UPPER_SNAKE (A-Z) → enum constant; everything else is a method name.
       if (first >= 65 && first <= 90) {
         return constantFor(prop);
       }
@@ -578,7 +578,7 @@ export const installFakeWebGl2Globals = (): void => {
 
   const stub: Record<string, number> = {};
 
-  // Every constant the backend's format table reads — it builds all five format
+  // Every constant the backend's format table reads - it builds all five format
   // descriptors in one go, so a missing name would put `undefined` in an entry
   // rather than only failing if that format were ever requested.
   for (const name of ['R8', 'R32F', 'RGBA8', 'RGBA16F', 'RGBA32F', 'RED', 'RGBA', 'UNSIGNED_BYTE', 'HALF_FLOAT', 'FLOAT']) {

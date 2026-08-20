@@ -18,11 +18,11 @@ export interface DefineAssetDescriptor<Result, Options> {
   readonly ctor: AssetConstructor<Result>;
   /** The {@link AssetDefinitions} key this type registers under. */
   readonly type: keyof AssetDefinitions;
-  /** File suffixes that map to this type. Feeds the per-loader map and — for a leaf-capable type — global bare-path inference. */
+  /** File suffixes that map to this type. Feeds the per-loader map and - for a leaf-capable type - global bare-path inference. */
   readonly extensions?: readonly string[];
   /**
    * Config-map type names resolving to this handler. Defaults to `[type]`.
-   * @internal — internal alias-compat only; not part of the public extension
+   * @internal - internal alias-compat only; not part of the public extension
    * surface (extensions should rely on `type`).
    */
   readonly typeNames?: readonly string[];
@@ -47,19 +47,19 @@ export interface DefineAssetDescriptor<Result, Options> {
 }
 
 /**
- * Declare a built-in asset type in one place. For a **leaf-capable** type — one
- * with a {@link SeamlessAdapter} (resource) or `isValue: true` (value) — this
+ * Declare a built-in asset type in one place. For a **leaf-capable** type - one
+ * with a {@link SeamlessAdapter} (resource) or `isValue: true` (value) - this
  * registers its placeholder strategy and suffix→type inference GLOBALLY at import
  * time, so a loader-free `Assets.from` resolves it before any Application exists.
  *
- * A **non-leaf** resource type (`isValue: false` and no adapter — e.g. `bmFont`,
+ * A **non-leaf** resource type (`isValue: false` and no adapter - e.g. `bmFont`,
  * `font`) has no placeholder strategy, so it is deliberately NOT registered
  * globally: its bare path cannot be inferred and must be declared via `Asset.type(...)`
  * or an explicit config. Its `extensions` still travel on the returned binding
  * for the per-Loader map.
  *
  * The returned {@link AssetBinding} flows through the unchanged
- * `materializeAssetBindings` path exactly like any extension package's binding —
+ * `materializeAssetBindings` path exactly like any extension package's binding -
  * `defineAsset` adds no second per-loader registration channel.
  * @advanced
  */

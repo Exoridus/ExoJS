@@ -11,7 +11,7 @@ interface DrawPlanDepthHooks {
  * Draw ONE already-resolved drawable that engine-internal effect code owns,
  * without building a render plan for it.
  *
- * `RenderNode.render()` is `playRenderTree` — build, optimize, play — and the
+ * `RenderNode.render()` is `playRenderTree` - build, optimize, play - and the
  * filter and composite paths call it once per sprite they draw. That is a whole
  * plan cycle to issue a single quad the caller already holds, positioned by the
  * caller, into a target the caller already bound. A blur at quality 3 pays it
@@ -20,17 +20,17 @@ interface DrawPlanDepthHooks {
  * Everything the plan would have contributed for this one node is either
  * already true or already provided:
  *
- * - TARGET / VIEW / CLEAR — the enclosing `BackendTargetPass` bound them. A
+ * - TARGET / VIEW / CLEAR - the enclosing `BackendTargetPass` bound them. A
  *   single-sprite plan's pass carries `target: null` and the backend's own
  *   view, so playing it changes neither.
- * - TRANSFORM SLOT — the renderers already fall back to `_pushTransform` when
+ * - TRANSFORM SLOT - the renderers already fall back to `_pushTransform` when
  *   no plan draw command is active (`WebGl2SpriteRenderer`), which is the same
  *   row the plan would have written at its group upload boundary.
- * - FLUSH ORDER — the plan-depth bracket below keeps it. Ending a NESTED plan
+ * - FLUSH ORDER - the plan-depth bracket below keeps it. Ending a NESTED plan
  *   flushes the active renderer and rewinds the transform rows it pushed, so
  *   the drawable's batch lands in the target that is bound now and the
  *   frame-scoped buffer does not grow per effect pass.
- * - CULLING — deliberately dropped. The plan would have tested this drawable
+ * - CULLING - deliberately dropped. The plan would have tested this drawable
  *   against the cull rect, but effect code only reaches here for output it has
  *   already decided to produce, and the quad fills the target it draws into.
  *   The test can only remove a draw the caller asked for.

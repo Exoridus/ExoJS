@@ -5,9 +5,9 @@ import type { Loopable, Pausable, RatePitched, Seekable } from './Playable';
 
 /** Playback window within the buffer for a {@link SoundVoice}. */
 export interface SoundVoiceWindow {
-  /** Buffer offset (seconds) where this voice's span begins — 0 for a full sound, `clip.start` for a sprite. */
+  /** Buffer offset (seconds) where this voice's span begins - 0 for a full sound, `clip.start` for a sprite. */
   base: number;
-  /** Buffer offset (seconds) where playback ends — buffer duration for a full sound, `clip.end` for a sprite. */
+  /** Buffer offset (seconds) where playback ends - buffer duration for a full sound, `clip.end` for a sprite. */
   end: number;
   /** Loop window start (seconds). */
   loopStart: number;
@@ -31,9 +31,9 @@ export interface SoundVoiceInit extends BaseVoiceInit {
  * `AudioBufferSourceNode`. Each `AudioManager.play(sound)` creates an
  * independent SoundVoice; concurrent plays each get their own.
  *
- * Mixes in {@link Seekable}, {@link Loopable} and {@link Pausable} — all three
+ * Mixes in {@link Seekable}, {@link Loopable} and {@link Pausable} - all three
  * recreate the buffer source at the current position, since a source can be
- * neither repositioned, re-bounded, nor halted-and-restarted in place — plus
+ * neither repositioned, re-bounded, nor halted-and-restarted in place - plus
  * {@link RatePitched} and (via {@link BaseVoice}) {@link Spatializable}.
  *
  * **Pause is a stop-and-restart, not a freeze.** `pause()` reads the playhead
@@ -128,14 +128,14 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   /**
    * Halt playback, keeping the playhead. A buffer source can be neither
    * repositioned nor stopped-and-restarted, so the running source is retired
-   * outright — with its `onended` cleared first, so the teardown does not
-   * finish the voice — and {@link SoundVoice.resume} starts a fresh one at the
+   * outright - with its `onended` cleared first, so the teardown does not
+   * finish the voice - and {@link SoundVoice.resume} starts a fresh one at the
    * remembered offset.
    *
    * The offset is sample-exact but the restart is not phase-continuous: on
    * sustained tonal material the seam can be audible.
    *
-   * A voice whose source has already played out ends here instead of pausing —
+   * A voice whose source has already played out ends here instead of pausing -
    * see {@link SoundVoice._reachedWindowEnd}.
    */
   public pause(): void {
@@ -146,14 +146,14 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
     // clears that callback, so pausing here would strand the voice as
     // permanently paused-but-not-ended: holding its pool slot, its entry in the
     // manager's voice registry, and its place in `SceneAudio._suspended`, with
-    // nothing left that could ever finish it. It is over — end it properly.
+    // nothing left that could ever finish it. It is over - end it properly.
     if (this._reachedWindowEnd()) {
       this._finish();
 
       return;
     }
 
-    // Read the playhead before the flag flips — `time` reports the frozen
+    // Read the playhead before the flag flips - `time` reports the frozen
     // value once `_paused` is set.
     this._pausedAt = this._window.base + this.time;
     this._paused = true;
@@ -162,7 +162,7 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
 
   /**
    * Whether the running source has already played past the end of its window.
-   * Only meaningful for a non-looping voice — a looping source is bounded by
+   * Only meaningful for a non-looping voice - a looping source is bounded by
    * nothing and wraps forever.
    */
   private _reachedWindowEnd(): boolean {
@@ -197,20 +197,20 @@ export class SoundVoice extends BaseVoice implements Seekable, Loopable, RatePit
   public set loop(value: boolean) {
     // Paused too: there is no live source to re-bound, and `_startSource`
     // reads `_loop` when `resume()` builds the replacement, so recording the
-    // flag is all that is needed — and all that is allowed.
+    // flag is all that is needed - and all that is allowed.
     if (this._loop === value || this._ended || this._paused) {
       this._loop = value;
       return;
     }
 
-    // Read the playhead before the flag flips — `time` wraps modulo the span
+    // Read the playhead before the flag flips - `time` wraps modulo the span
     // while looping, and the value needed below is the pre-change position.
     const position = this.time;
 
     this._loop = value;
 
     // The clip window is an invariant of the voice, not a property of the loop
-    // flag — and a buffer source can be neither repositioned nor re-bounded in
+    // flag - and a buffer source can be neither repositioned nor re-bounded in
     // place, so flipping `loop` on the live source is not enough in either
     // direction:
     //

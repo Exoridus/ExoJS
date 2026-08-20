@@ -1,3 +1,3 @@
-// @codexo/exojs-tiled — side-effect-free root entry.
+// @codexo/exojs-tiled - side-effect-free root entry.
 
 export * from './public';

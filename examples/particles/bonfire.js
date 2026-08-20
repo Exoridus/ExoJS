@@ -1,4 +1,4 @@
-// Auto-generated from bonfire.ts — edit the .ts source, not this file.
+// Auto-generated from bonfire.ts - edit the .ts source, not this file.
 import { Application, BlendModes, Color, Scene } from '@codexo/exojs';
 import { ColorGradient, ColorOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn, VectorRange, } from '@codexo/exojs-particles';
 class BonfireScene extends Scene {

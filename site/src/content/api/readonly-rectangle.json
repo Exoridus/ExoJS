@@ -1,6 +1,6 @@
 {
   "title": "ReadonlyRectangle",
-  "description": "Read-only view of a Rectangle: every accessor and non-mutating query a rectangle offers, with none of its writers. Returned by APIs that hand out a LIVE internal rectangle for zero allocation cost — SceneNode.getLocalBounds being the canonical one. Those rectangles are read on hot per-frame paths, so cloning them defensively would add a per-frame allocation; the view costs nothing at runtime and removes the write at the type level instead. Owners keep a real Rectangle and expose a dedicated writer that also runs whatever invalidation the write implies. Same idea as a `readonly T[]`: the object underneath is still the mutable one, the view just does not offer a way to change it.",
+  "description": "Read-only view of a Rectangle: every accessor and non-mutating query a rectangle offers, with none of its writers. Returned by APIs that hand out a LIVE internal rectangle for zero allocation cost - SceneNode.getLocalBounds being the canonical one. Those rectangles are read on hot per-frame paths, so cloning them defensively would add a per-frame allocation; the view costs nothing at runtime and removes the write at the type level instead. Owners keep a real Rectangle and expose a dedicated writer that also runs whatever invalidation the write implies. Same idea as a `readonly T[]`: the object underneath is still the mutable one, the view just does not offer a way to change it.",
   "symbol": "ReadonlyRectangle",
   "kind": "interface",
   "subsystem": "math",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Read-only view of a Rectangle: every accessor and non-mutating query a rectangle offers, with none of its writers.",
-        "Returned by APIs that hand out a LIVE internal rectangle for zero allocation cost — SceneNode.getLocalBounds being the canonical one. Those rectangles are read on hot per-frame paths, so cloning them defensively would add a per-frame allocation; the view costs nothing at runtime and removes the write at the type level instead. Owners keep a real Rectangle and expose a dedicated writer that also runs whatever invalidation the write implies.",
+        "Returned by APIs that hand out a LIVE internal rectangle for zero allocation cost - SceneNode.getLocalBounds being the canonical one. Those rectangles are read on hot per-frame paths, so cloning them defensively would add a per-frame allocation; the view costs nothing at runtime and removes the write at the type level instead. Owners keep a real Rectangle and expose a dedicated writer that also runs whatever invalidation the write implies.",
         "Same idea as a `readonly T[]`: the object underneath is still the mutable one, the view just does not offer a way to change it."
       ],
       "importLine": "import { ReadonlyRectangle } from '@codexo/exojs'",

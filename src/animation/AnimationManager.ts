@@ -4,7 +4,7 @@ import type { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 /**
  * Owns and advances the {@link AnimatedSprite}s whose frame playback is
  * currently running, driving them once per frame from {@link Application.update}
- * — the {@link SystemMethods.preUpdate} phase, at
+ * - the {@link SystemMethods.preUpdate} phase, at
  * {@link SystemOrder.CoreAnimation}.
  *
  * Registration is automatic and requires no user wiring: an
@@ -13,7 +13,7 @@ import type { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
  * deregisters on `stop()`/`pause()`, on clip completion, on detach from the
  * tree, and on `destroy()`. A sprite that is never attached to a tree (e.g. one
  * drawn immediate-mode via `context.render(sprite)`) is never registered, and
- * must be ticked by hand with {@link AnimatedSprite.update} — which stays
+ * must be ticked by hand with {@link AnimatedSprite.update} - which stays
  * public exactly for that case.
  *
  * Update iteration uses a snapshot so `onFrame`/`onComplete` handlers may
@@ -82,7 +82,7 @@ export class AnimationManager {
   }
 
   /**
-   * Deregister every sprite immediately. Playback state is left as-is — the
+   * Deregister every sprite immediately. Playback state is left as-is - the
    * sprites are simply no longer advanced by this manager.
    */
   public clear(): this {

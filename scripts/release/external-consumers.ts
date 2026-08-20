@@ -7,7 +7,7 @@
  *
  *   - Node (ESM runtime): `import` each package and assert key exports exist.
  *   - TypeScript / Vite (bundler resolution): type-check a consumer module with
- *     `moduleResolution: bundler` — exactly the resolution Vite/esbuild use —
+ *     `moduleResolution: bundler` - exactly the resolution Vite/esbuild use -
  *     against the shipped `.d.ts`. Combined with `attw`'s `bundler 🟢` this is
  *     the Vite-consumer proof without needing Vite installed.
  *   - TypeScript subpath entry: the same type-check again, but through a
@@ -119,12 +119,12 @@ const CONSUMER_TSCONFIG = JSON.stringify(
   2,
 );
 
-// Entering through a documented SUBPATH — never the root barrel — in its
+// Entering through a documented SUBPATH - never the root barrel - in its
 // OWN program (a separate tsconfig/include, not merely a separate import
 // line in `CONSUMER_TS`). A root-barrel import anywhere in the same
 // TypeScript program would pull in whatever ambient declarations the root
 // barrel's `.d.ts` carries and mask a defect that only affects a consumer
-// whose program never includes it — exactly the shape of bug this lane
+// whose program never includes it - exactly the shape of bug this lane
 // exists to catch (a `declare global` augmentation the shipped `.d.ts` tree
 // needs from a file OTHER than the one a subpath consumer actually reaches).
 // `renderer-sdk` is the documented path for writing a custom renderer.
@@ -238,7 +238,7 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
     });
 
     // 4. TypeScript subpath-entry type-check, in a program that never
-    // includes the root barrel — see `CONSUMER_SUBPATH_TS`'s doc comment.
+    // includes the root barrel - see `CONSUMER_SUBPATH_TS`'s doc comment.
     writeFileSync(join(consumerDir, 'consumer-subpath.ts'), CONSUMER_SUBPATH_TS);
     writeFileSync(join(consumerDir, 'tsconfig.subpath.json'), CONSUMER_SUBPATH_TSCONFIG);
     const tscSubpath = run('node', [tscBin, '--noEmit', '-p', 'tsconfig.subpath.json'], consumerDir);
@@ -257,7 +257,7 @@ export const verifyExternalConsumers = (tarballs: string[]): { ok: boolean; cons
 // CLI: pack the official packages into a temp dir and run the checks.
 if (import.meta.url.startsWith('file:') && fileURLToPath(import.meta.url) === resolve(process.argv[1] ?? '')) {
   const staging = mkdtempSync(join(tmpdir(), 'exo-cons-pack-'));
-  // Offline-smoke subset (excludes @codexo/exojs-react — its react peers are not
+  // Offline-smoke subset (excludes @codexo/exojs-react - its react peers are not
   // resolvable offline). Derived from the single source of truth.
   const smokePackages = LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke);
   const dirs = smokePackages.map(p => (p.dir === '.' ? repoRoot : resolve(repoRoot, p.dir)));

@@ -13,7 +13,7 @@ import { Time } from '#core/Time';
 
 const fakeContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };
 
-// A minimal concrete subclass declaring NO constructor of its own — the
+// A minimal concrete subclass declaring NO constructor of its own - the
 // exact shape a real FlashTransition-style author would write. If
 // PhasedSceneTransition's constructor were `protected`, this class would
 // inherit that modifier and `new MinimalPhase()` below would fail to
@@ -53,7 +53,7 @@ describe('PhasedSceneTransition', () => {
   test('getRequirementsForPhase() is callable from outside the class hierarchy and forwards to the phase hook', () => {
     const instance = new MinimalPhase();
 
-    // directorLikeCaller does not extend PhasedSceneTransition — this call
+    // directorLikeCaller does not extend PhasedSceneTransition - this call
     // only compiles/works because getRequirementsForPhase() is public.
     const directorLikeCaller = (phase: PhasedSceneTransition): unknown => phase.getRequirementsForPhase('exit', fakeContext);
 
@@ -152,7 +152,7 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
     expect(session.done).toBe(false);
 
     // environment.committed flipped true synchronously inside this fake's commit() call, but the
-    // session only observes it on the *next* update() — the switch is never processed reentrantly
+    // session only observes it on the *next* update() - the switch is never processed reentrantly
     // from inside the callback that requested it.
     session.update(new Time(0));
     session.render(fakeRenderingContext, fakeFrame);
@@ -201,7 +201,7 @@ class TexturePhase extends RecordingPhase {
 }
 
 describe('composePhasedSceneTransition', () => {
-  test("merges the two instances' own requirements via getRequirementsForPhase (§3.9.1)", () => {
+  test("merges the two instances' own requirements via getRequirementsForPhase", () => {
     const exitPhase = new DirectPhase({ duration: 10 });
     const enterPhase = new TexturePhase({ duration: 10 });
     const composed = composePhasedSceneTransition(exitPhase, enterPhase);
@@ -250,7 +250,7 @@ describe('resolvePhasedSelection', () => {
     const resolved = resolvePhasedSelection(exitPhase, undefined);
 
     // TexturePhase alone requests snapshot/texture; the no-op fallback requests
-    // none/none on both axes, so it never wins the merge — the composed result
+    // none/none on both axes, so it never wins the merge - the composed result
     // is exactly TexturePhase's own requirements.
     expect(resolved.getRequirements(fakeContext)).toEqual({ outgoingFrame: 'snapshot', currentFrame: 'texture' });
   });
@@ -270,7 +270,7 @@ describe('mergeSceneTransitionRequirements', () => {
     expect(mergeSceneTransitionRequirements(a, b)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
   });
 
-  test('direct exit + texture enter promotes to texture (identity-composite promotion, §3.9.1)', () => {
+  test('direct exit + texture enter promotes to texture (identity-composite promotion)', () => {
     const exit: SceneTransitionPhaseRequirements = { outgoingFrame: 'none', currentFrame: 'direct' };
     const enter: SceneTransitionPhaseRequirements = { outgoingFrame: 'none', currentFrame: 'texture' };
 

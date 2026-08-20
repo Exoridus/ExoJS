@@ -72,7 +72,7 @@ export interface RenderPipelineRow {
  *   - "Is this drawable being re-rendered or cached?" → `[cached]` flag
  *
  * For deep per-pass inspection (intermediate render-target contents, GLSL/WGSL
- * source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel —
+ * source, uniform values), use Spector.js or Chrome DevTools' WebGPU panel -
  * the engine emits debug-group labels around filter and mesh-custom-shader
  * passes so those tools show meaningful pass names.
  */
@@ -90,7 +90,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
 
   /**
    * Flatten a {@link RenderPipeline} into depth-tagged rows, recursing into nested pipelines. Pure and
-   * app-independent: identity is the pass object and `label` is display-only — no names are required.
+   * app-independent: identity is the pass object and `label` is display-only - no names are required.
    */
   public static describePipeline(pipeline: RenderPipeline): RenderPipelineRow[] {
     const rows: RenderPipelineRow[] = [];

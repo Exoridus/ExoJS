@@ -116,7 +116,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Subclass hook — called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input)."
+          "description": "Subclass hook - called once the worklet is loaded and inserted into the wet path. Use for additional wiring (e.g. a sidechain input)."
         },
         {
           "name": "destroy",

@@ -118,7 +118,7 @@ describe('WebGPU WGSL shader sources', () => {
   });
 
   // One shader compile per `test()` call (rather than `test.each`) so each
-  // gets its own device — matching the isolation-per-test pattern the other
+  // gets its own device - matching the isolation-per-test pattern the other
   // WebGPU browser specs in this directory use (see `setupBackend` in
   // `webgpu-backdrop-blend.test.ts`), and keeping `ctx.skip` unambiguous.
   //
@@ -166,7 +166,7 @@ ${log}`,
   // `requestAdapterInfo()` it replaced) are the only APIs that could answer
   // this from inside a test, but support/content is inconsistent across
   // Chromium versions and can be intentionally opaque for fingerprinting
-  // reasons — so this is diagnostic logging only, not a hard pass/fail gate.
+  // reasons - so this is diagnostic logging only, not a hard pass/fail gate.
   // A human should read this log line in the CI run to confirm the adapter
   // description does not say "SwiftShader".
   test('logs the requested adapter identity (informational, non-blocking)', async () => {

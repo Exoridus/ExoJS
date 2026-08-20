@@ -78,7 +78,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true only while this key is genuinely parked in the low-priority background queue — always in lockstep with state === 'queued', and never true on a row whose state has already settled to 'ready' or 'failed'."
+          "description": "true only while this key is genuinely parked in the low-priority background queue - always in lockstep with state === 'queued', and never true on a row whose state has already settled to 'ready' or 'failed'."
         },
         {
           "name": "canonicalKey",
@@ -248,7 +248,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Where this key currently sits in the load lifecycle: 'idle' (claimed but its fetch has not started), 'queued' (parked in the low-priority background lane), 'loading' (fetch in flight), 'ready' (payload resident and readable), or 'failed' (the last fetch attempt errored). A row reports exactly one of these five, chosen by priority: a 'failed' or 'ready' outcome always wins over 'queued'/'loading', so a row can never claim to be both settled and still pending. A key can have more than one live handle/ref sharing it — multiple Assets.from() leaves or get() calls joined onto the same source, whose individual outcomes CAN diverge (e.g. one ref's parse() throws while a sibling ref's succeeds; AssetRef._fill fails only the ref whose parse threw). state reports the REPRESENTATIVE handle/ref's outcome — the first one registered for this key — not an aggregate across every handle/ref sharing it; a divergent sibling's outcome is not visible here."
+          "description": "Where this key currently sits in the load lifecycle: 'idle' (claimed but its fetch has not started), 'queued' (parked in the low-priority background lane), 'loading' (fetch in flight), 'ready' (payload resident and readable), or 'failed' (the last fetch attempt errored). A row reports exactly one of these five, chosen by priority: a 'failed' or 'ready' outcome always wins over 'queued'/'loading', so a row can never claim to be both settled and still pending. A key can have more than one live handle/ref sharing it - multiple Assets.from() leaves or get() calls joined onto the same source, whose individual outcomes CAN diverge (e.g. one ref's parse() throws while a sibling ref's succeeds; AssetRef._fill fails only the ref whose parse threw). state reports the REPRESENTATIVE handle/ref's outcome - the first one registered for this key - not an aggregate across every handle/ref sharing it; a divergent sibling's outcome is not visible here."
         },
         {
           "name": "type",

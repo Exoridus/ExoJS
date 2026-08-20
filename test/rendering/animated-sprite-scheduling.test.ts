@@ -2,7 +2,7 @@
  * AnimatedSprite frame playback is scheduled by the engine, not by hand:
  * a playing sprite attached to an Application's scene tree registers with
  * `app.animations` and is advanced once per frame from the core preUpdate
- * phase — and deregisters again on stop, detach, completion and destroy.
+ * phase - and deregisters again on stop, detach, completion and destroy.
  */
 import { Application, ApplicationState } from '#core/Application';
 import { Time } from '#core/Time';
@@ -11,7 +11,7 @@ import { Container } from '#rendering/Container';
 import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 
 // ---------------------------------------------------------------------------
-// Backend stubs — keep WebGL2 / WebGPU out of jsdom. The factories must be
+// Backend stubs - keep WebGL2 / WebGPU out of jsdom. The factories must be
 // inline because vi.mock() is hoisted above any variable declaration.
 // ---------------------------------------------------------------------------
 
@@ -89,7 +89,7 @@ const advanceFrame = (app: Application, milliseconds: number): void => {
 
 const createFrames = (): Rectangle[] => [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16), new Rectangle(32, 0, 16, 16)];
 
-/** A three-frame clip at 10fps — one frame per 100ms of simulated time. */
+/** A three-frame clip at 10fps - one frame per 100ms of simulated time. */
 const createSprite = (): AnimatedSprite => new AnimatedSprite(null, { walk: { frames: createFrames(), fps: 10 } });
 
 describe('AnimatedSprite scheduling', () => {

@@ -1,5 +1,5 @@
 /**
- * Focused unit tests for `src/audio/audio-context.ts` — the lazy singleton
+ * Focused unit tests for `src/audio/audio-context.ts` - the lazy singleton
  * AudioContext/OfflineAudioContext, and the `onAudioContextReady` unlock
  * machinery (statechange listener + interaction-gesture fallback).
  *
@@ -98,7 +98,7 @@ describe('audio/audio-context — getOfflineAudioContext()', () => {
     const second = getOfflineAudioContext();
 
     expect(second).toBe(first);
-    // Decoding must NOT force a live AudioContext into existence — it falls back
+    // Decoding must NOT force a live AudioContext into existence - it falls back
     // to the default 44.1 kHz sample rate before any gesture (AU2).
     expect(audioContextCreations).toBe(0);
     expect(offlineCreations).toBe(1);
@@ -111,7 +111,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
   const originalAudioContext = globalThis.AudioContext;
   const originalOfflineAudioContext = globalThis.OfflineAudioContext;
 
-  /** A minimal AudioContext double supporting `addEventListener('statechange', …)` and a real resume(). */
+  /** A minimal AudioContext double supporting `addEventListener('statechange', ...)` and a real resume(). */
   class UnlockableAudioContext {
     public state: AudioContextState;
     public currentTime = 0;
@@ -136,7 +136,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
       if (index !== -1) arr.splice(index, 1);
     }
 
-    /** Real browsers fire `statechange` once `resume()` settles — mirrored here. */
+    /** Real browsers fire `statechange` once `resume()` settles - mirrored here. */
     public resume(): Promise<void> {
       this.state = 'running';
       for (const cb of this._listeners.get('statechange') ?? []) cb();
@@ -228,14 +228,14 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
 
     // The first event's resume() call flips `state` to 'running' synchronously
     // (its Promise settles later), so a second interaction dispatched in the
-    // same tick — before that microtask runs — takes the "already running"
+    // same tick - before that microtask runs - takes the "already running"
     // branch of onUserInteraction() instead of calling resume() again.
     document.dispatchEvent(new MouseEvent('mousedown'));
     document.dispatchEvent(new Event('touchstart'));
 
     expect(readyHandler).toHaveBeenCalledTimes(1);
 
-    // Let the first resume().then() microtask flush too — it re-invokes
+    // Let the first resume().then() microtask flush too - it re-invokes
     // dispatchReadyIfRunning(), which is a safe no-op the second time.
     await Promise.resolve();
     await Promise.resolve();
@@ -250,7 +250,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
 
     // First ensure monitoring starts with `document` available (adds the
     // interaction listeners for real), then remove `document` before the
-    // successful unlock fires — exercising the second operand of
+    // successful unlock fires - exercising the second operand of
     // `removeInteractionListeners`'s `!interactionListenersAdded ||
     // !canUseDocument()` guard.
     onAudioContextReady.once(() => undefined);
@@ -259,7 +259,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     vi.stubGlobal('document', undefined);
 
     // Directly resolve readiness without going through a DOM event (document
-    // is gone) — dispatch acts on the already-registered handlers.
+    // is gone) - dispatch acts on the already-registered handlers.
     ctx.state = 'running';
     onAudioContextReady.dispatch(ctx);
 
@@ -271,7 +271,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     /**
      * Like {@link UnlockableAudioContext}, but also supports simulating an
      * externally-driven suspension (i.e. NOT caused by ExoJS calling
-     * `resume()`) — the browser flips `state` back to `'suspended'` on its
+     * `resume()`) - the browser flips `state` back to `'suspended'` on its
      * own and fires `statechange`, exactly as iOS does on an audio session
      * interruption or as a bfcache restore can.
      */
@@ -325,7 +325,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
 
     const readyHandler = vi.fn();
 
-    // `add`, not `once` — the second resume below must be observable without
+    // `add`, not `once` - the second resume below must be observable without
     // the subscription auto-detaching after the first dispatch.
     onAudioContextReady.add(readyHandler);
 
@@ -342,7 +342,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
 
     const mousedownListenerCountAfterFirstUnlock = addEventListenerSpy.mock.calls.filter(call => call[0] === 'mousedown').length;
 
-    // Simulated interruption: nothing in ExoJS called resume()/suspend() —
+    // Simulated interruption: nothing in ExoJS called resume()/suspend() -
     // the AudioContext itself dropped back to 'suspended' and fired its
     // native 'statechange' event, which the module already listens to.
     ctx.simulateExternalSuspend();
@@ -361,7 +361,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
     expect(ctx.state).toBe('running');
     expect(ctx.resumeCallCount).toBe(2);
 
-    // onAudioContextReady is a one-shot "became ready at least once" signal —
+    // onAudioContextReady is a one-shot "became ready at least once" signal -
     // it must not re-dispatch on the second resume.
     expect(readyHandler).toHaveBeenCalledTimes(1);
   });

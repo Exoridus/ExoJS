@@ -2,14 +2,14 @@
  * The archetype catalog the render-plan **allocation** gate measures.
  *
  * Shared by the CI gate (`allocation.test.ts`) and the standalone launcher
- * (`run-allocation.ts`) so both report the same scenes under the same names —
+ * (`run-allocation.ts`) so both report the same scenes under the same names -
  * previously each kept its own inline copy and they had drifted apart.
  *
  * ── What earns a place here ────────────────────────────────────────────────
  * An archetype belongs in the gate only if it satisfies all four:
  *   1. It reaches a plan/backend path no other archetype reaches, so a
  *      regression there cannot hide behind a scene that already passes.
- *   2. It is deterministic — no randomness, no wall-clock, no GPU. Every
+ *   2. It is deterministic - no randomness, no wall-clock, no GPU. Every
  *      per-frame mutation is a pure function of the frame index.
  *   3. Its median is reproducible: window-to-window and pass-to-pass spread
  *      small enough that a budget can sit close to the baseline without
@@ -20,7 +20,7 @@
  *
  * `scenarios.ts` (the wall-clock structural sweep) is a different catalog on
  * purpose: it is a cross-product built for coverage breadth, whereas this list
- * is hand-picked, budgeted, and ordered — the gate's baselines are measured
+ * is hand-picked, budgeted, and ordered - the gate's baselines are measured
  * in this order, because in-suite JIT tier state depends on what ran before.
  *
  * @internal Test/perf-only.
@@ -32,7 +32,7 @@ import { BlendModes } from '#rendering/types';
 import { buildFilteredScene, buildMeshScene, buildNestedScene, buildSpriteScene, makeTextures } from './fixtures';
 import type { WebGl2Harness } from './harness';
 
-/** Viewport the gate renders through — matches the harness default. */
+/** Viewport the gate renders through - matches the harness default. */
 const VIEW = { w: 1280, h: 720 } as const;
 
 /** Fixed-function blend modes only: `>= BlendModes.Darken` takes the backdrop-aware shader path, a different archetype entirely. */
@@ -48,23 +48,23 @@ export interface AllocationScene {
 export interface AllocationArchetype {
   /** Gate label, also the key into the baseline table. */
   readonly id: string;
-  /** Why this archetype exists — the path it reaches that the others do not. */
+  /** Why this archetype exists - the path it reaches that the others do not. */
   readonly rationale: string;
   /**
    * Warm-up frames before sampling starts, when the sampler's default (30) is
    * not enough. Raised ONLY where the measured window series is non-stationary,
-   * and only to the value at which it settles — never as a blanket "more is
+   * and only to the value at which it settles - never as a blanket "more is
    * safer", because warm-up frames are the harness's dominant cost.
    *
    * The scenes that need it are the light ones (a few KB/frame): their rate is
    * still falling as V8 tiers up the plan walk, so a 5-window median taken at
    * the default sits ON the transient and shifts with whatever ran before. At
    * 1500 frames the series is flat and the median reproduces to ~2% pass to
-   * pass. `scrolling-world` is the one that moves the other way — it reads
-   * ~6 KB/frame while cold and ~21 once settled — which is exactly why it is
+   * pass. `scrolling-world` is the one that moves the other way - it reads
+   * ~6 KB/frame while cold and ~21 once settled - which is exactly why it is
    * measured after the transient rather than through it.
    *
-   * Heavy scenes (`moving`, `mesh`, `filtered`, `blend/… alternating`) are
+   * Heavy scenes (`moving`, `mesh`, `filtered`, `blend/... alternating`) are
    * already stationary at the default to within ±0.6%, and raising their
    * warm-up would cost minutes for no gain.
    */
@@ -99,7 +99,7 @@ const nudgeEveryNth = (sprites: readonly Sprite[], stride: number): (() => void)
 /**
  * Ping-pong the camera across a world wider than the view. Ping-pong rather
  * than wrap: a modulo wrap teleports the camera once per cycle, and that single
- * frame invalidates every view-dependent cached product at once — a spike the
+ * frame invalidates every view-dependent cached product at once - a spike the
  * median would then have to absorb. A ping-pong only reverses direction.
  */
 const pingPongCamera = (harness: WebGl2Harness, worldW: number, worldH: number, speed: number): (() => void) => {
@@ -241,7 +241,7 @@ export const ALLOCATION_ARCHETYPES: readonly AllocationArchetype[] = [
 ];
 
 /**
- * Measured and reported, but deliberately NOT gated — they fail criterion 3
+ * Measured and reported, but deliberately NOT gated - they fail criterion 3
  * above. Kept here so the standalone launcher still covers them and so the
  * reason they are ungated is recorded next to the scene rather than lost.
  */
@@ -270,7 +270,7 @@ export const ALLOCATION_REPORT_ONLY: readonly AllocationArchetype[] = [
 ];
 
 /**
- * A 1M-sprite scrolling world — the count stage the audit asked for, kept OUT
+ * A 1M-sprite scrolling world - the count stage the audit asked for, kept OUT
  * of the gate on purpose. One reading at this size costs orders more than the
  * whole rest of the catalog, which is the wrong trade for a lane every
  * contributor PR runs. Exposed here so the standalone launcher can offer it as
@@ -278,7 +278,7 @@ export const ALLOCATION_REPORT_ONLY: readonly AllocationArchetype[] = [
  * where the number is read by a human rather than gated.
  *
  * At this size the scene's START-UP allocation is not a warm-up detail that a
- * few dozen frames absorb — it dominates any short window (frame 1 alone runs
+ * few dozen frames absorb - it dominates any short window (frame 1 alone runs
  * into hundreds of MB, and the persistent source + spatial index are still
  * being built dozens of frames in). The launcher therefore measures this scene
  * in two phases and reports the bootstrap total and the steady-state rate

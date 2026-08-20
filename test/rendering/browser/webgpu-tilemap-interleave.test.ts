@@ -1,10 +1,10 @@
 /**
- * WebGPU tilemap actor-interleaving browser test (G-INTERLEAVE) — opt-in,
+ * WebGPU tilemap actor-interleaving browser test (G-INTERLEAVE) - opt-in,
  * capability-aware. The parity counterpart of
  * `webgl2-tilemap-interleave.test.ts`: an application-owned sibling node placed
  * BETWEEN two `TileMapView` bands composites in document order (over the band
  * below, under the band above) on a real WebGPU backend. All WebGPU renderers
- * use inline WGSL — no shader mocks. CI guarantees a real WebGPU adapter (the
+ * use inline WGSL - no shader mocks. CI guarantees a real WebGPU adapter (the
  * required Chromium-WebGPU lane runs against Mesa lavapipe); `renderScene`
  * only skips when the software adapter drops the device mid-test.
  *
@@ -83,9 +83,9 @@ const BLUE: RgbaTuple = [0, 0, 255, 255];
 /**
  * Build the interleave scene (parity with the WebGL2 test):
  *   worldRoot
- *    ├─ ground band   (red,   screen 0..16)   — bottom
- *    ├─ actor         (green, screen 8..24)   — app-owned sibling (middle)
- *    └─ roof band     (blue,  screen 16..32)  — top
+ *    ├─ ground band   (red,   screen 0..16)   - bottom
+ *    ├─ actor         (green, screen 8..24)   - app-owned sibling (middle)
+ *    └─ roof band     (blue,  screen 16..32)  - top
  */
 const makeInterleaveScene = () => {
   const red = createSolidTexture('#ff0000');

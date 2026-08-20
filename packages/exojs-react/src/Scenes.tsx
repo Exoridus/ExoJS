@@ -37,7 +37,7 @@ export interface SceneProps {
 }
 
 /**
- * Declares one scene inside a {@link Scenes} switch. Renders nothing on its own —
+ * Declares one scene inside a {@link Scenes} switch. Renders nothing on its own -
  * {@link Scenes} reads its props and renders its {@link SceneProps.children} only
  * while the scene is active.
  */
@@ -59,14 +59,14 @@ export interface ScenesProps {
  * Declarative scene switch over the one-active-scene model. Renders a set of
  * {@link Scene} declarations and activates the one whose `name` equals `active`
  * via `app.start()` (first activation) or `app.scenes.change()` (subsequent
- * switches, with the optional `transition`) — the declaration's `component`
+ * switches, with the optional `transition`) - the declaration's `component`
  * constructor must be registered in `ApplicationOptions.scenes`. The active
  * scene's React children (HUD overlay) render alongside, and can read the
  * instance via {@link useActiveScene}.
  *
  * A failure in `app.start()`/`app.scenes.change()` (e.g. a scene's `load()`
  * rejects) is caught and routed to {@link Application.onError} rather than
- * left as an unhandled promise rejection — subscribe via `app.onError.add(...)`
+ * left as an unhandled promise rejection - subscribe via `app.onError.add(...)`
  * or the {@link import('./ExoCanvas').ExoCanvas} `onError` prop to observe it.
  *
  * @example
@@ -105,7 +105,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
   useEffect(() => {
     if (SceneClass === null) {
       // No matching <Scene name={active}> declaration. No public API switches
-      // the director back to scene-less mid-lifetime — the
+      // the director back to scene-less mid-lifetime - the
       // last-active scene keeps running underneath; only the React-rendered
       // HUD overlay is cleared. This is a caller mismatch (an `active` name
       // with no matching <Scene>), not a supported "show nothing" path.
@@ -130,7 +130,7 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
         }
       } catch (error) {
         // Route to Application.onError instead of leaving an unhandled
-        // rejection — app.start()/change() reject rather than dispatching
+        // rejection - app.start()/change() reject rather than dispatching
         // onError themselves.
         app.onError.dispatch(error instanceof Error ? error : new Error(String(error)));
       }

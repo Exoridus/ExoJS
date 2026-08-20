@@ -21,7 +21,7 @@ class MusicLoopScene extends Scene {
         // Wide progress bar centred horizontally on the 16:9 canvas.
         this.bar = { x: width * 0.15, y: height * 0.5, w: width * 0.7, h: 28 };
 
-        // A single streaming track — the browser's media pipeline loops it
+        // A single streaming track - the browser's media pipeline loops it
         // seamlessly when `loop` is on, so no duplicate/silent track is needed.
         // AudioStream is a non-leaf resource kind (no seamless placeholder), so it
         // is loaded directly through `Asset.type('music', ...)` and awaited rather
@@ -29,7 +29,7 @@ class MusicLoopScene extends Scene {
         this.music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
 
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — play() returns the Voice now,
+        // gesture, then starts automatically - play() returns the Voice now,
         // and all live control (volume, rate, loop, seek) lives on it.
         this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.7, playbackRate: 1 }) as Voice & Seekable & Pausable & Loopable & RatePitched;
 

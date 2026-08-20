@@ -16,7 +16,7 @@ import { View } from '#rendering/View';
  * selection it was just handed.
  *
  * The store's buffers are bounded by the GRANTED device limits, and the bound is
- * only knowable once the selection's slot count exists — a root of ten million
+ * only knowable once the selection's slot count exists - a root of ten million
  * items whose camera never admits more than a few thousand is perfectly
  * representable, so refusing at acquisition on the item count would cost the
  * fast path exactly the scenes it exists for. The answer is therefore asked per

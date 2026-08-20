@@ -130,7 +130,7 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
 
     await forceGc();
 
-    // FinalizationRegistry pruned the emptied entry — no unbounded growth.
+    // FinalizationRegistry pruned the emptied entry - no unbounded growth.
     expect(deferredHas(loader, key)).toBe(false);
     expect(evictedHas(loader, key)).toBe(false);
   });
@@ -153,10 +153,10 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
 
     loader._adopt(coHandle, loader.createScope({ name: 'adopter' }));
 
-    // Filled in place from the stored donor…
+    // Filled in place from the stored donor...
     expect(coHandle.loadState).toBe('ready');
     expect(coHandle.source).not.toBeNull();
-    // …AND entered into the key's deferred set (the finding: previously it was
+    // ...AND entered into the key's deferred set (the finding: previously it was
     // filled once but never tracked, so a later evict+heal skipped it).
     expect(deferredHandles(loader, key)?.has(coHandle)).toBe(true);
     expect(deferredHandles(loader, key)?.has(donor)).toBe(true);

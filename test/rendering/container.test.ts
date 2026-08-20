@@ -68,7 +68,7 @@ describe('Container', () => {
     const child = new DummyDrawable();
 
     expect(() => {
-      // @ts-expect-error — `parent` has no public setter; use addChild/removeChild.
+      // @ts-expect-error - `parent` has no public setter; use addChild/removeChild.
       child.parent = container;
     }).toThrow(TypeError);
 
@@ -148,11 +148,11 @@ describe('Container', () => {
     expect(container.children).toEqual([third, first, second]);
   });
 
-  // Attaching an already-destroyed node used to be silent in production — a
+  // Attaching an already-destroyed node used to be silent in production - a
   // __DEV__-only warning fired, then the node was linked into the tree anyway.
   // The engine is pre-1.0 and favours clean breaks, so use-after-destroy is
   // now rejected via `invariant`, which throws in EVERY build (unlike the
-  // __DEV__-stripped `assert`) — see `invariant`'s contract in `#core/dev`.
+  // __DEV__-stripped `assert`) - see `invariant`'s contract in `#core/dev`.
   describe('destroyed-child guard', () => {
     test('addChild throws when the child was already destroy()ed', () => {
       const container = new Container();
@@ -232,7 +232,7 @@ describe('Container children view', () => {
     const container = new Container();
 
     expect(() => {
-      // @ts-expect-error — `children` is `readonly RenderNode[]`; mutate via addChild/removeChild instead.
+      // @ts-expect-error - `children` is `readonly RenderNode[]`; mutate via addChild/removeChild instead.
       container.children.push(new DummyDrawable());
     }).toThrow(TypeError);
   });
@@ -240,14 +240,14 @@ describe('Container children view', () => {
   // Regression for the whole-branch review finding: removeChildAt used to
   // splice `_children` and run every removal side effect (bounds cascade,
   // _setParent(null), interaction notify, focus notify) BEFORE invalidating
-  // `_childrenView` — invalidation was the very last statement in the
+  // `_childrenView` - invalidation was the very last statement in the
   // method. The stage's focus manager's `_notifyNodeRemoved` synchronously
   // dispatches the public `onBlur` signal, i.e. arbitrary user code, from
   // inside that window. A handler reading `container.children` from onBlur
   // would therefore see the STALE cached snapshot (still containing the
   // node being removed). This test focuses the child being removed so
   // `onBlur` fires synchronously from inside `removeChildAt`, and asserts
-  // the handler already observes the post-removal list — which only holds
+  // the handler already observes the post-removal list - which only holds
   // if the cache was invalidated before the focus notify runs, not merely
   // by the time `removeChildAt` returns.
   test('the children-view cache is already invalidated when a synchronous onBlur handler runs during removeChildAt', () => {
@@ -271,7 +271,7 @@ describe('Container children view', () => {
     container.addChild(child);
     focus.focus(child);
 
-    // Populate the cache BEFORE removal — without this, `_childrenView` is
+    // Populate the cache BEFORE removal - without this, `_childrenView` is
     // still null going into removeChildAt and the getter would compute a
     // fresh (already-correct) array on first read regardless of where the
     // invalidation line sits, silently defeating the regression check.
@@ -319,7 +319,7 @@ describe('Container paint-order cache', () => {
     d.zIndex = 5;
 
     // a/c share z=0 and keep their relative document order; b/d share z=5 and
-    // do the same — a stable sort, not merely "sorted by z". Asserted by
+    // do the same - a stable sort, not merely "sorted by z". Asserted by
     // IDENTITY (not `toEqual`): `a`/`c` (and `b`/`d`) are otherwise
     // indistinguishable `DummyDrawable` instances, so a structural-equality
     // assertion here would pass even for a wrongly-swapped tie (e.g.
@@ -441,7 +441,7 @@ describe('Container paint-order cache', () => {
     // A zIndex write changes neither document order nor any child index, so
     // the `children` snapshot must keep the reference stability its own doc
     // comment promises ("the same array reference until the next STRUCTURAL
-    // change") — only the paint order actually became stale.
+    // change") - only the paint order actually became stale.
     expect(container.children).toBe(childrenBefore);
     expect(container._childrenInPaintOrder()).not.toBe(paintBefore);
     expect(container._childrenInPaintOrder()).toEqual([b, a]);
@@ -596,7 +596,7 @@ describe('Container geometry accessors', () => {
     expect(container.right).toBe(bounds.x + bounds.width);
     expect(container.bottom).toBe(bounds.y + bounds.height);
 
-    // The edges must span exactly the reported size — the invariant the
+    // The edges must span exactly the reported size - the invariant the
     // mismatched origin terms used to break.
     expect(container.right - container.left).toBe(container.width);
     expect(container.bottom - container.top).toBe(container.height);

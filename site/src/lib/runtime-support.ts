@@ -59,7 +59,7 @@ export function getAvailabilityForBackend(backend: ExampleBackend): ExampleAvail
 export async function detectRuntimeSupport(): Promise<void> {
     // Capabilities.ready does the WebGL2 context probe + the async WebGPU
     // adapter check in one shot. `webgpuAdapter !== null` is the strict
-    // "real adapter is available" signal — `caps.webgpu` alone only confirms
+    // "real adapter is available" signal - `caps.webgpu` alone only confirms
     // the API surface and would over-report support on browsers where the
     // adapter request fails (blacklisted GPU, headless without software).
     const caps = await Capabilities.ready;

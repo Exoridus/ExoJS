@@ -527,7 +527,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "First paddle / extra button. Upper-left slot — SDL's SDL_GAMEPAD_BUTTON_LEFT_PADDLE1. Written by SteamDeckGamepadMapping (L4) and by JoyConLeftGamepadMapping (the SL rail button — see that class for why a rail button is a paddle rather than a shoulder). Xbox Elite paddles do **not** reach this channel: the Windows path is XInput, whose XINPUT_GAMEPAD struct carries no paddle bits, and no browser mapper emits them. Reaching them needs WebHID and a custom GamepadDefinition."
+          "description": "First paddle / extra button. Upper-left slot - SDL's SDL_GAMEPAD_BUTTON_LEFT_PADDLE1. Written by SteamDeckGamepadMapping (L4) and by JoyConLeftGamepadMapping (the SL rail button - see that class for why a rail button is a paddle rather than a shoulder). Xbox Elite paddles do **not** reach this channel: the Windows path is XInput, whose XINPUT_GAMEPAD struct carries no paddle bits, and no browser mapper emits them. Reaching them needs WebHID and a custom GamepadDefinition."
         },
         {
           "name": "Paddle2",
@@ -548,7 +548,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Second paddle / extra button. Upper-right slot — SDL's SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1. Written by SteamDeckGamepadMapping (R4) and by JoyConRightGamepadMapping (the SR rail button) — see Paddle1 for why Xbox Elite paddles are absent."
+          "description": "Second paddle / extra button. Upper-right slot - SDL's SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1. Written by SteamDeckGamepadMapping (R4) and by JoyConRightGamepadMapping (the SR rail button) - see Paddle1 for why Xbox Elite paddles are absent."
         },
         {
           "name": "Paddle3",
@@ -569,7 +569,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Third paddle / extra button. Lower-left slot — SDL's SDL_GAMEPAD_BUTTON_LEFT_PADDLE2. Written by SteamDeckGamepadMapping (L5) and by JoyConLeftGamepadMapping (the SR rail button) — see Paddle1 for why Xbox Elite paddles are absent."
+          "description": "Third paddle / extra button. Lower-left slot - SDL's SDL_GAMEPAD_BUTTON_LEFT_PADDLE2. Written by SteamDeckGamepadMapping (L5) and by JoyConLeftGamepadMapping (the SR rail button) - see Paddle1 for why Xbox Elite paddles are absent."
         },
         {
           "name": "Paddle4",
@@ -590,7 +590,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fourth paddle / extra button. Lower-right slot — SDL's SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2. Written by SteamDeckGamepadMapping (R5) and by JoyConRightGamepadMapping (the SL rail button) — see Paddle1 for why Xbox Elite paddles are absent."
+          "description": "Fourth paddle / extra button. Lower-right slot - SDL's SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2. Written by SteamDeckGamepadMapping (R5) and by JoyConRightGamepadMapping (the SL rail button) - see Paddle1 for why Xbox Elite paddles are absent."
         },
         {
           "name": "RightShoulder",
@@ -695,7 +695,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Share / Create button. Written by XboxGamepadMapping (Xbox Series pads). On PlayStation pads the Share/Create button reports as Select instead — the browser puts it on the standard Back/Select slot."
+          "description": "Share / Create button. Written by XboxGamepadMapping (Xbox Series pads). On PlayStation pads the Share/Create button reports as Select instead - the browser puts it on the standard Back/Select slot."
         },
         {
           "name": "South",
@@ -758,7 +758,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Touchpad **click**. Written by PlayStationGamepadMapping (DualShock 4, DualSense). Finger coordinates are a separate matter — see GamepadAxis.TouchpadX."
+          "description": "Touchpad **click**. Written by PlayStationGamepadMapping (DualShock 4, DualSense). Finger coordinates are a separate matter - see GamepadAxis.TouchpadX."
         },
         {
           "name": "West",

@@ -28,7 +28,7 @@ const noopInteraction: InteractionHooks = {
 /**
  * Build a minimal Application mock wired to a real Scene root + a
  * FocusController. Sets `Stage.app`, like every production stage does (see
- * that field's own doc comment) — needed for the ownership tests below to
+ * that field's own doc comment) - needed for the ownership tests below to
  * tell two Applications' nodes apart; harmless for every other test here,
  * which only ever deals with one.
  */
@@ -205,8 +205,8 @@ describe('FocusController', () => {
     expect(focus.focused).toBe(c);
 
     // The real InputManager dispatches onKeyDown/onKeyUp with the
-    // side-specific channel only (see Keyboard's own doc comment) — never
-    // the aggregate Shift channel directly — so either physical Shift key
+    // side-specific channel only (see Keyboard's own doc comment) - never
+    // the aggregate Shift channel directly - so either physical Shift key
     // must be recognized here.
     onKeyDown.dispatch(Keyboard.ShiftRight);
     onKeyDown.dispatch(Keyboard.Tab);
@@ -253,7 +253,7 @@ describe('FocusController', () => {
     scene.root.addChild(a).addChild(flaky).addChild(c);
 
     // `flaky` looks focusable while `_collectFocusables()` walks the tree,
-    // but has stopped being focusable by the time `focus()` validates it —
+    // but has stopped being focusable by the time `focus()` validates it -
     // simulating the race `_step()` must not stall on.
     let reads = 0;
 
@@ -352,7 +352,7 @@ describe('FocusController', () => {
 
     expect(focus.focused).toBeNull();
 
-    // The onKeyDown/onKeyUp handlers were removed — further dispatches are no-ops.
+    // The onKeyDown/onKeyUp handlers were removed - further dispatches are no-ops.
     const handler = vi.fn();
 
     node.onKeyDown.add(handler);
@@ -418,7 +418,7 @@ describe('FocusController', () => {
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(visible);
 
-    // Wraps back to `visible` — `hidden` is never a stop along the way.
+    // Wraps back to `visible` - `hidden` is never a stop along the way.
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(visible);
   });
@@ -461,7 +461,7 @@ describe('FocusController', () => {
     expect(focus.focused).toBe(inA);
 
     // Nothing was focused when the scope opened, so popping it restores
-    // exactly that — not whatever Tab happened to land on inside the scope.
+    // exactly that - not whatever Tab happened to land on inside the scope.
     focus.popScope(token);
     expect(focus.focused).toBeNull();
   });
@@ -559,7 +559,7 @@ describe('FocusController — ownership hardening', () => {
     focus.focus(y);
     focus.pushScope(tokenB, modalB); // remembers previousFocus = y
 
-    // x — scope A's remembered previousFocus — is destroyed while scope B
+    // x - scope A's remembered previousFocus - is destroyed while scope B
     // (unrelated to x) is the active one.
     x.destroy();
 
@@ -568,7 +568,7 @@ describe('FocusController — ownership hardening', () => {
     focus.popScope(tokenB);
     expect(focus.focused).toBe(y);
 
-    // Now scope A pops and tries to restore x — already destroyed.
+    // Now scope A pops and tries to restore x - already destroyed.
     focus.popScope(tokenA);
     expect(focus.focused).toBeNull();
   });
@@ -592,7 +592,7 @@ describe('FocusController — ownership hardening', () => {
     onKeyDown.dispatch(Keyboard.Tab);
 
     // The dead scope no longer confines traversal to its own (now detached)
-    // subtree — `inScene`, part of the real graph, is reachable again.
+    // subtree - `inScene`, part of the real graph, is reachable again.
     expect(focus.focused).toBe(inScene);
 
     focus.popScope(token);
@@ -613,7 +613,7 @@ describe('FocusController — ownership hardening', () => {
     expect(focus.focused).toBe(a);
 
     onKeyDown.dispatch(Keyboard.Tab);
-    // Wraps back to `a` — the sole surviving candidate — `b` is never a stop.
+    // Wraps back to `a` - the sole surviving candidate - `b` is never a stop.
     expect(focus.focused).toBe(a);
   });
 
@@ -631,7 +631,7 @@ describe('FocusController — ownership hardening', () => {
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(enabled);
 
-    // Wraps straight back to `enabled` — `disabled` is never a stop along the way.
+    // Wraps straight back to `enabled` - `disabled` is never a stop along the way.
     onKeyDown.dispatch(Keyboard.Tab);
     expect(focus.focused).toBe(enabled);
   });

@@ -13,7 +13,7 @@ export interface SystemRegistrationOptions {
   readonly order?: number;
   /**
    * Systems this one must run before, additive to (not a replacement for)
-   * `order` — see {@link SystemRegistry} class docs for how `before`/`after`
+   * `order` - see {@link SystemRegistry} class docs for how `before`/`after`
    * combine with `order`/registration sequence.
    */
   readonly before?: readonly System[];
@@ -25,7 +25,7 @@ export interface SystemRegistrationOptions {
    * system wants.
    *
    * Pass this when an object happens to carry a method whose name matches a
-   * phase without meaning to be that phase — a controller with its own
+   * phase without meaning to be that phase - a controller with its own
    * `update()` that should only draw, say. Naming a phase the system does not
    * implement is ignored.
    */
@@ -60,7 +60,7 @@ type PendingMutation = PendingAdd | PendingRemove;
 
 // A type predicate (rather than a truthy/literal check on `mutation.add`) so this
 // narrows `PendingMutation` correctly under every tsconfig this file is compiled
-// under, including tsconfig.guides.json's `strict: false` — plain discriminant
+// under, including tsconfig.guides.json's `strict: false` - plain discriminant
 // narrowing on a boolean-literal tag is unreliable there.
 const isPendingAdd = (mutation: PendingMutation): mutation is PendingAdd => mutation.add;
 
@@ -82,9 +82,9 @@ const requireSynchronousPhase = (result: unknown, system: System, phase: string)
 
 /**
  * Sorts `list` in place. Pure `order`/`sequence` comparison when no
- * registration in `list` declares `before`/`after` — identical to the
+ * registration in `list` declares `before`/`after` - identical to the
  * original plain-sort behaviour. Otherwise resolves `before`/`after` against
- * `registrations` (only edges where BOTH ends are present in `list` count —
+ * `registrations` (only edges where BOTH ends are present in `list` count -
  * a phase-mismatched or not-yet-registered target is silently a no-op) and
  * topologically sorts (Kahn's algorithm), using `tieBreak` to pick among
  * simultaneously-ready registrations at each step. Throws if a cycle leaves
@@ -183,19 +183,19 @@ const removeRegistration = (list: SystemRegistration[], registration: SystemRegi
  * layer a dependency graph on top of `order`, additive rather than a
  * replacement: `order`/registration sequence still decide ties among
  * registrations the graph doesn't relate to each other. A `before`/`after`
- * reference to a system outside the current phase — a different phase, or
- * never registered — is silently a no-op there, not an error. A cycle throws
+ * reference to a system outside the current phase - a different phase, or
+ * never registered - is silently a no-op there, not an error. A cycle throws
  * once the affected phase list is next sorted.
  *
  * Structural mutations are frame-scoped: a system added
- * during a frame — whether from outside or from another system's own
- * callback — does not participate in any phase until the *next* frame, in
+ * during a frame - whether from outside or from another system's own
+ * callback - does not participate in any phase until the *next* frame, in
  * any phase. Removing a system during a callback marks it inactive
  * immediately, so it is skipped by every later phase and every later fixed
  * step in the *same* frame; the structural delete and the single {@link
  * SystemRegistry.onRemove} dispatch are finalized at the frame boundary.
- * Outside a frame — before the first {@link SystemRegistry._beginFrame} or
- * after its matching {@link SystemRegistry._endFrame} — `add()`/`remove()`
+ * Outside a frame - before the first {@link SystemRegistry._beginFrame} or
+ * after its matching {@link SystemRegistry._endFrame} - `add()`/`remove()`
  * apply immediately.
  */
 export class SystemRegistry implements Destroyable {
@@ -243,7 +243,7 @@ export class SystemRegistry implements Destroyable {
   }
 
   /**
-   * Remove `system` without destroying it — never destroys. Returns `true`
+   * Remove `system` without destroying it - never destroys. Returns `true`
    * if it was registered. See the class docs for the exact timing of
    * structural cleanup and {@link SystemRegistry.onRemove}.
    */
@@ -285,7 +285,7 @@ export class SystemRegistry implements Destroyable {
     return true;
   }
 
-  /** Whether `system` is currently registered and eligible to run — `false` for a not-yet-eligible buffered add or an already-removed system. */
+  /** Whether `system` is currently registered and eligible to run - `false` for a not-yet-eligible buffered add or an already-removed system. */
   public has(system: System): boolean {
     return this._registrations.get(system)?.active === true;
   }
@@ -423,20 +423,20 @@ export class SystemRegistry implements Destroyable {
   /**
    * Destroy every remaining registered system exactly once, in reverse
    * registration order, then clear the registry. A system already removed
-   * via {@link SystemRegistry.remove} — even if not yet structurally
-   * finalized — is not destroyed: `remove()` never destroys.
+   * via {@link SystemRegistry.remove} - even if not yet structurally
+   * finalized - is not destroyed: `remove()` never destroys.
    *
    * Each system is destroyed under its own guard and the clear-and-reset tail
    * always runs, so one throwing system can neither skip the systems after it
    * nor leave the registry live. Systems are the extension seam, which makes a
    * throwing `destroy()` the case to expect rather than a remote one.
    *
-   * Failures are logged, never propagated — including in development, where
+   * Failures are logged, never propagated - including in development, where
    * {@link DestroyScope.destroy} rethrows an `AggregateError` instead. The
    * difference is the caller: `Application._disposeManagedResources` invokes
    * this method unguarded, part-way through an ordered teardown, so a throw
    * here would strand the rendering context, audio, input, backend, platform
-   * and clocks that come after it — reinstating the very leak this guard
+   * and clocks that come after it - reinstating the very leak this guard
    * closes.
    */
   public destroy(): void {

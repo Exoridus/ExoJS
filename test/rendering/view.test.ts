@@ -106,7 +106,7 @@ describe('View.viewport — invalidation on direct mutation', () => {
   // `get viewport` hands out the LIVE rectangle, so a direct write changes what
   // a backend reads when it opens a render pass. Every backend guard against
   // "this pass was opened with a different viewport" is keyed on updateId, so a
-  // mutation that leaves updateId alone is invisible to all of them — the write
+  // mutation that leaves updateId alone is invisible to all of them - the write
   // lands, the guard never fires, and the draw renders through the previous
   // viewport. These pin that every route to the rectangle moves the counter.
   const mutations: ReadonlyArray<[string, (view: View) => void]> = [
@@ -118,7 +118,7 @@ describe('View.viewport — invalidation on direct mutation', () => {
     ['viewport.copy', view => view.viewport.copy(new Rectangle(0.5, 0, 0.5, 1))],
     ['viewport.setPosition', view => view.viewport.setPosition(0.5, 0)],
     ['viewport.setSize', view => view.viewport.setSize(0.5, 1)],
-    // One level down — the leak the accessors above cannot see.
+    // One level down - the leak the accessors above cannot see.
     ['viewport.position.x', view => (view.viewport.position.x = 0.5)],
     ['viewport.size.width', view => (view.viewport.size.width = 0.5)],
     // The API routes, for symmetry.

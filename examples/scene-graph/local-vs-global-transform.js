@@ -1,4 +1,4 @@
-// Auto-generated from local-vs-global-transform.ts — edit the .ts source, not this file.
+// Auto-generated from local-vs-global-transform.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Scene, Sprite, Text } from '@codexo/exojs';
 class LocalVsGlobalTransformScene extends Scene {
     parent;

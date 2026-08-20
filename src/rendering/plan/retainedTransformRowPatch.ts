@@ -18,7 +18,7 @@ export type PatchableRetainedGroupBundle = RetainedGroupBundle & {
 };
 
 /**
- * A backend exposing a renderer registry, structurally — the same narrow shape
+ * A backend exposing a renderer registry, structurally - the same narrow shape
  * `drawCommandUsesSharedTransform` (`plan/RenderCommand.ts`) resolves through,
  * so every call site agrees on what "the renderer for this drawable" means
  * without a hard dependency between the modules.
@@ -32,12 +32,12 @@ interface BackendWithRendererRegistry {
 /**
  * Optional per-renderer escape hatch from the generic shared-`TransformBuffer`
  * row patch: a renderer that packs its own private per-node data
- * (`_consumesSharedTransform === false`, e.g. Text — its row format and storage
+ * (`_consumesSharedTransform === false`, e.g. Text - its row format and storage
  * differ from the shared buffer's) implements this instead, patching whatever it
  * owns directly. `base` is the same capture-frame row base the generic path
  * uses; a renderer whose own indexing scheme does not need it may ignore the
  * parameter. Returns `false` when the node is not fast-patch-eligible, which
- * drops the recording and falls back to a full re-record — never wrong pixels,
+ * drops the recording and falls back to a full re-record - never wrong pixels,
  * only a missed optimization.
  *
  * Renderer-agnostic by design: a WebGL2 implementation of the same renderer
@@ -63,15 +63,15 @@ const patchRowScratch = new Float32Array(TRANSFORM_FLOATS_PER_ROW);
 /**
  * Patch one moved node's recorded transform row, or return `false` when it is
  * not fast-patch-eligible (not present in the recorded row map). The matrix is
- * `getGlobalTransform()` — relative to the nearest enclosing transform-group
- * boundary, or world-space without one — which is exactly the value the recorder
+ * `getGlobalTransform()` - relative to the nearest enclosing transform-group
+ * boundary, or world-space without one - which is exactly the value the recorder
  * wrote.
  *
  * A renderer that opts out of the shared `TransformBuffer` (its resolved renderer
  * exposes {@link OwnTransformRowPatcher}, e.g. Text) is dispatched to its OWN
  * patch method: its row lives in a private, renderer-owned store the generic path
  * never reads, so calling the generic patch there would silently no-op against
- * bytes nobody consumes — stale pixels, not a caught failure.
+ * bytes nobody consumes - stale pixels, not a caught failure.
  * @internal
  */
 export const tryPatchRetainedTransformRow = (
@@ -92,7 +92,7 @@ export const tryPatchRetainedTransformRow = (
         return renderer._patchOwnTransformRow(node, bundle, base);
       }
     } catch {
-      // No renderer registered for this drawable (custom drawable type) — fall
+      // No renderer registered for this drawable (custom drawable type) - fall
       // through to the generic shared-transform patch below.
     }
   }
@@ -118,7 +118,7 @@ export const tryPatchRetainedTransformRow = (
 /**
  * Rewrite each queued node's snapshotted screen AABB in its captured draw record.
  * A record whose extent is one move out of date is not a rendering error by
- * itself — the replay re-derives nothing from it — but the optimizer reads it to
+ * itself - the replay re-derives nothing from it - but the optimizer reads it to
  * decide whether a batch run may be reordered past an intervening draw, and a
  * stale extent can hide a real overlap.
  */
@@ -145,7 +145,7 @@ const refreshRetainedDrawBounds = (fragment: RetainedGroupFragment): void => {
  * instruction set. On the recorded tier the transforms are baked into the
  * fragment-owned store, so each eligible moved node's row is patched in place
  * (O(k) rows + one sub-range upload). Any ineligible move drops the recording, so
- * the frame falls back to entry replay with live transforms and re-records —
+ * the frame falls back to entry replay with live transforms and re-records -
  * correct, O(entries), the rare path. Without a patchable recording there is
  * nothing to reconcile and the queue is simply drained.
  *
@@ -153,7 +153,7 @@ const refreshRetainedDrawBounds = (fragment: RetainedGroupFragment): void => {
  * admits only its DIRECT children (deeper nodes are not in its patch contract),
  * the render-root representation admits every recorded node.
  *
- * Returns `false` when the recording was dropped — the caller must then treat its
+ * Returns `false` when the recording was dropped - the caller must then treat its
  * product as stale for this frame.
  * @internal
  */
@@ -162,10 +162,10 @@ export const reconcileRetainedTransformRows = (fragment: RetainedGroupFragment, 
 
   if (!set?.hasRecording) {
     // Nothing is baked: either no recording was ever armed (the bootstrap frame
-    // — a fragment only gets an instruction set once it reaches the record-arming
+    // - a fragment only gets an instruction set once it reaches the record-arming
     // tier) or the fragment sits on entry replay. Both re-read each node's live
     // transform, so there is no row to patch. Only the RECORD's snapshotted
-    // screen AABB is stale, and the optimizer's reorder-safety test reads it —
+    // screen AABB is stale, and the optimizer's reorder-safety test reads it -
     // refresh those, drain, and report the moves as accounted for.
     refreshRetainedDrawBounds(fragment);
     fragment.clearDirtyTransformRows();
@@ -187,7 +187,7 @@ export const reconcileRetainedTransformRows = (fragment: RetainedGroupFragment, 
     return false;
   }
 
-  // The row origin is the fragment's CAPTURE-frame minimum draw index — NOT
+  // The row origin is the fragment's CAPTURE-frame minimum draw index - NOT
   // `bundle.transformRowBase` (the record-frame rebase base). The two frames can
   // start the fragment at different absolute rows, and the store rows are
   // fragment-local, so only the capture-frame base maps a captured index to its

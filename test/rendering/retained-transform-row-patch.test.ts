@@ -208,7 +208,7 @@ describe('recorded row base spans nested draws', () => {
   test('a group whose first child is a plain container patches the moved child at its true store row', () => {
     // The backend rebases the group's rows by the minimum node index over ALL
     // recorded batches, so the nested leaf's row 0 is the base. A base taken over
-    // top-level draw records only would report 1 here and patch row 0 — the
+    // top-level draw records only would report 1 here and patch row 0 - the
     // nested leaf would jump to `direct`'s transform and `direct` would freeze.
     const harness = createPatchingBackend();
     const root = new Container();
@@ -367,8 +367,8 @@ describe('automatic render-root representation: incremental transform rows', () 
     leaver.setPosition(5000, 5000);
     playFrame(root, harness.backend);
 
-    // Drawing a node that has left the view is not a pixel error — it lands
-    // outside the viewport and is clipped — so the cheap answer is the correct
+    // Drawing a node that has left the view is not a pixel error - it lands
+    // outside the viewport and is clipped - so the cheap answer is the correct
     // one: patch the row and keep replaying.
     expect(harness.patches).toHaveLength(1);
     expect(harness.events).toContain('replay:a,b');

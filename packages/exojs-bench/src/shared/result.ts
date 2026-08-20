@@ -2,7 +2,7 @@
  * Domain-agnostic cell-result core.
  *
  * Every benchmark domain measures a matrix of cells and reports, per cell,
- * whether it completed and an optional explanation — regardless of what the
+ * whether it completed and an optional explanation - regardless of what the
  * cell actually measured (per-frame GPU time for rendering, per-`step` CPU time
  * for physics). Those three fields are the genuinely shared shape; each domain
  * extends {@link BaseCellResult} with its own spec type, timing fields and

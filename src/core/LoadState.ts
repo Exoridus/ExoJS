@@ -12,9 +12,9 @@ export type LoadStateValue = 'idle' | 'loading' | 'ready' | 'failed';
  * The promise is only created when {@link loaded} is accessed, so a handle
  * whose consumers never await it can fail without triggering
  * `unhandledrejection`. {@link begin} drops the cached promise so every load
- * cycle materializes a fresh one — a once-rejected promise would otherwise
+ * cycle materializes a fresh one - a once-rejected promise would otherwise
  * stay rejected after a successful retry.
- * @internal — driven by the Loader's seamless pipeline via the type adapters.
+ * @internal - driven by the Loader's seamless pipeline via the type adapters.
  */
 export class LoadState<Owner> {
   private _value: LoadStateValue = 'ready';
@@ -68,7 +68,7 @@ export class LoadState<Owner> {
   }
 
   /**
-   * Enter `'idle'` — a catalog leaf/ref that exists but has not been adopted by
+   * Enter `'idle'` - a catalog leaf/ref that exists but has not been adopted by
    * a loader, as opposed to `'ready'` (a manually
    * constructed, immediately usable resource). {@link loaded} on an idle handle
    * stays pending; {@link begin} on adoption preserves that pending promise.

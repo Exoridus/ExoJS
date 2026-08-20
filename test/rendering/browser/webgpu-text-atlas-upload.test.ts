@@ -1,20 +1,20 @@
 /// <reference types="@webgpu/types" />
 
 /**
- * WebGPU text-atlas upload regression — opt-in, capability-aware.
+ * WebGPU text-atlas upload regression - opt-in, capability-aware.
  *
  * Regression for a WebGPU bug where the text renderer caches the glyph-atlas
  * bind group per `Texture` and returned the cached group on a hit *without*
  * re-resolving the binding. Resolving the binding is what syncs the texture and
  * uploads its dirty region, so a later Text that grew the shared atlas with new
  * glyphs (e.g. switching to a scene whose text introduces new characters) never
- * uploaded those glyphs — they sampled empty atlas texels and rendered
+ * uploaded those glyphs - they sampled empty atlas texels and rendered
  * invisibly. The fix always resolves the binding (uploading the dirty region)
  * and only reuses the cached bind group while the underlying texture view is
  * unchanged.
  *
  * The existing text tests miss this because each resets the atlas pool, so the
- * atlas is freshly created and fully uploaded every time — the partial,
+ * atlas is freshly created and fully uploaded every time - the partial,
  * post-cache upload path never runs.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
@@ -99,7 +99,7 @@ describe('WebGPU text atlas upload', () => {
   test('re-resolves the atlas binding when a later Text adds new glyphs (no stale bind-group cache)', async ctx => {
     const backend = await setupBackend();
     // The Text constructor rasterizes eagerly, so the second Text must be
-    // created only after the first upload — only then are its (disjoint) glyphs
+    // created only after the first upload - only then are its (disjoint) glyphs
     // new to the shared atlas, exercising the post-cache re-sync path.
     const first = new Text('il', { fillColor: Color.white, fontSize: 30 });
     let second: Text | null = null;

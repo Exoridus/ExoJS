@@ -74,7 +74,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Half-life in seconds for the BeatDetector.barPulse envelope. Default 0.3 — slower than beat pulse for downbeat-emphasized visuals."
+          "description": "Half-life in seconds for the BeatDetector.barPulse envelope. Default 0.3 - slower than beat pulse for downbeat-emphasized visuals."
         },
         {
           "name": "emitProvisionalBeats",
@@ -99,7 +99,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When true (default), early low-confidence beats are emitted tagged status: 'provisional' (then promoted to 'locked') for snappy visual reactivity. Set false to suppress provisional beats entirely — onBeat then fires only for 'locked' beats, matching the pre-provisional behaviour."
+          "description": "When true (default), early low-confidence beats are emitted tagged status: 'provisional' (then promoted to 'locked') for snappy visual reactivity. Set false to suppress provisional beats entirely - onBeat then fires only for 'locked' beats, matching the pre-provisional behaviour."
         },
         {
           "name": "enableTimeSignatureDetection",
@@ -224,7 +224,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Time window in seconds for BeatDetector.justBeat. Default 0.03 — true for the visual frame(s) within 30ms of a beat onset."
+          "description": "Time window in seconds for BeatDetector.justBeat. Default 0.03 - true for the visual frame(s) within 30ms of a beat onset."
         },
         {
           "name": "maxBpm",
@@ -349,7 +349,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Half-life in seconds for the BeatDetector.pulse envelope. Default 0.15 — pulse halves every 150ms after each beat."
+          "description": "Half-life in seconds for the BeatDetector.pulse envelope. Default 0.15 - pulse halves every 150ms after each beat."
         },
         {
           "name": "source",

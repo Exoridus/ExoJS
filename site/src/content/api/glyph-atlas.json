@@ -430,7 +430,7 @@
             }
           ],
           "returnType": "number",
-          "description": "Return the kerning adjustment (in pixels) between two adjacent characters. Positive values add space; negative values pull glyphs together. Optional — callers treat a missing method as zero kerning."
+          "description": "Return the kerning adjustment (in pixels) between two adjacent characters. Positive values add space; negative values pull glyphs together. Optional - callers treat a missing method as zero kerning."
         }
       ],
       "paragraphs": [],

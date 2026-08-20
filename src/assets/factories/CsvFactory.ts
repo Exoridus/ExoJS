@@ -17,7 +17,7 @@ export interface CsvFactoryOptions {
  * the delimiter, newlines, or double-quotes) are handled correctly. Line
  * endings are normalised before parsing; empty trailing lines are dropped.
  *
- * The returned `string[][]` is intentionally untyped — callers decide whether
+ * The returned `string[][]` is intentionally untyped - callers decide whether
  * to treat the first row as headers, apply type coercions, etc.
  */
 export class CsvFactory extends AbstractAssetFactory<string[][]> {

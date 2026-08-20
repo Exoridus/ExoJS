@@ -8,9 +8,9 @@ const weldEpsilon = 1e-4;
  * A convex polygon defined by ≥3 local-space vertices. Input vertices may be
  * given in either winding; they are canonicalised to counter-clockwise and the
  * outward edge normals are precomputed. Construction throws on any non-convex,
- * degenerate, or under-specified input — there is no silent repair.
+ * degenerate, or under-specified input - there is no silent repair.
  *
- * Vertices and normals are exposed as flat `[x0, y0, x1, y1, …]` arrays to keep
+ * Vertices and normals are exposed as flat `[x0, y0, x1, y1, ...]` arrays to keep
  * the narrow phase allocation-free; both are frozen.
  */
 export class PolygonShape extends Shape {
@@ -64,7 +64,7 @@ export class PolygonShape extends Shape {
     }
 
     // Canonicalise to CCW (positive signed area). Screen space is +Y down, so a
-    // mathematically CCW polygon appears clockwise — the math stays consistent.
+    // mathematically CCW polygon appears clockwise - the math stays consistent.
     if (signedArea(points) < 0) {
       reverseWinding(points);
     }

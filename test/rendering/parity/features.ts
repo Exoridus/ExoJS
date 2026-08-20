@@ -3,7 +3,7 @@
  *
  * Kept by hand on purpose. Deriving the list from the scenes that happen to
  * exist would make the matrix structurally incapable of saying "this feature
- * is unverified" — the row would simply not appear, and absence of a claim
+ * is unverified" - the row would simply not appear, and absence of a claim
  * would look identical to absence of a problem. Listing features first and
  * filling them from measurements second is what lets the table show its own
  * gaps.

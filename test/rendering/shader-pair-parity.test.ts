@@ -199,7 +199,7 @@ describe.each(pairs)('$name shader pair', ({ source }) => {
 
   test('declares the same user textures, in the same slot order', () => {
     // GLSL claims texture slots 1..N in declaration order; WGSL claims
-    // `@group(1) @binding(1, 3, 5, …)` in the same order. Both are derived from
+    // `@group(1) @binding(1, 3, 5, ...)` in the same order. Both are derived from
     // the one uniform record, so the two lists have to line up.
     const glslTextures = glslUniforms(source.glsl!.fragment).filter(u => !autoBoundNames.has(u.name) && glslSamplerTypes.has(u.type));
     const wgslTextures = wgslBindings(source.wgsl!).filter(b => b.group === 1 && b.binding > 0 && b.type.startsWith('texture_'));

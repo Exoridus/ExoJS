@@ -1,6 +1,6 @@
 {
   "title": "TileProperties",
-  "description": "An immutable, flat key-value bag of generic tile properties. Adapters copy and freeze source properties; the runtime never retains a caller-owned mutable object. Declared as an interface (not a `Record<...>` type alias) so it can mutually recurse with TilePropertyValue — a nested-bag member of that union — without TypeScript's \"circularly references itself\" alias restriction; structurally it behaves exactly like `Readonly<Record<string, TilePropertyValue>>`.",
+  "description": "An immutable, flat key-value bag of generic tile properties. Adapters copy and freeze source properties; the runtime never retains a caller-owned mutable object. Declared as an interface (not a `Record<...>` type alias) so it can mutually recurse with TilePropertyValue - a nested-bag member of that union - without TypeScript's \"circularly references itself\" alias restriction; structurally it behaves exactly like `Readonly<Record<string, TilePropertyValue>>`.",
   "symbol": "TileProperties",
   "kind": "interface",
   "subsystem": "tilemap",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "An immutable, flat key-value bag of generic tile properties. Adapters copy and freeze source properties; the runtime never retains a caller-owned mutable object.",
-        "Declared as an interface (not a `Record<...>` type alias) so it can mutually recurse with TilePropertyValue — a nested-bag member of that union — without TypeScript's \"circularly references itself\" alias restriction; structurally it behaves exactly like `Readonly<Record<string, TilePropertyValue>>`."
+        "Declared as an interface (not a `Record<...>` type alias) so it can mutually recurse with TilePropertyValue - a nested-bag member of that union - without TypeScript's \"circularly references itself\" alias restriction; structurally it behaves exactly like `Readonly<Record<string, TilePropertyValue>>`."
       ],
       "importLine": "import { TileProperties } from '@codexo/exojs-tilemap'",
       "sourceLink": null

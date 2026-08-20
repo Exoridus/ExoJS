@@ -6,7 +6,7 @@ import type { MockInstance } from 'vitest';
  * HTMLText rasterizes an SVG `<foreignObject>` into a canvas via a Blob URL +
  * `Image` load, none of which jsdom simulates by default:
  *  - The shared canvas 2D context stub (test/setup-env.vitest.ts) only
- *    implements `fillStyle`/`fillRect`/`drawImage` — HTMLText also needs
+ *    implements `fillStyle`/`fillRect`/`drawImage` - HTMLText also needs
  *    `clearRect`, so this file installs a fuller local mock.
  *  - jsdom never fires `Image#onload`/`onerror` on its own (verified: setting
  *    `.src` is a no-op for the load pipeline). This file patches
@@ -62,7 +62,7 @@ let originalBlob: typeof Blob;
 
 // Node's real `URL.createObjectURL` (used by jsdom here, since it already
 // exists natively and the fallback stub in test/setup-env.vitest.ts only
-// activates when it is missing) requires a genuine `Blob` instance — so the
+// activates when it is missing) requires a genuine `Blob` instance - so the
 // capturing fake extends the real class instead of replacing its behavior.
 class CapturingBlob extends Blob {
   public readonly parts: unknown[];
@@ -135,7 +135,7 @@ describe('HTMLText construction', () => {
     expect(label.children).toHaveLength(1); // the mesh is always built eagerly
     expect(label.html).toBe('');
 
-    // No render was ever scheduled — `ready` falls back to an already-resolved promise.
+    // No render was ever scheduled - `ready` falls back to an already-resolved promise.
     expect(label.ready).toBeInstanceOf(Promise);
 
     label.destroy();

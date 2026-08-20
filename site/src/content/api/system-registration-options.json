@@ -100,7 +100,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Systems this one must run before, additive to (not a replacement for) order — see SystemRegistry class docs for how before/after combine with order/registration sequence."
+          "description": "Systems this one must run before, additive to (not a replacement for) order - see SystemRegistry class docs for how before/after combine with order/registration sequence."
         },
         {
           "name": "order",
@@ -162,7 +162,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Restrict this registration to the named phases. By default a system takes part in every phase whose method it defines, which is what almost every system wants. Pass this when an object happens to carry a method whose name matches a phase without meaning to be that phase — a controller with its own update() that should only draw, say. Naming a phase the system does not implement is ignored."
+          "description": "Restrict this registration to the named phases. By default a system takes part in every phase whose method it defines, which is what almost every system wants. Pass this when an object happens to carry a method whose name matches a phase without meaning to be that phase - a controller with its own update() that should only draw, say. Naming a phase the system does not implement is ignored."
         }
       ],
       "paragraphs": [],

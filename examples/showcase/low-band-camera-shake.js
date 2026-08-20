@@ -1,4 +1,4 @@
-// Auto-generated from low-band-camera-shake.ts — edit the .ts source, not this file.
+// Auto-generated from low-band-camera-shake.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Sprite, Text, View } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
@@ -32,7 +32,7 @@ class LowBandCameraShakeScene extends Scene {
             .setAnchor(0.5, 0.5)
             .setPosition(width / 2, height - 64);
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — play() returns the Voice now.
+        // gesture, then starts automatically - play() returns the Voice now.
         this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
     update(delta) {

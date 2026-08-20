@@ -1,7 +1,7 @@
 import { AbstractAssetFactory } from '#assets/AbstractAssetFactory';
 
 // ---------------------------------------------------------------------------
-// Minimal concrete subclass — AbstractAssetFactory is abstract, and its own
+// Minimal concrete subclass - AbstractAssetFactory is abstract, and its own
 // protected revokeObjectUrl() needs a public seam for direct testing.
 // ---------------------------------------------------------------------------
 

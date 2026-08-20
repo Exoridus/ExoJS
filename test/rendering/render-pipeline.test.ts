@@ -416,7 +416,7 @@ describe('RenderPipeline', () => {
     expect(disabled.resizes).toEqual([[800, 600]]);
   });
 
-  // 28 — exception-safe best-effort teardown
+  // 28 - exception-safe best-effort teardown
   test('destroy keeps tearing down later children after an earlier child throws', () => {
     const a = new TestPass({
       onDestroy: () => {

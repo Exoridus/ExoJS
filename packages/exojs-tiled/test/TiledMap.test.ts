@@ -120,7 +120,7 @@ describe('TiledMap.tilesets — sort and validation', () => {
 describe('TiledMap — GID coverage validation', () => {
   it('throws TiledFormatError when a tile layer GID is not covered by any tileset', () => {
     const underCovering = new TiledTileset({ name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 1, columns: 1 }, 1);
-    // minimal.tmj has GID 2 in data — not covered by tilecount=1 (lastGid=1)
+    // minimal.tmj has GID 2 in data - not covered by tilecount=1 (lastGid=1)
     expect(() => makeMap({ tilesets: [underCovering] })).toThrow(TiledFormatError);
     expect(() => makeMap({ tilesets: [underCovering] })).toThrow(/gid 2.*is not covered by any tileset/);
   });

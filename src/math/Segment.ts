@@ -6,7 +6,7 @@ let temp: Segment | null = null;
 
 /**
  * Mutable line segment defined by start and end {@link Vector}s. Unlike
- * {@link Line} this type does not implement {@link ShapeLike} — it is a
+ * {@link Line} this type does not implement {@link ShapeLike} - it is a
  * lightweight value type used in path and swept-collision utilities.
  *
  * `Segment.temp` is a shared scratch instance.

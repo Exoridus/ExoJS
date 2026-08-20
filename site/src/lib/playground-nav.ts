@@ -2,7 +2,7 @@
 //
 // The playground browser shows the *flat* example catalog: one category level
 // (the `examples.json` directory / `CHAPTERS` slug) with the examples of that
-// category directly underneath — never the guide's Part → Chapter → Example
+// category directly underneath - never the guide's Part → Chapter → Example
 // nesting. Keeping these helpers free of Lit/DOM imports lets them be unit
 // tested directly (see `test/site/playground-nav.test.ts`).
 
@@ -64,7 +64,7 @@ export function isExampleRouteActive(candidatePath: string, activePath: string |
 }
 
 /**
- * Groups a flat list of examples into one nav level — category → examples —
+ * Groups a flat list of examples into one nav level - category → examples -
  * ordered and titled by `CHAPTERS`. Each example appears exactly once (under
  * its own `section`), which is what makes the active-link state unambiguous.
  * Categories that end up empty (e.g. after search/tag filtering upstream) are

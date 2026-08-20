@@ -22,13 +22,13 @@ import type { TileLayerNode } from './TileLayerNode';
  *
  * **Rendering order within a band always follows map document order**
  * ({@link import('./TileMap').TileMap.renderableLayers}), not the order layers
- * were listed in the band definition — band membership *selects* layers; it
+ * were listed in the band definition - band membership *selects* layers; it
  * never reorders them. Tile and image members interleave exactly as the map's
  * combined document order dictates.
  *
  * **Ownership:** the band owns the layer nodes it was created with. Destroying
  * the band destroys those layer nodes (and their cached chunk geometry) and
- * detaches the band from its application parent — it never touches application
+ * detaches the band from its application parent - it never touches application
  * actors, sibling bands, the {@link TileMap}, the {@link TileLayer}s /
  * {@link ImageLayer}s, or Loader-owned textures.
  *
@@ -69,7 +69,7 @@ export class TileMapBand extends Container {
   }
 
   /**
-   * The layer nodes that compose this band, in map document order — tile and
+   * The layer nodes that compose this band, in map document order - tile and
    * image members interleaved. This is the band's **membership** list (the
    * nodes it owns and destroys); it may differ from {@link Container.children}
    * if the caller reparents an individual layer node elsewhere.
@@ -151,7 +151,7 @@ export class TileMapBand extends Container {
   /**
    * Reorder this band's membership and its still-parented children to map
    * document order. `documentIndex` maps a layer **instance** to its index in
-   * the map's combined document order — keyed by instance rather than id
+   * the map's combined document order - keyed by instance rather than id
    * because a tile layer and an image layer may share an id in fallback-ordered
    * maps. Layer nodes the caller has reparented away from this band keep their
    * membership (for ownership) but are not re-adopted.

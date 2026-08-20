@@ -1,4 +1,4 @@
-// Auto-generated from camera-and-view.ts — edit the .ts source, not this file.
+// Auto-generated from camera-and-view.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene, Text, View } from '@codexo/exojs';
 class CameraViewScene extends Scene {
     camera;

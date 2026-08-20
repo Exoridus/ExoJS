@@ -1,5 +1,5 @@
 /**
- * ScrollContainer tests — construction defaults, scroll clamping, mouse-wheel
+ * ScrollContainer tests - construction defaults, scroll clamping, mouse-wheel
  * routing (direction filtering + in-bounds gating), stage attach/detach
  * subscription lifecycle, and destroy() cleanup.
  */
@@ -27,7 +27,7 @@ const makeStage = (
     },
   } as unknown as Application;
 
-  // Full no-op hook implementations — Container._setStage() propagates the
+  // Full no-op hook implementations - Container._setStage() propagates the
   // stage to `content` too, and later setPosition() calls (via scrollTo())
   // walk up through these hooks to invalidate bounds.
   const interaction: Stage['interaction'] = {
@@ -248,7 +248,7 @@ describe('ScrollContainer viewport bounds (ME-58)', () => {
 
     // The content is far bigger than the 100x100 viewport; wheel routing
     // used to gate on this union instead of the viewport, so a point
-    // at (150, 150) — inside the content extent, outside the viewport —
+    // at (150, 150) - inside the content extent, outside the viewport -
     // would have wrongly been accepted.
     stubContentBounds(scroll, new Rectangle(0, 0, 5000, 5000));
     scroll._setStage(stage);
@@ -263,20 +263,20 @@ describe('ScrollContainer viewport bounds (ME-58)', () => {
     const child = new Container();
 
     scroll.content.addChild(child);
-    // Simulate a child whose own geometry claims every point — isolates the
+    // Simulate a child whose own geometry claims every point - isolates the
     // viewport gate under test from needing real drawn geometry.
     vi.spyOn(child, 'contains').mockReturnValue(true);
 
-    // Outside the 100x100 viewport — must be rejected regardless of the child.
+    // Outside the 100x100 viewport - must be rejected regardless of the child.
     expect(scroll.contains(500, 500)).toBe(false);
-    // Inside the viewport, with a child that claims the point — accepted.
+    // Inside the viewport, with a child that claims the point - accepted.
     expect(scroll.contains(50, 50)).toBe(true);
   });
 
   test('contains() still requires an actual child hit inside the viewport (delegation semantics unchanged)', () => {
     const scroll = new ScrollContainer({ width: 100, height: 100 });
 
-    // No children at all — nothing to hit, even squarely inside the viewport.
+    // No children at all - nothing to hit, even squarely inside the viewport.
     expect(scroll.contains(50, 50)).toBe(false);
   });
 });

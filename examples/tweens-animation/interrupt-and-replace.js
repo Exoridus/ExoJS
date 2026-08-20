@@ -1,4 +1,4 @@
-// Auto-generated from interrupt-and-replace.ts — edit the .ts source, not this file.
+// Auto-generated from interrupt-and-replace.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 class InterruptAndReplaceScene extends Scene {
     sprite;

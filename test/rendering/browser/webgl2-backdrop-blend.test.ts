@@ -1,11 +1,11 @@
 /**
- * WebGL2 backdrop-aware blend SPIKE — proves the advanced-blend primitive
+ * WebGL2 backdrop-aware blend SPIKE - proves the advanced-blend primitive
  * (`WebGl2BackdropBlendCompositor`) end-to-end in isolation, before any
  * render-plan integration. Mode = Darken (the motivating bug).
  *
  * Verifies the two things the spike exists to de-risk:
  *  1. Backdrop capture + composite math: a transparent source region shows the
- *     backdrop through (NOT black — the old fixed-function Darken bug), and a
+ *     backdrop through (NOT black - the old fixed-function Darken bug), and a
  *     covered region equals min(backdrop, source).
  *  2. Spatial / V-flip correctness: the captured backdrop is composited at the
  *     right place (a vertically-split backdrop under an opaque white source
@@ -138,7 +138,7 @@ describe('WebGL2 backdrop-aware blend (Darken spike)', () => {
 
       // Left (red over blue, Darken): min((60,120,200),(255,0,0)) = (60,0,0).
       expectRgbNear(readPixel(backend, 16, 32), [60, 0, 0]);
-      // Right (transparent): the backdrop shows through — NOT black.
+      // Right (transparent): the backdrop shows through - NOT black.
       expectRgbNear(readPixel(backend, 48, 32), [60, 120, 200]);
     } finally {
       source.destroy();
@@ -161,7 +161,7 @@ describe('WebGL2 backdrop-aware blend (Darken spike)', () => {
       gl.disable(gl.SCISSOR_TEST);
 
       // Opaque white under Darken = min(white, backdrop) = backdrop. The result
-      // must match the backdrop spatially (top red, bottom blue) — a V-flip bug
+      // must match the backdrop spatially (top red, bottom blue) - a V-flip bug
       // would swap them.
       composeBackdropBlend(backend, white, BlendModes.Darken);
 

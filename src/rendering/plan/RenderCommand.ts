@@ -42,7 +42,7 @@ export interface MaterialKey {
   /**
    * Whether the keys came from a {@link Material} the drawable carries (custom
    * path) rather than from the conservative default-path derivation. Decides how
-   * much of the key {@link forcesBatchFlush} reads — see there.
+   * much of the key {@link forcesBatchFlush} reads - see there.
    */
   ownMaterial: boolean;
 }
@@ -51,12 +51,12 @@ export interface MaterialKey {
  * Whether a draw with material key `next` forces the batcher to flush when it
  * directly follows a draw with key `prev`.
  *
- * This — not "the two keys differ" — is what the plan optimizer buckets and
+ * This - not "the two keys differ" - is what the plan optimizer buckets and
  * gates on, because a flush is what actually costs a draw call. On the default
  * sprite path a pure `bindKey` change is a texture change, which the 16 texture
  * slots absorb without a flush (`WebGl2SpriteRenderer._renderDefault` flushes on
  * `batchFull || blendModeChanged || slotExhausted || materialSwitch`); only the
- * pipeline — renderer identity plus blend mode — forces one. A draw carrying its
+ * pipeline - renderer identity plus blend mode - forces one. A draw carrying its
  * own {@link Material} runs the custom path, where any material switch flushes,
  * so there both keys count, as does the crossing between the two paths.
  *
@@ -72,7 +72,7 @@ export const forcesBatchFlush = (prev: MaterialKey, next: MaterialKey): boolean 
 
 /**
  * {@link forcesBatchFlush} against a previous key held as loose fields rather
- * than an object — the shape the plan builder keeps on a scope, where snapshotting
+ * than an object - the shape the plan builder keeps on a scope, where snapshotting
  * the first draw's key into three primitives avoids retaining a pooled
  * {@link MaterialKey} across the frame. Same rule, one definition.
  *
@@ -204,7 +204,7 @@ const getMaterial = (drawable: Drawable): Material | null => {
  * from the material so identically configured materials group together.
  * When the drawable uses its default rendering path, both keys fall back
  * to a conservative derivation from renderer identity, blend mode, and
- * texture identity — keeping grouping safe but still enabling adjacency
+ * texture identity - keeping grouping safe but still enabling adjacency
  * coalescing for default-pipeline draws of the same type.
  *
  * @internal
@@ -293,7 +293,7 @@ export const copyMaterialKeyInto = (target: MaterialKey, source: MaterialKey): M
 /**
  * Whether `drawable` carries its own {@link Material}. Such a drawable can mutate
  * its material's `pipelineKey`/`bindKey` internally without notifying the node,
- * so its material key must not be cached — it is recomputed every frame. The
+ * so its material key must not be cached - it is recomputed every frame. The
  * default (material-less) path is safe to cache and invalidate via the existing
  * `invalidateCache` setters.
  *
@@ -307,14 +307,14 @@ export const drawableHasOwnMaterial = (drawable: Drawable): boolean => getMateri
  * world transform (+ tint) keyed by its `nodeIndex`; only renderers that fetch
  * those rows back from the buffer need a record written.
  *
- * Sprite and Mesh (and their subclasses — {@link AnimatedSprite}, Video,
+ * Sprite and Mesh (and their subclasses - {@link AnimatedSprite}, Video,
  * Graphics' meshes) fetch the transform via `nodeIndex` and therefore consume
  * it. Text/BitmapText and particle renderers pack their own per-node data into
  * a private data texture / uniforms and never touch the shared buffer, so they
  * opt out via `_consumesSharedTransform === false` and their writes are skipped.
  *
- * Anything else — a custom renderer, or a drawable with no registered renderer
- * (resolve throws) — defaults to writing, so behaviour is unchanged for any
+ * Anything else - a custom renderer, or a drawable with no registered renderer
+ * (resolve throws) - defaults to writing, so behaviour is unchanged for any
  * path that might still rely on the shared transform.
  *
  * @internal

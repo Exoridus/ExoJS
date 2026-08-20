@@ -3,7 +3,7 @@
  * already holds.
  *
  * `TextureSource` accepts any `HTMLCanvasElement`, and a caller may well hand
- * over one that is already driven by WebGL or `bitmaprenderer` — a minimap, an
+ * over one that is already driven by WebGL or `bitmaprenderer` - a minimap, an
  * offscreen effect, another engine's output. `copyExternalImageToTexture` takes
  * such a canvas happily; `getImageData` cannot, because `getContext('2d')`
  * returns null once a canvas is bound to a different context type. The

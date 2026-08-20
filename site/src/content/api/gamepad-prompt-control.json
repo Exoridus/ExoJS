@@ -1,6 +1,6 @@
 {
   "title": "GamepadPromptControl",
-  "description": "Named controls that can appear in an in-game prompt or button-hint UI. Intentionally a subset of GamepadButton channels — covers the controls a typical prompt overlay needs to label, including the composite `'DPad'` token which has no single channel equivalent. The names retain a `'Button'` prefix on the face cluster for compatibility with prompt artwork file names.",
+  "description": "Named controls that can appear in an in-game prompt or button-hint UI. Intentionally a subset of GamepadButton channels - covers the controls a typical prompt overlay needs to label, including the composite `'DPad'` token which has no single channel equivalent. The names retain a `'Button'` prefix on the face cluster for compatibility with prompt artwork file names.",
   "symbol": "GamepadPromptControl",
   "kind": "type",
   "subsystem": "input",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Named controls that can appear in an in-game prompt or button-hint UI.",
-        "Intentionally a subset of GamepadButton channels — covers the controls a typical prompt overlay needs to label, including the composite `'DPad'` token which has no single channel equivalent. The names retain a `'Button'` prefix on the face cluster for compatibility with prompt artwork file names."
+        "Intentionally a subset of GamepadButton channels - covers the controls a typical prompt overlay needs to label, including the composite `'DPad'` token which has no single channel equivalent. The names retain a `'Button'` prefix on the face cluster for compatibility with prompt artwork file names."
       ],
       "importLine": "import { GamepadPromptControl } from '@codexo/exojs'",
       "sourceLink": null

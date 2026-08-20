@@ -86,8 +86,8 @@ const readComponent = (view: DataView, attribute: GeometryAttribute, byteOffset:
  * fixed stride, while a caller's mesh may declare any names in any supported
  * types. Normalising here is what lets one compiled program serve every mesh.
  *
- * `Geometry` guarantees a position attribute exists — it resolves one in its
- * own constructor and throws otherwise — so the same resolution order is
+ * `Geometry` guarantees a position attribute exists - it resolves one in its
+ * own constructor and throws otherwise - so the same resolution order is
  * mirrored here rather than re-validated. A geometry without a texcoord
  * attribute leaves the UV columns at zero.
  *
@@ -143,7 +143,7 @@ export const meshParticleWgsl: string = meshParticleWgslModule;
  *
  * The cheap counterpart to `RibbonParticles`: the relationship stays one
  * particle, one instance, and the per-instance data is byte-identical to
- * `QuadParticles`'s — {@link instanceAttributes}, filled by the same
+ * `QuadParticles`'s - {@link instanceAttributes}, filled by the same
  * writer. Only the shape changes. That is what makes this mode **GPU-eligible**
  * without touching the compute pipeline: the pipeline emits precisely that
  * layout, so a system on the GPU path binds its instance buffer directly and
@@ -155,8 +155,8 @@ export const meshParticleWgsl: string = meshParticleWgslModule;
  * mesh is limited only by what a vertex buffer holds.
  *
  * **Mutating the mesh works.** Its vertices are read into a normalised
- * `(x, y, u, v)` table — the shader binds fixed names, a caller's geometry may
- * use any — and re-read whenever the geometry's `version` changes. Edit the
+ * `(x, y, u, v)` table - the shader binds fixed names, a caller's geometry may
+ * use any - and re-read whenever the geometry's `version` changes. Edit the
  * geometry in place, call `invalidate()` on it, and the next draw picks it up.
  * Changing the vertex *count* is equally fine.
  *
@@ -165,7 +165,7 @@ export const meshParticleWgsl: string = meshParticleWgslModule;
  * frame (`uv = mix(uvMin, uvMax, meshUV)`), so `system.frames` plus a
  * per-particle `textureIndex` selects a frame the same way. A geometry with
  * **no texcoord attribute** therefore carries UV `(0, 0)` on every vertex and
- * the mix degenerates to `uvMin` — the whole mesh samples the single texel at
+ * the mix degenerates to `uvMin` - the whole mesh samples the single texel at
  * the frame's top-left corner, which on the default 1×1 white texture is
  * exactly "untextured, tinted by the particle's `color`".
  *
@@ -196,7 +196,7 @@ export class MeshParticles extends ParticleRenderMode {
   public readonly instanced = true;
 
   /**
-   * The geometry this mode was constructed with — the shape one particle
+   * The geometry this mode was constructed with - the shape one particle
    * draws. Owned by the caller: {@link destroy} leaves it alone, so one mesh
    * can back several modes.
    */
@@ -287,7 +287,7 @@ export class MeshParticles extends ParticleRenderMode {
    * Re-runs from {@link build} rather than from a draw so it also happens for a
    * system whose backend has not compiled a pipeline yet. A vertex count change
    * swaps the table, which is why the geometry's own `vertexData` is reassigned
-   * rather than written through — the executors notice via its `version`.
+   * rather than written through - the executors notice via its `version`.
    */
   private _syncMesh(): void {
     if (this._meshVersion === this.mesh.version) {

@@ -1,6 +1,6 @@
 {
   "title": "ViewFollowTarget",
-  "description": "A target that a View can track — either a SceneNode or any `{x, y}` position object.",
+  "description": "A target that a View can track - either a SceneNode or any `{x, y}` position object.",
   "symbol": "ViewFollowTarget",
   "kind": "type",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A target that a View can track — either a SceneNode or any `{x, y}` position object."
+        "A target that a View can track - either a SceneNode or any `{x, y}` position object."
       ],
       "importLine": "import { ViewFollowTarget } from '@codexo/exojs'",
       "sourceLink": null

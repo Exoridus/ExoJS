@@ -26,7 +26,7 @@ export interface AssetResidencyHooks {
   readonly createDependencyScope: (asset: CanonicalAsset) => LoaderScope;
 }
 
-/** The `Loader` signals `AssetResidency` dispatches on directly — owned by `Loader` (public API), referenced here for dispatch only. */
+/** The `Loader` signals `AssetResidency` dispatches on directly - owned by `Loader` (public API), referenced here for dispatch only. */
 export interface AssetResidencySignals {
   readonly onProgress: Signal<[loaded: number, total: number]>;
   readonly onLoaded: Signal<[type: AssetConstructor, alias: string, resource: unknown]>;
@@ -69,12 +69,12 @@ export interface AssetInspection {
    * or `'ready'` outcome always wins over `'queued'`/`'loading'`, so a row can
    * never claim to be both settled and still pending.
    *
-   * A key can have more than one live handle/ref sharing it — multiple
+   * A key can have more than one live handle/ref sharing it - multiple
    * `Assets.from()` leaves or `get()` calls joined onto the same source, whose
    * individual outcomes CAN diverge (e.g. one ref's `parse()` throws while a
    * sibling ref's succeeds; `AssetRef._fill` fails only the ref whose `parse`
-   * threw). `state` reports the REPRESENTATIVE handle/ref's outcome — the
-   * first one registered for this key — not an aggregate across every
+   * threw). `state` reports the REPRESENTATIVE handle/ref's outcome - the
+   * first one registered for this key - not an aggregate across every
    * handle/ref sharing it; a divergent sibling's outcome is not visible here.
    */
   readonly state: 'idle' | 'queued' | 'loading' | 'ready' | 'failed';
@@ -92,7 +92,7 @@ export interface AssetInspection {
   readonly inFlight: boolean;
   /**
    * `true` only while this key is genuinely parked in the low-priority
-   * background queue — always in lockstep with `state === 'queued'`, and
+   * background queue - always in lockstep with `state === 'queued'`, and
    * never `true` on a row whose `state` has already settled to `'ready'` or
    * `'failed'`.
    */
@@ -160,7 +160,7 @@ export class AssetResidency {
   private readonly _dependencyScopes = new Map<CanonicalAssetKey, LoaderScope>();
   private readonly _evicted = new Set<CanonicalAssetKey>();
   private readonly _handleKeys = new WeakMap<object, CanonicalAssetKey>();
-  // Every handle/ref residency has EVER registered under a key — a WeakSet, so
+  // Every handle/ref residency has EVER registered under a key - a WeakSet, so
   // it never needs pruning and never retains a dead handle. Unlike `_handleKeys`,
   // this is never deleted from (not even by `_forgetKey`/`unloadAll`'s hard
   // reset), so a release's "was this ever a real handle" check stays
@@ -215,7 +215,7 @@ export class AssetResidency {
         continue;
       }
 
-      // Raw queue membership only — a settled row must never report `background: true`
+      // Raw queue membership only - a settled row must never report `background: true`
       // (see below), so this is an INPUT to `state`, not the field's own value.
       const queuedInBackground = backgroundKeys.has(key);
       const handleState = this._inspectHandleState(key, asset.type);
@@ -269,7 +269,7 @@ export class AssetResidency {
    * handle/ref always wins over a merely-`stored` payload. This matters for a
    * value key: `_storeResource` stores the raw fetched payload unconditionally,
    * even when the ref's OWN `parse()` step subsequently failed it (e.g. a
-   * thenable rejected by the synchronous-parse contract) — so `stored` alone
+   * thenable rejected by the synchronous-parse contract) - so `stored` alone
    * cannot be trusted to mean "readable". A failed/settled outcome then always
    * wins over `'queued'`/`'loading'`, so a row can never claim to be both
    * settled and still pending. Backs {@link _inspect}.
@@ -370,7 +370,7 @@ export class AssetResidency {
 
   /**
    * Release every claim held under a claim scope (a scene unloading its
-   * scene-private assets). Collect the held keys first, then release —
+   * scene-private assets). Collect the held keys first, then release -
    * {@link _release} mutates `_claims`, so we must not delete during iteration.
    * @internal
    */
@@ -411,7 +411,7 @@ export class AssetResidency {
       const entry = this._deferred.get(key);
       // Re-arm every live consumer handle in place: the representative AND any
       // co-handle adopted from the stored donor, so a later claim
-      // heals them all — not just the canonical one. The stored donor is itself
+      // heals them all - not just the canonical one. The stored donor is itself
       // a member (registered at store time); guard the fallback for the (defensive)
       // case where no entry exists.
       let evictedStored = false;
@@ -504,7 +504,7 @@ export class AssetResidency {
     this._evicted.add(asset.key);
     this._releaseDependencies(asset.key);
     // Drop a resolved-but-not-yet-cleaned in-flight entry so the reclaim's
-    // re-fetch starts fresh instead of deduping onto it — see the seamless
+    // re-fetch starts fresh instead of deduping onto it - see the seamless
     // branch above for the full reasoning; it applies verbatim here.
     this._inFlight.delete(asset.key);
   }
@@ -550,7 +550,7 @@ export class AssetResidency {
 
     if (handle instanceof AssetRef) {
       // The generic re-arm above only re-enters 'loading' on the shared
-      // `_loadState` — it does not clear a value ref's OWN `_value`/`_hasValue`
+      // `_loadState` - it does not clear a value ref's OWN `_value`/`_hasValue`
       // (only `AssetRef._begin()` does). `_fail()` never clears them either, so a
       // ref that was 'ready' before a LATER failure (`_onTrackedFailure` fails
       // every ref of a key regardless of its prior state) carries a stale value
@@ -586,7 +586,7 @@ export class AssetResidency {
           handle._fill(stored);
         }
       }
-      // else: the SAME ref re-adopted — Set membership makes this a no-op.
+      // else: the SAME ref re-adopted - Set membership makes this a no-op.
 
       // Retry of a leaf whose key already has a ref entry. The
       // `existingRef === undefined` branch above already fetched (or filled)
@@ -598,7 +598,7 @@ export class AssetResidency {
       // above), never 'failed', yet joining a key whose earlier load failed is
       // every bit as much a retry request. Without the sibling check such a ref
       // would join the set, find no stored payload, and sit in 'loading'
-      // forever — its fetch already settled into failure, so `_storeResource`
+      // forever - its fetch already settled into failure, so `_storeResource`
       // never runs for the key and nothing else would ever restart it.
       // Reading the siblings after the join above is equivalent to reading them
       // before it: the adopted ref is 'loading' by now either way, so its own
@@ -655,9 +655,9 @@ export class AssetResidency {
 
     if (stored !== undefined && this._handleKeys.get(handle) !== key) {
       // Already stored for this key (e.g. loaded elsewhere before this leaf was
-      // adopted — the core catalog scenario) and this exact handle has not been
+      // adopted - the core catalog scenario) and this exact handle has not been
       // filled/registered yet: transplant the stored donor into THIS handle in
-      // place (per-catalog identity — do NOT swap to the stored object; the
+      // place (per-catalog identity - do NOT swap to the stored object; the
       // caller already holds this leaf) and register it so a release can
       // resolve its key.
       //
@@ -678,13 +678,13 @@ export class AssetResidency {
       // in failure - the retry below covers the latter.
       this._addDeferredHandle(key, deferredEntry, handle);
     }
-    // else: the SAME handle re-adopted, or already filled — a no-op.
+    // else: the SAME handle re-adopted, or already filled - a no-op.
 
     // Retry of a key that already failed. Being a retry is a property of the
     // KEY, not of the adopted handle: a brand-new leaf is 'idle' (re-armed to
     // 'loading' at the top of this method), never 'failed', yet joining a key
-    // whose earlier load failed — a second scene claiming the same catalog does
-    // exactly this — is every bit as much a retry request. Nothing else would
+    // whose earlier load failed - a second scene claiming the same catalog does
+    // exactly this - is every bit as much a retry request. Nothing else would
     // restart such a key: its fetch already settled into failure, so
     // `_storeResource` never runs for it and the joining handle would sit in
     // 'loading' forever.
@@ -696,7 +696,7 @@ export class AssetResidency {
     // `deferredEntry === undefined && stored === undefined` branch above
     // returns after starting its own fetch, so no key is ever fetched twice in
     // one adopt. Two handles joining a failed key in the same tick fetch once
-    // too — the first adopt re-arms every failed sibling, so the second finds
+    // too - the first adopt re-arms every failed sibling, so the second finds
     // none.
     //
     // A key whose payload is already stored needs no retry, unlike a value key:
@@ -858,7 +858,7 @@ export class AssetResidency {
   /**
    * Does any live handle registered for a seamless key sit in `'failed'`? Then
    * the key's last attempt ended in failure, and an adoption joining it is a
-   * retry — whatever state the adopted handle itself was in. Restarting is
+   * retry - whatever state the adopted handle itself was in. Restarting is
    * harmless in the one case where a fetch IS already running past a `'failed'`
    * straggler ({@link _getSeamless} re-arms only the representative):
    * {@link _loadSingle} dedupes on the key's in-flight entry, and the straggler
@@ -929,7 +929,7 @@ export class AssetResidency {
   /**
    * Dispatch a fetch and place it under in-flight tracking.
    *
-   * `_dispatchFetch` can fail *synchronously* — it copies the caller's fetch
+   * `_dispatchFetch` can fail *synchronously* - it copies the caller's fetch
    * options into the handler config, so an option object with a throwing getter
    * fails before any promise exists. Every real 404 or decode error fails
    * asynchronously instead, which is why this path stayed unnoticed.
@@ -1036,8 +1036,8 @@ export class AssetResidency {
    * Central failure sink for a tracked fetch.
    *
    * A CANCELLED fetch takes the same handle bookkeeping but none of the
-   * reporting: every handle/ref still has to settle — leaving them `'loading'`
-   * would strand `.loaded` and the load queues awaiting it forever — while
+   * reporting: every handle/ref still has to settle - leaving them `'loading'`
+   * would strand `.loaded` and the load queues awaiting it forever - while
    * `onError` and the missing-source diagnostic stay silent, because nothing
    * failed. A cancel only ever happens once the key's last claim is gone, so
    * there is no consumer left to surprise with someone else's cancellation, and
@@ -1165,7 +1165,7 @@ export class AssetResidency {
       let representative: object | undefined;
 
       // Fill EVERY in-flight handle for the key from the single decoded donor
-      // (multi-handle fill). The first handle is the representative — it
+      // (multi-handle fill). The first handle is the representative - it
       // becomes the canonical resource entry, mirroring the old single-handle
       // contract (which object is canonical for eviction).
       for (const handle of deferredEntry.handles) {
@@ -1257,7 +1257,7 @@ export class AssetResidency {
   /**
    * Divert an adopted leaf's fetch into the low-priority background queue.
    * The leaf is already registered in `_deferred`/`_refs` and claimed, so the
-   * fetch — whenever the queue drains it, or a `get()` boosts it — fills that
+   * fetch - whenever the queue drains it, or a `get()` boosts it - fills that
    * same handle in place via {@link _storeResource}.
    * @internal
    */
@@ -1367,7 +1367,7 @@ export class AssetResidency {
     const key = asset.key;
 
     // Snapshot BEFORE the delete: a key whose resource is already stored has a
-    // SETTLED fetch — any lingering `_inFlight` entry for it is stale (its
+    // SETTLED fetch - any lingering `_inFlight` entry for it is stale (its
     // `.finally` cleanup microtask has not yet run), not a live fetch. This is
     // the signal that separates a genuine in-flight unload (fail-in-place, keep
     // the handle) from a settled one (forget it, drop the stale entry).
@@ -1424,7 +1424,7 @@ export class AssetResidency {
     // Global reset. Snapshot the keys with a stored resource first: their
     // in-flight entries (if any) are stale (resolved-but-uncleaned), so they can
     // be dropped, while a not-yet-stored key with a live `_inFlight` entry is a
-    // genuine fetch that must be preserved (its handle fills or fails in place) —
+    // genuine fetch that must be preserved (its handle fills or fails in place) -
     // honoring "does not cancel in-flight fetches".
     const settledKeys = new Set<CanonicalAssetKey>(this._resources.keys());
 
@@ -1569,7 +1569,7 @@ export class AssetResidency {
 
   /**
    * Clears all resident-resource, in-flight, claim, and background-queue state,
-   * cancelling every fetch still running. Called from `Loader.destroy()` — the
+   * cancelling every fetch still running. Called from `Loader.destroy()` - the
    * loader is going away, so no holder can possibly still want a result, and a
    * download left running would only compete for bandwidth with whatever
    * replaces it.

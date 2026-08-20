@@ -1,6 +1,6 @@
 {
   "title": "Clock",
-  "description": "High-precision wall-clock that accumulates elapsed time while running. Reads from performance.now via `getPreciseTime`. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared — copy it if you need to keep a snapshot). Use Timer for a clock with a fixed limit and `expired` flag.",
+  "description": "High-precision wall-clock that accumulates elapsed time while running. Reads from performance.now via `getPreciseTime`. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared - copy it if you need to keep a snapshot). Use Timer for a clock with a fixed limit and `expired` flag.",
   "symbol": "Clock",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "High-precision wall-clock that accumulates elapsed time while running. Reads from performance.now via `getPreciseTime`. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared — copy it if you need to keep a snapshot).",
+        "High-precision wall-clock that accumulates elapsed time while running. Reads from performance.now via `getPreciseTime`. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared - copy it if you need to keep a snapshot).",
         "Use Timer for a clock with a fixed limit and `expired` flag."
       ],
       "importLine": "import { Clock } from '@codexo/exojs'",
@@ -363,7 +363,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Total accumulated time since the last Clock.reset. While the clock is running, the value advances on every read by folding in the delta since the previous read; while stopped, the value is fixed at the stop point. Returns the same Time instance — read the scalar fields if you need an unchanging snapshot."
+          "description": "Total accumulated time since the last Clock.reset. While the clock is running, the value advances on every read by folding in the delta since the previous read; while stopped, the value is fixed at the stop point. Returns the same Time instance - read the scalar fields if you need an unchanging snapshot."
         },
         {
           "name": "running",

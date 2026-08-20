@@ -2,14 +2,14 @@
  * WebGPU mesh-renderer mid-frame disconnect browser test.
  *
  * Since the pass-cursor sweep, the WebGPU render pass survives a renderer
- * switch and is only ended (submitted) at genuine frame boundaries — a mesh
+ * switch and is only ended (submitted) at genuine frame boundaries - a mesh
  * flush no longer ends it. `WebGpuMeshRenderer.onDisconnect` used to destroy
  * `_vertexBuffer` / `_indexBuffer` / `_uniformBuffer` (and the instanced
  * counterparts) right after its own `flush()`, with no regard for whether
  * that flush's draws had already been recorded into a pass that is STILL
- * OPEN and not yet submitted. A renderer disconnected on its own — outside
+ * OPEN and not yet submitted. A renderer disconnected on its own - outside
  * `WebGpuBackend.destroy()` / device loss, both of which drop the pass first
- * — left those draws bound to now-destroyed buffers sitting in the pass;
+ * - left those draws bound to now-destroyed buffers sitting in the pass;
  * whatever later ends it submits a command buffer that reads freed GPU
  * memory, a WebGPU validation error.
  *
@@ -150,7 +150,7 @@ describe('WebGPU mesh renderer mid-frame disconnect', () => {
         // Buffers the mesh draw call (mesh renderer becomes the active renderer).
         mesh.render(backend);
         // Renderer switch: flushes the mesh renderer, recording its draw into
-        // the coordinator's pass — which stays OPEN, not submitted — then
+        // the coordinator's pass - which stays OPEN, not submitted - then
         // buffers the sprite draw on the new active renderer.
         sprite.render(backend);
 

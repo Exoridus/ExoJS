@@ -1,6 +1,6 @@
 {
   "title": "LifetimeFunction",
-  "description": "Lifetime-parameterised function that produces a deterministic `T` for a given lifetime ratio `t` in `[0, 1]`. Used by per-frame update modules that interpolate over particle lifetime — `ColorOverLifetime` (ColorGradient), `ScaleOverLifetime` (Curve), etc. Mutable-target rule: same as Distribution — pass your own scratch via `out` for hot loops, omit for one-off calls.",
+  "description": "Lifetime-parameterised function that produces a deterministic `T` for a given lifetime ratio `t` in `[0, 1]`. Used by per-frame update modules that interpolate over particle lifetime - `ColorOverLifetime` (ColorGradient), `ScaleOverLifetime` (Curve), etc. Mutable-target rule: same as Distribution - pass your own scratch via `out` for hot loops, omit for one-off calls.",
   "symbol": "LifetimeFunction",
   "kind": "interface",
   "subsystem": "particles",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Lifetime-parameterised function that produces a deterministic `T` for a given lifetime ratio `t` in `[0, 1]`. Used by per-frame update modules that interpolate over particle lifetime — `ColorOverLifetime` (ColorGradient), `ScaleOverLifetime` (Curve), etc.",
-        "Mutable-target rule: same as Distribution — pass your own scratch via `out` for hot loops, omit for one-off calls."
+        "Lifetime-parameterised function that produces a deterministic `T` for a given lifetime ratio `t` in `[0, 1]`. Used by per-frame update modules that interpolate over particle lifetime - `ColorOverLifetime` (ColorGradient), `ScaleOverLifetime` (Curve), etc.",
+        "Mutable-target rule: same as Distribution - pass your own scratch via `out` for hot loops, omit for one-off calls."
       ],
       "importLine": "import { LifetimeFunction } from '@codexo/exojs-particles'",
       "sourceLink": null

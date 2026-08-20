@@ -24,7 +24,7 @@ const makeStore = (overrides: Partial<CacheStore> = {}): CacheStore => ({
   ...overrides,
 });
 
-/** The loader's own decoder — the object that builds the request-scoped sink. */
+/** The loader's own decoder - the object that builds the request-scoped sink. */
 const decoderOf = (loader: Loader): AssetDecoder => (loader as unknown as { _decoder: AssetDecoder })._decoder;
 
 /** Drive one asset through the real cache-strategy path of `loader`. */

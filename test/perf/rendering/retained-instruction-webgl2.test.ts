@@ -47,7 +47,7 @@ const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
 
 /**
  * One sprite OUTSIDE (and before) the retained group so the group's shared
- * transform rows never start at 0 — the group-local index rebase is
+ * transform rows never start at 0 - the group-local index rebase is
  * load-bearing in every cell, not incidentally satisfied.
  */
 const buildScene = () => {
@@ -81,7 +81,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
       const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
 
-      // F1 — dirty first frame: full collect + fragment capture, no recording
+      // F1 - dirty first frame: full collect + fragment capture, no recording
       // (record-on-first-clean-frame policy), no replay.
       const f1 = measureFrame(harness, root);
 
@@ -91,7 +91,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(f1.instances).toBe(4);
       expect(f1.visibleNodes).toBe(4);
 
-      // F2 — first clean frame: entry replay + instruction recording. Still
+      // F2 - first clean frame: entry replay + instruction recording. Still
       // draws through the normal path (same draw shape as F1); additionally
       // uploads the recorded bytes into the group bundle once.
       const f2 = measureFrame(harness, root);
@@ -103,7 +103,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(f2.visibleNodes).toBe(4);
       expect(fragmentOf(group).instructions?.hasRecording).toBe(true);
 
-      // F3 — splice: the group replays from its instruction set. The group's
+      // F3 - splice: the group replays from its instruction set. The group's
       // transform DataTexture uploads once here (first bind after finalize).
       const f3 = measureFrame(harness, root);
 
@@ -113,10 +113,10 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       expect(f3.instances).toBe(4);
       expect(f3.visibleNodes).toBe(4);
 
-      // F4 — steady splice: NOTHING uploads for the group anymore. The only
+      // F4 - steady splice: NOTHING uploads for the group anymore. The only
       // buffer traffic is the live outside sprite's own 36-byte re-pack; the
       // shared transform texture is unchanged (hash) and the group texture is
-      // clean (version) — zero texture uploads of any kind.
+      // clean (version) - zero texture uploads of any kind.
       const f4 = measureFrame(harness, root);
 
       expect(f4.drawCalls).toBe(2);
@@ -142,7 +142,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       const words = bundle.instanceWords;
 
       // 3 instances of 8 words each; word 7 is the node index. The outside
-      // sprite occupied shared row 0, so the group's rows started at 1+ —
+      // sprite occupied shared row 0, so the group's rows started at 1+ -
       // after the rebase they MUST read 0..2.
       expect(bundle.usedWords).toBe(3 * 8);
       expect([words[0 * 8 + 7], words[1 * 8 + 7], words[2 * 8 + 7]]).toEqual([0, 1, 2]);
@@ -171,7 +171,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
 
       // Between capture and record, hide `outside`. This does NOT dirty the
       // group (a sibling's structure change is off the group's subtree), so the
-      // group stays clean and records on F2 — but now its children start at row
+      // group stays clean and records on F2 - but now its children start at row
       // 0 (groupBase shifts 1 -> 0). The node->row map still holds the F1
       // indices (1,2,3); the store is rebased to the F2 base (0). The patch must
       // use the F1 subtree-local origin, not the F2 bundle base, or every
@@ -246,9 +246,9 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
       const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
 
-      // Content mutation (a bare move would be row-patched instead —
+      // Content mutation (a bare move would be row-patched instead -
       // exercised by the fast-patch gate below): content-dirty wins, so the
-      // dirty frame is a plain collect — no replay, no capture. The move rides
+      // dirty frame is a plain collect - no replay, no capture. The move rides
       // along so the re-recorded row still carries fresh position data.
       inside[1]!.invalidateContent();
       inside[1]!.setPosition(80, 80);
@@ -293,7 +293,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
       const beginSpy = vi.spyOn(harness.backend, '_beginRetainedCapture');
       const replaySpy = vi.spyOn(harness.backend, '_replayRetainedBatch');
 
-      // Resize: bumps only the texture version — no node revision, the
+      // Resize: bumps only the texture version - no node revision, the
       // fragment stays clean. The recorded UV words are normalized against
       // the record-time size (WebGl2SpriteRenderer._packInstance), so a
       // replay would sample a stale region: only the backend's collect-time
@@ -439,7 +439,7 @@ describe('WebGL2 retained instruction set: record + splice ladder (Tasks 6/7)', 
 
       // Both pixel-snap modes are resolved in the vertex shaders from the
       // transform row flag, so the uploaded rows/quads stay view-independent
-      // — a snapped draw is fully recordable, no poison instruction needed.
+      // - a snapped draw is fully recordable, no poison instruction needed.
       expect(set.hasRecording).toBe(true);
       expect(set.isValidFor(backend)).toBe(true);
 

@@ -12,7 +12,7 @@ function getCategoryData(catKey: string): Record<string, unknown> {
     return (assets.demo as unknown as Record<string, Record<string, unknown>>)[catKey] ?? {};
 }
 
-// Union of the tileset catalog entry shapes — every entry declares
+// Union of the tileset catalog entry shapes - every entry declares
 // tileWidth/tileHeight even though only some also carry `data`.
 type TilesetEntry = (typeof assets.demo.tilesets)[keyof typeof assets.demo.tilesets];
 
@@ -212,7 +212,7 @@ class AssetBrowserScene extends Scene {
         const loader = this.assetLoader;
 
         // Every category below fetches its assets by real (dynamic, non-literal)
-        // path via `Asset.type(type, path)` + `load()` — the old alias-keyed batch-record form
+        // path via `Asset.type(type, path)` + `load()` - the old alias-keyed batch-record form
         // (`load(Type, { alias: path })` + `get(Type, alias)`) is gone; there is no
         // alias indirection to reconstruct, so each item is loaded directly and its
         // resolved handle/value is stored under the catalog's own key.
@@ -321,7 +321,7 @@ class AssetBrowserScene extends Scene {
                     Object.entries(assets.demo.fonts ?? {}).map(async ([k, url]) => {
                         // The fonts category mixes vector fonts (.ttf/.otf) with
                         // bitmap-font sidecars (.fnt/.png) that FontFace cannot
-                        // parse. Load only the vector entries — the bitmap ones
+                        // parse. Load only the vector entries - the bitmap ones
                         // fall back to a path readout.
                         if (!/\.(ttf|otf|woff2?)$/i.test(url as string)) return;
                         const family = `assetbrowser_${k}`;
@@ -382,7 +382,7 @@ class AssetBrowserScene extends Scene {
                 break;
             }
             default:
-                // 'video' previews only show the asset URL — nothing to load.
+                // 'video' previews only show the asset URL - nothing to load.
                 break;
         }
     }

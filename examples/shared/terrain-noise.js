@@ -1,4 +1,4 @@
-// Auto-generated from terrain-noise.ts — edit the .ts source, not this file.
+// Auto-generated from terrain-noise.ts - edit the .ts source, not this file.
 // Deterministic value-noise used by the procedural-terrain examples.
 //
 // Shared because two of them sample the same world from two threads: the main

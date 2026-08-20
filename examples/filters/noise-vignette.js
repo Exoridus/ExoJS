@@ -1,4 +1,4 @@
-// Auto-generated from noise-vignette.ts — edit the .ts source, not this file.
+// Auto-generated from noise-vignette.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A detailed full-frame texture so grain + vignette read as a screen-wide post

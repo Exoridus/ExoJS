@@ -1,10 +1,10 @@
-// Auto-generated from pointer-to-world.ts — edit the .ts source, not this file.
+// Auto-generated from pointer-to-world.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, View } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // The camera continuously pans (a slow figure-eight) and breathes its zoom, so
 // the same design-space pixel maps to a moving world point every frame.
-// `screenToWorld(x, y)` undoes the camera transform — pointer coordinates are
-// already in design space (`0..app.width`) — so we never hand-roll the inverse
+// `screenToWorld(x, y)` undoes the camera transform - pointer coordinates are
+// already in design space (`0..app.width`) - so we never hand-roll the inverse
 // projection. Tap to drop a marker in *world* space; it stays pinned to the
 // world as the camera moves over it.
 class PointerToWorldScene extends Scene {
@@ -69,7 +69,7 @@ class PointerToWorldScene extends Scene {
         this.view.setCenter(centerX, centerY);
         this.view.setZoom(this.userZoom * (1 + Math.sin(this.elapsed * 0.35) * 0.25));
         this.view.update(delta.milliseconds);
-        // Live world coordinate under the cursor — recomputed every frame because
+        // Live world coordinate under the cursor - recomputed every frame because
         // the mapping changes as the camera moves.
         this.world = this.view.screenToWorld(this.cursor.x, this.cursor.y);
         this.hud.setStatus(`Screen ${Math.round(this.cursor.x)}, ${Math.round(this.cursor.y)} → World ${this.world.x.toFixed(0)}, ${this.world.y.toFixed(0)} · zoom ${this.view.zoomLevel.toFixed(2)}`);

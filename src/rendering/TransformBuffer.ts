@@ -7,7 +7,7 @@ import { PixelSnapMode } from '#rendering/pixelSnap';
  * the layout shared by {@link TransformBuffer}, the retained group transform
  * store, and the in-place row patch. Tint lives in a separate,
  * natively-8-bit-per-channel row (see {@link TRANSFORM_TINT_BYTES_PER_ROW} /
- * {@link packTintRow}) — GPU texture/buffer uploads round up to whole
+ * {@link packTintRow}) - GPU texture/buffer uploads round up to whole
  * texels/vec4s regardless of how few of a slot's floats are "real" data, so a
  * layout that keeps tint's 4 float32 channels inline never crosses the
  * 3-texel -> 2-texel boundary that actually reduces upload bandwidth and GPU
@@ -21,7 +21,7 @@ export const TRANSFORM_FLOATS_PER_ROW = 8;
 
 /**
  * Bytes per tint row (one rgba8 texel / one packed `u32`): r, g, b (0..255,
- * {@link Color}'s native integer channels — exact, not quantized) and alpha
+ * {@link Color}'s native integer channels - exact, not quantized) and alpha
  * rounded to 0..255 (the only lossy step, and it matches the precision every
  * mainstream 2D/WebGPU renderer already uses for a per-instance blend color,
  * via a native normalized 8-bit-per-channel vertex/texture format).
@@ -42,7 +42,7 @@ const hashUintScratch = new Uint32Array(hashFloatScratch.buffer);
  * Write one transform row into `target` at `offset` in the canonical layout
  * (a,b,c,d, tx,ty, snapMode,0). The single packer shared by
  * {@link TransformBuffer.write} and the in-place row patch, so the frame buffer
- * and a patched retained row stay bit-identical by construction — a layout change
+ * and a patched retained row stay bit-identical by construction - a layout change
  * lands in exactly one place.
  *
  * `snapMode` rides in the row's spare slot (`m1.z`): both backends now upload
@@ -63,7 +63,7 @@ export const packTransformRow = (target: Float32Array, offset: number, transform
 
 /**
  * Write one tint row into `target` (a `Uint8Array`) at byte `offset`, as
- * `(r, g, b, a)` — r/g/b are {@link Color}'s native 0..255 integer channels
+ * `(r, g, b, a)` - r/g/b are {@link Color}'s native 0..255 integer channels
  * (copied exactly), alpha is `Color.a` (0..1 float) rounded to 0..255. Shares
  * the {@link packTransformRow} write-site, so the two rows stay in lockstep.
  * @internal
@@ -107,7 +107,7 @@ export class TransformBuffer {
   private _skippedWriteCount = 0;
   private _uploadCount = 0;
   private _uploadedRecordCount = 0;
-  // Dirty row range [_dirtyMin, _dirtyMax] written since the last upload — the
+  // Dirty row range [_dirtyMin, _dirtyMax] written since the last upload - the
   // exact rows a delta upload must push. Empty when `_dirtyMax < _dirtyMin`.
   // Tracked by slot (not a high-water mark) so a reused slot (nested-plan
   // rewind, filter composite) is correctly re-uploaded.
@@ -130,7 +130,7 @@ export class TransformBuffer {
 
   /**
    * Number of draw commands whose transform write was skipped since the last
-   * {@link begin} — recorded by the backend for renderers that opt out of the
+   * {@link begin} - recorded by the backend for renderers that opt out of the
    * shared transform storage (`_consumesSharedTransform === false`).
    * @internal
    */
@@ -165,7 +165,7 @@ export class TransformBuffer {
     return this._data;
   }
 
-  /** Parallel per-row tint bytes (rgba, 0..255) — see {@link packTintRow}. @internal */
+  /** Parallel per-row tint bytes (rgba, 0..255) - see {@link packTintRow}. @internal */
   public get tintData(): Uint8Array {
     return this._tintData;
   }
@@ -262,7 +262,7 @@ export class TransformBuffer {
     }
 
     // Track the exact written-slot range so a delta upload pushes precisely the
-    // changed rows — including a slot reused below the high-water mark.
+    // changed rows - including a slot reused below the high-water mark.
     if (this._dirtyMax < this._dirtyMin) {
       this._dirtyMin = slot;
       this._dirtyMax = slot;
@@ -280,7 +280,7 @@ export class TransformBuffer {
       this._frameHash = this._mix(this._frameHash, this._hashFloat(data[offset + i]!));
     }
 
-    // Tint lives in a separate byte array (see the class doc) — fold it into the
+    // Tint lives in a separate byte array (see the class doc) - fold it into the
     // same content hash, otherwise a frame that only changes tint (identical
     // transform) would hash identically to the previous frame and commitSnapshot
     // would wrongly report `changed: false`, skipping the tint texture's upload.
@@ -298,7 +298,7 @@ export class TransformBuffer {
   /**
    * Record that a draw command's transform write was intentionally skipped
    * because its renderer opts out of the shared transform storage. Counts
-   * toward {@link skippedWriteCount} only — buffer contents are untouched.
+   * toward {@link skippedWriteCount} only - buffer contents are untouched.
    * @internal
    */
   public recordSkippedWrite(): this {

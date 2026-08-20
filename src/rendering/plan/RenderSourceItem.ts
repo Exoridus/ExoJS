@@ -30,13 +30,13 @@ export const enum LiveEntryReason {
  * `_collect` at its recorded placement on every selection.
  *
  * Kept as local as the semantics allow, which is what contract 10 of the
- * architecture freeze asks for — the optimisation object is a segment, not the
+ * architecture freeze asks for - the optimisation object is a segment, not the
  * whole renderer. One view-dependent parallax layer must therefore cost one
  * live entry, not the persistence of the other 999,999 sprites around it.
  *
  * No `zIndex`: the re-dispatch goes through `RenderNode._collect`, which reads
  * the node's live `zIndex` exactly as a full collect would. Only the placement
- * the source cannot re-derive — the child index the producer was collected at —
+ * the source cannot re-derive - the child index the producer was collected at -
  * has to be stored.
  */
 export interface LiveEntry {
@@ -53,7 +53,7 @@ export interface LiveEntry {
   reason: LiveEntryReason;
   /**
    * How many of the owning scope's items had been recorded when this entry was
-   * pushed — i.e. where it sits in the scope's recorded order.
+   * pushed - i.e. where it sits in the scope's recorded order.
    *
    * Recorded order, not `seq`, is what the emit walk has to reproduce: `seq` is
    * the caller's explicit placement and an emitter is free to hand out a lower
@@ -109,7 +109,7 @@ export interface SourceScope extends EntryPlacementState {
  * scanned item by item. Without it the selection would emit an empty group where
  * a full collect emits nothing.
  *
- * Never a transform-group boundary — those are {@link LiveEntry}s, so this scope
+ * Never a transform-group boundary - those are {@link LiveEntry}s, so this scope
  * has no `transformNode` field to go stale.
  * @internal
  */

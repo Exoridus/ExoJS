@@ -1,6 +1,6 @@
 {
   "title": "TilePropertyValue",
-  "description": "Union of legal tile-property value types in the generic runtime. Format-neutral; adapters map their native property systems into this set — including the structured TilePropertyPoint, TilePropertyObjectRef, and TilePropertyTileRef variants, arrays of any of the above, and nested property bags (e.g. Tiled `class`-typed properties).",
+  "description": "Union of legal tile-property value types in the generic runtime. Format-neutral; adapters map their native property systems into this set - including the structured TilePropertyPoint, TilePropertyObjectRef, and TilePropertyTileRef variants, arrays of any of the above, and nested property bags (e.g. Tiled `class`-typed properties).",
   "symbol": "TilePropertyValue",
   "kind": "type",
   "subsystem": "tilemap",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Union of legal tile-property value types in the generic runtime. Format-neutral; adapters map their native property systems into this set — including the structured TilePropertyPoint, TilePropertyObjectRef, and TilePropertyTileRef variants, arrays of any of the above, and nested property bags (e.g. Tiled `class`-typed properties)."
+        "Union of legal tile-property value types in the generic runtime. Format-neutral; adapters map their native property systems into this set - including the structured TilePropertyPoint, TilePropertyObjectRef, and TilePropertyTileRef variants, arrays of any of the above, and nested property bags (e.g. Tiled `class`-typed properties)."
       ],
       "importLine": "import { TilePropertyValue } from '@codexo/exojs-tilemap'",
       "sourceLink": null

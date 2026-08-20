@@ -1,5 +1,5 @@
 /**
- * WebGPU renderer-matrix browser tests — Mesh retained instruction-set replay.
+ * WebGPU renderer-matrix browser tests - Mesh retained instruction-set replay.
  *
  * The mesh counterpart of `webgpu-nine-slice-retained-instruction-replay.test.ts`.
  * Mesh's recordable draw is an INDEXED instanced draw over a SHARED, persistent
@@ -9,7 +9,7 @@
  * `drawIndexed`. The replay tier must reproduce the record frame's pixels
  * exactly. A live sprite OUTSIDE (and before) the group keeps the group's
  * shared storage rows starting at a non-zero frame-global index, so the
- * group-local node-index rebase is load-bearing — the final cell
+ * group-local node-index rebase is load-bearing - the final cell
  * neuters it and proves the probes diverge.
  *
  * The group holds two same-geometry mesh runs with DISTINCT textures (2 red +
@@ -159,7 +159,7 @@ const fragmentOf = (group: RetainedContainer): RetainedGroupFragment => (group a
  * Standard cell scene, mirroring the WebGL2 mesh retained cells: a live blue
  * sprite OUTSIDE (and before) the group at (48,0)-(64,16) keeps the group-local
  * rebase load-bearing; the group at (8,24) holds four meshes sharing ONE quad
- * geometry — two red (one instanced batch of 2) then two green (a second
+ * geometry - two red (one instanced batch of 2) then two green (a second
  * instanced batch of 2). Group-local positions: redA (0,0), redB (16,0),
  * greenA (0,16), greenB (16,16).
  */
@@ -211,7 +211,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
         return;
       }
 
-      // F2: clean entry replay + record — this IS the slow path's output.
+      // F2: clean entry replay + record - this IS the slow path's output.
       if (!(await renderScene(ctx, backend, scene.root))) {
         return;
       }
@@ -232,7 +232,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
         expectPixelNear(slowPixels[i]!, hexToRgba(probes[i]![2]));
       }
 
-      // F3: instruction replay — must be identical to the record frame.
+      // F3: instruction replay - must be identical to the record frame.
       if (!(await renderScene(ctx, backend, scene.root))) {
         return;
       }
@@ -267,7 +267,7 @@ describe('WebGPU renderer matrix: Mesh retained instruction replay cells', () =>
       expectPixelNear(readPixel(16, 32), [255, 0, 0, 255]);
 
       // Pan the camera 16px right: replayed content must appear 16px further
-      // left — projection is resolved live at replay.
+      // left - projection is resolved live at replay.
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
 
       if (!(await renderScene(ctx, backend, scene.root))) {

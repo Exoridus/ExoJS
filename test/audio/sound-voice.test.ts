@@ -174,7 +174,7 @@ describe('SoundVoice — capabilities', () => {
 
   // A non-looping start caps the source with a `duration`, and the Web Audio
   // spec counts that cap over all played content "including any whole or
-  // partial loop iterations" — flipping `loop` on the live source would not
+  // partial loop iterations" - flipping `loop` on the live source would not
   // lift it, the source would still end at the clip end and finish the voice.
   // The only way to actually start looping is to rebuild the source, the same
   // mechanism `seek()` uses.
@@ -380,7 +380,7 @@ describe('SoundVoice — capabilities', () => {
     voice.stop();
 
     voice.seek(1);
-    // No second source was created — seek() bailed out early.
+    // No second source was created - seek() bailed out early.
     expect(factory.sources.length).toBe(1);
 
     factory.restore();
@@ -453,7 +453,7 @@ describe('SoundVoice — capabilities', () => {
   // The window bound is a `duration` on `start()`, which the spec measures in
   // buffer time. That makes it immune to a later rate change and to the
   // per-frame Doppler modulation `_applyDopplerRate` writes straight to the
-  // rate param — neither of which an absolute `stop(when)` would survive.
+  // rate param - neither of which an absolute `stop(when)` would survive.
   test('the clip bound survives a later playback-rate change without rescheduling', () => {
     const factory = setupSourceSpy();
     const manager = new AudioManager();
@@ -470,7 +470,7 @@ describe('SoundVoice — capabilities', () => {
     voice.playbackRate = 4;
 
     // No absolute stop was ever scheduled, so there is nothing that a rate
-    // change could invalidate — and no source rebuild either.
+    // change could invalidate - and no source rebuild either.
     expect(bounded.stop).not.toHaveBeenCalled();
     expect(factory.sources).toHaveLength(2);
     expect(bounded.playbackRate.setTargetAtTime).toHaveBeenCalledWith(4, expect.any(Number), expect.any(Number));

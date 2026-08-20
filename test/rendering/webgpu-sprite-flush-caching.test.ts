@@ -3,7 +3,7 @@
  *
  * The sprite flush used to create a fresh texture bind group (8 texture views
  * + 8 samplers) and rewrite the 128-byte projection/group uniform on EVERY
- * batch flush — per-frame GPU object churn that scales with flush count even
+ * batch flush - per-frame GPU object churn that scales with flush count even
  * for completely static scenes.
  *
  * These tests drive the REAL WebGpuBackend + sprite renderer against a mock
@@ -245,7 +245,7 @@ describe('WebGPU sprite flush hot-path caching', () => {
       expect(environment.bindGroupCount()).toBeGreaterThan(0);
       expect(countLabel(environment.writeBufferLabels(), spriteUniformLabel)).toBe(1);
 
-      // Static frame: identical scene, identical view — everything GPU-object
+      // Static frame: identical scene, identical view - everything GPU-object
       // shaped must come from caches.
       const bindGroupsAfterWarmup = environment.bindGroupCount();
       const writesAfterWarmup = environment.writeBufferLabels().length;

@@ -1,4 +1,4 @@
-// Auto-generated from mesh-textured-quad.ts — edit the .ts source, not this file.
+// Auto-generated from mesh-textured-quad.ts - edit the .ts source, not this file.
 import { Application, Color, Mesh, Scene } from '@codexo/exojs';
 const UV_GRID = assets.technical.filtering.uvGrid256;
 const HALF = 300;

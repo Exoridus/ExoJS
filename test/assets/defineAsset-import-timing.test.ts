@@ -1,7 +1,7 @@
-// Import ONLY the catalog facade and the core-binding module — NO Application,
+// Import ONLY the catalog facade and the core-binding module - NO Application,
 // no Loader. This proves `defineAsset` runs its global kind/extension
 // registrations as an import side effect, so `Assets.from` resolves bare paths
-// loader-free (asset-system v2 §5). If core registration were still tied to
+// loader-free. If core registration were still tied to
 // Application construction, `createLeaf` would throw here.
 import '#assets/coreAssetBindings';
 

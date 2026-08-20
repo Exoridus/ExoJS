@@ -17,14 +17,14 @@ import { type RenderNode } from './RenderNode';
 import { type RenderStats } from './RenderStats';
 import { View } from './View';
 
-/** Options for {@link RenderingContext.capture} — allocates a new RenderTexture. */
+/** Options for {@link RenderingContext.capture} - allocates a new RenderTexture. */
 export interface CaptureOptions {
   width: number;
   height: number;
   clearColor?: Color;
   /**
    * Color attachment format for the allocated target. Defaults to `'rgba8'`.
-   * Float formats require `EXT_color_buffer_float` — check
+   * Float formats require `EXT_color_buffer_float` - check
    * {@link RenderingContext.supportsColorFormat} first.
    */
   format?: ColorTextureFormat;
@@ -81,7 +81,7 @@ export class RenderingContext implements DrawContext {
   private _batchMesh: ImmediateMesh | null = null;
   /** Views explicitly pinned for per-frame update via {@link trackView} (escape hatch for views ticked but never rendered). */
   private readonly _trackedViews = new Set<View>();
-  /** Views rendered since the last {@link update} — auto-advanced then cleared each frame, so a custom view's follow/shake ticks with no manual bookkeeping. */
+  /** Views rendered since the last {@link update} - auto-advanced then cleared each frame, so a custom view's follow/shake ticks with no manual bookkeeping. */
   private readonly _renderedViews = new Set<View>();
 
   public constructor(backend: RenderBackend) {
@@ -101,7 +101,7 @@ export class RenderingContext implements DrawContext {
   }
 
   /**
-   * The active world {@link View} — the default for {@link render}. Defaults to
+   * The active world {@link View} - the default for {@link render}. Defaults to
    * a view matching the initial backend view. Replace with a custom `View` for
    * follow, zoom, bounds, or split-screen viewport behavior.
    *
@@ -154,7 +154,7 @@ export class RenderingContext implements DrawContext {
    * Advance follow, shake, and bounds-constraint animations on the active
    * {@link view}, every view rendered last frame (automatic), and any
    * {@link trackView}-ed view. The {@link SystemMethods.preUpdate} phase, at
-   * {@link SystemOrder.CoreRendering} — last of the engine's core systems.
+   * {@link SystemOrder.CoreRendering} - last of the engine's core systems.
    */
   public preUpdate(delta: Time): void {
     const ms = delta.milliseconds;
@@ -180,11 +180,11 @@ export class RenderingContext implements DrawContext {
   }
 
   /**
-   * Destroy the resources this context owns — its own default camera and the
+   * Destroy the resources this context owns - its own default camera and the
    * screen-space {@link View}. A {@link View} assigned through {@link view} is
    * caller-owned and left alone. The {@link RenderBackend} is owned by the
    * Application and destroyed separately.
-   * @internal — invoked directly by {@link Application.destroy}.
+   * @internal - invoked directly by {@link Application.destroy}.
    */
   public destroy(): void {
     this._defaultView.destroy();
@@ -236,7 +236,7 @@ export class RenderingContext implements DrawContext {
    * into on the active backend. `'rgba8'` is always supported; the float formats
    * (`'rgba16f'` / `'rgba32f'`) require hardware/extension support (WebGL2
    * `EXT_color_buffer_float`). Check this before allocating a float target and
-   * fall back to `'rgba8'` yourself if unsupported — the engine throws rather
+   * fall back to `'rgba8'` yourself if unsupported - the engine throws rather
    * than silently producing a broken target.
    */
   public supportsColorFormat(format: ColorTextureFormat): boolean {
@@ -311,7 +311,7 @@ export class RenderingContext implements DrawContext {
    * clear onto another target. Falls back to a raw backend clear when no
    * coordinator is present (test stubs).
    *
-   * `clear` here is the graphics-API verb (as in `gl.clear`) — it overwrites the
+   * `clear` here is the graphics-API verb (as in `gl.clear`) - it overwrites the
    * target's pixels. It is deliberately **not** the collection `clear()` used
    * elsewhere in the engine, which empties a container; nothing is released or
    * reset by this call.
@@ -341,7 +341,7 @@ export class RenderingContext implements DrawContext {
 
   /**
    * Render `node` into a caller-owned {@link RenderTexture} that is reused across
-   * frames — the per-frame, allocation-free counterpart to {@link capture}. The
+   * frames - the per-frame, allocation-free counterpart to {@link capture}. The
    * target and view are supplied by the caller; the view defaults to the
    * target's own view. Save/restore is handled by the pass coordinator.
    */
@@ -387,13 +387,13 @@ export class RenderingContext implements DrawContext {
   }
 
   /**
-   * @internal Render arbitrary content — not limited to a single
-   * {@link RenderNode} — into a caller-owned {@link RenderTexture}, using the
+   * @internal Render arbitrary content - not limited to a single
+   * {@link RenderNode} - into a caller-owned {@link RenderTexture}, using the
    * pass-coordinator's target/view save-restore semantics (the same
    * mechanism {@link RenderingContext.renderTo} uses internally, generalized
    * to an arbitrary draw callback). Used by `SceneDirector` to capture a
    * scene's full render surface (`Scene.draw()` + its systems + `Scene.ui`)
-   * for `SceneTransition` resource provisioning — that sequence
+   * for `SceneTransition` resource provisioning - that sequence
    * of calls cannot be expressed as a single `RenderNode`.
    */
   public _renderSurfaceInto(target: RenderTexture, clear: Color | undefined, draw: () => void): void {
@@ -437,7 +437,7 @@ export class RenderingContext implements DrawContext {
 
   /**
    * Immediately draw a single {@link Geometry} with `transform` as its world
-   * matrix — no retained {@link RenderNode} required. Useful for procedural or
+   * matrix - no retained {@link RenderNode} required. Useful for procedural or
    * data-driven shapes that would be wasteful to wrap in a node.
    *
    * The draw is submitted through the mesh renderer and flushed at once, so it
@@ -447,7 +447,7 @@ export class RenderingContext implements DrawContext {
    *
    * `transform` is taken as the raw world matrix (`a, b, c, d, tx, ty`),
    * bypassing the position / rotation / scale / origin composition a node would
-   * apply — build it with {@link Matrix} directly. The geometry must use the
+   * apply - build it with {@link Matrix} directly. The geometry must use the
    * `triangle-list` topology and the standard mesh attribute layout (position,
    * optional texcoord and color); custom per-vertex attributes are dropped.
    *
@@ -478,8 +478,8 @@ export class RenderingContext implements DrawContext {
 
     // Set the view first: setView now only flushes when the view actually changes
     // (not unconditionally). Correctness here rests on (a) the trailing flush()
-    // below — so a later drawGeometry cannot observe this pooled mesh through a
-    // still-deferred draw — and (b) any renderer switch flushing its pending batch.
+    // below - so a later drawGeometry cannot observe this pooled mesh through a
+    // still-deferred draw - and (b) any renderer switch flushing its pending batch.
     this._backend.setView(view);
     mesh.configure(geometry, transform, material, options.tint ?? null);
     this._backend.draw(mesh);
@@ -487,7 +487,7 @@ export class RenderingContext implements DrawContext {
   }
 
   /**
-   * Immediately draw an instanced {@link RenderBatch} — one geometry + material
+   * Immediately draw an instanced {@link RenderBatch} - one geometry + material
    * drawn once with the batch's N per-instance `(transform, tint)` pairs as a
    * single instanced draw call. This is the high-throughput immediate path: use
    * it for many like items (tiles, bullets, procedural instances) where
@@ -499,14 +499,14 @@ export class RenderingContext implements DrawContext {
    * `drawInstanced` records the draw immediately rather than queueing it, so
    * this path leaves the backend's pass open: consecutive `drawBatch` calls
    * merge into one GPU render pass and one submit instead of paying a pass plus
-   * a submit each. Ordering is unaffected — a renderer switch, a target/view
+   * a submit each. Ordering is unaffected - a renderer switch, a target/view
    * change, or the end of the frame still closes the pass, and each batch takes
    * its own slice of every shared buffer it writes.
    *
    * With no {@link RenderBatch.material material} the batch renders through the
    * default mesh material (per-instance tint over the geometry's vertex colors).
    * A custom material is supported, but its shader must read the per-instance
-   * transform from the shared transform buffer via `a_nodeIndex` — build it on
+   * transform from the shared transform buffer via `a_nodeIndex` - build it on
    * `INSTANCE_TRANSFORM_GLSL` / `INSTANCE_TRANSFORM_WGSL`, which supply that
    * contract. A shader that does not satisfy it throws on the first draw (the
    * check reads the linked program, so it cannot run any earlier).
@@ -530,7 +530,7 @@ export class RenderingContext implements DrawContext {
     //
     // No trailing flush: `drawInstanced` goes straight to the backend's mesh
     // renderer, which records the draw rather than queueing it, so there is
-    // nothing pending to drain — the flush only ever ended the GPU pass, one
+    // nothing pending to drain - the flush only ever ended the GPU pass, one
     // submit per `drawBatch`. Anything that must not merge into that pass
     // (renderer switch, target/view/scissor/stencil change, frame end) closes it
     // on its own.

@@ -9,7 +9,7 @@ declare const gamepadButtonChannelBrand: unique symbol;
  * input channel. Members are absolute offsets into the engine's shared
  * {@link Float32Array} input channel buffer (relative to slot 0): the 32
  * slots reserved for a gamepad slot's button section, computed as
- * `ChannelOffset.Gamepads + 0..31` (512..543 with the default layout —
+ * `ChannelOffset.Gamepads + 0..31` (512..543 with the default layout -
  * `ChannelSize.Category = 256`, `Gamepads = 2 * Category = 512`).
  *
  * The 24 named buttons (`South`-`Paddle4`) cover offsets 0..23; offsets
@@ -19,7 +19,7 @@ declare const gamepadButtonChannelBrand: unique symbol;
  *
  * The brand keeps the type system from confusing button channels with
  * {@link GamepadAxisChannel} or raw `number`s during mapping authoring.
- * User code does not construct values of this type directly — read them
+ * User code does not construct values of this type directly - read them
  * from the {@link GamepadButton} namespace (`GamepadButton.South`, ...).
  *
  * @internal
@@ -63,7 +63,7 @@ export type GamepadButtonChannel = (
 export interface GamepadButtonOptions {
   /** Negate the raw value before threshold comparison. Default `false`. */
   invert?: boolean;
-  /** Activation threshold in 0..1 — values at or below this read as 0 (deadzone). Default 0.2. */
+  /** Activation threshold in 0..1 - values at or below this read as 0 (deadzone). Default 0.2. */
   threshold?: number;
 }
 
@@ -115,7 +115,7 @@ export class GamepadButton {
 const button = (offset: number): GamepadButtonChannel => (ChannelOffset.Gamepads + offset) as GamepadButtonChannel;
 
 /**
- * Channel-identifier constants — same convention as `Pointer.X` /
+ * Channel-identifier constants - same convention as `Pointer.X` /
  * `Keyboard.Space`. The first 32 slots of each gamepad sub-buffer are
  * reserved for buttons (24 named, 8 buffer for future / custom mappings).
  */
@@ -152,7 +152,7 @@ export namespace GamepadButton {
    * Share / Create button.
    *
    * Written by {@link XboxGamepadMapping} (Xbox Series pads). On PlayStation
-   * pads the Share/Create button reports as {@link Select} instead — the
+   * pads the Share/Create button reports as {@link Select} instead - the
    * browser puts it on the standard Back/Select slot.
    */
   export const Share = button(17);
@@ -167,16 +167,16 @@ export namespace GamepadButton {
    * Touchpad **click**.
    *
    * Written by {@link PlayStationGamepadMapping} (DualShock 4, DualSense).
-   * Finger coordinates are a separate matter — see `GamepadAxis.TouchpadX`.
+   * Finger coordinates are a separate matter - see `GamepadAxis.TouchpadX`.
    */
   export const Touchpad = button(19);
   /**
    * First paddle / extra button.
    *
-   * Upper-left slot — SDL's `SDL_GAMEPAD_BUTTON_LEFT_PADDLE1`.
+   * Upper-left slot - SDL's `SDL_GAMEPAD_BUTTON_LEFT_PADDLE1`.
    *
    * Written by {@link SteamDeckGamepadMapping} (L4) and by
-   * {@link JoyConLeftGamepadMapping} (the SL rail button — see that class for
+   * {@link JoyConLeftGamepadMapping} (the SL rail button - see that class for
    * why a rail button is a paddle rather than a shoulder). Xbox Elite paddles
    * do **not** reach this channel: the Windows path is XInput, whose
    * `XINPUT_GAMEPAD` struct carries no paddle bits, and no browser mapper
@@ -186,30 +186,30 @@ export namespace GamepadButton {
   /**
    * Second paddle / extra button.
    *
-   * Upper-right slot — SDL's `SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1`.
+   * Upper-right slot - SDL's `SDL_GAMEPAD_BUTTON_RIGHT_PADDLE1`.
    *
    * Written by {@link SteamDeckGamepadMapping} (R4) and by
-   * {@link JoyConRightGamepadMapping} (the SR rail button) — see
+   * {@link JoyConRightGamepadMapping} (the SR rail button) - see
    * {@link Paddle1} for why Xbox Elite paddles are absent.
    */
   export const Paddle2 = button(21);
   /**
    * Third paddle / extra button.
    *
-   * Lower-left slot — SDL's `SDL_GAMEPAD_BUTTON_LEFT_PADDLE2`.
+   * Lower-left slot - SDL's `SDL_GAMEPAD_BUTTON_LEFT_PADDLE2`.
    *
    * Written by {@link SteamDeckGamepadMapping} (L5) and by
-   * {@link JoyConLeftGamepadMapping} (the SR rail button) — see
+   * {@link JoyConLeftGamepadMapping} (the SR rail button) - see
    * {@link Paddle1} for why Xbox Elite paddles are absent.
    */
   export const Paddle3 = button(22);
   /**
    * Fourth paddle / extra button.
    *
-   * Lower-right slot — SDL's `SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2`.
+   * Lower-right slot - SDL's `SDL_GAMEPAD_BUTTON_RIGHT_PADDLE2`.
    *
    * Written by {@link SteamDeckGamepadMapping} (R5) and by
-   * {@link JoyConRightGamepadMapping} (the SL rail button) — see
+   * {@link JoyConRightGamepadMapping} (the SL rail button) - see
    * {@link Paddle1} for why Xbox Elite paddles are absent.
    */
   export const Paddle4 = button(23);

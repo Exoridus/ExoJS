@@ -4,8 +4,8 @@ import { AudioEffect, getAudioContext, isAudioContextReady, onAudioContextReady 
 export interface RingModulatorEffectOptions {
   /**
    * Carrier oscillator frequency in Hz. Range 0..20000, default 440. Lower
-   * frequencies (1–60 Hz) produce tremolo-like pulsing; mid-range values
-   * (100–1000 Hz) give the characteristic robotic ring-mod sound; high values
+   * frequencies (1-60 Hz) produce tremolo-like pulsing; mid-range values
+   * (100-1000 Hz) give the characteristic robotic ring-mod sound; high values
    * shift sidebands above the audible fundamental.
    */
   frequency?: number;
@@ -39,7 +39,7 @@ interface RingModulatorEffectSetup {
  * A carrier `OscillatorNode` is connected directly to the `gain` AudioParam of
  * a `GainNode` whose base gain value is 0. The carrier's bipolar output (±1)
  * modulates the gain, multiplying the input signal by the instantaneous carrier
- * amplitude — the mathematical definition of ring modulation. The result
+ * amplitude - the mathematical definition of ring modulation. The result
  * contains the sum and difference frequencies of the input and carrier but
  * suppresses the original carrier (unlike amplitude modulation, which retains
  * the carrier). At sub-audio carrier frequencies (< 20 Hz) the effect becomes
@@ -180,7 +180,7 @@ export class RingModulatorEffect extends AudioEffect {
     dryGain.gain.setValueAtTime(1 - this._wet, ctx.currentTime);
     wetGain.gain.setValueAtTime(this._wet, ctx.currentTime);
     // Base gain is 0; the carrier oscillator provides the ±1 modulation signal
-    // via AudioParam connection — the effective gain becomes exactly the carrier
+    // via AudioParam connection - the effective gain becomes exactly the carrier
     // waveform, multiplying the input: output = input × carrier(t).
     ringGain.gain.setValueAtTime(0, ctx.currentTime);
 
@@ -189,7 +189,7 @@ export class RingModulatorEffect extends AudioEffect {
     carrierOsc.frequency.value = this._frequency;
 
     // Connect carrier to ringGain's gain AudioParam. The carrier (±1) is added
-    // to the base value (0), producing an effective gain in [-1, +1] — true
+    // to the base value (0), producing an effective gain in [-1, +1] - true
     // bipolar ring modulation. The `as unknown as AudioNode` cast works around
     // a TypeScript overload-resolution quirk (same pattern as ChorusEffect).
     carrierOsc.connect(ringGain.gain as unknown as AudioNode);

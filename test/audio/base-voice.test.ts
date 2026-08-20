@@ -1,14 +1,14 @@
 import type { MockInstance } from 'vitest';
 
 /**
- * Focused unit tests for BaseVoice — the shared control surface (volume,
+ * Focused unit tests for BaseVoice - the shared control surface (volume,
  * fade, stop, effects chain, bus routing, spatialization) mixed into every
  * concrete voice. Exercised through SoundVoice/Sound, the simplest concrete
  * subclass, since BaseVoice itself is abstract.
  *
  * Other test files (fade.test.ts, voice-effects.test.ts, sound-voice.test.ts,
  * sound-spatial.test.ts) cover BaseVoice indirectly through everyday usage;
- * this file targets the remaining branches — post-`ended` no-ops, the
+ * this file targets the remaining branches - post-`ended` no-ops, the
  * deferred-bus-connect path, and the panner-position fallback API.
  */
 import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
@@ -75,7 +75,7 @@ interface MockGainNode {
   };
 }
 
-/** Capture the first createGain call after this helper runs — the voice's output gain. */
+/** Capture the first createGain call after this helper runs - the voice's output gain. */
 const captureVoiceOutput = (): { get node(): MockGainNode | null; restore: () => void } => {
   const ctx = getAudioContext() as AudioContext & { createGain: () => GainNode };
   const original = ctx.createGain.bind(ctx);
@@ -235,7 +235,7 @@ describe('BaseVoice — post-ended no-ops', () => {
     expect(onEndSpy).toHaveBeenCalledTimes(1);
 
     expect(() => (voice as unknown as { _finish: () => void })._finish()).not.toThrow();
-    // onEnd was already destroyed by the first _finish() — dispatch is a no-op now.
+    // onEnd was already destroyed by the first _finish() - dispatch is a no-op now.
     expect(onEndSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -344,7 +344,7 @@ describe('BaseVoice — position edge cases', () => {
 
     expect(voice.position!.x).toBe(3);
     expect(voice.position!.y).toBe(4);
-    // Only one PannerNode is ever created — the second call's _ensurePanner() no-ops.
+    // Only one PannerNode is ever created - the second call's _ensurePanner() no-ops.
     expect(pannerSpy.panners.length).toBe(1);
 
     pannerSpy.restore();
@@ -401,7 +401,7 @@ describe('BaseVoice — _tickSpatial()', () => {
     const voice = manager.play(sound) as SoundVoice;
 
     voice.position = { x: 1, y: 2 }; // creates the panner, registers as spatial
-    // Clears position with no follow target active — this actually tears down
+    // Clears position with no follow target active - this actually tears down
     // and disconnects the panner (real de-spatialization); see
     // voice-despatialization.test.ts for dedicated coverage of that
     // reconnection behavior.
@@ -482,7 +482,7 @@ describe('BaseVoice — effect chain / bus routing', () => {
     voice.bus = newBus;
 
     // The effect's outputNode (not the raw voice output) was connected onward
-    // to the new bus's input — proving _tail() returned the effect chain's tail.
+    // to the new bus's input - proving _tail() returned the effect chain's tail.
     expect((fx.outputNode as unknown as { connect: MockInstance }).connect).toHaveBeenCalledWith(newBus._getInputNode());
 
     sound.destroy();
@@ -534,7 +534,7 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     const destination = ctx.destination;
 
     // A bus constructed while the context is suspended has no input node yet,
-    // and only the (one-shot) ready signal ever gives it one — so it stays that
+    // and only the (one-shot) ready signal ever gives it one - so it stays that
     // way even after the context itself runs again.
     const originalState = ctx.state;
     ctx.state = 'suspended';

@@ -1,6 +1,6 @@
 {
   "title": "ImageFactory",
-  "description": "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a decoded image. When `createImageBitmap` is available (all modern browsers) the factory returns an ImageBitmap — a zero-copy GPU-upload path that avoids the HTMLImageElement render-pipeline overhead. On older environments it falls back to an HTMLImageElement. MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` in options to override.",
+  "description": "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a decoded image. When `createImageBitmap` is available (all modern browsers) the factory returns an ImageBitmap - a zero-copy GPU-upload path that avoids the HTMLImageElement render-pipeline overhead. On older environments it falls back to an HTMLImageElement. MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` in options to override.",
   "symbol": "ImageFactory",
   "kind": "class",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a decoded image.",
-        "When `createImageBitmap` is available (all modern browsers) the factory returns an ImageBitmap — a zero-copy GPU-upload path that avoids the HTMLImageElement render-pipeline overhead. On older environments it falls back to an HTMLImageElement.",
+        "When `createImageBitmap` is available (all modern browsers) the factory returns an ImageBitmap - a zero-copy GPU-upload path that avoids the HTMLImageElement render-pipeline overhead. On older environments it falls back to an HTMLImageElement.",
         "MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` in options to override."
       ],
       "importLine": "import { ImageFactory } from '@codexo/exojs'",

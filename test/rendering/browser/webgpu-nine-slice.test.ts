@@ -1,5 +1,5 @@
 /**
- * WebGPU NineSliceSprite browser tests — opt-in, capability-aware.
+ * WebGPU NineSliceSprite browser tests - opt-in, capability-aware.
  *
  * Validates the 9-region UV mapping that {@link NineSliceSprite} builds via
  * `buildNineSliceQuads`: a source texture is divided into 9 colour-coded
@@ -10,7 +10,7 @@
  *  - Each side's border can be sized independently (asymmetric borders),
  *    proving edges are scaled per-axis rather than uniformly.
  *
- * All WebGPU renderers use inline WGSL — no shader file mocks are needed.
+ * All WebGPU renderers use inline WGSL - no shader file mocks are needed.
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe); `renderScene` only skips when the software adapter
  * drops the device mid-test.
@@ -200,7 +200,7 @@ describe('WebGPU NineSliceSprite', () => {
       expectPixelNear(readPixel(32, 32), colors.center);
 
       // Corner/edge boundary sharpness (horizontal): the TL corner column
-      // ends exactly at dest x=20 — one pixel inside remains corner colour,
+      // ends exactly at dest x=20 - one pixel inside remains corner colour,
       // one pixel past the boundary is already the (stretched) edge colour.
       expectPixelNear(readPixel(19, 14), colors.tl);
       expectPixelNear(readPixel(21, 14), colors.top);
@@ -240,7 +240,7 @@ describe('WebGPU NineSliceSprite', () => {
 
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
-      // Corner centers — each corner's footprint matches its own border size.
+      // Corner centers - each corner's footprint matches its own border size.
       expectPixelNear(readPixel(4, 8), colors.tl); // 8x16
       expectPixelNear(readPixel(52, 8), colors.tr); // 24x16
       expectPixelNear(readPixel(4, 48), colors.bl); // 8x32
@@ -259,7 +259,7 @@ describe('WebGPU NineSliceSprite', () => {
       // exact integer seam: still inside the top-left corner just before its
       // row boundary (y=16), then already past the (smaller) left border
       // (x=8) into the top edge, then already past the top border into the
-      // left edge — proving left/top were honoured independently rather than
+      // left edge - proving left/top were honoured independently rather than
       // forced symmetric with right/bottom.
       expectPixelNear(readPixel(4, 12), colors.tl);
       expectPixelNear(readPixel(12, 8), colors.top);

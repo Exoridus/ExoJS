@@ -49,8 +49,8 @@ const hasProductionBuild = requiredDistFiles.every(f => existsSync(resolve(rootD
 /**
  * Set in the CI lane that builds `dist/` before running this file. It turns a
  * missing build from a silent skip into a failure: without it these checks were
- * skipped on every CI run — the only place where they were ever meant to be the
- * gate — and passed locally only when a (possibly stale) `dist/` happened to
+ * skipped on every CI run - the only place where they were ever meant to be the
+ * gate - and passed locally only when a (possibly stale) `dist/` happened to
  * exist. Contributors without a build still skip, which is the intent.
  */
 const mustHaveProductionBuild = process.env['EXOJS_REQUIRE_PRODUCTION_BUILD'] === '1';
@@ -98,9 +98,9 @@ function transpileTs(source: string): string {
 }
 
 /**
- * Runs a small snippet — importing the real `assert`/`assertDefined`/
+ * Runs a small snippet - importing the real `assert`/`assertDefined`/
  * `invariant` from `src/core/dev.ts` and calling them the way real call sites
- * do — through the production define-replace + terser pipeline, and returns
+ * do - through the production define-replace + terser pipeline, and returns
  * the minified output.
  */
 async function buildProductionSnippet(cycleMessage: string, pureFuncs: string[]): Promise<string> {
@@ -162,7 +162,7 @@ describe('assert/assertDefined stripped vs. invariant survives (real terser prod
     const output = await buildProductionSnippet(cycleMessage, pureFuncs);
 
     // assert/assertDefined: __DEV__ → false empties their bodies, and they're
-    // listed in pure_funcs, so terser drops the callsites entirely — the
+    // listed in pure_funcs, so terser drops the callsites entirely - the
     // interpolated marker messages must not survive into the bundle.
     expect(output).not.toContain('dev-only-assert-marker-should-not-survive-minification');
     expect(output).not.toContain('dev-only-assertDefined-marker-should-not-survive-minification');
@@ -177,7 +177,7 @@ describe('assert/assertDefined stripped vs. invariant survives (real terser prod
 });
 
 // ---------------------------------------------------------------------------
-// invariant always-on contract — static, config-level checks.
+// invariant always-on contract - static, config-level checks.
 //
 // Complementary to the pipeline test above: verifies the *configuration*
 // guarantees directly (no __DEV__ guard in the source, absent from every
@@ -215,9 +215,9 @@ describe.runIf(hasProductionBuild || mustHaveProductionBuild)('production build 
   });
 
   it('strips the __DEV__-gated assert/assertDefined bodies to no-ops', () => {
-    // `__DEV__` → `false` turns every `if (false && …) throw …` into dead code,
+    // `__DEV__` → `false` turns every `if (false && ...) throw ...` into dead code,
     // so Rollup's DCE empties the helper bodies. assert/assertDefined become
-    // no-ops with no runtime cost — independent of the consumer's minifier.
+    // no-ops with no runtime cost - independent of the consumer's minifier.
     // This is the call-site-agnostic guarantee for the modular tree. Their
     // default messages live only inside the now-dead branch, so they vanish
     // along with it.
@@ -247,7 +247,7 @@ describe.runIf(hasProductionBuild || mustHaveProductionBuild)('production build 
     const content = read('dist/esm/core/BuildInfo.js');
     // Must contain `development: false` as a literal.
     expect(content).toContain('development:');
-    // The entire object should NOT contain `__DEV__` bare — it should be a literal.
+    // The entire object should NOT contain `__DEV__` bare - it should be a literal.
     expect(content).not.toMatch(/(?<![a-zA-Z0-9_$])__DEV__(?![a-zA-Z0-9_$])/);
   });
 
@@ -273,8 +273,8 @@ describe.runIf(hasProductionBuild || mustHaveProductionBuild)('production build 
 
   it('drops dev-assert callsites from the single-file bundle (terser pure_funcs)', () => {
     // The production bundle is minified with `pure_funcs` listing the dev
-    // helpers, so their now-empty callsites — and the interpolated message
-    // allocations passed to them — are removed outright. These two messages are
+    // helpers, so their now-empty callsites - and the interpolated message
+    // allocations passed to them - are removed outright. These two messages are
     // the dev-`assert()` callsites currently reachable in the bundle; if they
     // move, update the anchors (the strip guarantee itself is unchanged).
     const bundle = read('dist/exo.esm.js');
@@ -284,7 +284,7 @@ describe.runIf(hasProductionBuild || mustHaveProductionBuild)('production build 
 
   it('keeps invariant alive in the single-file bundle (never stripped)', () => {
     // Unlike assert/assertDefined, invariant is not in pure_funcs and is never
-    // __DEV__-gated — it must survive minification with its real message intact.
+    // __DEV__-gated - it must survive minification with its real message intact.
     const bundle = read('dist/exo.esm.js');
     const cycleMessage = extractContainerCycleMessage();
     expect(bundle).toContain(cycleMessage);

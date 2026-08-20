@@ -44,9 +44,9 @@ describe('getCollisionRectangleRectangle', () => {
     expect(response!.shapeAinB).toBe(false);
   });
 
-  // 3. Edge-touching: overlap is 0 (not null — rects share an edge)
+  // 3. Edge-touching: overlap is 0 (not null - rects share an edge)
   test('edge-touching rectangles return overlap of 0', () => {
-    // rectA: (0,0)→(10,10), rectB: (10,0)→(20,10) — share right/left edge
+    // rectA: (0,0)→(10,10), rectB: (10,0)→(20,10) - share right/left edge
     // Early-out check: rectB.left(10) > rectA.right(10) is false (not strictly greater)
     // overlapX = min(10,20) - max(0,10) = 10 - 10 = 0
     // overlapY = min(10,10) - max(0,0) = 10 - 0 = 10
@@ -59,7 +59,7 @@ describe('getCollisionRectangleRectangle', () => {
 
   // Non-overlapping: returns null
   test('non-overlapping rectangles return null', () => {
-    // rectA: (0,0)→(5,5), rectB: (10,0)→(20,10) — gap between them
+    // rectA: (0,0)→(5,5), rectB: (10,0)→(20,10) - gap between them
     const response = getCollisionRectangleRectangle(rect(0, 0, 5, 5), rect(10, 0, 10, 10));
 
     expect(response).toBeNull();

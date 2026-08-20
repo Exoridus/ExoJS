@@ -1,6 +1,6 @@
 {
   "title": "SceneTransitionLifecycleError",
-  "description": "Thrown when a SceneTransitionSession or SceneTransitionEnvironment violates the transition lifecycle contract: - `'commit-reentrant'` — SceneTransitionEnvironment.commit was called a second time on the same session. Dev-mode only; a production build no-ops the second call instead of throwing. - `'done-before-commit'` — the session reported SceneTransitionSession.done `true` while SceneTransitionEnvironment.committed was still `false`. Always thrown, dev and production — the navigation aborts and the session is destroyed. - `'aborted'` — the owning `SceneDirector` was destroyed while this session was still active. Always thrown.",
+  "description": "Thrown when a SceneTransitionSession or SceneTransitionEnvironment violates the transition lifecycle contract: - `'commit-reentrant'` - SceneTransitionEnvironment.commit was called a second time on the same session. Dev-mode only; a production build no-ops the second call instead of throwing. - `'done-before-commit'` - the session reported SceneTransitionSession.done `true` while SceneTransitionEnvironment.committed was still `false`. Always thrown, dev and production - the navigation aborts and the session is destroyed. - `'aborted'` - the owning `SceneDirector` was destroyed while this session was still active. Always thrown.",
   "symbol": "SceneTransitionLifecycleError",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Thrown when a SceneTransitionSession or SceneTransitionEnvironment violates the transition lifecycle contract: - `'commit-reentrant'` — SceneTransitionEnvironment.commit was called a second time on the same session. Dev-mode only; a production build no-ops the second call instead of throwing. - `'done-before-commit'` — the session reported SceneTransitionSession.done `true` while SceneTransitionEnvironment.committed was still `false`. Always thrown, dev and production — the navigation aborts and the session is destroyed. - `'aborted'` — the owning `SceneDirector` was destroyed while this session was still active. Always thrown."
+        "Thrown when a SceneTransitionSession or SceneTransitionEnvironment violates the transition lifecycle contract: - `'commit-reentrant'` - SceneTransitionEnvironment.commit was called a second time on the same session. Dev-mode only; a production build no-ops the second call instead of throwing. - `'done-before-commit'` - the session reported SceneTransitionSession.done `true` while SceneTransitionEnvironment.committed was still `false`. Always thrown, dev and production - the navigation aborts and the session is destroyed. - `'aborted'` - the owning `SceneDirector` was destroyed while this session was still active. Always thrown."
       ],
       "importLine": "import { SceneTransitionLifecycleError } from '@codexo/exojs'",
       "sourceLink": null

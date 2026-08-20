@@ -3,14 +3,14 @@ import type { MockInstance } from 'vitest';
 /**
  * Real Application + real SceneDirector integration tests for the
  * start() overloads (scene-less / constructor-based). Only the
- * WebGL2/WebGPU backends are mocked (kept out of jsdom) — SceneDirector,
+ * WebGL2/WebGPU backends are mocked (kept out of jsdom) - SceneDirector,
  * the scene registry, and scene activation all run for real.
  */
 import { Application, ApplicationState } from '#core/Application';
 import { Scene } from '#core/Scene';
 
 // ---------------------------------------------------------------------------
-// Backend stubs — keep WebGL2 / WebGPU out of jsdom. Inline factories: vi.mock()
+// Backend stubs - keep WebGL2 / WebGPU out of jsdom. Inline factories: vi.mock()
 // is hoisted above any variable declarations in the file.
 // ---------------------------------------------------------------------------
 
@@ -140,7 +140,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     const first = app.start(ConcurrentStartScene);
 
-    // start() flips to Loading synchronously, before its first await — so the
+    // start() flips to Loading synchronously, before its first await - so the
     // second caller below observes a startup that is genuinely still running.
     expect(app.state).toBe(ApplicationState.Loading);
 
@@ -148,7 +148,7 @@ describe('Application.start() — scene-less and constructor overloads', () => {
 
     await expect(second).resolves.toBe(app);
 
-    // Awaiting the second call must mean startup is done — not merely that the
+    // Awaiting the second call must mean startup is done - not merely that the
     // call returned early while the first one is still mid-navigation.
     expect(app.state).toBe(ApplicationState.Running);
     expect(app.scenes.currentScene).toBeInstanceOf(ConcurrentStartScene);

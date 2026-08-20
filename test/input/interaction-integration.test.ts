@@ -1,7 +1,7 @@
 /**
  * End-to-end InputManager + InteractionManager integration tests: real
  * PointerEvents dispatched on a real canvas, through a real InputManager,
- * into a real InteractionManager — no mocked signals. Covers the phase-level
+ * into a real InteractionManager - no mocked signals. Covers the phase-level
  * defects the mocked-signal test suites (interaction.test.ts, dragging.test.ts)
  * cannot exercise, because those construct a bare Pointer stub with a single
  * (x, y) rather than letting a real Pointer/InputManager produce the distinct
@@ -60,7 +60,7 @@ interface Harness {
 }
 
 /**
- * A full real InputManager + InteractionManager pair sharing one canvas —
+ * A full real InputManager + InteractionManager pair sharing one canvas -
  * dispatching a genuine platform PointerEvent and calling `flush()` runs the
  * exact pipeline a live Application does (input.preUpdate() then
  * interaction.preUpdate()).
@@ -156,7 +156,7 @@ describe('phase-correct hit-testing within one frame flush', () => {
     flush(h);
 
     // Down over `left`, a fast move sweeps over `right`, release back over `left`
-    // — all collapsed into one frame, before either manager ever flushes.
+    // - all collapsed into one frame, before either manager ever flushes.
     h.fire('pointerdown', { clientX: 10, clientY: 10, buttons: 1 });
     h.fire('pointermove', { clientX: 210, clientY: 10, buttons: 1 });
     h.fire('pointerup', { clientX: 10, clientY: 10, buttons: 0 });
@@ -209,7 +209,7 @@ describe('phase-correct hit-testing within one frame flush', () => {
     flush(h);
 
     // Grabbed at (10,10) on a node at (0,0) → offset (-10,-10). Dragged to
-    // (60,10): position = (60,10) + offset = (50,0) — the MOVE coordinate,
+    // (60,10): position = (60,10) + offset = (50,0) - the MOVE coordinate,
     // not the (90,40) release coordinate the same frame ended at.
     expect(a.position.x).toBeCloseTo(50);
     expect(a.position.y).toBeCloseTo(0);
@@ -335,7 +335,7 @@ describe('no orphaned drag candidate', () => {
 
     h.scene.addChild(a);
 
-    // pointerover alone only registers the pointer with InputManager — hover
+    // pointerover alone only registers the pointer with InputManager - hover
     // tracking (_lastHit) is driven by an actual dispatched phase, same as a
     // real cursor settling with an immediate pointermove after entering.
     h.fire('pointerover', { clientX: 10, clientY: 10 });
@@ -445,7 +445,7 @@ describe('context menu: engine-wide fallback', () => {
     h.scene.addChild(a);
     h.input.onContextMenu.add(engineWide);
 
-    // No pointerover/pointerdown/pointermove precedes this — the keyboard
+    // No pointerover/pointerdown/pointermove precedes this - the keyboard
     // context-menu key and Shift+F10 fire this same native event with no
     // pointer ever having been tracked.
     h.fire('contextmenu', { clientX: 40, clientY: 50 });
@@ -453,7 +453,7 @@ describe('context menu: engine-wide fallback', () => {
 
     expect(engineWide).toHaveBeenCalledTimes(1);
     expect(engineWide.mock.calls[0]![0]).toEqual({ x: 40, y: 50, pointer: null });
-    // No pointer to attribute a per-node event to — the scene-graph route
+    // No pointer to attribute a per-node event to - the scene-graph route
     // stays silent; only the engine-wide fallback fires.
     expect(nodeLevel).not.toHaveBeenCalled();
 

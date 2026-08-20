@@ -1,9 +1,9 @@
 /**
- * WebGL2 renderer-matrix browser tests — RepeatingSprite retained
+ * WebGL2 renderer-matrix browser tests - RepeatingSprite retained
  * instruction-set replay (extending the flush-level batch cache to
  * RepeatingSprite).
  *
- * Only the GEOMETRY path (TextureRegion source) is recordable — its 32-byte
+ * Only the GEOMETRY path (TextureRegion source) is recordable - its 32-byte
  * instance layout matches the sprite/NineSlice batch shape exactly (node
  * index at word 7 of the 8-word instance), so it shares the sprite renderer's
  * group-owned bundle and replay seam. Cells:
@@ -12,12 +12,12 @@
  *    all produce identical frames),
  * 2. the load-bearing correctness gate this follow-up exists for: a scroll-
  *    offset mutation AFTER a batch was recorded must never replay STALE
- *    tiling — `RepeatingSprite.setOffset` marks geometry dirty and calls
+ *    tiling - `RepeatingSprite.setOffset` marks geometry dirty and calls
  *    `invalidateCache()`, which bumps the node's content revision and
  *    propagates it through the `RetainedContainer` boundary, forcing a
  *    recapture before the next replay,
  * 3. a SHADER-path (bare Texture) RepeatingSprite inside a capture window
- *    poisons it (`_supportsRetainedBatches` only covers the geometry path) —
+ *    poisons it (`_supportsRetainedBatches` only covers the geometry path) -
  *    the group must never reach the replay tier, staying pixel-correct on
  *    the live entry-replay tier across mutations instead.
  *
@@ -213,7 +213,7 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
       // sampled window shifts by exactly half a period and the two halves
       // SWAP. `setOffset` marks geometry dirty on this (geometry-path) sprite
       // and calls `invalidateCache()`, which bumps the node's content revision
-      // and propagates it through the RetainedContainer boundary — the
+      // and propagates it through the RetainedContainer boundary - the
       // fragment's `isClean()` check must fail on the next collect, forcing a
       // recapture instead of replaying the OLD (pre-swap) cached bytes.
       repeating.setOffset(8, 0);
@@ -256,7 +256,7 @@ describe('WebGL2 renderer matrix: RepeatingSprite retained instruction-set repla
     const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
 
     try {
-      // Render many frames, including a scroll mutation — the shader path
+      // Render many frames, including a scroll mutation - the shader path
       // never records/replays a batch (_supportsRetainedBatches only covers
       // the geometry path here), so the group must stay correct via
       // the (poisoned, permanently-entry-replay) live path the whole time.

@@ -2,7 +2,7 @@
  * Root index type-level export inventory.
  *
  * Uses the TypeScript compiler API to enumerate ALL symbols exported from
- * src/index.ts — including interfaces, type aliases, and const enums that are
+ * src/index.ts - including interfaces, type aliases, and const enums that are
  * erased at runtime and therefore invisible in the runtime snapshot gate
  * (test/core/root-index-snapshot.test.ts).
  *
@@ -55,7 +55,7 @@ describe('root index type-level export inventory', () => {
 
     const allExports = checker.getExportsOfModule(moduleSymbol);
 
-    // Produce a sorted "Name: kind" string per export — one entry per line
+    // Produce a sorted "Name: kind" string per export - one entry per line
     // in the snapshot, easy to scan in PR diffs.
     const inventory = allExports
       .map(sym => {

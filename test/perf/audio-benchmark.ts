@@ -1,5 +1,5 @@
 /**
- * Audio benchmark — main-thread JavaScript overhead only.
+ * Audio benchmark - main-thread JavaScript overhead only.
  *
  * No audio output is produced: AudioContext is fully mocked.  The benchmark
  * measures the CPU cost of Sound/AudioBus/AudioListener JavaScript operations
@@ -12,7 +12,7 @@ import type { BenchmarkResult } from './harness';
 import { runScenario, writeResults } from './harness';
 
 // ---------------------------------------------------------------------------
-// Minimal AudioContext mock (no Jest — plain objects)
+// Minimal AudioContext mock (no Jest - plain objects)
 // ---------------------------------------------------------------------------
 
 const makeParam = (): AudioParam =>
@@ -182,7 +182,7 @@ if (typeof (globalThis as Record<string, unknown>)['AudioWorkletNode'] === 'unde
 
 // Now import ExoJS audio modules (after mock is in globalThis)
 // We use dynamic-style imports resolved at module evaluation time via top-level await alternative:
-// tsx supports top-level await in ESM — but for simpler compat we do it synchronously here.
+// tsx supports top-level await in ESM - but for simpler compat we do it synchronously here.
 
 import { AudioBus } from '../../src/audio/AudioBus';
 import { AudioListener } from '../../src/audio/AudioListener';
@@ -239,7 +239,7 @@ const results: BenchmarkResult[] = [];
   );
 }
 
-// --- Scenario 2: AudioManager.update() — listener tick + 20 spatial sounds ---
+// --- Scenario 2: AudioManager.update() - listener tick + 20 spatial sounds ---
 {
   let manager: AudioManager | null = null;
   const spatialSounds: Sound[] = [];
@@ -306,7 +306,7 @@ const results: BenchmarkResult[] = [];
   ); // 100 iterations — each is 10 add+remove calls
 }
 
-// --- Scenario 4: Spatial sound _tickSpatial() — 20 sounds, positions updated each frame ---
+// --- Scenario 4: Spatial sound _tickSpatial() - 20 sounds, positions updated each frame ---
 {
   const spatialSounds: Sound[] = [];
 

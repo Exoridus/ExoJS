@@ -137,7 +137,7 @@ const tick = (manager: SceneDirector, app: ReturnType<typeof createApplicationSt
 
 type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'fixedUpdate' | 'draw' | 'unload' | 'destroy'>>;
 
-// Registration key is fixed per constructor ("scene") — every test registers
+// Registration key is fixed per constructor ("scene") - every test registers
 // exactly the constructor(s) it needs against a fresh SceneDirector, so key
 // collisions across tests never happen.
 const makeSceneClass = (hooks: SceneHooks = {}): SceneConstructor<void> =>
@@ -892,7 +892,7 @@ describe('SceneDirector — post-commit signal isolation', () => {
     await director.change(SecondScene);
 
     // The incoming scope's own signals fire, fully, before the outgoing
-    // scope's unload() is even started — not just before it settles.
+    // scope's unload() is even started - not just before it settles.
     expect(order).toEqual(['onChangeScene', 'onStartScene', 'onStopScene', 'outgoing.unload:start', 'outgoing.unload:end']);
   });
 
@@ -907,7 +907,7 @@ describe('SceneDirector — post-commit signal isolation', () => {
     await director.change(SecondScene, { suspendCurrent: true }); // retains First
 
     // Every SceneScope dispatches onStateChange for its own lifecycle
-    // transitions (Preparing->Active, ->Destroying, etc.) — restore() here
+    // transitions (Preparing->Active, ->Destroying, etc.) - restore() here
     // also permanently ends the outgoing SecondScene, which fires several
     // onStateChange events of its own. Only the restored FirstScene's own
     // Suspended->Active edge is the one this test's ordering claim is about.
@@ -1055,7 +1055,7 @@ describe('SceneDirector — destroy() / _dispose()', () => {
 
     await director.change(FirstScene);
 
-    // Fire-and-forget, matching Application.stop()'s real usage — the
+    // Fire-and-forget, matching Application.stop()'s real usage - the
     // caller does not await _clearScene() before calling destroy()/_dispose().
     void director._clearScene();
 
@@ -1146,7 +1146,7 @@ describe('SceneDirector — destroy() / _dispose()', () => {
     const preloadPromise = director.preload(SlowScene);
     const disposePromise = director._dispose();
 
-    // Still mid-load() — _dispose() must be waiting on prepare() to settle,
+    // Still mid-load() - _dispose() must be waiting on prepare() to settle,
     // not tearing anything down concurrently.
     await Promise.resolve();
     await Promise.resolve();
@@ -1199,7 +1199,7 @@ describe('SceneDirector — key-based navigation', () => {
   test('change() rejects for an unregistered string key, in every build', async () => {
     const app = createApplicationStub();
     const RegisteredScene = makeSceneClass();
-    // Widened to the untyped registry shape for this one call — a string
+    // Widened to the untyped registry shape for this one call - a string
     // key not present in the registry is a compile-time error against the
     // precisely-typed overload, which is exactly the point; this test
     // exercises the runtime rejection path a production build still needs.
@@ -1211,7 +1211,7 @@ describe('SceneDirector — key-based navigation', () => {
   test('restore() rejects for an unregistered string key, in every build', async () => {
     const app = createApplicationStub();
     const RegisteredScene = makeSceneClass();
-    // Widened to the untyped registry shape for this one call — a string
+    // Widened to the untyped registry shape for this one call - a string
     // key not present in the registry is a compile-time error against the
     // precisely-typed overload, which is exactly the point; this test
     // exercises the runtime rejection path a production build still needs.
@@ -1439,7 +1439,7 @@ describe('SceneDirector — unload', () => {
     await director.preload(GameScene); // + a fresh preloaded GameScene
 
     await expect(director.unload(GameScene, { instance: 'preloaded' })).resolves.toBe(true);
-    // The retained GameScene is untouched — still resolvable and unambiguous now:
+    // The retained GameScene is untouched - still resolvable and unambiguous now:
     await expect(director.unload(GameScene, { instance: 'retained' })).resolves.toBe(true);
   });
 
@@ -1475,7 +1475,7 @@ describe('SceneDirector — unload', () => {
     const PreloadedScene = makeSceneClass();
     const director = new SceneDirector(app, { preloaded: PreloadedScene });
 
-    // No transition session is started for a retained/preloaded discard —
+    // No transition session is started for a retained/preloaded discard -
     // this resolves immediately even though the supplied transition's session
     // never commits or completes, proving the direct fast path ran instead.
     const neverCompletingTransition = new FakeTransition();
@@ -1518,7 +1518,7 @@ describe('SceneDirector — unload', () => {
     const preloadPromise = director.preload(SlowScene);
     const unloadPromise = director.unload(SlowScene);
 
-    // Still mid-load() — unload() must be waiting on prepare() to settle,
+    // Still mid-load() - unload() must be waiting on prepare() to settle,
     // not tearing anything down yet.
     await Promise.resolve();
     await Promise.resolve();
@@ -1573,13 +1573,13 @@ describe('SceneDirector — unload', () => {
     expect(firstUnloadHook).toHaveBeenCalledTimes(1); // the cancelled entry's own scene was torn down
     // `init` is one shared hook function reused across every RacyScene
     // instance (makeSceneClass assigns the same hooks object to each new
-    // instance) — it fires once per scene's own prepare() call, and both
+    // instance) - it fires once per scene's own prepare() call, and both
     // the cancelled first preload and the fresh second one run their own
     // prepare() to completion independently (cancelling only gates what
     // happens *after* prepare() settles, not during it), hence 2 calls.
     expect(secondInit).toHaveBeenCalledTimes(2); // both the cancelled and the fresh preload reached Ready independently
 
-    // The second preload is still available for a later change() to consume —
+    // The second preload is still available for a later change() to consume -
     // confirmed by its state, not yet activated:
     expect(director.currentScene).toBeNull();
   });
@@ -1676,7 +1676,7 @@ describe('SceneDirector — transition session driving', () => {
 
     expect(capturedContext).toEqual({ operation: 'change', hasOutgoingScene: true, hasIncomingScene: true });
 
-    // The session committed synchronously in its constructor — one tick drives
+    // The session committed synchronously in its constructor - one tick drives
     // the async switch, settle() lets it finish, then update() flips done true.
     tick(manager, app);
     await settle();
@@ -1765,7 +1765,7 @@ describe('SceneDirector — transition session driving', () => {
     const navigation = manager.change(Second, { transition });
 
     // The session requests commit; this tick kicks off commitSwitch, which then
-    // suspends on the incoming scene's still-pending load() — the async prepare
+    // suspends on the incoming scene's still-pending load() - the async prepare
     // window this bug lives in.
     environmentRef?.commit();
     tick(manager, app);
@@ -1776,7 +1776,7 @@ describe('SceneDirector — transition session driving', () => {
 
     // The session self-terminates DURING that window WITHOUT going through
     // `_abortInFlightNavigation`: `session.update()` throws, so
-    // `_updateTransition` calls `_finishActiveSession` directly — rejecting the
+    // `_updateTransition` calls `_finishActiveSession` directly - rejecting the
     // navigation and clearing `_activeSession`, but NOT bumping
     // `_navigationGeneration`. The generation term of the abort guard therefore
     // cannot detect this; only the session-identity term can.
@@ -1871,7 +1871,7 @@ describe('SceneDirector — transition resource provisioning', () => {
 
     const navigation = manager.change(Second, { transition });
 
-    // The snapshot is captured once, synchronously, before beginSession() —
+    // The snapshot is captured once, synchronously, before beginSession() -
     // the outgoing scene's draw() ran exactly once for it.
     expect(drawSpy).toHaveBeenCalledTimes(1);
 
@@ -1974,7 +1974,7 @@ describe('SceneDirector — transition resource provisioning', () => {
     manager._renderTransition(app.rendering);
     expect((capturedFrame as SceneTransitionFrame | null)?.outgoing).toBeNull();
 
-    // Never committed — reporting done here is a done-before-commit lifecycle
+    // Never committed - reporting done here is a done-before-commit lifecycle
     // error; drive one more frame to let the Director observe it.
     session.done = true;
     manager._renderTransition(app.rendering);
@@ -2124,7 +2124,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
 
     const navigation = manager.change(Second, { transition });
 
-    // session.update() (driven by tick()) calls commit() a second time —
+    // session.update() (driven by tick()) calls commit() a second time -
     // __DEV__ is true in the test environment, so this throws and rejects the
     // navigation with a SceneTransitionLifecycleError.
     tick(manager, app);
@@ -2312,7 +2312,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
 
     await manager.change(First);
 
-    // Records any update()/render() that lands after destroy() — the exact
+    // Records any update()/render() that lands after destroy() - the exact
     // use-after-free the fix prevents. destroy()'s contract promises "No
     // further update()/render() calls follow." The common completion path
     // reports done from inside update(), which Application.update() drives
@@ -2382,9 +2382,9 @@ describe('SceneDirector — transition lifecycle contract', () => {
 });
 
 // NOTE ("Ready-scope cleanup"): the fourth pre-commit-failure concept
-// — a navigation aborted after commit() was requested and prepare() was
+// - a navigation aborted after commit() was requested and prepare() was
 // already in flight, cancelled before ever reaching the atomic commit boundary
-// — requires the abort-flag machinery in Application.start()'s frame loop.
+// - requires the abort-flag machinery in Application.start()'s frame loop.
 // It is deliberately not tested here; that coverage belongs once
 // _frameLoopActive exists.
 describe('SceneDirector — pre-commit failure semantics', () => {
@@ -2415,7 +2415,7 @@ describe('SceneDirector — pre-commit failure semantics', () => {
     })();
 
     const navigation = manager.change(Failing, { transition });
-    // Attach a handler before the switch runs — the navigation rejects during
+    // Attach a handler before the switch runs - the navigation rejects during
     // settle(), so observing it only afterwards would flag a spurious
     // "handled asynchronously" unhandled-rejection warning.
     void navigation.catch(() => undefined);
@@ -2502,7 +2502,7 @@ describe('SceneDirector — pre-commit failure semantics', () => {
 
     // Whether this listener throw surfaces as a rejection depends on the
     // guarded-dispatch: onStateChange is dispatched via dispatchIsolated, so
-    // the throw is reported, not thrown back — the restore commits. Assert the
+    // the throw is reported, not thrown back - the restore commits. Assert the
     // invariant that holds regardless: the scope ends up in exactly one place.
     try {
       await navigation;
@@ -2675,7 +2675,7 @@ describe('SceneDirector — registry-default transition resolution', () => {
     const navigation = manager.change(GameScene);
 
     // beginSession() runs synchronously inside _runTransitionedAction, before
-    // change()'s own first await suspends — observable immediately.
+    // change()'s own first await suspends - observable immediately.
     expect(RecordingPhaseForDirectorTest.beginSessionCalls).toBeGreaterThan(0);
 
     await driveZeroDurationTransition(manager, app);
@@ -2724,7 +2724,7 @@ describe('SceneDirector — registry-default transition resolution', () => {
     await driveZeroDurationTransition(manager, app);
     await firstChange;
 
-    // Suspend GameScene (retained) by switching to OtherScene — restore() below reactivates it.
+    // Suspend GameScene (retained) by switching to OtherScene - restore() below reactivates it.
     await manager.change(OtherScene, { transition: false, suspendCurrent: true });
 
     RecordingPhaseForDirectorTest.beginSessionCalls = 0;
@@ -2763,7 +2763,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     expect(aborted).toBe(true);
     expect(session.destroyCallCount).toBe(1);
     await expect(navigation).rejects.toBe(reason);
-    // Never committed — the outgoing scene stays live, the input gate is closed.
+    // Never committed - the outgoing scene stays live, the input gate is closed.
     expect(director.currentScene).toBe(firstInstance);
     expect((director as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
   });
@@ -2823,7 +2823,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     void navigation.catch(() => undefined);
     await Promise.resolve(); // let commitSwitch reach its prepare await
 
-    // SlowLoad's load()/init() is still pending — abort now, exactly what
+    // SlowLoad's load()/init() is still pending - abort now, exactly what
     // Application._stopFrameLoop() does on stop()/a fatal frame error. There
     // is no session, so this returns false but still bumps the generation.
     expect(director._abortInFlightNavigation(new SceneNavigationAbortedError())).toBe(false);
@@ -2853,7 +2853,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     const transition = new FakeTransition(session);
     const navigation = director.change(GameScene, { transition });
 
-    // Claimed synchronously by change() before its first await — removed from _preloaded.
+    // Claimed synchronously by change() before its first await - removed from _preloaded.
     expect(preloaded.has(GameScene)).toBe(false);
 
     const reason = new SceneNavigationAbortedError();
@@ -2895,7 +2895,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     expect(director._abortInFlightNavigation(reason)).toBe(true);
     await expect(navigation).rejects.toBe(reason);
 
-    // restore()'s pre-existing catch put the claim back — Second is still active.
+    // restore()'s pre-existing catch put the claim back - Second is still active.
     expect(retained.has(First)).toBe(true);
     expect(director.currentScene).toBeInstanceOf(Second);
     await expect(director.restore(First)).resolves.toBe(director);
@@ -2945,7 +2945,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     await expect(navigation).rejects.toBe(reason);
     expect(director.currentScene).toBe(firstInstance);
 
-    // Let the suspended load() resolve — commitSwitch's continuation resumes in
+    // Let the suspended load() resolve - commitSwitch's continuation resumes in
     // the background. It MUST observe the abort and bail, not commit the switch.
     resolveLoad();
     await settle();
@@ -2957,7 +2957,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     // NOTE: SceneScope.destroy() already guards scene.unload()/scene.destroy()
     // internally (see SceneScope's own `_guard`/`_guardAsync` + `_reportErrors`)
     // and reports failures through app.onError itself, so a plain throwing
-    // `unload()` never actually reaches this code path — SceneScope's own
+    // `unload()` never actually reaches this code path - SceneScope's own
     // safety net already covers it. To exercise the specific gap this test
     // guards (SceneDirector's OWN handling of a rejected `_disposeScene()`
     // call in the abort race guard, independent of SceneScope's guarantee),
@@ -3012,13 +3012,13 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     const destroySpy = vi.spyOn(SceneScope.prototype, 'destroy').mockRejectedValueOnce(disposalError);
 
     try {
-      // Let the suspended load() resolve — commitSwitch's continuation
+      // Let the suspended load() resolve - commitSwitch's continuation
       // resumes in the background, observes the abort, and discards the
       // freshly prepared Second scope via the race guard
       // (`_disposeScene(newScope, { dispatchStopScene: false })`). That
-      // disposal rejects — this must surface through app.onError, not vanish
+      // disposal rejects - this must surface through app.onError, not vanish
       // silently (`_performSessionCommit`'s own catch calling
-      // `_finishActiveSession` again is a no-op — the session already
+      // `_finishActiveSession` again is a no-op - the session already
       // settled via the abort above).
       resolveLoad();
       await settle();
@@ -3070,21 +3070,21 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     environmentRef?.commit();
     tick(director, app); // commitSwitch runs synchronously -> _activeScope becomes First's retained scope
 
-    // The switch has genuinely committed — First is live — but the session
+    // The switch has genuinely committed - First is live - but the session
     // is still playing (session.done was never set).
     expect(director.currentScene).toBeInstanceOf(First);
 
     const reason = new SceneNavigationAbortedError();
 
     // Mirrors Application.stop(): one operation that aborts the session and
-    // clears the (now-committed) active scope — before restore()'s own catch
+    // clears the (now-committed) active scope - before restore()'s own catch
     // has had a chance to run.
     const stopAndClear = director._stopAndClearActiveScene(reason);
 
     await expect(navigation).rejects.toBe(reason);
     await stopAndClear;
 
-    // The committed-but-aborted scope must NOT be put back into _retained —
+    // The committed-but-aborted scope must NOT be put back into _retained -
     // it was already disposed by _stopAndClearActiveScene().
     expect(retained.has(First)).toBe(false);
 
@@ -3242,7 +3242,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
 
   test('_dispose() still waits for the stop teardown after an intervening navigation overwrote the per-navigation handle', async () => {
     // `_pendingOutgoingTeardown` is one navigation's view and the next
-    // navigation to commit overwrites it — with `Promise.resolve()` when it
+    // navigation to commit overwrites it - with `Promise.resolve()` when it
     // has no outgoing scope of its own (beginOutgoingTeardown(null)). If
     // _dispose() waited on that single handle, an ordinary change() landing
     // between stop() and destroy() would silently end the wait for a
@@ -3287,7 +3287,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
     // _trackTeardown attaches its `catch` to a derived promise, not to the
     // teardown promise itself, so the rejection is marked handled globally
     // (no unhandledrejection event fires) while the teardown promise itself
-    // still rejects for whoever awaits it — here, this test awaiting
+    // still rejects for whoever awaits it - here, this test awaiting
     // _stopAndClearActiveScene() directly.
     const app = createApplicationStub();
     const TestScene = makeSceneClass();
@@ -3319,7 +3319,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
     // The third affected interleaving: the session HAS started, requested
     // commit, and `commitSwitch` is suspended in the incoming scene's load().
     // The abort settles the session, so the navigation lock is still held with
-    // no session left to abort — the same shape as the non-transitioned case.
+    // no session left to abort - the same shape as the non-transitioned case.
     const app = createApplicationStub();
     const First = makeSceneClass();
     let resolveLoad!: () => void;
@@ -3383,7 +3383,7 @@ describe('SceneDirector._stopAndClearActiveScene()', () => {
 
     try {
       await expect(director._stopAndClearActiveScene(new SceneNavigationAbortedError())).rejects.toBe(disposalError);
-      // The scope is still detached from the director regardless — a failed
+      // The scope is still detached from the director regardless - a failed
       // teardown must not leave the scene reachable as "active".
       expect(director.currentScene).toBeNull();
     } finally {

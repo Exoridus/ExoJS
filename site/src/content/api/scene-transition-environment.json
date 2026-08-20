@@ -1,6 +1,6 @@
 {
   "title": "SceneTransitionEnvironment",
-  "description": "Handed to SceneTransition.beginSession. `commitRequested`/`committed` are live views — they reflect state at read time, not a snapshot taken when this object was constructed.",
+  "description": "Handed to SceneTransition.beginSession. `commitRequested`/`committed` are live views - they reflect state at read time, not a snapshot taken when this object was constructed.",
   "symbol": "SceneTransitionEnvironment",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Handed to SceneTransition.beginSession. `commitRequested`/`committed` are live views — they reflect state at read time, not a snapshot taken when this object was constructed."
+        "Handed to SceneTransition.beginSession. `commitRequested`/`committed` are live views - they reflect state at read time, not a snapshot taken when this object was constructed."
       ],
       "importLine": "import { SceneTransitionEnvironment } from '@codexo/exojs'",
       "sourceLink": null
@@ -55,7 +55,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Request the scene switch. May be called synchronously from createSession(), update(), or render(). Exactly once per session — a second call is a dev-mode lifecycle error (SceneTransitionLifecycleError, reason 'commit-reentrant') and a production no-op. Never swaps the active scene reentrantly from inside the caller's own callback — the Director processes the actual switch only after the current callback has fully returned control."
+          "description": "Request the scene switch. May be called synchronously from createSession(), update(), or render(). Exactly once per session - a second call is a dev-mode lifecycle error (SceneTransitionLifecycleError, reason 'commit-reentrant') and a production no-op. Never swaps the active scene reentrantly from inside the caller's own callback - the Director processes the actual switch only after the current callback has fully returned control."
         }
       ],
       "paragraphs": [],

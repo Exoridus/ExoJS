@@ -16,7 +16,7 @@ const placeholderVertices = (): Float32Array => new Float32Array([0, 0, 1, 0, 0,
  * across every immediate draw without per-call allocation.
  *
  * Unlike a regular {@link Mesh}, its world matrix is the raw {@link Matrix}
- * handed to `drawGeometry` — there is no parent, origin, position, rotation, or
+ * handed to `drawGeometry` - there is no parent, origin, position, rotation, or
  * scale to compose. {@link getGlobalTransform} therefore returns that matrix
  * verbatim, a lossless 1:1 mapping onto the renderer's `a, b, c, d, tx, ty`
  * transform slot, which both backends read at their transform-write seam.
@@ -40,7 +40,7 @@ export class ImmediateMesh extends Mesh {
    * Reconfigure this pooled mesh for one immediate draw.
    *
    * The geometry is re-flattened only when its identity or data {@link Geometry.version}
-   * changed — the steady-state case (same procedural geometry, fresh transform each
+   * changed - the steady-state case (same procedural geometry, fresh transform each
    * frame) reuses the previously flattened arrays and allocates nothing. The raw
    * transform reference is held directly (not copied): `drawGeometry` flushes the
    * draw synchronously, so the caller cannot mutate it before it is consumed.
@@ -49,7 +49,7 @@ export class ImmediateMesh extends Mesh {
   public configure(geometry: Geometry, transform: Matrix, material: MeshMaterial | null, tint: Color | null): void {
     this._flattenGeometry(geometry);
     // Single immediate draws go through the dynamic (non-static-cached) path, so
-    // the geometry reference is left off the mesh — only the flattened arrays are
+    // the geometry reference is left off the mesh - only the flattened arrays are
     // consumed. (The batch source path sets it for the shared GPU buffer cache.)
     this._geometry = null;
     this._material = material;

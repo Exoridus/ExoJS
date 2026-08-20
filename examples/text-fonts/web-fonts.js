@@ -1,4 +1,4 @@
-// Auto-generated from web-fonts.ts — edit the .ts source, not this file.
+// Auto-generated from web-fonts.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Text } from '@codexo/exojs';
 class WebFontsScene extends Scene {
     default;

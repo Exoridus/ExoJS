@@ -444,7 +444,7 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     // Runtime chunk grid defaults to 32x32; on-disk chunk (0,0) covers tile
     // rect [0,16)x[0,16), which is inside runtime chunk (0,0) (tile rect
     // [0,32)x[0,32)). Runtime chunk (5,5) covers tile rect [160,192)x
-    // [160,192) — nowhere near the one on-disk chunk we authored.
+    // [160,192) - nowhere near the one on-disk chunk we authored.
     expect(source.getChunk(5, 5)).toBeNull();
   });
 
@@ -476,7 +476,7 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
   });
 
   it('getChunk resolves flip flags through the same path as populateTileLayer', async () => {
-    // 2147483649 = base gid 1 with the horizontal-flip flag (0x80000000) set —
+    // 2147483649 = base gid 1 with the horizontal-flip flag (0x80000000) set -
     // same literal convention as fixtures/orthogonal-rich.tmj's flip-combination row.
     const { context } = makeInfiniteMapContext([
       { x: 0, y: 0, width: 16, height: 16, data: [2147483649, ...new Array(255).fill(0)] },
@@ -595,7 +595,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
     const crate = runtime.getObjectLayer('Spawns')!.getObjectByName('crate')!;
 
     // The corner is derived from the UNROTATED anchor offset, and `rotation` is
-    // passed through verbatim — so the pivot is still Tiled's bottom-left
+    // passed through verbatim - so the pivot is still Tiled's bottom-left
     // anchor at (32, 48), which is (x, y + height), not (x, y).
     expect(crate.x).toBe(32);
     expect(crate.y).toBe(32);

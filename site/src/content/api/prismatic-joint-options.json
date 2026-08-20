@@ -210,7 +210,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Maximum motor force — clamps the per-step motor impulse. Default 0."
+          "description": "Maximum motor force - clamps the per-step motor impulse. Default 0."
         },
         {
           "name": "motorSpeed",

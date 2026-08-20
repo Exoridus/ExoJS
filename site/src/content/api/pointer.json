@@ -1,6 +1,6 @@
 {
   "title": "Pointer",
-  "description": "Unified mouse / touch / pen pointer. Wraps a single browser `PointerEvent.pointerId` and writes its state (position, buttons, pressure, tilt, etc.) into the engine's shared channels buffer so it can be polled by Input bindings or read directly by interaction-aware scene nodes. Coordinates are stored in logical/design pixel space — i.e. `app.width`/ `app.height` units (`0..app.width` × `0..app.height`), matching node positions, the 2-argument View.screenToWorld, and the active camera. The CSS-pixel event coordinates are mapped through the application's content viewport, so the value is independent of Application.pixelRatio and of however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`, or a CSS transform): a click at the right edge always reads `app.width`. In `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel writes are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic sampling. Pointers are owned by the InputManager, which assigns them a slot index in 0..15 (see maxPointers) and exposes their per-slot channel offsets via the Pointer class namespace constants.",
+  "description": "Unified mouse / touch / pen pointer. Wraps a single browser `PointerEvent.pointerId` and writes its state (position, buttons, pressure, tilt, etc.) into the engine's shared channels buffer so it can be polled by Input bindings or read directly by interaction-aware scene nodes. Coordinates are stored in logical/design pixel space - i.e. `app.width`/ `app.height` units (`0..app.width` × `0..app.height`), matching node positions, the 2-argument View.screenToWorld, and the active camera. The CSS-pixel event coordinates are mapped through the application's content viewport, so the value is independent of Application.pixelRatio and of however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`, or a CSS transform): a click at the right edge always reads `app.width`. In `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel writes are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic sampling. Pointers are owned by the InputManager, which assigns them a slot index in 0..15 (see maxPointers) and exposes their per-slot channel offsets via the Pointer class namespace constants.",
   "symbol": "Pointer",
   "kind": "class",
   "subsystem": "input",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Unified mouse / touch / pen pointer. Wraps a single browser `PointerEvent.pointerId` and writes its state (position, buttons, pressure, tilt, etc.) into the engine's shared channels buffer so it can be polled by Input bindings or read directly by interaction-aware scene nodes.",
-        "Coordinates are stored in logical/design pixel space — i.e. `app.width`/ `app.height` units (`0..app.width` × `0..app.height`), matching node positions, the 2-argument View.screenToWorld, and the active camera. The CSS-pixel event coordinates are mapped through the application's content viewport, so the value is independent of Application.pixelRatio and of however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`, or a CSS transform): a click at the right edge always reads `app.width`. In `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel writes are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic sampling.",
+        "Coordinates are stored in logical/design pixel space - i.e. `app.width`/ `app.height` units (`0..app.width` × `0..app.height`), matching node positions, the 2-argument View.screenToWorld, and the active camera. The CSS-pixel event coordinates are mapped through the application's content viewport, so the value is independent of Application.pixelRatio and of however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`, or a CSS transform): a click at the right edge always reads `app.width`. In `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel writes are normalized to 0..1 (position, size, twist, tilt) for backend-agnostic sampling.",
         "Pointers are owned by the InputManager, which assigns them a slot index in 0..15 (see maxPointers) and exposes their per-slot channel offsets via the Pointer class namespace constants."
       ],
       "importLine": "import { Pointer } from '@codexo/exojs'",
@@ -511,7 +511,7 @@
             }
           ],
           "returnType": "{ closedPress: boolean; maxDistance: number }",
-          "description": "Returns this release's own tap/swipe classification data — whether it closed an actual press, and that press's accumulated excursion — so the caller (the raw pointerup handler, the only place true global arrival order across pointers is still observable) can fold it directly onto the journal entry it builds for this occurrence, rather than reading it back off internal state that a later phase in the same flush could overwrite."
+          "description": "Returns this release's own tap/swipe classification data - whether it closed an actual press, and that press's accumulated excursion - so the caller (the raw pointerup handler, the only place true global arrival order across pointers is still observable) can fold it directly onto the journal entry it builds for this occurrence, rather than reading it back off internal state that a later phase in the same flush could overwrite."
         }
       ],
       "paragraphs": [],
@@ -562,7 +562,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Movement accumulated over the current frame — position - previousPosition."
+          "description": "Movement accumulated over the current frame - position - previousPosition."
         },
         {
           "name": "id",
@@ -604,7 +604,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Position of the most recent move. Several platform moves in one frame collapse into this, their last one — the coordinates the frame's moved phase is dispatched at. (-1, -1) until the pointer has moved at least once."
+          "description": "Position of the most recent move. Several platform moves in one frame collapse into this, their last one - the coordinates the frame's moved phase is dispatched at. (-1, -1) until the pointer has moved at least once."
         },
         {
           "name": "position",
@@ -625,7 +625,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Current position in design pixels — always the pointer's latest, live position, never rewound to an earlier phase. A signal handler that needs the coordinates a SPECIFIC phase happened at (press, move, release, context menu) receives them as explicit arguments rather than reading this property, and InteractionEvent.x/InteractionEvent.y are the corresponding immutable per-phase snapshot at the interaction layer — this is a deliberate choice over a temporary rewind-and-restore, which could leave a handler reading a DIFFERENT phase's position if it runs any code after the dispatch that called it returns."
+          "description": "Current position in design pixels - always the pointer's latest, live position, never rewound to an earlier phase. A signal handler that needs the coordinates a SPECIFIC phase happened at (press, move, release, context menu) receives them as explicit arguments rather than reading this property, and InteractionEvent.x/InteractionEvent.y are the corresponding immutable per-phase snapshot at the interaction layer - this is a deliberate choice over a temporary rewind-and-restore, which could leave a handler reading a DIFFERENT phase's position if it runs any code after the dispatch that called it returns."
         },
         {
           "name": "pressPosition",
@@ -793,7 +793,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true when the platform cancelled this pointer during this frame (system gesture, focus loss, …)."
+          "description": "true when the platform cancelled this pointer during this frame (system gesture, focus loss, ...)."
         },
         {
           "name": "currentState",
@@ -982,7 +982,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "true when the pointer was pressed during this frame. A press and release that both land between two frames set pressed *and* released on the same frame — the phases are not lost."
+          "description": "true when the pointer was pressed during this frame. A press and release that both land between two frames set pressed *and* released on the same frame - the phases are not lost."
         },
         {
           "name": "pressure",

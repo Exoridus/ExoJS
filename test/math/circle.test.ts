@@ -90,7 +90,7 @@ describe('Circle', () => {
       const changed = after.some((v, i) => Math.abs(v.x - snapshot[i].x) > 1e-9 || Math.abs(v.y - snapshot[i].y) > 1e-9);
 
       expect(changed).toBe(false); // normals of a circle are direction-only; radius shouldn't change direction
-      // The important thing is that it recomputed without error — verify length stays correct
+      // The important thing is that it recomputed without error - verify length stays correct
       expect(after.length).toBe(Circle.collisionSegments);
     });
 
@@ -118,7 +118,7 @@ describe('Circle', () => {
 
       expect(normalsBefore).toBeDefined();
 
-      // Change x — must mark dirty
+      // Change x - must mark dirty
       circle.x = 10;
 
       // Calling getNormals after x change should not throw and returns valid data
@@ -151,7 +151,7 @@ describe('Circle', () => {
     // getCollisionVertices() (private) guards its own recompute with
     // `_verticesDirty`, but every public mutator toggles `_verticesDirty` and
     // `_normalsDirty` together, and getCollisionVertices() is only ever
-    // invoked from inside getNormals()'s `_normalsDirty` guard — so the two
+    // invoked from inside getNormals()'s `_normalsDirty` guard - so the two
     // flags are always in lock-step through the public API alone, and the
     // `_verticesDirty === false` branch can never be observed that way.
     // Force it directly (bracket-notation access to private fields is an

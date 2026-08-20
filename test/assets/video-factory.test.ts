@@ -4,12 +4,12 @@ import { VideoFactory } from '#assets/factories/VideoFactory';
 import type { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 
-// MP4-ish header bytes ("....ftypmp4" box) aren't required — a WebM-style
+// MP4-ish header bytes ("....ftypmp4" box) aren't required - a WebM-style
 // magic number is easiest to satisfy determineMimeType()'s pattern table.
 const VIDEO_HEADER = new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]).buffer;
 
 // ---------------------------------------------------------------------------
-// <video> element capture helper — see music-factory.test.ts for rationale.
+// <video> element capture helper - see music-factory.test.ts for rationale.
 // ---------------------------------------------------------------------------
 
 let capturedVideoElements: HTMLVideoElement[];
@@ -26,7 +26,7 @@ describe('VideoFactory', () => {
 
   beforeEach(() => {
     capturedVideoElements = [];
-    // Spy (rather than replace) so the real jsdom Blob-URL behavior still runs —
+    // Spy (rather than replace) so the real jsdom Blob-URL behavior still runs -
     // only the call history is inspected.
     vi.spyOn(URL, 'createObjectURL');
     revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL');
@@ -198,7 +198,7 @@ describe('VideoFactory', () => {
     revokeSpy.mockClear();
 
     // A second, different terminal event still fires (each listener uses
-    // { once: true } but on a different event type) — settle()'s internal
+    // { once: true } but on a different event type) - settle()'s internal
     // `settled` guard must make this a no-op rather than re-running cleanup.
     expect(() => videoElement.dispatchEvent(new Event('error'))).not.toThrow();
     expect(revokeSpy).not.toHaveBeenCalled();

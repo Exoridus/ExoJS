@@ -2,12 +2,12 @@
  * Integration tests for gesture occurrences (pinch/rotate/long-press) queued
  * onto InputManager's own global frame journal, driven by real `PointerEvent`
  * dispatches through a real `<canvas>` via `BrowserPlatform`, into a real
- * `InputManager` — not direct `GestureRecognizer` construction (see
+ * `InputManager` - not direct `GestureRecognizer` construction (see
  * test/input/gesture-recognizer.test.ts for that).
  *
  * Covers the hardening this file's tests were written against: a gesture
  * derived from a pointer-move used to dispatch synchronously, out of band
- * with the journal — losing its true position relative to the pointer phase
+ * with the journal - losing its true position relative to the pointer phase
  * that produced it, and firing before the frame boundary a long-press hold
  * completed mid-frame instead of waiting for the next `update()`. Queuing both
  * onto the same journal `GestureRecognizer` reports into fixes both: a
@@ -15,7 +15,7 @@
  * pointer-move phase that produced it), and only on the next `update()`.
  *
  * The long-press hold is measured in engine time, so it is driven here by
- * feeding frame deltas to `preUpdate()` — never by a fake wall clock. That is
+ * feeding frame deltas to `preUpdate()` - never by a fake wall clock. That is
  * also what makes it stop with `app.scenes.pause()`, which the mock app below
  * models with a writable `paused` flag.
  */
@@ -79,7 +79,7 @@ const createInputManager = (canvas?: HTMLCanvasElement): { im: InputManager; can
   return { im: new InputManager(createMockApp(c, scenes)), canvas: c, scenes };
 };
 
-/** One frame boundary with no engine time elapsed — drains the journal without advancing any hold. */
+/** One frame boundary with no engine time elapsed - drains the journal without advancing any hold. */
 const drainFrame = (im: InputManager): void => {
   im.preUpdate(Time.zero);
 };
@@ -133,7 +133,7 @@ describe('InputManager — gesture journal ordering', () => {
     settleTwoTouchBaseline(im, canvas, 10, 0); // distance=10, angle=0
     calls.length = 0; // discard the baseline-establishing move's own dispatch
 
-    // Spread the touches apart — distance changes (angle does not), so only
+    // Spread the touches apart - distance changes (angle does not), so only
     // onPinch fires alongside the move, all within this one frame.
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: 40, clientY: 0, isPrimary: false });
     drainFrame(im);
@@ -153,7 +153,7 @@ describe('InputManager — gesture journal ordering', () => {
     settleTwoTouchBaseline(im, canvas, 40, 0); // distance=40, angle=0
     calls.length = 0; // discard the baseline-establishing move's own dispatch
 
-    // Rotate the pair around the midpoint — distance unchanged, angle changes.
+    // Rotate the pair around the midpoint - distance unchanged, angle changes.
     fire(canvas, 'pointermove', { pointerId: 2, pointerType: 'touch', clientX: 0, clientY: 40, isPrimary: false });
     drainFrame(im);
 
@@ -185,7 +185,7 @@ describe('InputManager — long-press queuing', () => {
     advanceFrames(im, 16);
     expect(spy).toHaveBeenCalledTimes(1);
 
-    // Holding on does not repeat it — the entry is consumed.
+    // Holding on does not repeat it - the entry is consumed.
     advanceFrames(im, 500);
     expect(spy).toHaveBeenCalledTimes(1);
 
@@ -291,7 +291,7 @@ describe('InputManager — long-press and the scene pause', () => {
     scenes.paused = false;
 
     // The 400 ms banked before the pause still count, so 96 ms is one frame
-    // short and 112 ms crosses the threshold — the pause neither reset the
+    // short and 112 ms crosses the threshold - the pause neither reset the
     // hold nor credited it the frozen frames.
     advanceFrames(im, 96);
     expect(spy).not.toHaveBeenCalled();

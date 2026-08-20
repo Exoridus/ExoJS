@@ -6,7 +6,7 @@ import { GamepadMappingFamily } from './GamepadMapping';
 /**
  * Named controls that can appear in an in-game prompt or button-hint UI.
  *
- * Intentionally a subset of {@link GamepadButton} channels — covers the
+ * Intentionally a subset of {@link GamepadButton} channels - covers the
  * controls a typical prompt overlay needs to label, including the composite
  * `'DPad'` token which has no single channel equivalent. The names retain
  * a `'Button'` prefix on the face cluster for compatibility with prompt
@@ -164,8 +164,8 @@ const switchLabels = new Map<GamepadPromptControl, string>([
 ]);
 
 /**
- * Solo Joy-Con (L). The SL/SR rail buttons report paddle channels — see
- * {@link JoyConLeftGamepadMapping} — and this half takes the two left-hand
+ * Solo Joy-Con (L). The SL/SR rail buttons report paddle channels - see
+ * {@link JoyConLeftGamepadMapping} - and this half takes the two left-hand
  * slots, so only those two carry a label.
  */
 const joyConLeftLabels = createLabels(switchLabels, [
@@ -264,7 +264,7 @@ export class GamepadPromptLayouts {
    * Pass the connected pad's {@link GamepadMapping} rather than its family
    * whenever you have one: a family spans several product generations, and the
    * mapping contributes the labels that differ between them through
-   * {@link GamepadMapping.promptLabels} — "Share" on a DualShock 4 where the
+   * {@link GamepadMapping.promptLabels} - "Share" on a DualShock 4 where the
    * family default reads "Create". The merged map is cached per mapping.
    *
    * @example

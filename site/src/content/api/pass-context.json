@@ -1,6 +1,6 @@
 {
   "title": "PassContext",
-  "description": "Pass-scoped DrawContext: the active render target and view for a CallbackRenderPass callback. `clear`/`render`/`renderTo` route through the owning RenderingContext (and its pass coordinator), so they act on THIS pass's target and never reset the active view or leak onto another target. Default view for `render`/`draw*` is the pass view — not the world view — so a callback inside an off-screen redirect renders correctly without passing `{ view }` explicitly. Use backend only for raw draws or GPU state; switching target / view / clear through it bypasses the coordinator (the leak this type prevents).",
+  "description": "Pass-scoped DrawContext: the active render target and view for a CallbackRenderPass callback. `clear`/`render`/`renderTo` route through the owning RenderingContext (and its pass coordinator), so they act on THIS pass's target and never reset the active view or leak onto another target. Default view for `render`/`draw*` is the pass view - not the world view - so a callback inside an off-screen redirect renders correctly without passing `{ view }` explicitly. Use backend only for raw draws or GPU state; switching target / view / clear through it bypasses the coordinator (the leak this type prevents).",
   "symbol": "PassContext",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Pass-scoped DrawContext: the active render target and view for a CallbackRenderPass callback. `clear`/`render`/`renderTo` route through the owning RenderingContext (and its pass coordinator), so they act on THIS pass's target and never reset the active view or leak onto another target. Default view for `render`/`draw*` is the pass view — not the world view — so a callback inside an off-screen redirect renders correctly without passing `{ view }` explicitly.",
+        "Pass-scoped DrawContext: the active render target and view for a CallbackRenderPass callback. `clear`/`render`/`renderTo` route through the owning RenderingContext (and its pass coordinator), so they act on THIS pass's target and never reset the active view or leak onto another target. Default view for `render`/`draw*` is the pass view - not the world view - so a callback inside an off-screen redirect renders correctly without passing `{ view }` explicitly.",
         "Use backend only for raw draws or GPU state; switching target / view / clear through it bypasses the coordinator (the leak this type prevents)."
       ],
       "importLine": "import { PassContext } from '@codexo/exojs'",
@@ -549,7 +549,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Raw backend — draws/state only; do NOT switch target/view/clear here."
+          "description": "Raw backend - draws/state only; do NOT switch target/view/clear here."
         }
       ],
       "paragraphs": [],

@@ -1,4 +1,4 @@
-// Auto-generated from mouse-and-pointer.ts — edit the .ts source, not this file.
+// Auto-generated from mouse-and-pointer.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Everything the pointer pipeline reports, surfaced at once:

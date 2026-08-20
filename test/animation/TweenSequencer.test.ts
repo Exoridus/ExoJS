@@ -333,7 +333,7 @@ describe('TweenSequencer', () => {
       expect(onComplete).not.toHaveBeenCalled();
       expect(seq.state).toBe(TweenSequencerState.Active);
 
-      // Pass 2 — tweens restarted from inside _startCurrentStage
+      // Pass 2 - tweens restarted from inside _startCurrentStage
       seq.update(1.0);
       seq.update(1.0);
       expect(onComplete).not.toHaveBeenCalled();
@@ -373,7 +373,7 @@ describe('TweenSequencer', () => {
 
       // t2 completes, ending pass 1; direction flips 1 -> -1 and pass 2
       // starts reversed, immediately restarting t2 (logical stage 0 now
-      // maps to t2) — all within this single update() call.
+      // maps to t2) - all within this single update() call.
       seq.update(1.0);
       expect(t2.state).toBe(TweenState.Active);
 

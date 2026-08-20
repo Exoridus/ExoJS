@@ -10,21 +10,21 @@ declare const matrix: Matrix;
 // would silently skip the bounds/content invalidation the engine needs.
 // Engine-internal writers go through `_setLocalBounds` instead.
 
-// @ts-expect-error — the read-only bounds view has no set()
+// @ts-expect-error - the read-only bounds view has no set()
 node.getLocalBounds().set(0, 0, 16, 16);
-// @ts-expect-error — the read-only bounds view has no setPosition()
+// @ts-expect-error - the read-only bounds view has no setPosition()
 node.getLocalBounds().setPosition(1, 2);
-// @ts-expect-error — the read-only bounds view has no setSize()
+// @ts-expect-error - the read-only bounds view has no setSize()
 node.getLocalBounds().setSize(1, 2);
-// @ts-expect-error — the read-only bounds view has no copy()
+// @ts-expect-error - the read-only bounds view has no copy()
 node.getLocalBounds().copy(new Rectangle(0, 0, 1, 1));
-// @ts-expect-error — the read-only bounds view has no destroy()
+// @ts-expect-error - the read-only bounds view has no destroy()
 node.getLocalBounds().destroy();
-// @ts-expect-error — x is read-only on the bounds view
+// @ts-expect-error - x is read-only on the bounds view
 node.getLocalBounds().x = 4;
-// @ts-expect-error — width is read-only on the bounds view
+// @ts-expect-error - width is read-only on the bounds view
 node.getLocalBounds().width = 4;
-// @ts-expect-error — transform() may not default to mutating the view in place
+// @ts-expect-error - transform() may not default to mutating the view in place
 node.getLocalBounds().transform(matrix);
 
 // Reads must keep working unchanged.

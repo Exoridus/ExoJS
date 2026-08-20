@@ -1,4 +1,4 @@
-// Auto-generated from blendmodes.ts — edit the .ts source, not this file.
+// Auto-generated from blendmodes.ts - edit the .ts source, not this file.
 import { Application, Asset, BlendModes, Color, ScaleModes, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
@@ -9,7 +9,7 @@ const BLEND_MODES = [
     { mode: BlendModes.Subtract, name: 'Subtract' },
     { mode: BlendModes.Multiply, name: 'Multiply' },
     { mode: BlendModes.Screen, name: 'Screen' },
-    // Advanced (backdrop-aware) modes — correct coverage, work with alpha.
+    // Advanced (backdrop-aware) modes - correct coverage, work with alpha.
     { mode: BlendModes.Darken, name: 'Darken' },
     { mode: BlendModes.Lighten, name: 'Lighten' },
     { mode: BlendModes.Overlay, name: 'Overlay' },
@@ -32,10 +32,10 @@ class BlendmodesScene extends Scene {
     ticker = 0;
     hud;
     cycle;
-    // Note: passing `options` as a 3rd argument to `loader.get(…)` or
-    // `loader.load(Asset.type('texture', …))` alongside a non-Json type currently mis-resolves
+    // Note: passing `options` as a 3rd argument to `loader.get(...)` or
+    // `loader.load(Asset.type('texture', ...))` alongside a non-Json type currently mis-resolves
     // the overload (falls through to the `Json` generic and types the result as
-    // `unknown`) — see the flagged deviation in the migration report. `load()`
+    // `unknown`) - see the flagged deviation in the migration report. `load()`
     // is awaited here purely to seed the fetch with `scaleMode: Nearest`; its
     // return value is intentionally unused. The subsequent 2-argument `get()`
     // calls for the same sources are unaffected and stay seamless.

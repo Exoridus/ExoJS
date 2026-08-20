@@ -50,7 +50,7 @@ const withHarness = (fn: (harness: WebGl2Harness) => void): void => {
 
 /**
  * A fully retained scene: `count` sprites, all in `mode`, inside a single
- * translated RetainedContainer under the root — no live drawable outside the
+ * translated RetainedContainer under the root - no live drawable outside the
  * group, so a steady splice frame does zero instance/transform upload.
  */
 const buildSnappedScene = (count: number, mode: PixelSnapMode): { root: Container; group: RetainedContainer; inside: Sprite[] } => {
@@ -252,7 +252,7 @@ describe('GPU position pixel-snap: retained recording gates (PR 1)', () => {
 
       // A pure transform move on a position-snapped direct child: content and
       // structure stay clean, so the group keeps its recording and patches just
-      // this child's row — the recorded row carries the RAW translation and the
+      // this child's row - the recorded row carries the RAW translation and the
       // snap flag, and the shader rounds it on the GPU.
       inside[1]!.setPosition(80, 80);
 

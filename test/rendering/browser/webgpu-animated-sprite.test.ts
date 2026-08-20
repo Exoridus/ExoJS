@@ -1,5 +1,5 @@
 /**
- * WebGPU AnimatedSprite browser test — v0.16 renderer-matrix follow-up.
+ * WebGPU AnimatedSprite browser test - v0.16 renderer-matrix follow-up.
  *
  * {@link AnimatedSprite} reuses the normal Sprite renderer but swaps the
  * texture-frame UV sub-region per animation frame. This asserts that swap
@@ -8,7 +8,7 @@
  * frame 0, then advanced to frame 1, with pixel reads proving the sampled
  * color changes to match the new cell.
  *
- * All WebGPU renderers use inline WGSL — no shader file mocks are needed.
+ * All WebGPU renderers use inline WGSL - no shader file mocks are needed.
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
  * against Mesa lavapipe); `renderScene` only skips when the software adapter
  * drops the device mid-test.
@@ -177,7 +177,7 @@ describe('WebGPU AnimatedSprite — frame-region UV swap', () => {
 
       readPixel = readWebGpuPixels(backend, canvasSize);
 
-      // Same screen position now samples cell 1 (blue) — proves the UV
+      // Same screen position now samples cell 1 (blue) - proves the UV
       // sub-rect swap, not just a re-render of the same frame.
       expectPixelNear(readPixel(16, 16), [0, 0, 255, 255]);
     } finally {

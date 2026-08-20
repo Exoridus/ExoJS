@@ -6,7 +6,7 @@ import { mountControls } from '@examples/runtime';
 // The lesson: bind several *physical* inputs to a few *named actions*, then read
 // only the actions in the update loop. Keyboard and gamepad feed the same
 // `moveX` / `moveY` / `jump` values, so the gameplay code never branches on the
-// device. Whichever device pushes a control harder this frame wins — so you can
+// device. Whichever device pushes a control harder this frame wins - so you can
 // pick up either input mid-motion without a mode switch.
 class ActionMappingScene extends Scene {
     private sprite!: Sprite;

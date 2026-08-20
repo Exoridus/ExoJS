@@ -1,6 +1,6 @@
 {
   "title": "ColorGradient",
-  "description": "Piecewise-linear color gradient sampled by lifetime ratio `t` in `[0, 1]`. Keyframes are stored sorted by `t`; sampling outside the range returns the nearest endpoint color. Like Curve, the last accessed segment is cached so monotonically advancing `t` is O(1) amortised. Two output paths: - evaluate — writes into a `Color` instance (own scratch by default). - evaluateRgba — returns the packed `0xAABBGGRR` u32 directly, skipping the Color object. Use this in tight per-particle inner loops that write into a `Uint32Array` instance buffer.",
+  "description": "Piecewise-linear color gradient sampled by lifetime ratio `t` in `[0, 1]`. Keyframes are stored sorted by `t`; sampling outside the range returns the nearest endpoint color. Like Curve, the last accessed segment is cached so monotonically advancing `t` is O(1) amortised. Two output paths: - evaluate - writes into a `Color` instance (own scratch by default). - evaluateRgba - returns the packed `0xAABBGGRR` u32 directly, skipping the Color object. Use this in tight per-particle inner loops that write into a `Uint32Array` instance buffer.",
   "symbol": "ColorGradient",
   "kind": "class",
   "subsystem": "particles",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Piecewise-linear color gradient sampled by lifetime ratio `t` in `[0, 1]`. Keyframes are stored sorted by `t`; sampling outside the range returns the nearest endpoint color. Like Curve, the last accessed segment is cached so monotonically advancing `t` is O(1) amortised.",
-        "Two output paths: - evaluate — writes into a `Color` instance (own scratch by default). - evaluateRgba — returns the packed `0xAABBGGRR` u32 directly, skipping the Color object. Use this in tight per-particle inner loops that write into a `Uint32Array` instance buffer."
+        "Two output paths: - evaluate - writes into a `Color` instance (own scratch by default). - evaluateRgba - returns the packed `0xAABBGGRR` u32 directly, skipping the Color object. Use this in tight per-particle inner loops that write into a `Uint32Array` instance buffer."
       ],
       "importLine": "import { ColorGradient } from '@codexo/exojs-particles'",
       "sourceLink": null

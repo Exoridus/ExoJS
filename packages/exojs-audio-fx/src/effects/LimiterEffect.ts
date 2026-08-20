@@ -248,7 +248,7 @@ export class LimiterEffect extends AudioEffect {
     wetGain.gain.setValueAtTime(this._wet, ctx.currentTime);
 
     // Defaults to brick-wall behaviour (high ratio, hard knee) but both remain
-    // configurable — see LimiterEffectOptions.ratio / .knee.
+    // configurable - see LimiterEffectOptions.ratio / .knee.
     compressor.ratio.setValueAtTime(this._ratio, ctx.currentTime);
     compressor.knee.setValueAtTime(this._knee, ctx.currentTime);
     compressor.threshold.setValueAtTime(this._threshold, ctx.currentTime);

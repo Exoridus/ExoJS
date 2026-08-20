@@ -1,6 +1,6 @@
 {
   "title": "ReverbEffect",
-  "description": "Convolution reverb using a procedurally-generated impulse response loaded into a `ConvolverNode`. The impulse response is a stereo noise burst whose amplitude decays exponentially, simulating room reflections. Adjusting `durationSeconds` or `decay` rebuilds the impulse response immediately, so avoid animating these properties at audio rate — use `wet` for real-time mix control instead.",
+  "description": "Convolution reverb using a procedurally-generated impulse response loaded into a `ConvolverNode`. The impulse response is a stereo noise burst whose amplitude decays exponentially, simulating room reflections. Adjusting `durationSeconds` or `decay` rebuilds the impulse response immediately, so avoid animating these properties at audio rate - use `wet` for real-time mix control instead.",
   "symbol": "ReverbEffect",
   "kind": "class",
   "subsystem": "audio",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Convolution reverb using a procedurally-generated impulse response loaded into a `ConvolverNode`. The impulse response is a stereo noise burst whose amplitude decays exponentially, simulating room reflections. Adjusting `durationSeconds` or `decay` rebuilds the impulse response immediately, so avoid animating these properties at audio rate — use `wet` for real-time mix control instead."
+        "Convolution reverb using a procedurally-generated impulse response loaded into a `ConvolverNode`. The impulse response is a stereo noise burst whose amplitude decays exponentially, simulating room reflections. Adjusting `durationSeconds` or `decay` rebuilds the impulse response immediately, so avoid animating these properties at audio rate - use `wet` for real-time mix control instead."
       ],
       "importLine": "import { ReverbEffect } from '@codexo/exojs-audio-fx'",
       "sourceLink": null

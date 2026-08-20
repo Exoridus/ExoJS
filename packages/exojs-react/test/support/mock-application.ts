@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 
 // Values mirrored from the real `ApplicationState` enum. They are injected by
-// each test file's `vi.mock('@codexo/exojs', …)` factory via
+// each test file's `vi.mock('@codexo/exojs', ...)` factory via
 // `configureApplicationState(actual.ApplicationState)` so the mock never
 // hard-codes the enum's members (and can't drift from the real engine).
 const state = { stopped: 'stopped', running: 'running', loading: 'loading' };
@@ -52,8 +52,8 @@ interface MockApplicationOptions {
 
 /**
  * Minimal `Signal`-alike (add/remove/dispatch/count) for `MockApplication.onError`.
- * Deliberately NOT the real `Signal` from `@codexo/exojs` — this module is
- * dynamically imported from inside the `vi.mock('@codexo/exojs', …)` factory
+ * Deliberately NOT the real `Signal` from `@codexo/exojs` - this module is
+ * dynamically imported from inside the `vi.mock('@codexo/exojs', ...)` factory
  * (see `configureApplicationState` above for the same reasoning), so a
  * top-level `import { Signal } from '@codexo/exojs'` here would re-enter the
  * still-resolving mock factory and deadlock the module loader.
@@ -129,7 +129,7 @@ export class MockApplication {
   /**
    * True while `start()`'s initial navigation is running. The real
    * SceneDirector never queues navigation: an overlapping `change()` rejects
-   * with `ConcurrentSceneNavigationError` — including against the navigation
+   * with `ConcurrentSceneNavigationError` - including against the navigation
    * `Application.start()` performs internally, which is the window a React
    * StrictMode double-mount lands in.
    */
@@ -141,7 +141,7 @@ export class MockApplication {
   public readonly scenes: MockSceneDirector = {
     currentScene: null,
     // The real SceneDirector.change() takes a constructor and constructs a
-    // fresh instance internally — mirror that here so
+    // fresh instance internally - mirror that here so
     // `scenes.currentScene` is an instance, matching what the real API
     // exposes, while `change.mock.calls` still records the raw constructor
     // argument tests assert against.
@@ -176,7 +176,7 @@ export class MockApplication {
 
     const startPromise = (async (): Promise<MockApplication> => {
       try {
-        // Stands in for backend init / capability detection — the async window
+        // Stands in for backend init / capability detection - the async window
         // during which the initial navigation has not completed yet.
         await Promise.resolve();
 

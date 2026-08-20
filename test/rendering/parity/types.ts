@@ -26,7 +26,7 @@ export type { EvidenceClass, EvidenceRow, SupportState } from './evidenceSink';
  *
  * `colour-modified` is a self-describing texture the scene then tints, blends
  * or otherwise recolours. The geometry stays exact, but the channels no longer
- * carry coordinates, so the pixel cannot be traced back — worth stating
+ * carry coordinates, so the pixel cannot be traced back - worth stating
  * separately from `opaque-solid`, where nothing was traceable to begin with.
  */
 export type FixtureKind = 'self-describing' | 'colour-modified' | 'opaque-solid' | 'interpolated';
@@ -41,7 +41,7 @@ export interface Scene {
   readonly fixture: FixtureKind;
   /** Nearest sampling is the other half of the `traced` precondition. */
   readonly nearestSampled: boolean;
-  /** Builds a fresh scene graph. Called once per backend — never share nodes across backends. */
+  /** Builds a fresh scene graph. Called once per backend - never share nodes across backends. */
   readonly build: () => Container;
   /**
    * Bounds within which this scene's two backends may disagree, for the rare
@@ -63,7 +63,7 @@ export interface Scene {
    * Registers renderers this scene needs beyond the core set, called once on a
    * freshly initialised backend before anything is drawn.
    *
-   * Features living in extension packages — tilemaps, particles — have no
+   * Features living in extension packages - tilemaps, particles - have no
    * binding in `wireCoreRenderers`, so without this their nodes would silently
    * draw nothing. Which is precisely the failure `renders-something` was added
    * to catch, and a matrix row claiming verification of an unregistered
@@ -115,7 +115,7 @@ export type Property = PerBackendProperty | CrossBackendProperty;
 /**
  * Caps a property's claim at what the scene can actually support.
  *
- * `traced` requires a self-describing fixture under nearest sampling — without
+ * `traced` requires a self-describing fixture under nearest sampling - without
  * both, an output pixel cannot be traced back to a specific texel, however
  * exhaustively the frames were compared, so the claim drops to `frame-equal`.
  * A `colour-modified` fixture fails the same test for a different reason: the

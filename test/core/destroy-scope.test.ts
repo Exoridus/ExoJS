@@ -116,7 +116,7 @@ describe('DestroyScope', () => {
 });
 
 describe('Scene — ownership via track()', () => {
-  // Scene.destroy() is a pure user hook — tracked-resource
+  // Scene.destroy() is a pure user hook - tracked-resource
   // disposal is engine-owned teardown, run by SceneScope via
   // Scene._teardownInternals() (see scene-scope.test.ts for the full
   // permanent-teardown sequence this participates in).

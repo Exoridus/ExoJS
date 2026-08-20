@@ -2,7 +2,7 @@
  * CPU reference implementation of the W3C Compositing & Blending Level 1 blend
  * functions, in straight (un-premultiplied) color space [0, 1]. Mirrors the
  * GLSL/WGSL backdrop-blend shaders and serves as the pixel-value oracle for the
- * `webgl2-backdrop-blend` / `webgpu-backdrop-blend` suite tests — written
+ * `webgl2-backdrop-blend` / `webgpu-backdrop-blend` suite tests - written
  * independently of the shaders so an agreement is a real cross-check, not a
  * tautology.
  */

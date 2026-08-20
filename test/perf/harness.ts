@@ -3,7 +3,7 @@
  *
  * Each domain (rendering, audio, collision, scene-graph, interaction) imports
  * the types and helpers it needs.  The harness itself has no domain
- * knowledge — it only measures wall-clock time and writes JSON + Markdown
+ * knowledge - it only measures wall-clock time and writes JSON + Markdown
  * output to test/perf/results/.
  */
 
@@ -33,7 +33,7 @@ export interface BenchmarkResult {
   readonly avgMs: number;
   readonly minMs: number;
   readonly maxMs: number;
-  /** Domain-specific extra columns — may be undefined for non-rendering runs. */
+  /** Domain-specific extra columns - may be undefined for non-rendering runs. */
   readonly extra?: Readonly<Record<string, number | string>>;
 }
 
@@ -95,7 +95,7 @@ const DEFAULT_COLUMNS: ColumnDef[] = [
 
 const getCellValue = (result: BenchmarkResult, key: string): string => {
   if (key in result) {
-    // `extra` is a record, not a cell — its columns are resolved below by name.
+    // `extra` is a record, not a cell - its columns are resolved below by name.
     // Stringifying it here would print `[object Object]` into the table.
     const value = key === 'extra' ? undefined : result[key as Exclude<keyof BenchmarkResult, 'extra'>];
 
@@ -126,7 +126,7 @@ export const formatResults = (results: readonly BenchmarkResult[], columns: read
  * repository or git is unavailable.
  *
  * Files are commit-named so multiple local runs over time accumulate in
- * `test/perf/results/` without overwriting each other — useful for diffing
+ * `test/perf/results/` without overwriting each other - useful for diffing
  * perf characteristics across versions / commits. All result files are
  * gitignored; the suffix is purely a local-retention convenience.
  */
@@ -147,7 +147,7 @@ const buildIdentifier = (() => {
       .toString()
       .trim();
   } catch {
-    // ignore — not in a git repo or git unavailable
+    // ignore - not in a git repo or git unavailable
   }
 
   return sha ? `${version}-${sha}` : version;

@@ -1,5 +1,5 @@
 /**
- * WebGPU render-only pixel-snapping browser tests — opt-in, capability-aware.
+ * WebGPU render-only pixel-snapping browser tests - opt-in, capability-aware.
  *
  * Mirrors `webgl2-pixel-snap.test.ts` case-for-case on the WebGPU backend.
  * The exact snapping math is proven by `test/rendering/pixel-snap.test.ts`;
@@ -9,7 +9,7 @@
  * rotation.
  *
  * CI guarantees a real WebGPU adapter (the required Chromium-WebGPU lane runs
- * against Mesa lavapipe), so these tests do not skip on a missing adapter —
+ * against Mesa lavapipe), so these tests do not skip on a missing adapter -
  * `renderScene` only skips when the software adapter drops the device
  * mid-test (a DOMException device-loss caught during rendering).
  *
@@ -105,7 +105,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 };
 
 // ---------------------------------------------------------------------------
-// Sprite — position snapping is render-only
+// Sprite - position snapping is render-only
 // ---------------------------------------------------------------------------
 
 describe('WebGPU pixel snapping — Sprite position mode', () => {
@@ -221,7 +221,7 @@ describe('WebGPU pixel snapping — Sprite position mode', () => {
 });
 
 // ---------------------------------------------------------------------------
-// NineSlice — geometry snapping is seam-free and downgrades under rotation
+// NineSlice - geometry snapping is seam-free and downgrades under rotation
 // ---------------------------------------------------------------------------
 
 describe('WebGPU pixel snapping — NineSlice geometry mode', () => {
@@ -244,7 +244,7 @@ describe('WebGPU pixel snapping — NineSlice geometry mode', () => {
       const readPixel = readWebGpuPixels(backend, canvasSize);
 
       // Scan a horizontal line well inside the panel: every pixel must be the
-      // solid panel colour — a snapping-induced seam would show as black.
+      // solid panel colour - a snapping-induced seam would show as black.
       for (let x = 10; x <= 44; x++) {
         const pixel = readPixel(x, 26);
 

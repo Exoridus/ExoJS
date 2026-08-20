@@ -7,15 +7,15 @@ import { mountControls } from '@examples/runtime';
 // procedural-terrain examples stream generated worlds: TiledMap.toTileMap()
 // converts every chunked ("infinite") tile layer to an unbounded runtime
 // TileLayer and builds a ChunkSource for it as a side effect; getChunkSource
-// hands that source to a ChunkStreamer — one per chunked layer — ticked from
+// hands that source to a ChunkStreamer - one per chunked layer - ticked from
 // a free-flying WASD camera with no bounds.
 //
 // drift-fields.tmj (examples/assets/json/maps/) is a small island cluster: a
-// "Ground" tile layer (8 on-disk 16x16 chunks — a sand beach ring, a rock
+// "Ground" tile layer (8 on-disk 16x16 chunks - a sand beach ring, a rock
 // outcrop near the origin, a snow patch tucked into the interior, and an open
 // "bay" where one corner chunk was left unauthored) and a sparser "Props"
 // tile layer (6 chunks of scattered boulder/gem decoration) stacked on top.
-// Everywhere neither layer has an on-disk chunk, the map shows nothing —
+// Everywhere neither layer has an on-disk chunk, the map shows nothing -
 // the clear color behind it reads as open water.
 
 const TILE = 64;
@@ -46,7 +46,7 @@ class TiledInfiniteMapScene extends Scene {
             throw new Error('drift-fields.tmj is missing its "Ground" or "Props" tile layer');
         }
 
-        // getChunkSource is a side effect of the toTileMap() call above — it
+        // getChunkSource is a side effect of the toTileMap() call above - it
         // returns undefined for a finite (data-based) layer, and one
         // ChunkSource per chunked ("infinite") layer otherwise.
         const groundSource = source.getChunkSource(ground.id);
@@ -58,7 +58,7 @@ class TiledInfiniteMapScene extends Scene {
 
         const { width, height } = app;
 
-        // Free camera: moved directly by WASD, not following any actor — no
+        // Free camera: moved directly by WASD, not following any actor - no
         // setBounds, since an unbounded map has no edges to clamp to.
         this.camera = new View(0, 0, width, height);
 

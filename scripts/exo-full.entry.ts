@@ -1,4 +1,4 @@
-// Full-bundle entry — bundles core + all extension packages into a single IIFE.
+// Full-bundle entry - bundles core + all extension packages into a single IIFE.
 // Global name: Exo (i.e. window.Exo after a <script> tag).
 //
 // Extension packages that re-export tilemap runtime classes (tiled, ldtk) are
@@ -14,7 +14,7 @@ export * from '@codexo/exojs-particles';
 // ── Audio FX ──────────────────────────────────────────────────────────────────
 export * from '@codexo/exojs-audio-fx';
 
-// ── Tilemap (base) — value exports only. The package's object-layer
+// ── Tilemap (base) - value exports only. The package's object-layer
 // `TextStyle` interface collides with core's runtime `TextStyle` class, while
 // type-only exports do not exist on the IIFE global. Tiled + LDtk also
 // re-export these runtime symbols, so import them exactly once here. ──────────
@@ -54,7 +54,7 @@ export * from '@codexo/exojs-physics';
 export * from '@codexo/exojs-aseprite';
 
 // ── Tiled ─────────────────────────────────────────────────────────────────────
-// Unique value exports only — tilemap runtime classes (TileMap, TileSet, …)
+// Unique value exports only - tilemap runtime classes (TileMap, TileSet, ...)
 // are already exported from exojs-tilemap above. Note: TiledMap / TiledLayer /
 // TiledObjectLayer are the *parsed source model* classes (distinct from the
 // runtime TileMap / TileLayer / ObjectLayer from tilemap).
@@ -76,7 +76,7 @@ export {
 } from '@codexo/exojs-tiled';
 
 // ── LDtk ──────────────────────────────────────────────────────────────────────
-// Unique value exports only — tilemap runtime classes already exported above.
+// Unique value exports only - tilemap runtime classes already exported above.
 export {
   LDTK_FLIP_NONE,
   LDTK_FLIP_X,

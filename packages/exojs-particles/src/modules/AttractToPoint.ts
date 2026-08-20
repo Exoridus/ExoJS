@@ -7,7 +7,7 @@ import type { WgslContribution } from './WgslContribution';
  * Pulls every live particle toward a fixed point in the system's local
  * coordinate space. Acceleration magnitude is `strength` (units / s²),
  * applied along the direction `(point − particle)`. The optional `falloff`
- * radius softens the pull near the center — particles within `falloff`
+ * radius softens the pull near the center - particles within `falloff`
  * units lerp the strength linearly to zero, preventing the singularity at
  * `r = 0` from yielding infinite acceleration.
  *

@@ -1,4 +1,4 @@
-// Auto-generated from bloom-lite.ts — edit the .ts source, not this file.
+// Auto-generated from bloom-lite.ts - edit the .ts source, not this file.
 import { Application, BlendModes, BlurFilter, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 class BloomLiteScene extends Scene {
     baseRt;

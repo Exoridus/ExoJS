@@ -116,7 +116,7 @@ describe('buildCollidersFromObjectLayer', () => {
   it('skips and warns on a non-convex polygon (no automatic decomposition)', () => {
     const world = new PhysicsWorld();
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    // An arrow/dart shape — concave, so PolygonShape rejects it.
+    // An arrow/dart shape - concave, so PolygonShape rejects it.
     const concave: TileMapObject = {
       ...base,
       kind: ObjectKind.Polygon,
@@ -247,7 +247,7 @@ describe('buildCollidersFromTileLayer', () => {
 
     const built = buildCollidersFromTileLayer(world, layer);
 
-    // Four tiles, one merged body — the whole point of the merging pass.
+    // Four tiles, one merged body - the whole point of the merging pass.
     expect(built).toHaveLength(1);
     expect(built[0].source.kind).toBe('rect');
 

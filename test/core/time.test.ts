@@ -3,7 +3,7 @@ import { Time } from '#core/Time';
 // Regression coverage for the shared canonical Time constants: they used to
 // be plain mutable Time instances, so a mutating call on one (e.g.
 // `Time.zero.add(1)`) corrupted the shared value for every other caller
-// process-wide. They are now frozen — a mutating call throws instead.
+// process-wide. They are now frozen - a mutating call throws instead.
 describe('Time canonical constants are frozen', () => {
   const mutators: Array<[name: string, run: (time: Time) => void]> = [
     ['set()', time => time.set(5)],
@@ -58,7 +58,7 @@ describe('Time canonical constants are frozen', () => {
 });
 
 // `Time.temp` was a publicly reachable static getter returning the exact
-// scratch instance the frame loop hands out as `frameDelta` every frame —
+// scratch instance the frame loop hands out as `frameDelta` every frame -
 // user code holding that reference could mutate the delta the engine was
 // about to consume. It has been internalized entirely (moved into
 // Application, which owns the frame loop) rather than kept as public API.

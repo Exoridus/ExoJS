@@ -8,7 +8,7 @@ import { colliderAt } from './support';
 
 /**
  * Loose sanity gate for the high-N envelope this broad phase targets (tens of
- * thousands of colliders) — a generous wall-clock ceiling only, not a tight
+ * thousands of colliders) - a generous wall-clock ceiling only, not a tight
  * regression gate (machine-dependent, same posture as perf.test.ts). Catches
  * a catastrophic algorithmic regression (e.g. an accidental O(n^2) creeping
  * back in), not meant to track exact timings.
@@ -32,7 +32,7 @@ describe('AabbTreeBroadPhase high-N performance sanity', () => {
     broadPhase.computePairs(world.colliders, out);
 
     // Steady state: jitter a small fraction of colliders per step, well
-    // within the margin most of the time — the regime the fat-AABB
+    // within the margin most of the time - the regime the fat-AABB
     // coherence is meant to exploit.
     const steps = 60;
     const start = performance.now();
@@ -58,7 +58,7 @@ describe('AabbTreeBroadPhase high-N performance sanity', () => {
     const world = new PhysicsWorld();
     const colliders: Collider[] = [];
 
-    // 2,000 overlapping boxes on one line — sort-and-sweep degrades toward
+    // 2,000 overlapping boxes on one line - sort-and-sweep degrades toward
     // O(n^2) here; the tree's cost is dominated by insertion, not this shape.
     for (let i = 0; i < 2000; i++) {
       colliders.push(colliderAt(world, new BoxShape(20, 20), { x: i * 2, y: 0 }, 0, 'static'));

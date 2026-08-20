@@ -1,4 +1,4 @@
-// Auto-generated from bounding-boxes.ts — edit the .ts source, not this file.
+// Auto-generated from bounding-boxes.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 class BoundingBoxesScene extends Scene {
@@ -14,7 +14,7 @@ class BoundingBoxesScene extends Scene {
             const sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(0.8);
             sprite.setPosition(margin + i * step, height / 2 + Math.sin(i) * 80);
             // The boundingBoxes layer walks the SCENE GRAPH (scene.root), so
-            // the sprites must be attached to it — nodes that are only passed
+            // the sprites must be attached to it - nodes that are only passed
             // to context.render() directly are invisible to the overlay.
             this.root.addChild(sprite);
             return { sprite, speed: 0.8 + i * 0.14 };

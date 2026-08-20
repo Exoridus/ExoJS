@@ -207,7 +207,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
       root.addChild(sprite);
 
       expect(() => render(backend, root)).not.toThrow();
-      // No pixels should be red — zero-size renders nothing
+      // No pixels should be red - zero-size renders nothing
       expectPixelNear(readWebGl2Pixel(backend, 16, 16), [0, 0, 0, 255]);
     } finally {
       root.destroy();
@@ -236,7 +236,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
 
       render(backend, root);
 
-      // Both should show red — sampler state must not corrupt the sprite
+      // Both should show red - sampler state must not corrupt the sprite
       expectPixelNear(readWebGl2Pixel(backend, 12, 12), [255, 0, 0, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 42, 10), [255, 0, 0, 255]);
     } finally {
@@ -253,7 +253,7 @@ describe('WebGL2 RepeatingSprite — shader path', () => {
     const sprite = new RepeatingSprite(texture, { width: 16, height: 16 });
 
     try {
-      // Sprite at (40, 40) — interior at (44, 44)
+      // Sprite at (40, 40) - interior at (44, 44)
       sprite.setPosition(40, 40);
       root.addChild(sprite);
 

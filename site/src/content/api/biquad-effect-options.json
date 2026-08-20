@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Gain in dB — only used by peaking, lowshelf, highshelf. Default 0."
+          "description": "Gain in dB - only used by peaking, lowshelf, highshelf. Default 0."
         },
         {
           "name": "resonance",

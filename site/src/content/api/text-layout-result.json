@@ -1,6 +1,6 @@
 {
   "title": "TextLayoutResult",
-  "description": "Result of a full text layout pass: quad placements plus both extents. Text has two honest sizes and they are not interchangeable. The advance is what a layout wants — it answers \"how much room does this string take up in the flow\". The ink is what the GPU wants — it answers \"which rectangle do these glyphs actually cover\", padding, outline reach and all.",
+  "description": "Result of a full text layout pass: quad placements plus both extents. Text has two honest sizes and they are not interchangeable. The advance is what a layout wants - it answers \"how much room does this string take up in the flow\". The ink is what the GPU wants - it answers \"which rectangle do these glyphs actually cover\", padding, outline reach and all.",
   "symbol": "TextLayoutResult",
   "kind": "interface",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Result of a full text layout pass: quad placements plus both extents.",
-        "Text has two honest sizes and they are not interchangeable. The advance is what a layout wants — it answers \"how much room does this string take up in the flow\". The ink is what the GPU wants — it answers \"which rectangle do these glyphs actually cover\", padding, outline reach and all."
+        "Text has two honest sizes and they are not interchangeable. The advance is what a layout wants - it answers \"how much room does this string take up in the flow\". The ink is what the GPU wants - it answers \"which rectangle do these glyphs actually cover\", padding, outline reach and all."
       ],
       "importLine": "import { TextLayoutResult } from '@codexo/exojs'",
       "sourceLink": null
@@ -48,7 +48,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Advance extent — where the cursor ends up. Width is the widest line's advance (letterSpacing and kerning included, no trailing gap), height is lineCount * (fontSize * lineHeight + leading). This is the measure a caller wants for layout, panel sizing and caret placement."
+          "description": "Advance extent - where the cursor ends up. Width is the widest line's advance (letterSpacing and kerning included, no trailing gap), height is lineCount * (fontSize * lineHeight + leading). This is the measure a caller wants for layout, panel sizing and caret placement."
         },
         {
           "name": "ink",
@@ -133,7 +133,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Ink extent — the union of the glyph quads, in the same local space as placements. Carries SDF padding and therefore outline/shadow reach, and its minimum is not necessarily zero. This is the node's local bounds."
+          "description": "Ink extent - the union of the glyph quads, in the same local space as placements. Carries SDF padding and therefore outline/shadow reach, and its minimum is not necessarily zero. This is the node's local bounds."
         },
         {
           "name": "placements",

@@ -70,7 +70,7 @@ const groupScope = (entries: Array<DrawScopeEntry | GroupScopeEntry>): GroupScop
   preserveDrawOrder: false,
 });
 
-// Reference packing: one write per draw — the pre-refactor `_prepareDrawCommand` path.
+// Reference packing: one write per draw - the pre-refactor `_prepareDrawCommand` path.
 const packPerDraw = (scope: GroupScope): TransformBuffer => {
   const buffer = new TransformBuffer();
 

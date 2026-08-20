@@ -1,6 +1,6 @@
 // Strict:false regression guard for the `Assets.from()` catalog inference
 // (S3 Phase 4.5, G2). Compiled by `tsconfig.type-tests.json`, which inherits the
-// `strict: false` / `strictNullChecks: false` example project settings — the exact
+// `strict: false` / `strictNullChecks: false` example project settings - the exact
 // configuration under which `Assets.from({ ship: 'ship.png' }).ship` degraded to
 // `{}` before the `const` type parameter on `Assets.from` was added.
 //

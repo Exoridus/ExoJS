@@ -1,6 +1,6 @@
 {
   "title": "Logger",
-  "description": "Engine-wide log dispatcher. Below `LogSeverity.Error`, calls are dropped outright in production builds (`__DEV__` is `false`); `error()` always reaches every registered sink. In development a createConsoleSink is installed by default — see logger.",
+  "description": "Engine-wide log dispatcher. Below `LogSeverity.Error`, calls are dropped outright in production builds (`__DEV__` is `false`); `error()` always reaches every registered sink. In development a createConsoleSink is installed by default - see logger.",
   "symbol": "Logger",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Engine-wide log dispatcher. Below `LogSeverity.Error`, calls are dropped outright in production builds (`__DEV__` is `false`); `error()` always reaches every registered sink. In development a createConsoleSink is installed by default — see logger."
+        "Engine-wide log dispatcher. Below `LogSeverity.Error`, calls are dropped outright in production builds (`__DEV__` is `false`); `error()` always reaches every registered sink. In development a createConsoleSink is installed by default - see logger."
       ],
       "importLine": "import { Logger } from '@codexo/exojs'",
       "sourceLink": null

@@ -50,7 +50,7 @@ const mockFetchJson = (payload: unknown): void => {
 
 /**
  * A SINGLE persistent fetch mock that starts failing (404) and switches to
- * succeeding once `succeed()` is called — unlike `mockFetchImage`/`mockFetchJson`
+ * succeeding once `succeed()` is called - unlike `mockFetchImage`/`mockFetchJson`
  * (which install a brand-new `vi.fn()` per call), this keeps one mock alive
  * across a failure→retry cycle so the call count can prove "exactly one new
  * fetch per retry, never zero, never two".
@@ -125,7 +125,7 @@ describe('Loader._adopt', () => {
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
 
-    // Built with NO loader at all — mirrors what Assets.from() hands back.
+    // Built with NO loader at all - mirrors what Assets.from() hands back.
     const leaf = createLeaf('texture', 'ship.png') as Texture;
 
     expect(leaf.loadState).toBe('idle');
@@ -162,7 +162,7 @@ describe('Loader._adopt', () => {
     warnSpy.mockRestore();
   });
 
-  test('duplicate source, two distinct handles adopted while in flight: BOTH heal from ONE fetch, no warn (§7 multi-handle fill)', async () => {
+  test('duplicate source, two distinct handles adopted while in flight: BOTH heal from ONE fetch, no warn (multi-handle fill)', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
@@ -182,7 +182,7 @@ describe('Loader._adopt', () => {
     expect(a.width).toBe(4);
     expect(b.width).toBe(4);
     expect(global.fetch).toHaveBeenCalledTimes(1); // ONE decode shared across both handles
-    // Same (default) sampler on both → the former §7 hang-warn must NOT fire.
+    // Same (default) sampler on both, so the duplicate-source hang warning must NOT fire.
     expect(warnSpy).not.toHaveBeenCalled();
 
     warnSpy.mockRestore();
@@ -208,7 +208,7 @@ describe('Loader._adopt', () => {
     expect(b.loadState).toBe('ready');
     expect(a.width).toBe(4); // shared decode reached both
     expect(b.width).toBe(4);
-    // fill transplanted ONLY the decoded source — each handle kept its OWN sampler.
+    // fill transplanted ONLY the decoded source - each handle kept its OWN sampler.
     expect(a.scaleMode).toBe(ScaleModes.Nearest);
     expect(b.scaleMode).toBe(ScaleModes.Linear);
     expect(a.scaleMode).not.toBe(b.scaleMode);
@@ -284,7 +284,7 @@ describe('Loader._adopt', () => {
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
 
-    // "Loaded elsewhere earlier" — the core catalog scenario: some other
+    // "Loaded elsewhere earlier" - the core catalog scenario: some other
     // consumer already claimed and fully loaded this source under its own
     // scope, well before this leaf is ever adopted.
     const stored = owner.get('x.png');
@@ -292,7 +292,7 @@ describe('Loader._adopt', () => {
     expect(stored.loadState).toBe('ready');
     expect(stored.width).toBe(4);
 
-    // Built with NO loader at all — mirrors what Assets.from() hands back —
+    // Built with NO loader at all - mirrors what Assets.from() hands back -
     // and is a DISTINCT object from the already-stored resource.
     const leaf = createLeaf('texture', 'x.png') as Texture;
     expect(leaf.loadState).toBe('idle');
@@ -348,9 +348,9 @@ describe('Loader._adopt', () => {
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
 
-    // "Loaded elsewhere earlier" — the core catalog scenario: a bulk load()
+    // "Loaded elsewhere earlier" - the core catalog scenario: a bulk load()
     // (not get()) already resolved this value under its own scope, well
-    // before this leaf is ever adopted, and — crucially — WITHOUT ever
+    // before this leaf is ever adopted, and - crucially - WITHOUT ever
     // creating an AssetRef for the key (load() never touches `_refs`), so
     // this exercises the exact stored-raw-value fast path `_getRef` uses.
     await owner.load('cfg.json');
@@ -442,7 +442,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     succeed();
     loader._adopt(a, loader.createScope({ name: 'claimer-a' })); // re-adopt only `a`
 
-    // The co-handle `b` — never touched directly — heals too.
+    // The co-handle `b` - never touched directly - heals too.
     expect(a.loadState).toBe('loading');
     expect(b.loadState).toBe('loading');
 
@@ -468,8 +468,8 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
 
     // A second scene claiming the same catalog hands over a leaf that was never
     // adopted before: 'idle', never 'failed'. What failed is the KEY, and
-    // nothing else will ever restart it — no fetch is in flight and
-    // `_storeResource` never runs for it — so the joining leaf must drive the
+    // nothing else will ever restart it - no fetch is in flight and
+    // `_storeResource` never runs for it - so the joining leaf must drive the
     // retry off its FAILED SIBLING, not off its own prior state.
     succeed();
 
@@ -588,7 +588,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
 
     await expect(leaf.loaded).resolves.toBe(leaf);
 
-    // Releasing only the retry scope must NOT evict — the original scope still holds it.
+    // Releasing only the retry scope must NOT evict - the original scope still holds it.
     loader._release(key, retryClaimer);
     expect(leaf.loadState).toBe('ready');
     expect(loader['_residency']['_claims'].has(key)).toBe(true);
@@ -614,7 +614,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(b.loadState).toBe('failed');
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    // Retry — but the source is STILL down.
+    // Retry - but the source is STILL down.
     loader._adopt(a, loader.createScope({ name: 'a2' }));
     expect(a.loadState).toBe('loading');
     expect(b.loadState).toBe('loading');
@@ -624,7 +624,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(b.loadState).toBe('failed'); // co-handle updated too, not orphaned
     expect(fetchMock).toHaveBeenCalledTimes(2);
 
-    // Still retryable — the source recovers on the NEXT attempt.
+    // Still retryable - the source recovers on the NEXT attempt.
     succeed();
     loader._adopt(a, loader.createScope({ name: 'a3' }));
 
@@ -703,7 +703,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
     // Value twin of the seamless case: a second scene hands over a ref that was
-    // never adopted before — 'idle', never 'failed'. What failed is the KEY, so
+    // never adopted before - 'idle', never 'failed'. What failed is the KEY, so
     // the joining ref must drive the retry off its FAILED SIBLING, not off its
     // own prior state. Nothing else would restart the key: its fetch already
     // settled into failure, so `_storeResource` never runs for it.
@@ -859,7 +859,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
 
     await expect(leaf.loaded).resolves.toEqual({ hp: 3 });
 
-    // Releasing only the retry scope must NOT evict — the original scope still holds it.
+    // Releasing only the retry scope must NOT evict - the original scope still holds it.
     loader._release(key, retryClaimer);
     expect(leaf.loadState).toBe('ready');
     expect(loader['_residency']['_claims'].has(key)).toBe(true);
@@ -870,11 +870,11 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
   });
 
   // Minor #2 (review follow-up): the generic re-arm at the top of `_adopt` only
-  // re-enters 'loading' on the shared `_loadState` — it does not clear a value
+  // re-enters 'loading' on the shared `_loadState` - it does not clear a value
   // ref's OWN `_value`/`_hasValue` (only `AssetRef._begin()` does). `_fail()`
   // never clears them either, so a ref that was 'ready' before a LATER failure
   // (`_onTrackedFailure` fails every ref of a key regardless of its prior state)
-  // must have its stale internal value actually cleared on retry — not merely
+  // must have its stale internal value actually cleared on retry - not merely
   // hidden behind the `state !== 'ready'` guard on `.value`.
   test('a ref that was ready, then failed, has its stale value actually cleared on retry (not just gated by state)', async () => {
     const { fetchMock, succeed } = togglableJsonFetch({ hp: 42 });
@@ -891,7 +891,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
 
     // A LATER failure on this already-'ready' ref (mirrors `_onTrackedFailure`,
     // which fails every ref of a key regardless of its current state), paired
-    // with invalidating the stored value directly — value-ref eviction has no
+    // with invalidating the stored value directly - value-ref eviction has no
     // public path yet ("an accepted gap", per AssetResidency._evictKey's own
     // comment), so this reaches into internals to set up the precondition
     // rather than exercising a real eviction API that does not exist.
@@ -901,7 +901,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(leaf.loadState).toBe('failed');
     expect(() => leaf.value).toThrow("'failed'"); // gated by state, as expected
 
-    // `_fail()` alone does NOT clear the stale value — confirms the precondition
+    // `_fail()` alone does NOT clear the stale value - confirms the precondition
     // this test is guarding against actually holds before the retry runs.
     const internalsBeforeRetry = leaf as unknown as { _value: unknown; _hasValue: boolean };
 
@@ -913,7 +913,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(leaf.loadState).toBe('loading');
     expect(() => leaf.value).toThrow("'loading'"); // still gated by state either way…
 
-    // …but the INTERNAL value must actually be cleared too, not merely hidden
+    // ...but the INTERNAL value must actually be cleared too, not merely hidden
     // behind the state guard: re-arming through the generic `LoadState.begin()`
     // alone (bypassing `AssetRef._begin()`) would leave the stale `{hp:42}`
     // sitting in `_value`/`_hasValue` behind that gate.
@@ -1013,10 +1013,10 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     const textureCatalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
 
     // Each assertion is wrapped in an uncalled arrow so only the overload
-    // resolution is checked — invoking `load()` for real here would fire an
+    // resolution is checked - invoking `load()` for real here would fire an
     // unmocked fetch.
     //
-    // catalog.config: AssetRef<unknown> — load() must resolve to the raw value
+    // catalog.config: AssetRef<unknown> - load() must resolve to the raw value
     // type (`unknown`), never to `LoadingQueue<AssetRef<unknown>>`.
     expectTypeOf(() => owner.load(catalog.config)).returns.toEqualTypeOf<LoadingQueue<unknown>>();
 
@@ -1047,10 +1047,9 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1); // one network fetch for the shared source
   });
 
-  // §7 fix: a single catalog with two fields pointing at the same source
-  // produces two DIFFERENT leaves for the same key. The first leaf registers
-  // and starts the fetch; the second distinct leaf is added to the key's
-  // in-flight handle set, so ONE decode heals BOTH leaves in place — no hang,
+  // A single catalog with two fields pointing at the same source produces two
+  // DIFFERENT leaves for the same key. The first leaf registers and starts the fetch; the second distinct leaf is added to the key's
+  // in-flight handle set, so ONE decode heals BOTH leaves in place - no hang,
   // no warn (same sampler).
   test('duplicate source within one catalog: both leaves heal from ONE fetch (no hang, no warn)', async () => {
     mockFetchImage();
@@ -1080,7 +1079,7 @@ describe('Loader.get / load — Assets catalog adoption (end-to-end)', () => {
   // The runtime contract the loader's single-leaf TYPE overloads mirror: a leaf
   // is exactly an object carrying the `_assetMeta` stamp. A catalog property is
   // stamped (it comes from `createLeaf`); a bare-path `get(path)` handle is NOT
-  // — that branch resolves through the source-keyed dedup instead. This is why
+  // - that branch resolves through the source-keyed dedup instead. This is why
   // `LeafForPath` (the `get(path)` result) stays unbranded while the catalog
   // twin is branded: branding both would let `load(owner.get('x.png'))`
   // compile into the record fallback.

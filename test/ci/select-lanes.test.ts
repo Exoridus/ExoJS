@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { effectiveLanes, selectAreas } from '../../scripts/ci/select-lanes.mjs';
 
 // Deterministic coverage for the CI path-to-lane policy. The logic under test is
-// scripts/ci/select-lanes.mjs — the SAME module the "Detect changes" job in
-// .github/workflows/_ci-checks.yml runs — so these assertions exercise the real
+// scripts/ci/select-lanes.mjs - the SAME module the "Detect changes" job in
+// .github/workflows/_ci-checks.yml runs - so these assertions exercise the real
 // lane-selection decision, not a copy of it.
 
 /** Areas + concrete lanes for a set of changed files. */
@@ -201,7 +201,7 @@ describe('CI lane selection — package-only change must not skip engine lanes',
   it('selects every lane that a naive package-only check would wrongly skip', () => {
     const { areas, lanes } = decide(...EXTENSION_PACKAGE_ONLY_FILES);
     expect(areas).toMatchObject({ engine: true, site: true, audioFx: false, tilemapWorker: true });
-    // Previously skipped — must now run:
+    // Previously skipped - must now run:
     expect(lanes.unit).toBe(true);
     expect(lanes.coverage).toBe(true);
     expect(lanes.packageVerify).toBe(true);
@@ -212,7 +212,7 @@ describe('CI lane selection — package-only change must not skip engine lanes',
     expect(lanes.typecheck).toBe(true);
     expect(lanes.lint).toBe(true);
     expect(lanes.siteBuild).toBe(true);
-    // This change touched no audio-fx code — the browser-audio lane stays off.
+    // This change touched no audio-fx code - the browser-audio lane stays off.
     expect(lanes.browserAudio).toBe(false);
   });
 });

@@ -4,7 +4,7 @@
 // only public entry is `Capabilities.ready`, a lazy-cached `Promise<Capabilities>`
 // that fires the (mostly) async probes on first access and returns the
 // same Promise for every subsequent call. Once it resolves, the returned
-// instance is frozen — every property is read once and never mutates.
+// instance is frozen - every property is read once and never mutates.
 //
 // Synchronous callsites should keep the resolved instance in scope (e.g.,
 // `app.capabilities` after `await app.start(...)`); there is no global
@@ -41,7 +41,7 @@ interface CapabilityValues {
  * fullscreen / vibration / OffscreenCanvas / Worker support, max touch
  * points, and the resolved devicePixelRatio.
  *
- * Construction is private — the only public entry is
+ * Construction is private - the only public entry is
  * {@link Capabilities.ready}, a lazy-cached `Promise<Capabilities>` that
  * fires the (mostly) async probes on first access. The resolved instance
  * is frozen and never mutates. {@link Application.capabilities} returns
@@ -55,7 +55,7 @@ export class Capabilities {
    *
    * The first read kicks off the async probes (currently just the WebGPU
    * adapter request); every subsequent read returns the same Promise.
-   * Concurrent callers share the in-flight detection — no double work.
+   * Concurrent callers share the in-flight detection - no double work.
    *
    * Early-warmup pattern for callers who want to overlap detection with
    * other startup work:

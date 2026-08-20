@@ -1,4 +1,4 @@
-// Auto-generated from signal-bus-inspector.ts — edit the .ts source, not this file.
+// Auto-generated from signal-bus-inspector.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Signal, Text, Time, Timer } from '@codexo/exojs';
 class SignalBusInspectorScene extends Scene {
     signals;

@@ -14,7 +14,7 @@ export const MAX_POOLED_RENDER_TEXTURES = 32;
 
 /**
  * Largest total VRAM the pool may hold, in bytes. The count cap alone is no
- * protection — 32 full-screen 4K targets would be well over a gigabyte — so
+ * protection - 32 full-screen 4K targets would be well over a gigabyte - so
  * whichever limit binds first wins.
  * @internal
  */
@@ -43,7 +43,7 @@ const colorFormatBytesPerPixel = (format: ColorTextureFormat): number => {
  * backend's own destroy-listener teardown and frees the GPU objects rather than
  * merely dropping the reference.
  *
- * One pool per backend instance — the textures it holds belong to that
+ * One pool per backend instance - the textures it holds belong to that
  * backend's device/context.
  * @internal
  */
@@ -75,7 +75,7 @@ export class RenderTexturePool {
       if (texture.width === width && texture.height === height) {
         // Shift down rather than `splice(index, 1)`: splice allocates the
         // removed-elements array it returns, and this runs once per filter,
-        // mask and backdrop-blend intermediate — every frame, forever. The
+        // mask and backdrop-blend intermediate - every frame, forever. The
         // copy keeps the least-recently-released-first order eviction relies
         // on, and the pool is capped at a few dozen entries.
         for (let next = index + 1; next < this._textures.length; next++) {
@@ -95,7 +95,7 @@ export class RenderTexturePool {
   /**
    * Hand a borrowed texture back for reuse, evicting older entries if that puts
    * the pool over either cap. Releasing a texture twice, or releasing one that
-   * has already been destroyed, is a no-op — both would otherwise seed the pool
+   * has already been destroyed, is a no-op - both would otherwise seed the pool
    * with an entry that throws the moment it is bound.
    */
   public release(texture: RenderTexture): void {

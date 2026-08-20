@@ -1,6 +1,6 @@
 {
   "title": "BrowserPlatform",
-  "description": "The PlatformAdapter backed by the browser: a canvas element for the drawing surface, `window` for keyboard and blur, `document` for visibility, and `navigator` for gamepads. Used automatically by Application when no adapter was injected. Every capability degrades rather than throws when the host does not provide it — pointer capture is rejected by jsdom and by browsers asked to release a pointer they never captured, `navigator.getGamepads` is missing on locked-down hosts, and `document` is absent under SSR. None of those are worth failing an application over, so each is caught and reported as \"unavailable\".",
+  "description": "The PlatformAdapter backed by the browser: a canvas element for the drawing surface, `window` for keyboard and blur, `document` for visibility, and `navigator` for gamepads. Used automatically by Application when no adapter was injected. Every capability degrades rather than throws when the host does not provide it - pointer capture is rejected by jsdom and by browsers asked to release a pointer they never captured, `navigator.getGamepads` is missing on locked-down hosts, and `document` is absent under SSR. None of those are worth failing an application over, so each is caught and reported as \"unavailable\".",
   "symbol": "BrowserPlatform",
   "kind": "class",
   "subsystem": "core",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "The PlatformAdapter backed by the browser: a canvas element for the drawing surface, `window` for keyboard and blur, `document` for visibility, and `navigator` for gamepads. Used automatically by Application when no adapter was injected.",
-        "Every capability degrades rather than throws when the host does not provide it — pointer capture is rejected by jsdom and by browsers asked to release a pointer they never captured, `navigator.getGamepads` is missing on locked-down hosts, and `document` is absent under SSR. None of those are worth failing an application over, so each is caught and reported as \"unavailable\"."
+        "Every capability degrades rather than throws when the host does not provide it - pointer capture is rejected by jsdom and by browsers asked to release a pointer they never captured, `navigator.getGamepads` is missing on locked-down hosts, and `document` is absent under SSR. None of those are worth failing an application over, so each is caught and reported as \"unavailable\"."
       ],
       "importLine": "import { BrowserPlatform } from '@codexo/exojs'",
       "sourceLink": null
@@ -389,7 +389,7 @@
             }
           ],
           "returnType": "PlatformSubscription",
-          "description": "Subscribe to a surface event. Which events are listened for — and whether one is suppressed — stays an input-policy decision made above this seam, so the adapter only wires up the delivery."
+          "description": "Subscribe to a surface event. Which events are listened for - and whether one is suppressed - stays an input-policy decision made above this seam, so the adapter only wires up the delivery."
         },
         {
           "name": "onVisibilityChange",
@@ -732,7 +732,7 @@
             }
           ],
           "returnType": "number",
-          "description": "Schedule callback for the next display frame and return a handle for PlatformAdapter.cancelFrame. One-shot — the frame loop reschedules itself every frame."
+          "description": "Schedule callback for the next display frame and return a handle for PlatformAdapter.cancelFrame. One-shot - the frame loop reschedules itself every frame."
         },
         {
           "name": "setCursor",
@@ -826,7 +826,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Set the surface's touch-action policy — 'none' keeps native pan/zoom out of the way."
+          "description": "Set the surface's touch-action policy - 'none' keeps native pan/zoom out of the way."
         }
       ],
       "paragraphs": [],

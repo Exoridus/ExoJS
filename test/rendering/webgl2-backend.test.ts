@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// WebGl2Backend — context-loss signal tests
+// WebGl2Backend - context-loss signal tests
 //
 // We mock the WebGl2Backend module entirely so the tests remain self-contained
 // and don't require a real WebGL2 context. We verify the public signal API
@@ -78,13 +78,13 @@ describe('WebGl2Backend', () => {
   });
 
   test('WebGl2Backend class does not declare a setCursor method', async () => {
-    // Import the real class just to inspect its prototype — no GL context required.
+    // Import the real class just to inspect its prototype - no GL context required.
     // We don't call the constructor, so no GL calls happen.
     vi.resetModules();
     const { WebGl2Backend: WebGl2BackendCtor } = await import('#rendering/webgl2/WebGl2Backend');
 
     // setCursor has been moved to Application; it must not be on the prototype.
-    // Cast via Record to avoid TS error — the point is it does not exist at runtime.
+    // Cast via Record to avoid TS error - the point is it does not exist at runtime.
     const proto = WebGl2BackendCtor.prototype as unknown as Record<string, unknown>;
 
     expect(proto['setCursor']).toBeUndefined();
@@ -231,7 +231,7 @@ describe('Application.setCursor', () => {
 
   test('setCursor(Texture) with a valid source sets a url() cursor', () => {
     // Tests the Texture → canvas data-URL path. jsdom does not implement toDataURL
-    // but does not throw — it logs a not-implemented warning and returns an empty
+    // but does not throw - it logs a not-implemented warning and returns an empty
     // string, so we just verify the url() wrapper is applied.
     const canvas = document.createElement('canvas');
     const app = new Application({ canvas: { element: canvas }, backend: { type: 'webgl2' } });

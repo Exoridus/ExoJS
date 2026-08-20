@@ -22,7 +22,7 @@ import { reconcileRetainedTransformRows } from './retainedTransformRowPatch';
 type RenderTargetIdentity = RenderBackend['renderTarget'];
 
 /**
- * The automatic persistent render representation of one **render root** — the
+ * The automatic persistent render representation of one **render root** - the
  * node handed to `RenderingContext.render()` / `renderTo()` / `capture()` or
  * to `RenderNode.render()`. Created lazily by the node
  * ({@link RenderNode._retainedRootRepresentation}) and disposed with it.
@@ -31,14 +31,14 @@ type RenderTargetIdentity = RenderBackend['renderTarget'];
  * snapshot plus the recorded instruction set) and adds the keys a root needs
  * that a {@link RetainedContainer} deliberately does not:
  *
- * - the subtree's TRANSFORM revision — a plain container has no group matrix and
+ * - the subtree's TRANSFORM revision - a plain container has no group matrix and
  *   no row-patch path, so a descendant move re-collects (same rule
  *   {@link RetainedPlanCache} already applies to the per-child skip);
- * - the root's own global-transform stamp — a render root is not a closed
+ * - the root's own global-transform stamp - a render root is not a closed
  *   dependency boundary, so an ancestor ABOVE it moving must invalidate even
  *   though it stamps none of the root's revisions;
- * - the backend's render target — compiled products are pass/target-specific;
- * - the view SELECTION (see {@link isClean}) — per-child culling is view
+ * - the backend's render target - compiled products are pass/target-specific;
+ * - the view SELECTION (see {@link isClean}) - per-child culling is view
  *   dependent even though the captured records are not.
  *
  * Unlike a `RetainedContainer` this changes no scene-graph semantics: children
@@ -73,7 +73,7 @@ export class RetainedRootRepresentation {
   private readonly _keptBounds = new Bounds();
   private _keptEmpty = true;
   /**
-   * The rect the capturing collect actually culled against — the view rect grown
+   * The rect the capturing collect actually culled against - the view rect grown
    * by the capture margin (`RenderPlanBuilder.cullRect`). Every node the capture
    * dropped lies outside it, so any view still INSIDE it selects the same nodes
    * and the product replays unchanged.
@@ -81,7 +81,7 @@ export class RetainedRootRepresentation {
   private readonly _captureCullRect = new Rectangle();
   private _hasCaptureCullRect = false;
   /**
-   * Whether the capturing collect READ the view — i.e. produced content that is
+   * Whether the capturing collect READ the view - i.e. produced content that is
    * a function of the camera, not merely positioned by it.
    *
    * Such a capture may only be replayed under the very same view. Both view
@@ -105,13 +105,13 @@ export class RetainedRootRepresentation {
    * use for them. Only a root that actually re-selects pays for one.
    *
    * Owned here rather than beside the fragment because the source is the
-   * backend- and frame-NEUTRAL half: the keys that are not — view selection,
-   * render target, backend identity — stay on this class.
+   * backend- and frame-NEUTRAL half: the keys that are not - view selection,
+   * render target, backend identity - stay on this class.
    *
    * Root-only, and not for want of a second consumer: a `RetainedContainer`
    * suppresses per-child culling inside its boundary, so it has no re-selection
    * to make and holds none of this (see {@link RenderRootSource}). The layer the
-   * two tiers do share is the one below — the fragment's pooled records and the
+   * two tiers do share is the one below - the fragment's pooled records and the
    * capture-thrash rule.
    */
   private _source: RenderRootSource | null = null;
@@ -137,14 +137,14 @@ export class RetainedRootRepresentation {
    * Consecutive frames that had to rebuild and found the subtree exactly as the
    * rebuild before them left it, plus the keys that streak is measured against.
    *
-   * The build gate ({@link shouldBuildSource}). One such frame proves nothing —
+   * The build gate ({@link shouldBuildSource}). One such frame proves nothing -
    * a camera that stepped once and stopped produces exactly one, and a source
    * built for it is one O(N) walk plus one record per drawable that will never
    * be selected from twice. Two in a row is the signature of a camera moving
    * across a settled scene, which is the case the source exists for.
    *
    * The keys are exactly the source's own, transform included, so a scene that
-   * moves something every frame can never produce the streak — and therefore
+   * moves something every frame can never produce the streak - and therefore
    * never pays for a source it would have to discard on the next frame anyway.
    * That is the gate's second job, and the more important one: without the
    * transform key, `dynamic-heavy` and `deep-hierarchy` would re-walk their
@@ -161,7 +161,7 @@ export class RetainedRootRepresentation {
   private _streakTransform = -1;
   /**
    * The root producer itself read the view during discovery, so there is no
-   * persistable source at any granularity — attribution to the outermost
+   * persistable source at any granularity - attribution to the outermost
    * producer covers the entire subtree.
    *
    * Sticky across invalidation: it is a property of what the root node DOES
@@ -184,15 +184,15 @@ export class RetainedRootRepresentation {
    * Whether the captured product can be replayed as-is this frame.
    *
    * The revision/identity keys are exact compares. The view key is not, and it
-   * has two independent ways to pass, because the captured records — world-space
-   * bounds, material keys, baked transform rows — carry no view state of their
+   * has two independent ways to pass, because the captured records - world-space
+   * bounds, material keys, baked transform rows - carry no view state of their
    * own (the recorded batches resolve projection live at replay):
    *
    * - **The view still fits the capture's cull rect.** Every node the capture
    *   dropped was outside that rect, hence outside this view too; every node it
    *   kept is still drawn, and any that no longer meets the view is clipped
    *   rather than wrong. This is the case that survives a moving camera over a
-   *   scene with off-screen content — the margin exists to make it common.
+   *   scene with off-screen content - the margin exists to make it common.
    * - **Nothing was culled and the view still contains every kept node.** Then
    *   the selection is trivially the whole subtree and stays that way. This one
    *   also covers a view that GREW past the capture rect (a zoom-out), which the
@@ -281,7 +281,7 @@ export class RetainedRootRepresentation {
    * first use, or `null` when this root does not qualify for the indexed path.
    *
    * Decided once per source rather than per frame. Eligibility is a property of
-   * the source's content — its draw order, its materials, its texture set — and
+   * the source's content - its draw order, its materials, its texture set - and
    * none of that changes while the source stays usable; asking again every frame
    * would put a walk over every item back on the path the whole design exists to
    * keep off it. A refusal is remembered for the same reason.
@@ -309,8 +309,8 @@ export class RetainedRootRepresentation {
 
   /**
    * Whether every slot the backend holds is still the one the plan believes it
-   * wrote. False after a generation bump — device restore, a store the backend
-   * had to reallocate — which is the signal that the next selection must treat
+   * wrote. False after a generation bump - device restore, a store the backend
+   * had to reallocate - which is the signal that the next selection must treat
    * every visible item as entering.
    */
   public get persistentSlotsIntact(): boolean {
@@ -345,7 +345,7 @@ export class RetainedRootRepresentation {
 
   /**
    * Drop the slot store and refuse the indexed path for as long as this source
-   * lives — the backend has answered that it cannot represent the root.
+   * lives - the backend has answered that it cannot represent the root.
    *
    * Sticky for the same reason an acquisition refusal is: the answer is a
    * property of the source and the device, so asking again next frame would
@@ -394,7 +394,7 @@ export class RetainedRootRepresentation {
 
   /**
    * Whether `view` still lies inside the rect the last indexed selection
-   * admitted against — i.e. whether its order stream is still the right answer.
+   * admitted against - i.e. whether its order stream is still the right answer.
    *
    * Same argument as the capture margin, applied one tier down: a selection that
    * culled against a rect ENCLOSING the view admitted everything any view inside
@@ -455,23 +455,23 @@ export class RetainedRootRepresentation {
    * Transform-only descendant moves are the one change class that does NOT
    * invalidate here. The moved nodes arrive through the same seam a
    * {@link RetainedContainer} uses, and their baked rows are patched in place
-   * (O(k)) rather than re-derived — which is what keeps a scene with a few
+   * (O(k)) rather than re-derived - which is what keeps a scene with a few
    * percent of moving nodes on the recorded tier.
    *
    * The queue is fed from a live capture onward, one tier earlier than a group's
-   * — a group only needs it on the recorded tier, whereas the root needs the
+   * - a group only needs it on the recorded tier, whereas the root needs the
    * queue as its PROOF that every move was accounted for. Without that proof one
    * frame earlier, a scene that moves something every frame would never reach the
    * clean frame it has to record on.
    *
-   * The guards that make that sound against per-child view culling — which a
+   * The guards that make that sound against per-child view culling - which a
    * group does not have to face, since it suppresses culling inside itself and
-   * is culled as a whole — live in {@link _canReconcileMovedNodes}.
+   * is culled as a whole - live in {@link _canReconcileMovedNodes}.
    */
   public reconcileTransform(transformRevision: number, view: View, backend: RenderBackend): boolean {
     if (!this.fragment.hasDirtyTransformRows()) {
       // Nothing queued. Either nothing moved (revisions agree), or a move
-      // happened while no recording was live — the enqueue gate skips those, so
+      // happened while no recording was live - the enqueue gate skips those, so
       // there is no proof the queue saw everything and the frame re-collects.
       return this._transformRevision === transformRevision;
     }
@@ -498,7 +498,7 @@ export class RetainedRootRepresentation {
    * Two rejections, one per direction a move can break the selection:
    *
    * - **A moved node the capture never recorded, on a capture that culled.** It
-   *   is not in the product, so it may be one of the culled ones — and it may
+   *   is not in the product, so it may be one of the culled ones - and it may
    *   have just moved INTO the view, which replay would silently omit. Patching
    *   cannot help: there is no row to patch. (On the recorded tier the row patch
    *   would catch this too, but the entry-replay tier has no such check, and
@@ -506,7 +506,7 @@ export class RetainedRootRepresentation {
    *   node is in the product and no such node exists.
    * - **A moved node that left the view, when only the kept-union rule is
    *   carrying validity.** Replaying would keep drawing it where a real collect
-   *   would have dropped it — which matters because that rule's whole premise is
+   *   would have dropped it - which matters because that rule's whole premise is
    *   that nothing was culled. Under the capture-rect rule the premise is
    *   different and this cannot go wrong: an out-of-view node that is still
    *   drawn is clipped, not wrong.
@@ -550,7 +550,7 @@ export class RetainedRootRepresentation {
     this.fragment.clearDirtyTransformRows();
   }
 
-  /** The active capture was replayed at least once — it earned its keep. */
+  /** The active capture was replayed at least once - it earned its keep. */
   public markReplayed(): void {
     this._thrash.markReplayed();
     this.fragment.markReplayed();
@@ -591,7 +591,7 @@ export class RetainedRootRepresentation {
 
   /**
    * Arm cull-union accumulation for the collect that is about to run, and record
-   * the rect that collect will cull against — the view's rect plus the capture
+   * the rect that collect will cull against - the view's rect plus the capture
    * margin, which is what later lets a moved view be judged in O(1).
    */
   public beginCapture(cullRect: ReadonlyRectangle): void {
@@ -606,7 +606,7 @@ export class RetainedRootRepresentation {
   /**
    * The collect being captured read the view (see {@link _viewDependentCapture}).
    * Called from `RenderPlanBuilder`'s public view getter, so it fires for any
-   * node — engine or third-party — without one having to declare itself.
+   * node - engine or third-party - without one having to declare itself.
    */
   public noteViewRead(): void {
     this._viewDependentCapture = true;
@@ -620,7 +620,7 @@ export class RetainedRootRepresentation {
 
   /**
    * {@link noteKept} for a caller that holds the compared extent as four numbers
-   * rather than a rectangle — the source selection, whose items store it that
+   * rather than a rectangle - the source selection, whose items store it that
    * way. Materialising a `Rectangle` per item just to hand it over would cost
    * more than the fold.
    */
@@ -629,7 +629,7 @@ export class RetainedRootRepresentation {
     this._keptEmpty = false;
   }
 
-  /** A node was dropped by the view test — the capture is view-locked. */
+  /** A node was dropped by the view test - the capture is view-locked. */
   public noteCulled(): void {
     this._culledDuringCapture = true;
   }
@@ -668,7 +668,7 @@ export class RetainedRootRepresentation {
    *
    * The SOURCE deliberately survives. It is keyed on the node's own revisions
    * and validates itself, so it stays correct across anything that invalidates a
-   * capture — and the loudest caller here is capture suppression, where the
+   * capture - and the loudest caller here is capture suppression, where the
    * frame that just lost its capture is exactly the one that most needs a cheap
    * path to fall back to.
    */

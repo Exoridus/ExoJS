@@ -63,7 +63,7 @@ describe('staleEvidenceReasons', () => {
   });
 
   it('ignores browsers outside the guarantee, however stale', () => {
-    // They still render in the table as data — they are simply not something a
+    // They still render in the table as data - they are simply not something a
     // release promises to keep current, so they must never block a cut.
     const rows = doc({ chromium: { commit: 'abc1234' }, firefox: { commit: 'abc1234' }, webkit: { commit: 'ancient' } });
 

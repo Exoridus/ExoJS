@@ -8,7 +8,7 @@ import type { RenderPassDescriptor, RenderPassLoad } from './RenderPassDescripto
 
 /**
  * Internal, backend-owned owner of render-pass lifecycle: target / view / clear
- * orchestration, the scissor and stencil-clip stacks, and — on WebGPU — the
+ * orchestration, the scissor and stencil-clip stacks, and - on WebGPU - the
  * active `GPURenderPassEncoder`.
  *
  * There is no public RenderPass API. This abstraction exists so the WebGL2 and
@@ -32,7 +32,7 @@ export interface RenderPassCoordinator {
   endPass(): void;
   /**
    * Run `body` inside a child pass described by `descriptor`, restoring the
-   * previous target and view afterwards — even if `body` throws. Preserves the
+   * previous target and view afterwards - even if `body` throws. Preserves the
    * save / restore semantics of {@link BackendTargetPass}.
    */
   withChildPass(descriptor: RenderPassDescriptor, body: () => void): void;
@@ -42,7 +42,7 @@ export interface RenderPassCoordinator {
   /** Pop the most recently pushed scissor rectangle. */
   popScissorRect(): void;
 
-  /** Push a geometric stencil clip — the `shape` silhouette under `transform`. */
+  /** Push a geometric stencil clip - the `shape` silhouette under `transform`. */
   pushStencilClip(shape: Geometry, transform: Matrix): void;
   /** Pop the most recently pushed stencil clip. */
   popStencilClip(): void;

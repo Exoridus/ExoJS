@@ -1,6 +1,6 @@
 {
   "title": "MouseJoint",
-  "description": "Softly pulls a single body's grab point toward a movable **target** point (typically the mouse cursor). The grab point is fixed on the body at creation; update target each frame to drag. A soft constraint bounded by maxForce — solved in the sub-step loop, warm-started. Internally the \"other\" body is a private static ground sentinel, so this is a single-body constraint that touches only the dragged body.",
+  "description": "Softly pulls a single body's grab point toward a movable **target** point (typically the mouse cursor). The grab point is fixed on the body at creation; update target each frame to drag. A soft constraint bounded by maxForce - solved in the sub-step loop, warm-started. Internally the \"other\" body is a private static ground sentinel, so this is a single-body constraint that touches only the dragged body.",
   "symbol": "MouseJoint",
   "kind": "class",
   "subsystem": "physics",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Softly pulls a single body's grab point toward a movable **target** point (typically the mouse cursor). The grab point is fixed on the body at creation; update target each frame to drag. A soft constraint bounded by maxForce — solved in the sub-step loop, warm-started. Internally the \"other\" body is a private static ground sentinel, so this is a single-body constraint that touches only the dragged body."
+        "Softly pulls a single body's grab point toward a movable **target** point (typically the mouse cursor). The grab point is fixed on the body at creation; update target each frame to drag. A soft constraint bounded by maxForce - solved in the sub-step loop, warm-started. Internally the \"other\" body is a private static ground sentinel, so this is a single-body constraint that touches only the dragged body."
       ],
       "importLine": "import { MouseJoint } from '@codexo/exojs-physics'",
       "sourceLink": null

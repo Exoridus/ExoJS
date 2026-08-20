@@ -1,5 +1,5 @@
 /**
- * ExoJS Phase 2 Auto-Profiler — granular sub-timings, memory deltas, call counts.
+ * ExoJS Phase 2 Auto-Profiler - granular sub-timings, memory deltas, call counts.
  *
  * Picks the five hottest scenarios from Phase 1 baseline.md and re-runs them
  * with SubTimingTracker, MemoryTracker, and CallCounter instrumentation, then
@@ -26,7 +26,7 @@ import { CallCounter, MemoryTracker, SubTimingTracker } from './profile-runner';
 const resultsDir = resolve(dirname(fileURLToPath(import.meta.url)), 'results');
 
 // ---------------------------------------------------------------------------
-// Audio mock — must be set up before any ExoJS audio import
+// Audio mock - must be set up before any ExoJS audio import
 // ---------------------------------------------------------------------------
 
 const makeParam = (): AudioParam =>
@@ -372,7 +372,7 @@ const scenarioResults: ProfileScenarioResult[] = [];
           getCollisionSat(a, b);
           stopTest();
 
-          // Suppress unused-var warnings — normals are obtained above for timing
+          // Suppress unused-var warnings - normals are obtained above for timing
           void normalsA;
           void normalsB;
         }

@@ -49,7 +49,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Let the browser show its own context menu over the canvas. Default false — a right-click is normally a game input, not a request for the browser's menu. Independent of the engine's own contextmenu event, which is routed through the scene graph either way."
+          "description": "Let the browser show its own context menu over the canvas. Default false - a right-click is normally a game input, not a request for the browser's menu. Independent of the engine's own contextmenu event, which is routed through the scene graph either way."
         },
         {
           "name": "allowTextSelection",
@@ -74,7 +74,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Let the browser start a text selection from a drag on the canvas. Default false — a drag is normally a game gesture, and a stray selection highlight over the canvas is almost never wanted."
+          "description": "Let the browser start a text selection from a drag on the canvas. Default false - a drag is normally a game gesture, and a stray selection highlight over the canvas is almost never wanted."
         },
         {
           "name": "dragThreshold",

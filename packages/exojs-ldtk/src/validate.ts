@@ -165,7 +165,7 @@ function validateTilesetDef(raw: unknown, source: string, path: string): void {
   expectString(def.identifier, source, joinPath(path, 'identifier'));
 
   // `relPath` is null for an embedded ("embed atlas") tileset, which the loader
-  // skips — anything other than a string or null is malformed.
+  // skips - anything other than a string or null is malformed.
   const relPathPath = joinPath(path, 'relPath');
   if (def.relPath !== null) expectString(def.relPath, source, relPathPath);
 
@@ -223,7 +223,7 @@ function validateDefs(raw: unknown, source: string, path: string): void {
 /**
  * Validate one field-instance `__value` against the shape its `__type` declares.
  *
- * `null` is LDtk's "not set" and always passes — the conversion drops the
+ * `null` is LDtk's "not set" and always passes - the conversion drops the
  * property. Everything else is checked here because the conversion pass casts
  * rather than probes: a `Point` whose value is not `{cx, cy}` used to reach the
  * runtime as a point with `undefined` coordinates, indistinguishable from a
@@ -299,7 +299,7 @@ function validateFieldValue(typeName: string, value: unknown, source: string, pa
 
 /**
  * A field instance is validated down to its identifier, declared type and the
- * shape of `__value` that type implies — see {@link validateFieldValue}.
+ * shape of `__value` that type implies - see {@link validateFieldValue}.
  */
 function validateFieldInstance(raw: unknown, source: string, path: string): void {
   const field = expectObject(raw, source, path);

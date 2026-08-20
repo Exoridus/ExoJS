@@ -39,9 +39,9 @@ export class AssetTypeRegistry {
   private readonly _extensionMap = new Map<string, AssetConstructor>();
   private readonly _boundHandlers: AssetHandler[] = [];
   private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
-  /** Tier 1 — explicit app-local overrides, written only by {@link registerType}. */
+  /** Tier 1 - explicit app-local overrides, written only by {@link registerType}. */
   private readonly _extensionOverrides = new Map<string, keyof AssetDefinitions>();
-  /** Tier 2 — binding-declared defaults, written only by {@link bindAsset}'s `type`. */
+  /** Tier 2 - binding-declared defaults, written only by {@link bindAsset}'s `type`. */
   private readonly _bindingExtensionTypes = new Map<string, keyof AssetDefinitions>();
   private _nextTypeId = 1;
 
@@ -62,7 +62,7 @@ export class AssetTypeRegistry {
    * When `type` is given, each declared extension is also recorded in the
    * binding-declared extension→type table read by {@link resolveExtensionType}
    * (tier 2, below an explicit {@link registerType} override and above the
-   * global `defineAsset` default) — and only then does the suffix take part in
+   * global `defineAsset` default) - and only then does the suffix take part in
    * bare-path resolution ({@link _resolveTypeForPath}). A binding that declares
    * `extensions` without a `type` still reserves those suffixes (so a later
    * conflicting binding throws), but its assets must be named with
@@ -99,7 +99,7 @@ export class AssetTypeRegistry {
       seenExts.add(ext);
     }
 
-    // Validate: detect conflicts with already-registered keys — throw before any mutation
+    // Validate: detect conflicts with already-registered keys - throw before any mutation
     if (this._handlerFunctions.has(keys.ctor)) {
       throw new Error(`An asset handler is already registered for ${keys.ctor.name}.`);
     }
@@ -121,9 +121,9 @@ export class AssetTypeRegistry {
     // No separate validation for the binding-declared extension→type table: it
     // is keyed exactly like `_extensionMap`, whose check above already rejects a
     // second binding claiming the same suffix. A `registerType` override for the
-    // suffix is deliberately NOT a conflict — it simply outranks this binding.
+    // suffix is deliberately NOT a conflict - it simply outranks this binding.
 
-    // All validation passed — install atomically.
+    // All validation passed - install atomically.
     this._handlerFunctions.set(keys.ctor, this._createHandlerEntry<Result, Options>(handler, keys.storageName));
 
     for (const name of resolvedNames) {
@@ -257,7 +257,7 @@ export class AssetTypeRegistry {
    *
    * This is the single bare-path resolution funnel: a `bindAsset` binding feeds
    * it only through its declared `type` (which `defineAsset` always sets), not
-   * through the constructor-keyed extension map — that map now only guards
+   * through the constructor-keyed extension map - that map now only guards
    * against duplicate extension registrations.
    * @internal
    */
@@ -287,13 +287,13 @@ export class AssetTypeRegistry {
   }
 
   /**
-   * Registers an app-local extension→type override — the top tier of
+   * Registers an app-local extension→type override - the top tier of
    * {@link resolveExtensionType}, ahead of both the binding-declared default and
    * the global `defineAsset` table. Overriding a suffix a binding already claimed
    * (`registerType('json', 'ldtkMap')`) is the intended use, not a conflict.
    *
    * Idempotent for the same (extension, type) pair; throws only when a DIFFERENT
-   * type was already registered here by an earlier `registerType` call — two
+   * type was already registered here by an earlier `registerType` call - two
    * competing app-wide overrides for one suffix are ambiguous.
    */
   public registerType(extension: string, type: keyof AssetDefinitions): void {
@@ -360,7 +360,7 @@ export class AssetTypeRegistry {
     this._seamlessAdapters.clear();
   }
 
-  /** Destroys every bound handler — see {@link destroyHandlers}. */
+  /** Destroys every bound handler - see {@link destroyHandlers}. */
   public destroy(): void {
     this.destroyHandlers();
   }

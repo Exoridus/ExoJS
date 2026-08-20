@@ -64,7 +64,7 @@ describe('render instructions', () => {
   test('same-material sprites at different z-indices land in separate render groups', () => {
     // The optimizer assigns different groupIndices when z differs, so the plan
     // has two logical groups. However, the sprite renderer coalesces these into
-    // one GPU draw call because it tracks blend-mode/texture/material — not
+    // one GPU draw call because it tracks blend-mode/texture/material - not
     // groupIndex. This test documents the logical split; draw-call coalescing
     // is proven by the browser tests.
     const { backend, destroy } = createBuildBackend();

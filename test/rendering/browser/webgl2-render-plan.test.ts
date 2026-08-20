@@ -237,11 +237,11 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       meshC.setPosition(48, 0);
 
       // Each mesh is rendered in its OWN render() call within a single frame,
-      // with no flush between them — the cross-call batching path. Every draw's
+      // with no flush between them - the cross-call batching path. Every draw's
       // DrawCommand is pooled by the plan builder and its nodeIndex is
       // frame-global; recycling the command pool per plan (the regression) lets
       // each later build() overwrite the earlier deferred draws' command, so all
-      // three reads collapse onto the last command's transform+tint slot — every
+      // three reads collapse onto the last command's transform+tint slot - every
       // mesh would render blue at meshC's position (48, 0).
       backend.resetStats();
       backend.clear(Color.black);
@@ -250,7 +250,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
       meshC.render(backend);
       backend.flush();
 
-      // Fixed: each mesh keeps its own slot — distinct color AND position.
+      // Fixed: each mesh keeps its own slot - distinct color AND position.
       expectPixelNear(readWebGl2Pixel(backend, 8, 8), [255, 0, 0, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 32, 8), [0, 255, 0, 255]);
       expectPixelNear(readWebGl2Pixel(backend, 56, 8), [0, 0, 255, 255]);
@@ -362,7 +362,7 @@ describe('RenderPlan WebGL2 browser regressions', () => {
     // Different z-indices make the optimizer assign different groupIndices,
     // producing two logical RenderGroups. The sprite renderer coalesces them
     // into a single instanced draw because it tracks blend-mode / texture /
-    // material — not render-group boundaries. Each sprite's transform is
+    // material - not render-group boundaries. Each sprite's transform is
     // resolved independently from the shared buffer via its stable nodeIndex,
     // so non-contiguous nodeIndex values are handled correctly.
     const { backend } = await createBackend();

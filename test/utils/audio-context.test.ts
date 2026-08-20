@@ -105,7 +105,7 @@ describe('utils/audio-context', () => {
 
     onAudioContextReady.once(() => undefined);
 
-    // A suspended live AudioContext must not be spawned before a user gesture —
+    // A suspended live AudioContext must not be spawned before a user gesture -
     // subscribing only wires up the interaction listeners (AU2).
     expect(audioContextCreations).toBe(0);
     expect(addEventListenerSpy).toHaveBeenCalled();

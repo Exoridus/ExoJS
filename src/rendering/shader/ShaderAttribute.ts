@@ -30,6 +30,6 @@ export class ShaderAttribute {
   }
 
   public destroy(): void {
-    // no-op — metadata only
+    // no-op - metadata only
   }
 }

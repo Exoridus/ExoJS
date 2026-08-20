@@ -1,6 +1,6 @@
 {
   "title": "LdtkWorldData",
-  "description": "A single world in a multi-world LDtk project (`root.worlds[]`, populated when the project has \"Multi-Worlds\" enabled in its advanced settings). Each world owns its own levels; `defs` (tilesets/layers/entity definitions) is declared once at the document root and shared by every world rather than duplicated per-world — see LdtkData.defs.",
+  "description": "A single world in a multi-world LDtk project (`root.worlds[]`, populated when the project has \"Multi-Worlds\" enabled in its advanced settings). Each world owns its own levels; `defs` (tilesets/layers/entity definitions) is declared once at the document root and shared by every world rather than duplicated per-world - see LdtkData.defs.",
   "symbol": "LdtkWorldData",
   "kind": "interface",
   "subsystem": "ldtk",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A single world in a multi-world LDtk project (`root.worlds[]`, populated when the project has \"Multi-Worlds\" enabled in its advanced settings). Each world owns its own levels; `defs` (tilesets/layers/entity definitions) is declared once at the document root and shared by every world rather than duplicated per-world — see LdtkData.defs."
+        "A single world in a multi-world LDtk project (`root.worlds[]`, populated when the project has \"Multi-Worlds\" enabled in its advanced settings). Each world owns its own levels; `defs` (tilesets/layers/entity definitions) is declared once at the document root and shared by every world rather than duplicated per-world - see LdtkData.defs."
       ],
       "importLine": "import { LdtkWorldData } from '@codexo/exojs-ldtk'",
       "sourceLink": null

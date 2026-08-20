@@ -6,7 +6,7 @@
  * the entire module), this test constructs the real class with a real GL
  * context and verifies the constructor + initialize() complete without errors.
  *
- * The RendererRegistry is mocked to skip shader compilation — the test target
+ * The RendererRegistry is mocked to skip shader compilation - the test target
  * is the WebGL2 context lifecycle (context acquisition, canvas wiring,
  * renderTarget setup), not the renderer pipeline itself.
  */

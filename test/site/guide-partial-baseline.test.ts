@@ -1,5 +1,5 @@
 /**
- * Tests for scripts/guide-partial-baseline.ts — the ratchet that keeps the
+ * Tests for scripts/guide-partial-baseline.ts - the ratchet that keeps the
  * guide typecheck gate from silently growing a set of unchecked code blocks.
  *
  * The checked-in baseline itself is asserted against the real extractor output

@@ -1,6 +1,6 @@
 {
   "title": "ConstructorOf",
-  "description": "Extracts the Scene subclass constructor a SceneRegistration resolves to — unwraps the descriptor form, passes a bare constructor through unchanged.",
+  "description": "Extracts the Scene subclass constructor a SceneRegistration resolves to - unwraps the descriptor form, passes a bare constructor through unchanged.",
   "symbol": "ConstructorOf",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Extracts the Scene subclass constructor a SceneRegistration resolves to — unwraps the descriptor form, passes a bare constructor through unchanged."
+        "Extracts the Scene subclass constructor a SceneRegistration resolves to - unwraps the descriptor form, passes a bare constructor through unchanged."
       ],
       "importLine": "import { ConstructorOf } from '@codexo/exojs'",
       "sourceLink": null

@@ -6,7 +6,7 @@
  * draws nothing at all, and every comparison would pass on two empty frames.
  *
  * A tile layer is an instanced draw with per-tile UV offsets, which is a
- * different code path from a plain sprite on both backends — and the one place
+ * different code path from a plain sprite on both backends - and the one place
  * a half-texel offset shows up as visible seams between tiles.
  */
 

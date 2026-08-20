@@ -7,7 +7,7 @@
  * data in Tiled maps).
  *
  * Decompression is async because `DecompressionStream` is a streaming API.
- * Only the formats the platform implements natively are supported — notably
+ * Only the formats the platform implements natively are supported - notably
  * **not** `zstd`, which has no native browser decoder.
  */
 
@@ -34,9 +34,9 @@ function decodeBase64(input: string): Uint8Array {
 /**
  * Decompress a byte buffer using the native `DecompressionStream`.
  *
- * - `'gzip'` — gzip container (RFC 1952).
- * - `'deflate'` — zlib container (RFC 1950), Tiled's `zlib` compression.
- * - `'deflate-raw'` — raw DEFLATE with no header (RFC 1951).
+ * - `'gzip'` - gzip container (RFC 1952).
+ * - `'deflate'` - zlib container (RFC 1950), Tiled's `zlib` compression.
+ * - `'deflate-raw'` - raw DEFLATE with no header (RFC 1951).
  *
  * @throws If the platform lacks `DecompressionStream`, or the data is corrupt.
  */

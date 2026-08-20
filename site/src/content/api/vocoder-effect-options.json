@@ -145,7 +145,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Modulator AudioBus — its output drives the spectral envelope. Typically routed from a microphone or voice sample."
+          "description": "Modulator AudioBus - its output drives the spectral envelope. Typically routed from a microphone or voice sample."
         },
         {
           "name": "numBands",

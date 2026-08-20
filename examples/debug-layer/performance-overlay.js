@@ -1,4 +1,4 @@
-// Auto-generated from performance-overlay.ts — edit the .ts source, not this file.
+// Auto-generated from performance-overlay.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 class PerformanceOverlayScene extends Scene {

@@ -14,7 +14,7 @@
  * MSAA so a sub-pixel edge shows as a partially-covered boundary column: with
  * snapping ON the origin lands on an integer device pixel and the edge is crisp
  * (no partial column); with snapping OFF the fractional edge produces a blended
- * column. Case 2 needs no MSAA — it is a parity assert between the retained and
+ * column. Case 2 needs no MSAA - it is a parity assert between the retained and
  * immediate render paths, proving the GPU snaps the COMPOSED (group · local)
  * device origin, not the group-local one.
  *
@@ -41,7 +41,7 @@ import { wireCoreRenderers } from './_coreRenderers';
 import { type RgbaTuple } from './_pixels';
 
 // ---------------------------------------------------------------------------
-// Shader wiring — substitute the REAL sprite.vert/frag (the snap logic under
+// Shader wiring - substitute the REAL sprite.vert/frag (the snap logic under
 // test) via `?raw`; Mesh/Text stay mocked because `initialize()` eagerly
 // compiles every registered renderer's program.
 // ---------------------------------------------------------------------------
@@ -152,7 +152,7 @@ const createSolidTexture = (color: string, size: number): Texture => {
 };
 
 // ---------------------------------------------------------------------------
-// Case 1: Position snap lands the origin on an integer device pixel — the edge
+// Case 1: Position snap lands the origin on an integer device pixel - the edge
 // is crisp (no half-covered boundary column) even at a fractional position.
 // ---------------------------------------------------------------------------
 
@@ -172,7 +172,7 @@ describe('WebGL2 GPU pixel snapping — Sprite position mode', () => {
       render(backend, root);
 
       // Left edge snapped to device x = 20: column 20 fully sprite, column 19
-      // fully background — no partial column between them.
+      // fully background - no partial column between them.
       expect(readPixel(backend, 20, 26)[0]).toBeGreaterThan(240); // full red
       expect(readPixel(backend, 19, 26)[0]).toBeLessThan(16); // full background
       // Top edge snapped to device y = 21.
@@ -194,13 +194,13 @@ describe('WebGL2 GPU pixel snapping — Sprite position mode', () => {
   // only the fragment stage; the engine's `spriteVertexGlsl` runs the same
   // origin snap. Before the snap block was ported into that vertex source,
   // custom-material sprites silently lost position snapping (the CPU seam that
-  // used to snap them was deleted) — this pins the regression.
+  // used to snap them was deleted) - this pins the regression.
   // -------------------------------------------------------------------------
   test('Case 1b: a custom-material Position sprite snaps identically to the default path', async () => {
     const backend = await createBackend(true);
     const texture = createSolidTexture('#ff0000', 10);
     // Fragment samples the base texture unchanged, so the coverage/edge is the
-    // same red quad as Case 1 — only the vertex path (custom vs default) differs.
+    // same red quad as Case 1 - only the vertex path (custom vs default) differs.
     const material = new SpriteMaterial({
       shader: new ShaderSource({
         glsl: {
@@ -238,7 +238,7 @@ void main() { fragColor = sampleBase(v_textureSlot, v_texcoord); }`,
   });
 
   // -------------------------------------------------------------------------
-  // Case 4: Geometry mode under a FRACTIONAL zoom — the reason geometry snap
+  // Case 4: Geometry mode under a FRACTIONAL zoom - the reason geometry snap
   // exists. Position snap alone lands the ORIGIN on a device pixel but leaves
   // the far quad edge at a fractional device coordinate (device width =
   // 10 · 1.25 = 12.5 px), so MSAA renders that right edge as a ~50 %-covered
@@ -247,7 +247,7 @@ void main() { fragColor = sampleBase(v_textureSlot, v_texcoord); }`,
   // pixel (snapped width = round(12.5) = 13 px) and the whole row is crisp: a
   // horizontal scan holds no partially-covered column. Without the shader
   // boundary block the right edge sits at x.5 and produces exactly such a
-  // blended column — the discriminator that flips this case RED→GREEN.
+  // blended column - the discriminator that flips this case RED→GREEN.
   // -------------------------------------------------------------------------
   test('Case 4: a fractional Geometry sprite snaps its quad edges under fractional zoom', async () => {
     const backend = await createBackend(true);
@@ -264,7 +264,7 @@ void main() { fragColor = sampleBase(v_textureSlot, v_texcoord); }`,
       render(backend, root);
 
       // Scan the row through the quad's left and right edges. Every column is
-      // either full sprite (> 240) or full background (< 16) — no blended
+      // either full sprite (> 240) or full background (< 16) - no blended
       // boundary. Position snap alone would leave the right edge at a fractional
       // device x, MSAA-ing one column to a mid value in (16, 240).
       let sawSprite = false;
@@ -297,7 +297,7 @@ void main() { fragColor = sampleBase(v_textureSlot, v_texcoord); }`,
 
   // -------------------------------------------------------------------------
   // Case 3: the control. With snapping OFF the fractional edge is NOT snapped,
-  // so the boundary column is partially covered — proving the snap branch is
+  // so the boundary column is partially covered - proving the snap branch is
   // gated on the row flag (same position as Case 1, opposite outcome).
   // -------------------------------------------------------------------------
   test('Case 3: PixelSnapMode.None leaves the fractional edge blended (flag-gated)', async () => {
@@ -334,13 +334,13 @@ void main() { fragColor = sampleBase(v_textureSlot, v_texcoord); }`,
 // first renderer with INTERNAL shared edges (the corner/edge/center quads meet
 // at shared boundary values), so the seam guarantee is load-bearing: the pure
 // `snapBoundary` moves both neighbours of a shared edge identically, keeping the
-// seam closed. Under zoom 1.25 the 42-local panel is 52.5 device px wide — a
+// seam closed. Under zoom 1.25 the 42-local panel is 52.5 device px wide - a
 // NON-integer span, so the far outer edge sits at a fractional device x. With
 // the shader boundary block every quad edge (outer + internal) lands on a whole
 // device pixel, so an interior scan row is a single contiguous green run with no
 // blended boundary column. WITHOUT the block (raw quads, origin-only snap) the
 // far outer edge stays fractional and MSAA renders a partially-covered column
-// there — the discriminator that flips this case RED→GREEN. A crack at an
+// there - the discriminator that flips this case RED→GREEN. A crack at an
 // internal seam (were `snapBoundary` impure) would break the contiguous run.
 // ---------------------------------------------------------------------------
 
@@ -361,7 +361,7 @@ describe('WebGL2 GPU pixel snapping — NineSlice geometry seams', () => {
 
       // The row with the most fully-covered green columns is guaranteed interior
       // (full vertical coverage), so its horizontal profile is free of the
-      // top/bottom edges — a position-independent way to pick a scan row.
+      // top/bottom edges - a position-independent way to pick a scan row.
       const frame = readFrame(backend);
 
       let bestRow = 0;
@@ -384,7 +384,7 @@ describe('WebGL2 GPU pixel snapping — NineSlice geometry seams', () => {
 
       // Classify every column on the interior row. With geometry snap each quad
       // edge lands on a whole device pixel, so every column is either full green
-      // (panel body) or full background — never a blended boundary. Without the
+      // (panel body) or full background - never a blended boundary. Without the
       // shader boundary block the far outer edge sits at a fractional device x
       // and MSAA blends its column (a value in (16, 240)) → this throws (RED).
       let firstGreen = -1;
@@ -410,7 +410,7 @@ describe('WebGL2 GPU pixel snapping — NineSlice geometry seams', () => {
       expect(firstGreen).toBeGreaterThanOrEqual(0); // the panel drew
       expect(sawBackground).toBe(true); // and did not fill the row
 
-      // Seam guarantee: the panel body is ONE contiguous green run — no interior
+      // Seam guarantee: the panel body is ONE contiguous green run - no interior
       // background crack where two quads share a snapped edge.
       for (let x = firstGreen; x <= lastGreen; x++) {
         expect(frame(x, bestRow)[1]).toBeGreaterThan(240);
@@ -432,14 +432,14 @@ describe('WebGL2 GPU pixel snapping — NineSlice geometry seams', () => {
 // carries the destW-from-snapped-corners subtlety: the shader derives the tiling
 // destination width from the SNAPPED corners (not the raw bounds), so the tile
 // period stays aligned to the snapped edge. Case 6 covers the SHADER strategy
-// (bare Texture, GPU sampler wrap — a single destination quad whose far edge must
+// (bare Texture, GPU sampler wrap - a single destination quad whose far edge must
 // snap); Case 7 covers the GEOMETRY strategy (TextureRegion, per-segment quads
-// with INTERNAL shared edges — the seam guarantee, like NineSlice). Both reuse
+// with INTERNAL shared edges - the seam guarantee, like NineSlice). Both reuse
 // the Case 4/5 MSAA discriminator: under zoom 1.25 the 42-local destination spans
 // 52.5 device px (fractional far edge), so with the shader boundary block every
 // edge lands on a whole device pixel and an interior scan row holds no partially-
 // covered column; without it the far edge blends a boundary column (RED). Case 7
-// additionally asserts one contiguous run — an impure `snapBoundary` would crack
+// additionally asserts one contiguous run - an impure `snapBoundary` would crack
 // a shared segment seam and split it.
 // ---------------------------------------------------------------------------
 
@@ -459,7 +459,7 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
       render(backend, root);
 
       // The row with the most fully-covered blue columns is interior (free of the
-      // top/bottom edges) — a position-independent scan row.
+      // top/bottom edges) - a position-independent scan row.
       const frame = readFrame(backend);
 
       let bestRow = 0;
@@ -482,7 +482,7 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
 
       // Classify every column on the interior row. With the shader boundary block
       // each destination edge lands on a whole device pixel, so every column is
-      // full blue or full background — never a blended boundary. Without it the far
+      // full blue or full background - never a blended boundary. Without it the far
       // edge sits at fractional 52.5 device x and MSAA blends its column → throws.
       let sawSprite = false;
       let sawBackground = false;
@@ -572,7 +572,7 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
       expect(firstBlue).toBeGreaterThanOrEqual(0); // the tiled panel drew
       expect(sawBackground).toBe(true); // and did not fill the row
 
-      // Seam guarantee: the panel body is ONE contiguous blue run — no interior
+      // Seam guarantee: the panel body is ONE contiguous blue run - no interior
       // background crack where two segments share a snapped edge.
       for (let x = firstBlue; x <= lastBlue; x++) {
         expect(frame(x, bestRow)[2]).toBeGreaterThan(240);
@@ -591,7 +591,7 @@ describe('WebGL2 GPU pixel snapping — RepeatingSprite geometry', () => {
 // ---------------------------------------------------------------------------
 // Case 2: retained vs immediate parity under a fractional camera pan. The
 // snapped origin of a group-relative sprite (group · local) must land on the
-// same device pixel as the equivalent world-space immediate sprite — i.e. the
+// same device pixel as the equivalent world-space immediate sprite - i.e. the
 // shader snaps the COMPOSED device origin, not the group-local one.
 // ---------------------------------------------------------------------------
 

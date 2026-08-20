@@ -33,7 +33,7 @@ const walkPrototype = (ctor: SceneNodeConstructor): SceneNodeConstructor | null 
  *
  * Serialize resolves a node to its serializer by walking the constructor's
  * prototype chain (so a subclass without its own registration inherits the
- * nearest registered base serializer — nearest across this registry *and* its
+ * nearest registered base serializer - nearest across this registry *and* its
  * fallback, never the nearest one this registry happens to know);
  * deserialize resolves by type name.
  * Core registers the built-in node types; extensions contribute their own via
@@ -85,7 +85,7 @@ export class SerializationRegistry {
    * constructor first, then its base, and so on, each level checked across the
    * whole fallback chain before moving up. Exhausting this registry's own
    * chain first would let a locally registered base class beat an exact match
-   * that only the fallback knows about — an application that registers part of
+   * that only the fallback knows about - an application that registers part of
    * a hierarchy would then silently serialize its subclasses as the base type.
    * Registries closer to this one still win ties at equal specificity.
    * @internal
@@ -106,7 +106,7 @@ export class SerializationRegistry {
     return undefined;
   }
 
-  /** The entry registered for exactly `ctor` — no prototype walk — searching this registry, then its fallback chain. */
+  /** The entry registered for exactly `ctor` - no prototype walk - searching this registry, then its fallback chain. */
   private _resolveExactCtor(ctor: SceneNodeConstructor): SerializerEntry | undefined {
     return this._byCtor.resolve(ctor) ?? this._fallback?._resolveExactCtor(ctor);
   }
@@ -126,7 +126,7 @@ export class SerializationRegistry {
 
   /**
    * Remove every own registration (both the name and constructor maps). The
-   * fallback chain is left untouched. Test infrastructure only — used to reset
+   * fallback chain is left untouched. Test infrastructure only - used to reset
    * the {@link defaultSerializationRegistry} between suites so process-wide
    * registrations do not leak across them.
    * @internal

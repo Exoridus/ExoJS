@@ -190,7 +190,7 @@ describe('TremoloEffect', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Node graph — autoPan = false (default)
+  // Node graph - autoPan = false (default)
   // -------------------------------------------------------------------------
 
   describe('internal node graph (autoPan = false)', () => {
@@ -290,7 +290,7 @@ describe('TremoloEffect', () => {
   });
 
   // -------------------------------------------------------------------------
-  // Node graph — autoPan = true
+  // Node graph - autoPan = true
   // -------------------------------------------------------------------------
 
   describe('internal node graph (autoPan = true)', () => {

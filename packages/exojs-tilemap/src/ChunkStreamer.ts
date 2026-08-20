@@ -16,7 +16,7 @@ export interface ChunkStreamerOptions {
   readonly loadRadius?: number;
   /**
    * Own-resident chunks beyond this many chunk-units of the view are
-   * evicted. Must be `>= loadRadius` — the gap between the two is
+   * evicted. Must be `>= loadRadius` - the gap between the two is
    * deliberate hysteresis that prevents load/unload thrashing when the
    * view sits near a chunk boundary. Default `2`.
    */
@@ -46,10 +46,10 @@ function isThenable(value: unknown): value is Promise<ChunkPayload | null> {
  * from a {@link View}'s position: chunks near the view are requested from a
  * {@link ChunkSource} and installed; chunks that scroll far enough away are
  * evicted. Works on both unbounded and bounded layers (a bounded-but-large
- * layer still benefits from not keeping every chunk resident at once) — for
+ * layer still benefits from not keeping every chunk resident at once) - for
  * a bounded layer, the wanted range is clamped to {@link TileLayer.chunkRange}.
  *
- * Touches only the {@link TileLayer} data layer —
+ * Touches only the {@link TileLayer} data layer -
  * {@link import('./TileLayerNode').TileLayerNode} reacts to
  * `_adoptChunk`/`_evictChunk` on its own via a structural listener, so this
  * class has no rendering dependency and no reference to any scene node.
@@ -250,7 +250,7 @@ export class ChunkStreamer {
 
   /**
    * Ignore-on-resolve: only the `_destroyed` and in-flight-token checks
-   * guard installation — a chunk that scrolled out of the wanted set while
+   * guard installation - a chunk that scrolled out of the wanted set while
    * its request was in flight is still installed if it resolves (installing
    * it is cheap and self-correcting: the next {@link update} call's unload
    * pass evicts it again if it's genuinely no longer wanted). There is no

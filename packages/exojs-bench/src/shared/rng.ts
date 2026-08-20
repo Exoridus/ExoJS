@@ -9,7 +9,7 @@
  * identical selection across arms.
  */
 
-/** mulberry32 — small, fast, deterministic. Same seed => same stream. */
+/** mulberry32 - small, fast, deterministic. Same seed => same stream. */
 export const createRng = (seed: number): (() => number) => {
   let state = seed >>> 0;
 

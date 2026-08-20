@@ -19,7 +19,7 @@ new Application({
   },
 });
 
-// No `scenes` option at all — Registry defaults to {}.
+// No `scenes` option at all - Registry defaults to {}.
 new Application();
 new Application({});
 
@@ -35,9 +35,9 @@ void typedApp;
 
 // An invalid entry (neither a Scene subclass constructor nor a valid
 // descriptor) is rejected at the type level too, not just at runtime.
-// @ts-expect-error — NotAScene is not a Scene subclass constructor
+// @ts-expect-error - NotAScene is not a Scene subclass constructor
 new Application({ scenes: { bad: NotAScene } });
-// @ts-expect-error — NotAScene is not a Scene subclass constructor
+// @ts-expect-error - NotAScene is not a Scene subclass constructor
 new Application({ scenes: { bad: { scene: NotAScene } } });
 
 // start() accepts a registered string key directly (no cast/bridge type).
@@ -45,9 +45,9 @@ void typedApp.start('title');
 void typedApp.start('game', { data: { level: 1 } });
 
 // start()'s constructor overload is constrained to the registry
-// (NavigableSceneConstructor<Registry>) — an unregistered constructor is
+// (NavigableSceneConstructor<Registry>) - an unregistered constructor is
 // rejected at compile time, not just by the dev-only UnregisteredSceneError
-// runtime check. A data-bearing registry entry is needed to observe this —
+// runtime check. A data-bearing registry entry is needed to observe this -
 // an empty, data-less scene subclass would be structurally identical to
 // TitleScene (structural typing can't tell two empty classes apart) and TS
 // would accept it despite not being registered; typedApp's registered
@@ -55,7 +55,7 @@ void typedApp.start('game', { data: { level: 1 } });
 // against instead.
 class UnregisteredScene extends Scene<{ readonly totallyDifferent: string }> {}
 
-// @ts-expect-error — UnregisteredScene is not in typedApp's registry; start() must reject it at compile time.
+// @ts-expect-error - UnregisteredScene is not in typedApp's registry; start() must reject it at compile time.
 void typedApp.start(UnregisteredScene);
 
 export {};

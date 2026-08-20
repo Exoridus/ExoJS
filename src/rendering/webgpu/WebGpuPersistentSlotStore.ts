@@ -24,12 +24,12 @@ const initialSlotCapacity = 1024;
 /**
  * Slots one dirty block covers.
  *
- * Arrivals are scattered — they come off a free list — so the dirty set is
+ * Arrivals are scattered - they come off a free list - so the dirty set is
  * tracked per BLOCK rather than as one min/max span, and each dirty block is one
  * `writeBuffer` per store. 256 slots is 8 KB of transform rows, 8 KB of quad
  * records and 1 KB of tints: large enough that the per-call overhead is
  * amortised, small enough that a lone arrival does not re-upload the store. In
- * practice they cluster anyway — the free list is LIFO, and the items leaving a
+ * practice they cluster anyway - the free list is LIFO, and the items leaving a
  * scrolling view were admitted together, so their slots were too.
  */
 const slotsPerBlock = 256;
@@ -92,7 +92,7 @@ export interface WebGpuPersistentSlotCapableRenderer {
  * slots through three data textures because that is what a WebGL2 vertex stage
  * can random-access; here a storage buffer indexes directly, so there is no
  * texel mapping, no `MAX_TEXTURE_SIZE` ceiling to route around and no row/line
- * geometry — a slot is just an array element. The order stream is a storage
+ * geometry - a slot is just an array element. The order stream is a storage
  * buffer too rather than an instanced vertex attribute, which is what lets the
  * pipeline declare no vertex buffers at all.
  *
@@ -102,13 +102,13 @@ export interface WebGpuPersistentSlotCapableRenderer {
  * item stays visible. A camera step therefore writes only the rows of the items
  * that just entered; the rest of the store is already correct and is not read,
  * not rewritten and not re-uploaded. What does change every selection is the
- * order buffer — four bytes per visible item — because that IS the draw order
+ * order buffer - four bytes per visible item - because that IS the draw order
  * and an insertion moves everything behind it.
  *
  * # Growth
  *
  * Capacity doubles and the CPU staging arrays carry every written slot across,
- * so a slot keeps both its number and its contents — which is why growth does
+ * so a slot keeps both its number and its contents - which is why growth does
  * not bump {@link generation}. The GPU buffers are replaced (WebGPU buffers do
  * not resize), so growth marks the whole store dirty and invalidates the cached
  * bind group; the plan is told nothing, because nothing it believes stopped
@@ -161,7 +161,7 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
   /**
    * Projection + group + snap viewport + premultiply mask, as the pipeline sees
    * them. Two views over one block because the mask is a `u32` sitting behind
-   * three matrices of `f32` — writing it through the float view would store its
+   * three matrices of `f32` - writing it through the float view would store its
    * bit pattern as a float.
    */
   public readonly uniformData = new Float32Array(persistentUniformBytes / Float32Array.BYTES_PER_ELEMENT);
@@ -187,7 +187,7 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
   /**
    * The one blend mode the whole source agreed on. A blend change is a hard
    * flush boundary for the batcher, so a source that mixes modes never gets a
-   * store at all — which is why this can be a single value rather than per slot.
+   * store at all - which is why this can be a single value rather than per slot.
    */
   public blendMode: BlendModes = BlendModes.Normal;
 
@@ -252,15 +252,15 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
    * All four slot buffers are `storage` bindings, so each is bounded by
    * `min(maxBufferSize, maxStorageBufferBindingSize)` of the GRANTED device
    * limits. Nothing raises either today, which puts the ceiling at the spec
-   * default of 128 MiB per binding — 4 194 304 slots at 32 bytes of transform
-   * row — on every device, however much the adapter would have offered.
+   * default of 128 MiB per binding - 4 194 304 slots at 32 bytes of transform
+   * row - on every device, however much the adapter would have offered.
    *
    * Answered against the SELECTION rather than against the source, because the
    * source is not the bound: a root of ten million items whose camera admits a
    * few thousand needs a few thousand slots, and refusing it at acquisition
    * would cost the indexed path exactly the scenes it exists for. Answered
    * BEFORE the growth allocates, because past the ceiling `createBuffer` still
-   * succeeds and `createBindGroup` does not — the root would keep selecting,
+   * succeeds and `createBindGroup` does not - the root would keep selecting,
    * keep uploading, and silently draw nothing behind an uncaptured validation
    * error.
    *
@@ -323,7 +323,7 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
     // buffers, so their contents have to be pushed again. The rows above the old
     // capacity are not. An arrival that writes one marks its own block through
     // `writeSlotFrom`, and a row nothing writes is never named by an order
-    // stream, so no draw can read it — marking the whole new capacity uploaded
+    // stream, so no draw can read it - marking the whole new capacity uploaded
     // the entire store on the one frame it allocates, up to half of it rows that
     // had never been written.
     //
@@ -345,8 +345,8 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
    * Deliberately takes offsets into typed arrays rather than a drawable: the
    * whole point of the source-side prepack is that an item entering the view is
    * never read out of the scene graph again, so this method must have no way to
-   * do so. The quad record's eight floats are already this store's quad layout —
-   * local bounds then UV — so they copy straight across.
+   * do so. The quad record's eight floats are already this store's quad layout -
+   * local bounds then UV - so they copy straight across.
    *
    * `textureIndex` overwrites the canonical transform row's spare fourth
    * component, which the shared packer leaves at zero and no other shader reads.
@@ -401,9 +401,9 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
     let block = 0;
 
     // Consecutive dirty blocks are uploaded as ONE run per buffer rather than
-    // one call per block. Arrivals cluster hard — the free list is LIFO, so a
+    // one call per block. Arrivals cluster hard - the free list is LIFO, so a
     // scrolling camera hands the departures' slots straight back to the
-    // arrivals — which at a million items turns a few hundred `writeBuffer`
+    // arrivals - which at a million items turns a few hundred `writeBuffer`
     // calls a frame into a handful, for the same bytes.
     while (block < blocks.length) {
       if (blocks[block] === 0) {
@@ -504,7 +504,7 @@ export class WebGpuPersistentSlotStore implements PersistentSlotBundle {
 
     // Rounded up to four bytes is a no-op here (entries are u32), but
     // writeBuffer requires a multiple of 4 and a non-zero size is never asked
-    // for — the draw hook returns early on an empty order.
+    // for - the draw hook returns early on an empty order.
     device.queue.writeBuffer(this._orderBuffer, 0, this._order.buffer, this._order.byteOffset, count * orderBytesPerEntry);
     this._accountant?.recordBufferUpload(count * orderBytesPerEntry);
 

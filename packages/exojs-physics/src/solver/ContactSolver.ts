@@ -7,7 +7,7 @@ const restitutionThreshold = 1;
  * Penetration allowance (px) the soft bias leaves uncorrected. The narrow phase
  * only produces a manifold while the colliders overlap, so pushing penetration
  * fully to zero lets a resting contact wink out for a frame (free-fall, then
- * re-detect) — a periodic energy spike. Leaving a small slop keeps the contact
+ * re-detect) - a periodic energy spike. Leaving a small slop keeps the contact
  * persistently overlapping and the warm-start cache alive.
  */
 const slop = 0.25;
@@ -21,7 +21,7 @@ const maxBiasVelocity = 4;
 const maxConditionNumber = 1000;
 
 /**
- * Per-contact velocity constraint (1–2 points), computed once per **frame** in
+ * Per-contact velocity constraint (1-2 points), computed once per **frame** in
  * {@link ContactSolver.prepare} and reused across all sub-steps and passes.
  * Pooled and reused across frames, so steady-state stepping allocates nothing.
  */
@@ -87,7 +87,7 @@ class ContactConstraint {
  *
  * The position constraint is folded into the velocity solve as a **soft bias**
  * (a damped-spring push-out whose stiffness is decoupled from the iteration
- * count), recomputed each pass from the live per-body delta position/rotation —
+ * count), recomputed each pass from the live per-body delta position/rotation -
  * so there is no separate NGS geometric pass. The contact anchors are rotated by
  * the live sub-step rotation each pass, so a tilting stack's restoring torque is
  * computed against its current orientation (without this the tilt grows instead
@@ -204,7 +204,7 @@ export class ContactSolver {
 
         // Frame-start relative normal velocity (the true impact speed, captured
         // before this frame's gravity since prepare runs ahead of the sub-step
-        // loop) — keys the restitution pass so a resting contact does not
+        // loop) - keys the restitution pass so a resting contact does not
         // perpetually micro-bounce off the per-step gravity increment.
         constraint.relativeVelocity[i] = normalVelocity(bodyA, bodyB, rAx, rAy, rBx, rBy, nx, ny);
       }
@@ -340,9 +340,9 @@ export class ContactSolver {
 
     // Recompute the per-point push-out target from the live separation (folds the
     // position constraint into the velocity solve as a soft bias). With useBias
-    // off (relax pass) the target is zero — the plain hard normal solve.
+    // off (relax pass) the target is zero - the plain hard normal solve.
     for (let i = 0; i < constraint.pointCount; i++) {
-      // Push out only the penetration beyond the slop, capped — leaving the slop
+      // Push out only the penetration beyond the slop, capped - leaving the slop
       // keeps the contact overlapping so the narrow phase does not drop it.
       const excess = -currentSeparation(constraint, i) - slop;
 
@@ -350,7 +350,7 @@ export class ContactSolver {
     }
 
     // Normal before friction (Box2D-v3 order): friction's Coulomb cone clamps to
-    // `μ·normalImpulse`, so it must see this pass's freshly-solved normal impulse —
+    // `μ·normalImpulse`, so it must see this pass's freshly-solved normal impulse -
     // solving friction first uses last pass's cone and lets stacks creep laterally.
     if (constraint.block) {
       this._solveNormalBlock(constraint);
@@ -437,7 +437,7 @@ export class ContactSolver {
     const bx = vn1 - n(constraint.velocityBias, 0) - (constraint.k11 * a1 + constraint.k12 * a2);
     const by = vn2 - n(constraint.velocityBias, 1) - (constraint.k12 * a1 + constraint.k22 * a2);
 
-    // Case 1 — both points active: x = −K⁻¹·b.
+    // Case 1 - both points active: x = −K⁻¹·b.
     let x1 = -(constraint.invK11 * bx + constraint.invK12 * by);
     let x2 = -(constraint.invK12 * bx + constraint.invK22 * by);
 
@@ -449,7 +449,7 @@ export class ContactSolver {
       return;
     }
 
-    // Case 2 — only point 1 active (x2 = 0).
+    // Case 2 - only point 1 active (x2 = 0).
     x1 = -n(constraint.normalMass, 0) * bx;
     x2 = 0;
 
@@ -461,7 +461,7 @@ export class ContactSolver {
       return;
     }
 
-    // Case 3 — only point 2 active (x1 = 0).
+    // Case 3 - only point 2 active (x1 = 0).
     x1 = 0;
     x2 = -n(constraint.normalMass, 1) * by;
 
@@ -473,7 +473,7 @@ export class ContactSolver {
       return;
     }
 
-    // Case 4 — neither active (separating). Only valid when both residuals are non-negative.
+    // Case 4 - neither active (separating). Only valid when both residuals are non-negative.
     if (bx >= 0 && by >= 0) {
       this._applyBlock(constraint, -a1, -a2);
       constraint.record.normalImpulse[0] = 0;

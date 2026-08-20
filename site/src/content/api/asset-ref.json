@@ -1,6 +1,6 @@
 {
   "title": "AssetRef",
-  "description": "Deferred handle for value assets (parsed JSON, text, CSV rows, …), returned by `loader.get(Asset.type('json', src))` / a bare value path and friends. Values cannot heal in place the way resource handles do, so the REF is the stable identity: value throws until `'ready'`, loaded resolves with the value itself, and a failed ref retries (healing in place) on the next `get`.",
+  "description": "Deferred handle for value assets (parsed JSON, text, CSV rows, ...), returned by `loader.get(Asset.type('json', src))` / a bare value path and friends. Values cannot heal in place the way resource handles do, so the REF is the stable identity: value throws until `'ready'`, loaded resolves with the value itself, and a failed ref retries (healing in place) on the next `get`.",
   "symbol": "AssetRef",
   "kind": "class",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Deferred handle for value assets (parsed JSON, text, CSV rows, …), returned by `loader.get(Asset.type('json', src))` / a bare value path and friends. Values cannot heal in place the way resource handles do, so the REF is the stable identity: value throws until `'ready'`, loaded resolves with the value itself, and a failed ref retries (healing in place) on the next `get`."
+        "Deferred handle for value assets (parsed JSON, text, CSV rows, ...), returned by `loader.get(Asset.type('json', src))` / a bare value path and friends. Values cannot heal in place the way resource handles do, so the REF is the stable identity: value throws until `'ready'`, loaded resolves with the value itself, and a failed ref retries (healing in place) on the next `get`."
       ],
       "importLine": "import { AssetRef } from '@codexo/exojs'",
       "sourceLink": null
@@ -138,7 +138,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Promise settling with the parsed value. Re-materialized when a failed load is retried — read it fresh from this getter across load cycles."
+          "description": "Promise settling with the parsed value. Re-materialized when a failed load is retried - read it fresh from this getter across load cycles."
         },
         {
           "name": "loadState",
@@ -222,7 +222,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The parsed value. Throws while 'loading' or 'failed' — await loaded or check loadState."
+          "description": "The parsed value. Throws while 'loading' or 'failed' - await loaded or check loadState."
         }
       ],
       "paragraphs": [],

@@ -2,8 +2,8 @@
  * DSP-level regression tests for the VocoderProcessor worklet.
  *
  * These tests directly instantiate the processor class (by evaluating the
- * worklet source string with minimal stubs) and verify the DSP output — RMS,
- * spectral envelope shaping, and the bandCount make-up gain — without needing
+ * worklet source string with minimal stubs) and verify the DSP output - RMS,
+ * spectral envelope shaping, and the bandCount make-up gain - without needing
  * a real AudioContext or browser.
  */
 
@@ -158,7 +158,7 @@ describe('VocoderProcessor DSP', () => {
   // ── 2. Make-up gain: broadband output ≈ carrier level ─────────────────────
   // The bandCount compensation factor (multiplied in the output line) ensures
   // that a broadband carrier + broadband modulator produces output within ±6 dB
-  // of the carrier RMS.  Before the fix the shortfall was –23.8 dB.
+  // of the carrier RMS.  Before the fix the shortfall was -23.8 dB.
   it('output RMS is within 6 dB of carrier RMS after 2 s warmup (broadband)', () => {
     const proc     = new Processor({ processorOptions: { numBands: NUM_BANDS, minHz: 80, maxHz: 8000, bandQ: 4 } });
     const carrier  = makeSawtooth(110, 1.0, TOTAL);

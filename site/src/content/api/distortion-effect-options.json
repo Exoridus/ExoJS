@@ -51,7 +51,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Drive amount: controls the intensity of the tanh soft-clip curve. Range 0..1, default 0.4. Higher values produce heavier, more saturated distortion; lower values produce a milder soft-clip. Note that even at drive=0 the curve is not perfectly linear — the formula tanh(x) / tanh(1) has a gain of 1/tanh(1) ≈ 1.31 at the origin."
+          "description": "Drive amount: controls the intensity of the tanh soft-clip curve. Range 0..1, default 0.4. Higher values produce heavier, more saturated distortion; lower values produce a milder soft-clip. Note that even at drive=0 the curve is not perfectly linear - the formula tanh(x) / tanh(1) has a gain of 1/tanh(1) ≈ 1.31 at the origin."
         },
         {
           "name": "oversample",

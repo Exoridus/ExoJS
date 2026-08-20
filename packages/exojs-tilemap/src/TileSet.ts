@@ -35,7 +35,7 @@ export interface TileSetOptions {
 /**
  * A resolved tileset: a uniform grid of tiles within a texture atlas.
  *
- * Does **not** own its texture — the Loader or application code retains
+ * Does **not** own its texture - the Loader or application code retains
  * texture ownership. Tileset dimensions are validated at construction and
  * frozen thereafter.
  *
@@ -47,7 +47,7 @@ export class TileSet {
   /** Stable runtime name. */
   public readonly name: string;
 
-  /** Atlas texture region — Loader-owned, never destroyed by the tileset. */
+  /** Atlas texture region - Loader-owned, never destroyed by the tileset. */
   public readonly texture: TextureRegion;
 
   /** Tile width in pixels. */
@@ -74,13 +74,13 @@ export class TileSet {
    * Visual drawing offset X in pixels (Tiled `tileoffset`).
    *
    * Applied by the tile-layer geometry builder and by the tile-collision
-   * helpers — i.e. wherever this package places a tile on a grid. It is **not**
+   * helpers - i.e. wherever this package places a tile on a grid. It is **not**
    * folded into a {@link TileObject}'s `x`/`y`: object layers are data-only, so
    * code that draws a tile object itself has to add this offset the way a tile
    * layer would.
    */
   public readonly offsetX: number;
-  /** Visual drawing offset Y in pixels (Tiled `tileoffset`) — see {@link offsetX} for where it applies. */
+  /** Visual drawing offset Y in pixels (Tiled `tileoffset`) - see {@link offsetX} for where it applies. */
   public readonly offsetY: number;
 
   private readonly _definitions: ReadonlyMap<number, TileDefinition>;

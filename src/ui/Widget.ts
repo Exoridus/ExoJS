@@ -27,7 +27,7 @@ const anchorFactors = (anchor: WidgetAnchor): readonly [number, number] => {
 };
 
 /**
- * Base class for UI widgets — a {@link Container} with an explicit layout size
+ * Base class for UI widgets - a {@link Container} with an explicit layout size
  * (independent of child bounds / scale), an `enabled` flag, and optional
  * screen-edge anchoring that re-applies on resize.
  *

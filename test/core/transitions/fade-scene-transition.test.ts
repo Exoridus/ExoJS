@@ -7,7 +7,7 @@ import { FadeSceneTransition } from '#core/transitions/FadeSceneTransition';
 import type { Matrix } from '#math/Matrix';
 import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
 
-// Exposes the protected authoring hooks through public wrappers — the
+// Exposes the protected authoring hooks through public wrappers - the
 // idiomatic way to unit-test a PhasedSceneTransition subclass's own
 // enter()/exit()/getPhaseRequirements() in isolation, without re-driving
 // PhasedSceneTransition's own session machinery (already covered by its own
@@ -29,7 +29,7 @@ class TestableFadeSceneTransition extends FadeSceneTransition {
 // The real SceneTransitionPhaseContext['rendering'] is a RenderingContext.
 // FadeSceneTransition draws a full-screen tinted quad via
 // rendering.drawGeometry(...), reading the screen bounds from
-// rendering.screenView.getBounds() — so the stub needs both.
+// rendering.screenView.getBounds() - so the stub needs both.
 const stubRendering = (drawGeometry = vi.fn()): SceneTransitionPhaseContext['rendering'] =>
   ({
     drawGeometry,
@@ -91,7 +91,7 @@ describe('FadeSceneTransition', () => {
 
   // The regression this whole options-only break was for: under the old
   // (color, options) positional signature, this call silently misassigned
-  // the options object to `color` instead of defaulting it — leaving both
+  // the options object to `color` instead of defaulting it - leaving both
   // assertions below false.
   test('options-only call with color omitted keeps the color default alongside the supplied option', () => {
     const fade = new FadeSceneTransition({ duration: 300 });
@@ -124,7 +124,7 @@ describe('FadeSceneTransition', () => {
     const [geometry, transform, options] = drawGeometry.mock.calls[0] as [QuadGeometry, Matrix, { tint: Color }];
 
     // Untextured full-screen quad, scaled/translated to the stubbed screen
-    // bounds (0,0)-(800,600) — no rotation/shear component.
+    // bounds (0,0)-(800,600) - no rotation/shear component.
     expect(geometry).toBeInstanceOf(QuadGeometry);
     expect(transform.equals({ a: 800, b: 0, x: 0, c: 0, d: 600, y: 0 })).toBe(true);
     expect(options.tint.equals({ r: fade.color.r, g: fade.color.g, b: fade.color.b, a: 0.75 })).toBe(true);
@@ -166,7 +166,7 @@ describe('FadeSceneTransition', () => {
     const sessionA = shared.beginSession(new TestEnvironment());
     const sessionB = shared.beginSession(new TestEnvironment());
 
-    // Drive A to a different presence than B, then render both — if they
+    // Drive A to a different presence than B, then render both - if they
     // shared one Color/Matrix/QuadGeometry on the definition, the second
     // render() call would clobber the first's tint alpha before A's draw
     // call actually reads it back.

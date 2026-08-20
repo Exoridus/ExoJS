@@ -1,6 +1,6 @@
 {
   "title": "UniformValue",
-  "description": "Value accepted by a material uniform. Scalars and small tuples auto-marshal to the appropriate `Float32Array`/`Int32Array` for the backend's uniform call. `Texture`/`RenderTexture` values are bound to texture slots starting at slot 1 — slot 0 is reserved for the drawable's own `texture`.",
+  "description": "Value accepted by a material uniform. Scalars and small tuples auto-marshal to the appropriate `Float32Array`/`Int32Array` for the backend's uniform call. `Texture`/`RenderTexture` values are bound to texture slots starting at slot 1 - slot 0 is reserved for the drawable's own `texture`.",
   "symbol": "UniformValue",
   "kind": "type",
   "subsystem": "rendering",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Value accepted by a material uniform. Scalars and small tuples auto-marshal to the appropriate `Float32Array`/`Int32Array` for the backend's uniform call. `Texture`/`RenderTexture` values are bound to texture slots starting at slot 1 — slot 0 is reserved for the drawable's own `texture`."
+        "Value accepted by a material uniform. Scalars and small tuples auto-marshal to the appropriate `Float32Array`/`Int32Array` for the backend's uniform call. `Texture`/`RenderTexture` values are bound to texture slots starting at slot 1 - slot 0 is reserved for the drawable's own `texture`."
       ],
       "importLine": "import { UniformValue } from '@codexo/exojs'",
       "sourceLink": null

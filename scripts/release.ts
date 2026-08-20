@@ -16,7 +16,7 @@
  *  7. Annotated tag is created at HEAD.
  *  8. The next-step push instructions are printed; the script exits.
  *
- * Aborts on any failure. Idempotent — safe to re-run after fixing issues
+ * Aborts on any failure. Idempotent - safe to re-run after fixing issues
  * (the failed run never reaches the tag-creation step). To undo a created
  * tag before pushing: `git tag -d vX.Y.Z`.
  *
@@ -162,7 +162,7 @@ try {
   out(`git rev-parse ${tag}`);
   localTagExists = true;
 } catch {
-  // tag does not exist locally — expected
+  // tag does not exist locally - expected
 }
 
 if (localTagExists) {

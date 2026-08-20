@@ -1,4 +1,4 @@
-// Auto-generated from ldtk-world-import.ts — edit the .ts source, not this file.
+// Auto-generated from ldtk-world-import.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, Graphics, Scene, Text } from '@codexo/exojs';
 import { getLdtkIntGridValueAt, ldtkExtension } from '@codexo/exojs-ldtk';
 import { TileMapNode } from '@codexo/exojs-tilemap';
@@ -7,15 +7,15 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 //
 //   - `loader.load(Asset.type('ldtkMap', url))` fetches the world, loads every referenced
 //     tileset image, and converts *every* level to its own runtime `TileMap`
-//     in one pass — `world.levels` (document order) or
+//     in one pass - `world.levels` (document order) or
 //     `world.getLevelByName(identifier)`.
-//   - `TileMapNode` renders any one level exactly like a Tiled-sourced map —
+//   - `TileMapNode` renders any one level exactly like a Tiled-sourced map -
 //     same runtime, same renderer.
 //   - LDtk's `IntGrid` layers (collision/terrain grids painted as plain
 //     integers, not tiles) convert to ordinary `TileLayer`s carrying the raw
 //     per-cell values as reserved properties; `getLdtkIntGridValueAt(layer,
 //     x, y)` looks up the named + coloured definition for a cell.
-//   - LDtk `Entities` layers convert to `ObjectLayer`s — the same
+//   - LDtk `Entities` layers convert to `ObjectLayer`s - the same
 //     `TileMapObject` shape a Tiled object layer produces, with entity
 //     fields (`Int`, `String`, ...) carried as `properties`.
 //

@@ -97,7 +97,7 @@ export const publishRelease = (
 
   // ── Build-once guard ────────────────────────────────────────────────────
   // Re-hash the on-disk artifacts. Any drift means something rebuilt or
-  // mutated the tarballs after `prepare` — refuse to publish.
+  // mutated the tarballs after `prepare` - refuse to publish.
   const drift = verifyManifestArtifacts(manifest, resolveArtifact);
   if (drift.length > 0) {
     report.abortReason = `artifact drift since prepare: ${drift.map(issue => `${issue.file} (${issue.reason})`).join(', ')}`;
@@ -123,7 +123,7 @@ export const publishRelease = (
     if (result.code !== 0) {
       outcome.publish = 'failed';
       outcome.detail = (result.stderr || result.stdout).trim().split('\n').slice(-1)[0];
-      // Stop the chain immediately — later packages are never attempted.
+      // Stop the chain immediately - later packages are never attempted.
       return report;
     }
     outcome.publish = 'published';

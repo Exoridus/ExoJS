@@ -3,8 +3,8 @@
 /**
  * A render-pipeline cache keyed without building a key.
  *
- * Every WebGPU renderer selects its pipeline from the same three inputs — blend
- * mode, target format, and whether a stencil clip is active — and the obvious
+ * Every WebGPU renderer selects its pipeline from the same three inputs - blend
+ * mode, target format, and whether a stencil clip is active - and the obvious
  * encoding is a template literal (`` `${blendMode}:${format}:${stencil}` ``).
  * That string is built on every draw and thrown away on every draw: measured on
  * the WebGPU allocation harness, the sprite renderer's key alone accounted for

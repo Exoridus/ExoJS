@@ -1,11 +1,11 @@
 /**
- * WebGPU rotated-mesh browser tests — instanced vs. single-draw parity
+ * WebGPU rotated-mesh browser tests - instanced vs. single-draw parity
  * (pixel regression gate).
  *
  * The WebGPU instanced-mesh path used to apply the per-node affine
  * TRANSPOSED (a·x + c·y instead of a·x + b·y). Axis-aligned transforms are
  * transpose-invariant, so every existing cell passed while rotated or skewed
- * instances rendered at mirrored positions — diverging both from the CPU-bake
+ * instances rendered at mirrored positions - diverging both from the CPU-bake
  * single-draw path and from WebGL2. These cells rotate quads through BOTH
  * paths and assert identical world positions; the expected pixels are
  * mirrored 1:1 in webgl2-rotated-mesh.test.ts for cross-backend equality.
@@ -34,7 +34,7 @@ const canvasSize = 64;
 
 // Rotation +90° in the engine's row-major convention (a=cosθ, b=-sinθ,
 // c=sinθ, d=cosθ): (x, y) → (tx - y, ty + x). The TRANSPOSED application maps
-// (x, y) → (tx + y, ty - x) instead — the black-checked artifact positions.
+// (x, y) → (tx + y, ty - x) instead - the black-checked artifact positions.
 const rotatePlus90 = (tx: number, ty: number): Matrix => new Matrix(0, -1, tx, 1, 0, ty);
 // Rotation -90°: (x, y) → (tx + y, ty - x).
 const rotateMinus90 = (tx: number, ty: number): Matrix => new Matrix(0, 1, tx, -1, 0, ty);
@@ -63,7 +63,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 };
 
 // A solid-color quad (two triangles) in local space. Layout: position f32x2
-// @0, color u8x4-norm @8, stride 12 — the default mesh path samples the 1×1
+// @0, color u8x4-norm @8, stride 12 - the default mesh path samples the 1×1
 // white texture, so the output is the vertex color.
 const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaTuple): Geometry => {
   const stride = 12;
@@ -177,7 +177,7 @@ describe('WebGPU rotated mesh: single-draw vs. instanced parity', () => {
         return;
       }
 
-      // All three instances are emitted as one instanced draw call — the
+      // All three instances are emitted as one instanced draw call - the
       // exact WGSL slot-math path under test.
       expect(backend.stats.drawCalls).toBe(1);
 

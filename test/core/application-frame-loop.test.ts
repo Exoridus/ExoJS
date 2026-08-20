@@ -107,7 +107,7 @@ describe('Application — _frameLoopActive', () => {
     await Promise.resolve();
 
     // start() hasn't resolved yet (status is still Loading), but the loop
-    // must already be live and self-rescheduling — this is the bug being fixed.
+    // must already be live and self-rescheduling - this is the bug being fixed.
     expect(app.state).toBe(ApplicationState.Loading);
     const callsBeforeManualTick = rafSpy.mock.calls.length;
 
@@ -129,7 +129,7 @@ describe('Application — _frameLoopActive', () => {
     await Promise.resolve();
 
     expect(frameLoopActive(app)).toBe(true);
-    // activeTime is a live Clock read — a non-zero value here (rather than
+    // activeTime is a live Clock read - a non-zero value here (rather than
     // waiting for start() to resolve) proves the clock started at
     // _startFrameLoop() time, alongside the rest of the state that must
     // clear/start together (the _activeClock one).
@@ -219,7 +219,7 @@ describe('Application — _frameLoopActive', () => {
 
         protected override createSession(_environment: SceneTransitionEnvironment): SceneTransitionSession {
           // Never calls environment.commit() and never reaches `done` on its
-          // own — a stand-in for "a transition whose session is still
+          // own - a stand-in for "a transition whose session is still
           // mid-flight when something stops the app," driven only by the test.
           return {
             placement: 'screen',
@@ -240,12 +240,12 @@ describe('Application — _frameLoopActive', () => {
 
       const startPromise = app.start(TargetScene, { transition });
 
-      // Let the loop start and the transition's session begin — but never
+      // Let the loop start and the transition's session begin - but never
       // drive it to commit/done (that's the whole point of this test). The
       // exact number of microtask turns start() needs before the session
       // actually begins (backend init, capability detection, then the
       // Director's own pre-session synchronous setup) isn't a stable
-      // constant to hardcode — poll instead of guessing a tick count.
+      // constant to hardcode - poll instead of guessing a tick count.
       for (let i = 0; i < 50 && !sessionActive(app); i++) {
         await Promise.resolve();
       }
@@ -292,7 +292,7 @@ describe('Application — _frameLoopActive', () => {
 
       const app = new Application({ backend: { type: 'webgl2' }, scenes: { a: SceneA, b: SceneB } });
 
-      // Get the app fully running with SceneA active first (no transition —
+      // Get the app fully running with SceneA active first (no transition -
       // resolves once the direct fast path completes), matching the
       // "already-running app" precondition the mid-transition abort gap
       // requires (unlike the startup test above, which never activates a
@@ -318,7 +318,7 @@ describe('Application — _frameLoopActive', () => {
       expect(app.state).toBe(ApplicationState.Stopped);
       // The bug this test guards: stop() must not leave SceneA loaded just
       // because a navigation abort (rather than a clean stop) is what
-      // triggered the unload — SceneA never committed away, so it is still
+      // triggered the unload - SceneA never committed away, so it is still
       // the active scene at the moment stop() is called, and stop()'s own
       // contract is to unload whatever is active.
       expect(app.scenes.currentScene).toBeNull();

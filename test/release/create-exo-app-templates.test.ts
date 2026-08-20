@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest';
 // Version-agnostic guard for packages/create-exo-app/templates/*/package.json:
 // every scaffolded app depends on `@codexo/exojs` (and, if a template ever grows
 // one, an `@codexo/exojs-*` extension), and that dependency range must never be
-// allowed to silently drift from the package it actually resolves against —
+// allowed to silently drift from the package it actually resolves against -
 // otherwise `npm create exo-app` hands out a project that breaks on install or
 // at runtime. Nothing here is hard-coded to a version number; both the current
 // version and the templates are read from disk so this test never goes stale on
@@ -47,15 +47,15 @@ for (const dir of readdirSync(packagesDir, { withFileTypes: true })) {
       publishedVersions.set(manifest.name, manifest.version);
     }
   } catch {
-    // No package.json (or unreadable) — not a package directory, skip.
+    // No package.json (or unreadable) - not a package directory, skip.
   }
 }
 
 /**
  * A dependency range on an `@codexo/exojs*` package is considered in sync with
  * `version` when it is:
- *   - the literal `latest` dist-tag (the documented create-exo-app convention —
- *     see scripts/verify-create-exo-app.ts — which by construction can never
+ *   - the literal `latest` dist-tag (the documented create-exo-app convention -
+ *     see scripts/verify-create-exo-app.ts - which by construction can never
  *     drift, since it always resolves to whatever is newest on npm); or
  *   - an exact match of `version` (optionally caret-prefixed); or
  *   - the lockstep `<major>.<minor>.x` form used elsewhere in the repo (see

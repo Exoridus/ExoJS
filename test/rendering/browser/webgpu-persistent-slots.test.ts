@@ -1,7 +1,7 @@
 /// <reference types="@webgpu/types" />
 
 /**
- * WebGPU persistent-indexed selection — real pixels.
+ * WebGPU persistent-indexed selection - real pixels.
  *
  * The counterpart of `webgl2-persistent-slots.test.ts`, against the same plan
  * layer and the same slot semantics but a WebGPU-native store (four storage
@@ -12,7 +12,7 @@
  * that is never uploaded, a stale slot, or a draw issued in slot order instead
  * of `(zIndex, seq)` order all produce a correct-looking plan and wrong pixels.
  * Every assertion here is therefore a framebuffer read taken after the tier has
- * demonstrably engaged (`drawCalls === 1` for the whole root — the live path
+ * demonstrably engaged (`drawCalls === 1` for the whole root - the live path
  * would need one per batch).
  *
  * Run via:  pnpm test:browser:webgpu
@@ -83,7 +83,7 @@ const render = (backend: WebGpuBackend, node: RenderNode): void => {
 
 /**
  * Drive frames until the persistent tier owns the root, then one more under a
- * validation scope so the final frame — the one every pixel assertion reads —
+ * validation scope so the final frame - the one every pixel assertion reads -
  * is proven free of WebGPU validation errors.
  *
  * The tier needs two consecutive rebuild frames over unchanged content before
@@ -218,7 +218,7 @@ describe('WebGPU persistent-indexed selection', () => {
 
       expect(backend.stats.drawCalls).toBe(1);
       // The stayer's rows were written once, several selections ago, and have
-      // not been touched since — a store that lost them would read black here.
+      // not been touched since - a store that lost them would read black here.
       // It now sits at screen x 8..24, so the read lands inside it.
       expectPixelNear(readWebGpuPixels(backend, canvasSize)(12, 8), red);
     } finally {
@@ -234,7 +234,7 @@ describe('WebGPU persistent-indexed selection', () => {
     const root = new Container();
     // `first` is admitted alone at the start, so it takes slot 0; `second`
     // enters later and takes a higher slot. They then overlap exactly, and
-    // `second` is recorded after `first`, so `second` must win — a draw issued
+    // `second` is recorded after `first`, so `second` must win - a draw issued
     // in physical slot order would produce the same answer only by accident,
     // which is why the setup makes the two orders disagree on purpose.
     const firstTexture = solidTexture('#0000ff');
@@ -252,7 +252,7 @@ describe('WebGPU persistent-indexed selection', () => {
         return;
       }
 
-      // Move `second` under `first` — a content change, so the source rebuilds
+      // Move `second` under `first` - a content change, so the source rebuilds
       // and both are admitted together, `second` on the slot it already holds.
       second.setPosition(0, 0);
 
@@ -355,7 +355,7 @@ describe('WebGPU persistent-indexed selection', () => {
 
     try {
       // Both on screen at once, side by side: one store, one draw, two entries
-      // of the texture table — which is what the per-slot texture index in the
+      // of the texture table - which is what the per-slot texture index in the
       // transform row's spare component addresses.
       left.setPosition(0, 0);
       right.setPosition(tile * 2, 0);

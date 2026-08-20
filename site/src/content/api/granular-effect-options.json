@@ -124,7 +124,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Compensate the density/grainSize-dependent loudness so the wet level stays roughly constant (near unity) instead of rising with overlap. Compile-time, not runtime. Default false, which preserves granular's expressive level dynamics — enable it when you want a predictable, density-independent level."
+          "description": "Compensate the density/grainSize-dependent loudness so the wet level stays roughly constant (near unity) instead of rising with overlap. Compile-time, not runtime. Default false, which preserves granular's expressive level dynamics - enable it when you want a predictable, density-independent level."
         },
         {
           "name": "pitchMax",

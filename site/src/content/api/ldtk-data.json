@@ -151,7 +151,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Levels not organised into worlds. Always populated for pre-multi-world documents; kept EMPTY (per the LDtk spec's backward-compatibility rule) when worlds is used instead — read levels via worlds[].levels in that case, or use import('./ldtkLevelEntries').getLdtkLevelEntries (or simply import('./LdtkMap').LdtkMap.levels / import('./LdtkMap').LdtkMap.getLevelByName) to get \"all levels, in order\" regardless of which shape the document uses."
+          "description": "Levels not organised into worlds. Always populated for pre-multi-world documents; kept EMPTY (per the LDtk spec's backward-compatibility rule) when worlds is used instead - read levels via worlds[].levels in that case, or use import('./ldtkLevelEntries').getLdtkLevelEntries (or simply import('./LdtkMap').LdtkMap.levels / import('./LdtkMap').LdtkMap.getLevelByName) to get \"all levels, in order\" regardless of which shape the document uses."
         },
         {
           "name": "worldGridHeight",
@@ -238,7 +238,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Worlds, present and non-empty only when the project has \"Multi-Worlds\" enabled in its advanced settings. Absent or empty for the (overwhelmingly common) single-world case, in which levels live directly in the root levels array instead. defs is NOT duplicated per-world — it stays declared once at the document root regardless of this field."
+          "description": "Worlds, present and non-empty only when the project has \"Multi-Worlds\" enabled in its advanced settings. Absent or empty for the (overwhelmingly common) single-world case, in which levels live directly in the root levels array instead. defs is NOT duplicated per-world - it stays declared once at the document root regardless of this field."
         }
       ],
       "paragraphs": [],

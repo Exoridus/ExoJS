@@ -80,7 +80,7 @@ export class Size implements Cloneable<Size> {
 
   /**
    * A plain, detached copy. Declared as `Size` rather than `this` so
-   * {@link ObservableSize} can hand back a value that carries no callback —
+   * {@link ObservableSize} can hand back a value that carries no callback -
    * a clone is a value, not a second observer of the original's owner.
    */
   public clone(): Size {
@@ -92,7 +92,7 @@ export class Size implements Cloneable<Size> {
   }
 
   public destroy(): void {
-    // no-op — pure value class, kept for Destroyable interface conformance
+    // no-op - pure value class, kept for Destroyable interface conformance
   }
 
   public static readonly zero = new Size(0, 0);

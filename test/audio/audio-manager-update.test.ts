@@ -78,7 +78,7 @@ describe('AudioManager.update()', () => {
   test('update() does NOT call _tickSpatial() on non-spatial voices', () => {
     const mixer = new AudioManager();
     const sound = new Sound(createAudioBufferStub());
-    // sound.position remains null — not spatial
+    // sound.position remains null - not spatial
     const voice = mixer.play(sound) as SoundVoice;
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
     mixer.preUpdate();
@@ -140,7 +140,7 @@ describe('AudioManager.update()', () => {
     rawApp['_rendering'] = preUpdateStub('rendering');
 
     // The constructor is bypassed here, so register the stubs the same way it
-    // would — same order values, same phase restriction.
+    // would - same order values, same phase restriction.
     const registry = rawApp['systems'] as InstanceType<typeof SystemRegistry>;
     const preUpdateOnly = ['preUpdate'] as const;
 
@@ -160,7 +160,7 @@ describe('AudioManager.update()', () => {
     };
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     // Object.create() bypasses the constructor, so the real field
-    // initializer (`= new Time()`) never runs — stand in with a real Time so
+    // initializer (`= new Time()`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = new Time();
     rawApp['_updateHandler'] = vi.fn();

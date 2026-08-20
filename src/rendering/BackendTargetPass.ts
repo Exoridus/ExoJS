@@ -45,7 +45,7 @@ export class BackendTargetPass implements BackendRenderPass {
    *
    * The coordinator reads it synchronously inside `withChildPass` and keeps no
    * reference, so one instance per pass is enough. It matters because the
-   * effect path executes a pass per capture and per filter — a hundred filtered
+   * effect path executes a pass per capture and per filter - a hundred filtered
    * nodes is two hundred descriptors a frame, for a shape that never varies.
    */
   private readonly _descriptor: Mutable<RenderPassDescriptor> = {
@@ -60,7 +60,7 @@ export class BackendTargetPass implements BackendRenderPass {
    * The pass body, allocated ONCE per pass rather than per execute.
    *
    * `withChildPass` takes a `() => void`, and the obvious inline arrow closes
-   * over `backend` — a fresh closure and its context on every execute, on the
+   * over `backend` - a fresh closure and its context on every execute, on the
    * hottest effect path there is. Staging the backend on the instance instead
    * lets one bound function serve every call. Not reentrant, which costs
    * nothing: a pass cannot be executing inside itself.
@@ -81,8 +81,8 @@ export class BackendTargetPass implements BackendRenderPass {
   /**
    * Re-point this pass at a different body, target, view and clear colour.
    *
-   * For callers that execute a target redirect every frame — the stock filters
-   * and `RenderNode`'s capture/composite — so they can hold ONE pass instead of
+   * For callers that execute a target redirect every frame - the stock filters
+   * and `RenderNode`'s capture/composite - so they can hold ONE pass instead of
    * constructing one per frame. A caller that configures a pass once still just
    * uses the constructor.
    */
@@ -128,7 +128,7 @@ export class BackendTargetPass implements BackendRenderPass {
     }
 
     // Legacy fallback for backends without a pass coordinator (e.g. test stubs):
-    // save the target/view, run the callback, then restore — even if it throws.
+    // save the target/view, run the callback, then restore - even if it throws.
     const previousTarget = backend.renderTarget;
     const previousView = backend.view;
 

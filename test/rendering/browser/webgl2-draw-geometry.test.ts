@@ -1,5 +1,5 @@
 /**
- * WebGL2 immediate-draw browser tests — opt-in, capability-aware.
+ * WebGL2 immediate-draw browser tests - opt-in, capability-aware.
  *
  * Exercises {@link RenderingContext.drawGeometry}: a node-free immediate draw of
  * a {@link Geometry} through the pooled mesh path and the synthetic (non-plan)
@@ -69,7 +69,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
 };
 
 // A solid-color quad (two triangles) in world space. Layout: position f32x2 @0,
-// color u8x4-norm @8, stride 12. No texcoord — the default mesh path samples the
+// color u8x4-norm @8, stride 12. No texcoord - the default mesh path samples the
 // 1×1 white texture, so the output is the vertex color × tint.
 const coloredQuad = (x0: number, y0: number, x1: number, y1: number, rgba: RgbaTuple): Geometry => {
   const stride = 12;
@@ -142,7 +142,7 @@ const mutableQuad = (x0: number, y0: number, x1: number, y1: number, stride: num
 };
 
 // A mesh material whose vertex shader is built on the exported instancing
-// contract — the constant under test, not a copy of it.
+// contract - the constant under test, not a copy of it.
 const contractMaterial = (vertexBody: string): MeshMaterial =>
   new MeshMaterial({
     shader: new ShaderSource({
@@ -277,7 +277,7 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
     const context = new RenderingContext(backend);
     const geometry = coloredQuad(0, 0, 16, 16, [255, 255, 255, 255]);
     // The shader reads neither a_texcoord nor a_color, so GL strips both at link
-    // time — this also covers the batch VAO binding geometry attributes
+    // time - this also covers the batch VAO binding geometry attributes
     // optionally rather than demanding all three.
     const material = contractMaterial(`
       out vec4 v_tint;
@@ -325,7 +325,7 @@ describe('WebGL2 RenderingContext.drawBatch', () => {
         v_tint = exoInstanceTint(a_nodeIndex);
       }`);
     const batch = new RenderBatch(geometry, material, { instanceAttributes: [{ name: 'a_offset', format: 'float32x2' }] });
-    // One scratch object reused across both adds — the documented pattern, and
+    // One scratch object reused across both adds - the documented pattern, and
     // proof that `add` copies rather than retaining the caller's arrays.
     const data = { a_offset: [0, 0] };
 

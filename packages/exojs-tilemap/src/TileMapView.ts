@@ -12,10 +12,10 @@ import { TileMapBand } from './TileMapBand';
  * A layer selector inside a {@link TileMapBandDefinition}: either a stable
  * layer **id** (`number`) or a **unique** layer **name** (`string`). Selectors
  * resolve across the map's tile **and** image layers. Names that are shared by
- * more than one layer (of either kind) are rejected as ambiguous — reference
+ * more than one layer (of either kind) are rejected as ambiguous - reference
  * such layers by id. An id shared by a tile layer and an image layer (possible
  * only in fallback-ordered maps, which never validated cross-kind uniqueness)
- * is equally ambiguous — reference such layers by a unique name.
+ * is equally ambiguous - reference such layers by a unique name.
  * @advanced
  */
 export type TileLayerSelector = number | string;
@@ -24,7 +24,7 @@ export type TileLayerSelector = number | string;
  * The layers composing one band, by id or unique name, in any order. Tile and
  * image layers may be freely mixed. Rendering order always follows the map's
  * combined document order ({@link import('./TileMap').TileMap.renderableLayers})
- * regardless of the order listed here — a definition *selects* layers, it never
+ * regardless of the order listed here - a definition *selects* layers, it never
  * reorders them. The band's name is the key it is registered under in
  * {@link TileMapViewOptions.bands}.
  * @advanced
@@ -38,7 +38,7 @@ export type TileMapBandDefinition = readonly TileLayerSelector[];
 export interface TileMapViewOptions {
   /**
    * Named bands, keyed by band name (keys are unique, so duplicate band names
-   * cannot occur). Each value lists the layers that compose the band — tile
+   * cannot occur). Each value lists the layers that compose the band - tile
    * and image layers alike. Layers not listed in any band remain reachable
    * through {@link TileMapView.getLayerNodeById} and friends and are owned
    * directly by the view (no implicit fallback band). The definition is copied
@@ -69,7 +69,7 @@ interface ResolvedBandDef {
  * A view produces exactly one canonical {@link TileLayerNode} per map layer
  * (stable identity, map document order) and, optionally, named {@link TileMapBand}s
  * grouping subsets of those nodes. The application parents the bands / layer
- * nodes wherever it wants — typically as siblings of its own actor containers:
+ * nodes wherever it wants - typically as siblings of its own actor containers:
  *
  * ```ts
  * const view = map.createView({ bands: { ground: ['background', 'ground'], roof: ['roofs'] } });
@@ -79,7 +79,7 @@ interface ResolvedBandDef {
  * ```
  *
  * **Actors are application-owned siblings.** A `TileMapView` never adopts or
- * destroys actors. The view is a helper, not a scene node — it does not own the
+ * destroys actors. The view is a helper, not a scene node - it does not own the
  * world container, the {@link TileMap}, the {@link TileLayer}s, or tileset
  * textures.
  *
@@ -89,7 +89,7 @@ interface ResolvedBandDef {
  * (detaching them from their application parents) but leaves actors, the map,
  * its layers, and Loader-owned textures untouched. There is no map-replacement
  * mutation API: to swap maps, destroy the old view, construct a new one, and
- * re-parent its bands — the actor tree is never involved.
+ * re-parent its bands - the actor tree is never involved.
  *
  * **Image layers.** A view also produces exactly one canonical
  * {@link ImageLayerNode} per {@link TileMap.imageLayers} entry (stable identity,
@@ -100,7 +100,7 @@ interface ResolvedBandDef {
  * members by the map's combined document order
  * ({@link import('./TileMap').TileMap.renderableLayers}). A banded image node
  * is owned by its band; an unbanded one is owned by the view directly, and the
- * application parents it wherever the image belongs in draw order — the same
+ * application parents it wherever the image belongs in draw order - the same
  * way actors are interleaved.
  *
  * @advanced
@@ -195,7 +195,7 @@ export class TileMapView {
    * forwarded to every chunk drawable, current and rebuilt by
    * {@link refreshLayers}). Snaps tile chunk origins to the active render
    * target's device-pixel grid for crisp tiles; with integer tile pitch the grid
-   * stays exact and adjacent chunks cannot drift apart. Purely visual — tile
+   * stays exact and adjacent chunks cannot drift apart. Purely visual - tile
    * data, layer offsets, chunk revisions, and culling are unchanged. Setting the
    * current value is a no-op; an invalid value throws and leaves the prior mode
    * unchanged.
@@ -226,7 +226,7 @@ export class TileMapView {
 
   /**
    * The canonical layer node for the **tile** layer with the given **id**, or
-   * `undefined`. Tile ids are authoritative and unique — this is the
+   * `undefined`. Tile ids are authoritative and unique - this is the
    * unambiguous lookup. The returned node may be reparented into the caller's
    * own containers; the view still tracks it for refresh and destruction.
    */
@@ -251,7 +251,7 @@ export class TileMapView {
 
   /**
    * The canonical image layer node for the image layer with the given **id**,
-   * or `undefined`. Ids are authoritative and unique — this is the unambiguous
+   * or `undefined`. Ids are authoritative and unique - this is the unambiguous
    * lookup. The returned node may be reparented into the caller's own
    * containers; the view still tracks it for refresh and destruction.
    */
@@ -309,7 +309,7 @@ export class TileMapView {
   /**
    * Rebuild the view after **structural** map changes (tile or image layers
    * added to or removed from the map). Ordinary tile edits and chunk
-   * creation/removal do NOT need this — those are handled by chunk revisions
+   * creation/removal do NOT need this - those are handled by chunk revisions
    * and {@link TileLayerNode.refresh} respectively.
    *
    * - Removed layers (tile or image): their generated node is detached and
@@ -492,7 +492,7 @@ export class TileMapView {
     }
 
     // Order members by combined document order (membership selects; doc order
-    // renders — tile and image members interleave).
+    // renders - tile and image members interleave).
     const orderedNodes: Array<TileLayerNode | ImageLayerNode> = [];
 
     for (const layer of this._map.renderableLayers) {
@@ -590,7 +590,7 @@ export class TileMapView {
   }
 
   /**
-   * Whether a band definition selects the given layer — only by a selector
+   * Whether a band definition selects the given layer - only by a selector
    * that is currently unambiguous (a unique name, or an id not shared across
    * kinds), mirroring {@link _resolveSelector}'s construction-time rules.
    */

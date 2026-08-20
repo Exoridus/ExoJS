@@ -180,14 +180,14 @@ class EffectChainsScene extends Scene {
         const app = this.app;
         const { width, height } = app;
 
-        // AudioStream has no seamless adapter — await it explicitly. The
+        // AudioStream has no seamless adapter - await it explicitly. The
         // impulse response is awaited too, so the Cathedral chain can hand a
         // decoded buffer to the convolver the moment it is selected.
         this.music = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
         this.impulse = await this.loader.load(Asset.type('sound', 'audio/ir/AK-SROOMS_016.wav'));
         this.impact = this.loader.get('audio/impact-light.ogg');
 
-        // Chains live on the master bus, not on `audio.music` — that way the
+        // Chains live on the master bus, not on `audio.music` - that way the
         // looping track and the one-shot impact both run through the same
         // effects instead of only whichever bus owns them.
         this.analyser = new AudioAnalyser({ source: app.audio.master, fftSize: 2048, smoothingTimeConstant: 0.75 });
@@ -242,7 +242,7 @@ class EffectChainsScene extends Scene {
     }
 
     /**
-     * Tear the current chain down and — unless bypassed — build the selected
+     * Tear the current chain down and - unless bypassed - build the selected
      * one. Bypass is not a separate code path: it is simply the teardown
      * without the rebuild, so there is only one way effects reach the bus.
      */
@@ -365,7 +365,7 @@ class EffectChainsScene extends Scene {
             this.gfx.drawRectangle(left + i * (SLOT_WIDTH + SLOT_GAP), SLOT_TOP, SLOT_WIDTH, SLOT_HEIGHT);
         }
 
-        // Spectrum, measured on the master output — that is downstream of the
+        // Spectrum, measured on the master output - that is downstream of the
         // chain, so the bars show what actually reaches the speakers.
         const barWidth = (width - GRAPH_INSET * 2) / BANDS;
 

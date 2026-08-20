@@ -5,7 +5,7 @@
  * texture buffer into a contiguous array before `queue.writeTexture` can read
  * it. Allocating that packing array per sync turns every flush of a
  * barrier-heavy scene (transform + tint textures sync once per flush) into
- * fresh CPU garbage — the exact class of garbage the WebGL2 backend already
+ * fresh CPU garbage - the exact class of garbage the WebGL2 backend already
  * eliminates with a grow-only per-texture scratch.
  *
  * These tests drive the REAL `WebGpuBackend._syncTexture` against the mock
@@ -97,7 +97,7 @@ describe('WebGPU partial DataTexture upload: packing scratch reuse', () => {
     expect(partialViews).toHaveLength(3);
     expect(distinctBuffers(partialViews)).toBe(1);
     // The view is still sized to the region actually uploaded, not to the
-    // grown scratch — `writeTexture` must not read past the packed region.
+    // grown scratch - `writeTexture` must not read past the packed region.
     expect(partialViews[2]!.byteLength).toBe(2 * 2 * Float32Array.BYTES_PER_ELEMENT);
   });
 
@@ -120,7 +120,7 @@ describe('WebGPU partial DataTexture upload: packing scratch reuse', () => {
     const partialViews = environment.writeTextureData().slice(fullUploadCount);
 
     expect(partialViews).toHaveLength(8);
-    // One scratch per texture — never a single shared buffer both would race
+    // One scratch per texture - never a single shared buffer both would race
     // over, and never a fresh allocation per sync.
     expect(distinctBuffers(partialViews)).toBe(2);
   });
@@ -197,8 +197,8 @@ describe('WebGPU partial DataTexture upload: packing scratch reuse', () => {
  * tightly packed in the row-major buffer, so packing it into the scratch is a
  * pure memcpy with no effect on the bytes `writeTexture` reads. WebGL2 has
  * recognised this since the partial path was introduced; WebGPU packed every
- * region alike, which made a scrolling ring-buffer upload — the shape the
- * transform/tint rows and a spectrogram both take — pay a full copy of the
+ * region alike, which made a scrolling ring-buffer upload - the shape the
+ * transform/tint rows and a spectrogram both take - pay a full copy of the
  * band per sync for nothing.
  */
 describe('WebGPU partial DataTexture upload: full-width fast path', () => {
@@ -297,7 +297,7 @@ describe('WebGPU partial DataTexture upload: full-width fast path', () => {
 
     const fullUploadCount = environment.writeTextureData().length;
 
-    // Full-height but one column short — the rows are no longer contiguous.
+    // Full-height but one column short - the rows are no longer contiguous.
     texture.commitRect(0, 0, 7, 8);
     syncTexture(backend, texture);
 

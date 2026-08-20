@@ -39,7 +39,7 @@ import { clampResolutionToTextureSize, resolveBarrierResolution } from './target
  * extra collect-time validation (e.g. WebGPU texture-view identity) on
  * top of the plan-level generation check.
  *
- * `_validateRetainedInstructionSet` failure contract — the backend chooses
+ * `_validateRetainedInstructionSet` failure contract - the backend chooses
  * between two sanctioned failure modes. Either way the splice is refused and
  * the frame takes the (correct) entry-replay tier; what differs is whether
  * the player re-records, and that is governed solely by the PLAN-level key
@@ -47,12 +47,12 @@ import { clampResolutionToTextureSize, resolveBarrierResolution } from './target
  *
  * - **Drop & re-record (same frame):** call `set.invalidate()` AND return
  *   `false`. The plan-level key stops validating, so this same clean frame
- *   entry-replays, re-arms recording, and the player re-records — one frame,
+ *   entry-replays, re-arms recording, and the player re-records - one frame,
  *   no tier loss. Use when the recording merely went stale against live GPU
  *   state (WebGPU does this on texture-view recreate/resize).
  * - **Persistent veto (no re-record):** return `false` WITHOUT invalidating.
  *   While the set still validates plan-level (committed recording, matching
- *   generations), the record-once guard keeps skipping re-capture — the
+ *   generations), the record-once guard keeps skipping re-capture - the
  *   group stays on entry replay every frame without record churn. Use for
  *   sets that would fail again identically (WebGPU's rejected/poisoned
  *   sets: re-recording would just re-poison).
@@ -84,8 +84,8 @@ interface MutableGroupScope extends GroupScope, EntryPlacementState {
    * the array to it, so every consumer downstream of the collect still reads a
    * scope whose physical length IS its entry count.
    *
-   * The indirection exists because the alternative — emptying the array at
-   * acquire and pushing back into it — hands the backing store to the GC once
+   * The indirection exists because the alternative - emptying the array at
+   * acquire and pushing back into it - hands the backing store to the GC once
    * per scope per frame and re-grows it through the whole doubling sequence on
    * the refill, at ~27 bytes per entry per frame (28.6 KB/frame on a
    * 1000-entry fragment replay). Overwriting the slots the scope already owns
@@ -115,7 +115,7 @@ interface SourceSelection {
  * Effect-less descriptor shared by every sub-branch escape barrier:
  * all effect stages are disabled, so {@link RenderEffectExecutor.play} is a
  * pure passthrough into the child plan. The barrier entry exists only for its
- * playback semantics — the group uniform is suspended (the branch collected
+ * playback semantics - the group uniform is suspended (the branch collected
  * world-space transforms) and fragment capture records a live re-dispatch.
  */
 /** Placeholder for a pooled descriptor's `filters` before its first fill. */
@@ -232,7 +232,7 @@ export class RenderPlanBuilder {
   private readonly _barrierEntryPool: BarrierScopeEntry[] = [];
   private _barrierEntryPoolCursor = 0;
   // The barrier ENTRY was pooled; the scope and effect descriptor it points at
-  // were not, so every barrier still built two fresh objects per frame — on a
+  // were not, so every barrier still built two fresh objects per frame - on a
   // path a static scene re-walks unchanged, because a barrier node never
   // reaches the retained tier. Same cursor discipline as the pools above: reset
   // per build, reused across frames, so a settled scene allocates none of them.
@@ -265,7 +265,7 @@ export class RenderPlanBuilder {
    * That walk must not pay the frame path: no pooled `DrawCommand`, no
    * frame-global `nodeIndex`, no transform-buffer row and no backend-bound
    * material key for a node that is only being discovered. It covers the whole
-   * subtree — a million nodes where three quarters are off-screen — so taking
+   * subtree - a million nodes where three quarters are off-screen - so taking
    * the normal `emitDraw` path would allocate roughly 48MB of transform rows in
    * a grow-only buffer for draws that never happen.
    */
@@ -275,7 +275,7 @@ export class RenderPlanBuilder {
    *
    * A view read attributes to THIS node rather than to the root, so one
    * view-dependent parallax layer becomes one {@link LiveEntry} instead of
-   * forcing every sibling off the persistent path — the segment granularity
+   * forcing every sibling off the persistent path - the segment granularity
    * contract 10 of the architecture freeze asks for.
    */
   private _sourceProducer: RenderNode | null = null;
@@ -285,8 +285,8 @@ export class RenderPlanBuilder {
   /**
    * The node this build treats as the retained render root, or `null` when the
    * root is not eligible. Compared by identity in {@link emitNode}, so the
-   * automatic representation attaches to the root's OWN group scope — the one
-   * that holds its whole subtree — and to nothing else.
+   * automatic representation attaches to the root's OWN group scope - the one
+   * that holds its whole subtree - and to nothing else.
    */
   private _retentionRoot: RenderNode | null = null;
   /**
@@ -337,7 +337,7 @@ export class RenderPlanBuilder {
     // render() calls in the frame references a distinct slot and can batch.
     const frameBase = (backend as { transformBufferCount?: number }).transformBufferCount ?? 0;
     this._nodeIndex = frameBase;
-    // The draw-command pool must be frame-global too — not reset to 0 per plan.
+    // The draw-command pool must be frame-global too - not reset to 0 per plan.
     // A drawable's renderer may DEFER its draw across render() calls (cross-call
     // batching) while holding a reference to its pooled DrawCommand until the
     // frame-end flush. Resetting the command cursor to 0 every plan recycles
@@ -374,7 +374,7 @@ export class RenderPlanBuilder {
     // and costs one null check on a path that already resolves a getter.
     //
     // Builder-internal reads go through `_viewUnobserved` so the machinery that
-    // sets a capture up — the cull-rect inflation, the plan's own view field —
+    // sets a capture up - the cull-rect inflation, the plan's own view field -
     // cannot mark every capture as view-dependent.
     this._trackedRoot?.noteViewRead();
 
@@ -394,8 +394,8 @@ export class RenderPlanBuilder {
    *
    * Keying a cache on the view and deriving content from the view are different
    * things, and only the second one makes a capture unreplayable under a moved
-   * camera. `Container._collectContent` does the first — it keys its retained
-   * child slots on `updateId` — and must not be mistaken for the second, or
+   * camera. `Container._collectContent` does the first - it keys its retained
+   * child slots on `updateId` - and must not be mistaken for the second, or
    * every capture would be view-locked and root retention would be dead for
    * every scene.
    */
@@ -403,7 +403,7 @@ export class RenderPlanBuilder {
     return this._viewUnobserved().updateId;
   }
 
-  /** The view without recording a dependency — builder-internal reads only. */
+  /** The view without recording a dependency - builder-internal reads only. */
   private _viewUnobserved(): View {
     if (this._view === null) {
       this._view = this.backend.view;
@@ -515,10 +515,10 @@ export class RenderPlanBuilder {
     // group boundary being collected (the scope guard keeps this off every
     // other emit) whose subtree contains a deep barrier leaves the group,
     // while its siblings keep retention + the group transform. Wrap it in an
-    // effect-less barrier entry — playback suspends the group uniform (the
+    // effect-less barrier entry - playback suspends the group uniform (the
     // branch resolves world-space transforms via the matching
     // `_escapesTransformGroup` seam) and fragment capture records a live
-    // re-dispatch — then re-enter emitNode inside the child plan,
+    // re-dispatch - then re-enter emitNode inside the child plan,
     // where the guard no longer matches and the node collects through its
     // normal path (a nested boundary still gets its own transformNode scope).
     if (node.parent !== null && this._currentScope().transformNode === node.parent && node.parent._childEscapesTransformGroup(node)) {
@@ -683,7 +683,7 @@ export class RenderPlanBuilder {
    * Collapse a producer that read the view into a single live re-dispatch.
    *
    * Resolved after its collect rather than before, because the read is OBSERVED
-   * — there is no flag to ask for up front, which is what lets a third-party
+   * - there is no flag to ask for up front, which is what lets a third-party
    * node be covered without declaring anything (contract 9 of the architecture
    * freeze). Everything the producer contributed is dropped back to `mark` and
    * replaced by one entry at the same placement, so the segment stays exactly as
@@ -712,7 +712,7 @@ export class RenderPlanBuilder {
    * it scrolls in, so a cull test here would drop precisely what the source
    * exists to remember.
    *
-   * It also produces no frame-local product — no pooled `DrawCommand`, no
+   * It also produces no frame-local product - no pooled `DrawCommand`, no
    * `nodeIndex`, no transform-buffer row, no backend-bound material key. At a
    * million nodes the normal `emitDraw` path would otherwise reserve roughly
    * 48MB of rows in a grow-only buffer for draws that never happen, three
@@ -779,7 +779,7 @@ export class RenderPlanBuilder {
     // Walk the ADMITTED items only, one set bit at a time, instead of stepping
     // over every stored item and asking. A scope that holds a million items and
     // admits a quarter of them otherwise pays three quarters of its loop to
-    // reject — the exact cost the spatial index was built to stop paying, still
+    // reject - the exact cost the spatial index was built to stop paying, still
     // being paid one layer further out. Skipping empty words makes the walk
     // O(items / 32 + admitted).
     //
@@ -848,7 +848,7 @@ export class RenderPlanBuilder {
    * Nothing backend- or frame-bound is taken from the item: the `nodeIndex` is
    * this frame's, the material key is resolved live (a backend switch or a tint
    * change since discovery has to win), and the bounds are read live because
-   * they feed the optimizer's overlap test — a moved node whose command still
+   * they feed the optimizer's overlap test - a moved node whose command still
    * carried its discovery-time extent could let a batch run be reordered past a
    * draw it really overlaps.
    *
@@ -871,7 +871,7 @@ export class RenderPlanBuilder {
     command.groupIndex = undefined;
     command.material = drawable._getOrComputeMaterialKey(this.backend);
 
-    // The stored extent is the drawable's own, unchanged — the same argument
+    // The stored extent is the drawable's own, unchanged - the same argument
     // the query just made. Asking the node again would resolve its parent chain
     // a second time for an answer already in hand.
     command.minX = minX;
@@ -887,8 +887,8 @@ export class RenderPlanBuilder {
    * Fold a selected item into the capture's kept-union, folding exactly the rect
    * the cull test compared.
    *
-   * That "exactly" is the whole contract of the union — a later view containing
-   * it must provably admit the same set — so a node with a `cullArea` folds its
+   * That "exactly" is the whole contract of the union - a later view containing
+   * it must provably admit the same set - so a node with a `cullArea` folds its
    * `cullArea`, and every other node folds its bounds, which the command already
    * carries.
    */
@@ -924,7 +924,7 @@ export class RenderPlanBuilder {
 
     // Read live rather than from a stored group extent: a group's AABB
     // aggregates its children, so it is the one rect a `getBounds()` call still
-    // has to compose even on the stored-bounds path — and there are as many
+    // has to compose even on the stored-bounds path - and there are as many
     // groups as the scene has containers, not as many as it has sprites.
     if (!node._inCullRect(rect)) {
       this.backend.stats.culledNodes++;
@@ -1033,7 +1033,7 @@ export class RenderPlanBuilder {
     }
 
     // This frame has to produce entries one way or another. Settle the source
-    // first — it is keyed on the node alone and is equally valid whether or not
+    // first - it is keyed on the node alone and is equally valid whether or not
     // this frame ends up capturing.
     representation.noteRebuildKeys(contentRevision, structureRevision, ancestryStamp, transformRevision);
 
@@ -1057,7 +1057,7 @@ export class RenderPlanBuilder {
 
     // Exactly one node per build is the retention root (`_retentionRoot` is
     // compared by identity in `emitNode`), so the capture cull rect needs no
-    // stack — it is armed here and disarmed below.
+    // stack - it is armed here and disarmed below.
     this._inflateCaptureCullRect(view);
     representation.beginCapture(this._captureCullRect);
     this._trackedRoot = representation;
@@ -1092,8 +1092,8 @@ export class RenderPlanBuilder {
    * that it does not qualify.
    *
    * Two frames exist here. When the camera still lies inside the rect the last
-   * selection admitted against, the answer it produced is still the right one —
-   * same argument as the capture margin, one tier down — so the same order
+   * selection admitted against, the answer it produced is still the right one -
+   * same argument as the capture margin, one tier down - so the same order
    * stream is re-issued and the frame costs one draw call. Otherwise the
    * membership is re-queried, the delta hands slots to arrivals and takes them
    * back from departures, and only the arrivals have their per-slot data
@@ -1103,7 +1103,7 @@ export class RenderPlanBuilder {
    * Requires a source that still describes the subtree: everything below keys on
    * the items' stored world bounds, and the source is invalidated by any content,
    * structure, ancestry or transform change. So a moved subtree does not arrive
-   * here at all — it takes the transform-reconcile tier below, which stays O(k).
+   * here at all - it takes the transform-reconcile tier below, which stays O(k).
    */
   private _collectPersistentRoot(
     representation: RetainedRootRepresentation,
@@ -1167,7 +1167,7 @@ export class RenderPlanBuilder {
     // before the write because past the ceiling the backend's allocation is
     // rejected by the driver rather than by us. The refusal is remembered, so
     // the root spends one selection finding out and then stays on the ordinary
-    // path — which has no per-root buffer to overflow.
+    // path - which has no per-root buffer to overflow.
     if (bundle.canRepresent?.(slots.slotCount, slots.orderCount) === false) {
       representation.refusePersistentSlots(this.backend);
 
@@ -1216,8 +1216,8 @@ export class RenderPlanBuilder {
    * item per drawable in the subtree, so a scene that alternates between a
    * content change and a camera step would otherwise pay for a source it never
    * gets to use twice. Two rebuild frames in a row over unchanged content is the
-   * signature of a camera moving across a settled scene — where the source then
-   * serves every frame after it — and it is a signature a changing scene cannot
+   * signature of a camera moving across a settled scene - where the source then
+   * serves every frame after it - and it is a signature a changing scene cannot
    * produce.
    */
   private _resolveSourceSelection(
@@ -1287,7 +1287,7 @@ export class RenderPlanBuilder {
    *
    * The margin is what lets a capture outlive a moving camera. Culling against
    * the tight view rect makes the resulting product valid for that rect and
-   * nothing else — every camera step invalidates it, which is why a scene with
+   * nothing else - every camera step invalidates it, which is why a scene with
    * off-screen content used to re-collect every single frame. Culling against a
    * rect that ENCLOSES the view instead makes the product valid for every view
    * still inside that rect: whatever was dropped was outside a rect containing
@@ -1297,7 +1297,7 @@ export class RenderPlanBuilder {
    *
    * The price is the extra nodes in the band, which are captured once and then
    * replayed for free. Growing each axis by twice the ratio, a uniformly dense
-   * scene gains `(1 + 2r)^2 - 1` nodes — about 27% at the current ratio — while
+   * scene gains `(1 + 2r)^2 - 1` nodes - about 27% at the current ratio - while
    * the camera may travel a full `r` of each axis before the product expires.
    */
   private _inflateCaptureCullRect(view: View): void {
@@ -1310,7 +1310,7 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — a node was dropped by the view test during a capturing collect.
+   * @internal - a node was dropped by the view test during a capturing collect.
    * The capture is then view-LOCKED: a later view could admit that node again
    * and no index exists to find it, so any view change must re-collect.
    */
@@ -1319,7 +1319,7 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — a node passed the view test during a capturing collect. Folds
+   * @internal - a node passed the view test during a capturing collect. Folds
    * exactly the rect `inView` compared into the capture's kept-union, so a later
    * view that still contains the union provably admits the same set of nodes.
    * Nodes that opt out of culling never affect the selection and are skipped.
@@ -1353,7 +1353,7 @@ export class RenderPlanBuilder {
 
     if (this._sourceStack.length > 0) {
       // Discovery: record the neutral item and stop. No pooled command, no
-      // nodeIndex, no transform row, no material key — the cut-1 invariant.
+      // nodeIndex, no transform row, no material key - the cut-1 invariant.
       // Bounds are read because they ARE the item's payload, and they are a
       // cache hit for an unmoved node.
       this._sourceStack[this._sourceStack.length - 1]!.items.push(drawable, placementSeq, placementZ, bounds.left, bounds.top, bounds.right, bounds.bottom);
@@ -1381,7 +1381,7 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — the entry array of the currently-active scope. Read-only peek
+   * @internal - the entry array of the currently-active scope. Read-only peek
    * used by {@link RetainedPlanCache} to snapshot a container's direct-drawable
    * fragment right after a full (non-skipped) collect of it.
    *
@@ -1395,13 +1395,13 @@ export class RenderPlanBuilder {
     return this._currentScope().entries;
   }
 
-  /** @internal — how many entries the currently-active scope holds so far this collect. */
+  /** @internal - how many entries the currently-active scope holds so far this collect. */
   public _peekCurrentScopeEntryCount(): number {
     return this._currentScope().entryCount;
   }
 
   /**
-   * @internal — true while collecting below a transform-group boundary.
+   * @internal - true while collecting below a transform-group boundary.
    * Inside a group, child bounds are group-local, so testing them against the
    * world-space view rect would be meaningless; the group is culled as a
    * whole by RetainedContainer._collect instead.
@@ -1414,30 +1414,30 @@ export class RenderPlanBuilder {
     return this._viewCullSuppression > 0 || this._sourceStack.length > 0;
   }
 
-  /** @internal — true while discovering a render root's persistent items. */
+  /** @internal - true while discovering a render root's persistent items. */
   public get _isCollectingSource(): boolean {
     return this._sourceStack.length > 0;
   }
 
-  /** @internal — enter a transform-group subtree (see {@link _isViewCullSuppressed}). */
+  /** @internal - enter a transform-group subtree (see {@link _isViewCullSuppressed}). */
   public _pushViewCullSuppression(): void {
     this._viewCullSuppression++;
   }
 
-  /** @internal — leave a transform-group subtree. */
+  /** @internal - leave a transform-group subtree. */
   public _popViewCullSuppression(): void {
     this._viewCullSuppression--;
   }
 
   /**
-   * @internal — replay a single previously-captured {@link RetainedDrawData}
+   * @internal - replay a single previously-captured {@link RetainedDrawData}
    * into the current scope: reuses its cached material key and screen-space
    * bounds verbatim, only assigning a fresh frame-local `nodeIndex`. Used by
    * {@link RetainedPlanCache} for the static-subtree skip and by
    * {@link _replayRetainedFragment} for the whole-fragment splice;
    * callers must have already verified the owning container's subtree is
    * unchanged (content + structure revision, and backend all match the
-   * capture — plus view for the per-child cache).
+   * capture - plus view for the per-child cache).
    */
   public _replayRetainedDraw(slot: RetainedDrawData): void {
     // Mirror the scope bookkeeping that `_reserveEntryPlacement` maintains on the
@@ -1475,12 +1475,12 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — instruction splice: when the current
+   * @internal - instruction splice: when the current
    * scope belongs to a clean RetainedContainer whose fragment holds a valid
    * recorded instruction set for this backend, mark the scope and push NO
    * entries. The plan player replays the recorded batches in O(batches);
-   * the optimizer sees an empty scope (O(1)). Returns `false` — caller falls
-   * back to entry replay — when the backend does not implement the replay
+   * the optimizer sees an empty scope (O(1)). Returns `false` - caller falls
+   * back to entry replay - when the backend does not implement the replay
    * hook, the set is stale (backend identity / bundle generation), or the
    * backend's own collect-time validation rejects it.
    */
@@ -1495,11 +1495,11 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — arm instruction recording for the current scope:
+   * @internal - arm instruction recording for the current scope:
    * called on a CLEAN entry-replay frame (record-on-first-clean-frame
    * policy), so the record cost is never wasted on a frame whose capture is
    * about to be invalidated. No-op when the backend lacks the capture hooks
-   * (dormant fallback — shipped behavior unchanged) or the fragment fails the
+   * (dormant fallback - shipped behavior unchanged) or the fragment fails the
    * v1 recordability predicate.
    */
   public _armRetainedRecord(fragment: RetainedGroupFragment): void {
@@ -1536,9 +1536,9 @@ export class RenderPlanBuilder {
   }
 
   /**
-   * @internal — replay a captured fragment into the current scope: the
+   * @internal - replay a captured fragment into the current scope: the
    * whole-range splice. No scene-graph walk, no cull, no bounds,
-   * no material keys — draws re-acquire pooled commands with fresh
+   * no material keys - draws re-acquire pooled commands with fresh
    * frame-local nodeIndex values (multi-render() bases stay coherent), nested
    * groups re-acquire pooled scopes, and barrier nodes re-dispatch through a
    * normal `_collect`.
@@ -1562,7 +1562,7 @@ export class RenderPlanBuilder {
     // frame was recorded with EMPTY entries + the set reference.
     // If the set is still replay-eligible, reproduce the splice; if
     // it went stale (bundle generation, backend validation), re-dispatch the
-    // live node so the inner container rebuilds from its own fragment —
+    // live node so the inner container rebuilds from its own fragment -
     // never replay the empty scope as-is.
     let innerSet = fragment.retainedInstructions;
 
@@ -1639,7 +1639,7 @@ export class RenderPlanBuilder {
    *
    * `length = 0` is not the same thing: V8 trims an array's backing store to
    * its new length, and it does so against the CAPACITY rather than the current
-   * length — so the assignment gives the store back even on a stack that is
+   * length - so the assignment gives the store back even on a stack that is
    * already empty, and the next push re-grows it. Popping leaves the store
    * alone. The loop also runs the per-scope trim `_popScope` owes each scope an
    * exception unwind may have left open.
@@ -1722,7 +1722,7 @@ export class RenderPlanBuilder {
    * Fold a draw's material into the scope's `hasMixedPipeline` flag. Lives in
    * {@link _pushDrawEntry} rather than beside the `firstZ`/`hasMixedZ` updates
    * because materials exist on draws only: `_pushDrawEntry` is the single funnel
-   * every draw entry — freshly collected or retained-replayed — passes through,
+   * every draw entry - freshly collected or retained-replayed - passes through,
    * so no emit path can silently skip the bookkeeping and leave the flag `false`
    * while the scope really does hold several materials.
    */
@@ -1812,8 +1812,8 @@ export class RenderPlanBuilder {
 
   /**
    * Close the innermost scope: trim its entry array to what this collect
-   * actually filled, so everything downstream — the optimizer's z-sort, the
-   * player's walk, a fragment snapshot — reads a scope whose length is its
+   * actually filled, so everything downstream - the optimizer's z-sort, the
+   * player's walk, a fragment snapshot - reads a scope whose length is its
    * entry count and never sees a slot left over from an earlier frame.
    *
    * The trim is the ONE place the array may shrink, and it only shrinks to the
@@ -1900,7 +1900,7 @@ export class RenderPlanBuilder {
 
   /**
    * A barrier scope from the pool, filled in. Held only for the duration of the
-   * plan that produced it — the executor reads it during playback and keeps no
+   * plan that produced it - the executor reads it during playback and keeps no
    * reference past the frame.
    */
   private _acquireBarrierScope(

@@ -1,6 +1,6 @@
 {
   "title": "InferLoadedEntry",
-  "description": "The LOADED payload a CatalogEntry resolves to — what a `loader.load(catalog)` result map holds, as opposed to the handle-hybrid leaf InferCatalogLeaf materializes on the catalog itself. A bare path string is classified by its file suffix exactly as LeafForPath does, but resolves to the raw resource for every type: a value type's LOAD result is its decoded value (`unknown` for `json`), not the `AssetRef` wrapper its catalog property holds. Descriptors and explicit configs delegate to InferAssetResource unchanged.",
+  "description": "The LOADED payload a CatalogEntry resolves to - what a `loader.load(catalog)` result map holds, as opposed to the handle-hybrid leaf InferCatalogLeaf materializes on the catalog itself. A bare path string is classified by its file suffix exactly as LeafForPath does, but resolves to the raw resource for every type: a value type's LOAD result is its decoded value (`unknown` for `json`), not the `AssetRef` wrapper its catalog property holds. Descriptors and explicit configs delegate to InferAssetResource unchanged.",
   "symbol": "InferLoadedEntry",
   "kind": "type",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The LOADED payload a CatalogEntry resolves to — what a `loader.load(catalog)` result map holds, as opposed to the handle-hybrid leaf InferCatalogLeaf materializes on the catalog itself.",
+        "The LOADED payload a CatalogEntry resolves to - what a `loader.load(catalog)` result map holds, as opposed to the handle-hybrid leaf InferCatalogLeaf materializes on the catalog itself.",
         "A bare path string is classified by its file suffix exactly as LeafForPath does, but resolves to the raw resource for every type: a value type's LOAD result is its decoded value (`unknown` for `json`), not the `AssetRef` wrapper its catalog property holds. Descriptors and explicit configs delegate to InferAssetResource unchanged."
       ],
       "importLine": "import { InferLoadedEntry } from '@codexo/exojs'",

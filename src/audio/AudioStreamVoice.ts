@@ -18,7 +18,7 @@ export interface AudioStreamVoiceInit extends BaseVoiceInit {
 /**
  * Active playback handle for one {@link AudioStream} play call, backed by the
  * stream's `HTMLMediaElement` + `MediaElementAudioSourceNode`. Because the
- * element owns a single playhead, a stream has one active voice at a time —
+ * element owns a single playhead, a stream has one active voice at a time -
  * starting a new voice stops the previous one.
  *
  * The element outlives every individual voice and is handed on to the next
@@ -29,7 +29,7 @@ export interface AudioStreamVoiceInit extends BaseVoiceInit {
  * voice-local state and therefore unguarded.
  *
  * Mixes in {@link Seekable}, {@link Pausable}, {@link Loopable},
- * {@link RatePitched} (playback rate; `detune` is stored but inert — an
+ * {@link RatePitched} (playback rate; `detune` is stored but inert - an
  * `HTMLMediaElement` has no detune control), and (via {@link BaseVoice})
  * {@link Spatializable}.
  *
@@ -41,7 +41,7 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
   private _detune = 0;
   /**
    * User-facing base playback rate, cached independently of what's actually
-   * written to `_element.playbackRate` — {@link AudioStreamVoice._applyDopplerRate}
+   * written to `_element.playbackRate` - {@link AudioStreamVoice._applyDopplerRate}
    * multiplies from this cached base every tick, never from the live element
    * value, so consecutive Doppler ticks never compound onto each other's
    * already-modulated rate (mirrors {@link SoundVoice}'s `_playbackRate` cache).
@@ -134,7 +134,7 @@ export class AudioStreamVoice extends BaseVoice implements Seekable, Pausable, L
 
   /**
    * Pitch detune in cents. An `HTMLMediaElement` exposes no detune control, so
-   * this value is stored but does not affect a stream — use {@link Sound} or
+   * this value is stored but does not affect a stream - use {@link Sound} or
    * {@link AudioGenerator} when you need real detune.
    */
   public get detune(): number {

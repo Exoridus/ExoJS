@@ -1,6 +1,6 @@
 {
   "title": "SequenceActionOptions",
-  "description": "Options for SequenceAction — the options every action shares, plus pattern timing and restart behavior.",
+  "description": "Options for SequenceAction - the options every action shares, plus pattern timing and restart behavior.",
   "symbol": "SequenceActionOptions",
   "kind": "interface",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for SequenceAction — the options every action shares, plus pattern timing and restart behavior."
+        "Options for SequenceAction - the options every action shares, plus pattern timing and restart behavior."
       ],
       "importLine": "import { SequenceActionOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Magnitude a channel's value must exceed to count as active — see the concrete action kind's own active/pressed/triggered semantics (for example ButtonAction.active). Defaults to 0. Distinct from a gamepad's device-level deadzone, which is applied before the value ever reaches the channel buffer."
+          "description": "Magnitude a channel's value must exceed to count as active - see the concrete action kind's own active/pressed/triggered semantics (for example ButtonAction.active). Defaults to 0. Distinct from a gamepad's device-level deadzone, which is applied before the value ever reaches the channel buffer."
         },
         {
           "name": "timeout",

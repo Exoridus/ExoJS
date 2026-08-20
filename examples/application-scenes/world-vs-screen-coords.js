@@ -1,4 +1,4 @@
-// Auto-generated from world-vs-screen-coords.ts — edit the .ts source, not this file.
+// Auto-generated from world-vs-screen-coords.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Scene, Text, View } from '@codexo/exojs';
 class WorldScreenScene extends Scene {
     view;

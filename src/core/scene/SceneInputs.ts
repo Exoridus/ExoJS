@@ -42,12 +42,12 @@ type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
  * Every `SceneInputs.onXxx()` call must construct exactly one underlying
  * {@link InputBinding} (via a single `app.input` factory call) and wire the
  * edge-rule bookkeeping onto that one binding's own `onStart`/`onActive`/
- * `onStop`/`onTrigger` signals — `InputManager.onStart`/`onActive`/`onStop`/
+ * `onStop`/`onTrigger` signals - `InputManager.onStart`/`onActive`/`onStop`/
  * `onTrigger` each construct a *fresh, independent* `InputBinding` internally
  * (confirmed in `src/input/InputManager.ts`), so calling two different
  * `SceneInputs` factories for "the same" channel would silently create two
  * unrelated bindings with two unrelated edge-rule sessions. `onStart` is used
- * as the anchor factory call below purely to obtain the binding object —
+ * as the anchor factory call below purely to obtain the binding object -
  * every one of the four `InputManager` factories constructs an identical
  * binding underneath (`createBinding(channel, options)`), so which one is
  * used to obtain the reference makes no behavioral difference.
@@ -57,7 +57,7 @@ type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
  * Scene-bound input facade. Bindings created here are automatically unbound
  * when the owning scene ends permanently. Access via {@link Scene.inputs}.
  *
- * Delegates to `app.input` for every binding — this facade adds no second
+ * Delegates to `app.input` for every binding - this facade adds no second
  * input clock, it only tracks what it created so it can unbind on teardown.
  * Every factory accepts a `when` option (default `'active'`) controlling
  * which {@link SceneState}s the binding may dispatch in; a trigger only
@@ -282,12 +282,12 @@ export class SceneInputs implements Destroyable {
   }
 
   /**
-   * Whether `when` currently permits dispatch — suspend and the director's
+   * Whether `when` currently permits dispatch - suspend and the director's
    * transition gate override every policy unconditionally, `when` itself is
    * then resolved against the live scene state/paused flag by
    * {@link whenPolicyAllows}. The single source of truth for both a
    * scene-owned {@link ActionMap} (see {@link SceneInputs.attach}) and every
-   * `on*` binding (see {@link SceneInputs._bind}) — the two must never drift
+   * `on*` binding (see {@link SceneInputs._bind}) - the two must never drift
    * apart, so neither inlines this check itself.
    */
   private _allowedNow(when: SceneAvailability): boolean {
@@ -295,7 +295,7 @@ export class SceneInputs implements Destroyable {
   }
 
   /**
-   * Forwards to the underlying `InputManager` — see
+   * Forwards to the underlying `InputManager` - see
    * `InputManager._currentBatchSequence`'s doc comment. Implementing this
    * lets a map attached here (rather than directly on `app.input`) get the
    * same mid-frame-attach protection.
@@ -307,7 +307,7 @@ export class SceneInputs implements Destroyable {
   }
 
   /**
-   * Forwards to the underlying `InputManager` — see
+   * Forwards to the underlying `InputManager` - see
    * `InputManager._snapshotActionChannels`'s doc comment. Lets a map
    * attached here get the same attach-time baseline truth as one attached
    * directly on `app.input`.
@@ -338,12 +338,12 @@ export class SceneInputs implements Destroyable {
    * same `when`/edge-rule gating as {@link SceneInputs.onStart}.
    *
    * The callback is optional: with none, this just creates and tracks the
-   * binding, which is the idiomatic way to poll an input per frame — read
+   * binding, which is the idiomatic way to poll an input per frame - read
    * {@link InputBinding.active} / {@link InputBinding.value} in your own
    * `update()` instead of tracking held-state in a callback.
    *
    * Note that polling reads the raw binding state, which the `when` policy
-   * does not gate — only callback dispatch is gated. A scene that polls while
+   * does not gate - only callback dispatch is gated. A scene that polls while
    * paused must check its own state.
    *
    * @param channel - Channel, or channels, to watch.
@@ -377,7 +377,7 @@ export class SceneInputs implements Destroyable {
 
   /**
    * Fire `callback` once a press-then-release completes within the
-   * threshold window — a "tap" or "click" gesture. Both the press and
+   * threshold window - a "tap" or "click" gesture. Both the press and
    * release edges must have occurred in a `when`-allowed state for the
    * trigger to fire: pressing while allowed, then the
    * scene pausing before release, does not trigger.
@@ -393,7 +393,7 @@ export class SceneInputs implements Destroyable {
 
   /**
    * Disable every tracked binding's dispatch without unbinding it. Reserved
-   * for retention (suspend/resume). Independent of the `when` policy — a
+   * for retention (suspend/resume). Independent of the `when` policy - a
    * suspended facade dispatches nothing regardless of `when`.
    */
   public suspend(): void {
@@ -414,7 +414,7 @@ export class SceneInputs implements Destroyable {
   /**
    * Restore normal `when`-policy dispatch after {@link SceneInputs.suspend}.
    * Each map is resynced against the current real channel state before it
-   * resumes being sampled — a source still held across the suspend must not
+   * resumes being sampled - a source still held across the suspend must not
    * surface as a synthetic press the instant this scene wakes back up.
    */
   public resume(): void {
@@ -489,7 +489,7 @@ export class SceneInputs implements Destroyable {
 
     const allowedNow = (): boolean => this._allowedNow(when);
 
-    // Anchor call — see the BindingKind comment above for why `onStart`
+    // Anchor call - see the BindingKind comment above for why `onStart`
     // specifically is used regardless of `kind`.
     const binding = this._app.input.onStart(
       channel,
@@ -518,7 +518,7 @@ export class SceneInputs implements Destroyable {
     binding.onStop.add((value: number) => {
       // Both the press edge (primed) and the release edge (allowedNow(),
       // checked live) must be allowed for the trigger to fire
-      // — checked live here since a same-frame disallow-then-release
+      // - checked live here since a same-frame disallow-then-release
       // with no intervening onActive tick would otherwise be missed.
       //
       // `primed` is intentionally NOT reset here: the real InputBinding
@@ -527,7 +527,7 @@ export class SceneInputs implements Destroyable {
       // and it needs to see the same `primed` value this onStop handler
       // just read. The next press's onStart handler always overwrites
       // `primed` unconditionally, so a stale value between releases and the
-      // next press is harmless — nothing else reads it in between (the real
+      // next press is harmless - nothing else reads it in between (the real
       // InputBinding cannot dispatch onActive/onStop/onTrigger again without
       // a fresh onStart first).
       if (kind === 'onStop' && primed && allowedNow()) {

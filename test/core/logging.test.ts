@@ -1,7 +1,7 @@
 import { _resetHello, createConsoleSink, hello, type LogEntry, Logger, logger, LogSeverity } from '#core/logging';
 
 // ---------------------------------------------------------------------------
-// Logger — dispatch, options bag, once dedup, addSink
+// Logger - dispatch, options bag, once dedup, addSink
 // ---------------------------------------------------------------------------
 
 describe('Logger', () => {
@@ -228,7 +228,7 @@ describe('createConsoleSink', () => {
 });
 
 // ---------------------------------------------------------------------------
-// hello — one-time DEV startup banner
+// hello - one-time DEV startup banner
 // ---------------------------------------------------------------------------
 
 describe('hello', () => {

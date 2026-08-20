@@ -236,7 +236,7 @@ describe('DataTexture', () => {
       const second = tex._consumeDirtyRegion();
 
       // Same object handed out again (no per-commit allocation), carrying the
-      // new region — which is why a consumer must not hold it across a sync.
+      // new region - which is why a consumer must not hold it across a sync.
       expect(second).toBe(first);
       expect(second).toEqual({ full: false, x: 9, y: 9, width: 3, height: 3 });
     });

@@ -48,7 +48,7 @@ describe('createWorkerSampledChunkSource — real Worker', () => {
     try {
       streamer.update();
       // ChunkStreamer's async branch installs on a later microtask/message-event
-      // tick, not synchronously — wait for the worker round trip to actually
+      // tick, not synchronously - wait for the worker round trip to actually
       // complete before asserting.
       await vi.waitFor(() => {
         expect(layer.getTileAt(0, 0)).not.toBeNull();

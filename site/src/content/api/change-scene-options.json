@@ -1,6 +1,6 @@
 {
   "title": "ChangeSceneOptions",
-  "description": "Options for SceneDirector.change. Carries the activation `data` (when `Data` is not `void`), `suspendCurrent`, and an optional `transition` — a class-based `SceneTransition`/ `PhasedSceneTransition`, or an `{ enter, exit }` pair — resolved against the target's registry-level default to drive the switch through a SceneTransitionSession; see SceneDirector.change's doc comment for the full guarantee.",
+  "description": "Options for SceneDirector.change. Carries the activation `data` (when `Data` is not `void`), `suspendCurrent`, and an optional `transition` - a class-based `SceneTransition`/ `PhasedSceneTransition`, or an `{ enter, exit }` pair - resolved against the target's registry-level default to drive the switch through a SceneTransitionSession; see SceneDirector.change's doc comment for the full guarantee.",
   "symbol": "ChangeSceneOptions",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for SceneDirector.change. Carries the activation `data` (when `Data` is not `void`), `suspendCurrent`, and an optional `transition` — a class-based `SceneTransition`/ `PhasedSceneTransition`, or an `{ enter, exit }` pair — resolved against the target's registry-level default to drive the switch through a SceneTransitionSession; see SceneDirector.change's doc comment for the full guarantee."
+        "Options for SceneDirector.change. Carries the activation `data` (when `Data` is not `void`), `suspendCurrent`, and an optional `transition` - a class-based `SceneTransition`/ `PhasedSceneTransition`, or an `{ enter, exit }` pair - resolved against the target's registry-level default to drive the switch through a SceneTransitionSession; see SceneDirector.change's doc comment for the full guarantee."
       ],
       "importLine": "import { ChangeSceneOptions } from '@codexo/exojs'",
       "sourceLink": null

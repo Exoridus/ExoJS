@@ -12,7 +12,7 @@ import type { UniformValue } from './Material';
  * normalized string descriptor, so identical material state always maps to
  * the exact same integer (no hashing, no collisions), and distinct state
  * maps to distinct integers. Descriptors are built from scalar fields in a
- * fixed order and from sorted texture-binding entries — never from
+ * fixed order and from sorted texture-binding entries - never from
  * `JSON.stringify` over objects with unstable key order.
  *
  * Two key spaces:

@@ -1,6 +1,6 @@
 {
   "title": "SlideMode",
-  "description": "The three visual shapes a slide can take — see SlideSceneTransition for details.",
+  "description": "The three visual shapes a slide can take - see SlideSceneTransition for details.",
   "symbol": "SlideMode",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The three visual shapes a slide can take — see SlideSceneTransition for details."
+        "The three visual shapes a slide can take - see SlideSceneTransition for details."
       ],
       "importLine": "import { SlideMode } from '@codexo/exojs'",
       "sourceLink": null

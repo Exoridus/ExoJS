@@ -292,7 +292,7 @@ describe('WebGpuTransformStorage.reserve: no reallocation across multiple getBuf
     const flush2 = storage.getBuffer(device as unknown as GPUDevice, 6);
 
     expect(flush2.buffer).toBe(reservedBuffer);
-    // Still only the one transform+tint pair from reserve — no mid-frame reallocation.
+    // Still only the one transform+tint pair from reserve - no mid-frame reallocation.
     expect(device.createBuffer).toHaveBeenCalledTimes(2);
     expect(reservedBuffer.destroy).not.toHaveBeenCalled();
   });
@@ -313,7 +313,7 @@ describe('WebGpuTransformStorage.reserve: no reallocation across multiple getBuf
 
     const firstBuffer = device.buffers[0];
 
-    // Second flush needs 6 slots — old buffers are too small, reallocation happens.
+    // Second flush needs 6 slots - old buffers are too small, reallocation happens.
     storage.writeCommand(makeCommand(5));
     storage.getBuffer(device as unknown as GPUDevice, 6);
 
@@ -397,7 +397,7 @@ describe('WebGpuTransformStorage.reserve: begin across frames', () => {
     expect(storage.buffer.writeCount).toBe(0);
     expect(storage.buffer.uploadCount).toBe(0);
 
-    // Reserve again — buffers are already large enough; no new allocation.
+    // Reserve again - buffers are already large enough; no new allocation.
     storage.reserve(device as unknown as GPUDevice, 4);
 
     expect(device.createBuffer).toHaveBeenCalledTimes(2);

@@ -1,7 +1,7 @@
 import { resolve } from 'node:path';
 
 // `./physics` is imported for TYPES only here (erased at runtime); its module
-// graph — the `@codexo/exojs-physics` source arm — is loaded lazily via a
+// graph - the `@codexo/exojs-physics` source arm - is loaded lazily via a
 // dynamic `import()` inside `runPhysicsDomain`, so a rendering run never pays for it.
 import type { PhysicsAdapter, PhysicsCellResult, PhysicsCellSpec } from './physics';
 import type { ArchetypeId, Backend, CellResult, CellSpec, MatrixSelection } from './rendering';
@@ -126,8 +126,8 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
 
   // `--archetype`, `--engine`, `--config` and `--nodes` each accept a
   // COMMA-SEPARATED list. A single value behaves exactly as before; a list
-  // routes through `MatrixSelection` so one invocation — and therefore ONE
-  // browser session per arm — can cover several archetypes/arms at once. Before
+  // routes through `MatrixSelection` so one invocation - and therefore ONE
+  // browser session per arm - can cover several archetypes/arms at once. Before
   // this, comparing two archetypes meant two process launches, i.e. two
   // sessions, which the same-session rule forbids for a cross-arm claim.
   const archetypes = parseList(archetypeArg) as ArchetypeId[] | undefined;
@@ -154,7 +154,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   // `--frames` overrides EVERY cell's
   // timed-frame count regardless of node count, so a smoke/spot-check run can
   // finish in seconds without editing `timedFramesFor` in source. This is
-  // strictly a convenience knob for fast iteration — like `timedFramesOverride`
+  // strictly a convenience knob for fast iteration - like `timedFramesOverride`
   // itself (see driver.ts), it must never be used for a reportable run: it
   // flattens the per-node-count frame budgets the report's `timedFrames`
   // column exists to make honest, so any run using it is forced into the
@@ -197,8 +197,8 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
   );
 
   // Incremental, crash-safe checkpoint: each cell is persisted the instant it
-  // lands (see shared/checkpoint.ts), so a later cell crash — the Pixi-WebGPU
-  // probe was the observed one — can never discard the cells already measured.
+  // lands (see shared/checkpoint.ts), so a later cell crash - the Pixi-WebGPU
+  // probe was the observed one - can never discard the cells already measured.
   const checkpoint = createCheckpointWriter<CellResult>(outDir);
 
   const data = await runMatrix({
@@ -219,7 +219,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
     console.log(`  ${library.name} @ ${library.version}${library.resolvedFrom.length > 0 ? ` (from ${library.resolvedFrom})` : ''}`);
   }
 
-  // Provenance up front, loudly — a green run on a software rasterizer is worthless.
+  // Provenance up front, loudly - a green run on a software rasterizer is worthless.
   console.log('\n=== Provenance ===');
 
   for (const entry of data.provenance) {
@@ -251,7 +251,7 @@ const runRenderingDomain = async (args: Map<string, string>): Promise<void> => {
  *
  * Physics is CPU-only: no browser, no GPU. The whole matrix runs in THIS Node
  * process as a straight loop over `world.step`, so the domain module is imported
- * dynamically (only when selected) — a rendering run never loads the physics
+ * dynamically (only when selected) - a rendering run never loads the physics
  * arm's `@codexo/exojs-physics` source graph, and vice versa.
  *
  * Flags mirror the rendering domain: `--archetype` and `--bodies` filter the
@@ -283,7 +283,7 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
   }
 
   // `--frames`: override every selected cell's timed-step count (like the
-  // rendering domain's flag). A convenience knob for fast iteration only — it
+  // rendering domain's flag). A convenience knob for fast iteration only - it
   // flattens the per-body-count step budgets the report's `timedSteps` column
   // exists to make honest, so any run using it is a non-reportable SUBSET RUN.
   let timedStepsOverride: number | undefined;

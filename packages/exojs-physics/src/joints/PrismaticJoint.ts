@@ -17,7 +17,7 @@ export interface PrismaticJointOptions {
   enableMotor?: boolean;
   /** Target translation speed along the axis (px/s). Default `0`. */
   motorSpeed?: number;
-  /** Maximum motor force — clamps the per-step motor impulse. Default `0`. */
+  /** Maximum motor force - clamps the per-step motor impulse. Default `0`. */
   maxMotorForce?: number;
   /** Enable the translation limit (keeps the axis translation in `[lowerTranslation, upperTranslation]`). Default `false`. */
   enableLimit?: boolean;
@@ -27,7 +27,7 @@ export interface PrismaticJointOptions {
   upperTranslation?: number;
 }
 
-/** Reused output sink — physics steps single-threaded, so a shared scratch is safe. */
+/** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
 const scratch: Mutable2D = { x: 0, y: 0 };
 
 /**

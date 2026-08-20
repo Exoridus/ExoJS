@@ -362,7 +362,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Total accumulated time since the last Clock.reset. While the clock is running, the value advances on every read by folding in the delta since the previous read; while stopped, the value is fixed at the stop point. Returns the same Time instance — read the scalar fields if you need an unchanging snapshot."
+          "description": "Total accumulated time since the last Clock.reset. While the clock is running, the value advances on every read by folding in the delta since the previous read; while stopped, the value is fixed at the stop point. Returns the same Time instance - read the scalar fields if you need an unchanging snapshot."
         },
         {
           "name": "expired",

@@ -252,7 +252,7 @@ describe('focus handling across push/pop', () => {
     h.im.focus(innerInside);
 
     // Releasing the BURIED outer scope while inner is active must not touch
-    // current focus at all — only popping the ACTIVE (topmost) scope does.
+    // current focus at all - only popping the ACTIVE (topmost) scope does.
     h.im.popScope(outerToken);
 
     expect(h.im.focused).toBe(innerInside);
@@ -275,7 +275,7 @@ describe('pushScope on a not-yet-live root', () => {
 
     const token = h.im.pushScope(modal);
 
-    // `modal` is not live yet, so nothing is trapped by it — the blur check
+    // `modal` is not live yet, so nothing is trapped by it - the blur check
     // must not run just because a scope entry now exists.
     expect(h.im.focused).toBe(trigger);
 
@@ -347,11 +347,11 @@ describe('effectively-active scope truth (topmost LIVE entry, not physical stack
     const deadToken = h.im.pushScope(deadRoot);
 
     // Destroy the scope root directly (no removeChild) so its stack entry
-    // goes stale without ever being popped — see `_isOwned`'s doc comment.
+    // goes stale without ever being popped - see `_isOwned`'s doc comment.
     deadRoot.destroy();
 
     // `outer`'s entry now sits BENEATH the dead `deadRoot` entry on the
-    // stack — popping it must still be recognized as ending the
+    // stack - popping it must still be recognized as ending the
     // effectively-active scope (the topmost LIVE entry), not dismissed
     // just because it is no longer the last physical array slot.
     h.im.popScope(outerToken);
@@ -378,12 +378,12 @@ describe('scope reactivation re-enforces the focus trap immediately', () => {
 
     h.im.focus(insideModal);
 
-    // Detach the scope root WITHOUT popping its scope entry — it goes dead
+    // Detach the scope root WITHOUT popping its scope entry - it goes dead
     // (see `_isOwned`'s doc comment), so it stops trapping anything until
     // it reattaches.
     h.scene.root.removeChild(modal);
 
-    // While dead, nothing traps focus — a direct focus() call elsewhere succeeds.
+    // While dead, nothing traps focus - a direct focus() call elsewhere succeeds.
     h.im.focus(outside);
     expect(h.im.focused).toBe(outside);
 
@@ -410,7 +410,7 @@ describe('detachRoot ownership', () => {
 
     h.im.detachRoot(h.scene.root);
 
-    // The foreign scope must still be releasable — it was never touched.
+    // The foreign scope must still be releasable - it was never touched.
     const stack = (h.im as unknown as { _scopeStack: Array<{ token: unknown }> })._scopeStack;
 
     expect(stack.some(entry => entry.token === foreignToken)).toBe(true);

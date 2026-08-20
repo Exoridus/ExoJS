@@ -101,7 +101,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Own-resident chunks beyond this many chunk-units of the view are evicted. Must be >= loadRadius — the gap between the two is deliberate hysteresis that prevents load/unload thrashing when the view sits near a chunk boundary. Default 2."
+          "description": "Own-resident chunks beyond this many chunk-units of the view are evicted. Must be >= loadRadius - the gap between the two is deliberate hysteresis that prevents load/unload thrashing when the view sits near a chunk boundary. Default 2."
         }
       ],
       "paragraphs": [],

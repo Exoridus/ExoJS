@@ -1,6 +1,6 @@
 {
   "title": "TiledWangSetData",
-  "description": "A wangset entry within a tileset's `wangsets` array. `type` is `'corner'`, `'edge'`, or `'mixed'` (Tiled 1.5+). Older files may omit it or use other strings — treat unknown values as-is. `tile` is the representative tile local id for this wangset (–1 if unset).",
+  "description": "A wangset entry within a tileset's `wangsets` array. `type` is `'corner'`, `'edge'`, or `'mixed'` (Tiled 1.5+). Older files may omit it or use other strings - treat unknown values as-is. `tile` is the representative tile local id for this wangset (-1 if unset).",
   "symbol": "TiledWangSetData",
   "kind": "interface",
   "subsystem": "tiled",
@@ -20,8 +20,8 @@
       "members": [],
       "paragraphs": [
         "A wangset entry within a tileset's `wangsets` array.",
-        "`type` is `'corner'`, `'edge'`, or `'mixed'` (Tiled 1.5+). Older files may omit it or use other strings — treat unknown values as-is.",
-        "`tile` is the representative tile local id for this wangset (–1 if unset)."
+        "`type` is `'corner'`, `'edge'`, or `'mixed'` (Tiled 1.5+). Older files may omit it or use other strings - treat unknown values as-is.",
+        "`tile` is the representative tile local id for this wangset (-1 if unset)."
       ],
       "importLine": "import { TiledWangSetData } from '@codexo/exojs-tiled'",
       "sourceLink": null

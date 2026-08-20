@@ -90,7 +90,7 @@ describe('SoundVoice — Pausable', () => {
   });
 
   // SceneAudio detects pausable voices by duck-typing `pause`/`resume`,
-  // and AudioStreamVoice used to be the only implementation — so every Sound
+  // and AudioStreamVoice used to be the only implementation - so every Sound
   // ambience kept playing straight through scene.pause()/suspend().
   test('pause() retires the running source without ending the voice', () => {
     const factory = setupSourceSpy();
@@ -162,7 +162,7 @@ describe('SoundVoice — Pausable', () => {
   });
 
   // Every operation that would normally rebuild or retarget the source has to
-  // stay inert while paused — none of them may resurrect audible playback.
+  // stay inert while paused - none of them may resurrect audible playback.
   test('seek() while paused moves the resume point without starting a source', () => {
     const factory = setupSourceSpy();
     const manager = new AudioManager();
@@ -275,7 +275,7 @@ describe('SoundVoice — Pausable', () => {
 
   // In a real browser `onended` is delivered as an asynchronous task, so a
   // source can be past its window end while the callback is still in flight.
-  // `pause()` retires the source and clears `onended` — which used to strand
+  // `pause()` retires the source and clears `onended` - which used to strand
   // the voice as permanently `paused` with `ended === false`, holding its pool
   // slot, its entry in the manager's voice registry and its place in
   // `SceneAudio._suspended` forever. The mocks here never auto-fire `onended`,

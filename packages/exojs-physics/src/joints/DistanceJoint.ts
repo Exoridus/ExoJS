@@ -30,7 +30,7 @@ export interface DistanceJointOptions {
   maxLength?: number;
 }
 
-/** Reused output sink — physics steps single-threaded, so a shared scratch is safe. */
+/** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
 const scratch: Mutable2D = { x: 0, y: 0 };
 
 /**

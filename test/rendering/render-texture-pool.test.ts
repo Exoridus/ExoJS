@@ -6,7 +6,7 @@ import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { createFakeCanvas, createFakeWebGl2Context, GlRecorder, installFakeWebGl2Globals } from '../perf/rendering/fakeWebGl2';
 import { createMockBackend, createMockWebGpuEnvironment } from './webgpuMockEnvironment';
 
-/** A backend wired to the recording fake GL context — enough for pool bookkeeping, no renderers needed. */
+/** A backend wired to the recording fake GL context - enough for pool bookkeeping, no renderers needed. */
 const createFakeWebGl2Backend = (): WebGl2Backend => {
   installFakeWebGl2Globals();
 
@@ -143,7 +143,7 @@ describe('WebGl2Backend render texture pool', () => {
     const backend = createFakeWebGl2Backend();
     const released: RenderTexture[] = [];
 
-    // Hold them all at once — an animated filter whose bounds resize every frame
+    // Hold them all at once - an animated filter whose bounds resize every frame
     // hands back far more textures than it ever re-acquires at a given size.
     for (let index = 0; index < MAX_POOLED_RENDER_TEXTURES * 8; index++) {
       released.push(backend.acquireRenderTexture(32, 32));

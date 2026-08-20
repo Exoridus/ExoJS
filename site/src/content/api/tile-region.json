@@ -1,6 +1,6 @@
 {
   "title": "TileRegion",
-  "description": "A half-open tile-coordinate rectangle covering `[x, x + width)` × `[y, y + height)`. Used to scope buildTileCollisionGeometry to part of a layer — a streamed chunk, the tiles around the player, a hand-picked room — instead of always rebuilding the whole map.",
+  "description": "A half-open tile-coordinate rectangle covering `[x, x + width)` × `[y, y + height)`. Used to scope buildTileCollisionGeometry to part of a layer - a streamed chunk, the tiles around the player, a hand-picked room - instead of always rebuilding the whole map.",
   "symbol": "TileRegion",
   "kind": "interface",
   "subsystem": "tilemap",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A half-open tile-coordinate rectangle covering `[x, x + width)` × `[y, y + height)`.",
-        "Used to scope buildTileCollisionGeometry to part of a layer — a streamed chunk, the tiles around the player, a hand-picked room — instead of always rebuilding the whole map."
+        "Used to scope buildTileCollisionGeometry to part of a layer - a streamed chunk, the tiles around the player, a hand-picked room - instead of always rebuilding the whole map."
       ],
       "importLine": "import { TileRegion } from '@codexo/exojs-tilemap'",
       "sourceLink": null

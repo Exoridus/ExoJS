@@ -10,9 +10,9 @@ import { TextAsset } from '#assets/tokens';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
-// A test-only, non-leaf asset kind — no seamless adapter, `isValue: false` —
+// A test-only, non-leaf asset kind - no seamless adapter, `isValue: false` -
 // the exact shape `LoaderScope.release()` calls out (a resource loaded
-// with `load(Asset.type('bmFont', …))`): it never goes through `createLeaf`,
+// with `load(Asset.type('bmFont', ...))`): it never goes through `createLeaf`,
 // so it carries no `_assetMeta` stamp and is never adopted/registered in the
 // handle→key map either.
 declare module '#assets/AssetDefinitions' {
@@ -90,7 +90,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
 
     expect(loader.inspect()).toHaveLength(1);
     expect(() => scope.release(resource as unknown as object)).toThrow(/no claim identity/);
-    // The claim survives the throw — nothing was silently discarded.
+    // The claim survives the throw - nothing was silently discarded.
     expect(loader.inspect()).toHaveLength(1);
 
     // The documented workaround (release the descriptor instead) works.
@@ -175,7 +175,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
     // way existing tests reach it via direct residency access.
     (loader as unknown as { _residency: { unloadAll(): void } })._residency.unloadAll();
 
-    // The throw must depend only on whether THIS object is a real handle —
+    // The throw must depend only on whether THIS object is a real handle -
     // never on unrelated internal state that changed since it was handed out.
     expect(() => scope.release(handle)).not.toThrow();
   });
@@ -288,7 +288,7 @@ describe('Loader.inspect() snapshot contract', () => {
     loader.load(catalog, { priority: LoadPriority.Background });
 
     const row = loader.inspect().find(r => r.aliases.includes('late.png'));
-    // `background` here is the inspection row's own field — whether the key is
+    // `background` here is the inspection row's own field - whether the key is
     // sitting in the queue right now, not the priority it was requested with.
     expect(row).toMatchObject({ state: 'queued', background: true, inFlight: false, claims: 1 });
   });
@@ -328,7 +328,7 @@ describe('Loader.inspect() snapshot contract', () => {
 
     // `_storeResource` stores the raw fetched payload into `_resources`
     // unconditionally, even though this leaf's own `parse()` step fails it via
-    // the new synchronous-parse check — `stored` alone must not be read as
+    // the new synchronous-parse check - `stored` alone must not be read as
     // "readable" for a diagnostic snapshot.
     const catalog = Assets.from({
       bad: { type: 'text', source: 'note.txt', parse: () => Promise.resolve('nope') as unknown as string },
@@ -355,7 +355,7 @@ describe('Loader.inspect() snapshot contract', () => {
 
     // Re-claiming the same leaf (routinely: a second scene claiming the same
     // catalog) is a retry, and here `_resources` holds a raw payload while
-    // `_refs` holds a ref its OWN `parse()` failed — the one case where the two
+    // `_refs` holds a ref its OWN `parse()` failed - the one case where the two
     // legitimately diverge. The retry must re-run `parse()` against the stored
     // payload and fail again honestly; refetch-gating the retry on "nothing
     // stored" left the ref re-armed to 'loading' with no fetch in flight, so it
@@ -368,9 +368,9 @@ describe('Loader.inspect() snapshot contract', () => {
   });
 
   test('never reports background:true for a row that has already settled', () => {
-    // A producer that stores a payload for a (type, source) key directly —
+    // A producer that stores a payload for a (type, source) key directly -
     // `loadContainer()`'s injection path calls `_storeResource` without going
-    // through the background queue's own dequeue/boost bookkeeping — must not
+    // through the background queue's own dequeue/boost bookkeeping - must not
     // leave a settled row also claiming to still be queued.
     const loader = new Loader();
     class FakeType {}

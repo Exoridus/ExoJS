@@ -14,7 +14,7 @@ const tileRendererBatchSize = 4096;
 /**
  * Build the renderer binding that wires the per-backend
  * {@link import('./TileChunkNode').TileChunkNode} renderers. The binding targets
- * the internal chunk drawable; applications never construct it directly — they
+ * the internal chunk drawable; applications never construct it directly - they
  * build {@link import('./TileMapNode').TileMapNode} /
  * {@link import('./TileLayerNode').TileLayerNode}, whose chunk children resolve
  * to this renderer through the registry prototype walk.
@@ -41,7 +41,7 @@ function buildTileChunkRendererBinding(batchSize: number): RendererBinding {
  *
  * Registers the WebGL2/WebGPU tile chunk renderers (`renderers`) and the
  * {@link TileMapNode} scene serializer (`serializers`); it carries no asset
- * bindings — there is no generic on-disk tilemap format in this slice, so format
+ * bindings - there is no generic on-disk tilemap format in this slice, so format
  * adapters (e.g. `@codexo/exojs-tiled`) own loading and depend on this
  * descriptor to pull in rendering.
  *

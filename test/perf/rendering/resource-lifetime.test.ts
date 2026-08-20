@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // GPU resource lifetime: the ownership contract's edge cases.
 //
-// The sibling `resource-accounting.test.ts` proves the *bookkeeping* is exact —
+// The sibling `resource-accounting.test.ts` proves the *bookkeeping* is exact -
 // adding a texture raises `gpuMemoryBytes` by precisely its footprint, freeing
 // it lowers it by the same. What it never asks is who is supposed to do the
 // freeing, or what happens when a resource is used after it has been released.
@@ -170,7 +170,7 @@ describe('GPU resource lifetime', () => {
 
       const beforeEvict = harness.backend.stats.gpuMemoryBytes;
 
-      // Nothing renders this handle again afterwards — the point is that
+      // Nothing renders this handle again afterwards - the point is that
       // eviction must not depend on a future bind to notice the drop.
       textureSeamlessAdapter.evict(texture);
 
@@ -195,7 +195,7 @@ describe('GPU resource lifetime', () => {
       measureSteadyFrame(harness, buildSpriteScene({ count: 1, textures: [texture] }).root);
       textureSeamlessAdapter.evict(texture);
 
-      // Eviction must not have dropped the destroy subscription — it exists
+      // Eviction must not have dropped the destroy subscription - it exists
       // precisely so a later real destroy() is still observed by the backend.
       expect(() => texture.destroy()).not.toThrow();
       expect(texture.destroyed).toBe(true);

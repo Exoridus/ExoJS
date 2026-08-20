@@ -3,7 +3,7 @@ import { createRng } from '../../shared/rng';
 import type { PhysicsArchetypeSpec } from '../PhysicsAdapter';
 
 /**
- * Engine-neutral description of a physics scene — the fairness backbone the
+ * Engine-neutral description of a physics scene - the fairness backbone the
  * matter.js and rapier arms build from.
  *
  * The native `adapters/exojs-physics.ts` arm builds its scene inline against the
@@ -13,7 +13,7 @@ import type { PhysicsArchetypeSpec } from '../PhysicsAdapter';
  * competitor arms: it produces one neutral list of {@link BodyDesc}s, drawn from
  * the SAME shared deterministic RNG in the SAME order as the exojs arm, so
  * matter and rapier simulate a byte-identical body configuration to each other,
- * and — because the draw order is a faithful transcription of exojs-physics.ts —
+ * and - because the draw order is a faithful transcription of exojs-physics.ts -
  * to the native arm as well.
  *
  * The perturbed-body selection is routed through the shared
@@ -60,7 +60,7 @@ export interface BodyDesc {
 export interface SceneDescription {
   /** Every body in the scene, in creation order (statics first per archetype, then dynamics). */
   readonly bodies: readonly BodyDesc[];
-  /** FNV-1a signature of the shared perturbed-index selection — the cross-arm determinism receipt. */
+  /** FNV-1a signature of the shared perturbed-index selection - the cross-arm determinism receipt. */
   readonly perturbedSignature: string;
 }
 
@@ -69,7 +69,7 @@ const DEFAULT_RESTITUTION = 0;
 /** Friction the exojs `staticBox` helper stamps on every static collider. */
 const STATIC_FRICTION = 0.5;
 
-/** Build one static box descriptor — the neutral analogue of exojs `staticBox(...)`. */
+/** Build one static box descriptor - the neutral analogue of exojs `staticBox(...)`. */
 const staticBox = (x: number, y: number, width: number, height: number): BodyDesc => ({
   type: 'static',
   x,
@@ -212,7 +212,7 @@ const buildMixed = (bodies: BodyDesc[], bodyCount: number, rng: () => number): v
  * The two RNG streams mirror `exojs-physics.ts` exactly: the perturbed-body set
  * is selected via {@link selectMutationIndices} on `createRng(seed)`, and body
  * placement/velocity jitter is drawn from an independent `createRng(seed ^
- * 0x5f356495)` stream — same seed, separate instance — so selection and
+ * 0x5f356495)` stream - same seed, separate instance - so selection and
  * placement never share a stream position.
  */
 export const describePhysicsScene = (spec: PhysicsArchetypeSpec, bodyCount: number, seed: number): SceneDescription => {

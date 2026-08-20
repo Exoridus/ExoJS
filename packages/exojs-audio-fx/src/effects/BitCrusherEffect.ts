@@ -23,9 +23,9 @@ export interface BitCrusherEffectOptions {
  * Lo-fi bit-crusher effect implemented as a {@link WorkletEffect}. Applies two
  * classic degradation stages in series:
  *
- * 1. **Bit-depth reduction** — each sample is quantized to `2^bits` discrete
+ * 1. **Bit-depth reduction** - each sample is quantized to `2^bits` discrete
  *    levels, adding harmonic distortion characteristic of low-resolution audio.
- * 2. **Sample-rate reduction** — a phase-accumulator sample-and-hold circuit
+ * 2. **Sample-rate reduction** - a phase-accumulator sample-and-hold circuit
  *    re-latches the (quantized) input only `normFreq` times per input sample on
  *    average, producing aliasing artefacts reminiscent of early digital hardware.
  *

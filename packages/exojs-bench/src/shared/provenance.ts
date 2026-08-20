@@ -7,8 +7,8 @@ import { dirname, resolve } from 'node:path';
  * Domain-agnostic provenance primitives.
  *
  * A wall-clock number is meaningless without the context that produced it, and
- * that context splits into a genuinely shared part — WHEN the run happened and
- * WHICH version of the primary package under test produced it — and a
+ * that context splits into a genuinely shared part - WHEN the run happened and
+ * WHICH version of the primary package under test produced it - and a
  * domain-specific part. Rendering adds the GPU adapter string, launch flags and
  * the software-rasterizer honesty bit; physics adds the Node runtime and CPU
  * host. Those domain parts stay in each domain's driver, extending
@@ -26,7 +26,7 @@ export interface BaseProvenance {
 /**
  * Provenance for one committed library arm: the exact installed version and
  * where it was resolved from. Stamped into every report header so a comparison
- * ("ExoJS vs Pixi", "stay-native vs adapter") is auditable — a reader can see
+ * ("ExoJS vs Pixi", "stay-native vs adapter") is auditable - a reader can see
  * precisely which build produced the numbers and reproduce it.
  */
 export interface LibraryProvenance {
@@ -34,7 +34,7 @@ export interface LibraryProvenance {
   readonly name: string;
   /** Exact installed version (from the resolved package manifest). */
   readonly version: string;
-  /** Absolute path the manifest was resolved from — the reproducibility receipt. */
+  /** Absolute path the manifest was resolved from - the reproducibility receipt. */
   readonly resolvedFrom: string;
 }
 
@@ -44,7 +44,7 @@ export interface LibraryProvenance {
  * Resolution walks up from the package's main entry to its `package.json` (some
  * packages do not expose `./package.json` in `exports`, so a direct
  * `require.resolve('<name>/package.json')` can fail). A package that cannot be
- * resolved is recorded as `not-installed` rather than throwing — a run that does
+ * resolved is recorded as `not-installed` rather than throwing - a run that does
  * not need every arm present must not be blocked by a missing one.
  *
  * Lifted out of the rendering driver (where it was hardcoded to `['pixi.js']`)
@@ -91,7 +91,7 @@ export const readLibraryProvenance = (names: readonly string[]): LibraryProvenan
 /**
  * Host + runtime provenance for a CPU-bound (Node) benchmark domain. A physics
  * step-time number is only comparable across runs if the CPU and Node version
- * that produced it are on the record — the CPU-domain analogue of rendering's
+ * that produced it are on the record - the CPU-domain analogue of rendering's
  * GPU adapter string.
  */
 export interface HostInfo {

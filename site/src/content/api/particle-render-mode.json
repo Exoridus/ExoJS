@@ -336,7 +336,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Layout of the buffer build fills each frame: attributes, stride, upload hint, and — when this mode declares no vertexGeometry — the topology and index list the draw uses. Named after data, the buffer it describes. It holds per-instance records for an instanced mode and per-vertex records otherwise, so a name fixed to either would be wrong for one of the two draw models."
+          "description": "Layout of the buffer build fills each frame: attributes, stride, upload hint, and - when this mode declares no vertexGeometry - the topology and index list the draw uses. Named after data, the buffer it describes. It holds per-instance records for an instanced mode and per-vertex records otherwise, so a name fixed to either would be wrong for one of the two draw models."
         },
         {
           "name": "gpuEligible",
@@ -357,7 +357,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether this mode can run while the system is in GPU compute mode. Mirrors UpdateModule.wgsl(): a mode that cannot forces the whole system onto the CPU path, silently and observably via ParticleSystem.gpuMode. A GPU-eligible mode's layout must match what the compute pipeline emits into gpuState.instanceBuffer — the shared 40-byte per-instance layout (instanceAttributes). QuadParticles and MeshParticles both declare exactly that layout and differ only in the shape they expand it into, which is why both are eligible without the compute shader knowing either."
+          "description": "Whether this mode can run while the system is in GPU compute mode. Mirrors UpdateModule.wgsl(): a mode that cannot forces the whole system onto the CPU path, silently and observably via ParticleSystem.gpuMode. A GPU-eligible mode's layout must match what the compute pipeline emits into gpuState.instanceBuffer - the shared 40-byte per-instance layout (instanceAttributes). QuadParticles and MeshParticles both declare exactly that layout and differ only in the shape they expand it into, which is why both are eligible without the compute shader knowing either."
         },
         {
           "name": "instanced",
@@ -428,7 +428,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fixed per-vertex geometry this mode instances, or null when it derives its vertices in the shader from the vertex index — which is what QuadParticles and RibbonParticles do. When set, it supplies the topology, index list and index count for the draw in place of dataLayout's, and the executors bind its vertexData as a second vertex buffer stepping per vertex beside the per-instance one. Only meaningful on an instanced mode: without instancing both buffers would step per vertex and no draw is expressible. Attribute names must not collide with dataLayout's, since both sets bind into the same shader. Mutating the geometry is picked up on the next draw through its version, so invalidate() after an in-place edit is enough to reach the GPU."
+          "description": "Fixed per-vertex geometry this mode instances, or null when it derives its vertices in the shader from the vertex index - which is what QuadParticles and RibbonParticles do. When set, it supplies the topology, index list and index count for the draw in place of dataLayout's, and the executors bind its vertexData as a second vertex buffer stepping per vertex beside the per-instance one. Only meaningful on an instanced mode: without instancing both buffers would step per vertex and no draw is expressible. Attribute names must not collide with dataLayout's, since both sets bind into the same shader. Mutating the geometry is picked up on the next draw through its version, so invalidate() after an in-place edit is enough to reach the GPU."
         },
         {
           "name": "count",

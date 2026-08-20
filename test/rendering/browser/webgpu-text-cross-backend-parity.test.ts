@@ -229,7 +229,7 @@ describe('Cross-backend parity: retained Text renders identically on WebGL2 and 
 
       // Per-pixel colour parity on the SOLID interior/background: every pixel
       // both backends agree is ink must be ~white on both, and agreed
-      // background ~black on both — within the project's ±8/channel tolerance.
+      // background ~black on both - within the project's ±8/channel tolerance.
       let checkedInterior = 0;
 
       for (let p = 0; p < gpuMask.length; p++) {

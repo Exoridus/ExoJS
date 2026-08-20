@@ -1,4 +1,4 @@
-// Auto-generated from containers.ts — edit the .ts source, not this file.
+// Auto-generated from containers.ts - edit the .ts source, not this file.
 import { Application, Asset, Assets, Color, Container, Scene, Sprite } from '@codexo/exojs';
 class ContainersScene extends Scene {
     rainbow;

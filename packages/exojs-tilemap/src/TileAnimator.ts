@@ -23,7 +23,7 @@ interface AnimatedCell {
  * On construction it scans the given layer(s) once and registers every cell
  * whose tile carries an `animation` (see {@link import('./types').TileDefinition}).
  * Each {@link update} advances a shared clock and rewrites **only** the
- * registered animated cells, and **only** when a cell crosses a frame boundary —
+ * registered animated cells, and **only** when a cell crosses a frame boundary -
  * static tiles are never touched. Because a tile rewrite goes through
  * `layer.setTileAt`, only the chunks that actually contain animated cells rebuild
  * their geometry, and only on the (infrequent) frames where a boundary is
@@ -35,7 +35,7 @@ interface AnimatedCell {
  * than sweeping every ever-loaded chunk. Streaming/procedural chunk
  * providers that need animated tiles must drive per-chunk `TileAnimator`
  * instances themselves (scanning only the newly-adopted chunk's tile
- * range) — a whole-layer `TileAnimator` is not currently wired to react to
+ * range) - a whole-layer `TileAnimator` is not currently wired to react to
  * chunk load/unload.
  *
  * Tick it from your update loop, like `TweenSequencer`:
@@ -45,7 +45,7 @@ interface AnimatedCell {
  * scene.systems.add({ update: (t) => animator.update(t.deltaSeconds) });
  * ```
  *
- * The animator references — but never owns — the layers and their tilesets;
+ * The animator references - but never owns - the layers and their tilesets;
  * {@link destroy} only drops its own cell registry.
  *
  * @advanced

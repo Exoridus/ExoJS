@@ -1,4 +1,4 @@
-// Auto-generated from blur-filter.ts — edit the .ts source, not this file.
+// Auto-generated from blur-filter.ts - edit the .ts source, not this file.
 import { Application, BlurFilter, Color, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // High-detail, high-contrast content so the blur visibly softens hard edges.

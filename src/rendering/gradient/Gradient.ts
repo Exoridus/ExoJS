@@ -28,7 +28,7 @@ const sortedStopOffset = (left: InternalGradientStop, right: InternalGradientSto
 /**
  * CPU-rasterized gradient base. A {@link Color}-like paint value (not a
  * {@link Drawable}): it owns a normalized list of color stops plus subclass
- * geometry and supports the value-object contract — {@link Gradient.clone},
+ * geometry and supports the value-object contract - {@link Gradient.clone},
  * {@link Gradient.copy}, and {@link Gradient.equals}. Stops are cloned on the
  * way in, clamped to `0..1`, and kept sorted by offset.
  *

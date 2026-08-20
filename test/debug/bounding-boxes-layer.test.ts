@@ -286,7 +286,7 @@ describe('BoundingBoxesLayer', () => {
   });
 
   test('a leaf node with no children property is not recursed into', () => {
-    // Plain leaf (no `children` key at all, as opposed to an empty array) —
+    // Plain leaf (no `children` key at all, as opposed to an empty array) -
     // exercises the Array.isArray(container.children) false branch.
     const leaf = {
       visible: true,

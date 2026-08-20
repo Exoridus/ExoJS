@@ -12,7 +12,7 @@ const NATIVE_PHYSICS_PACKAGE = '@codexo/exojs-physics';
 /**
  * Per-arm methodology disclosure, keyed by the arm's `engine` label. Each arm is
  * measured at its OWN engine defaults for solver iterations, contact model and
- * sleeping — those differences are the legitimate quantity the native-vs-adapter
+ * sleeping - those differences are the legitimate quantity the native-vs-adapter
  * comparison surfaces, so they are stated per arm rather than silently smoothed
  * over. Only the disclosures for arms actually present in a run are
  * stamped into that run's provenance caveats.
@@ -30,7 +30,7 @@ const ARM_DISCLOSURES: Readonly<Record<string, string>> = {
  * Catastrophic-regression step budget (ms). The physics domain is CPU-bound and
  * fast; a cell whose last-window median blows past this is a runaway (a
  * pathological body count or an accidental O(n²) regression), so it aborts to
- * `exceeded` rather than hanging the run. Deliberately loose — it is a hang
+ * `exceeded` rather than hanging the run. Deliberately loose - it is a hang
  * guard, not a performance gate.
  */
 const STEP_BUDGET_MS = 250;
@@ -41,7 +41,7 @@ const ABORT_WINDOW = 30;
  * Provenance stamped onto every physics run. Extends the shared
  * {@link BaseProvenance} (timestamp + engine version) with the CPU-domain host
  * (Node runtime + CPU) and the fixed timestep the step-time medians are measured
- * against. There is no GPU adapter or software-rasterizer bit here — physics is
+ * against. There is no GPU adapter or software-rasterizer bit here - physics is
  * pure CPU, so the honesty concern is instead the host CPU/Node identity.
  */
 export interface PhysicsProvenance extends BaseProvenance {

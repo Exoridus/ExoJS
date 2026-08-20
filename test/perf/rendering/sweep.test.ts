@@ -4,7 +4,7 @@
  *
  * For each scenario it captures deterministic structural metrics (one steady
  * frame) and Tier-B CPU submission timing (median/p95 over many frames against
- * the recording fake context). Timing is informational — never a CI gate — and
+ * the recording fake context). Timing is informational - never a CI gate - and
  * measures CPU submission only, NOT GPU execution or real-driver upload cost.
  *
  * @internal Test/perf-only.

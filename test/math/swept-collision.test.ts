@@ -70,7 +70,7 @@ describe('sweepRectangle', () => {
   });
 
   test('diagonal movement — Y axis entered last → normal on Y', () => {
-    // X gap tiny, Y gap large — Y entry is latest.
+    // X gap tiny, Y gap large - Y entry is latest.
     const moving = rect(0, 0, 10, 10);
     const target = rect(5, 30, 10, 10); // Y gap = 20, X already overlapping
     const hit = sweepRectangle(moving, 5, 40, target);
@@ -201,7 +201,7 @@ describe('sweepCircleVsCircle', () => {
   });
 
   test('already overlapping but not coincident computes a real (dist > 0) normal', () => {
-    // distance (3) < combined radius (10), and the centres are offset — unlike
+    // distance (3) < combined radius (10), and the centres are offset - unlike
     // the coincident-centre case above, this exercises the dist > 0 branch.
     const moving = circle(0, 0, 5);
     const target = circle(3, 0, 5);
@@ -338,7 +338,7 @@ describe('sweepCircleVsRectangle', () => {
 
   test('already overlapping from outside the rect (dist > 0 branch)', () => {
     // Circle centred to the right of the rect's right edge, close enough that
-    // its boundary already overlaps — the closest rect point is not the
+    // its boundary already overlaps - the closest rect point is not the
     // circle's own centre, so `dist > 0`.
     const moving = circle(25, 5, 6);
     const target = rect(0, 0, 20, 10);
@@ -382,7 +382,7 @@ describe('sweepCircleVsRectangle', () => {
   });
 
   test('moving toward the top face but not far enough to reach the bottom face time-wise', () => {
-    // tT lands in [0, 1] (hit), but tB overshoots past t = 1 — exercises the
+    // tT lands in [0, 1] (hit), but tB overshoots past t = 1 - exercises the
     // tB-range check's false outcome (unlike the full-traverse top/bottom tests
     // above, which happen to satisfy both time windows at once).
     const moving = circle(10, -30, 5);
@@ -462,7 +462,7 @@ describe('sweepRectangleAgainst', () => {
 
   test('multiple targets, returns earliest hit', () => {
     const moving = rect(0, 0, 10, 10);
-    // Near target at x=20, far target at x=60 — moving with delta=100
+    // Near target at x=20, far target at x=60 - moving with delta=100
     const near = rect(20, 0, 10, 10);
     const far = rect(60, 0, 10, 10);
     const hit = sweepRectangleAgainst(moving, 100, 0, [far, near]);
@@ -474,7 +474,7 @@ describe('sweepRectangleAgainst', () => {
 
   test('target whose AABB does not overlap swept AABB is skipped → null', () => {
     const moving = rect(0, 0, 10, 10);
-    // Target far to the side — swept AABB only covers y=0..10
+    // Target far to the side - swept AABB only covers y=0..10
     const target = rect(5, 200, 10, 10);
     const hit = sweepRectangleAgainst(moving, 100, 0, [target]);
 
@@ -526,7 +526,7 @@ describe('sweepCircleAgainst', () => {
 
   test('target outside swept AABB → skipped, returns null', () => {
     const moving = circle(0, 0, 2);
-    // Target far away in Y — not reachable with pure X delta
+    // Target far away in Y - not reachable with pure X delta
     const target = circle(5, 500, 2);
     const hit = sweepCircleAgainst(moving, 100, 0, [target]);
 

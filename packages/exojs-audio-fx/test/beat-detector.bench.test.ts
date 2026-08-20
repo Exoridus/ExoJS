@@ -1,7 +1,7 @@
 /**
  * Stage-1 BeatDetector baseline measurement.
  *
- * PHASE 1 — RECORD, DO NOT GATE.
+ * PHASE 1 - RECORD, DO NOT GATE.
  * Runs every fixture through the real worklet eval-sandbox, computes BeatMetrics,
  * and writes a committed baseline JSON snapshot. Assertions are limited to
  * sanity bounds that are certain to hold today (plan Task 4 spec).
@@ -185,7 +185,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
       if (entry.lockTimeSec !== null) {
         expect(entry.lockTimeSec).toBeLessThan(fixtureDurationSec);
       }
-      // If never locked, just note it — no assertion (recorded in snapshot)
+      // If never locked, just note it - no assertion (recorded in snapshot)
     });
   }
 
@@ -214,7 +214,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
       console.log('All fixtures PASS (no Stage-2 targets identified yet)\n');
     }
 
-    // The table itself is the assertion evidence — always passes
+    // The table itself is the assertion evidence - always passes
     expect(allMetrics.size).toBe(FIXTURES.length);
   });
 
@@ -280,7 +280,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   // ── Acceptance gates: subdivision-aware octave fix ──
   // Realistic drum-kit patterns whose true fundamental carries subdivision energy (hats on
   // 8th-notes) must lock to the fundamental, NOT to an unrelated in-band multiple. These are
-  // the core DJ-mix use case: a mix that STARTS at 180 must lock to 180 — not 120, not 90.
+  // the core DJ-mix use case: a mix that STARTS at 180 must lock to 180 - not 120, not 90.
   // pct ≤ 3% (= ±5.4 BPM around 180) excludes BOTH the octave partner 90 (50% off) AND the
   // 120 sub-harmonic the un-gated comb used to pick (33% off).
   for (const label of ['djMix_180bpm', 'djMixDrift_180bpm_d5']) {
@@ -294,11 +294,11 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     });
   }
 
-  // ── Acceptance gates: BPM range 50–300 ──
-  // The default range is now 50–300 BPM. The top edge (300) was previously out of range and
+  // ── Acceptance gates: BPM range 50-300 ──
+  // The default range is now 50-300 BPM. The top edge (300) was previously out of range and
   // mis-locked to ~100; it must now lock to the fundamental within the edge tolerance (≤5%),
   // using parabolic ACF-peak interpolation for sub-lag resolution at the coarse top end. The
-  // slow edge (50) must stay locked — the 6 s flux window holds ≫ 2 periods of its 1.2 s beat.
+  // slow edge (50) must stay locked - the 6 s flux window holds ≫ 2 periods of its 1.2 s beat.
   // The djMix subdivision guard is unchanged: hats at 360 BPM stay above 300, so they remain a
   // subdivision (not a competing beat) and djMix-180 stays locked to 180 (gates above).
   it('clicktrack_300 locks to fundamental ≤5%, no octave error', () => {
@@ -321,13 +321,13 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   // breakDrop SILENCE are suppressed (the coast gate), halving+ the last Stage-2 FP target;
   // (2) the sub-hop onset snap tightens beat offsets on clean grids. Soft-onset recall holds.
 
-  // breakDrop false-positive rate (baseline 40.0/min) must drop by ≥50% — the silence between
+  // breakDrop false-positive rate (baseline 40.0/min) must drop by ≥50% - the silence between
   // the drop no longer emits grid-predicted beats once onsets stop arriving.
   it('breakDrop_128 FP rate at least halved vs baseline (≤20/min)', () => {
     expect(allMetrics.get('breakDrop_128bpm')!.fpRatePerMin).toBeLessThanOrEqual(20);
   });
 
-  // Soft-onset recall must hold at or above its baseline floor (0.40) — the adaptive
+  // Soft-onset recall must hold at or above its baseline floor (0.40) - the adaptive
   // normalization keeps low, broad swells detectable instead of vanishing under a fixed gate.
   it('softOnset_90 recall holds at/above the 0.40 floor', () => {
     expect(allMetrics.get('softOnset_90bpm')!.recall).toBeGreaterThanOrEqual(0.4);
@@ -351,8 +351,8 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   // The constant-IBI predictor and its double-advancing snap are replaced by a bounded
   // phase-locked loop bootstrapped to a real onset. Two product wins fall out: (1) the large
   // anti-phase beat offsets (victims of the old arbitrary-bootstrap phase) collapse from
-  // 120–490 ms to a few ms; (2) emitting exactly one beat per predicted beat lifts recall from
-  // ~40–70 % to ≥90 % on every BPM-correct fixture (the old snap dropped every second beat).
+  // 120-490 ms to a few ms; (2) emitting exactly one beat per predicted beat lifts recall from
+  // ~40-70 % to ≥90 % on every BPM-correct fixture (the old snap dropped every second beat).
 
   // Big anti-phase offenders must now sit within a few ms (mean AND p90 well under 60 ms).
   for (const [label, maxMs] of [
@@ -402,7 +402,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     expect(e.beatOffsetP90Ms).toBeLessThan(60);
   });
 
-  // The coast gate must still suppress phantom beats in the breakDrop silence — the PLL may
+  // The coast gate must still suppress phantom beats in the breakDrop silence - the PLL may
   // not reintroduce false positives there.
   it('breakDrop_128 FP rate stays low (≤2.5/min)', () => {
     expect(allMetrics.get('breakDrop_128bpm')!.fpRatePerMin).toBeLessThanOrEqual(2.5);
@@ -441,7 +441,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     });
   }
 
-  // The flagship drift case stays locked to 180 under drift — no octave slip (≤3%, per the gates above).
+  // The flagship drift case stays locked to 180 under drift - no octave slip (≤3%, per the gates above).
   it('djMixDrift_180 stays locked to 180 (no octave slip)', () => {
     const e = allMetrics.get('djMixDrift_180bpm_d5')!;
     expect(e.octaveHalf).toBe(false);
@@ -455,14 +455,14 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   // the full-window AUTHORITATIVE lock has fired and the grid has held for a few beats above a
   // confidence floor. Two product properties fall out: (1) the first beat reaches the visual layer
   // far sooner (the "blink" reactivity); (2) locked beats are at least as trustworthy as beats from
-  // the original detector — promotion re-anchors the phase to exactly the original first-lock
+  // the original detector - promotion re-anchors the phase to exactly the original first-lock
   // evidence, so locked FP never exceeds the original settled-beat FP.
 
   // Original-detector reference (measured on this branch's parent commit): the FIRST beat was
   // emitted at a uniform 1.213 s for EVERY fixture (gated by the full slowest-tempo ACF window).
   // The gate here is a ≥50% reduction; we assert it on the across-fixture MEAN and MEDIAN
-  // (per-fixture, the 50/60 BPM edges are period-floored — a provisional beat still needs ≥1
-  // period of the true tempo, ~1.2 s at 50 BPM — and cannot be halved; this is the documented
+  // (per-fixture, the 50/60 BPM edges are period-floored - a provisional beat still needs ≥1
+  // period of the true tempo, ~1.2 s at 50 BPM - and cannot be halved; this is the documented
   // latency↔precision floor).
   const BASELINE_FIRST_BEAT_SEC = 1.213;
 
@@ -484,7 +484,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   });
 
   // Original-detector per-fixture FP rate (per minute) recorded in beat-baseline.json on the
-  // parent commit — the "current settled-beat FP rate". Every emitted beat was settled in the
+  // parent commit - the "current settled-beat FP rate". Every emitted beat was settled in the
   // original detector, so this is the bar the LOCKED beats must not exceed.
   const BASELINE_FP_PER_MIN: Record<string, number> = {
     clicktrack_50bpm: 4, clicktrack_60bpm: 0, clicktrack_90bpm: 4, clicktrack_120bpm: 0,
@@ -518,7 +518,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   // ── Write committed baseline snapshot ──
   // Opt-in only: set UPDATE_BASELINE=1 to regenerate the committed snapshot.
   // A normal `pnpm test` run still exercises detection and assertions above,
-  // but must never touch the tracked file — otherwise every run rewrites
+  // but must never touch the tracked file - otherwise every run rewrites
   // `generatedAt` and leaves the tree permanently dirty.
 
   afterAll(() => {

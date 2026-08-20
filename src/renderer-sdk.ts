@@ -1,13 +1,13 @@
-// @codexo/exojs/renderer-sdk — curated backend-author surface.
+// @codexo/exojs/renderer-sdk - curated backend-author surface.
 // Advanced symbols for renderer and backend authors (abstract renderers, render
 // backends, low-level GL/GPU building blocks). Ordinary application code should
 // import from the root `@codexo/exojs` barrel; these symbols are intentionally
 // kept out of it (see src/rendering/public.ts).
 //
 // Custom renderers extend the ABSTRACT renderers below (AbstractWebGl2Renderer /
-// AbstractWebGl2BatchedRenderer / AbstractWebGpuRenderer) — the subclass-stable
+// AbstractWebGl2BatchedRenderer / AbstractWebGpuRenderer) - the subclass-stable
 // contract used by the exojs-particles and exojs-tilemap packages. The engine's
-// built-in CONCRETE renderers (WebGl2SpriteRenderer, WebGpuMeshRenderer, …) are
+// built-in CONCRETE renderers (WebGl2SpriteRenderer, WebGpuMeshRenderer, ...) are
 // internal and intentionally NOT exported here: they are coupled to internal
 // sprite/mesh data paths and are not a stable subclassing surface pre-1.0.
 
@@ -25,7 +25,7 @@ export { Shader } from '#rendering/shader/Shader';
 // A renderer whose vertex stage reads the shared transform buffer must carry
 // this directive. The engine expands it at compile time into helpers that map a
 // logical `nodeIndex` onto whatever the transform/tint stores currently look
-// like — that mapping is ALL this contract guarantees. The stores' dimensions,
+// like - that mapping is ALL this contract guarantees. The stores' dimensions,
 // their packing, and the helpers' bodies are internal and change without notice,
 // which is exactly why a renderer takes the directive instead of addressing
 // texels itself.
@@ -33,7 +33,7 @@ export { fillShaderSource } from '#rendering/shader/fillShaderSource';
 export { TRANSFORM_TEXTURE_GLSL_INCLUDE } from '#rendering/shader/transformTextureLayout';
 export { Spritesheet } from '#rendering/sprite/Spritesheet';
 // Renderers that guard on `Texture.source === null` need this to tell "still
-// waiting on an image" from "holds its pixels in a CPU buffer" — without it an
+// waiting on an image" from "holds its pixels in a CPU buffer" - without it an
 // extension renderer silently drops every procedurally-generated texture.
 export { DataTexture } from '#rendering/texture/DataTexture';
 export { RenderTexture } from '#rendering/texture/RenderTexture';

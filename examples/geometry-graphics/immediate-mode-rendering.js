@@ -1,15 +1,15 @@
-// Auto-generated from immediate-mode-rendering.ts — edit the .ts source, not this file.
+// Auto-generated from immediate-mode-rendering.ts - edit the .ts source, not this file.
 import { Application, Color, Geometry, Matrix, RenderBatch, Scene } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Number of instances drawn in the batched field. The whole field is one
 // instanced draw call no matter how large this is.
 const FIELD_COUNT = 2400;
-// Procedural gears drawn individually with drawGeometry — one draw call each.
+// Procedural gears drawn individually with drawGeometry - one draw call each.
 const GEAR_COUNT = 14;
 // Build a flat-shaded regular polygon as interleaved geometry: position
 // (f32 x2) + color (u8 x4, normalized) per vertex, triangle-list. This is the
-// exact "standard mesh layout" the immediate path repacks — position, optional
-// texcoord, optional color — so an untextured colored shape needs no material.
+// exact "standard mesh layout" the immediate path repacks - position, optional
+// texcoord, optional color - so an untextured colored shape needs no material.
 function polygonGeometry(radius, sides, fill, center) {
     const stride = 12; // 2 * f32 (8) + 4 * u8 (4)
     const buffer = new ArrayBuffer(sides * 3 * stride);
@@ -39,14 +39,14 @@ function polygonGeometry(radius, sides, fill, center) {
         ],
         vertexData: buffer,
         stride,
-        // 'static' is the default and is required by RenderBatch — its GPU
+        // 'static' is the default and is required by RenderBatch - its GPU
         // buffer is uploaded once and cached by identity across frames.
         usage: 'static',
     });
 }
 // Compose a raw world matrix (no node, no parent) from translation, rotation,
 // and uniform scale. drawGeometry / RenderBatch take this verbatim as the
-// instance's world transform — there is no origin/position/scale to compose.
+// instance's world transform - there is no origin/position/scale to compose.
 function composeTransform(out, tx, ty, radians, scale) {
     const cos = Math.cos(radians) * scale;
     const sin = Math.sin(radians) * scale;
@@ -61,7 +61,7 @@ class ImmediateModeScene extends Scene {
     sparkBatch;
     sparks;
     gears;
-    // One scratch matrix, rewritten per draw — immediate draws are flushed
+    // One scratch matrix, rewritten per draw - immediate draws are flushed
     // synchronously, so a single matrix is safe to reuse.
     scratch = new Matrix();
     elapsed = 0;
@@ -133,7 +133,7 @@ class ImmediateModeScene extends Scene {
         const centerY = height / 2;
         const time = this.elapsed;
         // 1) Instanced field. Rebuild the per-instance transforms each frame,
-        //    then submit the whole batch as ONE instanced draw call — or, when
+        //    then submit the whole batch as ONE instanced draw call - or, when
         //    toggled off, draw each instance with its own drawGeometry to show
         //    the draw-call cost the batch collapses.
         this.sparkBatch.clear();
@@ -154,7 +154,7 @@ class ImmediateModeScene extends Scene {
         if (this.batched) {
             context.drawBatch(this.sparkBatch);
         }
-        // 2) Procedural gears on top — one immediate drawGeometry per gear, each
+        // 2) Procedural gears on top - one immediate drawGeometry per gear, each
         //    with its own raw transform and tint, no scene node involved.
         for (const gear of this.gears) {
             const scale = gear.baseScale * (1 + Math.sin(time * 1.5 + gear.x * 0.01) * 0.06);

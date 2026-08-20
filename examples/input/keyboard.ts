@@ -8,7 +8,7 @@ import { mountControls } from '@examples/runtime';
 //   - on-event: `inputs.onStart` / `onStop` fire once on the press / release
 //     transition. Great for discrete actions (here: a recentre tap on Escape).
 //   - per-frame polling: `inputs.onActive` called without a callback just
-//     returns the binding, which samples the channel buffer every frame — so
+//     returns the binding, which samples the channel buffer every frame - so
 //     reading `binding.active` inside update() gives the live held-state.
 //
 // Both WASD and the arrow keys drive the same square via a single binding per

@@ -5,7 +5,7 @@
  * the identity of the texel it came from, so a matching frame proves the two
  * backends agree but not that either placed the right texel. Mirror the UVs and
  * this scene still renders byte-identical frames. The runner therefore caps it
- * at `frame-equal` however exhaustively the frames were compared — which is the
+ * at `frame-equal` however exhaustively the frames were compared - which is the
  * point of capping it there rather than trusting the property's claim.
  */
 

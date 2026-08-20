@@ -16,15 +16,15 @@ import { assertPixelSnapMode } from './pixelSnap';
  * the pattern tiles seamlessly and scrolls with parallax. A repeat axis or a
  * `parallax` factor other than `1` both make this node's rendered position
  * and/or size camera-dependent at collect time, so its static bounds cannot be
- * culled against — such a node opts out of view culling (`cullable = false`).
+ * culled against - such a node opts out of view culling (`cullable = false`).
  *
  * `visible`, `opacity`, and `tintColor` are applied **once at construction**:
  * {@link ImageLayer} is immutable, so there is nothing to re-sync per frame.
  * A layer whose `texture` is `null` (image failed to load / not yet available)
- * produces an empty node with no children — it occupies its offset in the
+ * produces an empty node with no children - it occupies its offset in the
  * scene graph but draws nothing.
  *
- * The node references — but never owns — the {@link ImageLayer} and its
+ * The node references - but never owns - the {@link ImageLayer} and its
  * Loader-owned texture: {@link destroy} frees the wrapped sprite but leaves the
  * layer and texture intact. Image-layer nodes are band-selectable exactly like
  * tile-layer nodes: list the image layer in a
@@ -38,7 +38,7 @@ import { assertPixelSnapMode } from './pixelSnap';
  * which is also why such a node force-disables `cullable`. A repeating or
  * parallax node also re-sizes its wrapped sprite as the camera crosses period
  * boundaries, which content-dirties an enclosing retained group the same way
- * a streamed layer does — give it the same treatment (its own
+ * a streamed layer does - give it the same treatment (its own
  * `RetainedContainer`, or none).
  *
  * @advanced
@@ -116,8 +116,8 @@ export class ImageLayerNode extends Container {
 
   /**
    * Render-only pixel-snap mode forwarded to the wrapped {@link RepeatingSprite}
-   * (which snaps its rendered origin, and — in `PixelSnapMode.Geometry` mode for
-   * axis-aligned transforms — its repeat-segment boundaries, to the render
+   * (which snaps its rendered origin, and - in `PixelSnapMode.Geometry` mode for
+   * axis-aligned transforms - its repeat-segment boundaries, to the render
    * target's device-pixel grid). Purely visual: the layer offset, parallax, and
    * repeat coverage are never changed.
    *

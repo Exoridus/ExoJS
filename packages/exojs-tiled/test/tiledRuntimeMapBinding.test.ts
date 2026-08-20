@@ -111,10 +111,10 @@ describe('tiledRuntimeMapBinding.getIdentityDiscriminator', () => {
   });
 });
 
-// ── Integration tests — minimal map ─────────────────────────────────────────
+// ── Integration tests - minimal map ─────────────────────────────────────────
 //
 // `minimal.tmj` declares a tileset without an image, which `toTileMap()`
-// rejects — these runtime-binding tests convert, so they use the atlas fixture.
+// rejects - these runtime-binding tests convert, so they use the atlas fixture.
 
 describe('tiledRuntimeMapBinding.load — minimal map', () => {
   const { context } = makeContext({ 'minimal.tmj': loadFixture('with-tileset-image.tmj') });
@@ -149,7 +149,7 @@ describe('tiledRuntimeMapBinding.load — minimal map', () => {
   });
 });
 
-// ── Integration tests — tileset image ───────────────────────────────────────
+// ── Integration tests - tileset image ───────────────────────────────────────
 
 describe('tiledRuntimeMapBinding.load — with atlas tileset image', () => {
   const { context, loaderLoad } = makeContext({ 'with-tileset-image.tmj': loadFixture('with-tileset-image.tmj') });
@@ -171,7 +171,7 @@ describe('tiledRuntimeMapBinding.load — with atlas tileset image', () => {
   });
 });
 
-// ── Integration tests — external tileset ────────────────────────────────────
+// ── Integration tests - external tileset ────────────────────────────────────
 
 describe('tiledRuntimeMapBinding.load — external tileset (.tsj)', () => {
   const fixtures = {

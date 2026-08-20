@@ -96,7 +96,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Pre-loaded runtime TileSets keyed by LDtk tileset UID. When provided, tile layers are populated with tile data from gridTiles / autoLayerTiles. Without this map, tile layers are created with the correct dimensions but no tiles are placed — only entity and object layers carry data. Populate via import('./loadLdtkMap').loadLdtkMap for asset-loading flows, or pass a hand-crafted map for testing."
+          "description": "Pre-loaded runtime TileSets keyed by LDtk tileset UID. When provided, tile layers are populated with tile data from gridTiles / autoLayerTiles. Without this map, tile layers are created with the correct dimensions but no tiles are placed - only entity and object layers carry data. Populate via import('./loadLdtkMap').loadLdtkMap for asset-loading flows, or pass a hand-crafted map for testing."
         }
       ],
       "paragraphs": [],

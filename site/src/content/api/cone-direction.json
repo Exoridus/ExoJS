@@ -1,6 +1,6 @@
 {
   "title": "ConeDirection",
-  "description": "Random unit vector inside a cone, scaled by a speed magnitude. The cone is centred on `directionAngle` (in radians, 0 = +X, π/2 = +Y for screen-down coordinates) and spans `±halfAngle` radians around it. Speed is sampled uniformly in `[minSpeed, maxSpeed]`. Use for emission cones, explosions, fountain spread — anywhere the direction has a preferred axis with bounded variance.",
+  "description": "Random unit vector inside a cone, scaled by a speed magnitude. The cone is centred on `directionAngle` (in radians, 0 = +X, π/2 = +Y for screen-down coordinates) and spans `±halfAngle` radians around it. Speed is sampled uniformly in `[minSpeed, maxSpeed]`. Use for emission cones, explosions, fountain spread - anywhere the direction has a preferred axis with bounded variance.",
   "symbol": "ConeDirection",
   "kind": "class",
   "subsystem": "particles",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Random unit vector inside a cone, scaled by a speed magnitude.",
         "The cone is centred on `directionAngle` (in radians, 0 = +X, π/2 = +Y for screen-down coordinates) and spans `±halfAngle` radians around it. Speed is sampled uniformly in `[minSpeed, maxSpeed]`.",
-        "Use for emission cones, explosions, fountain spread — anywhere the direction has a preferred axis with bounded variance."
+        "Use for emission cones, explosions, fountain spread - anywhere the direction has a preferred axis with bounded variance."
       ],
       "importLine": "import { ConeDirection } from '@codexo/exojs-particles'",
       "sourceLink": null

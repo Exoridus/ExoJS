@@ -70,7 +70,7 @@ describe('trivial device-family mappings', () => {
 // spells this out in `device/gamepad/gamepad_standard_mappings.h`:
 // `BUTTON_INDEX_COUNT == 17`, then `XBOX_SERIES_X_BUTTON_SHARE`,
 // `SWITCH_PRO_BUTTON_CAPTURE`, `DUALSHOCK_BUTTON_TOUCHPAD` and
-// `DUAL_SENSE_BUTTON_TOUCHPAD` all sit at 17 with their counts at 18 — so there
+// `DUAL_SENSE_BUTTON_TOUCHPAD` all sit at 17 with their counts at 18 - so there
 // is no index above 17 either.
 describe('the device-specific button slot at index 17', () => {
   const slot17 = (mapping: { buttons: ReadonlyArray<{ index: number; channel: number }> }): number | undefined =>

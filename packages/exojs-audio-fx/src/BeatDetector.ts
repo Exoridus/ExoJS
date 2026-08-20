@@ -51,7 +51,7 @@ export interface BeatDetectorOptions {
   /**
    * When true (default), early low-confidence beats are emitted tagged
    * `status: 'provisional'` (then promoted to `'locked'`) for snappy visual
-   * reactivity. Set false to suppress provisional beats entirely — {@link onBeat}
+   * reactivity. Set false to suppress provisional beats entirely - {@link onBeat}
    * then fires only for `'locked'` beats, matching the pre-provisional behaviour.
    */
   emitProvisionalBeats?: boolean;
@@ -70,17 +70,17 @@ export interface BeatDetectorOptions {
   source?: BeatDetectorSource;
   /**
    * Half-life in seconds for the {@link BeatDetector.pulse} envelope.
-   * Default 0.15 — `pulse` halves every 150ms after each beat.
+   * Default 0.15 - `pulse` halves every 150ms after each beat.
    */
   pulseHalfLife?: number;
   /**
    * Half-life in seconds for the {@link BeatDetector.barPulse} envelope.
-   * Default 0.3 — slower than beat pulse for downbeat-emphasized visuals.
+   * Default 0.3 - slower than beat pulse for downbeat-emphasized visuals.
    */
   barPulseHalfLife?: number;
   /**
    * Time window in seconds for {@link BeatDetector.justBeat}. Default 0.03
-   * — true for the visual frame(s) within 30ms of a beat onset.
+   * - true for the visual frame(s) within 30ms of a beat onset.
    */
   justBeatWindow?: number;
 }
@@ -102,9 +102,9 @@ export interface BeatInfo {
   beatInBar: number;
   /**
    * Detection trust level:
-   * - `'provisional'` — an early, low-latency beat emitted before the tempo grid
+   * - `'provisional'` - an early, low-latency beat emitted before the tempo grid
    *   is fully settled. Good for visual reactivity (a "blink"); may be revised.
-   * - `'locked'` — the tempo grid is settled and trustworthy. Safe for
+   * - `'locked'` - the tempo grid is settled and trustworthy. Safe for
    *   sync-critical use. Each stable segment yields exactly one provisional→locked
    *   transition.
    */
@@ -149,21 +149,21 @@ const workletName = 'exojs-beat-detector';
  * Real-time tempo + beat tracker. Splits work between the audio-rendering
  * thread (an AudioWorklet that runs onset detection, tempogram analysis,
  * and parallel 3/4 and 4/4 posterior estimation) and the main thread (this
- * class — receives beats, fires Signals, handles configuration and source
+ * class - receives beats, fires Signals, handles configuration and source
  * routing).
  *
- * Accepts a wide range of {@link BeatDetectorSource}s — a bus, an individual
- * {@link Voice}, a raw MediaStream, or any AudioNode — and exposes a Signal
+ * Accepts a wide range of {@link BeatDetectorSource}s - a bus, an individual
+ * {@link Voice}, a raw MediaStream, or any AudioNode - and exposes a Signal
  * for each notable event:
- * - {@link BeatDetector.onBeat} — every detected beat
- * - {@link BeatDetector.onDownbeat} — first beat of each bar
- * - {@link BeatDetector.onBarStart} — bar boundary
- * - {@link BeatDetector.onTempoChange} — when the tracked BPM changes
- * - {@link BeatDetector.onBeatPredicted} — look-ahead schedule notice
+ * - {@link BeatDetector.onBeat} - every detected beat
+ * - {@link BeatDetector.onDownbeat} - first beat of each bar
+ * - {@link BeatDetector.onBarStart} - bar boundary
+ * - {@link BeatDetector.onTempoChange} - when the tracked BPM changes
+ * - {@link BeatDetector.onBeatPredicted} - look-ahead schedule notice
  *
  * Early beats arrive with low latency tagged `status: 'provisional'` (after a
  * short `minSettlingMs` warm-up, default 400 ms) for snappy visual reactivity,
- * then promote to `status: 'locked'` once the tempo grid is trustworthy — a
+ * then promote to `status: 'locked'` once the tempo grid is trustworthy - a
  * single {@link BeatDetector.onBeat} signal carries both via {@link BeatInfo.status}.
  * Set `emitProvisionalBeats: false` to receive only locked beats. Time-signature
  * detection (3/4 vs 4/4) is on by default; lock to 4/4 by setting
@@ -355,7 +355,7 @@ export class BeatDetector {
   }
 
   // -----------------------------------------------------------------------
-  // Visual derived state — pure getters for per-frame polling
+  // Visual derived state - pure getters for per-frame polling
   // -----------------------------------------------------------------------
 
   /**
@@ -435,7 +435,7 @@ export class BeatDetector {
   }
 
   // -----------------------------------------------------------------------
-  // Private helpers — setup
+  // Private helpers - setup
   // -----------------------------------------------------------------------
 
   private _setup(audioContext: AudioContext): void {
@@ -529,7 +529,7 @@ export class BeatDetector {
   }
 
   // -----------------------------------------------------------------------
-  // Private helpers — source tap
+  // Private helpers - source tap
   // -----------------------------------------------------------------------
 
   private _connectSource(source: BeatDetectorSource, audioContext: AudioContext): void {
@@ -548,7 +548,7 @@ export class BeatDetector {
   private _resolveToAudioNode(source: BeatDetectorSource, audioContext: AudioContext): AudioNode | null {
     if (source === null) return null;
 
-    // MediaStream — duck-type via getTracks
+    // MediaStream - duck-type via getTracks
     const asStream = source as Partial<{ getTracks: unknown }>;
     if (typeof asStream.getTracks === 'function') {
       if (this._streamSource) {
@@ -560,19 +560,19 @@ export class BeatDetector {
       return msNode;
     }
 
-    // AudioBus — has _getOutputNode (checked before raw AudioNode)
+    // AudioBus - has _getOutputNode (checked before raw AudioNode)
     const asBus = source as Partial<{ _getOutputNode: () => AudioNode | null }>;
     if (typeof asBus._getOutputNode === 'function') {
       return asBus._getOutputNode();
     }
 
-    // Voice — tap its output node
+    // Voice - tap its output node
     const asVoice = source as Partial<{ output: AudioNode }>;
     if ('output' in asVoice && asVoice.output) {
       return asVoice.output;
     }
 
-    // Raw AudioNode — duck-type: has connect & disconnect
+    // Raw AudioNode - duck-type: has connect & disconnect
     const asNode = source as Partial<{ connect: unknown; disconnect: unknown }>;
     if (typeof asNode.connect === 'function' && typeof asNode.disconnect === 'function') {
       return source as unknown as AudioNode;

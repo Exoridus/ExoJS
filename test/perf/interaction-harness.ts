@@ -2,8 +2,8 @@
  * Node-side interaction benchmark harness.
  *
  * Wires the real {@link InputManager} + {@link InteractionManager} to a fake,
- * DOM-free {@link PlatformAdapter} — the same seam `BrowserPlatform`
- * implements — so synthetic pointer events travel through the exact
+ * DOM-free {@link PlatformAdapter} - the same seam `BrowserPlatform`
+ * implements - so synthetic pointer events travel through the exact
  * `platform.onSurfaceEvent → InputManager → onPointer* signal →
  * InteractionManager` pipeline a live `Application` uses. Hit-testing is
  * therefore exercised through the real `InteractionManager` code (whichever
@@ -11,7 +11,7 @@
  * stand-in.
  *
  * No jsdom/browser globals are touched, so this runs under plain Node via
- * `tsx` — mirroring the "real engine object + fake platform, no real
+ * `tsx` - mirroring the "real engine object + fake platform, no real
  * GPU/DOM" pattern `test/perf/rendering/harness.ts` uses for the render
  * backend.
  *
@@ -41,7 +41,7 @@ type WindowListener = (event: never) => void;
 /**
  * Minimal {@link PlatformAdapter} with zero DOM dependency. `onSurfaceEvent`/
  * `onWindowEvent` just record listeners in a map;
- * {@link FakePlatformAdapter.dispatchSurfaceEvent} invokes them directly —
+ * {@link FakePlatformAdapter.dispatchSurfaceEvent} invokes them directly -
  * exactly what a real platform does when the OS delivers an event, minus the
  * actual OS (and without needing a real `HTMLCanvasElement`, which plain
  * Node does not have).
@@ -140,7 +140,7 @@ class FakePlatformAdapter implements PlatformAdapter {
     this._windowListeners.clear();
   }
 
-  /** Invoke every listener registered for `type` — simulates the platform delivering a native surface event. */
+  /** Invoke every listener registered for `type` - simulates the platform delivering a native surface event. */
   public dispatchSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(type: K, event: PlatformSurfaceEventMap[K]): void {
     for (const listener of this._surfaceListeners.get(type) ?? []) {
       (listener as (event: PlatformSurfaceEventMap[K]) => void)(event);
@@ -148,7 +148,7 @@ class FakePlatformAdapter implements PlatformAdapter {
   }
 }
 
-/** Fields the real InputManager/Pointer pipeline actually reads off a pointer event — see {@link Pointer}'s constructor. */
+/** Fields the real InputManager/Pointer pipeline actually reads off a pointer event - see {@link Pointer}'s constructor. */
 export interface FakePointerInit {
   readonly clientX: number;
   readonly clientY: number;
@@ -188,11 +188,11 @@ export interface InteractionHarness {
   readonly scene: Scene;
   readonly input: InputManager;
   readonly interaction: InteractionManager;
-  /** Enqueue a synthetic pointer event, mirroring a real `platform.onSurfaceEvent('pointer*', …)` delivery. */
+  /** Enqueue a synthetic pointer event, mirroring a real `platform.onSurfaceEvent('pointer*', ...)` delivery. */
   firePointer(type: FakePointerEventType, init: FakePointerInit): void;
   /** Drain the queued platform events through the real InputManager → InteractionManager pipeline, exactly as one `Application` frame does. */
   flush(): void;
-  /** Confine hit-testing to `root`'s subtree — see {@link InteractionManager.pushScope}. */
+  /** Confine hit-testing to `root`'s subtree - see {@link InteractionManager.pushScope}. */
   pushScope(root: RenderNode): ScopeToken;
   /** Release a scope pushed via {@link InteractionHarness.pushScope}. */
   popScope(token: ScopeToken): void;
@@ -207,7 +207,7 @@ export interface InteractionHarnessOptions {
 
 /**
  * Build a real InputManager + InteractionManager pair wired to a fake
- * DOM-free PlatformAdapter and a bare Scene — the same real pipeline
+ * DOM-free PlatformAdapter and a bare Scene - the same real pipeline
  * `Application` wires, without needing a real canvas/`HTMLCanvasElement`.
  */
 export const createInteractionHarness = (options: InteractionHarnessOptions = {}): InteractionHarness => {

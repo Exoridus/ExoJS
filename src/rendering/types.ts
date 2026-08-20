@@ -1,8 +1,8 @@
 /**
  * Compositing blend modes applied when drawing a {@link Drawable} over the current render target.
  *
- * Modes 0–4 are implemented as fixed-function GPU blend equations (no texture
- * capture required). Modes 5–17 use a backdrop-aware compositor: the content is
+ * Modes 0-4 are implemented as fixed-function GPU blend equations (no texture
+ * capture required). Modes 5-17 use a backdrop-aware compositor: the content is
  * first rendered off-screen, then composited over the captured backdrop via a
  * W3C-compliant blend shader. Use {@link isAdvancedBlendMode} to test whether a
  * mode requires the compositor path.
@@ -13,9 +13,9 @@ export enum BlendModes {
   Subtract = 2,
   Multiply = 3,
   Screen = 4,
-  /** `min(src, dst)` per channel — coverage-correct via backdrop-aware shader. */
+  /** `min(src, dst)` per channel - coverage-correct via backdrop-aware shader. */
   Darken = 5,
-  /** `max(src, dst)` per channel — coverage-correct via backdrop-aware shader. */
+  /** `max(src, dst)` per channel - coverage-correct via backdrop-aware shader. */
   Lighten = 6,
   /** Overlay: darkens or lightens depending on backdrop luminosity. */
   Overlay = 7,
@@ -43,8 +43,8 @@ export enum BlendModes {
 
 /**
  * Returns `true` for blend modes that require the backdrop-aware compositor
- * (shader-side blend + GPU texture copy). Modes 0–4 use fixed-function blending
- * and return `false`. Modes 5–17 return `true`.
+ * (shader-side blend + GPU texture copy). Modes 0-4 use fixed-function blending
+ * and return `false`. Modes 5-17 return `true`.
  */
 export const isAdvancedBlendMode = (mode: BlendModes): boolean => mode >= BlendModes.Darken;
 
@@ -82,7 +82,7 @@ export enum WrapModes {
  * readable strings so the mapping tables and any serialized format stay
  * legible.
  *
- * Not every format is valid everywhere — {@link ColorTextureFormat} and
+ * Not every format is valid everywhere - {@link ColorTextureFormat} and
  * `DataTextureFormat` carve out the subset each use accepts.
  *
  * | Format | Channels | Bytes/px | Buffer |
@@ -90,7 +90,7 @@ export enum WrapModes {
  * | `R8` | 1 | 1 | `Uint8Array` |
  * | `R32F` | 1 | 4 | `Float32Array` |
  * | `Rgba8` | 4 | 4 | `Uint8Array` |
- * | `Rgba16F` | 4 | 8 | — (render targets only) |
+ * | `Rgba16F` | 4 | 8 | - (render targets only) |
  * | `Rgba32F` | 4 | 16 | `Float32Array` |
  * @stable
  */
@@ -99,7 +99,7 @@ export enum TextureFormat {
   R8 = 'r8',
   /** Single-channel 32-bit float. */
   R32F = 'r32f',
-  /** 4-channel 8-bit unsigned — the universally supported default. */
+  /** 4-channel 8-bit unsigned - the universally supported default. */
   Rgba8 = 'rgba8',
   /** 4-channel half-float. Stores values outside `[0, 1]` at reduced precision; usually enough for feedback/state buffers. */
   Rgba16F = 'rgba16f',
@@ -108,7 +108,7 @@ export enum TextureFormat {
 }
 
 /**
- * Color attachment format for an offscreen {@link RenderTexture} — the
+ * Color attachment format for an offscreen {@link RenderTexture} - the
  * {@link TextureFormat} subset that can be rendered into.
  *
  * The float formats require `EXT_color_buffer_float` to be *rendered into*

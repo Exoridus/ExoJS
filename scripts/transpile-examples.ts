@@ -66,7 +66,7 @@ const inlineWorkerImports = (source: string, tsFilePath: string): string =>
   });
 
 /** Header prepended to every generated example `.js` file. */
-export const generatedHeader = (tsFileBasename: string): string => `// Auto-generated from ${tsFileBasename} — edit the .ts source, not this file.\n`;
+export const generatedHeader = (tsFileBasename: string): string => `// Auto-generated from ${tsFileBasename} - edit the .ts source, not this file.\n`;
 
 /**
  * Transpiles a single example `.ts` source string to the exact `.js` content

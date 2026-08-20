@@ -2,7 +2,7 @@
  * Tier-A structural regression tests for the WebGL2 particle renderer.
  *
  * Key measured fact: the renderer's per-instance buffer is a CPU-side scratch
- * allocation that the GL buffer is re-sized from on upload — not a hardware
+ * allocation that the GL buffer is re-sized from on upload - not a hardware
  * limit. A system holding more live particles than the configured batch size
  * must therefore still draw every one of them, matching the WebGPU renderer
  * which grows its instance buffer on demand. Anything less means the same

@@ -1,11 +1,11 @@
 /**
- * WebGPU Graphics gradient browser tests — opt-in, capability-aware.
+ * WebGPU Graphics gradient browser tests - opt-in, capability-aware.
  *
  * Graphics gradient paints rasterize the gradient to a {@link DataTexture} and
  * render each shape as a textured Mesh (bounding-box UVs, white tint), reusing
  * the existing default mesh texture path with no WebGpuMeshRenderer changes.
- * These tests assert that path issues valid GPU work on WebGPU — no validation
- * error, a draw call emitted — and that the presented pixels match the expected
+ * These tests assert that path issues valid GPU work on WebGPU - no validation
+ * error, a draw call emitted - and that the presented pixels match the expected
  * gradient samples through the real Graphics `fillStyle` / `strokeStyle`
  * API path.
  *

@@ -15,7 +15,7 @@ import { Signal } from '#core/Signal';
 //
 // The default MockAudioContext (test/setup-env.vitest.ts) starts in the
 // 'running' state, so the real onAudioContextReady signal fires synchronously
-// the first time anything subscribes — leaving no window to observe an
+// the first time anything subscribes - leaving no window to observe an
 // AudioManager registering its own forwarding handler *before* the event
 // fires. To exercise AudioManager's onUnlock wiring deterministically we
 // replace '#audio/audio-context' wholesale with a minimal fake that starts
@@ -259,7 +259,7 @@ describe('AudioManager', () => {
     mixer.onUnlock.add(onUnlock);
 
     // Simulate the AudioContext becoming ready: fires every pending listener in
-    // registration order — master/music/sound buses, the listener, and
+    // registration order - master/music/sound buses, the listener, and
     // finally AudioManager's own onUnlock-forwarding handler (see
     // AudioManager.ts constructor, registered last).
     ready = true;
@@ -275,7 +275,7 @@ describe('AudioManager', () => {
     // Our global test AudioContext mock starts 'running' immediately. Creating
     // the shared context explicitly first (as an earlier gesture / explicit
     // getAudioContext would) mirrors "an AudioManager constructed after the
-    // context has already unlocked" — e.g. a second Application in the same
+    // context has already unlocked" - e.g. a second Application in the same
     // process. The one-shot module-global ready signal has already fired by
     // then, so the manager dispatches its own unlock on a microtask instead.
     getAudioContext();

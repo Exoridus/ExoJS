@@ -1,6 +1,6 @@
 {
   "title": "RenderPipeline",
-  "description": "An ordered list of RenderPass steps, played once per frame against a RenderingContext. A `RenderPipeline` is **itself a `RenderPass`**, so pipelines nest freely and a disabled pipeline skips its whole subtree. It **owns** the passes added to it (exclusive ownership — a pass belongs to at most one pipeline): resize and destroy cascade to them. It never owns scene nodes or caller RenderTextures. Adding a pass that would create a direct or indirect cycle throws at add time.",
+  "description": "An ordered list of RenderPass steps, played once per frame against a RenderingContext. A `RenderPipeline` is **itself a `RenderPass`**, so pipelines nest freely and a disabled pipeline skips its whole subtree. It **owns** the passes added to it (exclusive ownership - a pass belongs to at most one pipeline): resize and destroy cascade to them. It never owns scene nodes or caller RenderTextures. Adding a pass that would create a direct or indirect cycle throws at add time.",
   "symbol": "RenderPipeline",
   "kind": "class",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "An ordered list of RenderPass steps, played once per frame against a RenderingContext.",
-        "A `RenderPipeline` is **itself a `RenderPass`**, so pipelines nest freely and a disabled pipeline skips its whole subtree. It **owns** the passes added to it (exclusive ownership — a pass belongs to at most one pipeline): resize and destroy cascade to them. It never owns scene nodes or caller RenderTextures. Adding a pass that would create a direct or indirect cycle throws at add time."
+        "A `RenderPipeline` is **itself a `RenderPass`**, so pipelines nest freely and a disabled pipeline skips its whole subtree. It **owns** the passes added to it (exclusive ownership - a pass belongs to at most one pipeline): resize and destroy cascade to them. It never owns scene nodes or caller RenderTextures. Adding a pass that would create a direct or indirect cycle throws at add time."
       ],
       "importLine": "import { RenderPipeline } from '@codexo/exojs'",
       "sourceLink": null
@@ -288,7 +288,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Cascade destroy() to every pass, release their ownership, then clear the list. Idempotent. Throws during execute (before any teardown begins). Best-effort teardown: the pipeline is marked destroyed and detached from its passes up front, so it always ends in a single, consistent destroyed-and-empty state — every child gets a destroy() attempt and has its owner slot released even if an earlier child throws. If one or more children throw, the first error is re-thrown after the cascade completes."
+          "description": "Cascade destroy() to every pass, release their ownership, then clear the list. Idempotent. Throws during execute (before any teardown begins). Best-effort teardown: the pipeline is marked destroyed and detached from its passes up front, so it always ends in a single, consistent destroyed-and-empty state - every child gets a destroy() attempt and has its owner slot released even if an earlier child throws. If one or more children throw, the first error is re-thrown after the cascade completes."
         },
         {
           "name": "execute",
@@ -642,7 +642,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "When false, the containing RenderPipeline skips this pass during execute. Default true. Evaluated by the parent — a direct execute call runs the pass regardless."
+          "description": "When false, the containing RenderPipeline skips this pass during execute. Default true. Evaluated by the parent - a direct execute call runs the pass regardless."
         },
         {
           "name": "label",
@@ -663,7 +663,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Debug label (inspector / logging). Defaults to the constructor name. Display only — not an identity."
+          "description": "Debug label (inspector / logging). Defaults to the constructor name. Display only - not an identity."
         },
         {
           "name": "size",

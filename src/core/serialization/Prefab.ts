@@ -8,7 +8,7 @@ import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab } fro
 /**
  * A reusable, data-driven template captured from a configured scene-graph
  * subtree. Capture once with {@link Prefab.from}; stamp out independent copies
- * with {@link instantiate} as many times as needed — no re-serialization per
+ * with {@link instantiate} as many times as needed - no re-serialization per
  * instance.
  *
  * A prefab holds the same **data, not behaviour** a scene serializer captures
@@ -38,7 +38,7 @@ export class Prefab {
   }
 
   /**
-   * Build a prefab from a previously serialized document — e.g. one produced by
+   * Build a prefab from a previously serialized document - e.g. one produced by
    * {@link toJSON} and persisted to disk or fetched over the network.
    *
    * Like {@link Scene.deserialize} this is an untrusted boundary, so the
@@ -61,7 +61,7 @@ export class Prefab {
   }
 
   /**
-   * The prefab as a versioned, JSON-serialisable document — the standard
+   * The prefab as a versioned, JSON-serialisable document - the standard
    * `JSON.stringify(prefab)` hook. Treat the returned object as read-only; the
    * `root` is the live internal descriptor, not a copy.
    */

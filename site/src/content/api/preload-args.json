@@ -1,6 +1,6 @@
 {
   "title": "PreloadArgs",
-  "description": "Tuple type for the variadic tail of `preload()` calls, after the target constructor — mirrors ChangeSceneArgs's conditional-arity trick: when `Data` is `void` the options argument itself is optional (nothing to supply), otherwise it's required so a data-carrying scene can't be preloaded without its data.",
+  "description": "Tuple type for the variadic tail of `preload()` calls, after the target constructor - mirrors ChangeSceneArgs's conditional-arity trick: when `Data` is `void` the options argument itself is optional (nothing to supply), otherwise it's required so a data-carrying scene can't be preloaded without its data.",
   "symbol": "PreloadArgs",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Tuple type for the variadic tail of `preload()` calls, after the target constructor — mirrors ChangeSceneArgs's conditional-arity trick: when `Data` is `void` the options argument itself is optional (nothing to supply), otherwise it's required so a data-carrying scene can't be preloaded without its data."
+        "Tuple type for the variadic tail of `preload()` calls, after the target constructor - mirrors ChangeSceneArgs's conditional-arity trick: when `Data` is `void` the options argument itself is optional (nothing to supply), otherwise it's required so a data-carrying scene can't be preloaded without its data."
       ],
       "importLine": "import { PreloadArgs } from '@codexo/exojs'",
       "sourceLink": null

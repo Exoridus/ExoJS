@@ -15,12 +15,12 @@ import { wireCoreRenderers } from './_coreRenderers';
 // What this test validates: that a *real* WebGl2Backend, with a *real* GlyphAtlas
 // (real canvas SDF rasterization, real font metrics), runs the Text collect →
 // flush → draw path without error in-browser, and that the geometry the layout
-// engine produces is structurally correct — glyphs separated horizontally and
+// engine produces is structurally correct - glyphs separated horizontally and
 // wrapped text split across vertical line bands. The structural claims are
 // asserted on the deterministic per-glyph quad geometry (`Text.pageQuads`) rather
 // than on read-back pixels: the text renderer drives texture units with raw GL
 // calls that bypass the backend's unit cache, which only a full multi-renderer
-// frame primes — reproducing that choreography in an isolated single-draw harness
+// frame primes - reproducing that choreography in an isolated single-draw harness
 // is brittle and unrelated to the layout behaviour under test. Asserting on the
 // real-atlas geometry also avoids any dependence on exact font rasterization.
 const defaultWebGlAttributes: WebGLContextAttributes = {
@@ -124,7 +124,7 @@ describe('Text layout WebGL2 browser', () => {
       // All three glyphs share one line (a single vertical band).
       expect(distinctBands(quads.map(q => q.y))).toHaveLength(1);
 
-      // Strictly increasing x with a real gap between successive glyph boxes —
+      // Strictly increasing x with a real gap between successive glyph boxes -
       // the opposite of the collapsed/overlapping blob the broken example showed.
       for (let i = 1; i < quads.length; i++) {
         expect(quads[i].x).toBeGreaterThan(quads[i - 1].x);
@@ -169,7 +169,7 @@ describe('Text layout WebGL2 browser', () => {
       render(backend, text);
       expect(backend.stats.drawCalls).toBeGreaterThan(0);
 
-      // Every visible glyph shares one y band — a single, non-wrapped line.
+      // Every visible glyph shares one y band - a single, non-wrapped line.
       const quads = glyphQuads(text);
       expect(quads.length).toBeGreaterThan(0);
       expect(distinctBands(quads.map(q => q.y))).toHaveLength(1);
@@ -183,7 +183,7 @@ describe('Text layout WebGL2 browser', () => {
   // never rasterized triggers a *partial* sub-region upload of the R8 atlas (the
   // first render does a full upload). With the WebGL default UNPACK_ALIGNMENT of
   // 4, a sub-region whose row width isn't a multiple of 4 and spans more than one
-  // row is rejected with INVALID_OPERATION — the new glyphs never reach the GPU
+  // row is rejected with INVALID_OPERATION - the new glyphs never reach the GPU
   // and render invisibly. This is exactly what broke switching to a scene whose
   // text introduces new characters. The existing tests miss it because each
   // resets the atlas pool, so every upload is full.
@@ -197,7 +197,7 @@ describe('Text layout WebGL2 browser', () => {
     const gl = backend.context;
     // The first Text populates and fully uploads the shared atlas. The Text
     // constructor rasterizes eagerly, so `second` must be created *after* the
-    // first upload — only then are its (disjoint) glyphs new to the atlas,
+    // first upload - only then are its (disjoint) glyphs new to the atlas,
     // forcing the partial sub-region upload rather than a fresh full upload.
     const first = new Text('il', { fillColor: Color.white, fontSize: 30 });
     let second: Text | null = null;
@@ -212,9 +212,9 @@ describe('Text layout WebGL2 browser', () => {
       second = new Text('WMQ', { fillColor: Color.white, fontSize: 30 });
       render(backend, second);
 
-      // The new glyphs went up as a partial sub-region (not a full re-alloc)…
+      // The new glyphs went up as a partial sub-region (not a full re-alloc)...
       expect(texSubImage2DSpy).toHaveBeenCalled();
-      // …with tight row packing, so the misaligned R8 rows upload intact.
+      // ...with tight row packing, so the misaligned R8 rows upload intact.
       expect(pixelStoreiSpy).toHaveBeenCalledWith(gl.UNPACK_ALIGNMENT, 1);
     } finally {
       vi.restoreAllMocks();
@@ -229,7 +229,7 @@ describe('Text layout WebGL2 browser', () => {
   // its node-data texture to unit 1; if it does so with a raw gl.activeTexture
   // that bypasses the backend's texture-unit cache, the subsequent
   // bindTexture(atlas, 0) is skipped (the cache still reads 0 from frame start)
-  // and the atlas lands on unit 1 — leaving unit 0 (what the shader reads) empty,
+  // and the atlas lands on unit 1 - leaving unit 0 (what the shader reads) empty,
   // so every glyph samples 0 and the whole frame is transparent. A preceding
   // sprite primes the cache off 0, which is why the bug only bites text that
   // renders first. We assert the GL unit state rather than read-back pixels: the

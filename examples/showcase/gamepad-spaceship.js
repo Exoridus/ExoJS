@@ -1,4 +1,4 @@
-// Auto-generated from gamepad-spaceship.ts — edit the .ts source, not this file.
+// Auto-generated from gamepad-spaceship.ts - edit the .ts source, not this file.
 import { Application, AudioGenerator, Color, GamepadAxis, GamepadButton, Graphics, Scene, Sprite, Text, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';

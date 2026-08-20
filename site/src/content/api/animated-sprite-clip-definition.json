@@ -88,7 +88,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Per-frame hold duration in milliseconds, indexed the same as frames. When provided it is authoritative for playback timing and fps is ignored while advancing frames (still accepted as a display-only average). Use this to preserve uneven hold-frames — e.g. an Aseprite export where one frame intentionally lingers longer than the rest."
+          "description": "Per-frame hold duration in milliseconds, indexed the same as frames. When provided it is authoritative for playback timing and fps is ignored while advancing frames (still accepted as a display-only average). Use this to preserve uneven hold-frames - e.g. an Aseprite export where one frame intentionally lingers longer than the rest."
         },
         {
           "name": "frameOffsets",
@@ -157,7 +157,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Per-frame local translation in local (pre-scale) pixels, indexed the same as frames, applied on top of the sprite's own position/origin. Use this to keep frames anchored to a stable point when a source atlas trims frames to different sizes (Aseprite's spriteSourceSize) — without it, differently-trimmed frames would jitter around their own top-left."
+          "description": "Per-frame local translation in local (pre-scale) pixels, indexed the same as frames, applied on top of the sprite's own position/origin. Use this to keep frames anchored to a stable point when a source atlas trims frames to different sizes (Aseprite's spriteSourceSize) - without it, differently-trimmed frames would jitter around their own top-left."
         },
         {
           "name": "frames",

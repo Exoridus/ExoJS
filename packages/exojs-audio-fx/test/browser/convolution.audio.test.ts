@@ -3,7 +3,7 @@
  * ConvolverNode in headless Chromium. Verifies two mathematical properties of
  * the ConvolverNode that underpin ConvolutionEffect's correctness:
  *
- * 1. A single-sample unit-impulse IR [1.0] is the identity of convolution —
+ * 1. A single-sample unit-impulse IR [1.0] is the identity of convolution -
  *    the output must equal the input (within floating-point tolerance).
  * 2. A 2-tap IR [1, 1] sums the input with a 1-sample-delayed copy, producing
  *    a louder-than-dry output for a steady sinusoidal input.
@@ -40,7 +40,7 @@ async function renderConvolution(opts: ConvolutionRenderOptions): Promise<Float3
 
   const ctx = new OfflineAudioContext(1, length, sr);
 
-  // Build the IR buffer (normalize=false — we want exact arithmetic).
+  // Build the IR buffer (normalize=false - we want exact arithmetic).
   const irBuffer = ctx.createBuffer(1, opts.irSamples.length, sr);
   irBuffer.getChannelData(0).set(new Float32Array(opts.irSamples));
 
@@ -98,7 +98,7 @@ describe('ConvolutionEffect — acoustic contract (real Web Audio)', () => {
       refPower += drySamples[i]! ** 2;
     }
     const snr = refPower / (diffPower + 1e-12);
-    // Require > 20 dB SNR (SNR > 100) — the identity property holds in floating point.
+    // Require > 20 dB SNR (SNR > 100) - the identity property holds in floating point.
     expect(snr).toBeGreaterThan(100);
   });
 
@@ -106,7 +106,7 @@ describe('ConvolutionEffect — acoustic contract (real Web Audio)', () => {
     // With normalize=false and IR=[1, 1], the convolver computes y[n]=x[n]+x[n-1].
     // For a 440 Hz sine at 48000 Hz the 1-sample phase difference is
     // 2π·440/48000 ≈ 0.0576 rad, so the two samples add nearly constructively:
-    // amplitude ≈ 2·cos(0.0288) ≈ 1.999 — roughly √2 more RMS than the dry signal.
+    // amplitude ≈ 2·cos(0.0288) ≈ 1.999 - roughly √2 more RMS than the dry signal.
     const withConv = await renderConvolution({ irSamples: [1.0, 1.0], durationSeconds: 0.3, wet: 1 });
     const dryOnly = await renderConvolution({ irSamples: [1.0, 1.0], durationSeconds: 0.3, wet: 0 });
 
@@ -121,7 +121,7 @@ describe('ConvolutionEffect — acoustic contract (real Web Audio)', () => {
 
   it('wet=0 passes the input through unmodified', async () => {
     // With wet=0 the convolver path is gated off (wetGain=0) and the dry
-    // gain is 1 — so the output equals the raw oscillator signal.
+    // gain is 1 - so the output equals the raw oscillator signal.
     const out = await renderConvolution({ irSamples: [1.0], durationSeconds: 0.3, wet: 0 });
     const skip = 256;
     const meas = out.subarray(skip);

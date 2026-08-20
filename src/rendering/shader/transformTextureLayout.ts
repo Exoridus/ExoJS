@@ -3,7 +3,7 @@ import { RenderError } from '#rendering/RenderError';
 
 /**
  * Texels one transform row occupies in the WebGL2 transform texture: texel 0 =
- * `(a, b, c, d)`, texel 1 = `(tx, ty, snapMode, 0)` — the rgba32f mirror of
+ * `(a, b, c, d)`, texel 1 = `(tx, ty, snapMode, 0)` - the rgba32f mirror of
  * `TRANSFORM_FLOATS_PER_ROW`. Tint rows are one rgba8 texel each and live in
  * their own texture (see `TransformBuffer`'s class doc).
  * @internal
@@ -14,13 +14,13 @@ export const TRANSFORM_TEXELS_PER_ROW = 2;
  * Logical transform rows packed side by side into ONE texture line.
  *
  * A row index used to BE the texture's y coordinate, which capped the shared
- * store at `MAX_TEXTURE_SIZE` rows — past that, `texImage2D` failed with
+ * store at `MAX_TEXTURE_SIZE` rows - past that, `texImage2D` failed with
  * `GL_INVALID_VALUE` and every transform fetch read an incomplete texture
  * (scenes rendered black). Packing `rowsPerLine` rows per line turns the cap
  * into `rowsPerLine * MAX_TEXTURE_SIZE` rows instead.
  *
  * 1024 is chosen so the transform texture is exactly `1024 * 2 = 2048` texels
- * wide — the width every WebGL2 context is guaranteed to support (the spec's
+ * wide - the width every WebGL2 context is guaranteed to support (the spec's
  * `MAX_TEXTURE_SIZE` floor). The cap is therefore at least 2,097,152 rows on a
  * minimal context and 16,777,216 on a 16384-limit desktop GPU, with no runtime
  * dependency in the SHADER's addressing (only the CPU-side allocation consults
@@ -38,7 +38,7 @@ export const TRANSFORM_ROWS_PER_TEXTURE_LINE = 1024;
 /**
  * The `MAX_TEXTURE_SIZE` every WebGL2 context is required to support. Used as
  * the conservative stand-in wherever a row store's layout has to be built
- * before a context is attached — never as a substitute for the real limit on a
+ * before a context is attached - never as a substitute for the real limit on a
  * live context, which is always larger or equal.
  * @internal
  */
@@ -60,7 +60,7 @@ export interface TransformTextureLayout {
   readonly transformHeight: number;
   /** Tint texture width in texels (`rowsPerLine`). */
   readonly tintWidth: number;
-  /** Tint texture height in texels — identical to {@link transformHeight}. */
+  /** Tint texture height in texels - identical to {@link transformHeight}. */
   readonly tintHeight: number;
 }
 
@@ -82,7 +82,7 @@ export interface TransformTextureRect {
  *
  * The CPU backing arrays need no re-packing: rows are contiguous and a texture
  * line holds exactly `rowsPerLine` of them, so line `y` covers backing rows
- * `[y * rowsPerLine, (y + 1) * rowsPerLine)` — the same tightly packed order
+ * `[y * rowsPerLine, (y + 1) * rowsPerLine)` - the same tightly packed order
  * `texImage2D` reads.
  * @internal
  */
@@ -198,13 +198,13 @@ export const tintTextureRect = (
  * Include directive every WebGL2 shader that reads the shared transform store
  * carries. `WebGl2ShaderProgram` swaps it for {@link TRANSFORM_TEXTURE_GLSL} at
  * compile time, so the row → texel mapping exists once instead of once per
- * shader — a shader that forgets the directive fails to compile on the helper
+ * shader - a shader that forgets the directive fails to compile on the helper
  * names rather than silently reading the wrong texel.
  *
  * Re-exported to renderer authors through `@codexo/exojs/renderer-sdk`, where it
  * promises one thing only: that `exoTransformTexel` / `exoTintTexel` resolve a
  * logical `nodeIndex` against the store as it currently exists. The store's
- * dimensions and packing are not part of that promise and have changed before —
+ * dimensions and packing are not part of that promise and have changed before -
  * a row index was the texture's y coordinate until it stopped fitting.
  * @internal
  */

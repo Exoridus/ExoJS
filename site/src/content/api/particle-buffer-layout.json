@@ -1,6 +1,6 @@
 {
   "title": "ParticleBufferLayout",
-  "description": "Describes the interleaved buffer a render mode's `build()` fills each frame. Deliberately not a `Geometry`. A `Geometry` requires a position attribute, requires that attribute to carry at least two components, and validates any index list against the vertex count implied by its `vertexData` — three rules that are meaningful for geometry and meaningless for a per-instance record. Satisfying them used to cost the instanced modes a zero-filled placeholder buffer that was never uploaded, sized purely to keep the index check quiet. What is checked here is the subset that protects a real GPU binding: a positive stride, at least one attribute, unique names, and ranges that neither overlap each other nor reach past the stride. A layout is a description rather than a resource: it owns no GPU handle and needs no disposal.",
+  "description": "Describes the interleaved buffer a render mode's `build()` fills each frame. Deliberately not a `Geometry`. A `Geometry` requires a position attribute, requires that attribute to carry at least two components, and validates any index list against the vertex count implied by its `vertexData` - three rules that are meaningful for geometry and meaningless for a per-instance record. Satisfying them used to cost the instanced modes a zero-filled placeholder buffer that was never uploaded, sized purely to keep the index check quiet. What is checked here is the subset that protects a real GPU binding: a positive stride, at least one attribute, unique names, and ranges that neither overlap each other nor reach past the stride. A layout is a description rather than a resource: it owns no GPU handle and needs no disposal.",
   "symbol": "ParticleBufferLayout",
   "kind": "class",
   "subsystem": "particles",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Describes the interleaved buffer a render mode's `build()` fills each frame.",
-        "Deliberately not a `Geometry`. A `Geometry` requires a position attribute, requires that attribute to carry at least two components, and validates any index list against the vertex count implied by its `vertexData` — three rules that are meaningful for geometry and meaningless for a per-instance record. Satisfying them used to cost the instanced modes a zero-filled placeholder buffer that was never uploaded, sized purely to keep the index check quiet.",
+        "Deliberately not a `Geometry`. A `Geometry` requires a position attribute, requires that attribute to carry at least two components, and validates any index list against the vertex count implied by its `vertexData` - three rules that are meaningful for geometry and meaningless for a per-instance record. Satisfying them used to cost the instanced modes a zero-filled placeholder buffer that was never uploaded, sized purely to keep the index check quiet.",
         "What is checked here is the subset that protects a real GPU binding: a positive stride, at least one attribute, unique names, and ranges that neither overlap each other nor reach past the stride.",
         "A layout is a description rather than a resource: it owns no GPU handle and needs no disposal."
       ],

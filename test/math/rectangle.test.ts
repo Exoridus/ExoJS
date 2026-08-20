@@ -456,7 +456,7 @@ describe('Rectangle', () => {
       node.updateParentTransform();
 
       expect(node.isAlignedBox).toBe(false);
-      // Either a response or null is valid geometry — this exercises the SAT branch.
+      // Either a response or null is valid geometry - this exercises the SAT branch.
       const response = base().collidesWith(node);
 
       expect(response === null || typeof response.overlap === 'number').toBe(true);

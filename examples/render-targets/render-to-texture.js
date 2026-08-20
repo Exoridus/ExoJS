@@ -1,4 +1,4 @@
-// Auto-generated from render-to-texture.ts — edit the .ts source, not this file.
+// Auto-generated from render-to-texture.ts - edit the .ts source, not this file.
 import { Application, Color, Container, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 class RenderToTextureScene extends Scene {
     container;

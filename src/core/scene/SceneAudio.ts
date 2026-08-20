@@ -16,13 +16,13 @@ const isPausable = (voice: Voice): voice is Voice & Pausable => 'pause' in voice
 export interface SceneAudioPlayOptions extends PlayOptions {
   /**
    * Availability relative to {@link SceneDirector.pause}/{@link SceneDirector.resume}.
-   * `'always'` (default) ignores scene pause entirely — today's behavior.
+   * `'always'` (default) ignores scene pause entirely - today's behavior.
    * `'active'` freezes the moment the scene pauses, resumes when it resumes.
    * `'paused'` is the mirror image: plays only while the scene is paused.
    * Has no effect on a {@link Voice} that doesn't support {@link Pausable}.
    *
    * Applied only at the scene's pause/resume transitions, not re-checked at
-   * creation time — a voice started while the scene is already paused plays
+   * creation time - a voice started while the scene is already paused plays
    * immediately and is only corrected at the next pause/resume cycle.
    */
   when?: SceneAvailability;
@@ -36,8 +36,8 @@ export interface SceneAudioTrackOptions {
 
 /**
  * The scalar {@link Spatializable} fields {@link PendingVoice} buffers before
- * flush. `position`/`velocity` are held separately — they own a {@link Vector}
- * that has to be released — and `follow` is a call, not a value.
+ * flush. `position`/`velocity` are held separately - they own a {@link Vector}
+ * that has to be released - and `follow` is a call, not a value.
  */
 interface BufferedSpatialWrites {
   distanceModel?: DistanceModel;
@@ -77,10 +77,10 @@ function copyPoint(target: Vector | null, value: Vector | { x: number; y: number
  * scope is still `Preparing`. Buffers `volume`/`bus`/effect and
  * {@link Spatializable} writes and replays them onto the real voice once
  * {@link PendingVoice._flush} runs at activation; `stop()` before flush
- * cancels playback entirely — the real voice is never created. Narrower than a
- * real `Voice`: capability mixins (`Pausable`, `Seekable`, …) are unavailable
+ * cancels playback entirely - the real voice is never created. Narrower than a
+ * real `Voice`: capability mixins (`Pausable`, `Seekable`, ...) are unavailable
  * until flush, and reading `bus` before flush returns `undefined` (despite the
- * type) unless an explicit `options.bus` override was given — the manager's
+ * type) unless an explicit `options.bus` override was given - the manager's
  * default bus isn't resolvable until the real voice exists. A documented
  * limitation of Preparing-phase playback, not a general `Voice` capability.
  * @internal
@@ -99,7 +99,7 @@ class PendingVoice implements Voice {
   private _velocity: Vector | null = null;
   private _velocityWritten = false;
   public readonly onEnd = new Signal();
-  /** The `when` policy this voice was created with — carried across to the real `Voice` at flush. */
+  /** The `when` policy this voice was created with - carried across to the real `Voice` at flush. */
   public readonly when: SceneAvailability;
 
   public constructor(
@@ -148,7 +148,7 @@ class PendingVoice implements Voice {
     if (this._real) {
       this._real.fade(to, ms);
     } else {
-      // Nothing is playing yet — best effort is to apply the target volume
+      // Nothing is playing yet - best effort is to apply the target volume
       // immediately once flushed; the ramp itself has nothing to animate.
       this._volume = to;
     }
@@ -192,7 +192,7 @@ class PendingVoice implements Voice {
     return this;
   }
 
-  // Spatializable — buffered like volume/bus above. Only what the caller
+  // Spatializable - buffered like volume/bus above. Only what the caller
   // actually wrote is replayed at flush: the real voice is created from the
   // same PlayOptions, so blindly writing defaults would undo the spatial
   // values the play call already carried.
@@ -447,11 +447,11 @@ class PendingVoice implements Voice {
  * lifetime: every tracked {@link Voice} is stopped when the owning scene ends
  * permanently. Access via {@link Scene.audio}.
  *
- * Delegates entirely to `app.audio` — no second audio graph, just tracking of
+ * Delegates entirely to `app.audio` - no second audio graph, just tracking of
  * what this facade started so it can stop it on teardown (and, for capable
  * voices, pause/resume it across retention suspension). Playback requested
  * while the scope is `Preparing` is queued and started once the scope
- * activates — see {@link PendingVoice}.
+ * activates - see {@link PendingVoice}.
  */
 export class SceneAudio implements Destroyable {
   private readonly _tracked = new Map<Voice, SceneAvailability>();
@@ -470,7 +470,7 @@ export class SceneAudio implements Destroyable {
    * resulting {@link Voice} for scene-lifetime cleanup. While the scope is
    * `Preparing`, `Ready`, or `Suspended`, returns a {@link PendingVoice}
    * stand-in immediately and defers the real `app.audio.play(...)` call
-   * until (re)activation — including a call made while already `Suspended`
+   * until (re)activation - including a call made while already `Suspended`
    * (a new registration while dormant must buffer, not
    * play for real, regardless of how the scope became dormant). While
    * `Destroying`/`Destroyed`, rejects instead: a dev build throws a clear
@@ -507,7 +507,7 @@ export class SceneAudio implements Destroyable {
    * Production-build fallback for {@link SceneAudio.play} called during
    * `Destroying`/`Destroyed`: an already-cancelled {@link PendingVoice}
    * whose `_createReal` callback is never invoked (a cancelled voice is
-   * never flushed) — inert, but Voice-shaped, so calling code that doesn't
+   * never flushed) - inert, but Voice-shaped, so calling code that doesn't
    * dev-guard its `play()` calls doesn't crash mid-teardown.
    */
   private _createDeadVoice(options: SceneAudioPlayOptions): Voice {
@@ -531,7 +531,7 @@ export class SceneAudio implements Destroyable {
    * Start every voice queued by {@link SceneAudio.play} while the scope was
    * `Preparing`. Called once, by {@link SceneScope.activate}. Swaps each
    * flushed {@link PendingVoice} wrapper in `_tracked` for the real `Voice`
-   * it created — carrying its `when` policy across — so
+   * it created - carrying its `when` policy across - so
    * `suspend()`/`restore()`/`pause()`/`resume()`/`destroy()` see the
    * capability-bearing voice. The caller's own reference stays the wrapper,
    * which forwards to the real voice transparently.
@@ -589,9 +589,9 @@ export class SceneAudio implements Destroyable {
    * Apply the `when` pause policy for every tracked, `Pausable` voice:
    * `'active'` voices currently playing are paused; `'paused'` voices
    * currently paused are woken up early. Called by {@link SceneScope.pause}.
-   * Does not touch a `'paused'` voice that happens to already be playing —
+   * Does not touch a `'paused'` voice that happens to already be playing -
    * see {@link SceneAudioPlayOptions.when}, a documented, accepted
-   * limitation — or any non-`Pausable` voice.
+   * limitation - or any non-`Pausable` voice.
    * @internal
    */
   public pause(): void {
@@ -618,7 +618,7 @@ export class SceneAudio implements Destroyable {
 
   /**
    * Undo {@link SceneAudio.pause}: resumes everything it froze, re-freezes
-   * everything it woke up early — each only if still in the state this
+   * everything it woke up early - each only if still in the state this
    * facade left it in, so a voice the caller paused/resumed manually in
    * between is left alone. Called by {@link SceneScope.resume}.
    * @internal

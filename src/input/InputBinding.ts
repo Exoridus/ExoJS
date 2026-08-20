@@ -16,11 +16,11 @@ import type { Keyboard, PointerButton } from './types';
 // `index.d.ts` ever being part of their program, so an augmentation declared
 // only there would leave `Symbol.dispose` undefined for that consumer.
 // Declaring it here instead means every entry point that transitively pulls
-// in `InputBinding.d.ts` gets it — including the root barrel, since
+// in `InputBinding.d.ts` gets it - including the root barrel, since
 // `index.d.ts` re-exports `#input/index` → `InputBinding.d.ts` anyway.
 // Duplicate `unique symbol` interface merging across this file and
 // TypeScript's own `lib.esnext.disposable.d.ts` (pulled in transitively by
-// `@types/node`, see the cast comment below) does not conflict — both
+// `@types/node`, see the cast comment below) does not conflict - both
 // declare the identical shape and merge into one property.
 declare global {
   interface SymbolConstructor {
@@ -36,7 +36,7 @@ declare global {
 // package's own `examples`/`type-tests` lanes, and many browser-only
 // consumers), nothing pulls in TypeScript's real `esnext.disposable` lib, so
 // `Symbol.dispose` is typed purely from the ambient declaration above and
-// `Symbol.for(...)`'s plain `symbol` return widens the union — the assertion
+// `Symbol.for(...)`'s plain `symbol` return widens the union - the assertion
 // re-narrows it back down. Under a project that DOES have `@types/node`
 // (this repo's own root tsconfig), the real lib already narrows the union on
 // its own, which is why this looks "unnecessary" to a linter resolving
@@ -80,11 +80,11 @@ interface InternalChannelDetacher {
  * proxy).
  *
  * Construct via the owner's `onStart` / `onActive` / `onStop` /
- * `onTrigger` factory methods rather than `new InputBinding(...)` directly —
+ * `onTrigger` factory methods rather than `new InputBinding(...)` directly -
  * the returned binding is caller-owned from that point on.
  *
  * Lifecycle: a binding lives until {@link unbind} is called, the owner
- * disposes it, or — for scene-bound bindings — the scene unloads.
+ * disposes it, or - for scene-bound bindings - the scene unloads.
  */
 export class InputBinding {
   /**
@@ -101,22 +101,22 @@ export class InputBinding {
   public readonly onStop = new Signal<[number]>();
   public readonly onTrigger = new Signal<[number]>();
 
-  /** Tap-window for `onTrigger`, in milliseconds — see the constructor's `options.threshold`. */
+  /** Tap-window for `onTrigger`, in milliseconds - see the constructor's `options.threshold`. */
   private readonly _triggerThreshold: number;
   /**
    * Source-event timestamp ({@link ChannelEventBatch.timestamp}-compatible)
    * of the activation edge currently in progress. `null` while inactive, or
    * while active from a seed whose true activation time predates this
    * binding's own observation window and so is unknowable (see
-   * `_seedUntouchedChannels`) — a `null` activation timestamp can never
+   * `_seedUntouchedChannels`) - a `null` activation timestamp can never
    * produce an `onTrigger`, see `_applyEdge`.
    */
   private _activationTimestamp: number | null = null;
   private readonly _detacher: InternalChannelDetacher | null;
-  /** Last known value of each bound channel, in `channels` order — the replay baseline `update` advances. */
+  /** Last known value of each bound channel, in `channels` order - the replay baseline `update` advances. */
   private readonly _channelValues: Float32Array;
   /**
-   * Batch-sequence watermark as of construction — see
+   * Batch-sequence watermark as of construction - see
    * {@link ChannelEventBatch}'s doc comment. Only consulted on the very
    * first `update()` call that supplies batches at all: it filters out any
    * batch pushed BEFORE this binding existed, still sitting in the owner's
@@ -124,7 +124,7 @@ export class InputBinding {
    * pushed after construction even on that same first call (a full
    * press-then-release that happens strictly after `new InputBinding(...)`
    * but is only first observed on its first `update()` must still fire
-   * `onStart`/`onStop`/`onTrigger` — not be silently swallowed the way a
+   * `onStart`/`onStop`/`onTrigger` - not be silently swallowed the way a
    * bare live-value read on that first call would).
    */
   private readonly _watermark: number;
@@ -135,7 +135,7 @@ export class InputBinding {
    * may omit it and retain the legacy watermark reconstruction fallback.
    */
   private readonly _constructionBaseline: Float32Array | null;
-  /** `false` until the first `update()` call — see `update`'s doc comment. */
+  /** `false` until the first `update()` call - see `update`'s doc comment. */
   private _seeded = false;
   private _value = 0;
   private _unbound = false;
@@ -175,16 +175,16 @@ export class InputBinding {
    * still fires `onStart`/`onStop`/`onTrigger` instead of being invisible to
    * a once-per-frame snapshot of `channels`. Omitted entirely by callers
    * with no ordered history of their own (e.g. {@link Gamepad}'s per-slot
-   * bindings) — falls back to reading `channels` directly, on every call,
+   * bindings) - falls back to reading `channels` directly, on every call,
    * exactly as before.
    *
    * The very first call that DOES supply batches filters them against
-   * {@link _watermark} first (see its own doc comment) — anything that
+   * {@link _watermark} first (see its own doc comment) - anything that
    * predates construction seeds this binding's baseline from the live
    * buffer with no synthetic edge, exactly as a plain live-value read always
    * did, while anything after is replayed for real transitions, even on
    * that very first call. A frame with no batch touching this binding's own
-   * channels — before or after seeding — still evaluates once, so a source
+   * channels - before or after seeding - still evaluates once, so a source
    * held continuously active keeps firing {@link onActive} every real frame.
    *
    * @internal
@@ -202,7 +202,7 @@ export class InputBinding {
       }
 
       // This path never replays an ordered batch history at all (see this
-      // method's own doc comment) — every call is a live, single-instant
+      // method's own doc comment) - every call is a live, single-instant
       // read, exactly like the pre-timestamp design, so "now" is always the
       // correct occurred-at for whatever edge this read reveals.
       this._replayOrEvaluate([], getPreciseTime());
@@ -222,14 +222,14 @@ export class InputBinding {
         // Establish the seeded baseline's active/inactive state (dispatching
         // `onStart` if the seed reveals an already-active source, exactly as
         // a plain live-value read always did) BEFORE replaying `relevant` on
-        // top of it — otherwise a channel seeded active from a pre-watermark
+        // top of it - otherwise a channel seeded active from a pre-watermark
         // batch (see `_seedUntouchedChannels`) would look, to the replay
         // below, like it started this call at 0, and a genuine release
         // within `relevant` would go undetected for want of a prior `onStart`
         // to release FROM. A no-op when the seed left everything at 0.
         //
         // The seed's true activation time predates this binding's own
-        // observation window and so is unknowable — pass `null` rather than
+        // observation window and so is unknowable - pass `null` rather than
         // fabricating "now", so a release replayed below can never produce a
         // spurious `onTrigger` for a press this binding never actually saw.
         this._applyEdge(null);
@@ -241,7 +241,7 @@ export class InputBinding {
 
   /**
    * Seed every bound channel `relevant` (the batches this call will actually
-   * replay) does NOT touch, directly from the live buffer — with no
+   * replay) does NOT touch, directly from the live buffer - with no
    * synthetic edge, exactly like a plain live-value read. A channel `relevant`
    * DOES touch is seeded from the exact construction-time snapshot when the
    * real InputManager supplied one. That closes the case a watermark alone
@@ -294,19 +294,19 @@ export class InputBinding {
   }
 
   /**
-   * Replay `batches` — already filtered to whatever this call should see —
+   * Replay `batches` - already filtered to whatever this call should see -
    * applying each to `_channelValues` and checking for a real threshold
    * crossing once per batch that actually touched a bound channel (never
    * mid-batch; see {@link ChannelEventBatch}'s doc comment). An empty
    * `batches` (nothing to replay this call, or none of it touched a bound
    * channel) still performs exactly one crossing check against the CURRENT
-   * `_channelValues` — the same thing a plain once-per-frame read would do —
+   * `_channelValues` - the same thing a plain once-per-frame read would do -
    * so a channel seeded active on this very call, or one simply held active
    * with nothing new to report, is still detected correctly.
    *
    * `onActive` is a final-frame-state signal, not a per-crossing one: it
    * fires at most ONCE per call, unconditionally, iff this binding is active
-   * once every edge for this call has been processed — never once per
+   * once every edge for this call has been processed - never once per
    * individual crossing into the active state, which would over-fire for a
    * source that presses, releases, and presses again within one call (it
    * should read as one continuous active session by the time this call
@@ -350,7 +350,7 @@ export class InputBinding {
 
   /**
    * Recompute the aggregate value from `_channelValues` and dispatch a
-   * transition only on a REAL crossing — `onStart` on 0 → nonzero, `onStop`
+   * transition only on a REAL crossing - `onStart` on 0 → nonzero, `onStop`
    * on nonzero → 0. A value that stays on the same side of zero (still
    * active, still inactive) dispatches nothing here; see
    * {@link _replayOrEvaluate} for the once-per-call `onActive`
@@ -359,7 +359,7 @@ export class InputBinding {
    * `onTrigger` fires on the release edge only when both the activation and
    * this release carry a known, real source-event `occurredAt` (see
    * `_activationTimestamp`'s doc comment) AND their difference is within the
-   * tap threshold — measured against the source events' own timestamps, not
+   * tap threshold - measured against the source events' own timestamps, not
    * however long replaying them happened to take, so two old batches
    * replayed back-to-back in one call are judged by how far apart they
    * REALLY occurred, not by the microseconds this call took to run.
@@ -404,7 +404,7 @@ export class InputBinding {
   }
 
   /**
-   * Explicit Resource Management alias for {@link unbind} — enables
+   * Explicit Resource Management alias for {@link unbind} - enables
    * `using binding = input.onStart(...)`. Idempotent, same as `unbind`
    * itself: disposing a binding that is already unbound (manually, or
    * because a tracking owner like `SceneInputs` unbound it first on scene
@@ -416,7 +416,7 @@ export class InputBinding {
    * Runtime `using` support requires the environment to provide a real
    * `Symbol.dispose`, or a `Symbol.for('Symbol.dispose')`-registry polyfill
    * installed before this module is imported (see the `disposeSymbol`
-   * fallback above) — without either, this method is installed under a key
+   * fallback above) - without either, this method is installed under a key
    * `using`'s lowering will never look up. Plain `unbind()` has no such
    * requirement.
    */

@@ -58,7 +58,7 @@ interface PhaserEffectSetup {
  * ```
  * inputGain ┬── dryGain ───────────────────────────────────────┐
  *           │                                                   ├── outputGain
- *           └── allpass[0] ─► … ─► allpass[N-1] ── wetGain ───┘
+ *           └── allpass[0] ─► ... ─► allpass[N-1] ── wetGain ───┘
  *                 ▲                      │
  *                 └── feedbackDelay ◄── feedbackGain ◄─────────┘
  *
@@ -266,7 +266,7 @@ export class PhaserEffect extends AudioEffect {
     // spec-compliant browsers do not mute the entire allpass chain. Browsers
     // are permitted to silence feedback cycles that contain no DelayNode (i.e.
     // zero-latency cycles), so even delayTime=0 here is sufficient to make the
-    // cycle legal — the DelayNode itself introduces at least one render-quantum
+    // cycle legal - the DelayNode itself introduces at least one render-quantum
     // of delay regardless of its delayTime parameter.
     const feedbackDelay = ctx.createDelay(1);
     feedbackDelay.delayTime.setValueAtTime(0, ctx.currentTime);
@@ -302,7 +302,7 @@ export class PhaserEffect extends AudioEffect {
     inputGain.connect(dryGain);
     dryGain.connect(outputGain);
 
-    // Wet path: inputGain → allpass[0] → … → allpass[N-1] → wetGain → outputGain
+    // Wet path: inputGain → allpass[0] → ... → allpass[N-1] → wetGain → outputGain
     inputGain.connect(allpassFilters[0]!);
     for (let i = 0; i < allpassFilters.length - 1; i++) {
       allpassFilters[i]!.connect(allpassFilters[i + 1]!);

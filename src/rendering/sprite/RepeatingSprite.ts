@@ -18,8 +18,8 @@ import { buildRepeatingSpriteQuads, validateFit, validateMode, validateOffset, v
  *
  * | Source type       | Internal path                                         |
  * |-------------------|-------------------------------------------------------|
- * | Bare `Texture`    | **Shader path** — one quad, GPU sampler repeat wrap.  |
- * | `TextureRegion`   | **Geometry path** — Cartesian-product quads, clamped. |
+ * | Bare `Texture`    | **Shader path** - one quad, GPU sampler repeat wrap.  |
+ * | `TextureRegion`   | **Geometry path** - Cartesian-product quads, clamped. |
  *
  * The public class identity and API do not change based on which path the
  * renderer uses.
@@ -175,7 +175,7 @@ export class RepeatingSprite extends Drawable {
    * Horizontal scroll offset in source-pixel units.
    *
    * On the shader path (bare `Texture` source), changing the offset does
-   * **not** trigger a geometry rebuild — the value is forwarded as
+   * **not** trigger a geometry rebuild - the value is forwarded as
    * per-instance data at render time.  On the geometry path
    * (`TextureRegion` source), offset changes mark quads dirty.
    */
@@ -257,8 +257,8 @@ export class RepeatingSprite extends Drawable {
 
   /**
    * Rendering strategy determined by the source type:
-   * - `'shader'` — bare `Texture`; renderer uses GPU sampler wrap.
-   * - `'geometry'` — `TextureRegion`; renderer builds repeat quads.
+   * - `'shader'` - bare `Texture`; renderer uses GPU sampler wrap.
+   * - `'geometry'` - `TextureRegion`; renderer builds repeat quads.
    * @internal
    */
   public get resolvedStrategy(): 'shader' | 'geometry' {

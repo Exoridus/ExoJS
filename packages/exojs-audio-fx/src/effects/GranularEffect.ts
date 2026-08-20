@@ -21,13 +21,13 @@ export interface GranularEffectOptions {
    * Compensate the density/grainSize-dependent loudness so the wet level stays
    * roughly constant (near unity) instead of rising with overlap. Compile-time,
    * not runtime. Default `false`, which preserves granular's expressive level
-   * dynamics — enable it when you want a predictable, density-independent level.
+   * dynamics - enable it when you want a predictable, density-independent level.
    */
   normalizeGain?: boolean;
 }
 
 /**
- * Granular synthesis filter — slices input into small Hann-windowed grains
+ * Granular synthesis filter - slices input into small Hann-windowed grains
  * and replays them with randomized parameters. Use cases:
  *
  *   - Ambient texture: long grain (200ms+), low density (10-30/s), high

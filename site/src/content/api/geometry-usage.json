@@ -1,6 +1,6 @@
 {
   "title": "GeometryUsage",
-  "description": "GPU buffer ownership strategy used by geometry-aware render paths. - `static` — immutable after creation; eligible for shared batched buffers. - `dynamic` — occasionally mutated; backend should keep a dedicated buffer. - `stream` — mutated every frame; backend should treat as immediate data.",
+  "description": "GPU buffer ownership strategy used by geometry-aware render paths. - `static` - immutable after creation; eligible for shared batched buffers. - `dynamic` - occasionally mutated; backend should keep a dedicated buffer. - `stream` - mutated every frame; backend should treat as immediate data.",
   "symbol": "GeometryUsage",
   "kind": "type",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "GPU buffer ownership strategy used by geometry-aware render paths.",
-        "- `static` — immutable after creation; eligible for shared batched buffers. - `dynamic` — occasionally mutated; backend should keep a dedicated buffer. - `stream` — mutated every frame; backend should treat as immediate data."
+        "- `static` - immutable after creation; eligible for shared batched buffers. - `dynamic` - occasionally mutated; backend should keep a dedicated buffer. - `stream` - mutated every frame; backend should treat as immediate data."
       ],
       "importLine": "import { GeometryUsage } from '@codexo/exojs'",
       "sourceLink": null

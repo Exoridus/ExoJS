@@ -22,7 +22,7 @@ export abstract class AudioEffect {
  * Probe whether `effect` has finished creating its underlying node(s). Every
  * built-in {@link AudioEffect} throws a descriptive error from `inputNode`/
  * `outputNode` when accessed before its own (possibly deferred) setup has
- * run — this reads that as a plain boolean instead of letting a caller that
+ * run - this reads that as a plain boolean instead of letting a caller that
  * disconnects/reconnects effects (`AudioBus`, `BaseVoice`) throw on one still
  * mid-setup.
  */

@@ -20,7 +20,7 @@
  *   5. Creates an annotated git tag `vVERSION`.
  *
  * If the packages are already at the target version (e.g. bumped manually earlier),
- * steps 1–4 are skipped and only the tag is created.
+ * steps 1-4 are skipped and only the tag is created.
  *
  * After this script succeeds, push both:
  *   git push && git push origin refs/tags/vVERSION
@@ -102,12 +102,12 @@ function assertTagAbsent(version: string): void {
     execSync(`git rev-parse --verify refs/tags/${tag}`, { stdio: 'pipe', cwd: repoRoot });
     die(`Tag ${tag} already exists. Delete it first if you need to re-cut.`);
   } catch {
-    // tag absent — good
+    // tag absent - good
   }
 }
 
 /**
- * The published parity matrix must describe the commit being released — it is
+ * The published parity matrix must describe the commit being released - it is
  * linked from the deployment and troubleshooting guides, and the release states
  * it holds as of this version.
  *
@@ -211,7 +211,7 @@ if (bumped) {
   log(`  ✓ committed`);
 } else {
   // The evidence stamp above already dirtied the tree, so it still needs a
-  // commit of its own — otherwise the tag would point at a tree whose matrix
+  // commit of its own - otherwise the tag would point at a tree whose matrix
   // does not name the release it is published under.
   log('  all packages already at target version — committing the evidence stamp only');
   run(`git add ${EVIDENCE_PATH}`);

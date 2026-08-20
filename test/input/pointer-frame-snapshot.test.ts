@@ -382,7 +382,7 @@ describe('keyboard dispatch order', () => {
     im.onKeyDown.add(channel => seen.push({ channel, pressed: true }));
     im.onKeyUp.add(channel => seen.push({ channel, pressed: false }));
 
-    // Shift released, THEN Tab pressed — within the same frame. A fixed
+    // Shift released, THEN Tab pressed - within the same frame. A fixed
     // "all keydowns before all keyups" dispatch order would report Tab's
     // keydown before Shift's keyup, letting a Tab handler still see Shift
     // as held.
@@ -408,7 +408,7 @@ describe('pointer dispatch order', () => {
     im.onPointerDown.add(() => seen.push('down'));
     im.onPointerUp.add(() => seen.push('up'));
 
-    // Release, then immediately press again — within the same frame. A
+    // Release, then immediately press again - within the same frame. A
     // fixed "Down always dispatches before Up" order would report this
     // backwards.
     fire(canvas, 'pointerup', { clientX: 10, clientY: 10, buttons: 0 });
@@ -530,7 +530,7 @@ describe('context menu policy', () => {
     manager.onContextMenu.add(seen);
 
     // The keyboard context-menu key / Shift+F10 funnel into this same native
-    // event — no prior pointerover/pointerdown means no pointer was ever
+    // event - no prior pointerover/pointerdown means no pointer was ever
     // tracked, but the request itself must still carry real coordinates.
     c.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: 40, clientY: 50 }));
     manager.preUpdate(0 as never);

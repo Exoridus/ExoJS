@@ -1,5 +1,5 @@
 /**
- * Tests for BitmapText — verifies that it uses the shared TextLayout engine
+ * Tests for BitmapText - verifies that it uses the shared TextLayout engine
  * (alignment, word-wrap, kerning, leading) and builds correct page quads.
  */
 
@@ -10,7 +10,7 @@ import { BmFont } from '#rendering/text/BmFont';
 import type { Texture } from '#rendering/texture/Texture';
 
 // ---------------------------------------------------------------------------
-// Layout-pass counter — "at most one pass per change" is only observable by
+// Layout-pass counter - "at most one pass per change" is only observable by
 // counting; comparing geometry cannot tell one pass from three.
 // ---------------------------------------------------------------------------
 
@@ -162,7 +162,7 @@ describe('BitmapText', () => {
 
   test('mutating a style property in place reaches the next layout pass', () => {
     // Line 0 ("A") is narrower than line 1 ("AB"), so right-alignment has to
-    // shift line 0's glyph to the right — a pass that skipped would leave it
+    // shift line 0's glyph to the right - a pass that skipped would leave it
     // at x = 0.
     const text = new BitmapText('A\nAB', makeFont());
     const first = text.pageQuads[0];
@@ -288,11 +288,11 @@ describe('BitmapText', () => {
     // "A B" total = 10 + 5 + 10 = 25. With maxWidth=12, "B" wraps to line 2.
     const text = new BitmapText('A B', makeFont(), { layout: { maxWidth: 12 } });
 
-    // All quads on the same page — but they are on two different Y positions.
+    // All quads on the same page - but they are on two different Y positions.
     const quads = text.pageQuads;
     expect(quads.length).toBeGreaterThanOrEqual(1);
 
-    // Gather unique Y values from the first vertex of each quad (y at index 1, 9, …)
+    // Gather unique Y values from the first vertex of each quad (y at index 1, 9, ...)
     const vertices = quads[0].vertices;
     const yValues = new Set<number>();
     for (let i = 1; i < vertices.length; i += 8) yValues.add(vertices[i]);
@@ -367,7 +367,7 @@ describe('BitmapText.measure', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Dev assertions — BmFont and BmFontAdapter
+// Dev assertions - BmFont and BmFontAdapter
 // ---------------------------------------------------------------------------
 
 describe('BmFont dev assertions', () => {
@@ -425,7 +425,7 @@ describe('BmFontAdapter missing-glyph warnings', () => {
 
     adapter.getGlyph('Z', 0);
 
-    // The default console sink logs `(prefix, style, message)` — the message
+    // The default console sink logs `(prefix, style, message)` - the message
     // is the third argument, not the first.
     expect(spy.mock.calls[0]?.[0]).toContain('[BitmapText]');
     expect(spy.mock.calls[0]?.[2]).toContain('U+005A');

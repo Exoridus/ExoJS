@@ -118,7 +118,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Visual presence of the affected scene — enter: 0 → 1 (offscreen → onscreen); exit: 1 → 0 (onscreen → offscreen). Lets both phases share one formula (e.g. lerp(offscreenX, 0, presence)) without either inverting anything itself."
+          "description": "Visual presence of the affected scene - enter: 0 → 1 (offscreen → onscreen); exit: 1 → 0 (onscreen → offscreen). Lets both phases share one formula (e.g. lerp(offscreenX, 0, presence)) without either inverting anything itself."
         },
         {
           "name": "progress",

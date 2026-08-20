@@ -85,7 +85,7 @@ describe('SmoothedAudioParam', () => {
     p.setTargetAtTime.mockClear();
     p.cancelScheduledValues.mockClear();
 
-    // Move by less than POSITION_EPSILON — treated as stationary.
+    // Move by less than POSITION_EPSILON - treated as stationary.
     s.write(p as unknown as AudioParam, 100 + POSITION_EPSILON / 2, 0.016, settings);
 
     expect(p.setValueAtTime).not.toHaveBeenCalled();
@@ -145,7 +145,7 @@ describe('deriveVelocity', () => {
     expect(sample.y).toBe(0);
 
     // A second tick at the exact same position AND the exact same
-    // AudioContext.currentTime (e.g. an explicit `voice.position = …` write
+    // AudioContext.currentTime (e.g. an explicit `voice.position = ...` write
     // immediately followed by the manager's per-frame tick, both landing in
     // the same render quantum) must not stomp the velocity just derived.
     deriveVelocity(sample, 100, 0, 1);
@@ -160,7 +160,7 @@ describe('deriveVelocity', () => {
     deriveVelocity(sample, 100, 0, 1);
     expect(sample.x).toBe(100);
 
-    // Same position as the last sample, but a distinctly LATER timestamp —
+    // Same position as the last sample, but a distinctly LATER timestamp -
     // the source has genuinely stopped moving, so the derived velocity must
     // now zero out rather than keep coasting on the last non-zero value.
     deriveVelocity(sample, 100, 0, 2);

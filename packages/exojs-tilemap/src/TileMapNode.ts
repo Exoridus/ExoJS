@@ -23,17 +23,17 @@ export interface TileMapNodeOptions {
 
 /**
  * A convenience scene node that renders a whole {@link TileMap} as a
- * {@link Container} of one node per renderable layer — a {@link TileLayerNode}
+ * {@link Container} of one node per renderable layer - a {@link TileLayerNode}
  * per tile layer and an {@link ImageLayerNode} per image layer, interleaved
  * back-to-front by the map's combined document order
  * ({@link import('./TileMap').TileMap.renderableLayers}).
  *
- * `TileMapNode` owns **only** its layer nodes — never application actors. Use
+ * `TileMapNode` owns **only** its layer nodes - never application actors. Use
  * it for the simple, non-interleaved case (no actors between layers); for
  * actor interleaving, place individual `TileLayerNode`s / `ImageLayerNode`s
  * into your own scene graph instead (see `TileMapView`).
  *
- * The node references — but never owns — the {@link TileMap}: destroying the
+ * The node references - but never owns - the {@link TileMap}: destroying the
  * node frees its layer/chunk nodes and their cached GPU geometry, while the
  * `TileMap` data and Loader-owned textures survive (free them via
  * `TileMap.destroy()` / `Loader.destroy()` respectively).
@@ -72,7 +72,7 @@ export class TileMapNode extends Container {
    * chunk node, current and rebuilt). Snaps tile chunk origins to the active
    * render target's device-pixel grid for crisp tiles; with integer tile pitch
    * the grid stays exact and adjacent chunks/layers cannot drift apart. Purely
-   * visual — tile data, layer offsets, chunk revisions, and culling are
+   * visual - tile data, layer offsets, chunk revisions, and culling are
    * unchanged. Setting the current value is a no-op; an invalid value throws and
    * leaves the prior mode unchanged.
    *
@@ -97,7 +97,7 @@ export class TileMapNode extends Container {
   }
 
   /**
-   * The layer render nodes — tile and image alike — in the map's combined
+   * The layer render nodes - tile and image alike - in the map's combined
    * document order.
    */
   public get layerNodes(): ReadonlyArray<TileLayerNode | ImageLayerNode> {
@@ -141,7 +141,7 @@ export class TileMapNode extends Container {
     const bounds = this._localBounds;
 
     // Reading the pixel extents directly (rather than gating on `bounded`)
-    // is what narrows them to numbers — `bounded` is a plain boolean getter.
+    // is what narrows them to numbers - `bounded` is a plain boolean getter.
     const { pixelHeight, pixelWidth } = this._map;
 
     if (pixelWidth !== undefined && pixelHeight !== undefined) {

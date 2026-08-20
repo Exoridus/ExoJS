@@ -556,7 +556,7 @@ describe('ShaderFilter on WebGL2', () => {
     filter.destroy();
   });
 
-  // 18. _ensureConnected is idempotent — second apply() does not re-compile
+  // 18. _ensureConnected is idempotent - second apply() does not re-compile
   test('second apply() reuses the already-compiled shader', () => {
     const backend = makeWebGl2Backend();
     const filter = new ShaderFilter({ glsl: { fragment: minimalFragSrc } });
@@ -601,7 +601,7 @@ describe('ShaderFilter on WebGL2', () => {
     const input = new RenderTexture(16, 16);
     const output = new RenderTexture(32, 32);
 
-    // Capture the FIRST setRenderTarget call — BackendTargetPass calls:
+    // Capture the FIRST setRenderTarget call - BackendTargetPass calls:
     //   1. setRenderTarget(output)   ← the one we want to verify
     //   2. setRenderTarget(previousTarget) after the callback
     const capturedTargets: Array<RenderTarget | null> = [];

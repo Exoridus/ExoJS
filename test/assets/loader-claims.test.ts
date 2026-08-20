@@ -17,7 +17,7 @@ function createCoreLoader(options?: LoaderOptions): Loader {
 
 // SoundFactory.create() decodes bytes via the shared OfflineAudioContext
 // (`decodeAudioData` from '#audio/audio-context'). jsdom has no real audio
-// decoder, so the module is mocked wholesale — mirroring the `{ duration }`
+// decoder, so the module is mocked wholesale - mirroring the `{ duration }`
 // AudioBuffer stub used by test/assets/sound-factory.test.ts. `vi.mock`
 // factories are hoisted above imports, so the mock function must be created
 // via `vi.hoisted()` to be referenced safely inside the factory below.
@@ -118,7 +118,7 @@ describe('refcount / claims', () => {
 
   test('a not-yet-started background entry is dropped from the queue at refcount 0', () => {
     // Hanging fetch: 'a.ogg' stays in flight (never settles), so 'b'/'c' remain
-    // queued behind the cap — no background fetch settles past the synchronous
+    // queued behind the cap - no background fetch settles past the synchronous
     // assertions (avoids an unhandled rejection after the test tears the mock down).
     global.fetch = vi.fn((): Promise<Response> => new Promise<Response>(() => {})) as unknown as typeof fetch;
     // Concurrency 1: only 'a.ogg' goes in flight; 'b'/'c' stay queued so the
@@ -149,7 +149,7 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).toBeNull(); // both gone → evicted
   });
 
-  test('release while the fetch is still in flight frees the handle on arrival (§4.7)', async () => {
+  test('release while the fetch is still in flight frees the handle on arrival', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
@@ -165,10 +165,10 @@ describe('refcount / claims', () => {
     const captured = handle.loaded;
 
     // Release before load settles: hits _evictKey's leave-it branch (deferred
-    // !== undefined) — it must NOT re-arm or drop the in-flight fetch.
+    // !== undefined) - it must NOT re-arm or drop the in-flight fetch.
     owner.release(handle);
 
-    // §4.7 free-on-arrival: the running fetch completes and settles the captured
+    // Free-on-arrival: the running fetch completes and settles the captured
     // .loaded (the asset WAS fully there), but because refcount is 0 the payload
     // is freed immediately on arrival.
     await captured;
@@ -212,7 +212,7 @@ describe('refcount / claims', () => {
     expect(handle.audioBuffer).not.toBeNull();
   });
 
-  test('in-flight arrival at refcount 0 frees immediately but .loaded still resolves (§4.7)', async () => {
+  test('in-flight arrival at refcount 0 frees immediately but .loaded still resolves', async () => {
     mockFetchAudio();
     const loader = createCoreLoader();
     const owner = loader.createScope({ name: 'owner' });
@@ -224,9 +224,9 @@ describe('refcount / claims', () => {
 
     owner.release(handle); // refcount 0 while the fetch is still in flight
 
-    // The captured promise resolves (the asset WAS fully fetched)…
+    // The captured promise resolves (the asset WAS fully fetched)...
     await expect(captured).resolves.toBe(handle);
-    // …but the payload was freed on arrival because nothing claims it.
+    // ...but the payload was freed on arrival because nothing claims it.
     expect(handle.audioBuffer).toBeNull();
     expect(handle.loadState).toBe('loading');
   });

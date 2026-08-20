@@ -145,7 +145,7 @@ function makeScene(): {
 }
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapView — construction / default view
+// TileMapView - construction / default view
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapView construction', () => {
@@ -193,7 +193,7 @@ describe('TileMapView construction', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapView — direct layer-node access
+// TileMapView - direct layer-node access
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapView direct layer-node access', () => {
@@ -240,7 +240,7 @@ describe('TileMapView direct layer-node access', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapView — bands
+// TileMapView - bands
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapView bands', () => {
@@ -378,7 +378,7 @@ describe('TileMapView bands', () => {
     expect(view.hasBand('late')).toBe(false);
 
     // Even a refresh that creates a NEW node re-resolves from the frozen
-    // internal copy ([1]) — not from the caller's mutated array ([1, 2]).
+    // internal copy ([1]) - not from the caller's mutated array ([1, 2]).
     map.removeLayer(2);
     view.refreshLayers();
     map.addLayer(makeLayer(tileset, { id: 2, name: 'ground' }));
@@ -394,7 +394,7 @@ describe('TileMapView bands', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapView — ownership & destruction
+// TileMapView - ownership & destruction
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapView ownership & destruction', () => {
@@ -409,7 +409,7 @@ describe('TileMapView ownership & destruction', () => {
 
     view.destroy();
 
-    // The view and its generated nodes are gone …
+    // The view and its generated nodes are gone ...
     expect(view.destroyed).toBe(true);
     expect(view.layers).toHaveLength(0);
     expect(view.bands).toHaveLength(0);
@@ -418,13 +418,13 @@ describe('TileMapView ownership & destruction', () => {
     expect(backgroundNode.children).toHaveLength(0);
     expect(roofNode.chunkNodes).toHaveLength(0);
 
-    // … the bands are detached from the application parent …
+    // ... the bands are detached from the application parent ...
     expect(worldRoot.children).toHaveLength(1);
     expect(worldRoot.children[0]).toBe(actors);
     expect(worldRoot.children).not.toContain(groundBand);
     expect(worldRoot.children).not.toContain(roofBand);
 
-    // … and application actors are untouched.
+    // ... and application actors are untouched.
     expect(actors.parent).toBe(worldRoot);
     expect(hero.parent).toBe(actors);
 
@@ -447,7 +447,7 @@ describe('TileMapView ownership & destruction', () => {
   it('band.destroy() is idempotent and safe before a later view.destroy()', () => {
     // Regression: TileMapBand had no destroyed guard, so a direct band.destroy()
     // followed by view.destroy() (which re-invokes band.destroy()) re-ran
-    // Container.destroy() — itself not idempotent. The guard makes both safe.
+    // Container.destroy() - itself not idempotent. The guard makes both safe.
     const { view, worldRoot, actors, hero } = makeScene();
     const groundBand = view.band('ground');
 
@@ -534,7 +534,7 @@ describe('TileMapView ownership & destruction', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapView — refreshLayers
+// TileMapView - refreshLayers
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapView refreshLayers', () => {
@@ -543,7 +543,7 @@ describe('TileMapView refreshLayers', () => {
     const view = map.createView({ bands: { ground: ['background', 'ground'] } });
     const node = view.getLayerNodeById(2)!;
 
-    // Write into an existing chunk — picked up via chunk revisions, no view API needed.
+    // Write into an existing chunk - picked up via chunk revisions, no view API needed.
     map.getTileLayerById(2)!.setTileAt(0, 0, { tileset, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY });
 
     expect(view.getLayerNodeById(2)).toBe(node);
@@ -682,7 +682,7 @@ describe('TileMapView refreshLayers', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapView — multiple maps
+// TileMapView - multiple maps
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapView across multiple maps', () => {
@@ -753,7 +753,7 @@ describe('TileMapView across multiple maps', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapView — image layer nodes
+// TileMapView - image layer nodes
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapView image layer nodes', () => {
@@ -869,7 +869,7 @@ describe('TileMapView image layer nodes', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapView — heterogeneous bands (tile + image members)
+// TileMapView - heterogeneous bands (tile + image members)
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapView heterogeneous bands', () => {
@@ -1097,7 +1097,7 @@ describe('TileMapView heterogeneous bands', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapBand — transform
+// TileMapBand - transform
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapBand transform', () => {
@@ -1172,7 +1172,7 @@ describe('TileMapBand transform', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapBand — bounds
+// TileMapBand - bounds
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapBand bounds', () => {
@@ -1237,7 +1237,7 @@ describe('TileMapBand bounds', () => {
 
     const rect = band.getBounds();
 
-    // The union covers children only — it is NOT stretched back to (0, 0).
+    // The union covers children only - it is NOT stretched back to (0, 0).
     expect([rect.x, rect.y, rect.width, rect.height]).toEqual([64, 32, 128, 128]);
   });
 
@@ -1272,7 +1272,7 @@ describe('TileMapBand bounds', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════
-// TileMapBand — internal membership operations (direct, bypassing TileMapView)
+// TileMapBand - internal membership operations (direct, bypassing TileMapView)
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapBand internal membership operations', () => {
@@ -1373,7 +1373,7 @@ describe('TileMapBand visibility & opacity', () => {
     layer.visible = false;
     layer.opacity = 0.25;
 
-    // The node reads the live runtime layer — no band/view API involved.
+    // The node reads the live runtime layer - no band/view API involved.
     expect(node.layer.visible).toBe(false);
     expect(node.layer.opacity).toBe(0.25);
 
@@ -1387,11 +1387,11 @@ describe('TileMapBand visibility & opacity', () => {
 
     band.visible = false;
 
-    // Hiding the band never writes through to the runtime layers …
+    // Hiding the band never writes through to the runtime layers ...
     expect(map.getTileLayerById(1)!.visible).toBe(true);
     expect(map.getTileLayerById(2)!.visible).toBe(true);
 
-    // … and layer visibility never feeds back into the band.
+    // ... and layer visibility never feeds back into the band.
     band.visible = true;
     map.getTileLayerById(1)!.visible = false;
 

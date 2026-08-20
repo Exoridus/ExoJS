@@ -174,7 +174,7 @@ export function buildRepeatingSpriteQuads(
  * Implementation: generates a plan for `(destLen + phase)`, shifts all
  * segment destinations back by `phase`, and clips to `[0, destLen]`.  This
  * is correct for `clip` fit; for `round` fit the extended-span count may
- * differ slightly from the zero-offset count — atlas scrolling is
+ * differ slightly from the zero-offset count - atlas scrolling is
  * discouraged by design.
  * @internal
  */

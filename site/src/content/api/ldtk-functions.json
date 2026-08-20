@@ -123,7 +123,7 @@
             }
           ],
           "returnType": "LdtkIntGridValueDef | undefined",
-          "description": "Look up the named/coloured LdtkIntGridValueDef at a tile coordinate on a TileLayer converted from an LDtk IntGrid layer instance. Returns undefined when the coordinate is out of bounds, the cell's raw value is 0 (empty), the raw value has no matching definition, or layer was not converted from an IntGrid layer instance (no IntGrid data attached via ldtkIntGridCsvProperty / ldtkIntGridValuesProperty). The underlying JSON-encoded CSV/value-defs properties are parsed once per layer and cached (see getParsedIntGridData) — safe to call from a hot path (e.g. per-cell or per-frame collision/classification checks)."
+          "description": "Look up the named/coloured LdtkIntGridValueDef at a tile coordinate on a TileLayer converted from an LDtk IntGrid layer instance. Returns undefined when the coordinate is out of bounds, the cell's raw value is 0 (empty), the raw value has no matching definition, or layer was not converted from an IntGrid layer instance (no IntGrid data attached via ldtkIntGridCsvProperty / ldtkIntGridValuesProperty). The underlying JSON-encoded CSV/value-defs properties are parsed once per layer and cached (see getParsedIntGridData) - safe to call from a hot path (e.g. per-cell or per-frame collision/classification checks)."
         },
         {
           "name": "ldtkToTileMap",
@@ -195,7 +195,7 @@
             }
           ],
           "returnType": "LdtkMap",
-          "description": "Convert a raw LdtkData document into an LdtkMap containing one runtime TileMap per LDtk level. Tile layers (Tiles / AutoLayer) become renderable TileLayers. IntGrid layers become dimension-correct TileLayers — tile data is placed only when the layer carries autoLayerTiles. Entity layers become data-only ObjectLayers with entity position, size, and scalar field properties. Pass options.tilesets to populate tile data; omit it for structure-only conversion (useful in unit tests that do not need textures). Transparently handles both LDtk root shapes via getLdtkLevelEntries: single-world (data.levels) and multi-world (data.worlds[].levels) — in the latter case every converted level's TileMap.properties is additionally tagged with its owning world's iid under the reserved ldtkWorldIid key."
+          "description": "Convert a raw LdtkData document into an LdtkMap containing one runtime TileMap per LDtk level. Tile layers (Tiles / AutoLayer) become renderable TileLayers. IntGrid layers become dimension-correct TileLayers - tile data is placed only when the layer carries autoLayerTiles. Entity layers become data-only ObjectLayers with entity position, size, and scalar field properties. Pass options.tilesets to populate tile data; omit it for structure-only conversion (useful in unit tests that do not need textures). Transparently handles both LDtk root shapes via getLdtkLevelEntries: single-world (data.levels) and multi-world (data.worlds[].levels) - in the latter case every converted level's TileMap.properties is additionally tagged with its owning world's iid under the reserved ldtkWorldIid key."
         }
       ],
       "paragraphs": [],
@@ -309,7 +309,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Default immutable LDtk extension descriptor. Registers one asset binding: - ldtkMapBinding — loader.load(LdtkMap, 'world.ldtk') → fetches the .ldtk JSON, loads all referenced tileset images, and returns a fully assembled LdtkMap with one runtime import('@codexo/exojs-tilemap').TileMap per level. Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the LDtk adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
+          "description": "Default immutable LDtk extension descriptor. Registers one asset binding: - ldtkMapBinding - loader.load(LdtkMap, 'world.ldtk') → fetches the .ldtk JSON, loads all referenced tileset images, and returns a fully assembled LdtkMap with one runtime import('@codexo/exojs-tilemap').TileMap per level. Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the LDtk adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
         },
         {
           "name": "ldtkIntGridCsvProperty",
@@ -351,7 +351,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Reserved TileLayer.properties key holding the JSON-encoded LdtkIntGridValueDef array for a TileLayer converted from an LDtk IntGrid layer instance — the raw-int → named/coloured mapping declared on the owning layer definition (data.defs.layers[].intGridValues). Prefer getLdtkIntGridValueAt over reading this directly."
+          "description": "Reserved TileLayer.properties key holding the JSON-encoded LdtkIntGridValueDef array for a TileLayer converted from an LDtk IntGrid layer instance - the raw-int → named/coloured mapping declared on the owning layer definition (data.defs.layers[].intGridValues). Prefer getLdtkIntGridValueAt over reading this directly."
         },
         {
           "name": "ldtkMapBinding",
@@ -392,7 +392,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Declarative asset binding for LdtkMap. Claims the ldtk file extension so that: - loader.load(Asset.type('ldtkMap', 'world.ldtk')) — returns the parsed LdtkMap with all levels pre-converted to runtime import('@codexo/exojs-tilemap').TileMaps. - loader.load('world.ldtk') — auto-routed to LdtkMap via the ExtensionKindMap augmentation in public.ts (suffix → 'ldtkMap'). Each loaded level's TileMap is accessible via LdtkMap.levels or LdtkMap.getLevelByName."
+          "description": "Declarative asset binding for LdtkMap. Claims the ldtk file extension so that: - loader.load(Asset.type('ldtkMap', 'world.ldtk')) - returns the parsed LdtkMap with all levels pre-converted to runtime import('@codexo/exojs-tilemap').TileMaps. - loader.load('world.ldtk') - auto-routed to LdtkMap via the ExtensionKindMap augmentation in public.ts (suffix → 'ldtkMap'). Each loaded level's TileMap is accessible via LdtkMap.levels or LdtkMap.getLevelByName."
         }
       ],
       "paragraphs": [],

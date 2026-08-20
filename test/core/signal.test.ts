@@ -131,7 +131,7 @@ describe('Signal', () => {
     // Neither the nested dispatch nor the outer dispatch mutate `_handlers`
     // itself while depth > 0, so both loops still walk the full [a, b] they
     // started with: the nested dispatch reaches `b` once, then the outer
-    // loop's own iteration (resumed after `a` returns) reaches it again —
+    // loop's own iteration (resumed after `a` returns) reaches it again -
     // proving the outer dispatch still sees the listener set it started
     // with instead of a set truncated by an early flush.
     expect(calls).toEqual(['a', 'a', 'b', 'b']);
@@ -173,7 +173,7 @@ describe('Signal', () => {
     // and the outer pass (its self-removal is deferred while depth > 0, same
     // as the plain `remove()` case above), so without an internal "already
     // fired" latch the wrapper itself would run twice and call `handler`
-    // twice — quietly breaking the "once" contract instead of the old code's
+    // twice - quietly breaking the "once" contract instead of the old code's
     // loud crash. The latch inside the wrapper must make the second
     // invocation a no-op.
     const signal = new Signal();
@@ -248,10 +248,10 @@ describe('Signal', () => {
     signal.dispatch();
 
     // Neither the nested dispatch nor the rest of the outer dispatch invoke
-    // `c` — it was added mid-dispatch, so it only takes effect once this
+    // `c` - it was added mid-dispatch, so it only takes effect once this
     // outermost dispatch has fully returned.
     expect(calls).toEqual(['a', 'a']);
-    // The add itself did land, just deferred — `c` is registered now...
+    // The add itself did land, just deferred - `c` is registered now...
     expect(signal.has(c)).toBe(true);
 
     calls.length = 0;
@@ -286,8 +286,8 @@ describe('Signal', () => {
   });
 
   it('remove() then add() for the same handler within one dispatch nets to "still registered"', () => {
-    // Regression: add() used to consult the un-flushed `_handlers` array —
-    // still physically containing `h` while depth > 0 — and treat that as
+    // Regression: add() used to consult the un-flushed `_handlers` array -
+    // still physically containing `h` while depth > 0 - and treat that as
     // "already registered, nothing to do", so it queued no pending op. The
     // later flush then only saw the pending remove and dropped `h` for good,
     // even though the caller's last word on `h` was "add it back".
@@ -369,7 +369,7 @@ describe('Signal', () => {
     expect(calls).toEqual(['a']);
     expect(signal.count).toBe(0);
 
-    // The signal is left destroyed, not merely emptied — further mutation
+    // The signal is left destroyed, not merely emptied - further mutation
     // is inert rather than resurrecting it.
     signal.add(() => calls.push('resurrected'));
     expect(signal.count).toBe(0);
@@ -402,7 +402,7 @@ describe('Signal', () => {
 
     expect(() => signal.dispatch()).not.toThrow();
 
-    // Nested dispatch: a, a (re-entrant), b (destroys) — both the nested
+    // Nested dispatch: a, a (re-entrant), b (destroys) - both the nested
     // loop (at its next index) and the outer loop (resumed after `a`
     // returns) see `_destroyed` and stop before ever reaching `c`.
     expect(calls).toEqual(['a', 'a', 'b']);

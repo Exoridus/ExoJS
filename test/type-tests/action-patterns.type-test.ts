@@ -5,8 +5,8 @@
 // alternatives within a step, `+` joins channels required together, and every
 // token must resolve to a `Keyboard` member (case-insensitively, whitespace
 // tolerated, with an optional `Keyboard.` prefix and the shorthand aliases).
-// Anything the compiler cannot see as a literal — a pattern read from a config
-// file, assembled at runtime, or handed over from JavaScript — must still
+// Anything the compiler cannot see as a literal - a pattern read from a config
+// file, assembled at runtime, or handed over from JavaScript - must still
 // compile and is left to the runtime parser alone.
 //
 // `pnpm typecheck:type-tests` compiles this file under all three lanes, so
@@ -28,7 +28,7 @@ type Equal<A, B> = (<G>() => G extends A ? 1 : 2) extends <G>() => G extends B ?
 type Expect<T extends true> = T;
 
 // ---------------------------------------------------------------------------
-// Array bindings — unchanged by the compile-time string validation
+// Array bindings - unchanged by the compile-time string validation
 // ---------------------------------------------------------------------------
 
 const chord: ChordBinding = [Keyboard.Control, Keyboard.K];
@@ -70,7 +70,7 @@ new ChordAction([{}]);
 new SequenceAction({});
 
 // ---------------------------------------------------------------------------
-// Non-literal patterns bail out — the runtime parser stays the only judge
+// Non-literal patterns bail out - the runtime parser stays the only judge
 // ---------------------------------------------------------------------------
 
 declare function readPatternFromConfig(): string;
@@ -94,7 +94,7 @@ void new SequenceAction(declaredSequence);
 type _ValidChordIsItself = Expect<Equal<ValidatedChordBinding<'Control+S'>, 'Control+S'>>;
 type _ValidSequenceIsItself = Expect<Equal<ValidatedSequenceBinding<'A>B'>, 'A>B'>>;
 
-// A union of literals is checked member by member — every member must hold.
+// A union of literals is checked member by member - every member must hold.
 declare const platformIsApple: boolean;
 void new ChordAction(platformIsApple ? 'Meta+S' : 'Control+S');
 // @ts-expect-error only one member of the union is a valid pattern.
@@ -132,18 +132,18 @@ void new SequenceAction('A>B|C');
 void new SequenceAction('Down>Down+Right>Right');
 void new SequenceAction('Control+K|Meta+K>S');
 void new SequenceAction('Up>Up>Down>Down>Left>Right>Left>Right>B>A', { maxGap: 800 });
-// A realistically long pattern — eight steps of three tokens each — must stay
+// A realistically long pattern - eight steps of three tokens each - must stay
 // well inside the compiler's instantiation limits.
 void new SequenceAction('A+B+C>D+E+F>G+H+I>J+K+L>M+N+O>P+Q+R>S+T+U>V+W+X');
 void new SequenceAction('   Up  >  Down   >  Left + Right  |  Ctrl + Alt  >  A   ');
 
 // ---------------------------------------------------------------------------
-// Rejected string literals — unknown tokens
+// Rejected string literals - unknown tokens
 // ---------------------------------------------------------------------------
 
 // @ts-expect-error 'Sv' is not a Keyboard member.
 new ChordAction('Ctrl+Sv');
-// @ts-expect-error 'KeyA' is not a Keyboard member — the member is named 'A'.
+// @ts-expect-error 'KeyA' is not a Keyboard member - the member is named 'A'.
 new ChordAction('Keyboard.KeyA');
 // @ts-expect-error the alias table has no 'meta.' prefix, only 'Keyboard.'.
 new ChordAction('Meta.S');
@@ -160,7 +160,7 @@ type _UnknownTokenMessage = Expect<
 >;
 
 // ---------------------------------------------------------------------------
-// Rejected string literals — empty tokens, alternatives and patterns
+// Rejected string literals - empty tokens, alternatives and patterns
 // ---------------------------------------------------------------------------
 
 // @ts-expect-error trailing '+' leaves an empty token.
@@ -198,7 +198,7 @@ type _EmptyAlternativeMessage = Expect<
 >;
 
 // ---------------------------------------------------------------------------
-// Rejected string literals — repeated channels within one alternative
+// Rejected string literals - repeated channels within one alternative
 // ---------------------------------------------------------------------------
 
 // @ts-expect-error the same channel twice within one chord.
@@ -219,7 +219,7 @@ void new ChordAction('Ctrl+S|Ctrl+K');
 type _RepeatedChannelMessage = Expect<Equal<ValidatedChordBinding<'Ctrl+Control'>, 'ChordAction: the chord contains the same channel more than once.'>>;
 
 // ---------------------------------------------------------------------------
-// Rejected string literals — ChordAction forbids '>'
+// Rejected string literals - ChordAction forbids '>'
 // ---------------------------------------------------------------------------
 
 // @ts-expect-error a chord is a single simultaneous step; use SequenceAction.

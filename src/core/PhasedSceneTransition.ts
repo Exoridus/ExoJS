@@ -16,7 +16,7 @@ import type { Time } from './Time';
 /**
  * Per-phase render-resource requirements for one phase (`enter` or `exit`)
  * of a {@link PhasedSceneTransition}. Same shape as {@link SceneTransitionRequirements}
- * — kept as a distinct type because a phase declares its *own* requirements,
+ * - kept as a distinct type because a phase declares its *own* requirements,
  * which the Director then merges with the other phase's via
  * {@link mergeSceneTransitionRequirements} to produce the session-wide
  * {@link SceneTransitionRequirements}.
@@ -31,12 +31,12 @@ const currentFrameRank = { none: 0, direct: 1, texture: 2 } as const;
 
 /**
  * Join two phases' {@link SceneTransitionPhaseRequirements} into one
- * session-wide {@link SceneTransitionRequirements} — the stronger
+ * session-wide {@link SceneTransitionRequirements} - the stronger
  * requirement wins on each axis independently. This is the
  * entire "direct → texture identity-composite promotion" rule: once this
  * merge picks `texture`, the existing per-frame live-surface-to-texture
  * render already populates `frame.current` for *any*
- * `texture`-requesting session — a promoted phase that itself only
+ * `texture`-requesting session - a promoted phase that itself only
  * declared `direct` never needs to know it was promoted.
  */
 export function mergeSceneTransitionRequirements(a: SceneTransitionPhaseRequirements, b: SceneTransitionPhaseRequirements): SceneTransitionRequirements {
@@ -67,7 +67,7 @@ export interface SceneTransitionPhaseContext {
   /** `progress` after this transition's `easing` function. Always 0 → 1. */
   readonly easedProgress: number;
   /**
-   * Visual presence of the affected scene — `enter`: 0 → 1 (offscreen →
+   * Visual presence of the affected scene - `enter`: 0 → 1 (offscreen →
    * onscreen); `exit`: 1 → 0 (onscreen → offscreen). Lets both phases share
    * one formula (e.g. `lerp(offscreenX, 0, presence)`) without either
    * inverting anything itself.
@@ -79,11 +79,11 @@ export interface SceneTransitionPhaseContext {
 
 /**
  * Single-class `enter()`/`exit()` authoring layer over the full
- * {@link SceneTransition} contract — covers the common case
+ * {@link SceneTransition} contract - covers the common case
  * (fade, slide, wipe, a custom flash) with no need to hand-manage timing,
  * easing, or session lifecycle. Subclasses implement
  * {@link PhasedSceneTransition.getPhaseRequirements} and override
- * {@link PhasedSceneTransition.enter}/{@link PhasedSceneTransition.exit} —
+ * {@link PhasedSceneTransition.enter}/{@link PhasedSceneTransition.exit} -
  * `createSession()` is implemented once, here, and never needs overriding
  * for this common case.
  * @stable
@@ -94,10 +94,10 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
   public readonly placement: 'scene' | 'screen';
 
   /**
-   * Public — an abstract class with a `protected` constructor is still not
+   * Public - an abstract class with a `protected` constructor is still not
    * directly instantiable (that's what `abstract` already does), but a
    * *protected* constructor is inherited: a concrete subclass that declares
-   * no constructor of its own (the common case — e.g. a `FlashTransition`
+   * no constructor of its own (the common case - e.g. a `FlashTransition`
    * with only `enter()`/`exit()`) would inherit it and become
    * uninstantiable from outside the module. Public keeps every minimal
    * subclass usable with zero boilerplate.
@@ -110,7 +110,7 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
   }
 
   /**
-   * Director entry point — mirrors {@link SceneTransition.beginSession}/
+   * Director entry point - mirrors {@link SceneTransition.beginSession}/
    * `createSession()`: the Director (and, for `{ enter, exit }`
    * composition, a sibling `PhasedSceneTransition` instance's own session
    * driver) calls this directly on a phase instance it doesn't own the
@@ -127,7 +127,7 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
 
   /**
    * Allocate this navigation's session-scoped mutable scratch state (reused
-   * `Sprite`/`Matrix`/`Color`/etc — anything `enter()`/`exit()` mutates per
+   * `Sprite`/`Matrix`/`Color`/etc - anything `enter()`/`exit()` mutates per
    * draw). Called once per session, never shared across navigations or with
    * the definition instance itself, which must stay fully immutable so it
    * can be reused (even concurrently) across arbitrarily many navigations.
@@ -138,7 +138,7 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
   }
 
   /**
-   * @internal Public forwarder for {@link PhasedSceneTransition.createPhaseState} —
+   * @internal Public forwarder for {@link PhasedSceneTransition.createPhaseState} -
    * mirrors {@link PhasedSceneTransition.getRequirementsForPhase}'s existing
    * pattern: `PhasedSceneTransitionSession` (and a composed sibling
    * instance) is not a subclass of this class and cannot call the
@@ -148,10 +148,10 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
     return this.createPhaseState();
   }
 
-  /** Draw one frame of the `enter` phase. No-op by default — override for a visible enter effect. */
+  /** Draw one frame of the `enter` phase. No-op by default - override for a visible enter effect. */
   protected enter(_context: SceneTransitionPhaseContext, _state: PhaseState): void {}
 
-  /** Draw one frame of the `exit` phase. No-op by default — override for a visible exit effect. */
+  /** Draw one frame of the `exit` phase. No-op by default - override for a visible exit effect. */
   protected exit(_context: SceneTransitionPhaseContext, _state: PhaseState): void {}
 
   public override getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
@@ -159,7 +159,7 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
   }
 
   /**
-   * Session-driver entry point for rendering one frame of `phase` —
+   * Session-driver entry point for rendering one frame of `phase` -
    * mirrors {@link PhasedSceneTransition.getRequirementsForPhase} exactly:
    * {@link PhasedSceneTransitionSession} (and, for `{ enter, exit }`
    * composition, a *different* `PhasedSceneTransition` instance's session)
@@ -184,10 +184,10 @@ export abstract class PhasedSceneTransition<PhaseState = void> extends SceneTran
 type PhasedTransitionPhaseState = 'exit' | 'holding' | 'enter' | 'done';
 
 /**
- * Drives one {@link SceneTransitionSession} for a `{ enter, exit }` pair —
+ * Drives one {@link SceneTransitionSession} for a `{ enter, exit }` pair -
  * `exitPhase` and `enterPhase` may be the *same* instance (the common,
  * single-`PhasedSceneTransition` case) or two independently
- * authored instances (composition — {@link composePhasedSceneTransition}).
+ * authored instances (composition - {@link composePhasedSceneTransition}).
  * Exit runs 0→1, then `environment.commit()` is requested exactly once and
  * the session holds at the exit end-state until `environment.committed`
  * is observed true on a later `update()` call (never reentrantly within
@@ -198,7 +198,7 @@ type PhasedTransitionPhaseState = 'exit' | 'holding' | 'enter' | 'done';
 export class PhasedSceneTransitionSession implements SceneTransitionSession {
   private _phaseState: PhasedTransitionPhaseState = 'exit';
   private _elapsedMs = 0;
-  /** Reusable sprite for the direct→texture identity-composite fallback — session-owned, never shared with the phase definitions. */
+  /** Reusable sprite for the direct→texture identity-composite fallback - session-owned, never shared with the phase definitions. */
   private readonly _identitySprite = new Sprite(null);
   private readonly _exitPhaseState: unknown;
   private readonly _enterPhaseState: unknown;
@@ -232,7 +232,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
 
       // Falls through to process the freshly-entered `enter` phase's advance
       // with this same delta, rather than returning and wasting an entire
-      // extra frame at 0 progress — the "holding" wait consumes zero of the
+      // extra frame at 0 progress - the "holding" wait consumes zero of the
       // enter phase's own duration, but the frame that finally observes
       // `committed` should not be a second no-op frame on top of that.
       this._phaseState = 'enter';
@@ -257,12 +257,12 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
   }
 
   public render(context: RenderingContext, frame: SceneTransitionFrame): void {
-    // `'done'` still renders — it maps to `enter`'s own resting frame
+    // `'done'` still renders - it maps to `enter`'s own resting frame
     // (progress 1 / presence 1), same as `'holding'` maps to `exit`'s
     // resting frame. Defensive: the current Director tears the session down
     // synchronously inside `_updateTransition()`, before `_renderTransition()`
     // runs later in the same frame, so a real `'done'`-state render never
-    // actually happens — this branch exists so the session stays internally
+    // actually happens - this branch exists so the session stays internally
     // consistent (matching the `placement` getter below) if that teardown
     // timing ever changes.
     const phase: 'enter' | 'exit' = this._phaseState === 'enter' || this._phaseState === 'done' ? 'enter' : 'exit';
@@ -273,7 +273,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     // SESSION-WIDE requirements were promoted to `currentFrame: 'texture'` by
     // the OTHER phase, but this phase itself only declared `direct` (or
     // `none`), the live surface was redirected into `frame.current` for the
-    // whole session — never drawn straight to the screen at any point — so
+    // whole session - never drawn straight to the screen at any point - so
     // this phase must draw an unmodified 1:1 copy of it before its own
     // effect runs, or the screen shows nothing for this phase's entire
     // duration. Detected by comparing THIS phase's own declared requirement
@@ -299,7 +299,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
 
   public destroy(): void {
     // Owns `_identitySprite`, but it only references pooled textures
-    // (Director-owned) and is never attached to a scene graph — dropping the
+    // (Director-owned) and is never attached to a scene graph - dropping the
     // session's own reference is enough for GC to reclaim it, no explicit
     // Sprite.destroy() needed here.
   }
@@ -310,9 +310,9 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
  * instances into one {@link SceneTransition}: `exit`'s `exit()` phase runs
  * first, then `enter`'s `enter()` phase, sharing one session and one
  * atomic commit (this contrasts with Excalibur's independently-
- * animated `in`/`out` entities — this is *not* that). Session-wide
+ * animated `in`/`out` entities - this is *not* that). Session-wide
  * requirements are resolved by the Director-facing `getRequirementsForPhase()`
- * wrapper on each instance, then merged — never via the
+ * wrapper on each instance, then merged - never via the
  * `protected` `getPhaseRequirements()` hook directly.
  */
 export function composePhasedSceneTransition(exit: PhasedSceneTransition, enter: PhasedSceneTransition): SceneTransition {
@@ -340,11 +340,11 @@ class ComposedPhasedSceneTransition extends SceneTransition {
 }
 
 /**
- * Concrete, fully-inert {@link PhasedSceneTransition} — requirements
+ * Concrete, fully-inert {@link PhasedSceneTransition} - requirements
  * `{ outgoingFrame: 'none', currentFrame: 'none' }` (the weakest possible
  * on both axes, so it never wins {@link mergeSceneTransitionRequirements}),
  * `enter()`/`exit()` left as the inherited no-ops. Fills whichever side of
- * a `{ enter, exit }` selection is omitted — the union type
+ * a `{ enter, exit }` selection is omitted - the union type
  * requires at least one of `{ enter, exit }`, never both, so the other
  * side needs a real (if inert) instance to compose against.
  */
@@ -357,7 +357,7 @@ class NoOpPhasedSceneTransition extends PhasedSceneTransition {
 const noOpPhasedSceneTransition = new NoOpPhasedSceneTransition({ duration: 0 });
 
 /**
- * Resolve an optional `{ enter, exit }` pair (either side may be omitted —
+ * Resolve an optional `{ enter, exit }` pair (either side may be omitted -
  * see {@link NoOpPhasedSceneTransition}) into one composed
  * {@link SceneTransition}, ready to hand to {@link SceneTransition.beginSession}.
  */

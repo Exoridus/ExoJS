@@ -21,8 +21,8 @@ export type TileCollisionShapeKind =
  * A half-open tile-coordinate rectangle covering
  * `[x, x + width)` × `[y, y + height)`.
  *
- * Used to scope {@link buildTileCollisionGeometry} to part of a layer — a
- * streamed chunk, the tiles around the player, a hand-picked room — instead of
+ * Used to scope {@link buildTileCollisionGeometry} to part of a layer - a
+ * streamed chunk, the tiles around the player, a hand-picked room - instead of
  * always rebuilding the whole map.
  * @advanced
  */
@@ -42,7 +42,7 @@ export interface TileRegion {
  * covering one or more whole tile cells.
  *
  * Rectangles are synthesized geometry, not source objects: a merged run has no
- * single originating object, so it carries no object `id`/`name`/`properties` —
+ * single originating object, so it carries no object `id`/`name`/`properties` -
  * only the `type` string shared by every shape merged into it. Anything that
  * does not exactly cover whole cells stays a {@link TileCollisionShape}, which
  * does keep its source object.
@@ -82,7 +82,7 @@ export interface TileCollisionShape {
   readonly height: number;
   /**
    * Rotation in degrees, clockwise, about `(x, y)`, normalised to `[0, 360)`.
-   * Always `0` for polygons and polylines — their rotation is baked into
+   * Always `0` for polygons and polylines - their rotation is baked into
    * {@link points}.
    */
   readonly rotation: number;
@@ -192,7 +192,7 @@ function transformRotation(transform: TileTransform): number {
 /**
  * Map a point from tile-local pixel space into the transformed tile-local
  * space of a placed tile. The diagonal flip (a transpose of the axes, which
- * also swaps the box dimensions) is applied first, then the axis mirrors —
+ * also swaps the box dimensions) is applied first, then the axis mirrors -
  * the same order the renderer's orientation code implies.
  */
 function mapLocalPoint(
@@ -390,7 +390,7 @@ function cellKey(tx: number, ty: number): string {
 
 /**
  * `true` when a placed shape is an axis-aligned rectangle covering exactly the
- * tile cell at `(cellX, cellY)` — the only geometry the merging pass handles.
+ * tile cell at `(cellX, cellY)` - the only geometry the merging pass handles.
  */
 function coversWholeCell(placed: PlacedShape, layer: TileLayer, cellX: number, cellY: number): boolean {
   return (
@@ -426,7 +426,7 @@ function unmergedCells(cells: ReadonlyMap<string, string>, layer: TileLayer): Ti
  * Greedy rectangle merging over the claimed cells: walk row-major, grow each
  * unconsumed cell as far right as the type key allows, then as far down as a
  * full row of that width allows, and consume the block. Deliberately the plain
- * textbook pass — it is linear in the number of cells and always produces a
+ * textbook pass - it is linear in the number of cells and always produces a
  * valid, non-overlapping cover, which matters more here than minimality.
  */
 function mergeCells(
@@ -496,13 +496,13 @@ function mergeCells(
  *
  * Every placed tile in `region` is resolved back to its tileset definition, and
  * each collision shape is transformed from tile-local pixel space into layer
- * pixel space (+Y down) — applying the tile's flip/rotation transform, the
+ * pixel space (+Y down) - applying the tile's flip/rotation transform, the
  * tileset draw offset, and the layer's pixel offset, so the geometry lands
  * exactly where the tile is drawn.
  *
  * Shapes that end up covering exactly one whole tile cell are collected into an
  * occupancy grid and merged into as few {@link TileCollisionRect}s as a greedy
- * pass manages — a 200×200 solid region becomes one rectangle instead of 40 000.
+ * pass manages - a 200×200 solid region becomes one rectangle instead of 40 000.
  * Cells only merge with neighbours whose source object carries the same `type`
  * string, so a `water` run never fuses into an adjacent `solid` run. Everything
  * else (partial boxes, ellipses, polygons, polylines, points, rotated geometry)

@@ -29,8 +29,8 @@ export class WebGpuTransformStorage {
   private _tintAccountedBytes = 0;
   /**
    * Reused result record for {@link getBuffer}. Every caller reads it inside
-   * the statement that asks for it — it binds two buffers and a count and is
-   * done — and `getBuffer` runs once per flush, so a fresh record per call was
+   * the statement that asks for it - it binds two buffers and a count and is
+   * done - and `getBuffer` runs once per flush, so a fresh record per call was
    * ~16 KB/frame on a 300-flush effect frame.
    */
   private readonly _result = {
@@ -71,7 +71,7 @@ export class WebGpuTransformStorage {
   /**
    * Append a drawable's world transform (+ tint) to the shared buffer and return
    * the slot it was written to. Used for draws that arrive without a stable
-   * `nodeIndex` — a direct `backend.draw(drawable)` outside the plan player —
+   * `nodeIndex` - a direct `backend.draw(drawable)` outside the plan player -
    * so a batch of synthetic draws does not collide on a single row.
    */
   public push(drawable: Drawable, transform?: Matrix, snapMode: PixelSnapMode = PixelSnapMode.None): number {
@@ -81,7 +81,7 @@ export class WebGpuTransformStorage {
   /**
    * Append a raw `(transform, tint)` pair to the shared buffer and return its
    * slot. Unlike {@link push} the values are supplied directly rather than read
-   * from a drawable — used by explicit instanced batches.
+   * from a drawable - used by explicit instanced batches.
    */
   public pushValues(transform: Matrix, tint: Color, snapMode: PixelSnapMode = PixelSnapMode.None): number {
     return this._buffer.push(transform, tint, snapMode);
@@ -92,7 +92,7 @@ export class WebGpuTransformStorage {
    * `recordCount` transform slots. Called once before render-plan playback so
    * that later per-group flushes never trigger a mid-frame reallocation.
    *
-   * If the buffer already covers `recordCount` this is a no-op — no GPU
+   * If the buffer already covers `recordCount` this is a no-op - no GPU
    * objects are destroyed or re-created. Capacity only grows, never shrinks.
    * @internal
    */
@@ -110,7 +110,7 @@ export class WebGpuTransformStorage {
   }
 
   /**
-   * Whether {@link getBuffer}/{@link reserve} for `minCount` slots would grow —
+   * Whether {@link getBuffer}/{@link reserve} for `minCount` slots would grow -
    * i.e. destroy the current GPU buffer and allocate a larger one. Lets callers
    * that keep live references to the current buffer (open render passes) split
    * before the reallocation frees it. @internal
@@ -138,14 +138,14 @@ export class WebGpuTransformStorage {
 
     // A skipped flush (all three guards false) leaves the dirty range uncleared
     // until the next begin(). Safe: every write() mixes its slot into _frameHash,
-    // so a non-empty dirty range always coincides with snapshot.changed = true —
+    // so a non-empty dirty range always coincides with snapshot.changed = true -
     // the upload branch is always taken before any dirty rows could be stale.
     if (snapshot.changed || snapshot.hash !== this._storageHash || snapshot.count !== this._storageCount) {
-      // Always consume the dirty range first to clear it — regardless of whether
+      // Always consume the dirty range first to clear it - regardless of whether
       // the full-upload path (post-grow) or the delta path runs below. Both paths
       // are inside this if-branch; the skip case (snapshot unchanged) never reaches
       // here, so the dirty range is only consumed when an upload is actually issued.
-      // Single consumption feeds BOTH buffers (transform + tint) — consumeDirtyRange
+      // Single consumption feeds BOTH buffers (transform + tint) - consumeDirtyRange
       // clears the range as a side effect, so it must only be called once per flush.
       const { firstRow, rowCount } = this._buffer.consumeDirtyRange(snapshot.count);
 

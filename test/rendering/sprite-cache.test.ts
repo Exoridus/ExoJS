@@ -141,7 +141,7 @@ describe('Sprite.getNormals() — dirty-flag cache', () => {
 
     sprite.setRotation(45);
 
-    // Read again — must update n0ref in place.
+    // Read again - must update n0ref in place.
     sprite.getNormals();
 
     // The reference stored before the invalidation is the same object,
@@ -153,7 +153,7 @@ describe('Sprite.getNormals() — dirty-flag cache', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Sprite.contains() — skew regression
+// Sprite.contains() - skew regression
 // ---------------------------------------------------------------------------
 
 describe('Sprite.contains() — skew regression', () => {

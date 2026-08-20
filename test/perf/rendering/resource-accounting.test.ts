@@ -10,7 +10,7 @@
 //
 // Determinism: DataTextures have an exact, known footprint (no source decode,
 // no mips by default), and the booking runs identically against the fake
-// context — no GPU, no flake.
+// context - no GPU, no flake.
 //
 // The backend's renderers allocate their own GPU buffers (instance/index/etc.)
 // at connect time, so a freshly wired backend already reports a non-zero
@@ -56,11 +56,11 @@ describe('GPU resource accounting (RenderStats)', () => {
         expect(stats.downloadBytes).toBe(0);
         expect(stats.downloadCount).toBe(0);
 
-        // The first resetStats() clears the per-frame accumulators…
+        // The first resetStats() clears the per-frame accumulators...
         harness.backend.resetStats();
         expect(harness.backend.stats.textureUploadBytes).toBe(0);
         expect(harness.backend.stats.bufferUploadBytes).toBe(0);
-        // …but preserves the running VRAM total booked at connect.
+        // ...but preserves the running VRAM total booked at connect.
         expect(harness.backend.stats.gpuMemoryBytes).toBeGreaterThanOrEqual(0);
       } finally {
         harness.destroy();
@@ -91,7 +91,7 @@ describe('GPU resource accounting (RenderStats)', () => {
         // size; the transform texture for a 4-row buffer adds at most a few
         // hundred bytes, so the delta is the content sum plus that tiny term.
         expect(delta).toBeGreaterThanOrEqual(textureCount * rgba8Bytes(size));
-        // …and the content textures clearly dominate (delta is not e.g. 2× the sum).
+        // ...and the content textures clearly dominate (delta is not e.g. 2× the sum).
         expect(delta).toBeLessThan(textureCount * rgba8Bytes(size) + rgba8Bytes(size));
       } finally {
         harness.destroy();
@@ -255,7 +255,7 @@ describe('GPU resource accounting (RenderStats)', () => {
         const a = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
         const b = new DataTexture({ width: size, height: size, format: TextureFormat.Rgba8 });
 
-        // Warm steady with texture `a` only — transforms quiescent.
+        // Warm steady with texture `a` only - transforms quiescent.
         const sceneA = buildSpriteScene({ count: 1, textures: [a] });
 
         measureSteadyFrame(harness, sceneA.root, 3);
@@ -291,7 +291,7 @@ describe('GPU resource accounting (RenderStats)', () => {
 
         // The render root climbs its retention ladder over the next few frames
         // (capture, record, splice) and allocates the retained bundle's
-        // group-owned buffers on the way — genuine one-off VRAM growth. Baseline
+        // group-owned buffers on the way - genuine one-off VRAM growth. Baseline
         // the running total once that has settled, so this still asserts what it
         // is about: a quiescent frame adds nothing.
         measureFrame(harness, root);
@@ -303,11 +303,11 @@ describe('GPU resource accounting (RenderStats)', () => {
         measureFrame(harness, root);
         measureFrame(harness, root);
 
-        // VRAM (a running total) is unchanged across idempotent frames…
+        // VRAM (a running total) is unchanged across idempotent frames...
         expect(harness.backend.stats.gpuMemoryBytes).toBe(vramAtSteadyState);
-        // …the first frame uploaded the content texture…
+        // ...the first frame uploaded the content texture...
         expect(uploadedFirst).toBeGreaterThan(0);
-        // …and the per-frame upload accumulator has dropped back to zero.
+        // ...and the per-frame upload accumulator has dropped back to zero.
         expect(harness.backend.stats.textureUploadBytes).toBe(0);
       } finally {
         harness.destroy();

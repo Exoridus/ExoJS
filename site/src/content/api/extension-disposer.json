@@ -1,6 +1,6 @@
 {
   "title": "ExtensionDisposer",
-  "description": "Undoes one Extension.install call, for the one Application that call was made against. Returned by `install`, held by that Application, and invoked exactly once during its teardown. Must be synchronous — Application.destroy does not await it. Work that genuinely cannot finish synchronously belongs behind an AbortSignal the extension owns, aborted from here.",
+  "description": "Undoes one Extension.install call, for the one Application that call was made against. Returned by `install`, held by that Application, and invoked exactly once during its teardown. Must be synchronous - Application.destroy does not await it. Work that genuinely cannot finish synchronously belongs behind an AbortSignal the extension owns, aborted from here.",
   "symbol": "ExtensionDisposer",
   "kind": "type",
   "subsystem": "extensions",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Undoes one Extension.install call, for the one Application that call was made against. Returned by `install`, held by that Application, and invoked exactly once during its teardown.",
-        "Must be synchronous — Application.destroy does not await it. Work that genuinely cannot finish synchronously belongs behind an AbortSignal the extension owns, aborted from here."
+        "Must be synchronous - Application.destroy does not await it. Work that genuinely cannot finish synchronously belongs behind an AbortSignal the extension owns, aborted from here."
       ],
       "importLine": "import { ExtensionDisposer } from '@codexo/exojs/extensions'",
       "sourceLink": null

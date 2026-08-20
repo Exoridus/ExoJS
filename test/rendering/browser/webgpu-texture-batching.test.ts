@@ -1,5 +1,5 @@
 /**
- * WebGPU sprite batcher texture-slot capacity — real-device acceptance test.
+ * WebGPU sprite batcher texture-slot capacity - real-device acceptance test.
  *
  * The WebGPU sprite renderer used to hard-code 8 texture slots per batch;
  * the WGSL source and group(1) bind-group layout are now generated for a
@@ -8,7 +8,7 @@
  * REAL device that:
  *
  *  1. the device reaches at least the 16-slot tier (spec base limits),
- *  2. exactly `slots` distinct-texture sprites draw in ONE draw call — with
+ *  2. exactly `slots` distinct-texture sprites draw in ONE draw call - with
  *     pixel probes on slots >= 8 proving the generated shader's upper slots
  *     sample the right texture (not just that the draw count dropped),
  *  3. the (slots + 1)-th distinct texture still splits the batch.

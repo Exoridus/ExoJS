@@ -18,7 +18,7 @@ const noGamepads: ReadonlyArray<BrowserGamepad | null> = [];
  * no adapter was injected.
  *
  * Every capability degrades rather than throws when the host does not provide
- * it — pointer capture is rejected by jsdom and by browsers asked to release a
+ * it - pointer capture is rejected by jsdom and by browsers asked to release a
  * pointer they never captured, `navigator.getGamepads` is missing on locked-down
  * hosts, and `document` is absent under SSR. None of those are worth failing an
  * application over, so each is caught and reported as "unavailable".
@@ -91,7 +91,7 @@ export class BrowserPlatform implements PlatformAdapter {
     try {
       this._canvas.setPointerCapture(pointerId);
     } catch {
-      // Not supported everywhere, and never essential — the interaction
+      // Not supported everywhere, and never essential - the interaction
       // manager tracks the capture itself.
     }
   }

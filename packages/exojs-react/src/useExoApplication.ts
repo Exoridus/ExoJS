@@ -33,7 +33,7 @@ function colorKey(color: Color | undefined): string | undefined {
 /**
  * Creates and owns an ExoJS {@link Application}, binding it to a `<canvas>` you
  * render yourself and attach the returned `canvasRef` to. The hook renders no
- * DOM of its own — you keep full control over the canvas element, its container,
+ * DOM of its own - you keep full control over the canvas element, its container,
  * and its styling.
  *
  * ```tsx
@@ -44,7 +44,7 @@ function colorKey(color: Color | undefined): string | undefined {
  * ```
  *
  * **Reactivity model.** The Application is recreated only when an *identity*
- * option changes — currently the render `backend` (you cannot hot-swap WebGL2 ↔
+ * option changes - currently the render `backend` (you cannot hot-swap WebGL2 ↔
  * WebGPU). All other supported options are applied *live* without tearing the
  * app down:
  *
@@ -57,7 +57,7 @@ function colorKey(color: Color | undefined): string | undefined {
  *
  * Styling note: with the default `'fixed'` sizing mode the engine never touches
  * the canvas CSS, so you may style it freely. The `'fit'`/`'shrink'`/`'letterbox'`
- * modes manage `canvas.style` themselves — don't fight them with a `style` prop.
+ * modes manage `canvas.style` themselves - don't fight them with a `style` prop.
  *
  * @param options - Application options (the canvas element is the one you render).
  * @param onReady - Called once each time an Application is created.
@@ -109,7 +109,7 @@ export function useExoApplication(
 
     return () => {
       // A React cleanup function cannot await, and teardown failures already
-      // travel through the application's own error pipeline — so the Promise
+      // travel through the application's own error pipeline - so the Promise
       // is deliberately dropped rather than reported a second time here.
       void application.destroy();
       setApp(null);

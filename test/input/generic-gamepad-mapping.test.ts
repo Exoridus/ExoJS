@@ -49,7 +49,7 @@ describe('GamepadAxis.transformValue', () => {
     const x = new GamepadAxis(0, GamepadAxis.LeftStickX, { bipolar: true, threshold: 0.2, pair: 1 });
 
     // Each component alone sits inside the deadzone, but the stick is pushed
-    // 0.212 out along the diagonal — past it.
+    // 0.212 out along the diagonal - past it.
     expect(x.transformValue(0.15, 0.15)).toBeGreaterThan(0);
     // Without a partner value the same component reads as fully dead.
     expect(x.transformValue(0.15, 0)).toBe(0);
@@ -121,7 +121,7 @@ describe('the standard dual-analog layout', () => {
   });
 
   // The standard layout ends at 16 (Meta/Guide) and browsers expose exactly one
-  // device-specific slot after it, at 17 — Share on an Xbox Series pad, Capture
+  // device-specific slot after it, at 17 - Share on an Xbox Series pad, Capture
   // on a Switch Pro, the touchpad click on a DualShock 4 / DualSense. Claiming
   // 17 in the baseline made every one of those fire the wrong channel, and 18+
   // were never delivered at all.

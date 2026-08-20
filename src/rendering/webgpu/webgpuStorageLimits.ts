@@ -11,7 +11,7 @@ import { RenderError } from '#rendering/RenderError';
  * `requiredLimits` entry is granted exactly the default, however much the
  * adapter could have offered, and `WebGpuBackend` raises only the texture and
  * sampler limits the batch layout needs. They double as the stand-in for a
- * device that exposes no limits object at all — a conformant device is never
+ * device that exposes no limits object at all - a conformant device is never
  * granted less, so assuming them is the safe direction.
  */
 export const defaultMaxBufferSize = 2 ** 28; // 256 MiB
@@ -41,7 +41,7 @@ const grantedLimits = (device: GPUDevice): { readonly maxBufferSize: number; rea
  *
  * Both limits apply to every such buffer: `createBuffer` rejects a size over
  * `maxBufferSize`, and `createBindGroup` rejects a storage binding over
- * `maxStorageBufferBindingSize` — which is the SMALLER of the two defaults, so
+ * `maxStorageBufferBindingSize` - which is the SMALLER of the two defaults, so
  * on a device that asked for neither it is the one that bites.
  * @internal
  */
@@ -59,7 +59,7 @@ export interface StorageGrowthRequest {
   readonly resource: string;
   /** Rows the caller asked for, BEFORE the growth policy rounded up. */
   readonly requestedRows: number;
-  /** Rows the growth policy actually settles on — a power of two at or above `requestedRows`. */
+  /** Rows the growth policy actually settles on - a power of two at or above `requestedRows`. */
   readonly capacityRows: number;
   /** Bytes `capacityRows` occupy, which is the size of the storage binding. */
   readonly capacityBytes: number;
@@ -73,7 +73,7 @@ export interface StorageGrowthRequest {
  * than the rows it was handed: every store here doubles, so one row over a
  * ceiling asks for twice the bytes, and it is the doubled size that fails.
  * Measured BEFORE the allocation because past the ceiling `createBuffer` still
- * succeeds — the doubled size lands on `maxBufferSize` exactly — and
+ * succeeds - the doubled size lands on `maxBufferSize` exactly - and
  * `createBindGroup` does not, which turns the failure into an uncaptured
  * validation error, a root that draws nothing, and a frame loop that keeps
  * running.
@@ -81,7 +81,7 @@ export interface StorageGrowthRequest {
  * Unlike the persistent slot store, which answers `canRepresent` and falls back
  * to the streamed path, these stores ARE the fallback: there is no further
  * representation below them, so the honest contract is to fail loudly and
- * typed — the same `RenderError('out-of-memory')` WebGL2 throws when its
+ * typed - the same `RenderError('out-of-memory')` WebGL2 throws when its
  * transform texture outgrows `MAX_TEXTURE_SIZE`.
  * @internal
  */

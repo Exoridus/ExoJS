@@ -1,4 +1,4 @@
-// Auto-generated from hello-world.ts — edit the .ts source, not this file.
+// Auto-generated from hello-world.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 // #region guide:first-scene
 class HelloWorldScene extends Scene {

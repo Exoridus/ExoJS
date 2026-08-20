@@ -1,6 +1,6 @@
 {
   "title": "PixelSnapMode",
-  "description": "Render-only pixel-snapping policy for a Drawable. - `None` — no snapping; rendered transform and geometry use existing behaviour. - `Position` — snap the rendered origin to the nearest device pixel. Logical `x`/`y`, matrices, bounds and collision are unchanged. - `Geometry` — snap a single coherent shared-boundary plan (origin + boundaries) so neighbouring quads stay seam-free. Falls back to `Position` automatically when the transform is not axis-aligned (rotation / skew). Snapping targets device pixels (× view scale × pixel ratio), not integer world units, and never alters logical state. The numeric values are the shader encoding carried in the transform row and must not be reordered.",
+  "description": "Render-only pixel-snapping policy for a Drawable. - `None` - no snapping; rendered transform and geometry use existing behaviour. - `Position` - snap the rendered origin to the nearest device pixel. Logical `x`/`y`, matrices, bounds and collision are unchanged. - `Geometry` - snap a single coherent shared-boundary plan (origin + boundaries) so neighbouring quads stay seam-free. Falls back to `Position` automatically when the transform is not axis-aligned (rotation / skew). Snapping targets device pixels (× view scale × pixel ratio), not integer world units, and never alters logical state. The numeric values are the shader encoding carried in the transform row and must not be reordered.",
   "symbol": "PixelSnapMode",
   "kind": "enum",
   "subsystem": "rendering",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Render-only pixel-snapping policy for a Drawable.",
-        "- `None` — no snapping; rendered transform and geometry use existing behaviour. - `Position` — snap the rendered origin to the nearest device pixel. Logical `x`/`y`, matrices, bounds and collision are unchanged. - `Geometry` — snap a single coherent shared-boundary plan (origin + boundaries) so neighbouring quads stay seam-free. Falls back to `Position` automatically when the transform is not axis-aligned (rotation / skew).",
+        "- `None` - no snapping; rendered transform and geometry use existing behaviour. - `Position` - snap the rendered origin to the nearest device pixel. Logical `x`/`y`, matrices, bounds and collision are unchanged. - `Geometry` - snap a single coherent shared-boundary plan (origin + boundaries) so neighbouring quads stay seam-free. Falls back to `Position` automatically when the transform is not axis-aligned (rotation / skew).",
         "Snapping targets device pixels (× view scale × pixel ratio), not integer world units, and never alters logical state. The numeric values are the shader encoding carried in the transform row and must not be reordered."
       ],
       "importLine": "import { PixelSnapMode } from '@codexo/exojs'",

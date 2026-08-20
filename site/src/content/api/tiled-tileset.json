@@ -1,6 +1,6 @@
 {
   "title": "TiledTileset",
-  "description": "A parsed Tiled tileset — either embedded inline in a map's `tilesets` array, or parsed from an external `.tsj` file referenced by it. firstGid and lastGid define the inclusive range of global tile ids (after masking flip/rotation flags via `maskTiledGid`) that this tileset owns within its owning TiledMap.",
+  "description": "A parsed Tiled tileset - either embedded inline in a map's `tilesets` array, or parsed from an external `.tsj` file referenced by it. firstGid and lastGid define the inclusive range of global tile ids (after masking flip/rotation flags via `maskTiledGid`) that this tileset owns within its owning TiledMap.",
   "symbol": "TiledTileset",
   "kind": "class",
   "subsystem": "tiled",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A parsed Tiled tileset — either embedded inline in a map's `tilesets` array, or parsed from an external `.tsj` file referenced by it.",
+        "A parsed Tiled tileset - either embedded inline in a map's `tilesets` array, or parsed from an external `.tsj` file referenced by it.",
         "firstGid and lastGid define the inclusive range of global tile ids (after masking flip/rotation flags via `maskTiledGid`) that this tileset owns within its owning TiledMap."
       ],
       "importLine": "import { TiledTileset } from '@codexo/exojs-tiled'",
@@ -449,7 +449,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Where a tile object's stored position sits within its bounding box. undefined (and 'unspecified') means Tiled's orientation-dependent default — resolve it with import('./objectAlignment').resolveTiledObjectAlignment."
+          "description": "Where a tile object's stored position sits within its bounding box. undefined (and 'unspecified') means Tiled's orientation-dependent default - resolve it with import('./objectAlignment').resolveTiledObjectAlignment."
         },
         {
           "name": "properties",

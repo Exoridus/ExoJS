@@ -3,7 +3,7 @@
  *
  * `test/rendering/parity/evidence.json` is measured by the browser suite and
  * published on the site, linked from the deployment and troubleshooting guides.
- * A release therefore states "as of this version, this parity holds" — a claim
+ * A release therefore states "as of this version, this parity holds" - a claim
  * that is only honest if the evidence was measured on the commit being released.
  *
  * Kept apart from `cut.ts` so it can be tested without executing the release
@@ -76,7 +76,7 @@ export function readEvidence(repoRoot: string): EvidenceDocument {
  * browser. Empty means it is current and the cut may proceed.
  *
  * `head` is HEAD as it stands *before* the release script creates its bump
- * commit — that is the tree the measurement ran against.
+ * commit - that is the tree the measurement ran against.
  */
 export function staleEvidenceReasons(doc: EvidenceDocument, head: string): string[] {
   const reasons: string[] = [];

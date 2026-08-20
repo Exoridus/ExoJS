@@ -189,7 +189,7 @@ describe('PerformanceLayer', () => {
 
   test('update() tolerates a panel torn down without going through destroy() (defensive null guards)', () => {
     // destroy() nulls _root too, which forces update() to rebuild everything on
-    // the next call — so the only way to exercise the individual per-field null
+    // the next call - so the only way to exercise the individual per-field null
     // guards (text nodes / sparkline still null while _root is not) is to null
     // them directly, simulating a partially torn-down panel.
     const layer = new PerformanceLayer(makeApp());

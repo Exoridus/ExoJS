@@ -46,7 +46,7 @@ export class BmFontAdapter implements GlyphProvider {
   private readonly _scale: number;
   /** Fallback advance for characters not present in the font (≈ ½ line height). */
   private readonly _fallbackAdvance: number;
-  /** Identifier used as part of the log dedup key — derived from the first page filename. */
+  /** Identifier used as part of the log dedup key - derived from the first page filename. */
   private readonly _fontId: string;
 
   public constructor(fontData: BmFontData, textures: readonly Texture[], scale: number) {
@@ -65,7 +65,7 @@ export class BmFontAdapter implements GlyphProvider {
     const base = this._fontData.base;
 
     if (g === undefined) {
-      // Unknown glyph — warn once per font + codepoint, then return an invisible
+      // Unknown glyph - warn once per font + codepoint, then return an invisible
       // placeholder with a cursor advance so layout still makes progress.
       if (__DEV__) {
         logger.warn(`missing glyph U+${cp.toString(16).toUpperCase().padStart(4, '0')} ('${char}') in "${this._fontId}"`, {
@@ -128,13 +128,13 @@ export class BmFontAdapter implements GlyphProvider {
 // ── BitmapText ────────────────────────────────────────────────────────────────
 
 /**
- * Text node that renders from an offline-generated atlas — either a BMFont
+ * Text node that renders from an offline-generated atlas - either a BMFont
  * (AngelCode .fnt + .png) or an MSDF atlas (msdf-atlas-gen + .json).
  *
  * The atlas is pre-built so there is no runtime Canvas 2D rasterisation.
  * All layout features (alignment, word-wrap, justify, leading, breakWords,
  * whiteSpace, letterSpacing) and kerning pairs from the descriptor are fully
- * supported. Outline effects are handled as shader uniforms — no extra draw
+ * supported. Outline effects are handled as shader uniforms - no extra draw
  * calls, no atlas rebuilds.
  *
  * ## Usage
@@ -144,8 +144,8 @@ export class BmFontAdapter implements GlyphProvider {
  * const label = new BitmapText('Score: 0', font, { msdf: true });
  * scene.addChild(label);
  *
- * label.text         = 'Score: 42';  // cheap — marks the geometry stale
- * label.style.align  = 'center';     // cheap — same pending pass
+ * label.text         = 'Score: 42';  // cheap - marks the geometry stale
+ * label.style.align  = 'center';     // cheap - same pending pass
  * ```
  *
  * Mutating any number of properties in the same frame is cheap; the geometry
@@ -169,7 +169,7 @@ export class BitmapText extends AbstractText {
   /**
    * Advance extent `text` would occupy in `font` under `options`, without
    * constructing a node. Takes the same arguments as the constructor and gives
-   * the same answer as the resulting node's `textBounds` — it runs the
+   * the same answer as the resulting node's `textBounds` - it runs the
    * identical layout pass against an adapter built the same way, so the two
    * cannot drift.
    *
@@ -206,7 +206,7 @@ export class BitmapText extends AbstractText {
 
   // ── Style ─────────────────────────────────────────────────────────────────
 
-  /** Visual style — `align`, `leading`, `fillColor`, `outlineColor` etc. */
+  /** Visual style - `align`, `leading`, `fillColor`, `outlineColor` etc. */
   public get style(): TextStyle {
     return this._style;
   }

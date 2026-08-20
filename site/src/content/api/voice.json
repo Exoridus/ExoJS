@@ -1,6 +1,6 @@
 {
   "title": "Voice",
-  "description": "A live playback instance in the audio graph with a control surface. A Voice is created by playing a Playable via AudioManager.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices. Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched) for whatever their backing Web Audio node actually supports — narrow with a capability check (`'seek' in voice`) before using one. Spatializable is not one of those: every voice carries it. The panner is inserted lazily, so a voice that is never positioned costs nothing, and PlayOptions already accepts the full spatial set at play time — a returned voice must be able to keep steering what the play call was allowed to start.",
+  "description": "A live playback instance in the audio graph with a control surface. A Voice is created by playing a Playable via AudioManager.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices. Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched) for whatever their backing Web Audio node actually supports - narrow with a capability check (`'seek' in voice`) before using one. Spatializable is not one of those: every voice carries it. The panner is inserted lazily, so a voice that is never positioned costs nothing, and PlayOptions already accepts the full spatial set at play time - a returned voice must be able to keep steering what the play call was allowed to start.",
   "symbol": "Voice",
   "kind": "interface",
   "subsystem": "audio",
@@ -21,8 +21,8 @@
       "paragraphs": [
         "A live playback instance in the audio graph with a control surface.",
         "A Voice is created by playing a Playable via AudioManager.play (and, later, by opening an `AudioInput`). Each `play()` returns an independent Voice, so overlapping concurrent playback of the same asset is just multiple Voices.",
-        "Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched) for whatever their backing Web Audio node actually supports — narrow with a capability check (`'seek' in voice`) before using one.",
-        "Spatializable is not one of those: every voice carries it. The panner is inserted lazily, so a voice that is never positioned costs nothing, and PlayOptions already accepts the full spatial set at play time — a returned voice must be able to keep steering what the play call was allowed to start."
+        "Concrete voices mix in the capability interfaces (Seekable, Pausable, Loopable, RatePitched) for whatever their backing Web Audio node actually supports - narrow with a capability check (`'seek' in voice`) before using one.",
+        "Spatializable is not one of those: every voice carries it. The panner is inserted lazily, so a voice that is never positioned costs nothing, and PlayOptions already accepts the full spatial set at play time - a returned voice must be able to keep steering what the play call was allowed to start."
       ],
       "importLine": "import { Voice } from '@codexo/exojs'",
       "sourceLink": null
@@ -297,7 +297,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Stop playback and release this voice's resources. Pass fadeMs to ramp the volume to zero over that many milliseconds before stopping; omit (or pass 0) to stop immediately. Idempotent — calling again is a no-op."
+          "description": "Stop playback and release this voice's resources. Pass fadeMs to ramp the volume to zero over that many milliseconds before stopping; omit (or pass 0) to stop immediately. Idempotent - calling again is a no-op."
         }
       ],
       "paragraphs": [],
@@ -348,7 +348,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Full-gain cone half-angle in degrees. Default 360 (omnidirectional — no cone)."
+          "description": "Full-gain cone half-angle in degrees. Default 360 (omnidirectional - no cone)."
         },
         {
           "name": "coneOuterAngle",
@@ -495,7 +495,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Facing direction for cone attenuation, in degrees — same convention as SceneNode.rotation (0° = local +X / \"east\", clockwise-positive on a Y-down screen). Has no audible effect unless coneInnerAngle/ coneOuterAngle are narrowed below 360°. Default 0."
+          "description": "Facing direction for cone attenuation, in degrees - same convention as SceneNode.rotation (0° = local +X / \"east\", clockwise-positive on a Y-down screen). Has no audible effect unless coneInnerAngle/ coneOuterAngle are narrowed below 360°. Default 0."
         },
         {
           "name": "output",
@@ -516,7 +516,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The voice's output node — the last node before the AudioBus. Use it as a parallel tap for an analyser, or (later) as the insertion point for per-voice effects."
+          "description": "The voice's output node - the last node before the AudioBus. Use it as a parallel tap for an analyser, or (later) as the insertion point for per-voice effects."
         },
         {
           "name": "panningModel",
@@ -666,7 +666,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "World-space velocity of the source (world units/second), or null. Feeds the Doppler calculation (app.audio.spatial.dopplerFactor) — has no other effect. Explicit; when null and follow(node) is active, velocity is auto-derived each frame from the tracked node's position delta instead."
+          "description": "World-space velocity of the source (world units/second), or null. Feeds the Doppler calculation (app.audio.spatial.dopplerFactor) - has no other effect. Explicit; when null and follow(node) is active, velocity is auto-derived each frame from the tracked node's position delta instead."
         }
       ],
       "paragraphs": [],

@@ -1,6 +1,6 @@
 {
   "title": "PlatformAdapter",
-  "description": "Everything the engine touches outside its own state: the drawing surface's focus, cursor, touch-action and geometry, pointer capture, gamepad polling, document visibility, frame scheduling, and the delivery of input events. One adapter serves the whole Application — `app.platform` — and both the InputManager and the InteractionManager read it from there, so there is exactly one seam between the engine and its host. BrowserPlatform is the default; pass your own through ApplicationOptions.platform to run the engine somewhere else, or to drive it from a test without monkey-patching globals. Deliberately not a platform kernel: there is nothing here for fetch, storage, audio, workers or display configuration. This adapter covers the mechanics the input and frame pipeline actually needs today, and grows only when a subsystem genuinely needs a seam. The adapter supplies mechanism, never policy. It reports that a pointer moved and captures it on request; whether that movement is a drag, a tap or an action is decided entirely by the input system above it.",
+  "description": "Everything the engine touches outside its own state: the drawing surface's focus, cursor, touch-action and geometry, pointer capture, gamepad polling, document visibility, frame scheduling, and the delivery of input events. One adapter serves the whole Application - `app.platform` - and both the InputManager and the InteractionManager read it from there, so there is exactly one seam between the engine and its host. BrowserPlatform is the default; pass your own through ApplicationOptions.platform to run the engine somewhere else, or to drive it from a test without monkey-patching globals. Deliberately not a platform kernel: there is nothing here for fetch, storage, audio, workers or display configuration. This adapter covers the mechanics the input and frame pipeline actually needs today, and grows only when a subsystem genuinely needs a seam. The adapter supplies mechanism, never policy. It reports that a pointer moved and captures it on request; whether that movement is a drag, a tap or an action is decided entirely by the input system above it.",
   "symbol": "PlatformAdapter",
   "kind": "interface",
   "subsystem": "core",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Everything the engine touches outside its own state: the drawing surface's focus, cursor, touch-action and geometry, pointer capture, gamepad polling, document visibility, frame scheduling, and the delivery of input events.",
-        "One adapter serves the whole Application — `app.platform` — and both the InputManager and the InteractionManager read it from there, so there is exactly one seam between the engine and its host. BrowserPlatform is the default; pass your own through ApplicationOptions.platform to run the engine somewhere else, or to drive it from a test without monkey-patching globals.",
+        "One adapter serves the whole Application - `app.platform` - and both the InputManager and the InteractionManager read it from there, so there is exactly one seam between the engine and its host. BrowserPlatform is the default; pass your own through ApplicationOptions.platform to run the engine somewhere else, or to drive it from a test without monkey-patching globals.",
         "Deliberately not a platform kernel: there is nothing here for fetch, storage, audio, workers or display configuration. This adapter covers the mechanics the input and frame pipeline actually needs today, and grows only when a subsystem genuinely needs a seam.",
         "The adapter supplies mechanism, never policy. It reports that a pointer moved and captures it on request; whether that movement is a drag, a tap or an action is decided entirely by the input system above it."
       ],
@@ -335,7 +335,7 @@
             }
           ],
           "returnType": "PlatformSubscription",
-          "description": "Subscribe to a surface event. Which events are listened for — and whether one is suppressed — stays an input-policy decision made above this seam, so the adapter only wires up the delivery."
+          "description": "Subscribe to a surface event. Which events are listened for - and whether one is suppressed - stays an input-policy decision made above this seam, so the adapter only wires up the delivery."
         },
         {
           "name": "onVisibilityChange",
@@ -678,7 +678,7 @@
             }
           ],
           "returnType": "number",
-          "description": "Schedule callback for the next display frame and return a handle for PlatformAdapter.cancelFrame. One-shot — the frame loop reschedules itself every frame."
+          "description": "Schedule callback for the next display frame and return a handle for PlatformAdapter.cancelFrame. One-shot - the frame loop reschedules itself every frame."
         },
         {
           "name": "setCursor",
@@ -772,7 +772,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Set the surface's touch-action policy — 'none' keeps native pan/zoom out of the way."
+          "description": "Set the surface's touch-action policy - 'none' keeps native pan/zoom out of the way."
         }
       ],
       "paragraphs": [],

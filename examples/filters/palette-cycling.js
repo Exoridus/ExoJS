@@ -1,4 +1,4 @@
-// Auto-generated from palette-cycling.ts — edit the .ts source, not this file.
+// Auto-generated from palette-cycling.ts - edit the .ts source, not this file.
 import { Application, Color, LutFilter, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;

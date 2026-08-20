@@ -1,6 +1,6 @@
 {
   "title": "ParticleMaterial",
-  "description": "Material specialization for particle render modes. `Material`'s constructor is protected, so every material family declares a thin subclass that fixes target and opens construction up — this is the particle counterpart of core's `MeshMaterial` and `SpriteMaterial`. Particle draws bind their system-level state (transform, local bounds, texture) through the renderer rather than through the material, so this subclass adds no behaviour of its own; it exists to name the contract.",
+  "description": "Material specialization for particle render modes. `Material`'s constructor is protected, so every material family declares a thin subclass that fixes target and opens construction up - this is the particle counterpart of core's `MeshMaterial` and `SpriteMaterial`. Particle draws bind their system-level state (transform, local bounds, texture) through the renderer rather than through the material, so this subclass adds no behaviour of its own; it exists to name the contract.",
   "symbol": "ParticleMaterial",
   "kind": "class",
   "subsystem": "particles",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Material specialization for particle render modes.",
-        "`Material`'s constructor is protected, so every material family declares a thin subclass that fixes target and opens construction up — this is the particle counterpart of core's `MeshMaterial` and `SpriteMaterial`.",
+        "`Material`'s constructor is protected, so every material family declares a thin subclass that fixes target and opens construction up - this is the particle counterpart of core's `MeshMaterial` and `SpriteMaterial`.",
         "Particle draws bind their system-level state (transform, local bounds, texture) through the renderer rather than through the material, so this subclass adds no behaviour of its own; it exists to name the contract."
       ],
       "importLine": "import { ParticleMaterial } from '@codexo/exojs-particles'",
@@ -113,7 +113,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used — renderers recompile on next draw — but typical usage is to drop the reference."
+          "description": "Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used - renderers recompile on next draw - but typical usage is to drop the reference."
         },
         {
           "name": "setTexture",

@@ -21,7 +21,7 @@ declare global {
     }>;
 }
 
-// Playground-only augmentation — not shipped with the library.
+// Playground-only augmentation - not shipped with the library.
 // Adds a permissive index signature to Scene so that JavaScript examples
 // extending Scene (e.g. `new class extends Scene { ... }`) can freely
 // read/write dynamic state fields (e.g. this._bunny) without declaring

@@ -66,7 +66,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   //
   // Content comparison, not the backend's group-transform id: a projection
   // rewrite is a PASS boundary below, so a group boundary that restores
-  // byte-identical group bytes must not read as a change — otherwise a retained
+  // byte-identical group bytes must not read as a change - otherwise a retained
   // group entered and left around tile chunks splits the single-submit frame.
   private _writtenView: View | null = null;
   private _writtenViewUpdateId = -1;
@@ -260,7 +260,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       return;
     }
 
-    // A null `source` means a Texture still waiting on its image — but
+    // A null `source` means a Texture still waiting on its image - but
     // DataTexture extends Texture and keeps its pixels in a CPU buffer, so it
     // has none by design. Without the exemption a procedurally-generated
     // tileset renders as nothing here while WebGL2, which has no such guard,
@@ -273,7 +273,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const textureChanged = this._currentTexture !== null && texture !== this._currentTexture;
     // Overflowing the CPU staging array flushes the accumulated run rather than
     // growing it. The GPU buffer is NOT what this asks about: it now carries
-    // every flush in the pass, so flushing frees no room there — its capacity is
+    // every flush in the pass, so flushing frees no room there - its capacity is
     // resolved in `flush()` against the pass total.
     const willExceed = this._quadIndex + quads.length > this._instanceStagingCapacity && this._instanceStagingCapacity > 0;
 
@@ -381,7 +381,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
 
     const flushBytes = this._quadIndex * instanceStrideBytes;
     // Sized for everything this pass has taken SO FAR plus this flush, captured
-    // BEFORE the guard below may reset the cursor — and used to size the buffer
+    // BEFORE the guard below may reset the cursor - and used to size the buffer
     // even when it does split. Sizing to the lone flush that remains after a
     // split would peg the buffer at one flush forever: the guard would split,
     // the split would shrink the requirement back, the capacity would never
@@ -390,9 +390,9 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     const ownDrawsInPass = this._passDraws !== null && this._passDraws === coordinator.activePass;
 
     // Two predicates, deliberately different. The first gates the hazards
-    // against resources only THIS renderer binds — the projection UBO (rewritten
+    // against resources only THIS renderer binds - the projection UBO (rewritten
     // at offset 0, which would retroactively re-project our earlier draws) and
-    // the instance buffer (whose reallocation frees what those draws read) — so
+    // the instance buffer (whose reallocation frees what those draws read) - so
     // it asks this renderer's own cursor. The second gates the two SHARED ones
     // (transform storage, managed texture content), which the pass may hold
     // another renderer's draws against, so it asks the coordinator. Both land on
@@ -407,7 +407,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       coordinator.endPass();
     }
 
-    // Any boundary above — or one another renderer hit since our last flush —
+    // Any boundary above - or one another renderer hit since our last flush -
     // means the open pass no longer holds our draws, so the cursor restarts.
     if (this._passDraws !== coordinator.activePass) {
       this._passDraws = null;
@@ -426,7 +426,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
 
     // A flush whose quads are entirely clipped away by the mask draws nothing,
-    // so it only needs a pass at all when a clear is still pending — opened
+    // so it only needs a pass at all when a clear is still pending - opened
     // here so `createColorAttachment` consumes the clear-state once. With no
     // clear pending, skip `acquirePass` entirely rather than open (and count)
     // a pass no draw will land in.
@@ -466,7 +466,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
 
     // Retained capture: while a capture window is active, additionally stage
-    // this batch's exact packed bytes into the group-owned bundle — the
+    // this batch's exact packed bytes into the group-owned bundle - the
     // recorded data IS the drawn data, byte-identical by construction.
     // Recorded regardless of the live visibility decision above (mask/
     // scissor), since visibility is re-evaluated live at replay. A batch
@@ -491,7 +491,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   /**
    * Whether the packed floats of the active group matrix differ from what the
    * shared projection UBO currently holds at [16, 32). Stages the packed matrix
-   * into `_stagedGroupData` as a side effect (idempotent — safe to call more
+   * into `_stagedGroupData` as a side effect (idempotent - safe to call more
    * than once per flush).
    */
   private _groupContentChanged(backend: WebGpuBackend): boolean {
@@ -556,7 +556,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   // The bundle/stage stores raw instance bytes; this renderer owns the
   // 32-byte (8-word) layout (tile word at word 7: transform row in bits
   // 0..28, diagonal flip in bit 29), so the layout-aware finalize steps
-  // (node-index scan/rebase) and the replay dispatch live here — mirroring
+  // (node-index scan/rebase) and the replay dispatch live here - mirroring
   // WebGpuNineSliceSpriteRenderer's seam.
 
   /** @internal See {@link WebGpuRetainedBatchReplayer._scanRetainedNodeIndexRange}. */
@@ -598,7 +598,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   /**
    * Replay one recorded batch from its group-owned bundle into the OPEN pass.
    * Reuses only recorded DATA (instance bytes, transform rows, texture, blend
-   * mode); every piece of STATE is resolved live — pipeline via the
+   * mode); every piece of STATE is resolved live - pipeline via the
    * `_getPipeline` cache, the group(1) texture bind group via the live
    * texture-set cache (resolving re-syncs dirty content), and the group's
    * 128-byte UBO (projection from the live view + the live composed group
@@ -616,7 +616,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
       return;
     }
 
-    // Drain any pending live batch first (defensive — the group boundary
+    // Drain any pending live batch first (defensive - the group boundary
     // already flushed; flush() is a no-op when nothing is pending).
     this.flush();
 
@@ -793,7 +793,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
   }
 
   /**
-   * Resolve the GPU instance buffer for `requiredBytes` — the total this pass
+   * Resolve the GPU instance buffer for `requiredBytes` - the total this pass
    * would reach by appending, not this flush's own bytes. Reallocation frees the
    * buffer earlier draws in the open pass read, so the caller must have ended
    * that pass (and restarted the cursor) before a growing call. Capacity

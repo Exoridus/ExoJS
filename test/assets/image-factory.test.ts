@@ -2,12 +2,12 @@ import type { MockInstance } from 'vitest';
 
 import { ImageFactory } from '#assets/factories/ImageFactory';
 
-// PNG magic bytes — enough for determineMimeType()'s pattern match without a
+// PNG magic bytes - enough for determineMimeType()'s pattern match without a
 // real, fully-formed PNG payload.
 const PNG_HEADER = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).buffer;
 
 // ---------------------------------------------------------------------------
-// Image element capture helper — see svg-factory.test.ts for rationale:
+// Image element capture helper - see svg-factory.test.ts for rationale:
 // jsdom's HTMLImageElement never fires 'load'/'error'/'abort' on its own.
 // ---------------------------------------------------------------------------
 
@@ -33,7 +33,7 @@ describe('ImageFactory', () => {
 
   beforeEach(() => {
     capturedImages = [];
-    // Spy (rather than replace) so the real jsdom Blob-URL behavior still runs —
+    // Spy (rather than replace) so the real jsdom Blob-URL behavior still runs -
     // only the call history is inspected.
     createObjectUrlSpy = vi.spyOn(URL, 'createObjectURL');
     revokeObjectUrlSpy = vi.spyOn(URL, 'revokeObjectURL');
@@ -107,7 +107,7 @@ describe('ImageFactory', () => {
 
   describe('HTMLImageElement fallback path (no createImageBitmap)', () => {
     beforeEach(() => {
-      // createImageBitmap is undefined by default in jsdom — explicitly stub it
+      // createImageBitmap is undefined by default in jsdom - explicitly stub it
       // as undefined so this describe block is order-independent.
       vi.stubGlobal('createImageBitmap', undefined);
       vi.stubGlobal('Image', CapturingImage);

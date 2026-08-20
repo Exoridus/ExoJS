@@ -81,7 +81,7 @@ const createTestBackend = (): RenderBackend => {
 
 // `build()` wraps a Container root in its own Group scope (see
 // retained-plan-cache.test.ts), so the draws for a scene never live at
-// `pass.root.entries` — they are nested one or more Group/Barrier scopes deep.
+// `pass.root.entries` - they are nested one or more Group/Barrier scopes deep.
 // Walk the scope tree in entry order to recover the true post-optimize paint
 // order.
 const gatherScopeDraws = (scope: GroupScope, out: DrawCommand[]): void => {
@@ -233,7 +233,7 @@ describe('static-subtree skip: invalidation gates', () => {
 
   // The stale-replay bug this guards: a captured direct drawable child that is
   // `destroy()`ed WITHOUT a preceding `removeChild()`. `destroy()` now unlinks
-  // the node itself, so the capture key changes and the fast path is gone —
+  // the node itself, so the capture key changes and the fast path is gone -
   // asserted on the cache key rather than on the collected draws, because the
   // draw-level symptom used to be papered over by a __DEV__-only slot scan that
   // production builds strip out (and Vitest always compiles __DEV__ to `true`,

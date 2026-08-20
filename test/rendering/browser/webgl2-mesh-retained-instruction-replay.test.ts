@@ -1,5 +1,5 @@
 /**
- * WebGL2 renderer-matrix browser tests — Mesh retained instruction-set replay.
+ * WebGL2 renderer-matrix browser tests - Mesh retained instruction-set replay.
  *
  * The mesh counterpart of `webgl2-nine-slice-retained-instruction-replay.test.ts`.
  * Mesh's recordable draw is structurally different from the self-contained
@@ -13,12 +13,12 @@
  *
  * A live sprite OUTSIDE (and before) the group keeps the group's shared
  * transform rows starting at a non-zero frame-global index, so the group-local
- * node-index rebase is load-bearing in every assertion — the final cell
+ * node-index rebase is load-bearing in every assertion - the final cell
  * neuters the rebase hook and proves the frame then diverges.
  *
  * The group holds two same-geometry mesh runs with DISTINCT textures (2 red +
  * 2 green), so each run records its own single-texture INSTANCED batch (>= 2
- * instances, the recordable path on both backends) — exercising per-batch byte
+ * instances, the recordable path on both backends) - exercising per-batch byte
  * offsets across more than one recorded batch, all sharing ONE geometry buffer.
  *
  * Run via:  pnpm test:browser:webgl
@@ -151,7 +151,7 @@ const createQuadGeometry = (): Geometry => {
 
 /**
  * Standard cell scene: one live sprite OUTSIDE (and before) the retained group
- * so the group's shared transform rows never start at row 0 — the group-local
+ * so the group's shared transform rows never start at row 0 - the group-local
  * node-index rebase is load-bearing in every pixel assertion.
  *
  * The group holds 4 meshes sharing ONE quad geometry: two red (one instanced
@@ -202,7 +202,7 @@ const buildScene = () => {
 /**
  * Same shape as {@link buildScene}, but the group's meshes are built from raw
  * vertex ARRAYS instead of a shared {@link Geometry}. Those can only ever take
- * the mesh renderer's dynamic single-draw path, which is not recordable — the
+ * the mesh renderer's dynamic single-draw path, which is not recordable - the
  * collect-time admission predicate must keep the group off the recorded tier
  * entirely rather than letting it record and poison every frame.
  */
@@ -264,7 +264,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
     const replaySpy = vi.spyOn(backend, '_replayRetainedBatch');
 
     try {
-      // F1 — full collect + fragment capture (slow tier).
+      // F1 - full collect + fragment capture (slow tier).
       render(backend, scene.root);
 
       const collectFrame = readCanvas(backend);
@@ -272,7 +272,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
       expectBaseScenePixels(backend);
       expect(replaySpy).not.toHaveBeenCalled();
 
-      // F2 — entry replay + instruction recording (the recording source).
+      // F2 - entry replay + instruction recording (the recording source).
       render(backend, scene.root);
 
       const recordFrame = readCanvas(backend);
@@ -280,7 +280,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
       expect(beginSpy).toHaveBeenCalledTimes(1);
       expect(replaySpy).not.toHaveBeenCalled();
 
-      // F3/F4 — instruction splice: recorded mesh batches replay indexed from
+      // F3/F4 - instruction splice: recorded mesh batches replay indexed from
       // group-owned resources (node-index stream) + the shared geometry. Same
       // bytes, same rows (group-local rebase), same live uniforms -> identical.
       render(backend, scene.root);
@@ -376,7 +376,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
       // A pure transform move on a direct child stays content-clean, so the
       // group keeps its recording and patches just this child's shared
       // transform row in place. redA and redB share ONE batch but reference
-      // DISTINCT rows, so only redA moves — the per-instance row rebase and the
+      // DISTINCT rows, so only redA moves - the per-instance row rebase and the
       // in-place patch are both load-bearing here.
       scene.redA.setPosition(0, 32); // group-local (0,32) -> world (8,56)-(24,72), off-canvas bottom
       render(backend, scene.root);
@@ -455,7 +455,7 @@ describe('WebGL2 renderer matrix: Mesh retained instruction-set replay cells', (
     try {
       // An array-vertex mesh re-packs its vertices into the renderer's own
       // scratch buffers every frame, so it can only ever take the dynamic
-      // single draw — the path that poisons an open capture. The collect-time
+      // single draw - the path that poisons an open capture. The collect-time
       // admission predicate keeps the capture from opening in the first place,
       // which must not change a single pixel of what the group renders.
       render(backend, scene.root); // F1 collect

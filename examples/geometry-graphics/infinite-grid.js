@@ -1,4 +1,4 @@
-// Auto-generated from infinite-grid.ts — edit the .ts source, not this file.
+// Auto-generated from infinite-grid.ts - edit the .ts source, not this file.
 import { Application, Color, Keyboard, Scene, ShaderFilter, Sprite, View } from '@codexo/exojs';
 const glsl = `#version 300 es
 precision mediump float;

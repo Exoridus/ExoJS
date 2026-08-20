@@ -1,4 +1,4 @@
-// Auto-generated from emitter-basics.ts — edit the .ts source, not this file.
+// Auto-generated from emitter-basics.ts - edit the .ts source, not this file.
 import { Application, Color, Scene } from '@codexo/exojs';
 import { ApplyForce, ColorGradient, ColorOverLifetime, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
@@ -12,7 +12,7 @@ class EmitterBasicsScene extends Scene {
         this.systems.add(this.system);
         this.system.setPosition(width / 2, height - 80);
         // Rate, lifetime, and a cone-shaped velocity spread: a fountain that
-        // shoots upward (-π/2) with a ±36° spread and 70–180 px/s speed.
+        // shoots upward (-π/2) with a ±36° spread and 70-180 px/s speed.
         this.system.addSpawnModule(new RateSpawn({
             rate: new Constant(180),
             lifetime: new Range(0.6, 1.4),

@@ -51,7 +51,7 @@ class KeyedDrawable extends Drawable {
   }
 }
 
-/** Replays fixed retained slots instead of collecting children — the `_replayRetainedDraw` path. */
+/** Replays fixed retained slots instead of collecting children - the `_replayRetainedDraw` path. */
 class ReplayOnlyContainer extends Container {
   public constructor(private readonly slots: readonly RetainedDrawData[]) {
     super();
@@ -542,7 +542,7 @@ describe('material grouping', () => {
   test('single-material scope: skipping the material pass changes nothing', () => {
     // Three interleaved same-material draws. Whether the optimizer runs the
     // material pass or skips it on `hasMixedPipeline: false`, the resulting draw
-    // order and groupIndex sequence must be identical — that equality is what
+    // order and groupIndex sequence must be identical - that equality is what
     // makes the skip safe.
     const mkEntries = () => {
       const a = new BoxDrawable('a');

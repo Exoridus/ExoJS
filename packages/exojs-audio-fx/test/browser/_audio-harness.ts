@@ -2,14 +2,14 @@
  * Browser-side helpers for the acoustic-contract tests. These run in real
  * headless Chromium (the `browser-audio-chromium` vitest project), so
  * OfflineAudioContext, AudioWorkletNode, Blob and URL are the genuine Web Audio
- * APIs — not jsdom mocks. A worklet effect is loaded by turning its source
+ * APIs - not jsdom mocks. A worklet effect is loaded by turning its source
  * string into a Blob module, then rendered offline and analysed.
  */
 
 export const SAMPLE_RATE = 48000;
 
 interface RenderOptions {
-  /** Worklet source string (the `…WorkletSource` export). */
+  /** Worklet source string (the `...WorkletSource` export). */
   source: string;
   /** Processor name registered via `registerProcessor()` in the source. */
   processorName: string;
@@ -70,7 +70,7 @@ export async function renderWorklet(opts: RenderOptions): Promise<Float32Array> 
 
 /**
  * Hann-windowed power spectrum via an in-place radix-2 FFT over the largest
- * power-of-two prefix of `buf`. O(N log N) — far cheaper than a per-bin DFT
+ * power-of-two prefix of `buf`. O(N log N) - far cheaper than a per-bin DFT
  * sweep when scanning the whole spectrum.
  */
 function powerSpectrum(buf: Float32Array): { mag: Float32Array; n: number } {

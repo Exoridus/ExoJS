@@ -12,7 +12,7 @@ import { validateTiledMapData, validateTiledTilesetFileData } from './validate';
  * Resolves and loads the image(s) referenced by a tileset: the atlas
  * `image` (if present) and any collection-of-images per-tile `image`
  * entries, relative to `baseUrl` (the resolved location of the file the
- * tileset data came from — the `.tmj` for an embedded tileset, the `.tsj`
+ * tileset data came from - the `.tmj` for an embedded tileset, the `.tsj`
  * for an external one).
  *
  * Textures are loaded via `context.loader`, which deduplicates concurrent

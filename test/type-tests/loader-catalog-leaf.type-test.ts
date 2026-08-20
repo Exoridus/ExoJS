@@ -2,7 +2,7 @@
 // (and their `SceneLoader` mirrors).
 //
 // Those overloads used to be keyed on `ResourceAssetObject`, i.e.
-// `Extract<AssetDefinitions[keyof AssetDefinitions]['resource'], object>` — but
+// `Extract<AssetDefinitions[keyof AssetDefinitions]['resource'], object>` - but
 // `json`'s `resource: unknown` swallows the indexed union it is extracted from,
 // so the whole thing collapsed to `Extract<unknown, object>` = `never` and
 // `loader.load(bag.player)` matched no overload at all, while the runtime
@@ -11,8 +11,8 @@
 // The replacement is not a hand-rolled union of object-ish resources: that would
 // wave through every raw `Texture`, plus non-leaf resources (`AudioStream`,
 // `Video`, `BmFont`, `FontFace`, `HTMLImageElement`) the runtime rejects. It
-// mirrors the runtime identity instead — the `_assetMeta` stamp `createLeaf`
-// puts on every materialized leaf — as a type-level brand, so the accepted set
+// mirrors the runtime identity instead - the `_assetMeta` stamp `createLeaf`
+// puts on every materialized leaf - as a type-level brand, so the accepted set
 // is exactly the set `_loadClaimed`'s meta-stamped-leaf branch handles.
 //
 // `pnpm typecheck:type-tests` compiles this file under all three lanes: the
@@ -73,7 +73,7 @@ const bag = Assets.from({
   player: 'player.png',
   jump: 'jump.wav',
   config: 'config.json',
-  // Explicit configs — no file suffix involved for the custom types.
+  // Explicit configs - no file suffix involved for the custom types.
   atlas: Asset.type('spriteAtlas', 'atlases/hero'),
   metrics: Asset.type('atlasMetrics', 'atlases/hero.meta'),
 });
@@ -86,7 +86,7 @@ const config: AssetRef<unknown> = bag.config;
 const atlas: SpriteAtlas = bag.atlas;
 const metrics: AssetRef<AtlasMetrics> = bag.metrics;
 
-// …and it is exactly the branded leaf, not the bare resource.
+// ...and it is exactly the branded leaf, not the bare resource.
 expectType<Equal<typeof bag.player, CatalogResourceLeaf<Texture>>>();
 expectType<Equal<typeof bag.jump, CatalogResourceLeaf<Sound>>>();
 expectType<Equal<typeof bag.config, CatalogValueLeaf<unknown>>>();
@@ -114,7 +114,7 @@ export async function leafLoads(): Promise<void> {
   const metricsQueue = loader.load(bag.metrics, { priority: LoadPriority.Background });
   expectType<Equal<Awaited<typeof metricsQueue>, AtlasMetrics>>();
 
-  // `get(leaf)` adopts and returns THE SAME leaf — brand included, because the
+  // `get(leaf)` adopts and returns THE SAME leaf - brand included, because the
   // runtime hands back the very stamped object it was given. A resource leaf
   // stays its resource, a value leaf the ref itself (its payload arrives on the
   // ref); both keep the stamp that makes them re-loadable below.
@@ -124,13 +124,13 @@ export async function leafLoads(): Promise<void> {
   expectType<Equal<ReturnType<typeof getConfig>, CatalogValueLeaf<unknown>>>();
   expectType<Equal<ReturnType<typeof getMetrics>, CatalogValueLeaf<AtlasMetrics>>>();
 
-  // A branded `get()` result stays ordinarily usable…
+  // A branded `get()` result stays ordinarily usable...
   const gotTexture: Texture = loader.get(bag.player);
   const gotSound: Sound = loader.get(bag.jump);
   const gotMetrics: AssetRef<AtlasMetrics> = loader.get(bag.metrics);
   void [gotTexture, gotSound, gotMetrics];
 
-  // …and round-trips back into a single-leaf `load()` with exact inference.
+  // ...and round-trips back into a single-leaf `load()` with exact inference.
   const roundTripTexture = loader.load(loader.get(bag.player));
   expectType<Equal<typeof roundTripTexture, LoadingQueue<Texture>>>();
 
@@ -170,7 +170,7 @@ export async function derivedLeaves(): Promise<void> {
   const composedValue = await loader.load(composed.trees);
   expectType<Equal<typeof composedValue, unknown>>();
 
-  // A composition SHARES its inputs' leaves — the base key stays loadable too.
+  // A composition SHARES its inputs' leaves - the base key stays loadable too.
   const composedBase = await loader.load(composed.player);
   expectType<Equal<typeof composedBase, Texture>>();
 
@@ -266,33 +266,33 @@ declare const image: HTMLImageElement;
 declare const fontFace: FontFace;
 
 export function negatives(): void {
-  // @ts-expect-error — a raw resource carries no `_assetMeta` stamp.
+  // @ts-expect-error - a raw resource carries no `_assetMeta` stamp.
   loader.load(rawTexture);
-  // @ts-expect-error — …and `get` rejects it for the same reason.
+  // @ts-expect-error - ...and `get` rejects it for the same reason.
   loader.get(rawTexture);
-  // @ts-expect-error — raw Sound is not a leaf either.
+  // @ts-expect-error - raw Sound is not a leaf either.
   loader.load(rawSound);
-  // @ts-expect-error — a bare `AssetRef` is not a materialized value leaf.
+  // @ts-expect-error - a bare `AssetRef` is not a materialized value leaf.
   loader.load(rawRef);
-  // @ts-expect-error — nor is a raw instance of a CUSTOM seamless resource.
+  // @ts-expect-error - nor is a raw instance of a CUSTOM seamless resource.
   loader.load(rawAtlas);
 
   // Non-leaf resource types must not sneak in through the leaf overloads.
-  // @ts-expect-error — AudioStream is not a catalog leaf.
+  // @ts-expect-error - AudioStream is not a catalog leaf.
   loader.load(audioStream);
-  // @ts-expect-error — Video is not a catalog leaf.
+  // @ts-expect-error - Video is not a catalog leaf.
   loader.load(video);
-  // @ts-expect-error — BmFont is not a catalog leaf.
+  // @ts-expect-error - BmFont is not a catalog leaf.
   loader.load(bmFont);
-  // @ts-expect-error — HTMLImageElement is not a catalog leaf.
+  // @ts-expect-error - HTMLImageElement is not a catalog leaf.
   loader.load(image);
-  // @ts-expect-error — FontFace is not a catalog leaf.
+  // @ts-expect-error - FontFace is not a catalog leaf.
   loader.load(fontFace);
 
   // The scene-scoped mirror enforces the same contract.
-  // @ts-expect-error — raw resource, scene loader.
+  // @ts-expect-error - raw resource, scene loader.
   scene.loader.load(rawTexture);
-  // @ts-expect-error — raw resource, scene loader `get`.
+  // @ts-expect-error - raw resource, scene loader `get`.
   scene.loader.get(rawTexture);
 }
 
@@ -300,7 +300,7 @@ export function negatives(): void {
 //
 // The deliberate asymmetry: a bare path resolves through the source-keyed dedup
 // rather than `createLeaf`, so the handle it returns carries no `_assetMeta`
-// stamp at runtime — and must therefore not be re-loadable as a single leaf.
+// stamp at runtime - and must therefore not be re-loadable as a single leaf.
 
 export function barePathStaysUnbranded(): void {
   const bareTexture = loader.get('player.png');
@@ -309,16 +309,16 @@ export function barePathStaysUnbranded(): void {
   const bareRef = loader.get('config.json');
   expectType<Equal<typeof bareRef, AssetRef<unknown>>>();
 
-  // @ts-expect-error — an unstamped bare-path handle is not a single leaf.
+  // @ts-expect-error - an unstamped bare-path handle is not a single leaf.
   loader.load(bareTexture);
-  // @ts-expect-error — …nor is the bare-path AssetRef.
+  // @ts-expect-error - ...nor is the bare-path AssetRef.
   loader.load(bareRef);
-  // @ts-expect-error — inline form, same contract.
+  // @ts-expect-error - inline form, same contract.
   loader.load(loader.get('player.png'));
 
   const sceneBareTexture = scene.loader.get('player.png');
   expectType<Equal<typeof sceneBareTexture, Texture>>();
-  // @ts-expect-error — the scene mirror keeps the asymmetry.
+  // @ts-expect-error - the scene mirror keeps the asymmetry.
   scene.loader.load(sceneBareTexture);
 }
 

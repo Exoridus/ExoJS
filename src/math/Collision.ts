@@ -63,7 +63,7 @@ export interface Collidable {
 export interface CollisionResponse {
   readonly shapeA: Collidable;
   readonly shapeB: Collidable;
-  /** Penetration depth — the minimum distance to move the shapes apart. */
+  /** Penetration depth - the minimum distance to move the shapes apart. */
   readonly overlap: number;
   /** `true` when `shapeA` is fully contained within `shapeB`. */
   readonly shapeAinB: boolean;

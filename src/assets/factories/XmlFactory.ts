@@ -5,8 +5,8 @@ import { AbstractAssetFactory } from '#assets/AbstractAssetFactory';
  * parsed {@link Document} via the browser's built-in {@link DOMParser}.
  *
  * Throws if the response body is not well-formed XML. Use the returned
- * `Document` directly with standard DOM APIs — `doc.querySelector`,
- * `doc.getElementsByTagName`, etc. — or pass it to a format-specific parser
+ * `Document` directly with standard DOM APIs - `doc.querySelector`,
+ * `doc.getElementsByTagName`, etc. - or pass it to a format-specific parser
  * (e.g. for Tiled TMX, BMFont, or TexturePacker XML atlas files).
  */
 export class XmlFactory extends AbstractAssetFactory<Document> {

@@ -1,4 +1,4 @@
-// Auto-generated from key-rebinding.ts — edit the .ts source, not this file.
+// Auto-generated from key-rebinding.ts - edit the .ts source, not this file.
 import { ActionMap, Application, BindingProfile, ButtonAction, Color, Graphics, inputToken, Keyboard, Scene, } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // A binding is persisted as a stable lowercase token ("keyboard.space"), never
@@ -30,7 +30,7 @@ function saveProfile(profile) {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(profile));
     }
     catch {
-        // Non-fatal — persistence is best-effort.
+        // Non-fatal - persistence is best-effort.
     }
 }
 class KeyRebindingScene extends Scene {
@@ -112,7 +112,7 @@ class KeyRebindingScene extends Scene {
         // Static ground line, just below where the hero square rests.
         this.graphics.fillColor = new Color(40, 48, 64);
         this.graphics.drawRectangle(0, this.groundY + 40, width, 4);
-        // Hero square — heroY is animated by the (rebindable) jump key.
+        // Hero square - heroY is animated by the (rebindable) jump key.
         this.graphics.fillColor = new Color(255, 190, 90);
         this.graphics.drawRectangle(width / 2 - 20, this.heroY, 40, 40);
         context.render(this.graphics);

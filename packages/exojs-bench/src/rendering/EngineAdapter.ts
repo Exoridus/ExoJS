@@ -47,7 +47,7 @@ export interface ArchetypeSpec {
    * arm with no matching cost on the Pixi arm.
    *
    * An archetype with genuine off-screen content sets it `true` and is measured
-   * on BOTH Pixi arms — `pixi default` leaves culling off (Pixi's out-of-the-box
+   * on BOTH Pixi arms - `pixi default` leaves culling off (Pixi's out-of-the-box
    * behaviour: it draws the off-screen content too) and `pixi culled` calls
    * `Culler.shared.cull` per frame, so the asymmetry is measured rather than
    * assumed away.
@@ -60,7 +60,7 @@ export interface ArchetypeSpec {
    * honours this field (it builds and renders through the extra `View`
    * instances); a competitor arm without a comparable multi-viewport API
    * renders its normal single-view scene instead, so `split-screen` is an
-   * ExoJS-internal structural probe, not a cross-arm wall-clock comparison —
+   * ExoJS-internal structural probe, not a cross-arm wall-clock comparison -
    * see `adapters/exojs.ts` and the archetype's doc comment in
    * `archetypes.ts`.
    */
@@ -71,7 +71,7 @@ export interface ArchetypeSpec {
    * (`Normal`), which is what every pre-existing archetype does.
    *
    * The mode for leaf `i` is `floor(i / blendRunLength) % blendModeCount`, so
-   * the scene contains long same-mode runs rather than alternating per sprite —
+   * the scene contains long same-mode runs rather than alternating per sprite -
    * a per-sprite alternation would degenerate to one draw call per sprite on
    * ANY batcher and would measure nothing but flush overhead. Only modes with a
    * fixed-function GPU blend equation are used (normal / add / multiply /
@@ -90,8 +90,8 @@ export interface ArchetypeSpec {
    * (its equivalent is a `Mesh` with its own `Shader`, a different geometry
    * path entirely), so the Pixi arm renders the same scene WITHOUT materials.
    * An archetype that sets this is therefore an ExoJS-internal probe on the
-   * material dimension — read it against the otherwise-identical
-   * `mixed-blend` archetype to isolate the custom-material cost — and NOT a
+   * material dimension - read it against the otherwise-identical
+   * `mixed-blend` archetype to isolate the custom-material cost - and NOT a
    * cross-arm wall-clock comparison.
    */
   readonly materialCount?: number;
@@ -117,7 +117,7 @@ export interface ArchetypeSpec {
    * `undefined` keeps the sprite-only scene every other archetype builds.
    *
    * Renderer SWITCHES are the measured dimension, so the scene is deliberately
-   * lopsided — long sprite runs punctuated by one mesh — rather than two equal
+   * lopsided - long sprite runs punctuated by one mesh - rather than two equal
    * plateaus. Equal plateaus would fill half the frame with mesh leaves, and the
    * default mesh path costs one draw call per leaf, so the measurement would be
    * swamped by per-mesh draw-call cost and say nothing about the switch. One
@@ -126,10 +126,10 @@ export interface ArchetypeSpec {
    * count.
    *
    * On WebGPU each switch used to end the open render pass and `queue.submit`,
-   * and the mesh renderer ended its own pass again at the tail of every flush —
+   * and the mesh renderer ended its own pass again at the tail of every flush -
    * so the frame's submit count scaled with the switch count.
    *
-   * ExoJS-ONLY, like `viewCount` and `materialCount` — a competitor arm builds
+   * ExoJS-ONLY, like `viewCount` and `materialCount` - a competitor arm builds
    * its ordinary sprite scene instead, so this archetype carries no cross-arm
    * meaning.
    */
@@ -154,7 +154,7 @@ export interface ArchetypeSpec {
    * ExoJS moves its `View` centre (the engine has a real camera, and the view
    * rect is what its culling and its retained-product validity are keyed on),
    * while the Pixi arm translates the world container (Pixi has no camera
-   * object). Same visible content per frame either way — disclosed in the
+   * object). Same visible content per frame either way - disclosed in the
    * report's Methodology rather than papered over.
    */
   readonly cameraSpeed?: number;
@@ -222,7 +222,7 @@ export interface CellResult extends BaseCellResult<CellSpec> {
    * it. `frameMs*` is hardware GPU time for the frame's render passes;
    * `queueMs*` is the CPU-observed `queue.onSubmittedWorkDone` interval charged
    * to the frame that caused it. Only `queueMs*` sees `queue.writeBuffer` upload
-   * cost, and only `frameMs*` resolves work below the queue's ~0.5–3.2ms
+   * cost, and only `frameMs*` resolves work below the queue's ~0.5-3.2ms
    * completion-observation floor. The cell note states both limits.
    */
   readonly queueMsMedian: number | null;
@@ -245,7 +245,7 @@ export interface EngineAdapter {
    * arm that omits it is measured on every archetype, which is the norm.
    *
    * It exists for arms that are a VARIANT of another arm rather than a whole
-   * engine — `pixi culled`, which differs from `pixi default` only by an
+   * engine - `pixi culled`, which differs from `pixi default` only by an
    * explicit per-frame `Culler.shared.cull` call. On an archetype whose content
    * is fully on-screen that call changes nothing except its own cost, so the
    * variant would spend the whole matrix producing rows that duplicate the arm
@@ -275,7 +275,7 @@ export interface EngineAdapter {
   mutationSignature?(): string;
   /**
    * The live WebGPU device when this adapter was initialised on the `'webgpu'`
-   * backend, so the harness can attach a structural probe to it — unlike a
+   * backend, so the harness can attach a structural probe to it - unlike a
    * WebGL2 context (recoverable from the canvas via `getContext('webgl2')`),
    * the device is not otherwise reachable from outside the engine. Returns
    * `null` on other backends or before {@link init}. Optional: engines that

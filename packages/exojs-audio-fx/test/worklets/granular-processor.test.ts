@@ -4,7 +4,7 @@ import type { MockInstance } from 'vitest';
  * DSP-level acoustic contract for the GranularProcessor worklet, focused on the
  * optional normalizeGain behaviour.
  *
- * Granular RMS scales with sqrt(density * grainSize) — overlapping uncorrelated
+ * Granular RMS scales with sqrt(density * grainSize) - overlapping uncorrelated
  * grains add in power. That level dynamics is the intended expressive default
  * (normalizeGain off). With normalizeGain on, output level should stay roughly
  * constant across densities.

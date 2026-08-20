@@ -3,13 +3,13 @@
  *
  * Every other scene here renders scene-graph nodes. `RenderingContext.drawBatch`
  * is an immediate call instead, so these scenes wrap it in a node that issues the
- * batch during its own render — that is what lets the same runner compare it
+ * batch during its own render - that is what lets the same runner compare it
  * across backends.
  *
  * The custom-material scene is the one that earns its place: the two backends
- * reach a batch's transform and tint through entirely different machinery — a
+ * reach a batch's transform and tint through entirely different machinery - a
  * `sampler2D` fetched with `texelFetch` on WebGL2, a `read-only-storage` array on
- * WebGPU — and `INSTANCE_TRANSFORM_GLSL` / `INSTANCE_TRANSFORM_WGSL` are two
+ * WebGPU - and `INSTANCE_TRANSFORM_GLSL` / `INSTANCE_TRANSFORM_WGSL` are two
  * hand-written encodings of the same contract. Nothing else checks that those two
  * agree. A divergence in the snap policy, the affine unpacking or the tint
  * unpacking shows up here as a cross-backend pixel difference and nowhere else.

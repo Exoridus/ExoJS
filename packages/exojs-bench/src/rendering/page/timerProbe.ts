@@ -4,7 +4,7 @@
  * `stallProbe.ts` answers "what does the engine do on this frame". This probe
  * answers a different question: "what does the harness's WebGPU frame-time
  * SAMPLE actually measure". It therefore records the full event timeline of a
- * timed frame —
+ * timed frame -
  *
  * ```text
  * rAF callback timestamp
@@ -16,7 +16,7 @@
  * hardware GPU timestamps around every render pass of the frame
  * ```
  *
- * — plus a set of scheduler CONTROL measurements (`performance.now` resolution,
+ * - plus a set of scheduler CONTROL measurements (`performance.now` resolution,
  * microtask latency, completion latency on a provably idle queue, rAF cadence)
  * that separate GPU execution from completion-callback overhead.
  *
@@ -61,7 +61,7 @@ const QUERY_CAPACITY = 2048;
 
 /** Frame pacing under test. */
 export type TimerProbeMode =
-  /** rAF-paced, submits overlap freely — what the matrix harness does. */
+  /** rAF-paced, submits overlap freely - what the matrix harness does. */
   | 'pipelined'
   /** rAF-paced, but each frame's queue work is awaited before the next frame runs. */
   | 'serialized'
@@ -70,19 +70,19 @@ export type TimerProbeMode =
    * buffer instead of rendering. The engine, the swapchain and every draw are out
    * of the picture, so whatever `onSubmittedWorkDone` still reports here is the
    * floor the metric carries from the browser's submit/completion plumbing under
-   * rAF pacing — not GPU work.
+   * rAF pacing - not GPU work.
    */
   | 'idle-empty'
   /**
    * Diagnostic control arm: rAF-paced, one render pass that only CLEARS the
    * canvas swapchain texture. Nanoseconds of GPU work, but the submit touches the
-   * presented surface — which isolates presentation coupling from engine work.
+   * presented surface - which isolates presentation coupling from engine work.
    */
   | 'canvas-clear'
   /**
    * Diagnostic control arm: {@link canvas-clear}, but clearing a probe-owned
    * OFFSCREEN texture instead of the swapchain. Identical GPU work, no
-   * presentation — the A/B partner that names presentation as the cause.
+   * presentation - the A/B partner that names presentation as the cause.
    */
   | 'offscreen-clear';
 
@@ -141,7 +141,7 @@ export interface TimerFrameRecord {
   /**
    * Sum over this frame's render passes of (end timestamp − begin timestamp),
    * from the hardware `timestamp-query` writes. Null when timestamps are off or
-   * unavailable. Covers render-pass execution ONLY — `queue.writeBuffer` copies
+   * unavailable. Covers render-pass execution ONLY - `queue.writeBuffer` copies
    * are queue operations outside any command buffer and cannot be bracketed.
    */
   gpuPassMs: number | null;
@@ -168,7 +168,7 @@ export interface TimerControlResult {
   readonly crossOriginIsolated: boolean;
   /** `await Promise.resolve()` round-trip, one entry per sample. */
   readonly microtaskMs: readonly number[];
-  /** `onSubmittedWorkDone()` on a queue that was just drained — pure completion-callback overhead. */
+  /** `onSubmittedWorkDone()` on a queue that was just drained - pure completion-callback overhead. */
   readonly idleQueueMs: readonly number[];
   /** Submit one EMPTY command buffer, then await completion. The floor of any real frame sample. */
   readonly emptySubmitMs: readonly number[];
@@ -220,7 +220,7 @@ const patchMethod = (target: Record<string, unknown>, name: string, make: (origi
  * Make every `requestDevice` on this page ask for `timestamp-query` when the
  * adapter has it, so the device the ENGINE creates carries the feature. The
  * engine builds its own descriptor (`WebGpuBackend`), so the feature cannot be
- * added after the fact — a device's feature set is immutable.
+ * added after the fact - a device's feature set is immutable.
  *
  * Additive only: the engine's own `requiredFeatures` are preserved.
  */
@@ -308,7 +308,7 @@ interface EncoderTimestamps {
  * `queue.writeBuffer` is a queue operation, not a command-buffer command. Its
  * copy never appears inside a render pass, so no timestamp pair can bracket it.
  * On an upload-heavy frame the pass timestamps therefore report the DRAW cost
- * and omit the upload cost — which is exactly the work the queue-completion
+ * and omit the upload cost - which is exactly the work the queue-completion
  * wall clock does see.
  */
 interface TimestampRig {
@@ -406,7 +406,7 @@ const createTimestampRig = (device: GPUDevice): TimestampRig => {
             } else {
               // The engine REUSES one descriptor object across passes, so a stale
               // `timestampWrites` would re-write query indices already written in
-              // this submit — a validation error. Clear it explicitly.
+              // this submit - a validation error. Clear it explicitly.
               descriptor['timestampWrites'] = undefined;
             }
 
@@ -527,7 +527,7 @@ const freshCanvas = (): HTMLCanvasElement => {
 /**
  * One clear-only render pass, into the canvas swapchain (`context` non-null) or
  * into a probe-owned offscreen texture. The GPU work is identical either way;
- * only whether the target is PRESENTED differs — which is the entire content of
+ * only whether the target is PRESENTED differs - which is the entire content of
  * the `canvas-clear` / `offscreen-clear` A/B.
  */
 const submitClear = (device: GPUDevice, context: GPUCanvasContext | null, offscreen: GPUTexture | null): void => {

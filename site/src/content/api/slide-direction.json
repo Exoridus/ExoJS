@@ -1,6 +1,6 @@
 {
   "title": "SlideDirection",
-  "description": "The edge the outgoing content exits toward — see SlideSceneTransitionOptions.direction.",
+  "description": "The edge the outgoing content exits toward - see SlideSceneTransitionOptions.direction.",
   "symbol": "SlideDirection",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The edge the outgoing content exits toward — see SlideSceneTransitionOptions.direction."
+        "The edge the outgoing content exits toward - see SlideSceneTransitionOptions.direction."
       ],
       "importLine": "import { SlideDirection } from '@codexo/exojs'",
       "sourceLink": null

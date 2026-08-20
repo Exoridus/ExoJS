@@ -1,6 +1,6 @@
 /**
  * The cache operation that failed. Carried by {@link AssetCacheError.operation}
- * so callers can branch on the failure class — a failed `save` is a degraded
+ * so callers can branch on the failure class - a failed `save` is a degraded
  * cache write, a failed `connect` means the whole store is unavailable.
  */
 export type AssetCacheOperation =
@@ -19,16 +19,16 @@ export interface AssetCacheErrorOptions {
   readonly message: string;
   /**
    * Object store / storage namespace, when the operation targets one.
-   * Explicitly `undefined` is accepted — a database-wide operation has none.
+   * Explicitly `undefined` is accepted - a database-wide operation has none.
    */
   readonly store?: string | undefined;
   /**
    * Record key, when the operation targets a single record. Explicitly
-   * `undefined` is accepted — a store-wide operation has none.
+   * `undefined` is accepted - a store-wide operation has none.
    */
   readonly key?: string | undefined;
   /**
-   * The underlying failure — an `IDBRequest.error` `DOMException`, a store's
+   * The underlying failure - an `IDBRequest.error` `DOMException`, a store's
    * own rejection, or anything a custom {@link CacheStore} threw. Passed
    * through as {@link Error.cause}.
    */
@@ -38,7 +38,7 @@ export interface AssetCacheErrorOptions {
 /**
  * Structured asset-cache failure. Thrown by {@link IndexedDbDatabase} for every
  * failed IndexedDB request, and handed to {@link CacheRequest.reportCacheError}
- * — which `Loader` routes to {@link Loader.onCacheError} — for cache errors a
+ * - which `Loader` routes to {@link Loader.onCacheError} - for cache errors a
  * {@link CacheStrategy} degrades instead of propagating.
  *
  * Extends {@link Error}, so callers can narrow with `error instanceof AssetCacheError`
@@ -72,8 +72,8 @@ export class AssetCacheError extends Error {
 
 /**
  * Append `<name>: <message>` for an `Error`/`DOMException` cause. Without this
- * the DOMException name — the only thing that separates a quota failure from an
- * unknown transaction failure — is invisible to any consumer that logs
+ * the DOMException name - the only thing that separates a quota failure from an
+ * unknown transaction failure - is invisible to any consumer that logs
  * `error.message` alone.
  */
 function appendCause(message: string, cause: unknown): string {

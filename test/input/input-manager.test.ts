@@ -116,20 +116,20 @@ describe('InputManager gamepad lifecycle', () => {
       const buttonSouthChannel = Gamepad.resolveChannelOffset(0, GamepadButton.South);
       const channels = (inputManager as unknown as { channels: Float32Array }).channels;
 
-      // Frame 1 — connect with the South button RELEASED.
+      // Frame 1 - connect with the South button RELEASED.
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [0]), null, null, null]);
       inputManager.preUpdate(Time.zero);
       expect(inputManager.gamepads[0].connected).toBe(true);
       expect(channels[buttonSouthChannel]).toBe(0);
 
-      // Frame 2 — a FRESH snapshot object (as the browser returns each call)
+      // Frame 2 - a FRESH snapshot object (as the browser returns each call)
       // now reports the button PRESSED. The engine must poll the new snapshot,
       // not the stale one captured at connect.
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [1]), null, null, null]);
       inputManager.preUpdate(Time.zero);
       expect(channels[buttonSouthChannel]).toBe(1);
 
-      // Frame 3 — released again must clear (no "stuck" button after release).
+      // Frame 3 - released again must clear (no "stuck" button after release).
       setSnapshot([createNativeGamepad('Vendor: 045e Product: 0b13', 0, [0]), null, null, null]);
       inputManager.preUpdate(Time.zero);
       expect(channels[buttonSouthChannel]).toBe(0);

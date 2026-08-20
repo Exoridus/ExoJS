@@ -28,7 +28,7 @@ interface DestroyableFilter {
  * The cache sprite, described structurally so this module never imports the
  * `Sprite` class (that edge would close a runtime cycle). `Drawable` is folded
  * in as a TYPE-only extension because the composite path now hands the sprite
- * straight to `backend.draw` — the factory returns a real `Sprite`, so this
+ * straight to `backend.draw` - the factory returns a real `Sprite`, so this
  * only writes down what was already true.
  */
 interface RenderNodeSpriteLike extends Drawable {
@@ -120,7 +120,7 @@ export abstract class RenderNode extends SceneNode {
    * automatically repositioned to follow the pointer during a drag gesture.
    * The framework captures the pointer offset at drag-start so the node
    * doesn't snap to the cursor position. Both `interactive` and `draggable`
-   * must be set for dragging to work — a `draggable` but non-interactive
+   * must be set for dragging to work - a `draggable` but non-interactive
    * node will never receive `pointerdown` and therefore cannot start a drag.
    */
   public draggable = false;
@@ -157,11 +157,11 @@ export abstract class RenderNode extends SceneNode {
    * Unlike {@link mask} (which is alpha/visibility masking), `clip` is a hard
    * geometric boundary:
    *
-   * - `clipShape === null` — clip to this node's world-space bounds
+   * - `clipShape === null` - clip to this node's world-space bounds
    *   ({@link getBounds}), using the GPU scissor fast path.
-   * - `clipShape` is a `Rectangle` — clip to that world-space rectangle via
+   * - `clipShape` is a `Rectangle` - clip to that world-space rectangle via
    *   scissor.
-   * - `clipShape` is a `Geometry` — clip to the geometry's silhouette via the
+   * - `clipShape` is a `Geometry` - clip to the geometry's silhouette via the
    *   stencil buffer (WebGL2). Only fragments inside the shape survive.
    *
    * Clipping wraps the node's final (filtered/masked) output and acts as a
@@ -233,16 +233,16 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /**
-   * Fired when a pointer requests a context menu over this node — right-click,
+   * Fired when a pointer requests a context menu over this node - right-click,
    * or a long-press/touch gesture that has an attributable pointer. Bubbles
    * like the other pointer events, so a scene-wide fallback can listen on an
-   * ancestor. Carries no native event — whether the browser's own menu
+   * ancestor. Carries no native event - whether the browser's own menu
    * appears is decided by `ApplicationOptions.input.allowNativeContextMenu`,
    * independently of this.
    *
    * Requires an attributable pointer: a pointerless keyboard-only request
    * (the context-menu key, or Shift+F10, with no pointer ever having touched
-   * the surface — see {@link ContextMenuRequest}'s doc comment) has nothing to
+   * the surface - see {@link ContextMenuRequest}'s doc comment) has nothing to
    * hit-test or bubble with, so it never reaches this per-node event. It only
    * ever reaches the engine-wide, scene-graph-independent `app.input.onContextMenu`.
    */
@@ -277,18 +277,18 @@ export abstract class RenderNode extends SceneNode {
     return signal;
   }
 
-  /** @internal — the signal for `type`, or `null` if never materialized (used by the dispatch peek). */
+  /** @internal - the signal for `type`, or `null` if never materialized (used by the dispatch peek). */
   public _peekInteractionSignal(type: InteractionEventType): Signal<[InteractionEvent]> | null {
     return this._signals?.get(type) ?? null;
   }
 
   // Focus & keyboard. Like the interaction signals these are lazily
-  // materialized — a node that never participates in focus allocates none.
+  // materialized - a node that never participates in focus allocates none.
   // Routed by app.interaction's focus controller to the focused node.
 
   /**
-   * When `true`, this node can receive keyboard focus — via {@link focus},
-   * Tab traversal, or `app.interaction.focus(node)` — and is delivered key
+   * When `true`, this node can receive keyboard focus - via {@link focus},
+   * Tab traversal, or `app.interaction.focus(node)` - and is delivered key
    * events through {@link onKeyDown} / {@link onKeyUp} while focused, or
    * while any of its descendants holds focus (key events bubble up the
    * parent chain like pointer {@link InteractionEvent}s do).
@@ -324,22 +324,22 @@ export abstract class RenderNode extends SceneNode {
     return (this._onBlur ??= new Signal<[RenderNode]>());
   }
 
-  /** Fired for each key pressed while this node — or a descendant of it — holds focus. Bubbles; see {@link KeyEvent}. */
+  /** Fired for each key pressed while this node - or a descendant of it - holds focus. Bubbles; see {@link KeyEvent}. */
   public get onKeyDown(): Signal<[KeyEvent]> {
     return (this._onKeyDown ??= new Signal<[KeyEvent]>());
   }
 
-  /** Fired for each key released while this node — or a descendant of it — holds focus. Bubbles; see {@link KeyEvent}. */
+  /** Fired for each key released while this node - or a descendant of it - holds focus. Bubbles; see {@link KeyEvent}. */
   public get onKeyUp(): Signal<[KeyEvent]> {
     return (this._onKeyUp ??= new Signal<[KeyEvent]>());
   }
 
-  /** @internal — the focus/blur signal if materialized, else `null` (dispatch peek). */
+  /** @internal - the focus/blur signal if materialized, else `null` (dispatch peek). */
   public _peekFocusSignal(type: 'focus' | 'blur'): Signal<[RenderNode]> | null {
     return type === 'focus' ? this._onFocus : this._onBlur;
   }
 
-  /** @internal — the keydown/keyup signal if materialized, else `null` (dispatch peek). */
+  /** @internal - the keydown/keyup signal if materialized, else `null` (dispatch peek). */
   public _peekKeySignal(type: 'keydown' | 'keyup'): Signal<[KeyEvent]> | null {
     return type === 'keydown' ? this._onKeyDown : this._onKeyUp;
   }
@@ -374,7 +374,7 @@ export abstract class RenderNode extends SceneNode {
   private _cacheBounds: Rectangle | null = null;
   private _cacheSprite: RenderNodeSpriteLike | null = null;
   private _captureView: View | null = null;
-  /** Lazily built, then reused for every capture this node performs — see {@link _renderContentToTexture}. */
+  /** Lazily built, then reused for every capture this node performs - see {@link _renderContentToTexture}. */
   private _capturePass: BackendTargetPass | null = null;
   private _captureContent: (() => void) | null = null;
   private _mask: MaskSource = null;
@@ -457,7 +457,7 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /**
-   * Raw rendering entry point. Direct backend access — bypasses the
+   * Raw rendering entry point. Direct backend access - bypasses the
    * RenderPlan pipeline machinery. Prefer the high-level
    * {@link RenderingContext.render} path via the owning
    * `RenderingContext` wherever possible.
@@ -475,13 +475,13 @@ export abstract class RenderNode extends SceneNode {
     if (this.destroyed) {
       // A destroyed node has released its pooled transform/bounds; collecting
       // it would read freed state and re-pin it. `destroy()` unlinks the node,
-      // so this normally cannot be reached through a parent's child list — but
+      // so this normally cannot be reached through a parent's child list - but
       // a destroyed node handed straight to the renderer as a detached root
       // still lands here. Skip it: "renders nothing" is the correct result.
       //
       // Unconditional, NOT __DEV__-gated: the skip is the behaviour, not a
       // diagnostic. Gating it would let production keep replaying a destroyed
-      // node's last visual state while dev renders nothing — a dev/prod
+      // node's last visual state while dev renders nothing - a dev/prod
       // divergence in what ends up on screen.
       return;
     }
@@ -527,7 +527,7 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /**
-   * @internal — whether this node, when it IS the render root, gets the
+   * @internal - whether this node, when it IS the render root, gets the
    * automatic persistent render representation. Grouping nodes do
    * ({@link Container} overrides this); a drawable root is a single draw with
    * nothing to retain, and a `RetainedContainer` root already owns the
@@ -538,7 +538,7 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /**
-   * @internal — the automatic persistent render representation for this node as
+   * @internal - the automatic persistent render representation for this node as
    * a render root, created on first use. Overlapping roots (`render(world)`
    * plus `render(world.hud)`, mask sub-renders) each own their own; nothing
    * here is an exclusive owner slot on the subtree.
@@ -556,7 +556,7 @@ export abstract class RenderNode extends SceneNode {
   }
 
   /**
-   * @internal — the descendant transform-move seam for the automatic root
+   * @internal - the descendant transform-move seam for the automatic root
    * representation. Gated on a live CAPTURE, not on a live recording as
    * {@link RetainedContainer._enqueueDirtyTransformRow} is: the root treats a
    * queued move as its proof that the transform channel is accounted for, and
@@ -689,7 +689,7 @@ export abstract class RenderNode extends SceneNode {
 
   /**
    * Mark this node's visual content dirty without going through a standard
-   * setter — e.g. a custom {@link Drawable} subclass backed by externally
+   * setter - e.g. a custom {@link Drawable} subclass backed by externally
    * mutable data (the pattern `TileChunkNode` in `@codexo/exojs-tilemap`
    * already uses via its own `_chunk.revision` compare). Call this after
    * mutating such state so the Track-B retained-plan skip does not serve a
@@ -715,7 +715,7 @@ export abstract class RenderNode extends SceneNode {
   protected override _escapesTransformGroup(): boolean {
     // Barrier-effect nodes escape on their own (their effect machinery
     // composites in world space); additionally the parent boundary
-    // may push this node out when its SUBTREE contains a deep barrier — the
+    // may push this node out when its SUBTREE contains a deep barrier - the
     // sub-branch escape. Callers only reach this when the parent is
     // a transform-group boundary, so the parent query stays off hot paths.
     return this._renderPlanHasBarrierEffects() || this.parent?._childEscapesTransformGroup(this) === true;
@@ -743,7 +743,7 @@ export abstract class RenderNode extends SceneNode {
     }
 
     // Compared field by field rather than through `equals`, which takes a rect
-    // and so needed an object literal built here — once per cached barrier per
+    // and so needed an object literal built here - once per cached barrier per
     // frame, purely to be read and thrown away.
     const bounds = this._cacheBounds;
 

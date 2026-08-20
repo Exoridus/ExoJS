@@ -9,15 +9,15 @@ export type RgbaTuple = readonly [number, number, number, number];
  * separate tolerances between 4 and 18 (8 being the most common). Re-running
  * both lanes with the constant walked down to 0 shows what they actually need:
  *
- * - WebGL2 — every one of the 262 assertions is byte-exact. Delta 0.
- * - WebGPU — a single assertion drifts, by 1, on the green channel of a
+ * - WebGL2 - every one of the 262 assertions is byte-exact. Delta 0.
+ * - WebGPU - a single assertion drifts, by 1, on the green channel of a
  *   decoded video frame (`webgpu-video`); YUV→RGB rounding. Everything else
  *   is byte-exact.
  *
  * So the real requirement is 1. The value is held at 4 rather than 1 because
  * that measurement comes from one machine, while CI renders through different
  * adapters (SwiftShader for WebGPU) whose rounding may differ by a step or
- * two. It stays far tighter than the 8–18 it replaces, and a comparison
+ * two. It stays far tighter than the 8-18 it replaces, and a comparison
  * needing materially more is a finding about the backends, not a reason to
  * raise this.
  */

@@ -8,7 +8,7 @@ import { BmFont } from '#rendering/text/BmFont';
 import { type Texture } from '#rendering/texture/Texture';
 
 // ---------------------------------------------------------------------------
-// VTTCue polyfill — jsdom does not implement the TextTrack cue API (see
+// VTTCue polyfill - jsdom does not implement the TextTrack cue API (see
 // subtitle-factory.test.ts, the canonical source of this pattern).
 // ---------------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ afterAll(() => {
 });
 
 // ---------------------------------------------------------------------------
-// Test helpers — call the handlers returned by coreAssetBindings directly,
+// Test helpers - call the handlers returned by coreAssetBindings directly,
 // bypassing the full Loader/fetch machinery (a plain module, per the task
 // brief: no DI harness needed).
 // ---------------------------------------------------------------------------
@@ -207,7 +207,7 @@ chars count=0
 });
 
 // ---------------------------------------------------------------------------
-// Environment-gated conditional bindings — the module reads `typeof FontFace`,
+// Environment-gated conditional bindings - the module reads `typeof FontFace`,
 // `typeof HTMLImageElement`, and `typeof WebAssembly` once at module-eval
 // time. Force a fresh evaluation under a mutated global to exercise both
 // sides of each gate.
@@ -237,7 +237,7 @@ describe('coreAssetBindings — conditional bindings (environment gating)', () =
 
   test('the ImageAsset binding is omitted when HTMLImageElement is undefined', async () => {
     const original = globalThis.HTMLImageElement;
-    // @ts-expect-error — deliberately removing a normally-always-present global to test the gate.
+    // @ts-expect-error - deliberately removing a normally-always-present global to test the gate.
     delete globalThis.HTMLImageElement;
     vi.resetModules();
 
@@ -252,7 +252,7 @@ describe('coreAssetBindings — conditional bindings (environment gating)', () =
 
   test('the WasmAsset binding is omitted when WebAssembly is undefined', async () => {
     const original = globalThis.WebAssembly;
-    // @ts-expect-error — deliberately removing a normally-always-present global to test the gate.
+    // @ts-expect-error - deliberately removing a normally-always-present global to test the gate.
     delete globalThis.WebAssembly;
     vi.resetModules();
 

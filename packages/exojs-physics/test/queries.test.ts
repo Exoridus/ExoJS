@@ -249,7 +249,7 @@ describe('QueryEngine spatial-index narrowing parity', () => {
     const point = { x: 15, y: 15 };
     const bounds = { minX: 0, minY: 0, maxX: 30, maxY: 30 };
 
-    // `PhysicsWorld` delegates query methods directly (no `.queries` sub-object) —
+    // `PhysicsWorld` delegates query methods directly (no `.queries` sub-object) -
     // see e.g. `world.queryPoint` at PhysicsWorld.ts:538, which forwards to its
     // internal `_query: QueryEngine` (now constructed with the backend's
     // `spatialIndex`, per Step 6 above).

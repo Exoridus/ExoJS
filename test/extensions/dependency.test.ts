@@ -229,7 +229,7 @@ describe('Extension dependency graph', () => {
       const a: Extension = { id: 'A', dependencies: [] };
       (a as { dependencies: Extension[] }).dependencies = [a];
 
-      // The function must throw — it must not return a snapshot.
+      // The function must throw - it must not return a snapshot.
       expect(() => buildSnapshot([a])).toThrow();
     });
   });
@@ -316,7 +316,7 @@ describe('Extension dependency graph', () => {
 
       const snapshot = buildSnapshot([A, B]);
 
-      // dep appears once — no self-conflict
+      // dep appears once - no self-conflict
       expect(snapshot.renderers).toHaveLength(1);
 
       // Materialisation succeeds because the binding is not self-duplicated
@@ -390,7 +390,7 @@ describe('Per-application selection', () => {
     const tilemap = extension('tilemap');
     const tiled = extension('tiled', [tilemap]);
 
-    // Selecting the dependent alone is enough — the graph supplies the rest.
+    // Selecting the dependent alone is enough - the graph supplies the rest.
     expect(ids(buildSnapshot([tiled]))).toEqual(['tilemap', 'tiled']);
   });
 

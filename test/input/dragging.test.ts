@@ -2,7 +2,7 @@
  * Drag threshold semantics: a press on a draggable node is a candidate, not a
  * drag. Covers no movement, movement below the threshold, movement past it,
  * tap suppression after a real drag, and positioning under a transformed
- * parent — the coordinate space `node.position` actually lives in.
+ * parent - the coordinate space `node.position` actually lives in.
  */
 
 import type { Application } from '#core/Application';
@@ -276,7 +276,7 @@ describe('parent-local positioning', () => {
     parent.addChild(sprite);
     parent.getWorldTransform();
 
-    // Grab at world (50, 50) — parent-local (-50, 10), so the offset is (50, -10).
+    // Grab at world (50, 50) - parent-local (-50, 10), so the offset is (50, -10).
     dispatchPointer(signals.onPointerDown, 50, 50);
     im.preUpdate();
 
@@ -322,7 +322,7 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
 
     scene.addChild(sprite);
     sprite.onDragStart.add(started);
-    // No removeChild first — the harder case: destroy() alone does not
+    // No removeChild first - the harder case: destroy() alone does not
     // unregister the node from the interaction manager on its own.
     sprite.onPointerDown.add(() => sprite.destroy());
 
@@ -406,7 +406,7 @@ describe('reentrancy: node removed/destroyed inside its own handler', () => {
     dispatchPointer(signals.onPointerDown, 50, 50);
     im.preUpdate();
 
-    // Promotes, fires dragstart, then the first `drag` tick — which destroys
+    // Promotes, fires dragstart, then the first `drag` tick - which destroys
     // the node from inside its own handler.
     dispatchPointer(signals.onPointerMove, 90, 50, 40);
     im.preUpdate();

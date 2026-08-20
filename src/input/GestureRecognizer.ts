@@ -35,11 +35,11 @@ interface LongPressEntry {
  * beyond `distanceThreshold` pixels from the down position.
  *
  * The hold is measured in ENGINE time, accumulated frame by frame in
- * {@link update}, not by a wall-clock timer — see that method for what that
+ * {@link update}, not by a wall-clock timer - see that method for what that
  * buys.
  *
  * Pinch and rotate are averaged over every active touch around their common
- * focal point, the way the platform gesture recognizers do — a third or fourth
+ * focal point, the way the platform gesture recognizers do - a third or fourth
  * finger widens the measurement instead of being ignored. See
  * {@link _processGestures} for the exact quantities.
  *
@@ -47,11 +47,11 @@ interface LongPressEntry {
  * changes to *which* touches those are. Every down/up/leave/cancel drops the
  * baseline, so the frame after a change re-seeds instead of emitting a delta:
  * adding two fingers and lifting the original two hands the gesture over
- * without a jump in `scale` or `angleDelta`. There is no start/end event —
+ * without a jump in `scale` or `angleDelta`. There is no start/end event -
  * deltas simply stop arriving below two touches and resume above it.
  *
  * Every occurrence (pinch, rotate, long-press) is handed to the `_enqueue`
- * callback supplied at construction rather than dispatched here — that
+ * callback supplied at construction rather than dispatched here - that
  * callback pushes it onto {@link InputManager}'s own frame journal, which
  * owns the actual `onPinch`/`onRotate`/`onLongPress` Signals and dispatches
  * them from there, in true chronological order relative to the pointer
@@ -79,7 +79,7 @@ export class GestureRecognizer {
     private readonly _enqueue: (event: GestureJournalEvent) => void,
   ) {}
 
-  /** `true` while at least one pointer is being held for a long-press — i.e. while {@link update} has work to do. */
+  /** `true` while at least one pointer is being held for a long-press - i.e. while {@link update} has work to do. */
   public get hasPendingLongPress(): boolean {
     return this.longPressEntries.size > 0;
   }
@@ -87,20 +87,20 @@ export class GestureRecognizer {
   /**
    * Advance every pending hold by one frame of engine time and report the ones
    * that have now been held for {@link longPressSeconds}, in `delta`'s own
-   * units — a `delta` of zero advances nothing.
+   * units - a `delta` of zero advances nothing.
    *
    * Long-press is the one gesture with a duration, so it is the one that needs
    * a clock, and taking that clock from the frame delta rather than from a
    * `setTimeout` is what makes it behave like the rest of the simulation: a
    * hold advances only on frames the owning {@link InputManager} actually
    * runs, so it freezes with a stopped application instead of maturing in the
-   * background. The caller decides whether the current frame counts at all —
+   * background. The caller decides whether the current frame counts at all -
    * {@link InputManager.preUpdate} skips this call entirely while the active
    * scene is paused, so a finger left on the screen through a pause menu does
    * not complete a long-press behind it.
    *
    * A matured hold is dropped from the pending set and handed to the
-   * construction-time enqueue callback, exactly like a pinch or rotate — it is
+   * construction-time enqueue callback, exactly like a pinch or rotate - it is
    * dispatched from {@link InputManager}'s frame journal, not from here.
    *
    * @internal
@@ -211,7 +211,7 @@ export class GestureRecognizer {
    * The focal point is the arithmetic mean of the pointer positions, and the
    * spread is twice their mean distance from it. For two pointers those reduce
    * to the midpoint and the distance between them, so the two-finger case is the
-   * same computation it has always been — three or more fingers simply widen the
+   * same computation it has always been - three or more fingers simply widen the
    * average instead of being ignored.
    *
    * Rotation is the mean of the per-pointer angle deltas around the focal point.

@@ -4,7 +4,7 @@ import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';
 
 /**
- * Applies a tangential acceleration around a center point — perpendicular
+ * Applies a tangential acceleration around a center point - perpendicular
  * to the radial vector `(particle − center)`. Combined with an attract /
  * repel module that controls the radial distance, this produces orbital,
  * spiral, or vortex motion.

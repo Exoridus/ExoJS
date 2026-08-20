@@ -36,7 +36,7 @@ export interface WebGl2Harness {
 /**
  * Deterministic, GPU-independent metrics for one rendered frame. Every field is
  * a count or byte total that depends only on CPU-side renderer decisions and the
- * recorded GL call stream — identical across machines and across WebGL2/WebGPU
+ * recorded GL call stream - identical across machines and across WebGL2/WebGPU
  * (same plan grouping, same instance formats, same flush rules).
  */
 export interface FrameMetrics {
@@ -52,7 +52,7 @@ export interface FrameMetrics {
   culledNodes: number;
   /** Render passes executed. */
   renderPasses: number;
-  /** `bindTexture(handle≠null)` calls — texture binds incl. content + transform texture. */
+  /** `bindTexture(handle≠null)` calls - texture binds incl. content + transform texture. */
   textureBinds: number;
   /** `bindSampler(handle≠null)` calls. */
   samplerBinds: number;
@@ -116,7 +116,7 @@ export const createWebGl2Harness = (options: HarnessOptions = {}): WebGl2Harness
 
 /**
  * Render `root` for one frame against `harness` and return the structural metrics.
- * `beforeFrame` runs after stats/recorder reset but before the render — use it to
+ * `beforeFrame` runs after stats/recorder reset but before the render - use it to
  * mutate the scene, pan the camera, etc.
  */
 export const measureFrame = (harness: WebGl2Harness, root: RenderNode, beforeFrame?: () => void): FrameMetrics => {
@@ -168,7 +168,7 @@ export const measureSteadyFrame = (harness: WebGl2Harness, root: RenderNode, war
 
 /**
  * Render each node via its own setView + playRenderTree (exactly what
- * RenderingContext.render does per call), then flush once — i.e. the
+ * RenderingContext.render does per call), then flush once - i.e. the
  * "one context.render() per drawable in a loop" pattern. Returns the metrics of
  * the final warmed frame.
  */

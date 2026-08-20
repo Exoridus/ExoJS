@@ -99,13 +99,13 @@ export interface AsepriteMeta {
   readonly version: string;
 }
 
-/** Aseprite JSON export in array mode — frames is an ordered array. */
+/** Aseprite JSON export in array mode - frames is an ordered array. */
 export interface AsepriteArrayData {
   readonly frames: readonly AsepriteFrameData[];
   readonly meta: AsepriteMeta;
 }
 
-/** Aseprite JSON export in hash mode — frames is an object keyed by frame name. */
+/** Aseprite JSON export in hash mode - frames is an object keyed by frame name. */
 export interface AsepriteHashData {
   readonly frames: Readonly<Record<string, AsepriteFrameData>>;
   readonly meta: AsepriteMeta;

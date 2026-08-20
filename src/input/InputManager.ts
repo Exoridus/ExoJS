@@ -37,7 +37,7 @@ export interface ActionScopeHost {
 // browsers default to `DOM_DELTA_PIXEL`, so without this conversion the
 // same physical scroll gesture reports wildly different raw magnitudes
 // depending on the browser. Values are round approximations (a typical line
-// height / viewport size) rather than device-exact figures — the Gamepad
+// height / viewport size) rather than device-exact figures - the Gamepad
 // API and DOM wheel spec don't expose a precise conversion factor.
 const wheelLineHeightPx = 16;
 const wheelPageSizePx = 800;
@@ -81,7 +81,7 @@ interface KeyChannelEvent {
 
 /**
  * One pointer phase, recorded in the EXACT global arrival order across every
- * tracked pointer — not merely ordered within its own pointer's sub-sequence.
+ * tracked pointer - not merely ordered within its own pointer's sub-sequence.
  * See {@link JournalEntry}'s doc comment for why this has to be a single flat
  * structure rather than one list per pointer.
  */
@@ -104,20 +104,20 @@ interface ContextMenuJournalEntry {
 }
 
 /**
- * One real-world pointer occurrence — a single pointer phase OR a single
- * context-menu request — in the exact chronological order the platform
+ * One real-world pointer occurrence - a single pointer phase OR a single
+ * context-menu request - in the exact chronological order the platform
  * raised it, spanning every tracked pointer AND every context-menu request
  * together in one flat sequence. Appended directly at the raw DOM handler
  * call sites (`handlePointerOver`/`handlePointerDown`/`handlePointerMove`/
  * `handlePointerUp`/`handlePointerLeave`/`handlePointerCancel`/
- * `handleContextMenu`) — the only place true arrival order across different
+ * `handleContextMenu`) - the only place true arrival order across different
  * pointers (and interleaved with a context-menu request) is still
  * observable. Reconstructing it afterward from each {@link Pointer}'s own
  * per-pointer phase list cannot recover an interleaving like
  * `P1 Down -> P2 Down -> P1 Up`: per-pointer buffering, dispatched one
  * pointer's whole list at a time, would silently turn that into
  * `P1 Down, P1 Up, P2 Down`. Drained once per frame by
- * {@link InputManager._drainJournal}, in this same order, then cleared —
+ * {@link InputManager._drainJournal}, in this same order, then cleared -
  * mirroring {@link InputManager.keyEvents}'s own append/drain/clear
  * lifecycle, just for pointers and context-menu requests together.
  */
@@ -135,11 +135,11 @@ type JournalEntry = PointerJournalEntry | ContextMenuJournalEntry | GestureJourn
  * {@link onStart} / {@link onStop} factory methods (or via
  * {@link Gamepad.onTrigger}-style methods on individual pads), or
  * subscribe to the signal-style notifications
- * (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, …).
+ * (`onKeyDown`, `onPointerDown`, `onGamepadConnected`, `onAnyGamepadButtonDown`, ...).
  *
  * Driven each frame by {@link Application.update}'s internal prepare stage
  * (first, ahead of interaction/audio/tweens/rendering); constructed
- * automatically — you do not instantiate this class yourself.
+ * automatically - you do not instantiate this class yourself.
  */
 export class InputManager {
   private readonly _app: Application;
@@ -147,17 +147,17 @@ export class InputManager {
   private readonly platform: PlatformAdapter;
   private readonly channels: Float32Array = new Float32Array(ChannelSize.Container);
   /**
-   * Channel values as of the last change check — compared against the live
+   * Channel values as of the last change check - compared against the live
    * buffer to detect an actual change and avoid logging a redundant repeat.
    */
   private readonly channelsLast: Float32Array = new Float32Array(ChannelSize.Container);
   /**
    * Every atomic channel-write batch since the frame closed, in true
-   * chronological order — one entry per real-world source event (one
+   * chronological order - one entry per real-world source event (one
    * keyboard key, one pointer event's co-written slot, one gamepad poll's
    * changed channels), never one entry per individual channel. Set as
    * platform events arrive, read by actions once per frame, and cleared only
-   * when the frame closes — the ordered record that lets an action replay
+   * when the frame closes - the ordered record that lets an action replay
    * its bound channels' real transition sequence, whole batch by whole
    * batch, instead of reconstructing it from independent, unordered
    * per-channel bits. See {@link ActionSample}'s doc comment.
@@ -165,11 +165,11 @@ export class InputManager {
   private readonly frameBatches: ChannelEventBatch[] = [];
   /**
    * Monotonic counter stamped onto every {@link ChannelEventBatch} pushed
-   * into {@link frameBatches} — unlike `frameBatches` itself, NEVER reset
+   * into {@link frameBatches} - unlike `frameBatches` itself, NEVER reset
    * once a frame closes. The watermark an {@link ActionMapBase._attach} (or
    * `InputBinding`'s own constructor) snapshots the CURRENT value of to tell
-   * a batch that predates the moment it started observing — still sitting in
-   * the shared log from earlier in the same real frame — apart from one that
+   * a batch that predates the moment it started observing - still sitting in
+   * the shared log from earlier in the same real frame - apart from one that
    * arrived after. See {@link ChannelEventBatch}'s doc comment.
    */
   private _batchSequence = 0;
@@ -187,7 +187,7 @@ export class InputManager {
   private readonly scopeHosts = new Set<ActionScopeHost>();
   /**
    * Reused view over the channel buffers, handed to action maps each frame.
-   * `frameId` is bumped once per {@link InputManager.update} — the mechanism an
+   * `frameId` is bumped once per {@link InputManager.update} - the mechanism an
    * action shared by two attached maps uses to sample itself only once per
    * real frame no matter how many owners reach it.
    */
@@ -232,7 +232,7 @@ export class InputManager {
   private readonly allowTextSelection: boolean;
   /**
    * Every pointer phase and context-menu request since the last flush, in
-   * true global chronological arrival order — see {@link JournalEntry}'s doc
+   * true global chronological arrival order - see {@link JournalEntry}'s doc
    * comment.
    */
   private readonly journal: JournalEntry[] = [];
@@ -243,7 +243,7 @@ export class InputManager {
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
   /**
    * Every pointer signal below carries the phase's own `(x, y)` explicitly,
-   * in design pixels, alongside the pointer — an immutable snapshot rather
+   * in design pixels, alongside the pointer - an immutable snapshot rather
    * than a temporary rewind of {@link Pointer.position}. `pointer.x`/
    * `pointer.y` always read the pointer's live, current position instead
    * (see {@link Pointer.position}'s doc comment); use the `x`/`y` parameters
@@ -278,26 +278,26 @@ export class InputManager {
   public readonly onKeyDown = new Signal<[number]>();
   public readonly onKeyUp = new Signal<[number]>();
   /**
-   * Fires whenever the platform's single native `contextmenu` event fires —
+   * Fires whenever the platform's single native `contextmenu` event fires -
    * right-click, the keyboard context-menu key, Shift+F10, and (on most
    * touch browsers) a long-press all funnel through that one event, so there
    * is exactly one source to listen to here regardless of which of them the
    * user used. Independent of whether the browser's own menu was suppressed
-   * — see {@link InputApplicationOptions.allowNativeContextMenu}.
+   * - see {@link InputApplicationOptions.allowNativeContextMenu}.
    *
    * This is the engine-wide fallback: it fires unconditionally, with no
    * regard for the scene graph, so it is the right place for an
-   * application-level menu that should appear no matter what — or nothing —
+   * application-level menu that should appear no matter what - or nothing -
    * was under the pointer. Fires even when the request has no pointer to
    * attribute itself to (a keyboard-only session that has never moved a
-   * mouse) — see {@link ContextMenuRequest}'s doc comment for why the request
+   * mouse) - see {@link ContextMenuRequest}'s doc comment for why the request
    * carries its own coordinates instead of forcing the contract onto a
    * {@link Pointer}. A request over a specific interactive node additionally
    * bubbles as a scene-graph `contextmenu` {@link InteractionEvent} (see
    * {@link InteractionManager}), which only fires when a node is actually hit
    * and can be stopped with {@link InteractionEvent.stopPropagation}; use that
    * one for a per-node menu instead. Do not confuse either with
-   * {@link GestureRecognizer.onLongPress} — a separate, purely informational
+   * {@link GestureRecognizer.onLongPress} - a separate, purely informational
    * touch/mouse-hold signal that never triggers this one on its own.
    */
   public readonly onContextMenu = new Signal<[ContextMenuRequest]>();
@@ -326,7 +326,7 @@ export class InputManager {
    * midpoint between the two pointers, in the same coordinate space as
    * {@link Pointer.position}.
    *
-   * The center arrives as two numbers rather than a `Vector` on purpose — a
+   * The center arrives as two numbers rather than a `Vector` on purpose - a
    * shared instance would be overwritten by the next gesture entry in the
    * same frame.
    */
@@ -334,12 +334,12 @@ export class InputManager {
   /**
    * Fires on every two-touch-pointer move where the angle between them
    * changed. `angleDelta` is in radians; the center is the midpoint between
-   * the two pointers — see {@link onPinch} for why it is not a `Vector`.
+   * the two pointers - see {@link onPinch} for why it is not a `Vector`.
    */
   public readonly onRotate = new Signal<[angleDelta: number, centerX: number, centerY: number]>();
   /**
    * Fires when a pointer has been held without significant movement for
-   * ≥ 500 ms of ENGINE time — frame deltas summed across the frames this
+   * ≥ 500 ms of ENGINE time - frame deltas summed across the frames this
    * manager actually ran, not wall-clock time. A hold therefore freezes while
    * the active scene is paused and while the application is stopped, and
    * resumes from where it left off; it never completes in the background.
@@ -540,7 +540,7 @@ export class InputManager {
   }
 
   /**
-   * Current value of the monotonic batch-sequence counter — the watermark an
+   * Current value of the monotonic batch-sequence counter - the watermark an
    * {@link ActionMapOwner} hands to an {@link ActionMapBase} on `_attach`.
    * See {@link _batchSequence}'s doc comment.
    *
@@ -551,7 +551,7 @@ export class InputManager {
   }
 
   /**
-   * Immutable snapshot of every live channel right now — the attach-moment
+   * Immutable snapshot of every live channel right now - the attach-moment
    * truth an {@link ActionOwnership} seeds every action from before it
    * replays any watermark-filtered batches on top. See
    * {@link ActionMapOwner._snapshotActionChannels}'s doc comment.
@@ -567,12 +567,12 @@ export class InputManager {
 
   /**
    * Register a callback fired once when any of `channels` becomes active.
-   * Manual lifecycle — call `.unbind()` on the returned binding to detach.
+   * Manual lifecycle - call `.unbind()` on the returned binding to detach.
    *
    * @param channel - Channel, or channels, to watch.
    * @param callback - Receives the channel value. Omit to only create the
    *   binding and poll {@link InputBinding.active} / {@link InputBinding.value}
-   *   yourself — see {@link onActive}.
+   *   yourself - see {@link onActive}.
    * @param options - Binding options.
    * @returns The binding, so it can be polled or unbound.
    */
@@ -586,7 +586,7 @@ export class InputManager {
    * Register a callback fired every frame while any of `channels` is active.
    *
    * The callback is optional: with none, this just creates a binding, which is
-   * the idiomatic way to poll an input per frame — read
+   * the idiomatic way to poll an input per frame - read
    * {@link InputBinding.active} / {@link InputBinding.value} in your own
    * `update()` instead of tracking held-state in a callback.
    *
@@ -639,13 +639,13 @@ export class InputManager {
 
   /**
    * {@link SystemMethods.preUpdate} phase, registered on `app.systems` by the
-   * {@link Application} at {@link SystemOrder.CoreInput} — ahead of every other
+   * {@link Application} at {@link SystemOrder.CoreInput} - ahead of every other
    * core system, so this frame's snapshot is current before anything
    * simulates. Polls the gamepad API, drains queued keyboard/pointer/wheel
    * deltas into the channel buffer, fires the corresponding Signals, then
    * evaluates each registered binding.
    *
-   * `delta` is also the clock a pending long-press matures on — see
+   * `delta` is also the clock a pending long-press matures on - see
    * {@link GestureRecognizer.update}.
    */
   public preUpdate(delta: Time): void {
@@ -660,7 +660,7 @@ export class InputManager {
       binding.update(this.channels, this.frameBatches);
     }
 
-    // A fresh id per real frame — the guard an action shared by two attached
+    // A fresh id per real frame - the guard an action shared by two attached
     // maps uses to sample itself only once, however many owners reach it. The
     // timestamp travels with it so a timing-dependent action can notice that
     // time passed with no events at all (see ActionSample.timestamp).
@@ -691,7 +691,7 @@ export class InputManager {
     }
 
     // Close the frame: the ordered batch log is cleared here rather than
-    // where it is read — every action within the frame must see the same
+    // where it is read - every action within the frame must see the same
     // sequence, and the next frame starts from an empty log.
     this.frameBatches.length = 0;
   }
@@ -809,14 +809,14 @@ export class InputManager {
 
   /**
    * Append ONE atomic batch covering every channel in `[base, base + length)`
-   * that actually changed since the last check — never one entry per
+   * that actually changed since the last check - never one entry per
    * individual channel, so co-written channels from a SINGLE real-world
    * event (a pointer's whole slot, one gamepad poll) are applied together
    * before any action/binding evaluates its aggregate state, rather than as
    * a sequence of independent steps with a transient, never-actually-true
    * state in between. Called right after a platform handler wrote into
    * those channels, which is the only moment a sub-frame change is still
-   * observable — a frame-boundary diff could not tell true order or
+   * observable - a frame-boundary diff could not tell true order or
    * intermediate values apart from a single net change. No batch is
    * appended at all when nothing in the range changed.
    */
@@ -838,7 +838,7 @@ export class InputManager {
     }
   }
 
-  /** Fold a pointer's whole 16-channel slot into ONE atomic batch — every field a single real-world pointer event wrote together. */
+  /** Fold a pointer's whole 16-channel slot into ONE atomic batch - every field a single real-world pointer event wrote together. */
   private _recordPointerChanges(pointer: Pointer): void {
     this._recordChannelChanges(ChannelOffset.Pointers + pointer.slotIndex * pointerSlotSize, pointerSlotSize);
   }
@@ -856,12 +856,12 @@ export class InputManager {
    * Fully retire a pointer whose FINAL state this flush is terminal (left
    * the canvas, or was cancelled): drop its map entry and slot TOGETHER, and
    * `destroy()` it. Checked once per pointer, after the WHOLE global journal
-   * has dispatched (see {@link _drainJournal}) — never mid-dispatch, and
+   * has dispatched (see {@link _drainJournal}) - never mid-dispatch, and
    * never at the raw platform-event handler that first observed the
    * Leave/Cancel. Releasing the slot any earlier would let a DIFFERENT
    * pointerId's `pointerover` claim it later the SAME flush while this
    * pointer's own Leave/Cancel entry is still sitting undispatched in the
-   * journal — corrupting the shared channel slot both would then be
+   * journal - corrupting the shared channel slot both would then be
    * writing into. A same-flush re-entry (see {@link handlePointerOver}'s doc
    * comment) leaves this pointer's final state something other than
    * terminal, so it is correctly skipped here rather than retired out from
@@ -875,19 +875,19 @@ export class InputManager {
 
   /**
    * Keys are identified by PHYSICAL position (`KeyboardEvent.code`), never by
-   * the layout-dependent `keyCode` — see {@link keyboardChannelFromCode}. A
+   * the layout-dependent `keyCode` - see {@link keyboardChannelFromCode}. A
    * key with no channel of its own (media and IME/language keys, and the empty
    * `code` a soft keyboard reports) is ignored outright rather than writing
    * into an arbitrary slot.
    *
    * For a modifier, `channel` is the SIDE-SPECIFIC channel and this also
-   * writes the aggregate channel (`ShiftLeft` -> also sets `Shift`) — see
+   * writes the aggregate channel (`ShiftLeft` -> also sets `Shift`) - see
    * {@link keyboardModifierChannelInfo}. `keyEvents`/`onKeyDown` only ever see
    * the side channel: the aggregate is buffer state an action reads, not a
    * signal of its own, keeping one physical event equal to one dispatch.
    *
    * An OS auto-repeat (`KeyboardEvent.repeat`) is not a physical down
-   * transition and produces no channel write and no `onKeyDown` dispatch —
+   * transition and produces no channel write and no `onKeyDown` dispatch -
    * `onKeyDown` means exactly what `ButtonAction.pressed` means, one dispatch
    * per real press. A captured key is still consumed on every repeat, since a
    * held key whose browser default is suppressed on the first event must stay
@@ -930,9 +930,9 @@ export class InputManager {
   /**
    * Physical-key resolution and unmapped-key handling exactly as in
    * {@link handleKeyDown}. For a modifier, the aggregate channel is set to
-   * the SIBLING side's current value rather than unconditionally cleared —
+   * the SIBLING side's current value rather than unconditionally cleared -
    * releasing left `Control` while right `Control` is still held must not
-   * clear {@link Keyboard.Control} — see {@link keyboardModifierChannelInfo}.
+   * clear {@link Keyboard.Control} - see {@link keyboardModifierChannelInfo}.
    */
   private handleKeyUp(event: KeyboardEvent): void {
     if (!this.canvasFocusedValue) {
@@ -967,7 +967,7 @@ export class InputManager {
 
   /**
    * A pointer that left or was cancelled earlier THIS SAME flush stays fully
-   * alive — map entry, slot, and channel data — until its own Leave/Cancel
+   * alive - map entry, slot, and channel data - until its own Leave/Cancel
    * phase has actually dispatched (see {@link _retirePointer}'s doc
    * comment), specifically so a re-entry arriving before that dispatch has
    * an existing, still-tracked pointer to reuse instead of one silently
@@ -975,7 +975,7 @@ export class InputManager {
    * mouse leaving and re-entering the canvas) therefore extends that SAME
    * pointer's own ordered phase list with a fresh `Over` entry rather than
    * constructing a new object and overwriting the map entry out from under
-   * the old one's still-undispatched phases — which would both lose the
+   * the old one's still-undispatched phases - which would both lose the
    * pending Leave/Cancel phase and leak the discarded `Pointer` (nothing else
    * ever reaches or destroys it once the map no longer points to it).
    */
@@ -1078,11 +1078,11 @@ export class InputManager {
 
   /**
    * Append one pointer phase to the global journal in the exact order it
-   * arrived — see {@link JournalEntry}'s doc comment. Two `Move` entries
+   * arrived - see {@link JournalEntry}'s doc comment. Two `Move` entries
    * coalesce ONLY when they are immediately adjacent in this GLOBAL order for
    * the SAME pointer: `P1 Move, P2 Move, P1 Move` stays three entries (a `P2`
    * entry sits between the two `P1` moves), while `P1 Move, P1 Move` collapses
-   * into the latest — several platform moves in a row for one pointer are
+   * into the latest - several platform moves in a row for one pointer are
    * never individually meaningful.
    */
   private _pushPointerPhase(pointer: Pointer, flag: PointerStateFlag, x: number, y: number, closedPress = false, maxDistance = 0): void {
@@ -1100,20 +1100,20 @@ export class InputManager {
   }
 
   /**
-   * Suppress the browser's own menu unless the application opted in — that
-   * decision must happen synchronously, here — and separately queue a
+   * Suppress the browser's own menu unless the application opted in - that
+   * decision must happen synchronously, here - and separately queue a
    * semantic engine event for the frame boundary, where it is routed through
    * the scene graph. The two are independent: an application may want its own
    * in-game menu and the native one, or neither.
    *
    * The request's coordinates are computed directly, not read off a
-   * `Pointer` — the keyboard context-menu key and Shift+F10 fire this same
+   * `Pointer` - the keyboard context-menu key and Shift+F10 fire this same
    * native event with no pointer ever having touched the surface, so a
    * missing pointer must not suppress the request itself. `_primaryPointer()`
    * is still attached when one exists, as best-effort attribution only.
    *
    * Appended to the SAME global journal every pointer phase goes through
-   * (never a single overwritable slot — see {@link JournalEntry}'s doc
+   * (never a single overwritable slot - see {@link JournalEntry}'s doc
    * comment), so two requests arriving in one frame both survive as separate
    * entries, and this request's position relative to any pointer phase
    * already queued this flush reflects the platform's true arrival order
@@ -1153,7 +1153,7 @@ export class InputManager {
     }
 
     // Fast/high-precision scrolling routinely fires several `wheel` events
-    // within one engine frame — accumulate them here (mirroring the
+    // within one engine frame - accumulate them here (mirroring the
     // journal's accumulate-then-flush-per-frame pattern for other input
     // signals) rather than overwriting, or all but the last sub-frame event
     // would be silently lost. `updateEvents` resets this to zero once the
@@ -1275,7 +1275,7 @@ export class InputManager {
     }
 
     // Two pads can vanish in the same poll, and the compact strategy's shift
-    // re-points map entries while this loop runs — so resolve each browser
+    // re-points map entries while this loop runs - so resolve each browser
     // index against the LIVE map at dispatch time instead of a pre-loop
     // entries snapshot (a stale pad reference would disconnect the wrong,
     // already-repurposed slot and leave a ghost `connected` pad behind).
@@ -1382,7 +1382,7 @@ export class InputManager {
 
   private updateEvents(): this {
     if (this.flags.popMask(InputManagerFlag.KeyChange)) {
-      // In true arrival order — a Shift-up followed by a Tab-down must
+      // In true arrival order - a Shift-up followed by a Tab-down must
       // dispatch in that same order, or FocusController would still see
       // Shift held when Tab's handler runs and misread it as Shift+Tab.
       for (const event of this.keyEvents) {
@@ -1410,8 +1410,8 @@ export class InputManager {
 
   /**
    * Dispatch this frame's pointer phases AND context-menu requests in the
-   * exact global chronological order {@link journal} recorded them — not a
-   * fixed type order, and not grouped per pointer — so `P1 Down -> P2 Down ->
+   * exact global chronological order {@link journal} recorded them - not a
+   * fixed type order, and not grouped per pointer - so `P1 Down -> P2 Down ->
    * P1 Up` dispatches in exactly that order, an Up followed by a Down within
    * one frame dispatches in that same order rather than always
    * Down-before-Up, two discrete presses in one frame each get their own
@@ -1421,11 +1421,11 @@ export class InputManager {
    *
    * Retirement (see {@link _retirePointer}'s doc comment) is checked in a
    * SEPARATE pass afterward, once per pointer, keyed on that pointer's FINAL
-   * state for the flush — never mid-journal. A Leave entry sitting anywhere
+   * state for the flush - never mid-journal. A Leave entry sitting anywhere
    * but last for its pointer (a same-flush re-entry followed it) must not
    * have its object/slot torn down while a later `Over` entry for that SAME
    * pointer, or a context-menu request attributed to it, is still waiting to
-   * dispatch — and a request attributed to a pointer that left/was cancelled
+   * dispatch - and a request attributed to a pointer that left/was cancelled
    * earlier this SAME flush is guaranteed to see that still-live Pointer
    * object here, never an already-retired one.
    */
@@ -1434,7 +1434,7 @@ export class InputManager {
 
     for (const entry of journal) {
       if (entry.kind === 'contextmenu') {
-        // Fires regardless of `request.pointer` — see this signal's own doc
+        // Fires regardless of `request.pointer` - see this signal's own doc
         // comment for why a missing pointer must not swallow the request.
         this.onContextMenu.dispatch(entry.request);
         continue;
@@ -1473,7 +1473,7 @@ export class InputManager {
         case PointerStateFlag.Up:
           this.onPointerUp.dispatch(pointer, x, y);
 
-          // A press that travelled far and came back is a swipe, not a tap —
+          // A press that travelled far and came back is a swipe, not a tap -
           // hence THIS press's own accumulated maximum, not the release distance.
           if (entry.closedPress) {
             if (entry.maxDistance < this.pointerDistanceThreshold) {
@@ -1510,10 +1510,10 @@ export class InputManager {
    * Finalize retirement of every pointer {@link _drainJournal} identified as
    * terminal this flush, once `InteractionManager` has fully drained its own
    * node-level dispatch for the frame. `InputManager._drainJournal` only
-   * flags a terminal pointer as PENDING — it must not destroy it itself,
+   * flags a terminal pointer as PENDING - it must not destroy it itself,
    * because `InteractionManager._prepareFrame` (a separate top-level call the
    * app's frame loop makes right after `InputManager._prepareFrame` returns)
-   * still has queued node-level events — e.g. a `contextmenu` request — that
+   * still has queued node-level events - e.g. a `contextmenu` request - that
    * reference that same `Pointer` object and dispatch only during ITS OWN
    * pass. Destroying the pointer any earlier would hand a node handler an
    * already-destroyed `Pointer`.
@@ -1523,7 +1523,7 @@ export class InputManager {
    * handler throws.
    *
    * Re-validates BOTH that a pending pointer is still genuinely terminal AND
-   * that it's still the live map entry for its id before destroying it — a
+   * that it's still the live map entry for its id before destroying it - a
    * node handler running during `InteractionManager._prepareFrame` can
    * synchronously drive a same-`pointerId` re-entry (see
    * {@link handlePointerOver}'s doc comment) that replaces the map entry with

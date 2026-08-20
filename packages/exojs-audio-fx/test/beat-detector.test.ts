@@ -52,7 +52,7 @@ function makeVoiceLike(): Voice {
  *
  * The shared mock AudioContext starts `'running'` immediately, so
  * `onAudioContextReady.add()`/`.once()` dispatch synchronously the first time
- * anything touches the context — there is no window to observe a genuinely
+ * anything touches the context - there is no window to observe a genuinely
  * pending state, nor to have several deferred registrations queue up before
  * the ready signal fires. A real browser starts `'suspended'` under the
  * autoplay policy; this helper reproduces that deterministically. Nothing
@@ -153,7 +153,7 @@ describe('BeatDetector', () => {
     });
   });
 
-  // ---- Source setter — all 5 types ----
+  // ---- Source setter - all 5 types ----
 
   describe('source setter — AudioBus', () => {
     it('accepts an AudioBus', async () => {
@@ -601,7 +601,7 @@ describe('BeatDetector', () => {
     });
 
     it('hysteresis is enforced in the worklet (processorOptions carries enableTimeSignatureDetection=true by default)', async () => {
-      // The main-thread BeatDetector is a pure cache of worklet state messages —
+      // The main-thread BeatDetector is a pure cache of worklet state messages -
       // hysteresis switching lives inside the worklet. We verify the option is
       // forwarded correctly so the worklet can apply it.
       let capturedProcessorOptions: Record<string, unknown> | undefined;
@@ -715,7 +715,7 @@ describe('BeatDetector', () => {
       const handler = vi.fn();
       d.onBeat.add(handler);
       d.destroy();
-      // After destroy, the signal is cleared — no more handlers
+      // After destroy, the signal is cleared - no more handlers
       expect(d.onBeat.count).toBe(0);
     });
   });
@@ -806,7 +806,7 @@ describe('BeatDetector', () => {
     });
   });
 
-  // ---- Visual derived state — pure getters for per-frame polling ----
+  // ---- Visual derived state - pure getters for per-frame polling ----
 
   describe('visual derived state', () => {
     it('secondsSinceLastBeat, pulse, barPulse, and justBeat are all 0/false before any tempo is known', () => {
@@ -963,7 +963,7 @@ describe('BeatDetector', () => {
       await withSuspendedBeatDetectorContext(async ({ FreshBeatDetector, flipToReady }) => {
         const d = new FreshBeatDetector();
         expect(d.tempo).toBe(0);
-        // Before _setup() has ever run, `_ready` is still null — the `ready`
+        // Before _setup() has ever run, `_ready` is still null - the `ready`
         // getter falls back to an already-resolved promise (`?? Promise.resolve()`).
         await expect(d.ready).resolves.toBeUndefined();
         flipToReady();
@@ -981,7 +981,7 @@ describe('BeatDetector', () => {
         flipToReady();
         // At this exact synchronous point the source setter's own deferred
         // handler (registered after the constructor's) may already have fired
-        // and no-opped, because _workletNode is still null — the worklet
+        // and no-opped, because _workletNode is still null - the worklet
         // registration promise resolves asynchronously. _setup()'s own
         // pending-source check (once the promise resolves) is what actually
         // connects it.
@@ -1080,12 +1080,12 @@ describe('BeatDetector', () => {
     // onAudioContextReady.once(...). That callback can only ever fire
     // synchronously as part of the SAME onAudioContextReady dispatch that also
     // kicks off _setup()'s async worklet registration (registerAudioWorkletProcessor(...).then(...))
-    // — reaching _connectSource while the context is *not yet* ready requires
+    // - reaching _connectSource while the context is *not yet* ready requires
     // this method to be invoked directly (see below), since through the public
     // API isAudioContextReady() is always true by the time _connectSource is
     // ever called. Because the worklet-ready promise can only resolve in a
     // *later* microtask than this synchronous dispatch, `this._workletNode` is
-    // provably still null at the exact moment this callback runs — so the
+    // provably still null at the exact moment this callback runs - so the
     // "reconnect" branch inside it (`this._workletNode && isAudioContextReady()`
     // both true) is structurally unreachable for this fallback path specifically,
     // unlike the AudioBus onceSetup path above (whose readiness is independent
@@ -1122,7 +1122,7 @@ describe('BeatDetector', () => {
 
   describe('private defensive guards', () => {
     it('_resolveToAudioNode replaces an existing stream tap when resolved again without an intervening disconnect', async () => {
-      // Through the public `.source =` setter this is unreachable — _disconnectTap()
+      // Through the public `.source =` setter this is unreachable - _disconnectTap()
       // always runs first and clears `_streamSource`. Calling the private method
       // directly (consistent with this file's existing convention of reaching
       // into internal state, e.g. getMockWorkletNode) exercises the "already had

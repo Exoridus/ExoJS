@@ -17,7 +17,7 @@ const uniformByteLength = 176;
 /**
  * Stride of one draw call's slot in the uniform ring. `setBindGroup`'s dynamic
  * offset must be a multiple of the device's `minUniformBufferOffsetAlignment`,
- * whose spec-mandated maximum is 256 — so a fixed 256 is valid on every device
+ * whose spec-mandated maximum is 256 - so a fixed 256 is valid on every device
  * and needs no limit query.
  */
 const uniformSlotStride = 256;
@@ -52,7 +52,7 @@ const vertexFormatsByKey: Record<string, GPUVertexFormat> = {
 };
 
 const resolveVertexFormat = (attribute: GeometryAttribute): GPUVertexFormat => {
-  // `normalized` is meaningless for floats — WebGL2 ignores it for GL_FLOAT
+  // `normalized` is meaningless for floats - WebGL2 ignores it for GL_FLOAT
   // too, so the two backends agree on what such a declaration means.
   const normalized = attribute.normalized && attribute.type !== 'f32';
   const format = vertexFormatsByKey[`${normalized ? 'n' : ''}${attribute.type}x${attribute.size}`];
@@ -67,7 +67,7 @@ const resolveVertexFormat = (attribute: GeometryAttribute): GPUVertexFormat => {
 /**
  * The WebGPU-side realisation of one render mode: its compiled shader module,
  * the vertex layouts it declares, its index buffer and the buffers its data is
- * uploaded into. Cached per {@link Material} — the mode's material is its
+ * uploaded into. Cached per {@link Material} - the mode's material is its
  * stable identity, and its `destroy()` evicts the entry.
  */
 interface ParticleModeResources {
@@ -95,7 +95,7 @@ interface ParticleModeResources {
    * against the coordinator's active pass. Anything else (a different pass, or
    * none open) means this mode holds no draws in the open pass and its cursor
    * restarts at 0. The mode's buffers are renderer-owned, so this is the local
-   * answer to "would writing them now alias a draw already recorded" — the
+   * answer to "would writing them now alias a draw already recorded" - the
    * coordinator's `passHasDraws` answers that only for SHARED resources.
    */
   passRef: WebGpuActiveRenderPass | null;
@@ -113,8 +113,8 @@ interface WebGpuParticleDrawCall {
  * Particle renderer for WebGPU.
  *
  * One ParticleSystem = one draw call. The system's {@link ParticleRenderMode}
- * owns the *how* — vertex layout, shader, draw model and the loop that fills
- * the buffer — and this renderer is the executor: it holds the system-level
+ * owns the *how* - vertex layout, shader, draw model and the loop that fills
+ * the buffer - and this renderer is the executor: it holds the system-level
  * uniforms (projection, transform, local bounds, texture flags), uploads what
  * the mode built and issues the draw the mode declares.
  *
@@ -170,7 +170,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
    * Materials this renderer already registered a dispose listener on.
    *
    * `Material` has no unsubscribe, and a disconnect clears {@link _resources}
-   * without clearing the material's callback set — so registering on every
+   * without clearing the material's callback set - so registering on every
    * resource creation would leave one dead closure per material behind on
    * every device-loss/reconnect cycle. The listener stays valid across those
    * cycles (it resolves the entry through the map when it fires), so it is
@@ -183,7 +183,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     const backend = this._backend;
     const texture = system.texture;
 
-    // A null `source` means a Texture still waiting on its image — but
+    // A null `source` means a Texture still waiting on its image - but
     // DataTexture extends Texture and keeps its pixels in a CPU buffer, so it
     // has none by design. Without the exemption every procedurally-generated
     // particle texture renders as nothing here while WebGL2, which has no such
@@ -238,8 +238,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       return;
     }
 
-    // Every draw call APPENDS at the cursors the open pass has reached — a byte
-    // offset into the mode's vertex buffer, a slot in the uniform ring — and
+    // Every draw call APPENDS at the cursors the open pass has reached - a byte
+    // offset into the mode's vertex buffer, a slot in the uniform ring - and
     // adds the base at bind time, so N particle draws cost ONE pass and ONE
     // submit instead of N of each. Rewriting either buffer from offset 0 (which
     // this loop used to do, hence its pass per draw call) cannot work with the
@@ -329,7 +329,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
   /**
    * Append one system's draw at the open pass's cursors and record it, leaving
    * the pass open. Ends (submits) the pass first only where appending cannot
-   * cover the hazard — see {@link _appendWouldAlias}.
+   * cover the hazard - see {@link _appendWouldAlias}.
    */
   private _drawSystem(backend: WebGpuBackend, device: GPUDevice, drawCall: WebGpuParticleDrawCall): void {
     const system = drawCall.system;
@@ -338,13 +338,13 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     const coordinator = backend._passCoordinator;
 
     // GPU mode: the system's compute pipeline already wrote the interleaved
-    // instance data into its own buffer — from its own encoder and its own
+    // instance data into its own buffer - from its own encoder and its own
     // submit, in the system's update, so that compute pass is finished and
     // ordered ahead of this render pass no matter when the render pass ends.
     // Bind it directly: no CPU build, no writeBuffer, no cursor, since the
     // buffer belongs to that one system and is never appended to.
     // CPU mode: the mode builds from CPU SoA into its scratch buffer, which is
-    // uploaded into the buffer this renderer owns for the mode — shared by every
+    // uploaded into the buffer this renderer owns for the mode - shared by every
     // system drawing that mode, so that one takes the cursor. The build is pure
     // CPU work, so it runs up front and gives the checks below the byte count
     // this draw will append.
@@ -365,7 +365,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
     // Pass totals appending would reach, resolved BEFORE the split below. They
     // size the buffers even when the split does happen: sizing to the lone draw
-    // that remains after it would peg both buffers at one draw forever — the
+    // that remains after it would peg both buffers at one draw forever - the
     // split shrinks the requirement back, the capacity never ratchets, and every
     // draw call opens its own pass again, which is the state this discipline
     // exists to remove.
@@ -445,7 +445,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     backend.stats.drawCalls++;
 
     // The pass stays open. Its cursors carry this draw's consumption forward so
-    // the next draw — this flush's or a later one's — appends AFTER the slices
+    // the next draw - this flush's or a later one's - appends AFTER the slices
     // this one reads instead of overwriting them. The backend ends the pass at
     // the frame boundary and at every genuine boundary in between.
     this._ownDrawsPass = active;
@@ -456,7 +456,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
   /**
    * Whether appending this draw would retroactively change what a draw already
-   * recorded into the open pass reads — in which case the caller ends (submits)
+   * recorded into the open pass reads - in which case the caller ends (submits)
    * that pass first, which restarts every cursor at 0.
    */
   private _appendWouldAlias(
@@ -472,7 +472,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
     // The texture cache is SHARED, and resolving the binding syncs dirty content
     // on the queue timeline ahead of the deferred submit. The pass survives a
-    // renderer switch, so the endangered draw need not be one of ours — hence
+    // renderer switch, so the endangered draw need not be one of ours - hence
     // the coordinator-side question rather than a local cursor.
     if (coordinator.passHasDraws && backend._textureUploadWouldMutate(drawCall.texture)) {
       return true;
@@ -485,8 +485,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
     // The viewport is baked into the pass at `acquirePass` and cannot be
     // rewritten on an open one, so a view invalidated since then would render
     // this draw through the rectangle the pass was opened with. That makes it a
-    // PASS property rather than a resource of ours: whoever opened the pass —
-    // any renderer — carried the stale viewport into it, so unlike the cursor
+    // PASS property rather than a resource of ours: whoever opened the pass -
+    // any renderer - carried the stale viewport into it, so unlike the cursor
     // checks below this one asks nothing about who owns the recorded draws.
     if (active.viewUpdateId !== backend.view.updateId) {
       return true;
@@ -556,7 +556,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       // destroys a mode it owns, which destroys the material.
       material._onDispose(() => {
         // `Material.destroy` drops its callbacks after firing them, so this
-        // registration is gone — forget it, and the next creation re-registers.
+        // registration is gone - forget it, and the next creation re-registers.
         this._disposeListenerRegistered.delete(material);
 
         const stored = this._resources.get(material);
@@ -639,7 +639,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       shaderModule: device.createShaderModule({ code: wgsl }),
       vertexLayout: {
         arrayStride: layout.stride,
-        // Per-instance for an instanced mode, per-vertex otherwise — the same
+        // Per-instance for an instanced mode, per-vertex otherwise - the same
         // interleaved layout serves both draw models.
         stepMode: mode.instanced ? 'instance' : 'vertex',
         attributes: layout.attributes.map((attribute, location) => ({
@@ -728,7 +728,7 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
   }
 
   /**
-   * Grow the uniform ring to `slots` draw-call slots — again the open pass's
+   * Grow the uniform ring to `slots` draw-call slots - again the open pass's
    * total, not this draw's one slot. Doubling and grow-only; growth frees the
    * current buffer, so the caller must have ended any pass holding draws of
    * ours that read it.

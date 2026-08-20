@@ -1,6 +1,6 @@
 {
   "title": "DynamicAabbTree",
-  "description": "Boundless, incrementally-updated bounding-volume hierarchy over fat AABBs (Box2D b2DynamicTree-style). Generic sibling of Quadtree: no world bounds, no max depth; leaves persist across updates and are only reinserted when their tight AABB escapes the stored fat AABB. Internals: an index-based node pool (a growable array of plain objects, mirroring the reuse-by-index idiom used elsewhere in the engine) with a free-list of freed slot indices for reuse. Insertion picks the sibling that minimises the surface-area-heuristic (SAH) cost of the resulting subtree; the ancestor chain is rebalanced on the way back to the root with AVL-style rotations on the height-imbalance factor — both exactly as in Box2D's `b2DynamicTree`. All public methods are allocation-free after the pool has grown to its working-set size.",
+  "description": "Boundless, incrementally-updated bounding-volume hierarchy over fat AABBs (Box2D b2DynamicTree-style). Generic sibling of Quadtree: no world bounds, no max depth; leaves persist across updates and are only reinserted when their tight AABB escapes the stored fat AABB. Internals: an index-based node pool (a growable array of plain objects, mirroring the reuse-by-index idiom used elsewhere in the engine) with a free-list of freed slot indices for reuse. Insertion picks the sibling that minimises the surface-area-heuristic (SAH) cost of the resulting subtree; the ancestor chain is rebalanced on the way back to the root with AVL-style rotations on the height-imbalance factor - both exactly as in Box2D's `b2DynamicTree`. All public methods are allocation-free after the pool has grown to its working-set size.",
   "symbol": "DynamicAabbTree",
   "kind": "class",
   "subsystem": "math",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Boundless, incrementally-updated bounding-volume hierarchy over fat AABBs (Box2D b2DynamicTree-style). Generic sibling of Quadtree: no world bounds, no max depth; leaves persist across updates and are only reinserted when their tight AABB escapes the stored fat AABB.",
-        "Internals: an index-based node pool (a growable array of plain objects, mirroring the reuse-by-index idiom used elsewhere in the engine) with a free-list of freed slot indices for reuse. Insertion picks the sibling that minimises the surface-area-heuristic (SAH) cost of the resulting subtree; the ancestor chain is rebalanced on the way back to the root with AVL-style rotations on the height-imbalance factor — both exactly as in Box2D's `b2DynamicTree`. All public methods are allocation-free after the pool has grown to its working-set size."
+        "Internals: an index-based node pool (a growable array of plain objects, mirroring the reuse-by-index idiom used elsewhere in the engine) with a free-list of freed slot indices for reuse. Insertion picks the sibling that minimises the surface-area-heuristic (SAH) cost of the resulting subtree; the ancestor chain is rebalanced on the way back to the root with AVL-style rotations on the height-imbalance factor - both exactly as in Box2D's `b2DynamicTree`. All public methods are allocation-free after the pool has grown to its working-set size."
       ],
       "importLine": "import { DynamicAabbTree } from '@codexo/exojs'",
       "sourceLink": null
@@ -634,7 +634,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Invoke callback for every leaf whose fat AABB overlaps the query AABB. Allocation-free: traversal uses a persistent internal stack. Invocation ORDER is tree-shape-dependent — callers needing determinism must normalise their own output (physics does via its final id-sort). NOT re-entrant: because the traversal stack is a single persistent field shared across all calls on this instance, a callback must not call query/queryPoint again on the SAME tree instance. The nested call resets the shared stack and silently truncates the outer traversal, yielding an incomplete result set with no error thrown."
+          "description": "Invoke callback for every leaf whose fat AABB overlaps the query AABB. Allocation-free: traversal uses a persistent internal stack. Invocation ORDER is tree-shape-dependent - callers needing determinism must normalise their own output (physics does via its final id-sort). NOT re-entrant: because the traversal stack is a single persistent field shared across all calls on this instance, a callback must not call query/queryPoint again on the SAME tree instance. The nested call resets the shared stack and silently truncates the outer traversal, yielding an incomplete result set with no error thrown."
         },
         {
           "name": "queryPoint",
@@ -947,7 +947,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Invoke callback for every leaf whose fat AABB the ray from originX, originY along dirX, dirY crosses within maxDistance (pass Infinity for an unbounded ray). A dumb AABB-pruning primitive mirroring query: it slab-tests each subtree's fat AABB against the ray segment and skips whole subtrees the segment misses, but performs no exact shape math and imposes no nearest-first order — the caller runs its own narrow phase and decides nearest-vs-all. Invocation ORDER is tree-shape-dependent. NOT re-entrant with itself: the traversal uses a single persistent stack field, so a callback must not call rayCast again on the SAME tree instance (the nested call resets the shared stack and silently truncates the outer traversal). The stack is separate from query/queryPoint's, so a rayCast from within a query callback (or the reverse) is safe."
+          "description": "Invoke callback for every leaf whose fat AABB the ray from originX, originY along dirX, dirY crosses within maxDistance (pass Infinity for an unbounded ray). A dumb AABB-pruning primitive mirroring query: it slab-tests each subtree's fat AABB against the ray segment and skips whole subtrees the segment misses, but performs no exact shape math and imposes no nearest-first order - the caller runs its own narrow phase and decides nearest-vs-all. Invocation ORDER is tree-shape-dependent. NOT re-entrant with itself: the traversal uses a single persistent stack field, so a callback must not call rayCast again on the SAME tree instance (the nested call resets the shared stack and silently truncates the outer traversal). The stack is separate from query/queryPoint's, so a rayCast from within a query callback (or the reverse) is safe."
         },
         {
           "name": "remove",

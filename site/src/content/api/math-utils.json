@@ -1,6 +1,6 @@
 {
   "title": "MathUtils",
-  "description": "Angle + curve/geometry math helpers, grouped as a namespace. The common scalar utilities (`clamp`, `lerp`, `sign`, `inRange`, `isPowerOfTwo`, `TAU`) are free top-level exports instead — see `src/math/index.ts`. This facade groups the less-common angle/curve/geometry helpers that don't warrant their own top-level export.",
+  "description": "Angle + curve/geometry math helpers, grouped as a namespace. The common scalar utilities (`clamp`, `lerp`, `sign`, `inRange`, `isPowerOfTwo`, `TAU`) are free top-level exports instead - see `src/math/index.ts`. This facade groups the less-common angle/curve/geometry helpers that don't warrant their own top-level export.",
   "symbol": "MathUtils",
   "kind": "namespace",
   "subsystem": "math",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Angle + curve/geometry math helpers, grouped as a namespace. The common scalar utilities (`clamp`, `lerp`, `sign`, `inRange`, `isPowerOfTwo`, `TAU`) are free top-level exports instead — see `src/math/index.ts`. This facade groups the less-common angle/curve/geometry helpers that don't warrant their own top-level export."
+        "Angle + curve/geometry math helpers, grouped as a namespace. The common scalar utilities (`clamp`, `lerp`, `sign`, `inRange`, `isPowerOfTwo`, `TAU`) are free top-level exports instead - see `src/math/index.ts`. This facade groups the less-common angle/curve/geometry helpers that don't warrant their own top-level export."
       ],
       "importLine": "import { MathUtils } from '@codexo/exojs'",
       "sourceLink": null

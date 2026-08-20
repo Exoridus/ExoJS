@@ -127,15 +127,15 @@ export class TiledMap {
    * its children as Tiled composes it: `visible` ANDs, `opacity` and the
    * parallax factors multiply, the offsets add, and tint colours multiply per
    * colour channel. Object layers take the visibility, opacity and offset the
-   * same way — `ObjectLayer` carries no parallax or tint of its own, so a
+   * same way - `ObjectLayer` carries no parallax or tint of its own, so a
    * group's contribution to those two is dropped for object layers only.
    *
    * An `infinite: true` (chunked) tile layer converts to an **unbounded**
-   * runtime `TileLayer` with no tiles populated eagerly — its data streams in
+   * runtime `TileLayer` with no tiles populated eagerly - its data streams in
    * on demand via the {@link ChunkSource} built for it, retrievable with
    * {@link getChunkSource} after this call returns.
    *
-   * The returned `TileMap` does **not** own the tileset textures — they remain
+   * The returned `TileMap` does **not** own the tileset textures - they remain
    * in the Loader cache. Destroying the returned map does not unload textures.
    */
   public toTileMap(): TileMap {
@@ -155,7 +155,7 @@ export class TiledMap {
     // Build runtime tilesets. Every tileset must resolve to an atlas texture:
     // a collection-of-images tileset is not supported yet, and a tileset with
     // no image at all is unusable. Both throw TiledFormatError rather than
-    // dropping the tileset — a skipped tileset makes every cell and tile object
+    // dropping the tileset - a skipped tileset makes every cell and tile object
     // that references it disappear from the runtime map without a diagnostic.
     const runtimeTilesets: TileSet[] = [];
     // indexToRuntime[i] = runtime TileSet for tilesets[i], or null for a hole in
@@ -212,7 +212,7 @@ export class TiledMap {
 
     // Collect and convert tile + object + image layers, flattening group layers.
     // `order` records each converted renderable (tile or image) layer's id in
-    // document (flattened, walk) order — object layers are excluded, matching
+    // document (flattened, walk) order - object layers are excluded, matching
     // TileMap.documentOrder's contract.
     //
     // The runtime map has no group node, so each enclosing group's own style has
@@ -306,7 +306,7 @@ export class TiledMap {
    * `layerId` doesn't name a tile layer, or if that layer is finite
    * (`data`-based) rather than chunked (`infinite`-map `chunks`-based).
    *
-   * Call {@link toTileMap} before calling this — it is what builds the
+   * Call {@link toTileMap} before calling this - it is what builds the
    * providers this method reads from.
    * @advanced
    */
@@ -369,7 +369,7 @@ function resolveGid(
 /**
  * Fill a `TileLayer` from a flat GID array decoded from a Tiled tile layer.
  *
- * @param width The source Tiled layer's width in tiles — `toTileMap()` always
+ * @param width The source Tiled layer's width in tiles - `toTileMap()` always
  *              constructs `layer` as bounded with this same width, but that
  *              fact isn't visible to the type checker from `layer` alone
  *              (runtime `TileLayer.width` is `number | undefined` since it
@@ -520,13 +520,13 @@ function convertObjectLayer(
 
 /**
  * Convert one `TiledObject` to a `TileMapObject`. A tile object whose GID
- * resolves to no tileset is dropped — returns `null`.
+ * resolves to no tileset is dropped - returns `null`.
  *
  * Tiled stores a **tile object**'s `x`/`y` at the tileset's object-alignment
  * anchor (bottom-left by default in an orthogonal map, bottom-centre in an
  * isometric one), while every other object kind stores the top-left corner of
  * its bounding box. The anchor is converted to the corner here so that
- * `TileMapObject.x`/`y` means the same thing for every kind — see
+ * `TileMapObject.x`/`y` means the same thing for every kind - see
  * {@link import('@codexo/exojs-tilemap').TileObject} for the resulting
  * convention.
  */
@@ -598,7 +598,7 @@ const ORIGIN_OFFSET = { x: 0, y: 0 } as const;
  * Offset from a tile object's stored anchor to the top-left corner of its
  * bounding box, using the owning tileset's `objectalignment` (or Tiled's
  * orientation-dependent default). Falls back to no offset when `gid` belongs
- * to no tileset — such an object is dropped by the caller anyway.
+ * to no tileset - such an object is dropped by the caller anyway.
  */
 function tileObjectAnchorOffset(
   gid: number,
@@ -661,7 +661,7 @@ function composeGroupStyle(parent: TiledGroupStyle, group: TiledGroupLayer): Til
 /**
  * Multiply two `0xRRGGBB` tints channel-wise (Tiled's own composition rule).
  * `null` means "no tint" and acts as the identity, so an untinted group leaves
- * its children's tints untouched — and vice versa.
+ * its children's tints untouched - and vice versa.
  */
 function multiplyTiledTint(a: number | null, b: number | null): number | null {
   if (a === null) return b;
@@ -739,7 +739,7 @@ function buildTileDefinitions(tiles: readonly TiledTileData[], tileCount: number
 /**
  * Convert a raw `TiledObjectData` to a runtime `TileMapObject` for use as a
  * per-tile collision shape. Text objects and tile-object (gid) references are
- * dropped — returns `null`. Does not perform GID resolution; collision shapes
+ * dropped - returns `null`. Does not perform GID resolution; collision shapes
  * in tile objectgroups are almost exclusively plain geometry.
  */
 function convertCollisionObject(obj: TiledObjectData): TileMapObject | null {
@@ -769,7 +769,7 @@ function convertCollisionObject(obj: TiledObjectData): TileMapObject | null {
 /**
  * Project Tiled custom properties to the generic flat property bag.
  * `object`-typed properties become a {@link TilePropertyKind.ObjectRef}
- * (the wire value is already the referenced object's numeric id — Tiled has
+ * (the wire value is already the referenced object's numeric id - Tiled has
  * no LDtk-style navigation fields, so those stay `undefined`). `class`-typed
  * properties recursively convert their nested member bag into a
  * {@link TileProperties}.
@@ -820,7 +820,7 @@ function convertPropertyValue(property: TiledPropertyData): TilePropertyValue | 
  * `ldtkWorldIid`-style reserved-metadata-key convention used by the LDtk
  * adapter (`packages/exojs-ldtk/src/ldtkToTileMap.ts`). Only set on the
  * top-level converted bag for a class-typed property that has a
- * `propertytype` — nested-class members carry no `propertytype` of their own
+ * `propertytype` - nested-class members carry no `propertytype` of their own
  * in Tiled's data model, so recursive calls never set it.
  */
 const tiledClassNameProperty = 'tiledClassName';
@@ -917,7 +917,7 @@ function checkGidCoverage(map: TiledMap, source: string): void {
         const gid = object.gid;
 
         // gid 0 (after masking the flip bits) is the empty-cell sentinel, the
-        // same as in tile-layer data — accept it as "no tile" instead of
+        // same as in tile-layer data - accept it as "no tile" instead of
         // rejecting it as uncovered.
         if (gid !== undefined && maskTiledGid(gid) !== 0 && map.findTilesetForGid(gid) === undefined) {
           throw new TiledFormatError(source, `${layerPath}.objects[${o}].gid`, `gid ${gid} (masked: ${maskTiledGid(gid)}) is not covered by any tileset`);

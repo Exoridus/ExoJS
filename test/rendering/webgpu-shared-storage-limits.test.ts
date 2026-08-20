@@ -9,8 +9,8 @@
  * transform + tint storage. All four are `storage` bindings bound in full, with
  * no `offset`/`size` sub-range, so each is bounded by
  * `min(maxBufferSize, maxStorageBufferBindingSize)` of the GRANTED device limits.
- * Past that ceiling `createBuffer` still succeeds — the doubled size is exactly
- * `maxBufferSize` — and `createBindGroup` does not, which makes the failure an
+ * Past that ceiling `createBuffer` still succeeds - the doubled size is exactly
+ * `maxBufferSize` - and `createBindGroup` does not, which makes the failure an
  * uncaptured validation error, a frame that draws nothing, and a loop that keeps
  * running.
  *
@@ -26,7 +26,7 @@ import { createRenderStats } from '#rendering/RenderStats';
 import { retainedTintSlotBytes, retainedTransformSlotBytes, WebGpuRetainedGroupBundle } from '#rendering/webgpu/WebGpuRetainedGroupResources';
 import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
 
-/** WebGPU's spec defaults — what a device gets when nothing higher is requested. */
+/** WebGPU's spec defaults - what a device gets when nothing higher is requested. */
 const DEFAULT_MAX_BUFFER_SIZE = 2 ** 28; // 256 MiB
 const DEFAULT_MAX_STORAGE_BUFFER_BINDING_SIZE = 2 ** 27; // 128 MiB
 
@@ -112,8 +112,8 @@ const expectRefusal = (body: () => void, store: string): RenderError => {
 describe('WebGpuTransformStorage device limits', () => {
   test('accepts the last capacity the device can bind, and refuses the first growth past it', () => {
     withGpuBufferUsage(() => {
-      // The band below the ceiling settles on the ceiling itself — capacity is a
-      // power of two — so it is the last capacity the device can serve.
+      // The band below the ceiling settles on the ceiling itself - capacity is a
+      // power of two - so it is the last capacity the device can serve.
       const below = createMockDevice();
 
       new WebGpuTransformStorage().reserve(below.device, DEFAULT_ROW_CEILING / 2 + 1);
@@ -283,7 +283,7 @@ describe('WebGpuRetainedGroupBundle device limits', () => {
   test('bounds the tint storage on its own row width, not the transform one', () => {
     withGpuBufferUsage(() => {
       // Four bytes a row rather than 32, so the tint ceiling is eight times
-      // further out. It can never break first in lockstep growth — which is
+      // further out. It can never break first in lockstep growth - which is
       // exactly why the two buffers grow independently here and need their own
       // boundary.
       const tintCeilingRows = DEFAULT_MAX_STORAGE_BUFFER_BINDING_SIZE / TINT_BYTES_PER_ROW;
@@ -378,13 +378,13 @@ describe('persistent refusal falls onto a path that now fails loudly', () => {
 
       store.connectDevice(mock.device, undefined as never);
 
-      // Step 1 (NEU-S1): the per-root store cannot represent the selection, so
-      // the plan puts the root back on the streamed path.
+      // Step 1: the per-root store cannot represent the selection, so the plan
+      // puts the root back on the streamed path.
       expect(store.canRepresent(DEFAULT_ROW_CEILING + 1, DEFAULT_ROW_CEILING + 1)).toBe(false);
 
-      // Step 2 (this fix): the streamed path needs the same rows in the
-      // frame-global shared storage, against the same ceiling — and says so
-      // instead of drawing nothing behind an uncaptured validation error.
+      // Step 2: the streamed path needs the same rows in the frame-global
+      // shared storage, against the same ceiling - and says so instead of
+      // drawing nothing behind an uncaptured validation error.
       expectRefusal(() => new WebGpuTransformStorage().reserve(mock.device, DEFAULT_ROW_CEILING + 1), 'shared transform storage');
     });
   });

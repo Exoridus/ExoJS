@@ -11,7 +11,7 @@ const compareT = (a: CurveKey, b: CurveKey): number => a.t - b.t;
 /**
  * Piecewise-linear keyframe curve sampled by lifetime ratio `t` in `[0, 1]`.
  *
- * Keyframes are stored sorted by `t` and clamped at the endpoints — sampling
+ * Keyframes are stored sorted by `t` and clamped at the endpoints - sampling
  * outside the keyframe range returns the nearest endpoint value. The
  * implementation tracks the last accessed segment so monotonically advancing
  * `t` (the typical case for per-particle lifetime sampling) costs O(1)

@@ -17,7 +17,7 @@ import {
   type VelocitySample,
 } from './spatial-smoothing';
 
-/** Clamp range for the Doppler ratio applied to a voice's playback rate — a much
+/** Clamp range for the Doppler ratio applied to a voice's playback rate - a much
  * tighter range than the general [0.1, 20] `playbackRate` clamp, since a wide
  * Doppler swing alone would never sound like a desirable game-feel effect. */
 const MIN_DOPPLER_RATIO = 0.1;
@@ -41,7 +41,7 @@ const defaultSpatialConfig: VoiceSpatialConfig = {
 /** Construction parameters shared by every concrete voice. */
 export interface BaseVoiceInit {
   audioContext: AudioContext;
-  /** The voice's output gain — the last node before the bus. */
+  /** The voice's output gain - the last node before the bus. */
   output: GainNode;
   bus: AudioBus;
   manager: AudioManager;
@@ -64,8 +64,8 @@ export interface SpatialVoice {
 /**
  * Shared base for the concrete voices ({@link SoundVoice},
  * {@link AudioStreamVoice}, {@link AudioGeneratorVoice}). Implements the common
- * {@link Voice} control surface — volume, fade, stop, lifecycle Signal, bus
- * routing — and the {@link Spatializable} capability via a lazily-inserted
+ * {@link Voice} control surface - volume, fade, stop, lifecycle Signal, bus
+ * routing - and the {@link Spatializable} capability via a lazily-inserted
  * `PannerNode`.
  *
  * The voice graph is `<source> → [panner] → output(gain) → bus.input`. The
@@ -127,7 +127,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     }
 
     // Registered here rather than in `AudioManager.play` so that every voice is
-    // covered regardless of how it was constructed — `open()`, sprite playback
+    // covered regardless of how it was constructed - `open()`, sprite playback
     // and pooled replays all go through this constructor. `_finish` deregisters.
     this._manager._registerVoice(this);
   }
@@ -184,7 +184,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       // Detach the removed effect's output from the graph (its internal input
       // wiring is left intact so the caller can reuse it). The rebuild below
       // only touches the effects still in the chain. Skipped for an effect
-      // whose own nodes have not been created yet — same probe `AudioBus`
+      // whose own nodes have not been created yet - same probe `AudioBus`
       // uses, since `outputNode` throws on an effect still mid-setup.
       if (isEffectReady(effect)) {
         effect.outputNode.disconnect();
@@ -266,9 +266,9 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
   /**
    * Track `node`'s position each frame and pan this voice from it (or stop
-   * tracking with `null`). Reads {@link SceneNode.getWorldTransform} — the
+   * tracking with `null`). Reads {@link SceneNode.getWorldTransform} - the
    * TRUE world position, composed through {@link RetainedContainer}
-   * transform-group boundaries — so an emitter inside a camera-panned world
+   * transform-group boundaries - so an emitter inside a camera-panned world
    * group sounds where it is drawn.
    */
   public follow(node: SceneNode | null): void {
@@ -298,12 +298,12 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
   }
 
   public set refDistance(value: number) {
-    // Clamped to strictly positive — refDistance = 0 divides by zero in the
+    // Clamped to strictly positive - refDistance = 0 divides by zero in the
     // 'exponential' distance model, (d / refDistance) ^ -rolloffFactor. Not
     // coupled to maxDistance: forcing the two to stay ordered would silently
     // create a maxDistance === refDistance state, which divides by zero in
     // the default 'linear' model instead. An out-of-order pair is left to
-    // the caller — no worse than the pre-existing possibility of setting
+    // the caller - no worse than the pre-existing possibility of setting
     // both to the same value directly.
     const safe = Number.isFinite(value) ? value : this._spatialConfig.refDistance;
     const clamped = Math.max(Number.EPSILON, safe);
@@ -319,7 +319,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
   public set maxDistance(value: number) {
     // Clamped to strictly positive per the PannerNode spec (a non-positive
-    // maxDistance throws RangeError in a real browser) — independent of
+    // maxDistance throws RangeError in a real browser) - independent of
     // refDistance, see the note on that setter above.
     const safe = Number.isFinite(value) ? value : this._spatialConfig.maxDistance;
     const clamped = Math.max(Number.EPSILON, safe);
@@ -417,7 +417,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       return;
     }
 
-    // Reject a non-finite component outright (no partial write) — an
+    // Reject a non-finite component outright (no partial write) - an
     // explicit NaN/±Infinity velocity would otherwise feed straight into the
     // Doppler ratio calculation. Keep whatever velocity was in effect before.
     if (!Number.isFinite(value.x) || !Number.isFinite(value.y)) return;
@@ -461,7 +461,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     const t = this._audioContext.currentTime;
     const settings = this._manager.spatial;
 
-    // Written RELATIVE to this manager's own listener, which is virtual — the
+    // Written RELATIVE to this manager's own listener, which is virtual - the
     // real `AudioContext.listener` is process-wide and stays pinned at the
     // origin, so two Applications cannot fight over it (see
     // {@link AudioListener}). With the listener at the origin the offset vector
@@ -494,7 +494,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
    * Resolve this tick's effective velocity (explicit {@link BaseVoice.velocity},
    * else auto-derived from the position delta since the last tick), then
    * compute and apply the Doppler ratio against the listener. No-op entirely
-   * when `dopplerFactor` is `0` (the default) — genuinely zero cost when the
+   * when `dopplerFactor` is `0` (the default) - genuinely zero cost when the
    * feature is unused.
    *
    * Ratio formula: classic Doppler is
@@ -503,11 +503,11 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
    * tunable {@link SpatialSmoothingSettings.speedOfSound} reference) this is
    * linearized to
    * `ratio = 1 + dopplerFactor * (listenerApproachSpeed - sourceRecedeSpeed) / speedOfSound`
-   * — a first-order Taylor approximation of the physical ratio around 1 that
+   * - a first-order Taylor approximation of the physical ratio around 1 that
    * stays numerically well-behaved (no risk of a negative or exploding
    * denominator) and lets `dopplerFactor` scale linearly as an exaggeration
    * knob, then the result is clamped to a sane, tight positive range (see
-   * {@link MIN_DOPPLER_RATIO}/{@link MAX_DOPPLER_RATIO}) — a source or
+   * {@link MIN_DOPPLER_RATIO}/{@link MAX_DOPPLER_RATIO}) - a source or
    * listener closing at or above `speedOfSound` pushes the *linearized* ratio
    * arbitrarily high/low, so the clamp is what actually keeps that case sane,
    * not the formula itself.
@@ -534,7 +534,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     const dx = x - listener.position.x;
     const dy = y - listener.position.y;
     const distance = Math.hypot(dx, dy);
-    // Coincident with the listener — no defined line of sight to project onto.
+    // Coincident with the listener - no defined line of sight to project onto.
     if (distance < POSITION_EPSILON) {
       this._setDopplerRatio(1);
       return;
@@ -557,7 +557,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
   private _setDopplerRatio(ratio: number): void {
     // A single backstop against every possible NaN source feeding the ratio
     // calculation (explicit or derived velocity, a NaN/zero `speedOfSound` on
-    // the shared settings object, ...) — falls back to the neutral ratio
+    // the shared settings object, ...) - falls back to the neutral ratio
     // rather than ever writing a non-finite value to a live AudioParam.
     const safeRatio = Number.isFinite(ratio) ? ratio : 1;
     if (safeRatio === 1 && !this._dopplerActive) return;
@@ -567,7 +567,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
   /**
    * Convert `_orientation` (degrees, `SceneNode.rotation` convention) to a
-   * unit XY vector (Z fixed at 0 — no Z axis in this engine) and write it
+   * unit XY vector (Z fixed at 0 - no Z axis in this engine) and write it
    * through the same smoothing layer used for position, so a fast-rotating
    * emitter's cone direction never zippers.
    */
@@ -600,7 +600,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
   // Internals
   // -------------------------------------------------------------------------
 
-  /** The last node in the voice chain before the bus — the output gain, or the last effect. */
+  /** The last node in the voice chain before the bus - the output gain, or the last effect. */
   protected _tail(): AudioNode {
     const lastEffect = this._effects[this._effects.length - 1];
     return lastEffect !== undefined ? lastEffect.outputNode : this._output;
@@ -618,7 +618,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
       return;
     }
 
-    // Bus not set up yet (AudioContext still locked) — route to the destination
+    // Bus not set up yet (AudioContext still locked) - route to the destination
     // for now and reconnect to the bus once it comes online. Keep the disposer
     // and drop any previous pending reconnect so a voice deferring repeatedly
     // (or ending) before the first gesture never leaves stale callbacks queued
@@ -711,7 +711,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
   }
 
   /**
-   * Called once on natural end or explicit {@link BaseVoice.stop}. Idempotent —
+   * Called once on natural end or explicit {@link BaseVoice.stop}. Idempotent -
    * subsequent calls are no-ops once `_ended` is set.
    */
   protected _finish(): void {
@@ -729,7 +729,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
     this._output.disconnect();
 
     // Detach per-voice effects from the chain (the caller still owns them).
-    // Skipped for an effect whose own nodes have not been created yet — same
+    // Skipped for an effect whose own nodes have not been created yet - same
     // probe `AudioBus.destroy` uses, since `outputNode` throws on an effect
     // still mid-setup.
     for (const effect of this._effects) {
@@ -775,7 +775,7 @@ export abstract class BaseVoice implements Voice, SpatialVoice {
 
   /**
    * Apply a Doppler pitch-shift multiplier on top of whatever playback rate
-   * the voice already has (never overwrite the user's own explicit rate —
+   * the voice already has (never overwrite the user's own explicit rate -
    * multiply it). Default no-op: voice types with no meaningful, live
    * rate parameter (`AudioGeneratorVoice`'s rate is documented as inert;
    * `InputVoice`/`NoopVoice` have no source to modulate) simply don't

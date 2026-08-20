@@ -35,10 +35,10 @@ class DuckingScene extends Scene {
         this.musicBarY = height * 0.42;
         this.voiceBarY = height * 0.55;
 
-        // AudioStream has no seamless adapter — await it explicitly.
+        // AudioStream has no seamless adapter - await it explicitly.
         const music = await this.loader.load(Asset.type('music', assets.demo.audio.musicLoop));
         this.music = music;
-        // Path-only get() infers Sound from the .ogg extension — sidesteps a
+        // Path-only get() infers Sound from the .ogg extension - sidesteps a
         // compile-time overload ambiguity between Sound and the Json token form
         // when passing the Sound token explicitly.
         this.voice = this.loader.get(assets.demo.voice.congratulations);
@@ -53,7 +53,7 @@ class DuckingScene extends Scene {
         app.audio.music.addEffect(this.ducking);
 
         // Tap each bus with a parallel analyser so we can show the live levels.
-        // The music meter visibly dips while the voice meter spikes — that gap
+        // The music meter visibly dips while the voice meter spikes - that gap
         // is the duck.
         this.musicLevel = new AudioAnalyser({ source: app.audio.music, smoothingTimeConstant: 0.85 });
         this.voiceLevel = new AudioAnalyser({ source: this.voiceBus, smoothingTimeConstant: 0.6 });

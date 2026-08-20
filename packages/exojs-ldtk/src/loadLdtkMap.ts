@@ -16,7 +16,7 @@ import { LdtkFormatError, validateLdtkData, validateLdtkLevelData } from './vali
  *
  * Returns `null` only for an embed-atlas tileset (`relPath` null or empty),
  * whose image ships with the LDtk editor and cannot be resolved from the
- * document — that case warns rather than passing unnoticed, because every tile
+ * document - that case warns rather than passing unnoticed, because every tile
  * drawn from it is missing from the runtime map.
  *
  * @throws {LdtkFormatError} when the tileset names an atlas that cannot yield a
@@ -90,7 +90,7 @@ async function loadLdtkTileset(
  * LDtk's "Save levels to separate files" project option nulls out
  * `layerInstances` on the root document; the real layer data lives in a
  * sibling `<levelIdentifier>.ldtkl` file referenced by {@link LdtkLevel.externalRelPath}.
- * That file also carries its own `fieldInstances`, which is authoritative —
+ * That file also carries its own `fieldInstances`, which is authoritative -
  * the root document's copy is typically stripped or stale for externalized
  * levels. Levels that already carry `layerInstances` (not externalized) are
  * returned unchanged.
@@ -107,7 +107,7 @@ async function loadExternalLevel(
 
   const externalUrl = resolveLdtkUrl(level.externalRelPath, ldtkSource);
   // Validated against the same level shape as an inlined level, with the
-  // `.ldtkl` file itself as the error source — a malformed external payload
+  // `.ldtkl` file itself as the error source - a malformed external payload
   // must fail as loudly as a malformed root document.
   const external = validateLdtkLevelData(await context.fetchJson(externalUrl), externalUrl);
   const fieldInstances = external.fieldInstances ?? level.fieldInstances;
@@ -123,10 +123,10 @@ async function loadExternalLevel(
  * Rebuild an {@link LdtkData} document with its levels replaced by
  * `resolvedLevels` (external `.ldtkl` payloads merged in via
  * {@link loadExternalLevel}), preserving whichever root shape the source
- * document used — single-world (`levels`) or multi-world (`worlds[].levels`).
+ * document used - single-world (`levels`) or multi-world (`worlds[].levels`).
  *
  * `resolvedLevels` must be in the same flattened order
- * {@link getLdtkLevelEntries} produced for `data` — each world's slice is
+ * {@link getLdtkLevelEntries} produced for `data` - each world's slice is
  * recovered by walking `data.worlds` in that same order, so a second pass
  * through {@link getLdtkLevelEntries} (performed inside {@link ldtkToTileMap})
  * reproduces an identical flattened list, now with external levels resolved.
@@ -152,13 +152,13 @@ function withResolvedLevels(data: LdtkData, resolvedLevels: readonly LdtkLevel[]
  * externalized (`.ldtkl`) levels, and return a fully assembled {@link LdtkMap}
  * with one runtime {@link import('@codexo/exojs-tilemap').TileMap} per level.
  *
- * The fetched document — and every external `.ldtkl` payload — is validated
+ * The fetched document - and every external `.ldtkl` payload - is validated
  * before use; a structural problem throws
  * {@link import('./validate').LdtkFormatError} naming the file and the
  * offending property path.
  *
  * A tileset whose declared atlas cannot hold a single tile is a
- * {@link import('./validate').LdtkFormatError} too — dropping it would make
+ * {@link import('./validate').LdtkFormatError} too - dropping it would make
  * every cell referencing it disappear without a diagnostic. An embed-atlas
  * tileset (`relPath = null`) is the one case that is skipped rather than
  * rejected, since its image lives inside the LDtk editor; that skip warns.
@@ -172,8 +172,8 @@ export async function loadLdtkMap(
 
   // Load all referenced tilesets and resolve externalized levels concurrently.
   // Iterate the flattened level list (not raw data.levels) so multi-world
-  // documents — whose levels live under worlds[].levels, with an empty root
-  // levels[] — still get their external .ldtkl files resolved.
+  // documents - whose levels live under worlds[].levels, with an empty root
+  // levels[] - still get their external .ldtkl files resolved.
   const [tilesetEntries, resolvedLevels] = await Promise.all([
     Promise.all(
       data.defs.tilesets.map(async (def) => {

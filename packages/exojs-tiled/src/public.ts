@@ -5,7 +5,7 @@ export { type TiledLoadOptions } from './tiledOptions';
 export type { AssetBinding, AssetHandler, AssetLoadRequest, Extension } from '@codexo/exojs/extensions';
 
 // ── Runtime facade (re-exports from @codexo/exojs-tilemap) ─────────────────
-// These are re-exports of the *same* module bindings — `instanceof TileMap`
+// These are re-exports of the *same* module bindings - `instanceof TileMap`
 // holds whether the class was imported from @codexo/exojs-tilemap or here.
 export type { TiledBuildInfo } from './tiledBuildInfo';
 export { tiledBuildInfo } from './tiledBuildInfo';
@@ -111,7 +111,7 @@ export { tiledWangSetToWangSet } from './wangSets';
 // ── Validation ───────────────────────────────────────────────────────────────
 export { TiledFormatError } from './validate';
 
-// ── Module augmentation — typed load calls ───────────────────────────────────
+// ── Module augmentation - typed load calls ───────────────────────────────────
 import type { TileMap } from '@codexo/exojs-tilemap';
 
 import type { TiledMap } from './TiledMap';
@@ -132,7 +132,7 @@ declare module '@codexo/exojs' {
     tiledSource: {
       resource: TiledMap;
       config: { source: string; format?: 'tiled' };
-      /** See `tileMap` — `tiledSourceBinding` ships no seamless adapter either. */
+      /** See `tileMap` - `tiledSourceBinding` ships no seamless adapter either. */
       isValue: true;
     };
   }

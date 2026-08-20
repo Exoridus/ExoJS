@@ -1,5 +1,5 @@
 /**
- * WebGPU counterpart to `webgl2-text-gradient.test.ts` — the ORIENTATION of the
+ * WebGPU counterpart to `webgl2-text-gradient.test.ts` - the ORIENTATION of the
  * two-stop text gradient.
  *
  * Both backends upload `gradientColors[0]` into node texel 7 and `[1]` into
@@ -83,7 +83,7 @@ describe('WebGPU: the text gradient runs from gradientColors[0] at the top', () 
       for (const { y, share } of rows) {
         // The shader interpolates at the pixel centre.
         const t = Math.min(1, Math.max(0, (y + 0.5 - textY - ink.y) / ink.height));
-        // Red is gradientColors[0] — the TOP stop — so its share is 1 at the
+        // Red is gradientColors[0] - the TOP stop - so its share is 1 at the
         // top of the ink box and falls to 0 at the bottom. A flipped mix would
         // produce `t` here instead, missing by |2t - 1| on every row but the
         // midpoint.

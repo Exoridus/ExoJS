@@ -293,10 +293,10 @@ describe('per-scope load progress', () => {
       hud.load(new Assets({ c: { type: 'texture', source: 'c.png' } })),
     ]);
 
-    // The level scope counts only its own two assets…
+    // The level scope counts only its own two assets...
     expect(levelProgress.at(-1)).toBe(2);
     expect(levelComplete).toBe(1);
-    // …while the loader keeps seeing all three.
+    // ...while the loader keeps seeing all three.
     expect(loaderProgress.at(-1)).toBe(3);
   });
 

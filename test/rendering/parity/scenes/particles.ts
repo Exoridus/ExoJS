@@ -7,7 +7,7 @@
  * WebGPU.
  *
  * Placement bypasses spawn and update modules and writes the SoA slot directly.
- * That is deliberate — the simulation is time- and RNG-driven, and a scene the
+ * That is deliberate - the simulation is time- and RNG-driven, and a scene the
  * determinism property cannot trust would report noise as divergence. What is
  * under test here is the rendering of a known particle state, not the
  * simulation that would normally produce it.

@@ -35,10 +35,10 @@ export default defineConfig([
   // Re-enabled repo-wide rather than per-directory: the delegation is only
   // ever safe when it tracks tsconfig coverage exactly, and keeping a second
   // list in sync with that coverage is what failed in the first place. Over
-  // `src/**` these are simply redundant with the compiler — they are all
+  // `src/**` these are simply redundant with the compiler - they are all
   // syntactic, so the cost is nil.
   //
-  // Four are deliberately left off — each is blind to the TS type space in a
+  // Four are deliberately left off - each is blind to the TS type space in a
   // way that produces false positives on correct code here:
   //
   // - `no-undef` misfires on type-only names and ambient globals in TS
@@ -275,8 +275,8 @@ export default defineConfig([
       '@typescript-eslint/naming-convention': [
         'error',
         {
-          // const namespace objects (MathUtils, Perf, Collision, …) are PascalCase
-          // by convention; const constants may be UPPER_CASE — both alongside camelCase.
+          // const namespace objects (MathUtils, Perf, Collision, ...) are PascalCase
+          // by convention; const constants may be UPPER_CASE - both alongside camelCase.
           selector: 'variable',
           modifiers: ['const'],
           format: ['strictCamelCase', 'StrictPascalCase', 'UPPER_CASE'],
@@ -305,7 +305,7 @@ export default defineConfig([
         // reject consecutive capitals, so `UIRoot`, `HTMLText` and `_peekUI`
         // each carried an inline disable repeating the same sentence. These
         // two entries carry a `filter`, which outranks the generic selectors
-        // above, and relax only the capitalisation — a name without one of
+        // above, and relax only the capitalisation - a name without one of
         // these acronyms stays strict.
         {
           selector: 'typeLike',
@@ -440,7 +440,7 @@ export default defineConfig([
       'no-new-func': 'error',
       'no-new-wrappers': 'error',
       'no-promise-executor-return': 'error',
-      // Scene.init() must be synchronous — see the
+      // Scene.init() must be synchronous - see the
       // matching rule in the engine-source block above for the full rationale.
       'no-restricted-syntax': [
         'error',
@@ -602,7 +602,7 @@ export default defineConfig([
         // reject consecutive capitals, so `UIRoot`, `HTMLText` and `_peekUI`
         // each carried an inline disable repeating the same sentence. These
         // two entries carry a `filter`, which outranks the generic selectors
-        // above, and relax only the capitalisation — a name without one of
+        // above, and relax only the capitalisation - a name without one of
         // these acronyms stays strict.
         {
           selector: 'typeLike',
@@ -679,8 +679,8 @@ export default defineConfig([
     },
   },
 
-  // @codexo/exojs-bench is an internal benchmark TOOL — a Node CLI plus an
-  // in-browser rendering harness — not a shipped library. It legitimately
+  // @codexo/exojs-bench is an internal benchmark TOOL - a Node CLI plus an
+  // in-browser rendering harness - not a shipped library. It legitimately
   // The published build tooling runs in Node: it drives esbuild and reads the
   // filesystem. The generic `packages/exojs-*/src` block grants browser
   // globals, which is the wrong environment here, so the Node ones are added on
@@ -749,7 +749,7 @@ export default defineConfig([
     },
   },
 
-  // Extension package tests — disable type-aware rules (package tsconfigs
+  // Extension package tests - disable type-aware rules (package tsconfigs
   // exclude test/), then apply relaxed structural rules matching the core test
   // policy. Excludes create-exo-app (standalone scaffolding CLI, no ESLint
   // integration).
@@ -901,7 +901,7 @@ export default defineConfig([
       ],
       // Disabled for site/src to match the engine: `strict-boolean-expressions`
       // is turned off across every practical src/ directory (core, input, math,
-      // rendering, audio, assets, …). The site's URL/version/runtime helpers
+      // rendering, audio, assets, ...). The site's URL/version/runtime helpers
       // are the same class of nullable-string code, so holding only site code to
       // it would be an inconsistent double standard.
       '@typescript-eslint/strict-boolean-expressions': 'off',
@@ -957,7 +957,7 @@ export default defineConfig([
   // Per-subsystem overrides for src/. Scoped narrowly because these directories
   // either have hot-path lifecycle invariants, browser-API variance, or typed-
   // array plumbing that would create excessive false positives. Each block is
-  // a known-deviation marker, NOT a license — every entry below is a candidate
+  // a known-deviation marker, NOT a license - every entry below is a candidate
   // for tightening once the underlying code is refactored.
   // ---------------------------------------------------------------------------
 
@@ -976,7 +976,7 @@ export default defineConfig([
 
   // Rendering hot paths rely on lifecycle invariants and a broad browser API
   // surface; keep strict coverage elsewhere while reducing noise here. Covers
-  // the whole subtree, WebGL2 and WebGPU alike — the backends, capability
+  // the whole subtree, WebGL2 and WebGPU alike - the backends, capability
   // probes and renderer lifecycles all sit under it.
   {
     files: ['src/rendering/**/*.ts'],
@@ -1086,7 +1086,7 @@ export default defineConfig([
   },
 
   // ObjectLayer exposes `ObjectKind`, a PascalCase `as const` enum-like value
-  // object whose members (Rectangle, Polygon, …) are PascalCase by convention
+  // object whose members (Rectangle, Polygon, ...) are PascalCase by convention
   // and whose string values are the Tiled wire format. This matches how the
   // core engine declares enum-like constants; the package naming policy is
   // relaxed here just for this file.
@@ -1113,7 +1113,7 @@ export default defineConfig([
     },
   },
 
-  // Extension renderer / GPU hot paths — same relaxed policy as core rendering.
+  // Extension renderer / GPU hot paths - same relaxed policy as core rendering.
   {
     files: ['packages/exojs-tilemap/src/webgl2/**/*.ts', 'packages/exojs-tilemap/src/webgpu/**/*.ts'],
     rules: {
@@ -1123,7 +1123,7 @@ export default defineConfig([
     },
   },
 
-  // Extension tilemap core — geometry and data-path relaxations.
+  // Extension tilemap core - geometry and data-path relaxations.
   {
     files: [
       'packages/exojs-tilemap/src/chunkGeometry.ts',
@@ -1176,7 +1176,7 @@ export default defineConfig([
     },
   },
 
-  // Particle extension descriptor — backend-type comparison is intentional.
+  // Particle extension descriptor - backend-type comparison is intentional.
   {
     files: ['packages/exojs-particles/src/particlesExtension.ts', 'packages/exojs-particles/src/modules/BurstSpawn.ts'],
     rules: {
@@ -1185,7 +1185,7 @@ export default defineConfig([
     },
   },
 
-  // Extracted audio-effects/DSP package — same defensive audio regime as the
+  // Extracted audio-effects/DSP package - same defensive audio regime as the
   // core audio graph it was split from (browser API variance, DSP hot paths).
   {
     files: ['packages/exojs-audio-fx/src/**/*.ts'],
@@ -1262,7 +1262,7 @@ export default defineConfig([
   },
 
   // Physics indexes flat vertex/normal buffers (`number[]`) at provably in-bounds
-  // positions; those reads use `arr[i]!` — the same convention core's hot math
+  // positions; those reads use `arr[i]!` - the same convention core's hot math
   // paths use. Allow the non-null assertion here (packages discourage it by
   // default; the audio-fx override below does the same for its hot code).
   {
@@ -1272,7 +1272,7 @@ export default defineConfig([
     },
   },
 
-  // `Map.forEach` is the allocation-free way to walk a Map: `for…of` builds a
+  // `Map.forEach` is the allocation-free way to walk a Map: `for...of` builds a
   // fresh iterator on every step, which these two per-frame paths cannot
   // afford. Deleting the current entry mid-`forEach` is well-defined and both
   // files rely on it. Scoped to the two files that actually run per frame
@@ -1296,7 +1296,7 @@ export default defineConfig([
   },
 
   // LDtk marks its runtime-computed fields with a `__` prefix (`__identifier`,
-  // `__type`, …). These types mirror an external file format verbatim, so the
+  // `__type`, ...). These types mirror an external file format verbatim, so the
   // prefix is data, not a naming choice we get to make.
   {
     files: ['packages/exojs-ldtk/src/**/*.ts'],
@@ -1329,7 +1329,7 @@ export default defineConfig([
     },
   },
 
-  // The input channel constants (`Pointer.X`, `GamepadButton.South`, …) are
+  // The input channel constants (`Pointer.X`, `GamepadButton.South`, ...) are
   // exposed as namespaces on purpose: it is the public spelling of the whole
   // input API, and these three files are the only namespaces in the engine.
   {
@@ -1388,10 +1388,10 @@ export default defineConfig([
       // measured cost of each rule across `test/**`:
       //   no-unsafe-call 293, no-unsafe-member-access 279,
       //   no-unsafe-assignment 241, no-unsafe-argument 89, no-unsafe-return 12
-      //     — the price of shape-only mocks; the type gate (`pnpm
+      //     - the price of shape-only mocks; the type gate (`pnpm
       //       typecheck:test`) is what actually holds these files honest.
-      //   require-await 395 — an `async` test body with no `await` is normal.
-      //   unbound-method 236 — `expect(obj.method)` reads the method by design.
+      //   require-await 395 - an `async` test body with no `await` is normal.
+      //   unbound-method 236 - `expect(obj.method)` reads the method by design.
       // Revisit any of them by flipping it on and re-measuring, not by
       // reasoning about it.
       '@typescript-eslint/no-misused-promises': 'off',
@@ -1453,10 +1453,10 @@ export default defineConfig([
       'vitest/no-disabled-tests': 'warn',
       // False positives in this suite, kept off:
       //  - expect-expect: assertions run through shared helpers (mountControls,
-      //    renderText, …) the rule cannot see (148 hits).
+      //    renderText, ...) the rule cannot see (148 hits).
       //  - no-conditional-expect / no-standalone-expect: browser tests use
       //    `if (!device) return` skip guards and assert via helpers.
-      //  - valid-title: parametrised `test(name, …)` over a case array.
+      //  - valid-title: parametrised `test(name, ...)` over a case array.
       'vitest/expect-expect': 'off',
       'vitest/no-conditional-expect': 'off',
       'vitest/no-standalone-expect': 'off',
@@ -1464,7 +1464,7 @@ export default defineConfig([
     },
   },
 
-  // Node / config files / scripts — not part of any tsconfig `include`, so
+  // Node / config files / scripts - not part of any tsconfig `include`, so
   // type-aware rules (from the global `recommendedTypeChecked`/
   // `stylisticTypeChecked` configs applied unscoped above) have no type
   // information to work with here. `parserOptions.project: null` below only
@@ -1474,7 +1474,7 @@ export default defineConfig([
   // by this block crashes on the first typed rule it hits (e.g.
   // `@typescript-eslint/await-thenable`). The four `no-unsafe-*` rules below
   // were previously re-enabled after that blanket disable, which crashed the
-  // same way (`no-unsafe-argument` needs type info too) — dropped rather than
+  // same way (`no-unsafe-argument` needs type info too) - dropped rather than
   // given a real tsconfig program, since these files intentionally sit
   // outside any typed program.
   {
@@ -1510,7 +1510,7 @@ export default defineConfig([
 
   // scripts/webgpu-probe.mjs runs as a Node process that drives a Playwright
   // page, but several of its callbacks are passed to `page.evaluate()` and
-  // execute inside the browser page instead — so the same file legitimately
+  // execute inside the browser page instead - so the same file legitimately
   // references both Node and browser globals. Layer `globals.browser` on top
   // of the Node/scripts block above just for this file, rather than widening
   // browser globals onto every `scripts/**` file.
@@ -1551,7 +1551,7 @@ export default defineConfig([
     },
   },
 
-  // Examples (plain browser JS) — disable all type-aware TS rules first
+  // Examples (plain browser JS) - disable all type-aware TS rules first
   {
     files: ['examples/**/*.js'],
     ...tseslint.configs.disableTypeChecked,
@@ -1621,7 +1621,7 @@ export default defineConfig([
   },
 
   // Build/release tooling and root config files. These run under Node, never
-  // ship to consumers, and report progress on stdout by design — `no-console`
+  // ship to consumers, and report progress on stdout by design - `no-console`
   // is the wrong rule here, not a violation to silence per-line.
   {
     files: ['scripts/**/*.ts', '*.config.ts'],

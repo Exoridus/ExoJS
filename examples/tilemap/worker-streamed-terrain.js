@@ -1,4 +1,4 @@
-// Auto-generated from worker-streamed-terrain.ts — edit the .ts source, not this file.
+// Auto-generated from worker-streamed-terrain.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Container, Keyboard, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
 import { ChunkStreamer, createSampledChunkSource, createWorkerSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -7,7 +7,7 @@ const terrainWorkerSource = "\"use strict\";\n(() => {\n  // ../shared/terrain-n
 // The same infinite, procedurally generated world as "Infinite Procedural
 // Terrain", but the noise sampling can run off the main thread via
 // createWorkerSampledChunkSource. Toggle "Provider" between sync/worker and
-// raise "Sample cost" to make each tile artificially expensive to sample —
+// raise "Sample cost" to make each tile artificially expensive to sample -
 // on the sync path the main thread stalls and the spinning marker + camera
 // motion visibly hitch; on the worker path they stay smooth.
 //
@@ -18,7 +18,7 @@ const TILE = 64;
 const FEATURE_SIZE = 28;
 const MOVE_SPEED = 420;
 // Biome mapping (elevation-style bands; localTileId values are solid
-// full-square terrain-center tiles read off mapPack_tilesheet.png — 17
+// full-square terrain-center tiles read off mapPack_tilesheet.png - 17
 // columns, index = row * 17 + column).
 const TILE_DEEP_WATER = 203; // patterned blue  (row 11, col 16)
 const TILE_WATER = 186; // plain light blue (row 10, col 16)
@@ -67,7 +67,7 @@ class WorkerStreamedTerrainScene extends Scene {
             tileCount: 204,
             columns: 17,
         });
-        // No width/height: the layer (and map) are unbounded — chunks exist
+        // No width/height: the layer (and map) are unbounded - chunks exist
         // only where something writes them.
         this.terrain = new TileLayer({ id: 1, name: 'terrain', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset] });
         const map = new TileMap({ name: 'infinite-world', tileWidth: TILE, tileHeight: TILE, tilesets: [this.tileset], layers: [this.terrain] });
@@ -77,7 +77,7 @@ class WorkerStreamedTerrainScene extends Scene {
         this.explorer.setPosition(0, 0);
         this.explorer.setScale(1.25);
         // Jank indicator: this sprite spins at a constant rate every frame
-        // regardless of provider mode — any hitch on the main thread (the
+        // regardless of provider mode - any hitch on the main thread (the
         // sync provider under a high sample cost) is immediately visible as
         // a stutter in its rotation.
         this.marker = characters.getFrameSprite('character_beige_front').setAnchor(0.5);
@@ -87,7 +87,7 @@ class WorkerStreamedTerrainScene extends Scene {
         actorLayer.addChild(this.explorer, this.marker);
         this.worldRoot = new Container();
         this.worldRoot.addChild(this.mapView.band('terrain'), actorLayer);
-        // Camera follows the explorer — no setBounds: an unbounded map has no
+        // Camera follows the explorer - no setBounds: an unbounded map has no
         // edges to clamp the camera to.
         const { width, height } = app;
         this.camera = new View(this.explorer.x, this.explorer.y, width, height);
@@ -102,7 +102,7 @@ class WorkerStreamedTerrainScene extends Scene {
         // wanted set unbudgeted, so a mode/cost/seed change repopulates the
         // screen in one frame.
         this.streamer?.destroy();
-        // Terminate the previous Worker on every rebuild — it leaks
+        // Terminate the previous Worker on every rebuild - it leaks
         // otherwise, since createWorkerSampledChunkSource has no lifecycle
         // hook of its own beyond the destroy() it returns.
         this.workerSourceHandle?.destroy();

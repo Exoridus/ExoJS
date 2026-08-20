@@ -3,9 +3,9 @@
  *
  * A partial upload cannot reuse the full-upload call: `texSubImage2D` reads a
  * tightly packed block, so the backend either lifts the dirty sub-region out of
- * the row-major texture buffer, or — when the region spans the full width and
- * its rows are therefore already contiguous — hands GL the texture buffer
- * itself plus an element offset via the `(…, srcData, srcOffset)` overload.
+ * the row-major texture buffer, or - when the region spans the full width and
+ * its rows are therefore already contiguous - hands GL the texture buffer
+ * itself plus an element offset via the `(..., srcData, srcOffset)` overload.
  * Both shapes must land the same texels at the same origin, and both are silent
  * corruption when they are wrong: nothing throws, the texture simply shows the
  * wrong pixels.
@@ -70,7 +70,7 @@ describe('WebGL2 uploads a partial DataTexture region', () => {
 
       expect(pixelAt(readWebGl2Frame(backend, CANVAS), 12, 12)).toEqual([...RED]);
 
-      // Columns 8..15 of rows 8..15 — neither row-aligned nor full-width, so a
+      // Columns 8..15 of rows 8..15 - neither row-aligned nor full-width, so a
       // wrong origin, stride or pack offset shifts the block visibly.
       paintRect(texture, 8, 8, 8, 8, BLUE);
       texture.commitRect(8, 8, 8, 8);
@@ -104,7 +104,7 @@ describe('WebGL2 uploads a partial DataTexture region', () => {
       renderWebGl2Once(backend, root, Color.black);
 
       // 20 rgba8 texels = 80 channels per row, past the width at which the
-      // packing loop switches from element-wise copying to `set(subarray(…))`.
+      // packing loop switches from element-wise copying to `set(subarray(...))`.
       // The narrow case above stays on the element-wise side, so the two tests
       // together cover both branches of that switch.
       paintRect(texture, 4, 6, 20, 5, BLUE);
@@ -140,7 +140,7 @@ describe('WebGL2 uploads a partial DataTexture region', () => {
 
       // Full-width rows are already contiguous in the row-major buffer, which
       // routes this through the `srcOffset` overload instead of the packing
-      // scratch — the resulting texels must be identical either way.
+      // scratch - the resulting texels must be identical either way.
       paintRect(texture, 0, 20, EDGE, 4, BLUE);
       texture.commitRect(0, 20, EDGE, 4);
 
@@ -170,7 +170,7 @@ describe('WebGL2 uploads a partial DataTexture region', () => {
     try {
       renderWebGl2Once(backend, root, Color.black);
 
-      // The degenerate offset — a wrong `srcOffset` sign or stride shows up as
+      // The degenerate offset - a wrong `srcOffset` sign or stride shows up as
       // the band landing at the wrong rows even when the offset is 0.
       paintRect(texture, 0, 0, EDGE, 2, BLUE);
       texture.commitRect(0, 0, EDGE, 2);
@@ -203,7 +203,7 @@ describe('WebGL2 uploads a partial DataTexture region', () => {
 
       renderWebGl2Once(backend, root, Color.black);
 
-      // A full-width band after an inset region — the two upload shapes must
+      // A full-width band after an inset region - the two upload shapes must
       // not clobber one another.
       paintRect(texture, 0, 24, EDGE, 2, BLUE);
       texture.commitRect(0, 24, EDGE, 2);

@@ -1,10 +1,10 @@
 /**
- * WebGl2Backend — context-loss / restore handle-invalidation bookkeeping.
+ * WebGl2Backend - context-loss / restore handle-invalidation bookkeeping.
  *
  * These run in Node against the recording fake WebGL2 context (see
  * `harness.ts`), driving the REAL backend + renderers. They assert the
  * device-state teardown/rebuild bookkeeping that a real `webglcontextrestored`
- * triggers — the part the previous implementation skipped, leaving dangling GL
+ * triggers - the part the previous implementation skipped, leaving dangling GL
  * handles after a genuine GPU reset.
  *
  * The browser lane (`test/rendering/browser/webgl2-context-restore.test.ts`)
@@ -21,7 +21,7 @@ interface ManagedTextureState {
   readonly handle: object;
 }
 
-// Private surface we assert against — the caches a real restore must evict and
+// Private surface we assert against - the caches a real restore must evict and
 // rebuild. Reached via a typed cast rather than `any` so the shape stays honest.
 interface BackendInternals {
   _contextLost: boolean;
@@ -76,7 +76,7 @@ describe('WebGl2Backend: real context-restore handle invalidation', () => {
       expect(back._contextLost).toBe(false);
       expect(back._textureStates.size).toBe(0);
 
-      // The render-target cache was evicted too — the root target is then
+      // The render-target cache was evicted too - the root target is then
       // immediately re-bound so the next frame can draw, but with a BRAND-NEW
       // state object (fresh framebuffer binding), never the dead one.
       const rootStateAfter = back._renderTargetStates.get(rootTarget);
@@ -134,7 +134,7 @@ describe('WebGl2Backend: real context-restore handle invalidation', () => {
       back._onContextRestored();
 
       // The renderers reconnected (fresh buffers / VAOs / shader programs), so
-      // the very next frame draws exactly as before — not a blank canvas.
+      // the very next frame draws exactly as before - not a blank canvas.
       const after = measureFrame(harness, root);
 
       expect(after.drawCalls).toBe(before.drawCalls);

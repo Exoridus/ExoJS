@@ -1,6 +1,6 @@
 {
   "title": "GamepadDefinition",
-  "description": "A rule that matches one or more physical gamepads and produces a GamepadMapping. `ids` is an optional allow-list of vendor IDs (`\"045e\"`) or `vendorId:productId` pairs (`\"045e:028e\"`); when omitted the definition matches every device. `resolve` is called with the parsed GamepadDescriptor and must return a GamepadDefinitionResult — `null`/`undefined` to skip, a mapping otherwise.",
+  "description": "A rule that matches one or more physical gamepads and produces a GamepadMapping. `ids` is an optional allow-list of vendor IDs (`\"045e\"`) or `vendorId:productId` pairs (`\"045e:028e\"`); when omitted the definition matches every device. `resolve` is called with the parsed GamepadDescriptor and must return a GamepadDefinitionResult - `null`/`undefined` to skip, a mapping otherwise.",
   "symbol": "GamepadDefinition",
   "kind": "interface",
   "subsystem": "input",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A rule that matches one or more physical gamepads and produces a GamepadMapping.",
-        "`ids` is an optional allow-list of vendor IDs (`\"045e\"`) or `vendorId:productId` pairs (`\"045e:028e\"`); when omitted the definition matches every device. `resolve` is called with the parsed GamepadDescriptor and must return a GamepadDefinitionResult — `null`/`undefined` to skip, a mapping otherwise."
+        "`ids` is an optional allow-list of vendor IDs (`\"045e\"`) or `vendorId:productId` pairs (`\"045e:028e\"`); when omitted the definition matches every device. `resolve` is called with the parsed GamepadDescriptor and must return a GamepadDefinitionResult - `null`/`undefined` to skip, a mapping otherwise."
       ],
       "importLine": "import { GamepadDefinition } from '@codexo/exojs'",
       "sourceLink": null

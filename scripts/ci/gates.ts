@@ -4,7 +4,7 @@
  * These gates run in two places with two different shapes: the pre-push hook
  * wants all of them in one sequential pass, while CI wants them spread across
  * parallel jobs. Writing the command lists out in both places is what let the
- * required CI gate drift below the local hook — CI claimed parity in a comment
+ * required CI gate drift below the local hook - CI claimed parity in a comment
  * while silently omitting gates.
  *
  * So the lists live in `gate-groups.ts`, grouped by the CI job that owns them:
@@ -17,7 +17,7 @@
  *
  * Adding a gate means adding it to one group there. It then runs locally and in
  * CI with no second edit. Adding a whole *group* still needs a CI job to invoke
- * it — that is the one remaining manual step, and `test/ci/gate-parity.test.ts`
+ * it - that is the one remaining manual step, and `test/ci/gate-parity.test.ts`
  * fails on a group no job claims rather than letting it stop running in CI.
  *
  * The group boundary is not cosmetic: `site` is separate because the site

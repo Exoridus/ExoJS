@@ -20,7 +20,7 @@ describe('assetMeta', () => {
 
     expect(returned).toBe(ref);
     expect(_readMeta(ref)).toEqual({ kind: 'json', src: 'config.json' });
-    // The stamp carries no `_resolvedType` — that field is a type-level phantom
+    // The stamp carries no `_resolvedType` - that field is a type-level phantom
     // used to recover the payload type, never written at runtime.
     expect(Object.hasOwn(_readMeta(ref) as object, '_resolvedType')).toBe(false);
   });

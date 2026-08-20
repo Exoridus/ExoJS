@@ -48,7 +48,7 @@ export interface RenderBatchOptions {
   /**
    * Free per-instance attributes, interleaved into one instance buffer in the
    * order given. Only meaningful together with a custom material whose shader
-   * declares matching inputs — the default mesh shader has none.
+   * declares matching inputs - the default mesh shader has none.
    */
   readonly instanceAttributes?: readonly InstanceAttribute[];
 }
@@ -74,20 +74,20 @@ export interface InstanceDataView {
 
 /**
  * Explicit instanced draw submission: **one** {@link Geometry} + {@link MeshMaterial}
- * drawn **once** with **N** per-instance `(transform, tint)` pairs — the general
+ * drawn **once** with **N** per-instance `(transform, tint)` pairs - the general
  * form of the engine's mesh-instancing model, surfaced for data-driven rendering
  * (thousands of tiles, bullets, grass blades, procedural items as a single draw).
  *
  * Build it up with {@link add}, hand it to {@link RenderingContext.drawBatch},
  * and {@link clear} it to reuse the same instance across frames without
- * reallocating — the per-instance transform/tint storage grows on demand and is
+ * reallocating - the per-instance transform/tint storage grows on demand and is
  * retained across `clear()`, so a steady-state batch allocates nothing.
  *
  * Each {@link add} **copies** the transform and tint into internal storage, so
  * the caller may mutate or reuse the passed `Matrix`/`Color` immediately
  * afterwards without affecting the batch.
  *
- * This is the explicit instanced submission path — distinct from the internal
+ * This is the explicit instanced submission path - distinct from the internal
  * automatic sprite batcher: every instance shares the one geometry and material,
  * and the whole batch is a single instanced draw call.
  * @stable
@@ -99,7 +99,7 @@ export class RenderBatch {
   /** The shared mesh material, or `null` for the default mesh material. */
   public readonly material: MeshMaterial | null;
 
-  // Per-instance storage grows with `add` and is reused after `clear` — only the
+  // Per-instance storage grows with `add` and is reused after `clear` - only the
   // logical `_count` resets, the pooled Matrix/Color instances are kept.
   private readonly _transforms: Matrix[] = [];
   private readonly _tints: Color[] = [];
@@ -185,7 +185,7 @@ export class RenderBatch {
    * declared attribute must be present.
    *
    * All three arguments are **copied** into the batch, so the caller may mutate
-   * and reuse them immediately — hoist one scratch object out of the loop rather
+   * and reuse them immediately - hoist one scratch object out of the loop rather
    * than allocating a literal per instance, or a steady-state batch stops being
    * allocation-free:
    *

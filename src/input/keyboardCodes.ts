@@ -7,7 +7,7 @@ import { Keyboard } from './types';
  * identical across layouts, so the entry for `'KeyA'` is the key an AZERTY
  * keyboard prints "Q" on and a QWERTZ keyboard prints "A" on. That is exactly
  * what a game binding wants: WASD stays a physical square under the player's
- * hand. `KeyboardEvent.keyCode` cannot express this — it reports the layout's
+ * hand. `KeyboardEvent.keyCode` cannot express this - it reports the layout's
  * own character mapping, so the same physical key yields a different number
  * per layout.
  *
@@ -17,7 +17,7 @@ import { Keyboard } from './types';
  * under a matching name.
  *
  * A modifier resolves to its SIDE-SPECIFIC channel here (`'ShiftLeft'` →
- * {@link Keyboard.ShiftLeft}, not the aggregate {@link Keyboard.Shift}) —
+ * {@link Keyboard.ShiftLeft}, not the aggregate {@link Keyboard.Shift}) -
  * {@link InputManager} derives the aggregate from it via
  * {@link modifierChannelInfo}. The legacy `OSLeft`/`OSRight` spellings some
  * browsers still emit alias onto {@link Keyboard.MetaLeft}/
@@ -90,7 +90,7 @@ const channelsByCode = new Map<string, Keyboard>([
   ['CapsLock', Keyboard.CapsLock],
   ['ContextMenu', Keyboard.ContextMenu],
 
-  // Modifiers — each side resolves to its own channel; see
+  // Modifiers - each side resolves to its own channel; see
   // `modifierChannelInfo` for how the aggregate channel is derived from it.
   ['ShiftLeft', Keyboard.ShiftLeft],
   ['ShiftRight', Keyboard.ShiftRight],
@@ -161,12 +161,12 @@ const channelsByCode = new Map<string, Keyboard>([
  * Resolve a `KeyboardEvent.code` to its {@link Keyboard} channel, or
  * `undefined` for a key ExoJS does not track (media and IME/language keys, and
  * the empty `code` a soft keyboard reports). This is the single seam between
- * the platform's physical-key identity and the engine's channel model — see
+ * the platform's physical-key identity and the engine's channel model - see
  * {@link Keyboard} for what "physical" means here and why `keyCode` is never
  * used.
  *
  * For a modifier this returns the SIDE-SPECIFIC channel (`'ShiftLeft'` →
- * {@link Keyboard.ShiftLeft}), never the aggregate — {@link InputManager}
+ * {@link Keyboard.ShiftLeft}), never the aggregate - {@link InputManager}
  * writes the aggregate channel alongside it on every keydown/keyup.
  *
  * Useful in a rebinding UI that has a raw DOM event rather than an engine
@@ -186,7 +186,7 @@ export function keyboardChannelFromCode(code: string): Keyboard | undefined {
 }
 
 /**
- * A modifier's side-specific channel's aggregate and sibling — the two facts
+ * A modifier's side-specific channel's aggregate and sibling - the two facts
  * {@link InputManager} needs to keep both channel kinds in sync. `aggregate`
  * is the OR-channel written alongside a side channel (`ShiftLeft` ->
  * `Shift`). `sibling` is the other physical side of the same modifier,

@@ -8,7 +8,7 @@ import { copyRetainedDrawData, type MutableRetainedDrawData, releasePooledDrawab
  * @internal
  *
  * A previously-collected, still-valid draw command snapshot for one direct
- * `Drawable` child of a `Container` — everything `RenderPlanBuilder.emitDraw`
+ * `Drawable` child of a `Container` - everything `RenderPlanBuilder.emitDraw`
  * would have computed for it, captured so it can be replayed without redoing
  * cull/bounds/material-key work.
  */
@@ -49,7 +49,7 @@ const createSlot = (): MutableRetainedDrawSlot => ({
  * (`SceneNode._contentRevision`/`_structureRevision`), the active view's
  * `updateId`, and the active `RenderBackend` identity.
  *
- * Direct container/effect-bearing children are never represented here — they
+ * Direct container/effect-bearing children are never represented here - they
  * are always re-dispatched through a normal `_collect` call by the owning
  * `Container`, which recurses into their own independent `RetainedPlanCache`.
  * This keeps every reused scope shape byte-for-byte identical to a full
@@ -92,8 +92,8 @@ export class RetainedPlanCache {
    * child's screen-space AABB (`minX..maxY`), so a plain-container child move
    * must re-collect. Own-transform mutations no longer stamp the content channel,
    * so without this the skip would replay a
-   * stale extent. Unlike a {@link RetainedContainer} — which patches its rows in
-   * place — the plain-container skip has no per-slot patch path and simply
+   * stale extent. Unlike a {@link RetainedContainer} - which patches its rows in
+   * place - the plain-container skip has no per-slot patch path and simply
    * re-collects, exactly as it did when transform still content-dirtied.
    */
   public isClean(contentRevision: number, structureRevision: number, transformRevision: number, viewUpdateId: number, backend: RenderBackend): boolean {

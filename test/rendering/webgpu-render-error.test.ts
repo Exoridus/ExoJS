@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 /**
- * Render-fail surface (S3 diagnostics, minimal slice) — contracts 6, 7 and 10:
+ * Render-fail surface (S3 diagnostics, minimal slice) - contracts 6, 7 and 10:
  *
  *  6. WebGPU `uncapturederror` (validation) → backend.onRenderError dispatched
  *     with code 'validation'; a second identical event does NOT re-dispatch

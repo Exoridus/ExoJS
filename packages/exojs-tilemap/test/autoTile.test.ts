@@ -27,8 +27,8 @@ function fakeRegion(): TextureRegion {
 
 /**
  * Create a TileSet with 256 tiles (16×16 grid in a 512×512 atlas).
- * localTileIds 0–255 are all valid, which conveniently covers the full
- * blob bitmask range (0–255) when using an identity blobMap.
+ * localTileIds 0-255 are all valid, which conveniently covers the full
+ * blob bitmask range (0-255) when using an identity blobMap.
  */
 function makeTileset256(name = 'ts'): TileSet {
   return new TileSet({
@@ -69,7 +69,7 @@ function setTile(layer: TileLayer, ts: TileSet, tx: number, ty: number, localTil
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Test 1: Blob mask — corner bits require adjacent cardinals to be set
+// Test 1: Blob mask - corner bits require adjacent cardinals to be set
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('autoTile — blob mode corner dependency', () => {
@@ -186,7 +186,7 @@ describe('autoTile — matchFn scope restriction', () => {
     const wangSet = new WangSet({ blobMap: identityBlobMap(), tilesetIndex: 0, type: 'blob' });
     autoTile(layer, wangSet, { matchFn, wrapBorder: false });
 
-    // The foreign tile at (2,2) must remain tile 5 — it was not autotiled.
+    // The foreign tile at (2,2) must remain tile 5 - it was not autotiled.
     expect(layer.getTileAt(2, 2)?.localTileId).toBe(5);
 
     // A tile-0 cell must have been updated (its localTileId changed to the mask).
@@ -218,7 +218,7 @@ describe('autoTile — matchFn scope restriction', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Test 3: Edge mode — 4 neighbors only
+// Test 3: Edge mode - 4 neighbors only
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('autoTile — edge mode (4-neighbor)', () => {
@@ -290,12 +290,12 @@ describe('WangSet — membership', () => {
       tilesetIndex: 0,
     });
 
-    // blobMap values are members…
+    // blobMap values are members...
     expect(wangSet.isMember(10)).toBe(true);
     expect(wangSet.isMember(11)).toBe(true);
-    // …explicit members too…
+    // ...explicit members too...
     expect(wangSet.isMember(99)).toBe(true);
-    // …and unrelated ids are not.
+    // ...and unrelated ids are not.
     expect(wangSet.isMember(0)).toBe(false);
     expect(wangSet.members.has(10)).toBe(true);
   });
@@ -318,7 +318,7 @@ describe('WangSet — membership', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Test 4b: applyVariant edge cases — unmapped mask / missing tileset
+// Test 4b: applyVariant edge cases - unmapped mask / missing tileset
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('autoTile — applyVariant defensive paths', () => {
@@ -327,7 +327,7 @@ describe('autoTile — applyVariant defensive paths', () => {
     const layer = makeLayer(ts, 3, 3);
 
     // Fill the grid so the center cell computes a non-zero mask, but the
-    // blobMap only maps mask 0 → 0 — every other mask is unmapped.
+    // blobMap only maps mask 0 → 0 - every other mask is unmapped.
     for (let ty = 0; ty < 3; ty++) {
       for (let tx = 0; tx < 3; tx++) {
         setTile(layer, ts, tx, ty, 0);
@@ -338,7 +338,7 @@ describe('autoTile — applyVariant defensive paths', () => {
     const wangSet = new WangSet({ blobMap: sparseBlobMap, tilesetIndex: 0, type: 'blob' });
     autoTile(layer, wangSet, { wrapBorder: false });
 
-    // Center (1,1) computes mask 255, which has no mapping — the cell must be
+    // Center (1,1) computes mask 255, which has no mapping - the cell must be
     // left exactly as painted (localTileId 0), never rewritten.
     expect(layer.getTileAt(1, 1)?.localTileId).toBe(0);
   });
@@ -383,7 +383,7 @@ describe('autoTile — applyVariant defensive paths', () => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Test 5: refreshCell — incremental autotiling around an edit
+// Test 5: refreshCell - incremental autotiling around an edit
 // ═══════════════════════════════════════════════════════════════════════════
 
 describe('refreshCell — incremental update', () => {
@@ -486,7 +486,7 @@ describe('autoTile + unbounded layers', () => {
   it('refreshCell() correctly treats negative coordinates as real (non-border) cells on an unbounded axis', () => {
     // Regression test for the isInGroup border check: with w/h === undefined
     // (unbounded), a coordinate of -1 must NOT be short-circuited as "off
-    // the grid" — unbounded layers accept any signed tile coordinate, so the
+    // the grid" - unbounded layers accept any signed tile coordinate, so the
     // neighbor at (-1, 0) must be read from the layer like any other cell.
     const ts = makeTileset256();
     const layer = new TileLayer({

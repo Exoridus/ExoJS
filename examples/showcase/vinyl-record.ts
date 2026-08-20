@@ -41,7 +41,7 @@ class VinylRecordScene extends Scene {
             .setPosition(width / 2, height - 64);
 
         // Core defers playback until the AudioContext unlocks on the first
-        // gesture, then starts automatically — play() returns the Voice now.
+        // gesture, then starts automatically - play() returns the Voice now.
         this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
     }
 

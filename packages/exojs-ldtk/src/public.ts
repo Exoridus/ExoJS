@@ -37,7 +37,7 @@ export { LDTK_FLIP_NONE, LDTK_FLIP_X, LDTK_FLIP_XY, LDTK_FLIP_Y } from './LdtkDa
 export { LdtkFormatError } from './validate';
 
 // ── Runtime facade (re-exports from @codexo/exojs-tilemap) ───────────────────
-// These re-export the *same* module bindings — `instanceof TileMap` holds
+// These re-export the *same* module bindings - `instanceof TileMap` holds
 // whether the class was imported from @codexo/exojs-tilemap or here.
 export type {
   ChunkCoord,
@@ -80,7 +80,7 @@ export {
   TileSet,
 } from '@codexo/exojs-tilemap';
 
-// ── Module augmentation — typed load calls ────────────────────────────────────
+// ── Module augmentation - typed load calls ────────────────────────────────────
 import type { LdtkMap } from './LdtkMap';
 
 declare module '@codexo/exojs' {

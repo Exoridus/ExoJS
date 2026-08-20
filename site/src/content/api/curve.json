@@ -1,6 +1,6 @@
 {
   "title": "Curve",
-  "description": "Piecewise-linear keyframe curve sampled by lifetime ratio `t` in `[0, 1]`. Keyframes are stored sorted by `t` and clamped at the endpoints — sampling outside the keyframe range returns the nearest endpoint value. The implementation tracks the last accessed segment so monotonically advancing `t` (the typical case for per-particle lifetime sampling) costs O(1) amortized per call instead of O(log n).",
+  "description": "Piecewise-linear keyframe curve sampled by lifetime ratio `t` in `[0, 1]`. Keyframes are stored sorted by `t` and clamped at the endpoints - sampling outside the keyframe range returns the nearest endpoint value. The implementation tracks the last accessed segment so monotonically advancing `t` (the typical case for per-particle lifetime sampling) costs O(1) amortized per call instead of O(log n).",
   "symbol": "Curve",
   "kind": "class",
   "subsystem": "particles",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Piecewise-linear keyframe curve sampled by lifetime ratio `t` in `[0, 1]`.",
-        "Keyframes are stored sorted by `t` and clamped at the endpoints — sampling outside the keyframe range returns the nearest endpoint value. The implementation tracks the last accessed segment so monotonically advancing `t` (the typical case for per-particle lifetime sampling) costs O(1) amortized per call instead of O(log n)."
+        "Keyframes are stored sorted by `t` and clamped at the endpoints - sampling outside the keyframe range returns the nearest endpoint value. The implementation tracks the last accessed segment so monotonically advancing `t` (the typical case for per-particle lifetime sampling) costs O(1) amortized per call instead of O(log n)."
       ],
       "importLine": "import { Curve } from '@codexo/exojs-particles'",
       "sourceLink": null

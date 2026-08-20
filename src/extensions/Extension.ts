@@ -62,12 +62,12 @@ export interface AssetHandler<Result = unknown, Options = undefined> {
   /**
    * Optionally produce the asset directly from in-memory bytes, bypassing the
    * network and cache. This is what lets the type be packed into an asset
-   * container ({@link Loader.loadContainer} — one fetch yields N assets): the
+   * container ({@link Loader.loadContainer} - one fetch yields N assets): the
    * loader hands the handler the asset's slice instead of a URL.
    *
    * Implement it when the asset can be built from its raw bytes alone (the
    * factory-backed core handlers do). Omit it when loading needs a URL fetch,
-   * sub-asset resolution, or anything bytes alone cannot supply — such types
+   * sub-asset resolution, or anything bytes alone cannot supply - such types
    * cannot be embedded in a container and raise a clear error if attempted.
    * @advanced
    */
@@ -78,7 +78,7 @@ export interface AssetHandler<Result = unknown, Options = undefined> {
    * alive; only that asset is torn down. A factory-backed handler forwards this
    * to `AssetFactory.dispose`.
    *
-   * Optional and safe to omit — implement it only when the produced asset owns
+   * Optional and safe to omit - implement it only when the produced asset owns
    * something the garbage collector cannot reclaim on its own (a media element,
    * a `FontFace` registered on `document.fonts`, a GPU buffer, a worker). Must
    * be synchronous; use {@link destroy} for handler-wide teardown instead.
@@ -90,7 +90,7 @@ export interface AssetHandler<Result = unknown, Options = undefined> {
 
 /**
  * Binds one or more drawable constructors to a renderer factory.
- * Pure descriptor — no active renderer, no GPU resources, no side effects
+ * Pure descriptor - no active renderer, no GPU resources, no side effects
  * until `create` is called once per backend during Application construction.
  *
  * `targets` must contain at least one entry. All targets share the single renderer
@@ -112,7 +112,7 @@ export interface RendererBinding<Target extends Drawable = Drawable> {
  * `Result` is the produced asset instance type (e.g. `TileMap`). `Options` is the
  * typed options object, defaulting to `undefined` (no options). The runtime `ctor`
  * field must be a constructor that produces `Result`; the handler returned by
- * `create` must also produce `Result` — both relationships are enforced by TypeScript.
+ * `create` must also produce `Result` - both relationships are enforced by TypeScript.
  *
  * Use `satisfies AssetBinding<MyAsset, MyLoadOptions>` on an object literal to get
  * typed options in the handler and enforce the result type without repeating it.
@@ -135,7 +135,7 @@ export interface AssetBinding<Result = unknown, Options = undefined> {
    * strategy and suffix→type inference GLOBALLY at import (so loader-free
    * `Assets.from` resolves it). `materializeAssetBindings` forwards it into
    * `Loader.bindAsset`, which records it as the binding-declared type for every
-   * declared extension — the middle tier of `AssetTypeRegistry.resolveExtensionType`,
+   * declared extension - the middle tier of `AssetTypeRegistry.resolveExtensionType`,
    * below an explicit `Loader.registerType` override and above the global default.
    */
   readonly type?: keyof AssetDefinitions;
@@ -149,7 +149,7 @@ export interface AssetBinding<Result = unknown, Options = undefined> {
 /**
  * Binds a {@link SceneNode} type to a {@link NodeSerializer} under a stable
  * type name, so an extension's own node types participate in
- * {@link Scene.serialize}/{@link Scene.deserialize}. Pure descriptor — the
+ * {@link Scene.serialize}/{@link Scene.deserialize}. Pure descriptor - the
  * serializer is a stateless write/read pair, materialised into the scene
  * serialization registry once at Application construction.
  *
@@ -169,7 +169,7 @@ export interface SerializerBinding<T extends SceneNode = SceneNode> {
  * that call was made against. Returned by `install`, held by that Application,
  * and invoked exactly once during its teardown.
  *
- * Must be synchronous — {@link Application.destroy} does not await it. Work
+ * Must be synchronous - {@link Application.destroy} does not await it. Work
  * that genuinely cannot finish synchronously belongs behind an
  * {@link AbortSignal} the extension owns, aborted from here.
  * @advanced
@@ -180,13 +180,13 @@ export type ExtensionDisposer = () => void;
  * An ExoJS extension: an immutable descriptor that contributes renderer bindings,
  * asset bindings, serializer bindings and/or app-level systems. Holds no Application,
  * backend, GPU, or loader instances. Pass it to the application that should have
- * it, via {@link ApplicationOptions.extensions} — that is the only way an
+ * it, via {@link ApplicationOptions.extensions} - that is the only way an
  * extension takes effect, so what an application can do is readable at its
  * construction rather than inferred from which modules were imported.
  *
  * The descriptor is a shared, frozen singleton: the same object equips any
  * number of Applications. Per-application state therefore never belongs on it
- * — it belongs in the closure {@link Extension.install} opens, which is also
+ * - it belongs in the closure {@link Extension.install} opens, which is also
  * what the returned {@link ExtensionDisposer} closes over.
  * @advanced
  */
@@ -197,7 +197,7 @@ export interface Extension {
   readonly assets?: readonly AssetBinding[];
   readonly serializers?: readonly SerializerBinding[];
   /**
-   * Set this application up for whatever the binding arrays cannot express — an
+   * Set this application up for whatever the binding arrays cannot express - an
    * app-level {@link System} on {@link Application.systems}, a subscription on
    * {@link Application.onResize}, a `MutationObserver`, a worker, a debug
    * overlay appended next to the canvas.
@@ -208,13 +208,13 @@ export interface Extension {
    *
    * Return an {@link ExtensionDisposer} to undo it. The Application holds the
    * disposers of everything it installed and runs them in reverse installation
-   * order — during {@link Application.destroy}, or, if a later construction
+   * order - during {@link Application.destroy}, or, if a later construction
    * step throws, during that constructor's rollback. Return nothing when there
    * is nothing to undo. A disposer that throws is reported and the remaining
    * ones still run.
    *
    * An extension's lifetime is its Application's lifetime: there is no
-   * uninstall at runtime, and no scene-level scope — extensions equip an
+   * uninstall at runtime, and no scene-level scope - extensions equip an
    * application, not a scene.
    *
    * `install` throwing aborts construction, and whatever it had already done

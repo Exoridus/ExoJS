@@ -88,7 +88,7 @@ interface PooledVoice {
 /**
  * Pre-decoded short audio clip backed by an `AudioBuffer`.
  *
- * Sound is a **data descriptor** — it holds the decoded audio buffer, sprite
+ * Sound is a **data descriptor** - it holds the decoded audio buffer, sprite
  * definitions, and default playback parameters but does NOT start playback
  * itself, and holds no per-playback spatial state (that lives on the
  * {@link Voice} returned by playing it). Playback is driven by
@@ -99,7 +99,7 @@ interface PooledVoice {
  * active voice to evict.
  *
  * Use {@link AudioStream} for long-form streaming audio (single source, decoded
- * lazily) — `Sound` is best for short, frequently-triggered clips.
+ * lazily) - `Sound` is best for short, frequently-triggered clips.
  */
 export class Sound implements Playable {
   private _audioBuffer: AudioBuffer | null;
@@ -108,14 +108,14 @@ export class Sound implements Playable {
    * {@link Sound.sprite}), or `null` for a root sound that owns its buffer.
    *
    * A sub-Sound holds no buffer of its own: it reads the root's at playback
-   * time. That is not a detail — the asset layer heals a sound **in place**
+   * time. That is not a detail - the asset layer heals a sound **in place**
    * (`_evictBuffer` / `_setBuffer`, identity preserved), so a sub-Sound that
    * snapshotted the buffer would pin the evicted one in memory and go on
    * playing stale audio after the reload.
    */
   private _parent: Sound | null = null;
   /**
-   * @internal — load lifecycle, driven by the Loader's seamless pipeline. Only
+   * @internal - load lifecycle, driven by the Loader's seamless pipeline. Only
    * a root sound's is ever driven; a sub-Sound reports its root's state.
    */
   public readonly _loadState = new LoadState<Sound>();
@@ -123,13 +123,13 @@ export class Sound implements Playable {
   /**
    * Memoized sub-{@link Sound}s handed out by {@link Sound.sprite}. One per
    * name, for the lifetime of that definition: a fresh sub-Sound per call would
-   * give every call its own voice pool, which makes the pool policy — the whole
-   * point of pooling a frequently-triggered sprite — silently unenforceable.
+   * give every call its own voice pool, which makes the pool policy - the whole
+   * point of pooling a frequently-triggered sprite - silently unenforceable.
    */
   private readonly _spriteSounds = new Map<string, Sound>();
 
   // Requested playable window in ROOT-buffer seconds, clamped against the live
-  // buffer on every read rather than stored pre-clamped — the root's buffer can
+  // buffer on every read rather than stored pre-clamped - the root's buffer can
   // come and go underneath a sub-Sound. `Infinity` means "to the end of
   // whatever buffer is currently loaded", which is what a root sound wants.
   private _clipStart = 0;
@@ -148,7 +148,7 @@ export class Sound implements Playable {
   private _poolStrategy: SoundPoolStrategy;
   private _priority: number;
 
-  // Active voice pool — tracks concurrent voices for eviction logic.
+  // Active voice pool - tracks concurrent voices for eviction logic.
   private readonly _activeVoices: PooledVoice[] = [];
 
   /**
@@ -163,7 +163,7 @@ export class Sound implements Playable {
   }
 
   /**
-   * Playable duration in seconds — the full buffer, or the clip span for a
+   * Playable duration in seconds - the full buffer, or the clip span for a
    * {@link Sound.clip} / {@link Sound.sprite}. `0` while no buffer is loaded.
    */
   public get duration(): number {
@@ -183,7 +183,7 @@ export class Sound implements Playable {
    * deferred handles returned by `loader.get('theme.ogg')` / `loader.get(Asset.type('sound', src))`
    * start `'loading'` and become `'ready'` once the payload fills in, or
    * `'failed'` when the load errors. A {@link Sound.clip} / {@link Sound.sprite}
-   * reports its root's lifecycle — it has no payload of its own to load.
+   * reports its root's lifecycle - it has no payload of its own to load.
    */
   public get loadState(): LoadStateValue {
     return this._rootLoadState.value;
@@ -205,7 +205,7 @@ export class Sound implements Playable {
   }
 
   /**
-   * Promise that settles with this sound once its payload has loaded —
+   * Promise that settles with this sound once its payload has loaded -
    * resolved immediately for `'ready'` sounds, rejected with the load error
    * for `'failed'` ones. Re-materialized when a failed load is retried, so
    * read it fresh from this getter rather than caching it across load cycles.
@@ -219,8 +219,8 @@ export class Sound implements Playable {
   }
 
   /**
-   * The buffer actually backing playback: this sound's own, or — for a
-   * sub-Sound — whatever its root holds right now.
+   * The buffer actually backing playback: this sound's own, or - for a
+   * sub-Sound - whatever its root holds right now.
    */
   private get _rootBuffer(): AudioBuffer | null {
     return this._parent === null ? this._audioBuffer : this._parent._rootBuffer;
@@ -298,7 +298,7 @@ export class Sound implements Playable {
 
   /**
    * Replace the whole sprite table. Every sub-{@link Sound} previously handed
-   * out by {@link Sound.sprite} is destroyed — the definitions they were
+   * out by {@link Sound.sprite} is destroyed - the definitions they were
    * derived from are gone, so keeping them alive would keep stale windows (and
    * their voices) playing.
    */
@@ -365,7 +365,7 @@ export class Sound implements Playable {
   }
 
   /**
-   * The {@link Sound} for a named sprite — the playback side of
+   * The {@link Sound} for a named sprite - the playback side of
    * {@link Sound.defineSprite}. Same concept as {@link Sound.clip}, addressed
    * by name instead of by offset: a sub-Sound over the same decoded buffer,
    * with the clip's own `loop` flag and its own voice pool.
@@ -396,7 +396,7 @@ export class Sound implements Playable {
     }
 
     // Sprite windows are validated against this sound's own span, so they are
-    // relative to it — rebase them onto the root buffer.
+    // relative to it - rebase them onto the root buffer.
     const sprite = this._subSound(this._clipStart + clip.start, this._clipStart + clip.end, clip.loop);
 
     this._spriteSounds.set(name, sprite);
@@ -406,13 +406,13 @@ export class Sound implements Playable {
 
   /**
    * Return a new {@link Sound} that plays only the `[offset, offset + duration]`
-   * sub-range (seconds) of this sound — an audio atlas / sprite-sheet clip. The
+   * sub-range (seconds) of this sound - an audio atlas / sprite-sheet clip. The
    * clip does not copy anything: it reads the decoded {@link AudioBuffer} from
    * the sound it was cut from at playback time, so it follows that sound
    * through eviction and reload. It inherits this sound's playback defaults
    * (`volume`, `loop`, `playbackRate`, `muted`) and pool configuration, and
    * gets its own independent voice pool. Spatialization is not among them: a
-   * `Sound` carries none — it is set per play via {@link PlayOptions} and lives
+   * `Sound` carries none - it is set per play via {@link PlayOptions} and lives
    * on the returned {@link Voice}.
    *
    * Available before the sound has loaded, and on a clip of a clip (the nested
@@ -426,7 +426,7 @@ export class Sound implements Playable {
   }
 
   /**
-   * Build a sub-{@link Sound} over the `[start, end]` window — the shared body
+   * Build a sub-{@link Sound} over the `[start, end]` window - the shared body
    * of {@link Sound.clip} and {@link Sound.sprite}. Coordinates are in
    * root-buffer seconds; clamping against the live buffer happens on read, not
    * here, since there may be no buffer yet. Inherits this sound's playback
@@ -494,7 +494,7 @@ export class Sound implements Playable {
 
   /**
    * Implements {@link Playable}. Called by {@link AudioManager.play}; do not
-   * call directly — use `manager.play(sound, options)` instead.
+   * call directly - use `manager.play(sound, options)` instead.
    *
    * Creates one {@link SoundVoice} backed by a single `AudioBufferSourceNode`.
    * Pool limits are enforced: if the pool is full the configured eviction
@@ -503,8 +503,8 @@ export class Sound implements Playable {
   public _createVoice(manager: AudioManager, options: SoundPlayOptions): Voice {
     const bus = options.bus ?? manager.sound;
 
-    // A suspended context's `currentTime` stands still, so `source.start(0, …)`
-    // — which `SoundVoice` issues from its own constructor — pins every voice
+    // A suspended context's `currentTime` stands still, so `source.start(0, ...)`
+    // - which `SoundVoice` issues from its own constructor - pins every voice
     // started before the unlock gesture to the same instant, and the whole
     // backlog then fires at once. A buffer sound cannot be deferred honestly:
     // skip it, like `AudioGenerator` does.
@@ -520,7 +520,7 @@ export class Sound implements Playable {
       return notLoaded ?? new NoopVoice(bus);
     }
 
-    // Resolved here, once, against the buffer that is loaded right now — a
+    // Resolved here, once, against the buffer that is loaded right now - a
     // sub-Sound's window is stored unclamped precisely because the buffer it
     // refers to can be swapped out from under it.
     const base = clamp(this._clipStart, 0, buffer.duration);
@@ -544,7 +544,7 @@ export class Sound implements Playable {
    * differentiated warning; otherwise return `null` so the caller builds a
    * real voice. {@link Sound._createVoice} routes through this before reaching
    * {@link Sound._buildVoice}, which covers full sounds, {@link Sound.clip}s
-   * and {@link Sound.sprite}s alike — they are all just Sounds — so
+   * and {@link Sound.sprite}s alike - they are all just Sounds - so
    * `_buildVoice` can never be handed a `null` buffer (a sprite defined while
    * loaded, then evicted and replayed before the reload settles).
    *
@@ -662,8 +662,8 @@ export class Sound implements Playable {
    * pool is empty.
    *
    * Paused voices are considered only as a last resort. A paused voice is not a
-   * stale one — it is frozen exactly where a scene pause or retention
-   * suspension left it, waiting for `resume()` — but its pool bookkeeping
+   * stale one - it is frozen exactly where a scene pause or retention
+   * suspension left it, waiting for `resume()` - but its pool bookkeeping
    * (`startedAt`) keeps aging against the still-running context clock, so both
    * strategies would otherwise single it out: FIFO sees the oldest entry, LRU
    * the one with the least time left. Evicting it stops it for good, and

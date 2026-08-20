@@ -11,8 +11,8 @@ import { targetTexels } from './targetResolution';
 /**
  * One barrier's in-flight state, held on a depth-indexed stack.
  *
- * The clip / rect-clip / mask chain is continuation-passing — each layer wraps
- * the next and the innermost body does the actual work — and written the
+ * The clip / rect-clip / mask chain is continuation-passing - each layer wraps
+ * the next and the innermost body does the actual work - and written the
  * obvious way that means a fresh closure per layer per barrier per frame, plus
  * the enclosing function's context. On a hundred filtered nodes that was the
  * single largest steady-state allocation left in the effect path.
@@ -29,7 +29,7 @@ interface EffectFrame {
   playScope: ((scope: GroupScope) => void) | null;
   /** Set on the `cacheAsTexture` replay path - the baked texture to composite. */
   cachedTexture: RenderTexture | null;
-  /** Set on the full path — the filter chain's output, or the capture when there are no filters. */
+  /** Set on the full path - the filter chain's output, or the capture when there are no filters. */
   finalTexture: RenderTexture | null;
   /**
    * Set while resolving a NODE mask into its own target. Narrower than

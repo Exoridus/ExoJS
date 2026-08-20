@@ -14,7 +14,7 @@ interface Ticker {
  * once per frame from {@link Application.update}. A tween enters the update
  * list when {@link Tween.start} is called and leaves it again on completion or
  * {@link Tween.stop}, so the manager only ever holds tweens that are running
- * or paused — regardless of whether it was created here or handed over via
+ * or paused - regardless of whether it was created here or handed over via
  * {@link TweenManager.add}.
  *
  * Custom updatables (such as {@link TweenSequencer}) can be registered via
@@ -34,7 +34,7 @@ export class TweenManager {
    * Create a new Tween bound to this manager and return it. Call
    * `.to(...).start()` on the result to begin animating.
    *
-   * The tween is only entered into the update list by {@link Tween.start} — a
+   * The tween is only entered into the update list by {@link Tween.start} - a
    * tween that is configured but never started is not retained here, so it
    * cannot keep its target alive for the lifetime of the application.
    */
@@ -51,7 +51,7 @@ export class TweenManager {
    * to kick off the whole sequence.
    *
    * All tweens are bound to this manager, but only enter the update list when
-   * they are actually started — the first through your own `.start()` call,
+   * they are actually started - the first through your own `.start()` call,
    * every later one through the chain. A sequence that is composed and never
    * started therefore leaves nothing behind here.
    *
@@ -75,7 +75,7 @@ export class TweenManager {
       if (current !== undefined && next !== undefined) current.chain(next);
     }
 
-    // Bind only — `Tween.start` does the registering, and every link after the
+    // Bind only - `Tween.start` does the registering, and every link after the
     // first is started by `_complete()` on its predecessor. Pre-registering
     // them here would be redundant and would pin an unstarted sequence (and
     // its targets) in the application-wide manager for good.
@@ -112,8 +112,8 @@ export class TweenManager {
    * {@link Tween.stop} evicts it again.
    *
    * Binding and entering are two separate steps. A tween that is already
-   * running or paused is live — nothing will call `start()` on it again to
-   * enter it — so it goes into the update list right away. An idle, completed
+   * running or paused is live - nothing will call `start()` on it again to
+   * enter it - so it goes into the update list right away. An idle, completed
    * or stopped tween is bound only: retaining it would pin it, and through it
    * its target, in this manager for the lifetime of the application while the
    * update loop has nothing to do with it.
@@ -143,7 +143,7 @@ export class TweenManager {
 
   /**
    * Register a custom updatable so it is driven each frame alongside tweens.
-   * Idempotent — registering the same ticker twice is a no-op.
+   * Idempotent - registering the same ticker twice is a no-op.
    *
    * Used internally by {@link TweenSequencer}.
    */
@@ -195,12 +195,12 @@ export class TweenManager {
    * Remove all tweens and tickers immediately. No callbacks fire.
    * Each tracked tween is {@link Tween.stop}ped first, so `tween.state`
    * reflects the eviction instead of staying `Active`/`Paused` on a tween the
-   * manager no longer drives — a `Stopped` tween's own manager binding
+   * manager no longer drives - a `Stopped` tween's own manager binding
    * survives, so a later {@link Tween.start} re-enters it as usual.
    */
   public clear(): this {
     // Snapshot first: `stop()` calls back into `remove()`, which splices the
-    // live `_tweens` array — iterating that array directly while it shrinks
+    // live `_tweens` array - iterating that array directly while it shrinks
     // under us would skip entries.
     for (const tween of [...this._tweens]) {
       tween.stop();

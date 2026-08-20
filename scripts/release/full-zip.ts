@@ -70,7 +70,7 @@ export interface ForbiddenHit {
 /**
  * Scans the shipped runtime artifacts (vendor ESM, examples, npm tarball
  * manifests) for forbidden patterns and raw `.ts` runtime entrypoints. The
- * built `site/` bundle is intentionally excluded — minified third-party bundles
+ * built `site/` bundle is intentionally excluded - minified third-party bundles
  * may contain arbitrary substrings; the contract is about the package
  * artifacts. `examples/src/**` is the only place `.ts` is allowed (example
  * lesson sources, not runtime entrypoints).
@@ -139,13 +139,13 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
   rmSync(treeDir, { recursive: true, force: true });
   mkdirSync(treeDir, { recursive: true });
 
-  // npm/ — the official tarballs (manifest-driven).
+  // npm/ - the official tarballs (manifest-driven).
   const npmOut = join(treeDir, 'npm');
   for (const record of options.manifest.packages) {
     copyFile(resolve(options.stagingDir, record.file), npmOut);
   }
 
-  // vendor/ — each package's ESM tree, taken from the built site's vendor dir.
+  // vendor/ - each package's ESM tree, taken from the built site's vendor dir.
   for (const { name, vendorDir } of VENDOR_PACKAGES) {
     const from = resolve(options.siteDistDir, 'vendor', vendorDir, 'esm');
     if (!existsSync(from)) {
@@ -154,10 +154,10 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
     cpSync(from, join(treeDir, 'vendor', vendorDir, 'esm'), { recursive: true });
   }
 
-  // examples/ — src/** (TS), js/** (transpiled), assets/**, examples.json.
+  // examples/ - src/** (TS), js/** (transpiled), assets/**, examples.json.
   assembleExamples(options.rootDir, join(treeDir, 'examples'));
 
-  // site/ — the full built static site (servable standalone).
+  // site/ - the full built static site (servable standalone).
   cpSync(options.siteDistDir, join(treeDir, 'site'), { recursive: true });
 
   // Top-level metadata.
@@ -167,7 +167,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
 
   // Manifest + checksums (covering the npm tarballs at their in-tree `npm/`
   // location so `sha256sum -c checksums.sha256` resolves from the tree root).
-  // The `fullZip` record is stripped — the archive cannot checksum itself.
+  // The `fullZip` record is stripped - the archive cannot checksum itself.
   const { fullZip: _omit, ...inTreeManifest } = options.manifest;
   writeFileSync(join(treeDir, 'release-manifest.json'), serializeManifest(inTreeManifest), 'utf8');
   writeFileSync(join(treeDir, 'checksums.sha256'), renderChecksums(options.manifest, 'npm/'), 'utf8');
@@ -178,7 +178,7 @@ export const assembleFullReleaseTree = (options: AssembleOptions): AssembleResul
 
 /**
  * Compresses the assembled tree into a `.zip` (tree contents at the archive
- * root: `npm/`, `vendor/`, `site/`, …). On Windows uses .NET `ZipFile` via
+ * root: `npm/`, `vendor/`, `site/`, ...). On Windows uses .NET `ZipFile` via
  * `pwsh` (fast + reliable for large trees, unlike `Compress-Archive`); on POSIX
  * uses `zip -r`.
  */

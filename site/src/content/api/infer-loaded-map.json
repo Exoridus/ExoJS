@@ -1,6 +1,6 @@
 {
   "title": "InferLoadedMap",
-  "description": "Maps each key of a catalog DEFINITION record to its resolved runtime resource type. Keyed on CatalogEntry, not `AssetInput`: a materialized catalog may have been defined with bare path strings, which `AssetInput` (configs and `Asset` descriptors only) does not cover — the loader consumes the already materialized leaves and must not re-validate the definition entries.",
+  "description": "Maps each key of a catalog DEFINITION record to its resolved runtime resource type. Keyed on CatalogEntry, not `AssetInput`: a materialized catalog may have been defined with bare path strings, which `AssetInput` (configs and `Asset` descriptors only) does not cover - the loader consumes the already materialized leaves and must not re-validate the definition entries.",
   "symbol": "InferLoadedMap",
   "kind": "type",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Maps each key of a catalog DEFINITION record to its resolved runtime resource type.",
-        "Keyed on CatalogEntry, not `AssetInput`: a materialized catalog may have been defined with bare path strings, which `AssetInput` (configs and `Asset` descriptors only) does not cover — the loader consumes the already materialized leaves and must not re-validate the definition entries."
+        "Keyed on CatalogEntry, not `AssetInput`: a materialized catalog may have been defined with bare path strings, which `AssetInput` (configs and `Asset` descriptors only) does not cover - the loader consumes the already materialized leaves and must not re-validate the definition entries."
       ],
       "importLine": "import { InferLoadedMap } from '@codexo/exojs'",
       "sourceLink": null

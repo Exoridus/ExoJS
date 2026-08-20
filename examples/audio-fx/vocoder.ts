@@ -4,7 +4,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 
 
 
-// Spoken phrases (Kenney Voiceover Pack, CC0) — a voice modulator is what makes
+// Spoken phrases (Kenney Voiceover Pack, CC0) - a voice modulator is what makes
 // a vocoder recognisable as the classic "robot voice" effect.
 const PHRASES: Array<{ key: string; label: string; asset: string }> = [
     { key: 'congrats', label: 'Congratulations', asset: assets.demo.voice.congratulations },
@@ -32,7 +32,7 @@ class VocoderScene extends Scene {
 
         for (const phrase of PHRASES) {
             // phrase.asset is a widened `string` (not a path literal), so the
-            // path-only get() overload can't infer Sound from the extension —
+            // path-only get() overload can't infer Sound from the extension -
             // use the explicit Sound token form.
             this.phrases.set(phrase.key, this.loader.get(Asset.type('sound', phrase.asset)));
         }
@@ -68,8 +68,8 @@ class VocoderScene extends Scene {
         app.input.onPointerTap.add(() => this.speak());
 
         // The carrier is a sustained saw tone shaped by the voice envelope.
-        // An oscillator played while audio is still locked is a no-op — it is
-        // ephemeral and cannot be deferred — so start it from the unlock
+        // An oscillator played while audio is still locked is a no-op - it is
+        // ephemeral and cannot be deferred - so start it from the unlock
         // gesture. Subscribing is safe even if audio unlocked earlier:
         // onUnlock replays.
         app.audio.onUnlock.add(() => {

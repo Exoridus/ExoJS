@@ -1,6 +1,6 @@
 {
   "title": "Asset",
-  "description": "A typed, loadable asset reference. Holds config only — no loaded resource.",
+  "description": "A typed, loadable asset reference. Holds config only - no loaded resource.",
   "symbol": "Asset",
   "kind": "interface",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A typed, loadable asset reference. Holds config only — no loaded resource."
+        "A typed, loadable asset reference. Holds config only - no loaded resource."
       ],
       "importLine": "import { Asset } from '@codexo/exojs'",
       "sourceLink": null

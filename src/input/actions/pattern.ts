@@ -3,7 +3,7 @@ import { Keyboard } from '#input/types';
 
 /**
  * One {@link SequenceAction} step requiring every listed channel
- * simultaneously — the array-form equivalent of a `'+'`-joined chord token
+ * simultaneously - the array-form equivalent of a `'+'`-joined chord token
  * group, and the whole binding a {@link ChordAction} accepts.
  */
 export type InputChord = readonly InputChannel[];
@@ -11,7 +11,7 @@ export type InputChord = readonly InputChannel[];
 /**
  * One {@link SequenceAction} step (or the whole binding a {@link ChordAction}
  * accepts) satisfied by any ONE of several alternatives rather than
- * requiring all of them — the array-form equivalent of a `'|'`-separated
+ * requiring all of them - the array-form equivalent of a `'|'`-separated
  * group of `'+'`-joined chord tokens, e.g. `'A+B|C'`.
  *
  * Every alternative is wrapped in its own array, even a single-channel one
@@ -19,7 +19,7 @@ export type InputChord = readonly InputChannel[];
  * {@link InputChord} (`[A, B]`, meaning "A and B required together", not "A
  * or B"): an {@link InputChord}'s entries are bare channels, an
  * {@link InputAlternation}'s are themselves channel arrays. Mixing the two
- * shapes within one step — some entries bare, some nested — is rejected.
+ * shapes within one step - some entries bare, some nested - is rejected.
  */
 export type InputAlternation = readonly InputChord[];
 
@@ -28,7 +28,7 @@ export type InputAlternation = readonly InputChord[];
  * single {@link InputChannel} (a one-channel step), a nested
  * {@link InputChord} (several channels required together for that one step),
  * or a nested {@link InputAlternation} (several alternatives, any one of
- * which satisfies that one step) — the array-form equivalent of a
+ * which satisfies that one step) - the array-form equivalent of a
  * `'>'`-separated, `'+'`-joined, `'|'`-alternated string pattern such as
  * `'Down>Down+Right>Right'` or `'A+B|C>D'`.
  */
@@ -54,7 +54,7 @@ const keyboardByName = new Map<string, number>(
 
 /**
  * Shorthand aliases for a string pattern token, resolved on top of the
- * reflexive {@link Keyboard} member table above — `'Ctrl+K'` and
+ * reflexive {@link Keyboard} member table above - `'Ctrl+K'` and
  * `'Control+K'` are equivalent. Array bindings are unaffected: an alias is a
  * string-pattern-only convenience, never a second {@link Keyboard} member.
  */
@@ -86,9 +86,9 @@ function resolveToken(token: string, owner: PatternOwner, patternText: string): 
 }
 
 /**
- * Parse one `'>'`-separated step's text into raw channel numbers — either a
+ * Parse one `'>'`-separated step's text into raw channel numbers - either a
  * flat list (no `'|'` present, one implicit alternative) or a nested list of
- * lists (one entry per `'|'`-separated alternative) — deciding the shape
+ * lists (one entry per `'|'`-separated alternative) - deciding the shape
  * `normalizeStep` below reduces uniformly for both string and array-form
  * input. Throws with the full pattern text quoted, matching this file's
  * existing string-parsing errors, for an empty `'|'`-separated alternative
@@ -205,8 +205,8 @@ export function normalizeSequence(input: string | InputSequence, owner: PatternO
  * only ever sees string LITERALS, so a pattern read from a config file, built
  * at runtime, or passed from JavaScript still reaches the parser above and
  * still throws the same errors. The two layers are kept in step by deriving
- * from the same sources — the `Keyboard` enum itself and the one
- * `keyboardAliases` table — and by wording each rejection like the runtime
+ * from the same sources - the `Keyboard` enum itself and the one
+ * `keyboardAliases` table - and by wording each rejection like the runtime
  * message it stands for, so a compile error and the throw it prevents read
  * the same.
  *
@@ -214,7 +214,7 @@ export function normalizeSequence(input: string | InputSequence, owner: PatternO
  * token count: forty steps of three tokens each still validate, while a
  * pattern of roughly a hundred steps exhausts the compiler's instantiation
  * depth (TS2589). A pattern that long is not a keyboard shortcut, and it is
- * still parsed and validated at runtime — but if one is ever needed, widening
+ * still parsed and validated at runtime - but if one is ever needed, widening
  * it to `string` (or reaching for the array form) sidesteps this layer
  * entirely.
  */
@@ -227,7 +227,7 @@ type PatternTrimEnd<S extends string> = S extends `${infer Rest}${PatternWhitesp
 
 /**
  * Type-level `String.prototype.trim`, mirroring the `.trim()` calls in
- * `normalizeSequence`/`parseStepText`/`resolveToken` — `' Control + A '` must
+ * `normalizeSequence`/`parseStepText`/`resolveToken` - `' Control + A '` must
  * validate exactly like `'Control+A'`.
  */
 type PatternTrim<S extends string> = PatternTrimEnd<PatternTrimStart<S>>;
@@ -247,7 +247,7 @@ type TokenLookupKey<S extends string> = Lowercase<PatternTrim<S>> extends `keybo
 
 /**
  * {@link TokenLookupKey} with an alias folded onto the member it resolves to,
- * so `'ctrl'` and `'Control'` compare equal — the type-level stand-in for
+ * so `'ctrl'` and `'Control'` compare equal - the type-level stand-in for
  * comparing the resolved channel NUMBERS, which is what `normalizeStep`'s
  * duplicate check actually does. Sound because no two {@link Keyboard} members
  * share a channel, so equal channels and equal canonical names coincide.
@@ -267,7 +267,7 @@ type CheckToken<Token extends string, Pattern extends string, Owner extends Patt
 type CheckEmptyToken<Token extends string, Pattern extends string, Owner extends PatternOwner, Where extends string> =
   PatternTrim<Token> extends '' ? `${Owner}: ${Where} of pattern "${Pattern}" contains an empty token.` : never;
 
-/** {@link CheckEmptyToken} across one alternative's `'+'`-joined tokens — a whole pass of its own, because the runtime checks every token for emptiness before resolving any of them. */
+/** {@link CheckEmptyToken} across one alternative's `'+'`-joined tokens - a whole pass of its own, because the runtime checks every token for emptiness before resolving any of them. */
 type CheckEmptyTokens<
   Rest extends string,
   Pattern extends string,
@@ -314,7 +314,7 @@ type CheckStep<Step extends string, Pattern extends string, Owner extends Patter
   ? CheckAlternatives<Step, Pattern, Owner, Where, []>
   : CheckAlternative<Step, Pattern, Owner, Where>;
 
-/** Position label for the n-th step — a {@link ChordAction} has no user-facing notion of "step N", only "the chord". */
+/** Position label for the n-th step - a {@link ChordAction} has no user-facing notion of "step N", only "the chord". */
 type StepWhere<Owner extends PatternOwner, Index extends readonly unknown[]> = Owner extends 'ChordAction'
   ? 'the chord'
   : `step ${[...Index, unknown]['length']}`;
@@ -355,7 +355,7 @@ type CheckDuplicateStep<Step extends string, Owner extends PatternOwner, Where e
   ? CheckDuplicateAlternatives<Step, Owner, Where, []>
   : CheckDuplicates<Step, Owner, Where>;
 
-/** {@link CheckDuplicateStep} across every step — a pass of its own, because `normalizeSequence` parses every step before it normalizes any of them. */
+/** {@link CheckDuplicateStep} across every step - a pass of its own, because `normalizeSequence` parses every step before it normalizes any of them. */
 type CheckDuplicateSteps<Rest extends string, Owner extends PatternOwner, Index extends readonly unknown[]> = Rest extends `${infer Head}>${infer Tail}`
   ? FirstPatternError<CheckDuplicateStep<Head, Owner, StepWhere<Owner, Index>>, CheckDuplicateSteps<Tail, Owner, [...Index, unknown]>>
   : CheckDuplicateStep<Rest, Owner, StepWhere<Owner, Index>>;
@@ -384,9 +384,9 @@ type OrPatternError<Binding, Error> = [Error] extends [never] ? Binding : Error;
 /**
  * A {@link ChordAction} binding, checked at compile time when it is a string
  * LITERAL. A valid pattern types as itself, an invalid one as the message
- * explaining why — so `new ChordAction('Ctrl+Sv')` fails to compile with
+ * explaining why - so `new ChordAction('Ctrl+Sv')` fails to compile with
  * `Argument of type '"Ctrl+Sv"' is not assignable to parameter of type
- * '"ChordAction: unknown keyboard token \"Sv\" …"'`.
+ * '"ChordAction: unknown keyboard token \"Sv\" ..."'`.
  *
  * A plain `string` (a pattern read from a config file, built at runtime, or
  * handed over from JavaScript) bails out and passes through untouched: only

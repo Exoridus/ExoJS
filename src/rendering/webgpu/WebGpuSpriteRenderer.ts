@@ -60,7 +60,7 @@ import spritePersistentVertexMainWgsl from './wgsl/sprite-persistent-vertex-main
 
 /**
  * Multi-texture batch slot tiers the sprite pipeline can be generated for.
- * Quantizing to fixed tiers means only these WGSL variants can ever ship —
+ * Quantizing to fixed tiers means only these WGSL variants can ever ship -
  * all of them covered by the shader-compile browser test.
  * @internal
  */
@@ -68,7 +68,7 @@ export const spriteBatchTextureSlotTiers = [8, 16, 32] as const;
 
 /**
  * Legacy slot count, used only when a device exposes no limits object
- * (non-conformant mocks — every real WebGPU device reports limits).
+ * (non-conformant mocks - every real WebGPU device reports limits).
  * @internal
  */
 export const fallbackSpriteBatchTextureSlots = 8;
@@ -148,7 +148,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`;
  * WGSL source for the PERSISTENT-INDEXED sprite pipeline, generated for the
  * same `textureSlots` batch table as {@link buildSpriteShaderSource}.
  *
- * Same fragment stage, same geometry, same snapping, same tint resolve — the
+ * Same fragment stage, same geometry, same snapping, same tint resolve - the
  * one difference is where a sprite's record comes from. The default pipeline
  * streams a 32-byte instance per draw; here every record already lives on the
  * GPU in slot-addressed storage that only changes when an item enters or leaves
@@ -161,7 +161,7 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`;
  * `(zIndex, seq)` sequence and is rewritten every selection (four bytes an
  * entry); the slot stores are physical and are written only for arrivals.
  *
- * `textureSlot` rides in the transform row's spare fourth component — the one
+ * `textureSlot` rides in the transform row's spare fourth component - the one
  * the canonical packer leaves at zero and no other shader reads. Which entry of
  * a store's table a texture occupies is a BATCHING fact, not a property of the
  * item, which is why it is derived into the slot rather than prepacked in the
@@ -184,7 +184,7 @@ const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 // mat4x4 projection + mat4x4 group + vec4 snap viewport (aligned 16, total 144).
 const projectionByteLength = 144;
 const initialBatchCapacity = 32;
-// Deliberately decoupled from the multi-texture batch slot count — bumping the
+// Deliberately decoupled from the multi-texture batch slot count - bumping the
 // default-path batch tiers must not silently widen the custom-material
 // contract (mirrors the WebGL2 renderer's maxCustomTextureSlots convention).
 // Together with spriteMaterialTextureSlots (8) this keeps a custom pipeline at
@@ -201,7 +201,7 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
  * `textures`, `views` and `samplers` are the fully-resolved slot-count arrays
  * (fillers included): the views detect a backend-recreated GPU texture
  * (resize / content-driven rebuild), the samplers detect a sampler-only
- * refresh — `_syncTexture` recreates the sampler on EVERY texture.version
+ * refresh - `_syncTexture` recreates the sampler on EVERY texture.version
  * bump (setScaleMode / setWrapMode) while the view identity stays put, so a
  * views-only check would silently keep serving the stale sampler.
  */
@@ -255,7 +255,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   private readonly _projectionData = new Float32Array(projectionByteLength / Float32Array.BYTES_PER_ELEMENT);
   // View whose transform the projection UBO currently holds, plus its updateId
-  // at write time — a matching (view, updateId) pair AND unchanged group-matrix
+  // at write time - a matching (view, updateId) pair AND unchanged group-matrix
   // CONTENT (compared against the packed bytes at [16, 32), staged into
   // `_stagedGroupData` by `_groupContentChanged`) means the 128-byte projection
   // write can be skipped for this flush. Content comparison (not the backend's
@@ -332,7 +332,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _currentMaterial: SpriteMaterial | null = null;
   // Material uniform buffers a draw already recorded into the currently open
   // pass reads from. A batch about to rewrite one of them has to end that pass
-  // first — see the hazard checks in flush(). Keyed to the pass identity so a
+  // first - see the hazard checks in flush(). Keyed to the pass identity so a
   // pass ended by anyone (the coordinator at a genuine boundary, another
   // renderer) clears it on the next acquisition.
   private _uniformHazardPass: WebGpuActiveRenderPass | null = null;
@@ -350,7 +350,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     this._device = backend.device;
     // The slot count is a property of the granted device limits, so it is
-    // resolved once per connection — before the shader module and the
+    // resolved once per connection - before the shader module and the
     // group(1) layout are built from it.
     this._maxBatchTextures = resolveSpriteBatchTextureSlots(this._device);
 
@@ -444,7 +444,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     // The group(0) bind group also binds the shared transform storage buffer,
-    // whose identity changes when its capacity grows — so it is built lazily in
+    // whose identity changes when its capacity grows - so it is built lazily in
     // flush() once the active storage buffer is known.
 
     // Static index buffer for the quad. Allocated once at connect; its
@@ -529,7 +529,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     // The transform lives in the shared storage buffer, keyed by the draw
     // command's stable nodeIndex (already packed at the draw-command boundary).
-    // A direct, non-plan `backend.draw(sprite)` has no command — push the
+    // A direct, non-plan `backend.draw(sprite)` has no command - push the
     // sprite's transform into the buffer and use the freshly-allocated slot.
     const command = backend.activeDrawCommand;
     const nodeIndex = command !== null ? command.nodeIndex : backend._pushTransform(sprite);
@@ -557,7 +557,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // ── Persistent-indexed selection ──────────────────────────────────────────
   // A render root whose whole subtree this renderer can serve draws out of
   // slot-addressed storage instead of a streamed instance buffer. Same batching
-  // rules, same geometry, same fragment stage — what changes is only where the
+  // rules, same geometry, same fragment stage - what changes is only where the
   // per-sprite record lives, which is what lets a camera step touch just the
   // items that entered or left.
 
@@ -623,7 +623,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    *
    * One `drawIndexed` for the whole root: the store's texture table binds once,
    * the order stream is issued verbatim, and no per-instance data crosses the
-   * bus. Nothing here may reorder or split the stream — it IS the draw order the
+   * bus. Nothing here may reorder or split the stream - it IS the draw order the
    * plan built.
    * @internal
    */
@@ -650,7 +650,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     // Resolving the bindings re-uploads mutated texture content on the queue
     // timeline, which would retroactively change draws already recorded into the
-    // open pass — the same hazard the live flush guards, applied to the store's
+    // open pass - the same hazard the live flush guards, applied to the store's
     // fixed texture table.
     if (coordinator.passHasDraws) {
       for (const texture of store.textures) {
@@ -770,7 +770,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   /**
    * Compile the persistent pipeline's WGSL and build its layouts, once per
-   * connection. group(0) is the store's own block — uniforms plus the four
+   * connection. group(0) is the store's own block - uniforms plus the four
    * slot-addressed storage buffers; group(1) is the SAME base-texture slot table
    * the live path uses, generated for the same device tier, so both paths share
    * one bind-group cache and one set of texture bindings.
@@ -863,7 +863,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const premultiplySample = backend.shouldPremultiplyTextureSample(texture) ? 1 : 0;
     const packedSlotFlags = slot | (premultiplySample << 8);
 
-    // Ensure capacity covers the new entry BEFORE packing — otherwise the
+    // Ensure capacity covers the new entry BEFORE packing - otherwise the
     // typed-array writes in _packInstance silently fall off the end of a
     // too-small buffer.
     this._ensureInstanceCapacity(this._instanceCount + 1);
@@ -893,7 +893,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     this._currentMaterial = material;
     backend.setBlendMode(blendMode);
 
-    // Resolve / assign texture slot, exactly as the default path does — the
+    // Resolve / assign texture slot, exactly as the default path does - the
     // fragment dispatches over the slot via the prologue's sampleBase().
     let slot = this._textureSlots.get(texture);
 
@@ -927,7 +927,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // The projection uniform is a single shared buffer rewritten at offset 0
     // every flush. If a pass is still open holding earlier batches whose view
     // transform differs from the one about to be written (same View object
-    // mutated between two merged flushes — e.g. a camera pan with no identity
+    // mutated between two merged flushes - e.g. a camera pan with no identity
     // change), overwriting the uniform would retroactively re-project them. End
     // (submit) that pass first so its draws keep their original projection.
     this._endPassOnProjectionChange(backend);
@@ -935,7 +935,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // ProjectionUniforms layout: mat4x4 projection + mat4x4 group, packed via
     // the shared canonical (non-transposed) column order. The write is skipped
     // when the UBO already holds this exact (view, updateId, group-bytes)
-    // state — static frames then issue zero projection uploads.
+    // state - static frames then issue zero projection uploads.
     const view = backend.view;
     // Staged unconditionally so a snap-rect change (attachment resize with an
     // unchanged view) forces the rewrite the (view, updateId, group) skip
@@ -969,7 +969,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       const batchBytes = this._instanceCount * instanceStrideBytes;
       const needCount = this._maxNodeIndex + 1;
 
-      // Open the coordinator's pass (idempotent — consecutive flushes reuse it)
+      // Open the coordinator's pass (idempotent - consecutive flushes reuse it)
       // and reserve a fresh slice of the instance arena for this batch.
       const coordinator = backend._passCoordinator;
       let active = coordinator.acquirePass();
@@ -989,7 +989,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       // open pass. End (submit) the pass first so those draws capture the
       // pre-mutation content, then reopen and re-upload into the fresh slice.
       // The texture cache is shared, so the endangered draw need not be one of
-      // ours — the pass survives a renderer switch. Same for the storage guard
+      // ours - the pass survives a renderer switch. Same for the storage guard
       // below; both ask the coordinator, not this renderer's own cursor.
       if (coordinator.passHasDraws && this._batchWouldMutateTexture(backend)) {
         active = this._reopenPass(backend);
@@ -1004,7 +1004,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
       // Same shape, for the material's own uniform buffer: this batch is about to
       // write it at offset 0, and a draw already recorded into the open pass reads
-      // that exact buffer — writes land on the queue timeline ahead of the whole
+      // that exact buffer - writes land on the queue timeline ahead of the whole
       // submit, so the earlier draw would silently pick up this batch's values.
       if (customResources !== null && uniformPlan !== null && this._uniformWriteWouldAlias(uniformPlan)) {
         active = this._reopenPass(backend);
@@ -1096,7 +1096,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
   /**
    * End the open pass if its recorded batches were projected with a different
-   * view transform — or different group-matrix BYTES — than the ones this
+   * view transform - or different group-matrix BYTES - than the ones this
    * flush is about to write into the shared projection uniform. Guarded on
    * the arena tracking the *current* active pass so a stale post-boundary
    * cursor never triggers a spurious split. Content comparison keeps group
@@ -1120,7 +1120,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   /**
    * Whether the packed bytes of the active group matrix differ from what the
    * shared projection UBO currently holds at [16, 32). Stages the packed
-   * matrix into `_stagedGroupData` as a side effect (idempotent — safe to
+   * matrix into `_stagedGroupData` as a side effect (idempotent - safe to
    * call more than once per flush).
    */
   private _groupContentChanged(backend: WebGpuBackend): boolean {
@@ -1153,8 +1153,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   /**
    * Discard the per-pass uniform-hazard bookkeeping when `active` is a pass this
    * renderer has not recorded into yet. The pass may have been ended by the
-   * coordinator at a genuine boundary or by another renderer, so pass identity —
-   * not this renderer's own actions — is what the set is keyed to.
+   * coordinator at a genuine boundary or by another renderer, so pass identity -
+   * not this renderer's own actions - is what the set is keyed to.
    */
   private _syncUniformHazardPass(active: WebGpuActiveRenderPass): void {
     if (this._uniformHazardPass === active) {
@@ -1165,7 +1165,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     // Guarded: `Set.clear()` allocates a fresh backing table even when the set
     // is already empty, and on the default (non-custom-material) path it always
-    // is — this runs once per flush.
+    // is - this runs once per flush.
     if (this._uniformBuffersInPass.size > 0) {
       this._uniformBuffersInPass.clear();
     }
@@ -1231,7 +1231,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   // ── Retained-batch record/replay ──────────────────────────────────────────
   // The bundle/stage stores raw instance bytes; this renderer owns the
   // 32-byte (8-word) layout, so the layout-aware finalize steps (node-index
-  // scan/rebase) and the replay dispatch live here — the WebGPU counterpart
+  // scan/rebase) and the replay dispatch live here - the WebGPU counterpart
   // of WebGl2SpriteRenderer's `_scanRetainedNodeIndexRange` /
   // `_rebaseRetainedNodeIndices` / `_replayRetainedBatch`.
 
@@ -1272,10 +1272,10 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    *
    * - pipeline via the existing `_getPipeline(blend, targetFormat, stencil)`
    *   cache,
-   * - texture bind group(1) via the existing texture-set cache — resolving
+   * - texture bind group(1) via the existing texture-set cache - resolving
    *   re-syncs dirty texture content exactly like a live flush,
    * - the group's 128-byte UBO (projection from the live view + the live
-   *   player-composed group matrix) written only when its content changed —
+   *   player-composed group matrix) written only when its content changed -
    *   a static camera and group cost zero uniform writes per frame,
    * - the same-frame double-replay hazard (one group under two different
    *   views while the open pass already holds this bundle's draws) ends the
@@ -1296,7 +1296,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       return;
     }
 
-    // Drain any pending live batch into the open pass first (defensive — the
+    // Drain any pending live batch into the open pass first (defensive - the
     // group boundary already flushed; flush() never ends the pass on the
     // default path and guards its own shared-UBO hazards).
     this.flush();
@@ -1320,7 +1320,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // re-uploads mutated content on the queue timeline BEFORE the deferred
     // submit, which would retroactively change draws already recorded into
     // the open pass. End (submit) the pass first so they keep the
-    // pre-mutation content — the `_batchWouldMutateTexture` hazard, applied
+    // pre-mutation content - the `_batchWouldMutateTexture` hazard, applied
     // to the recorded texture list. The texture cache is shared and the pass
     // survives a renderer switch, so any recorded draw is at risk, not just
     // one of ours.
@@ -1471,7 +1471,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
    * Without prewarm, the first draw of any new (blendMode, format)
    * combination would fall back to the synchronous _getPipeline() path,
    * which blocks while the WebGPU implementation compiles WGSL and
-   * sets up the pipeline state object — typically tens of milliseconds.
+   * sets up the pipeline state object - typically tens of milliseconds.
    */
   public async prewarmPipelines(formats: readonly GPUTextureFormat[]): Promise<void> {
     const device = this._device;
@@ -1524,7 +1524,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
 
-    // localBounds: left, top, right, bottom (words 0..3, offset 0) — device-snapped in
+    // localBounds: left, top, right, bottom (words 0..3, offset 0) - device-snapped in
     // PixelSnapMode.Geometry, otherwise the logical local bounds.
     const bounds = this._activeBounds ?? sprite.getLocalBounds();
 
@@ -1555,7 +1555,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // upload wrote from this sprite's tint.
     u32[offset + 6] = packedSlotFlags;
 
-    // nodeIndex (u32) at word 7 (offset 28) — row into the shared transform buffer.
+    // nodeIndex (u32) at word 7 (offset 28) - row into the shared transform buffer.
     const node = nodeIndex >>> 0;
 
     u32[offset + 7] = node;
@@ -1581,7 +1581,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const oldData = this._instanceData;
     // Preserve any already-packed instances. _instanceCount is bounded by
     // the previous capacity, but oldData may be the initial 0-byte buffer
-    // — clamp to its actual byteLength to avoid out-of-range typed-array
+    // - clamp to its actual byteLength to avoid out-of-range typed-array
     // construction.
     const carryBytes = Math.min(this._instanceCount * instanceStrideBytes, oldData.byteLength);
 
@@ -1600,7 +1600,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
   private _resetSlots(): void {
     if (this._slotCount > 0) {
       // Deleted key by key rather than `Map.clear()`: V8's `clear` drops the
-      // backing table and allocates a fresh one, and this runs once per flush —
+      // backing table and allocates a fresh one, and this runs once per flush -
       // 18 KB/frame on an effect scene that flushes 300 times. The table holds
       // at most `_maxBatchTextures` entries, so the delete loop is the cheaper
       // side on both counts.
@@ -1632,7 +1632,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     //
     // `textures` is the slot-ordered batch list: the live `_activeTextures`
     // scratch for a pending flush, or a recorded batch's texture list at
-    // retained replay — both share this cache.
+    // retained replay - both share this cache.
     //
     // Bindings are resolved BEFORE the cache lookup on purpose: resolving is
     // what syncs a dirty/mutated texture's content to the GPU, so it must run
@@ -1644,7 +1644,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     const fallbackTexture = textures[0] ?? Texture.empty;
     const fallbackBinding = backend.getTextureBinding(fallbackTexture, samplerOverride);
     // Reused scratch, not two fresh arrays: this runs once per bound texture
-    // set per draw, and a cache HIT — the steady state — used to allocate both
+    // set per draw, and a cache HIT - the steady state - used to allocate both
     // arrays anyway. They never outlive the call; the cache-miss path below
     // copies out of them before storing anything.
     const resolvedTextures = this._resolvedTextures;
@@ -1674,8 +1674,8 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
       cache.set(fallbackTexture, entries);
     }
 
-    // Indexed rather than `for…of`: this loop runs once per draw, and V8 does
-    // not scalar-replace the array iterator here (measured — see the WebGPU
+    // Indexed rather than `for...of`: this loop runs once per draw, and V8 does
+    // not scalar-replace the array iterator here (measured - see the WebGPU
     // allocation audit).
     for (let entryIndex = 0; entryIndex < entries.length; entryIndex++) {
       const entry = entries[entryIndex]!;
@@ -1717,7 +1717,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     // Copied, not stored by reference: `resolvedTextures` is reused scratch and
     // the entry has to survive the next call. `slice` rather than the whole
-    // array — the scratch may be longer than this flavour's slot capacity.
+    // array - the scratch may be longer than this flavour's slot capacity.
     entries.push({
       textures: resolvedTextures.slice(0, slotCapacity),
       views: this._copyViews(resolvedBindings, slotCapacity),
@@ -1732,7 +1732,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     return group;
   }
 
-  /** Slot-capacity-bounded copy of the resolved views — the scratch may be longer. */
+  /** Slot-capacity-bounded copy of the resolved views - the scratch may be longer. */
   private _copyViews(resolvedBindings: ReadonlyArray<ReturnType<WebGpuBackend['getTextureBinding']>>, slotCapacity: number): GPUTextureView[] {
     const views = new Array<GPUTextureView>(slotCapacity);
 
@@ -1902,7 +1902,7 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
 
     if (existing !== undefined) {
       // The slot count is device-derived and fixed per connection (the cache is
-      // dropped on disconnect), so this can only ever hold — it guards against a
+      // dropped on disconnect), so this can only ever hold - it guards against a
       // future device-dependent slot count silently reusing a stale layout.
       if (existing.textureSlots !== spriteMaterialTextureSlots) {
         throw new Error(

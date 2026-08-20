@@ -171,7 +171,7 @@ describe('NineSliceSprite — no-op setters', () => {
     const sprite = new NineSliceSprite(tex, { slices: { left: 8, top: 8, right: 8, bottom: 8 } });
     void sprite.quads;
     sprite.setSlices(8);
-    // Same effective slices via equality check — no rebuild
+    // Same effective slices via equality check - no rebuild
     expect(getDirty(sprite)).toBe(false);
   });
 });
@@ -238,7 +238,7 @@ describe('NineSliceSprite — constructor validation', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Setter validation — size
+// Setter validation - size
 // ---------------------------------------------------------------------------
 
 describe('NineSliceSprite — setter validation (size)', () => {
@@ -304,7 +304,7 @@ describe('NineSliceSprite — setter validation (size)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Setter validation — slices
+// Setter validation - slices
 // ---------------------------------------------------------------------------
 
 describe('NineSliceSprite — setter validation (slices)', () => {
@@ -373,7 +373,7 @@ describe('NineSliceSprite — setter validation (slices)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Setter validation — border
+// Setter validation - border
 // ---------------------------------------------------------------------------
 
 describe('NineSliceSprite — setter validation (border)', () => {
@@ -615,7 +615,7 @@ describe('NineSliceSprite — geometry invalidation', () => {
     const sprite = new NineSliceSprite(tex, { slices: { left: 8, top: 8, right: 8, bottom: 8 } });
     void sprite.quads;
     sprite.setSlices({ left: 8, top: 8, right: 8, bottom: 8 });
-    // Equivalent values — no rebuild via equality check
+    // Equivalent values - no rebuild via equality check
     expect(getDirty(sprite)).toBe(false);
   });
 

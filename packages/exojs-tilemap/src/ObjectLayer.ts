@@ -54,7 +54,7 @@ interface TileMapObjectBase<P extends TileProperties = TileProperties> {
   /** Bounding height in px (0 for points). */
   readonly height: number;
   /**
-   * Rotation in degrees, clockwise, about `(x, y)` — except on a
+   * Rotation in degrees, clockwise, about `(x, y)` - except on a
    * {@link TileObject}, whose pivot stays at the source format's own anchor and
    * is generally not `(x, y)`. See {@link TileObject} for why.
    */
@@ -174,7 +174,7 @@ export type TileMapObject<P extends TileProperties = TileProperties> =
  *
  * @remarks
  * A schema is a **developer promise, not a runtime guarantee.** Tiled data is
- * untyped at runtime and ExoJS performs no validation against the schema —
+ * untyped at runtime and ExoJS performs no validation against the schema -
  * the property objects are returned exactly as parsed. The schema only refines
  * the static type of `properties` for ergonomic, typo-safe field access. If the
  * source data does not match the declared shape, reads still succeed but the
@@ -233,8 +233,8 @@ function isTilePropertyObjectRef(value: TilePropertyValue): value is TilePropert
  * Equality used by {@link ObjectLayer.query}'s `value` filter.
  *
  * Scalars and `null` compare with `===`. `objectRef` values compare by `id`
- * alone — the one genuinely common "find all objects referencing X" query
- * need — regardless of differing LDtk navigation fields. Every other
+ * alone - the one genuinely common "find all objects referencing X" query
+ * need - regardless of differing LDtk navigation fields. Every other
  * structured shape (`point`, `tileRef`, arrays, nested property bags) has no
  * obvious value-equality semantics (exact float coordinates? array order?)
  * and only matches when reference-identical; use `query({ property })`
@@ -293,15 +293,15 @@ export interface ObjectLayerOptions {
 }
 
 /**
- * A data-only layer of {@link TileMapObject}s — spawn points, trigger zones,
+ * A data-only layer of {@link TileMapObject}s - spawn points, trigger zones,
  * collision regions, markers. Object layers are not rendered by the tile
  * renderer; they are parsed and exposed for gameplay use (e.g. building physics
  * colliders, placing entities).
  *
- * The presentation fields the source format attaches to a layer —
+ * The presentation fields the source format attaches to a layer -
  * {@link visible}, {@link opacity}, {@link offsetX}/{@link offsetY},
  * {@link parallaxX}/{@link parallaxY}, {@link parallaxScale}, and
- * {@link tintColor} — are carried
+ * {@link tintColor} - are carried
  * through in full, with any enclosing group layers' contribution already
  * folded in, so an object layer describes the same placement and shading its
  * neighbouring tile and image layers do. Nothing here acts on them: code that
@@ -309,13 +309,13 @@ export interface ObjectLayerOptions {
  *
  * Query with {@link query} (untyped, fully back-compatible) or, when an
  * {@link ObjectSchema} type argument `S` is supplied, with the typed accessors
- * {@link byType}, {@link byKind}, and {@link where} — these narrow `properties`
+ * {@link byType}, {@link byKind}, and {@link where} - these narrow `properties`
  * to the developer-declared shape. The schema is **opt-in**: the default type
  * parameter reproduces the original untyped behaviour, so
  * `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged.
  *
  * @remarks
- * A schema is a developer promise, not a runtime guarantee — Tiled data is
+ * A schema is a developer promise, not a runtime guarantee - Tiled data is
  * untyped at runtime and ExoJS performs no validation. See {@link ObjectSchema}.
  *
  * @typeParam S - Optional {@link ObjectSchema} mapping object `type` strings to
@@ -343,7 +343,7 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
   /** Layer pixel offset Y. */
   public readonly offsetY: number;
   /**
-   * Parallax scroll factor on the X axis — the same quantity
+   * Parallax scroll factor on the X axis - the same quantity
    * {@link import('./TileLayer').TileLayer.parallaxX} carries, so an object
    * layer authored beside a tile layer in the same parallax group reports the
    * same factor. `1` = full camera speed, `0.5` = half speed, `0` =
@@ -427,7 +427,7 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
    * Objects whose `type` equals `type`, with `properties` narrowed to the
    * schema shape `S[T]`. Returns a fresh array (insertion order).
    *
-   * The narrowing is a static convenience only — no runtime validation is
+   * The narrowing is a static convenience only - no runtime validation is
    * performed (see {@link ObjectSchema}). On an unschematised layer this
    * behaves like `query({ type })` with `TileProperties` properties.
    */

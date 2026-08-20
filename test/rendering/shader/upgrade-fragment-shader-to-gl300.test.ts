@@ -77,7 +77,7 @@ void main() { gl_FragColor = vec4(1.0); }`;
     expect(highpIndex).toBeGreaterThanOrEqual(0);
     expect(fragColorIndex).toBeGreaterThanOrEqual(0);
     expect(highpIndex).toBeLessThan(fragColorIndex);
-    // User's lowp declaration comes after fragColor — last-precision-wins
+    // User's lowp declaration comes after fragColor - last-precision-wins
     // for the user's own code below.
     expect(lowpIndex).toBeGreaterThan(fragColorIndex);
   });
@@ -113,7 +113,7 @@ void main() { gl_FragColor = vec4(1.0); }`;
   // 10. Comments containing varying get replaced too (documented expected behavior)
   test('replaces "varying" inside comments (cosmetic — documented behavior)', () => {
     // The regex replacement is source-level, not parse-level.
-    // "varying" in comments is replaced — this is known and expected.
+    // "varying" in comments is replaced - this is known and expected.
     const src = `// This was a varying input
 varying vec2 vUv;
 void main() { gl_FragColor = vec4(vUv, 0.0, 1.0); }`;

@@ -304,7 +304,7 @@ describe('AudioInput / InputVoice', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // AudioInput.open() — constraint forwarding and environment guard
+  // AudioInput.open() - constraint forwarding and environment guard
   // ---------------------------------------------------------------------------
 
   test('open() throws when navigator is undefined', async () => {

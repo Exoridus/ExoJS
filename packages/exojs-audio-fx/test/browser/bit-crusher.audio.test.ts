@@ -2,11 +2,11 @@
  * Acoustic contract for the BitCrusher worklet in real Web Audio. Rendered
  * through a genuine OfflineAudioContext + AudioWorkletNode in headless Chromium.
  * Three invariants are asserted:
- *  1. Bit-depth reduction (bits=1) measurably raises RMS above the 16-bit reference —
+ *  1. Bit-depth reduction (bits=1) measurably raises RMS above the 16-bit reference -
  *     the sine is partially quantized toward ±1, pushing energy higher.
- *  2. Sample-rate reduction (low normFreq) still produces audible output — the
+ *  2. Sample-rate reduction (low normFreq) still produces audible output - the
  *     held sample carries meaningful signal energy.
- *  3. normFreq=0 produces near-silence — the initial held value is 0 and never
+ *  3. normFreq=0 produces near-silence - the initial held value is 0 and never
  *     changes, so the output is a constant-zero buffer.
  */
 

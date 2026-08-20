@@ -25,7 +25,7 @@ const parentConstructor = (type: AssetConstructor): AssetConstructor | null => {
  * automatically handles all subclasses.
  *
  * @internal Standalone constructor→factory map; not wired into `Loader` or
- * `AssetTypeRegistry` — kept as a reusable utility for anything that needs
+ * `AssetTypeRegistry` - kept as a reusable utility for anything that needs
  * prototype-chain-aware factory resolution.
  */
 export class FactoryRegistry {

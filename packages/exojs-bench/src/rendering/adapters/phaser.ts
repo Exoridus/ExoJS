@@ -16,22 +16,22 @@ import { isScrolling } from '../world';
  * cycling, overdraw stacking, top-left anchoring) is a faithful transcription of
  * the other arms so the comparison rests on the same neutral archetypes.
  *
- * WEBGL VERSION DISCLOSURE — EMPIRICAL, and the reason this arm is measured as it
+ * WEBGL VERSION DISCLOSURE - EMPIRICAL, and the reason this arm is measured as it
  * is. Phaser 4 "Caladan" is often described as a from-scratch WebGL2 renderer;
  * against the installed 4.2.1 source it is NOT. Its `WebGLRenderer.init` requests
  * a `'webgl'` (WebGL**1**) context by default (`canvas.getContext('webgl')`,
  * `WebGLRenderer.js:709`), its shaders are GLSL ES 1.00 (`attribute`/`varying`;
  * no `#version 300 es` anywhere in the dist), and it polyfills the WebGL2-core
- * features it needs (instanced arrays, VAO) from WebGL1 extensions — its renderer
+ * features it needs (instanced arrays, VAO) from WebGL1 extensions - its renderer
  * is an evolution of the Phaser 3.85+ WebGL path, not a WebGL2 rewrite.
  *
  * By deliberate decision this arm renders through Phaser's OWN default context
- * (WebGL, i.e. WebGL1) — exactly as a stock Phaser 4 app would — rather than
+ * (WebGL, i.e. WebGL1) - exactly as a stock Phaser 4 app would - rather than
  * injecting a WebGL2 context to force backend parity. That keeps the arm honest:
  * its CPU-time column is measured identically to the other arms and IS cross-arm
  * comparable, but its GPU/structural columns are NOT WebGL2-backend-comparable.
  * The harness's WebGL2 draw-call structural probe cannot attach to a WebGL
- * (WebGL1) context, so this arm reports NO structural counters — disclosed per
+ * (WebGL1) context, so this arm reports NO structural counters - disclosed per
  * cell by the harness (`page/harness.ts::attachProbes`) and in the report
  * Methodology; the counts are omitted, never faked. Phaser 4 ships NO WebGPU
  * renderer (`Phaser.AUTO/CANVAS/WEBGL/HEADLESS` only), so this arm supports the
@@ -39,8 +39,8 @@ import { isScrolling } from '../world';
  *
  * The harness owns frame cadence, so Phaser's own `requestAnimationFrame` game
  * loop (`TimeStep`) is halted right after boot (`game.loop.stop()`), and one
- * frame is produced by the exact render sequence `Game.step` runs —
- * `renderer.preRender()`, `scene.render(renderer)`, `renderer.postRender()` —
+ * frame is produced by the exact render sequence `Game.step` runs -
+ * `renderer.preRender()`, `scene.render(renderer)`, `renderer.postRender()` -
  * with the update/input/physics half of the step deliberately never called, so
  * only Phaser's render path is measured.
  */
@@ -59,7 +59,7 @@ const WOBBLE_SPEED = 0.15;
 /** TextureManager key of the scene the game boots (fixed; the game is destroyed and rebuilt per cell). */
 const SCENE_KEY = 'bench';
 
-/** A pre-selected leaf sprite and its resting grid position — the only nodes `mutate` disturbs. */
+/** A pre-selected leaf sprite and its resting grid position - the only nodes `mutate` disturbs. */
 interface MutableLeaf {
   readonly sprite: Phaser.GameObjects.Sprite;
   readonly baseX: number;
@@ -67,7 +67,7 @@ interface MutableLeaf {
 }
 
 /**
- * Generate one of `total` visually distinct solid-colour 8x8 canvases — the same
+ * Generate one of `total` visually distinct solid-colour 8x8 canvases - the same
  * construction the ExoJS/Pixi arms use, so the `batch-breaking` archetype breaks
  * batches on every arm for the same reason (distinct GPU texture identities).
  */
@@ -97,7 +97,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
   let root: Phaser.GameObjects.Container | null = null;
   let textureKeys: string[] = [];
   let mutableLeaves: MutableLeaf[] = [];
-  /** Leaf indices the most recent buildScene selected for mutation — the source of {@link EngineAdapter.mutationSignature}. */
+  /** Leaf indices the most recent buildScene selected for mutation - the source of {@link EngineAdapter.mutationSignature}. */
   let mutableIndices: number[] = [];
 
   return {
@@ -114,7 +114,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
     coversArchetype(spec: ArchetypeSpec): boolean {
       // This arm builds a fixed, viewport-sized scene with a static camera. A
       // scrolling archetype would silently render as an ordinary fully-visible
-      // one here, i.e. a row that looks comparable and is not — so the arm sits
+      // one here, i.e. a row that looks comparable and is not - so the arm sits
       // the archetype out instead.
       return !isScrolling(spec);
     },
@@ -128,7 +128,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
         game = new Phaser.Game({
           // Force WebGL (never AUTO/Canvas): a Canvas fallback would silently
           // measure a different renderer. Phaser 4's WebGLRenderer creates its
-          // own default `'webgl'` (WebGL1) context — no `context` is injected, so
+          // own default `'webgl'` (WebGL1) context - no `context` is injected, so
           // this measures a stock Phaser 4 app's renderer honestly.
           type: Phaser.WEBGL,
           canvas,
@@ -185,7 +185,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
       //
       // No culling flag is set: Phaser has no per-node `.cullable` equivalent,
       // and its default `GameObject.willRender` checks only visibility/alpha
-      // flags — never a bounds/intersection test — so this arm does no
+      // flags - never a bounds/intersection test - so this arm does no
       // off-screen culling by construction, matching `cullingEnabled: false` on
       // every archetype for cull symmetry.
       const sceneRoot = new Phaser.GameObjects.Container(scene, 0, 0);
@@ -204,7 +204,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
       const cellHeight = (VIEWPORT_HEIGHT - 2 * GRID_MARGIN) / rows;
       const overdraw = spec.id === 'overdraw';
 
-      // Shared, canonical mutation selection — the SAME helper every arm routes
+      // Shared, canonical mutation selection - the SAME helper every arm routes
       // through, so all arms select the byte-for-byte identical index set and the
       // harness's cross-arm determinism assertion holds.
       const selectedIndices = selectMutationIndices(nodeCount, spec.mutationFraction, seed);
@@ -213,7 +213,7 @@ export const createPhaserAdapter = (): EngineAdapter => {
 
       for (let i = 0; i < nodeCount; i++) {
         // Texture indexed by position WITHIN the spine bucket, not the global
-        // index — identical to the other arms, so the batch-breaking archetype
+        // index - identical to the other arms, so the batch-breaking archetype
         // overflows the batcher's texture slots the same way everywhere.
         const key = textureKeys[Math.floor(i / spine.length) % textureKeys.length]!;
         const sprite = new Phaser.GameObjects.Sprite(scene, 0, 0, key);
@@ -283,8 +283,8 @@ export const createPhaserAdapter = (): EngineAdapter => {
     teardown(): void {
       if (game !== null) {
         // `destroy` only FLAGS pending destruction (normally consumed by the next
-        // game step); since the loop is stopped, drive one explicit `step` — which
-        // runs `runDestroy` immediately when `pendingDestroy` is set — so the
+        // game step); since the loop is stopped, drive one explicit `step` - which
+        // runs `runDestroy` immediately when `pendingDestroy` is set - so the
         // WebGL context and scene are released now rather than leaking across
         // cells. `removeCanvas: false` keeps the harness-owned canvas in the DOM.
         game.destroy(false);

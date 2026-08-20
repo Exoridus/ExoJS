@@ -1,4 +1,4 @@
-// Auto-generated from svg-drawable.ts — edit the .ts source, not this file.
+// Auto-generated from svg-drawable.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Sprite, Texture } from '@codexo/exojs';
 class SvgDrawableScene extends Scene {
     texture;
@@ -9,13 +9,13 @@ class SvgDrawableScene extends Scene {
         // SvgAsset has no seamless adapter (unlike Texture/Sound), so it is
         // awaited via `load()` rather than fetched synchronously via `get()`.
         // The exo.js wordmark SVG carries only a viewBox (no width/height), so
-        // it would rasterise to a 0x0 image. Request an explicit pixel size —
+        // it would rasterise to a 0x0 image. Request an explicit pixel size -
         // the SVG is vector, so it stays crisp at any rasterised resolution.
         //
         // The cast below works around a pre-existing overload-resolution gap:
-        // every value-asset dispatch token (Json/TextAsset/SvgAsset/…) is an
+        // every value-asset dispatch token (Json/TextAsset/SvgAsset/...) is an
         // empty marker class, so they're structurally identical to `load()`'s
-        // `typeof Json` overload — which is declared first and wins, typing
+        // `typeof Json` overload - which is declared first and wins, typing
         // the result as `unknown` instead of `HTMLImageElement`. See the
         // flagged deviation in the migration report.
         const mark = (await this.loader.load(Asset.type('svg', 'svg/exo-wordmark.svg', { width: 850, height: 324 })));

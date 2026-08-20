@@ -1,11 +1,11 @@
-// Auto-generated from sprite-follows-body.ts — edit the .ts source, not this file.
+// Auto-generated from sprite-follows-body.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Scene, Sprite, Spritesheet, SystemOrder, Vector } from '@codexo/exojs';
 import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';
 // The minimal physics binding: `world.attach(node, { ... })` builds a body +
 // collider and binds it to the node in one call. Registering the world as a
 // system (`this.systems.add(this.world, { order: SystemOrder.Physics })`)
-// drives it from the engine's fixed-timestep scheduler — no manual step()
+// drives it from the engine's fixed-timestep scheduler - no manual step()
 // call needed. After every fixed step the body's position and rotation are
 // written onto the bound sprite, so the sprite simply "follows the body". A
 // static floor stops the falling actor.
@@ -24,7 +24,7 @@ class SpriteFollowsBodyScene extends Scene {
     init() {
         const app = this.app;
         const { width, height } = app;
-        // Gravity in px/s², +Y down — matches the engine's screen space.
+        // Gravity in px/s², +Y down - matches the engine's screen space.
         this.world = new PhysicsWorld({ gravity: { x: 0, y: 1400 } });
         this.systems.add(this.world, { order: SystemOrder.Physics });
         const characters = new Spritesheet(this.loader.get(assets.demo.spritesheets.platformerCharacters.image), this.spritesheetData);

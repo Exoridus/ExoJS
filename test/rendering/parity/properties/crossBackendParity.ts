@@ -17,7 +17,7 @@ import type { CrossBackendProperty, PropertyResult } from '../types';
 /**
  * Largest deviation still counted as agreement, in 8-bit channel steps.
  *
- * One step is the smallest representable difference — the last bit of a byte.
+ * One step is the smallest representable difference - the last bit of a byte.
  * Software adapters round some interpolated coordinates differently from
  * hardware ones, which shows up on the nine-slice scenes as exactly this: 0 on
  * a real GPU, 1 under SwiftShader in CI. Anything larger is a real disagreement
@@ -31,7 +31,7 @@ export const crossBackendParity: CrossBackendProperty = {
   appliesTo: () => true,
 
   run: async ({ scene, skip }): Promise<PropertyResult> => {
-    // A browser missing a backend cannot be compared across backends — that is
+    // A browser missing a backend cannot be compared across backends - that is
     // an answer about the browser, not a failure of the engine.
     if (!webGl2Available()) {
       return { support: 'unavailable', evidence: 'none', delta: null, note: 'no WebGL2 context in this browser' };

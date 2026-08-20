@@ -3,7 +3,7 @@ import type { PhysicsAdapter, PhysicsArchetypeSpec, PhysicsCellSpec } from './Ph
 /**
  * Fixed physics timestep, seconds. `PhysicsWorld` defaults to `1/60` and owns a
  * fixed-step accumulator, so passing exactly `1/60` to `step` advances precisely
- * one fixed sub-step per call — the timed unit is one deterministic physics step.
+ * one fixed sub-step per call - the timed unit is one deterministic physics step.
  */
 export const STEP_DELTA = 1 / 60;
 
@@ -20,12 +20,12 @@ const BODY_COUNTS = [200, 1_000, 4_000] as const;
 /**
  * The physics archetypes. Kept to three representative scenes (review-note
  * "don't overdo it"):
- * - `box-stack` — settling columns of boxes on a static floor: resting-contact
+ * - `box-stack` - settling columns of boxes on a static floor: resting-contact
  *   solving + warm-start + sleeping, the tall-stack stability path.
- * - `many-dynamic` — a field of small dynamic bodies bouncing in a bounded box,
+ * - `many-dynamic` - a field of small dynamic bodies bouncing in a bounded box,
  *   every body perturbed with an initial impulse: wide broad-phase + many
  *   simultaneously-active contacts, nothing resting.
- * - `mixed-static-dynamic` — static obstacle geometry with dynamic bodies raining
+ * - `mixed-static-dynamic` - static obstacle geometry with dynamic bodies raining
  *   onto it: the common game mix of immovable level + active bodies.
  */
 export const PHYSICS_ARCHETYPES: readonly PhysicsArchetypeSpec[] = [
@@ -47,7 +47,7 @@ export const timedStepsFor = (bodyCount: number): number => {
 };
 
 /**
- * Warmup-step count for a given body count — discarded steps that let a stack
+ * Warmup-step count for a given body count - discarded steps that let a stack
  * settle into steady state (warm-started persistent contacts, sleeping islands)
  * before timing, so the measured median reflects the steady-state solver cost
  * rather than the transient settling spike. A settling stack needs a few seconds

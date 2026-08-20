@@ -1,6 +1,6 @@
 {
   "title": "DistanceModel",
-  "description": "Distance-attenuation model used by spatial sounds. Mirrors Web Audio's `PannerNode.distanceModel`: - `'linear'` — `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`, clamped to [0, 1]. Reaches silence at `maxDistance`. - `'inverse'` — `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`. Physically realistic; never reaches absolute silence. - `'exponential'` — `v = (d / refDistance) ^ -rolloffFactor`. Steepest near the listener; useful for very intimate sources.",
+  "description": "Distance-attenuation model used by spatial sounds. Mirrors Web Audio's `PannerNode.distanceModel`: - `'linear'` - `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`, clamped to [0, 1]. Reaches silence at `maxDistance`. - `'inverse'` - `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`. Physically realistic; never reaches absolute silence. - `'exponential'` - `v = (d / refDistance) ^ -rolloffFactor`. Steepest near the listener; useful for very intimate sources.",
   "symbol": "DistanceModel",
   "kind": "type",
   "subsystem": "audio",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Distance-attenuation model used by spatial sounds.",
-        "Mirrors Web Audio's `PannerNode.distanceModel`: - `'linear'` — `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`, clamped to [0, 1]. Reaches silence at `maxDistance`. - `'inverse'` — `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`. Physically realistic; never reaches absolute silence. - `'exponential'` — `v = (d / refDistance) ^ -rolloffFactor`. Steepest near the listener; useful for very intimate sources."
+        "Mirrors Web Audio's `PannerNode.distanceModel`: - `'linear'` - `v = 1 - rolloffFactor * (d - refDistance) / (maxDistance - refDistance)`, clamped to [0, 1]. Reaches silence at `maxDistance`. - `'inverse'` - `v = refDistance / (refDistance + rolloffFactor * (d - refDistance))`. Physically realistic; never reaches absolute silence. - `'exponential'` - `v = (d / refDistance) ^ -rolloffFactor`. Steepest near the listener; useful for very intimate sources."
       ],
       "importLine": "import { DistanceModel } from '@codexo/exojs'",
       "sourceLink": null

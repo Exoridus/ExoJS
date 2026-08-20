@@ -454,7 +454,7 @@ describe('ConvolutionEffect', () => {
       const { ConvolutionEffect: FreshConvolutionEffect } = await import('../../src/effects/ConvolutionEffect');
 
       const effect = new FreshConvolutionEffect();
-      // _setup must genuinely be null here — the context never reached 'running'.
+      // _setup must genuinely be null here - the context never reached 'running'.
       expect(effect['_setup']).toBeNull();
 
       const ir = { length: 1 } as unknown as AudioBuffer;

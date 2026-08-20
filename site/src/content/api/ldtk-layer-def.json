@@ -130,7 +130,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Parallax horizontal factor, in [-1, 1]. 0 (the default) means \"no parallax\" — the layer scrolls at normal camera speed, same as every other layer. See import('./ldtkToTileMap').ldtkToTileMap for how this is carried onto the runtime layer's parallaxX."
+          "description": "Parallax horizontal factor, in [-1, 1]. 0 (the default) means \"no parallax\" - the layer scrolls at normal camera speed, same as every other layer. See import('./ldtkToTileMap').ldtkToTileMap for how this is carried onto the runtime layer's parallaxX."
         },
         {
           "name": "parallaxFactorY",

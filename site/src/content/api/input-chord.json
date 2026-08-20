@@ -1,6 +1,6 @@
 {
   "title": "InputChord",
-  "description": "One SequenceAction step requiring every listed channel simultaneously — the array-form equivalent of a `'+'`-joined chord token group, and the whole binding a ChordAction accepts.",
+  "description": "One SequenceAction step requiring every listed channel simultaneously - the array-form equivalent of a `'+'`-joined chord token group, and the whole binding a ChordAction accepts.",
   "symbol": "InputChord",
   "kind": "type",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One SequenceAction step requiring every listed channel simultaneously — the array-form equivalent of a `'+'`-joined chord token group, and the whole binding a ChordAction accepts."
+        "One SequenceAction step requiring every listed channel simultaneously - the array-form equivalent of a `'+'`-joined chord token group, and the whole binding a ChordAction accepts."
       ],
       "importLine": "import { InputChord } from '@codexo/exojs'",
       "sourceLink": null

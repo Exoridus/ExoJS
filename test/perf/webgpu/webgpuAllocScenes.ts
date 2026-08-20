@@ -3,7 +3,7 @@
  *
  * Mirrors the Node gate's archetypes (`test/perf/rendering/allocationScenes.ts`)
  * scene for scene where the same work unit exists, so a WebGPU reading and a
- * WebGL2 reading describe the same frame — they are NOT comparable as numbers
+ * WebGL2 reading describe the same frame - they are NOT comparable as numbers
  * (different upload machinery, different backend objects), only as shapes.
  *
  * Two deliberate differences from the Node catalog:
@@ -44,7 +44,7 @@ export interface WebGpuAllocArchetype {
   build(harness: WebGpuHarness): WebGpuAllocScene;
 }
 
-/** Fixed-function blend modes only — `>= Darken` takes the backdrop-aware shader path. */
+/** Fixed-function blend modes only - `>= Darken` takes the backdrop-aware shader path. */
 const FIXED_FUNCTION_BLENDS = [BlendModes.Normal, BlendModes.Additive, BlendModes.Subtract, BlendModes.Multiply] as const;
 
 /**

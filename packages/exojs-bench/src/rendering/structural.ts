@@ -90,9 +90,9 @@ const WEBGPU_BIND_METHODS = ['setBindGroup'] as const;
 const WEBGPU_UPLOAD_METHODS = ['writeBuffer', 'writeTexture'] as const;
 
 /**
- * Wraps the WebGPU submission path — `GPUDevice.createCommandEncoder`, each
+ * Wraps the WebGPU submission path - `GPUDevice.createCommandEncoder`, each
  * encoder's `beginRenderPass`, that pass's draw/bind entry points, and the
- * device queue's upload methods — so every draw/bind/upload is tallied into the
+ * device queue's upload methods - so every draw/bind/upload is tallied into the
  * same engine-agnostic {@link StructuralCounters} the WebGL2 probe fills, then
  * forwarded unchanged.
  *
@@ -101,7 +101,7 @@ const WEBGPU_UPLOAD_METHODS = ['writeBuffer', 'writeTexture'] as const;
  * `createCommandEncoder`, a fresh pass each `beginRenderPass`). Those are
  * instrumented in place as they are produced but are NOT restore-tracked:
  * retaining every frame's throwaway encoder/pass just to "restore" a garbage
- * object would leak. Only the persistent objects — the device and its queue —
+ * object would leak. Only the persistent objects - the device and its queue -
  * are restore-tracked, and restoring the device's `createCommandEncoder` on
  * {@link StructuralProbe.detach} is what actually stops all further counting:
  * subsequent frames get vanilla, un-instrumented encoders and passes.

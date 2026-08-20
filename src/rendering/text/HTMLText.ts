@@ -33,7 +33,7 @@ export interface HTMLTextOptions {
  *
  * Full CSS typography and rich markup are supported. External resources
  * (`<img src>`, `background-image: url(...)`) are **blocked** by browsers
- * when loading SVG blob-URIs — inline those as base-64 data URIs.
+ * when loading SVG blob-URIs - inline those as base-64 data URIs.
  *
  * Custom web fonts must be registered with {@link addFont} before use;
  * pass the raw font bytes (from {@link BinaryAsset} or a plain `fetch`):
@@ -53,7 +53,7 @@ export interface HTMLTextOptions {
  *   { width: 200, height: 40, css: 'body { font: 20px Arial; color: white; }' },
  * );
  * scene.addChild(label);
- * await label.ready; // optional — wait for first render
+ * await label.ready; // optional - wait for first render
  * ```
  * @stable
  */
@@ -192,7 +192,7 @@ export class HTMLText extends Container {
   /**
    * Change the logical dimensions and rebuild the mesh.
    * Prefer this over setting `width` and `height` individually when changing
-   * both at once — it triggers a single re-render instead of two.
+   * both at once - it triggers a single re-render instead of two.
    */
   public resize(width: number, height: number): this {
     if (this._width === width && this._height === height) return this;

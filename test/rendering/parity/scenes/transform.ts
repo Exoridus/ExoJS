@@ -1,8 +1,8 @@
 /**
  * Transform scenes over a coordinate-encoding texture.
  *
- * Every transform here is loss-free under nearest sampling — quarter turns,
- * whole-number scales, axis flips — so each output pixel still names exactly
+ * Every transform here is loss-free under nearest sampling - quarter turns,
+ * whole-number scales, axis flips - so each output pixel still names exactly
  * one source texel. A backend that builds its matrix differently (row-major
  * against column-major, a flipped clip-space Y) shows up as coordinates that
  * disagree, not as a slightly softer image.
@@ -31,7 +31,7 @@ export const transformScenes: readonly Scene[] = [
   {
     // A quarter turn maps texels onto texels exactly; no resampling involved.
     // Anchored at the canvas centre so the sprite stays fully inside whichever
-    // way the rotation turns — off-canvas would silently halve the pixels under
+    // way the rotation turns - off-canvas would silently halve the pixels under
     // test while every comparison still passed.
     name: 'transform/rotated-quarter-turn',
     feature: 'Transform',
@@ -56,7 +56,7 @@ export const transformScenes: readonly Scene[] = [
     build: () => rooted(sprite().setPosition(8, 8).setScale(2, 2)),
   },
   {
-    // Negative scale on one axis — the mirror case, where a coordinate texture
+    // Negative scale on one axis - the mirror case, where a coordinate texture
     // is the difference between "looks fine" and "provably flipped".
     name: 'transform/flipped-x',
     feature: 'Transform',

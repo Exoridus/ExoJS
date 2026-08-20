@@ -11,7 +11,7 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 /**
  * Shared helpers for the WebGL2/WebGPU tilemap browser tests. The tilemap nodes
  * only emit `TileChunkNode` drawables, so the tests wire just the tilemap
- * renderer binding — no core renderers and therefore no shader-file mocks.
+ * renderer binding - no core renderers and therefore no shader-file mocks.
  */
 
 /** Materialise the tilemap renderer binding directly into a bare test backend. */
@@ -22,7 +22,7 @@ export function wireTilemapRenderers(backend: RenderBackend): void {
 /**
  * Wire renderers the way an Application would for `extensions: [tiledExtension]`:
  * resolve the extension dependency snapshot (which pulls in `tilemapExtension`)
- * and materialise its renderer bindings. Proves the one-extension Tiled path —
+ * and materialise its renderer bindings. Proves the one-extension Tiled path -
  * loading is unit-tested in the Tiled package; this exercises rendering.
  */
 export function wireViaTiledExtension(backend: RenderBackend): void {

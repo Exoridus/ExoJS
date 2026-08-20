@@ -1,6 +1,6 @@
 {
   "title": "ChunkSource",
-  "description": "Supplies chunk data for one import('./TileLayer').TileLayer on demand, keyed by signed chunk coordinates — the abstraction a import('./ChunkStreamer').ChunkStreamer drives to implement chunk streaming, and the seam a format adapter or a procedural generator implements. `getChunk` may return synchronously (e.g. slicing already-parsed source data) or a `Promise` (e.g. an expensive procedural-generation algorithm, plausibly off the main thread) — import('./ChunkStreamer').ChunkStreamer installs a synchronous result in the same tick it was requested, with zero pop-in. Returning `null` (synchronously or via a resolved `Promise`) means \"no data for this coordinate\" — e.g. outside a finite provider's authored extent, even though the layer itself may be unbounded.",
+  "description": "Supplies chunk data for one import('./TileLayer').TileLayer on demand, keyed by signed chunk coordinates - the abstraction a import('./ChunkStreamer').ChunkStreamer drives to implement chunk streaming, and the seam a format adapter or a procedural generator implements. `getChunk` may return synchronously (e.g. slicing already-parsed source data) or a `Promise` (e.g. an expensive procedural-generation algorithm, plausibly off the main thread) - import('./ChunkStreamer').ChunkStreamer installs a synchronous result in the same tick it was requested, with zero pop-in. Returning `null` (synchronously or via a resolved `Promise`) means \"no data for this coordinate\" - e.g. outside a finite provider's authored extent, even though the layer itself may be unbounded.",
   "symbol": "ChunkSource",
   "kind": "interface",
   "subsystem": "tilemap",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Supplies chunk data for one import('./TileLayer').TileLayer on demand, keyed by signed chunk coordinates — the abstraction a import('./ChunkStreamer').ChunkStreamer drives to implement chunk streaming, and the seam a format adapter or a procedural generator implements.",
-        "`getChunk` may return synchronously (e.g. slicing already-parsed source data) or a `Promise` (e.g. an expensive procedural-generation algorithm, plausibly off the main thread) — import('./ChunkStreamer').ChunkStreamer installs a synchronous result in the same tick it was requested, with zero pop-in. Returning `null` (synchronously or via a resolved `Promise`) means \"no data for this coordinate\" — e.g. outside a finite provider's authored extent, even though the layer itself may be unbounded."
+        "Supplies chunk data for one import('./TileLayer').TileLayer on demand, keyed by signed chunk coordinates - the abstraction a import('./ChunkStreamer').ChunkStreamer drives to implement chunk streaming, and the seam a format adapter or a procedural generator implements.",
+        "`getChunk` may return synchronously (e.g. slicing already-parsed source data) or a `Promise` (e.g. an expensive procedural-generation algorithm, plausibly off the main thread) - import('./ChunkStreamer').ChunkStreamer installs a synchronous result in the same tick it was requested, with zero pop-in. Returning `null` (synchronously or via a resolved `Promise`) means \"no data for this coordinate\" - e.g. outside a finite provider's authored extent, even though the layer itself may be unbounded."
       ],
       "importLine": "import { ChunkSource } from '@codexo/exojs-tilemap'",
       "sourceLink": null

@@ -1,5 +1,5 @@
 /**
- * WebGPU device-pixel-ratio / design-resolution browser tests — opt-in,
+ * WebGPU device-pixel-ratio / design-resolution browser tests - opt-in,
  * capability-aware. Mirror of the WebGL2 DPR test: when the canvas backing
  * store is larger than the logical render-target size (`pixelRatio > 1`), the
  * backend scales the root viewport to the full backing store, so logical
@@ -135,7 +135,7 @@ describe('WebGPU device-pixel-ratio resolution', () => {
       // The logical left-half edge (x=32) must land at physical x=64.
       expectPixelNear(read(60, 64), [255, 255, 255, 255]); // just left of the edge → white
       expectPixelNear(read(68, 64), [0, 0, 0, 255]); // just right of the edge → black
-      // Content fills the full physical height — not stuck in a logical corner.
+      // Content fills the full physical height - not stuck in a logical corner.
       expectPixelNear(read(32, 4), [255, 255, 255, 255]); // top
       expectPixelNear(read(32, 124), [255, 255, 255, 255]); // bottom
       expectPixelNear(read(124, 64), [0, 0, 0, 255]); // far right → background

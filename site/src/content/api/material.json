@@ -1,6 +1,6 @@
 {
   "title": "Material",
-  "description": "Describes the look of a renderable — shader, uniforms, textures, blend mode, and sampling state — independent of its geometry. A `Material` can be shared across many drawables; renderers cache compiled programs/pipelines keyed on pipelineKey and reuse bindings keyed on bindKey. Subclasses fix the target drawable class. Call destroy when the material is no longer needed to release the GPU resources cached on every backend it was used on. Both keys are derived live from the current material state, so they stay stable across repeated reads and change exactly when the relevant state changes — even when uniforms, textures, blendMode, or sampler are mutated in place.",
+  "description": "Describes the look of a renderable - shader, uniforms, textures, blend mode, and sampling state - independent of its geometry. A `Material` can be shared across many drawables; renderers cache compiled programs/pipelines keyed on pipelineKey and reuse bindings keyed on bindKey. Subclasses fix the target drawable class. Call destroy when the material is no longer needed to release the GPU resources cached on every backend it was used on. Both keys are derived live from the current material state, so they stay stable across repeated reads and change exactly when the relevant state changes - even when uniforms, textures, blendMode, or sampler are mutated in place.",
   "symbol": "Material",
   "kind": "class",
   "subsystem": "rendering",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Describes the look of a renderable — shader, uniforms, textures, blend mode, and sampling state — independent of its geometry.",
+        "Describes the look of a renderable - shader, uniforms, textures, blend mode, and sampling state - independent of its geometry.",
         "A `Material` can be shared across many drawables; renderers cache compiled programs/pipelines keyed on pipelineKey and reuse bindings keyed on bindKey. Subclasses fix the target drawable class. Call destroy when the material is no longer needed to release the GPU resources cached on every backend it was used on.",
-        "Both keys are derived live from the current material state, so they stay stable across repeated reads and change exactly when the relevant state changes — even when uniforms, textures, blendMode, or sampler are mutated in place."
+        "Both keys are derived live from the current material state, so they stay stable across repeated reads and change exactly when the relevant state changes - even when uniforms, textures, blendMode, or sampler are mutated in place."
       ],
       "importLine": "import { Material } from '@codexo/exojs'",
       "sourceLink": null
@@ -113,7 +113,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used — renderers recompile on next draw — but typical usage is to drop the reference."
+          "description": "Release GPU resources cached against this material on every backend that has compiled it. Safe to call multiple times. After destroy, the material can still be re-used - renderers recompile on next draw - but typical usage is to drop the reference."
         },
         {
           "name": "setTexture",

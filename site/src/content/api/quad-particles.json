@@ -1,6 +1,6 @@
 {
   "title": "QuadParticles",
-  "description": "The default render mode: one textured, rotated, tinted quad per particle, drawn as a single instanced triangle-list. build fills the shared 40-byte per-instance layout described by instanceAttributes. UVs are baked per-particle so the system can carry an atlas of frames — `system.frames` declares the rectangles and each particle's `textureIndex` selects one, resolved to UVs once per particle per frame; no per-instance shader-side indexing needed. GPU-eligible: the system's compute pipeline emits exactly that layout into its instance buffer, so a system running on the GPU path can bind that buffer directly and skip build entirely.",
+  "description": "The default render mode: one textured, rotated, tinted quad per particle, drawn as a single instanced triangle-list. build fills the shared 40-byte per-instance layout described by instanceAttributes. UVs are baked per-particle so the system can carry an atlas of frames - `system.frames` declares the rectangles and each particle's `textureIndex` selects one, resolved to UVs once per particle per frame; no per-instance shader-side indexing needed. GPU-eligible: the system's compute pipeline emits exactly that layout into its instance buffer, so a system running on the GPU path can bind that buffer directly and skip build entirely.",
   "symbol": "QuadParticles",
   "kind": "class",
   "subsystem": "particles",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "The default render mode: one textured, rotated, tinted quad per particle, drawn as a single instanced triangle-list.",
-        "build fills the shared 40-byte per-instance layout described by instanceAttributes. UVs are baked per-particle so the system can carry an atlas of frames — `system.frames` declares the rectangles and each particle's `textureIndex` selects one, resolved to UVs once per particle per frame; no per-instance shader-side indexing needed.",
+        "build fills the shared 40-byte per-instance layout described by instanceAttributes. UVs are baked per-particle so the system can carry an atlas of frames - `system.frames` declares the rectangles and each particle's `textureIndex` selects one, resolved to UVs once per particle per frame; no per-instance shader-side indexing needed.",
         "GPU-eligible: the system's compute pipeline emits exactly that layout into its instance buffer, so a system running on the GPU path can bind that buffer directly and skip build entirely."
       ],
       "importLine": "import { QuadParticles } from '@codexo/exojs-particles'",
@@ -334,7 +334,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The quad's four corners are derived in the shader — from gl_VertexID on WebGL2 and from vertex_index on WebGPU — so this mode declares no per-vertex geometry and its layout carries the indices that address those four corner slots."
+          "description": "The quad's four corners are derived in the shader - from gl_VertexID on WebGL2 and from vertex_index on WebGPU - so this mode declares no per-vertex geometry and its layout carries the indices that address those four corner slots."
         },
         {
           "name": "gpuEligible",
@@ -355,7 +355,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Whether this mode can run while the system is in GPU compute mode. Mirrors UpdateModule.wgsl(): a mode that cannot forces the whole system onto the CPU path, silently and observably via ParticleSystem.gpuMode. A GPU-eligible mode's layout must match what the compute pipeline emits into gpuState.instanceBuffer — the shared 40-byte per-instance layout (instanceAttributes). QuadParticles and MeshParticles both declare exactly that layout and differ only in the shape they expand it into, which is why both are eligible without the compute shader knowing either."
+          "description": "Whether this mode can run while the system is in GPU compute mode. Mirrors UpdateModule.wgsl(): a mode that cannot forces the whole system onto the CPU path, silently and observably via ParticleSystem.gpuMode. A GPU-eligible mode's layout must match what the compute pipeline emits into gpuState.instanceBuffer - the shared 40-byte per-instance layout (instanceAttributes). QuadParticles and MeshParticles both declare exactly that layout and differ only in the shape they expand it into, which is why both are eligible without the compute shader knowing either."
         },
         {
           "name": "instanced",
@@ -405,7 +405,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fixed per-vertex geometry this mode instances, or null when it derives its vertices in the shader from the vertex index — which is what QuadParticles and RibbonParticles do. When set, it supplies the topology, index list and index count for the draw in place of dataLayout's, and the executors bind its vertexData as a second vertex buffer stepping per vertex beside the per-instance one. Only meaningful on an instanced mode: without instancing both buffers would step per vertex and no draw is expressible. Attribute names must not collide with dataLayout's, since both sets bind into the same shader. Mutating the geometry is picked up on the next draw through its version, so invalidate() after an in-place edit is enough to reach the GPU."
+          "description": "Fixed per-vertex geometry this mode instances, or null when it derives its vertices in the shader from the vertex index - which is what QuadParticles and RibbonParticles do. When set, it supplies the topology, index list and index count for the draw in place of dataLayout's, and the executors bind its vertexData as a second vertex buffer stepping per vertex beside the per-instance one. Only meaningful on an instanced mode: without instancing both buffers would step per vertex and no draw is expressible. Attribute names must not collide with dataLayout's, since both sets bind into the same shader. Mutating the geometry is picked up on the next draw through its version, so invalidate() after an in-place edit is enough to reach the GPU."
         },
         {
           "name": "count",

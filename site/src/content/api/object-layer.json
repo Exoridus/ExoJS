@@ -1,6 +1,6 @@
 {
   "title": "ObjectLayer",
-  "description": "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities). The presentation fields the source format attaches to a layer — visible, opacity, offsetX/offsetY, parallaxX/parallaxY, parallaxScale, and tintColor — are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them. Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged.",
+  "description": "A data-only layer of TileMapObjects - spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities). The presentation fields the source format attaches to a layer - visible, opacity, offsetX/offsetY, parallaxX/parallaxY, parallaxScale, and tintColor - are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them. Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where - these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged.",
   "symbol": "ObjectLayer",
   "kind": "class",
   "subsystem": "tilemap",
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A data-only layer of TileMapObjects — spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities).",
-        "The presentation fields the source format attaches to a layer — visible, opacity, offsetX/offsetY, parallaxX/parallaxY, parallaxScale, and tintColor — are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them.",
-        "Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where — these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged."
+        "A data-only layer of TileMapObjects - spawn points, trigger zones, collision regions, markers. Object layers are not rendered by the tile renderer; they are parsed and exposed for gameplay use (e.g. building physics colliders, placing entities).",
+        "The presentation fields the source format attaches to a layer - visible, opacity, offsetX/offsetY, parallaxX/parallaxY, parallaxScale, and tintColor - are carried through in full, with any enclosing group layers' contribution already folded in, so an object layer describes the same placement and shading its neighbouring tile and image layers do. Nothing here acts on them: code that draws these objects itself is what applies them.",
+        "Query with query (untyped, fully back-compatible) or, when an ObjectSchema type argument `S` is supplied, with the typed accessors byType, byKind, and where - these narrow `properties` to the developer-declared shape. The schema is **opt-in**: the default type parameter reproduces the original untyped behaviour, so `new ObjectLayer(options)` and `map.getObjectLayer('x')` are unchanged."
       ],
       "importLine": "import { ObjectLayer } from '@codexo/exojs-tilemap'",
       "sourceLink": null
@@ -602,7 +602,7 @@
             }
           ],
           "returnType": "TypedObject<S, T>[]",
-          "description": "Objects whose type equals type, with properties narrowed to the schema shape S[T]. Returns a fresh array (insertion order). The narrowing is a static convenience only — no runtime validation is performed (see ObjectSchema). On an unschematised layer this behaves like query({ type }) with TileProperties properties."
+          "description": "Objects whose type equals type, with properties narrowed to the schema shape S[T]. Returns a fresh array (insertion order). The narrowing is a static convenience only - no runtime validation is performed (see ObjectSchema). On an unschematised layer this behaves like query({ type }) with TileProperties properties."
         },
         {
           "name": "getObjectById",
@@ -1203,7 +1203,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Parallax scroll factor on the X axis — the same quantity import('./TileLayer').TileLayer.parallaxX carries, so an object layer authored beside a tile layer in the same parallax group reports the same factor. 1 = full camera speed, 0.5 = half speed, 0 = stationary. Nothing in this package applies it: object layers are data-only, so placing an object relative to the camera is the consumer's job (see ObjectLayer)."
+          "description": "Parallax scroll factor on the X axis - the same quantity import('./TileLayer').TileLayer.parallaxX carries, so an object layer authored beside a tile layer in the same parallax group reports the same factor. 1 = full camera speed, 0.5 = half speed, 0 = stationary. Nothing in this package applies it: object layers are data-only, so placing an object relative to the camera is the consumer's job (see ObjectLayer)."
         },
         {
           "name": "parallaxY",

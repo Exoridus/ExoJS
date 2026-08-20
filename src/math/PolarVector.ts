@@ -25,7 +25,7 @@ export class PolarVector {
   }
 
   /**
-   * Convert to a Cartesian {@link Vector}. Returns `Vector.temp` — do not
+   * Convert to a Cartesian {@link Vector}. Returns `Vector.temp` - do not
    * store the reference across calls.
    */
   public toVector(): Vector {

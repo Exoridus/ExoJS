@@ -2,7 +2,7 @@
  * Verifies that all official ExoJS lockstep packages share the same version.
  *
  * The lockstep version contract: every package in `LOCKSTEP_PACKAGES`
- * (`scripts/release/lockstep-packages.ts`) — Core plus each opt-in extension —
+ * (`scripts/release/lockstep-packages.ts`) - Core plus each opt-in extension -
  * must be on the same X.Y.Z version per release, and each extension's
  * `peerDependencies["@codexo/exojs"]` must be `<major>.<minor>.x`.
  */

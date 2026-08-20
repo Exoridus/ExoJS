@@ -19,12 +19,12 @@ class CrossFadeSession implements SceneTransitionSession {
   private _elapsedMs = 0;
   private _done = false;
 
-  /** Reusable sprite for the live "current" surface — the outgoing scene pre-commit, the incoming scene post-commit. */
+  /** Reusable sprite for the live "current" surface - the outgoing scene pre-commit, the incoming scene post-commit. */
   private readonly _currentSprite = new Sprite(null);
   /**
    * Reusable sprite for the frozen outgoing snapshot, held separately from
    * {@link _currentSprite} because the post-commit blend draws both in the
-   * same frame — reusing one instance for both would have the second draw
+   * same frame - reusing one instance for both would have the second draw
    * overwrite the first before it renders.
    */
   private readonly _snapshotSprite = new Sprite(null);
@@ -53,7 +53,7 @@ class CrossFadeSession implements SceneTransitionSession {
 
   public render(context: RenderingContext, frame: SceneTransitionFrame): void {
     if (!this._environment.committed) {
-      // Still the outgoing scene either way — draw it once, plainly.
+      // Still the outgoing scene either way - draw it once, plainly.
       if (frame.current !== null) {
         this._drawFull(context, this._currentSprite, frame.current, 1);
       }
@@ -76,11 +76,11 @@ class CrossFadeSession implements SceneTransitionSession {
   public destroy(): void {
     // Owns `_currentSprite`/`_snapshotSprite`, but they only reference
     // pooled textures (Director-owned) and are never attached to a scene
-    // graph — dropping the session's own reference is enough for GC to
+    // graph - dropping the session's own reference is enough for GC to
     // reclaim them, no explicit Sprite.destroy() needed here.
   }
 
-  /** Draw `texture` full-frame (no offset — a crossfade only blends opacity) via `sprite` at `alpha`. */
+  /** Draw `texture` full-frame (no offset - a crossfade only blends opacity) via `sprite` at `alpha`. */
   private _drawFull(context: RenderingContext, sprite: Sprite, texture: NonNullable<SceneTransitionFrame['current']>, alpha: number): void {
     sprite.texture = texture;
     sprite.x = 0;
@@ -94,7 +94,7 @@ class CrossFadeSession implements SceneTransitionSession {
 /**
  * Continuous blend between the outgoing scene (frozen as a snapshot at
  * session start) and the incoming scene (rendered live to a pooled texture),
- * with no "exit half"/"enter half" seam — `placement: 'scene'`,
+ * with no "exit half"/"enter half" seam - `placement: 'scene'`,
  * `outgoingFrame: 'snapshot'`, `currentFrame: 'texture'`. A full
  * `SceneTransition`, not phase-split.
  * @stable
@@ -114,7 +114,7 @@ export class CrossFadeSceneTransition extends SceneTransition {
   }
 
   protected override createSession(environment: SceneTransitionEnvironment): SceneTransitionSession {
-    // No separate "exit hold" — a crossfade has nothing to wait on visually
+    // No separate "exit hold" - a crossfade has nothing to wait on visually
     // before starting to prepare the incoming scene.
     environment.commit();
 

@@ -127,7 +127,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Rotation in degrees, clockwise, about (x, y), normalised to [0, 360). Always 0 for polygons and polylines — their rotation is baked into points."
+          "description": "Rotation in degrees, clockwise, about (x, y), normalised to [0, 360). Always 0 for polygons and polylines - their rotation is baked into points."
         },
         {
           "name": "source",

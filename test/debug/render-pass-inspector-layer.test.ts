@@ -11,7 +11,7 @@ import type { Text } from '#rendering/text/Text';
 
 class TestPass extends RenderPass {
   public override execute(_context: RenderingContext): void {
-    // no-op — the inspector never runs the pass, only lists it.
+    // no-op - the inspector never runs the pass, only lists it.
   }
 }
 
@@ -232,7 +232,7 @@ describe('RenderPassInspectorLayer', () => {
   });
 
   test('a leaf node with no children property is not recursed into', () => {
-    // Plain leaf (no `children` key at all, as opposed to an empty array) —
+    // Plain leaf (no `children` key at all, as opposed to an empty array) -
     // exercises the Array.isArray(container.children) false branch in _collect.
     const leaf = { visible: true, filters: [], mask: null, cacheAsTexture: false, getBounds: vi.fn(), constructor: { name: 'Leaf' } };
     const layer = new RenderPassInspectorLayer(makeApp(leaf as unknown as FakeNode));
@@ -341,7 +341,7 @@ describe('RenderPassInspectorLayer — pipeline inspection', () => {
 describe('RenderPassInspectorLayer — HUD overflow', () => {
   test('entries beyond the panel line budget collapse into a "+N more" summary line', () => {
     // One entry (1 header line) plus 30 filters (30 lines) = 31 lines, well
-    // past the panel's fixed line budget — this must trigger the overflow path.
+    // past the panel's fixed line budget - this must trigger the overflow path.
     const manyFilters = Array.from({ length: 30 }, (_, i) => makeFilter(`Filter${i}`));
     const root = makeNode({ filters: manyFilters });
     const layer = new RenderPassInspectorLayer(makeApp(root));

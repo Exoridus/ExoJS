@@ -59,12 +59,12 @@ import { canvasSourceToDataUrl, isWebKitUserAgent } from './utils';
  *
  * | State | Meaning |
  * |---|---|
- * | `Stopped` | Constructed, or halted again — no frame loop, still reusable |
+ * | `Stopped` | Constructed, or halted again - no frame loop, still reusable |
  * | `Loading` | {@link Application.start} is running: backend, scene navigation |
  * | `Running` | Frame loop live |
  * | `Halting` | {@link Application.stop} or {@link Application.destroy} is taking the loop down |
  * | `Destroying` | {@link Application.destroy}'s asynchronous teardown is in flight |
- * | `Destroyed` | Teardown finished — the instance is permanently unusable |
+ * | `Destroyed` | Teardown finished - the instance is permanently unusable |
  *
  * `Destroying` and `Destroyed` are distinct because teardown is asynchronous:
  * `destroy()` returns a Promise, and everything between that call and its
@@ -101,7 +101,7 @@ export type CanvasAlphaMode = 'opaque' | 'premultiplied';
 
 export interface CanvasApplicationOptions {
   /**
-   * Existing canvas element to use. If omitted, Application creates one — and
+   * Existing canvas element to use. If omitted, Application creates one - and
    * a canvas it created is also one it removes from the document again in
    * {@link Application.destroy}. A canvas passed in here stays yours: it is
    * left in the DOM untouched when the application goes down.
@@ -115,7 +115,7 @@ export interface CanvasApplicationOptions {
    * Device/render pixel ratio applied to the backing buffer. Default: the
    * host `devicePixelRatio` clamped to `2` (crisp on Retina/HiDPI out of the
    * box, capped so DPR-3 phones don't pay a 9× fill-rate cost). Pass an
-   * explicit value to override — e.g. `window.devicePixelRatio` for full
+   * explicit value to override - e.g. `window.devicePixelRatio` for full
    * native density, or `1` to force logical-pixel rendering.
    */
   pixelRatio?: number;
@@ -125,7 +125,7 @@ export interface CanvasApplicationOptions {
   imageRendering?: 'auto' | 'pixelated' | 'crisp-edges';
   /**
    * Element (or CSS selector) to append the canvas to on construction. If
-   * omitted, the canvas is created but not mounted — append it yourself.
+   * omitted, the canvas is created but not mounted - append it yourself.
    */
   mount?: HTMLElement | string;
   /**
@@ -136,7 +136,7 @@ export interface CanvasApplicationOptions {
    *   fill it; `width`/`height` are the initial size.
    * - `'fit'`: render at `width`×`height` and CSS-scale to fit the parent,
    *   preserving aspect ratio (letterboxed).
-   * - `'shrink'`: like `'fit'` but never upscale beyond `width`×`height` —
+   * - `'shrink'`: like `'fit'` but never upscale beyond `width`×`height` -
    *   shrinks on smaller screens, stays native on larger ones.
    * - `'letterbox'`: track the parent's size, render the backing store at the
    *   parent size × `pixelRatio` (always crisp, no CSS upscale-blur), and keep
@@ -192,14 +192,14 @@ export interface InputApplicationOptions {
   dragThreshold?: number;
   /**
    * Let the browser show its own context menu over the canvas. Default
-   * `false` — a right-click is normally a game input, not a request for the
+   * `false` - a right-click is normally a game input, not a request for the
    * browser's menu. Independent of the engine's own `contextmenu` event,
    * which is routed through the scene graph either way.
    */
   allowNativeContextMenu?: boolean;
   /**
    * Let the browser start a text selection from a drag on the canvas. Default
-   * `false` — a drag is normally a game gesture, and a stray selection
+   * `false` - a drag is normally a game gesture, and a stray selection
    * highlight over the canvas is almost never wanted.
    */
   allowTextSelection?: boolean;
@@ -214,13 +214,13 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
   clearColor?: Color;
   /**
    * Clear the canvas to {@link ApplicationOptions.clearColor} at the start of
-   * every frame, before the scene draws. Default `true` — a scene's `draw()`
+   * every frame, before the scene draws. Default `true` - a scene's `draw()`
    * therefore paints onto a fresh frame and needs no clear of its own.
    *
    * Set `false` for pipelines that own the whole frame themselves: feedback /
    * trail effects that deliberately keep the previous frame, or a custom
    * renderer that issues its own clear as part of its first pass. Nothing else
-   * changes — {@link Application.clearColor} is still the colour a manual
+   * changes - {@link Application.clearColor} is still the colour a manual
    * `context.clear(app.clearColor)` would use.
    */
   autoClear?: boolean;
@@ -230,7 +230,7 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
   rendering?: RenderingApplicationOptions;
   input?: InputApplicationOptions;
   /**
-   * Host seam the application runs on — surface focus and geometry, cursor,
+   * Host seam the application runs on - surface focus and geometry, cursor,
    * touch-action, pointer capture, gamepad polling, document visibility, frame
    * scheduling, and input-event delivery. Defaults to a {@link BrowserPlatform}
    * bound to the application's canvas.
@@ -238,7 +238,7 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    * Pass your own to host the engine somewhere other than a plain DOM canvas,
    * or to drive input and the frame loop from a test without monkey-patching
    * globals. An injected adapter is *not* destroyed by
-   * {@link Application.destroy} — it stays yours to dispose.
+   * {@link Application.destroy} - it stays yours to dispose.
    */
   platform?: PlatformAdapter;
   /** Seed for the per-Application {@link Application.random} RNG. Omit for a non-deterministic seed. */
@@ -256,13 +256,13 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    */
   fixedTimeStep?: number;
   /**
-   * Extension selection — the only way an Application is equipped.
+   * Extension selection - the only way an Application is equipped.
    *
-   * `undefined` or `[]` → Core only. `[a, b, …]` → Core plus exactly these.
+   * `undefined` or `[]` → Core only. `[a, b, ...]` → Core plus exactly these.
    *
    * There is no global registry to fall back on: what an application can do is
    * decided here, at its construction, and nowhere else. That is what lets two
-   * Applications in one process hold different extension sets — an editor next
+   * Applications in one process hold different extension sets - an editor next
    * to its runtime preview, two canvases with different renderers, a test that
    * must not see what a neighbouring test installed.
    *
@@ -284,8 +284,8 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    * default transition, consulted by {@link SceneDirector.change}/
    * {@link SceneDirector.restore} whenever navigation targets this
    * constructor without its own call-site `transition` option
-   * — see {@link SceneRegistration}. Required for any {@link Application.start} /
-   * {@link SceneDirector.change} call that targets a constructor —
+   * - see {@link SceneRegistration}. Required for any {@link Application.start} /
+   * {@link SceneDirector.change} call that targets a constructor -
    * unregistered targets reject in development builds. Validated once at
    * construction: every value must resolve to a {@link Scene} subclass
    * constructor (checked without instantiating it), and no constructor may
@@ -309,14 +309,14 @@ export interface AutoBackendConfig {
 export type BackendConfig = AutoBackendConfig | WebGl2BackendConfig | WebGpuBackendConfig;
 
 /**
- * One entry of the bounded {@link Application.recentErrors} ring buffer —
+ * One entry of the bounded {@link Application.recentErrors} ring buffer -
  * a JSON-friendly snapshot of an engine error (feeds future debug dumps).
  */
 export interface RecentErrorEntry {
   /** `Date.now()` at the moment the error was recorded. */
   readonly time: number;
   readonly message: string;
-  /** Machine-readable failure class — present for {@link RenderError}s. */
+  /** Machine-readable failure class - present for {@link RenderError}s. */
   readonly code?: RenderErrorCode;
   readonly stack?: string;
 }
@@ -324,7 +324,7 @@ export interface RecentErrorEntry {
 const maxDeltaMs = 100;
 /** Default fixed-timestep size in milliseconds (60 Hz). */
 const defaultFixedStepMs = 1000 / 60;
-/** Max fixed steps run in one frame — the spiral-of-death guard. */
+/** Max fixed steps run in one frame - the spiral-of-death guard. */
 const maxFixedSteps = 5;
 /** Consecutive failing frames tolerated before the frame guard halts the loop. */
 const maxConsecutiveFrameErrors = 3;
@@ -335,12 +335,12 @@ const maxRecentErrors = 20;
  * gives up on it and releases the rest of the engine anyway.
  *
  * A scene whose `unload()` never settles would otherwise hold the whole
- * teardown open forever — the backend, the loader and the audio context stay
+ * teardown open forever - the backend, the loader and the audio context stay
  * alive with it, and the Promise `destroy()` returns never fulfils. Waiting
  * without limit turns one misbehaving scene into a leak of everything;
  * proceeding turns it into a loud, bounded failure. Scene teardown that
  * outlives the grace period keeps running, and may touch subsystems that are
- * destroyed by then — which is exactly why the timeout is reported through
+ * destroyed by then - which is exactly why the timeout is reported through
  * {@link Application.onError} rather than swallowed.
  */
 const sceneTeardownGraceMs = 5000;
@@ -366,7 +366,7 @@ type LetterboxParentProperty = (typeof letterboxParentProperties)[number];
 
 /**
  * A parent element together with the exact inline values it had for every
- * property {@link Application} was about to overwrite — `''` for a property
+ * property {@link Application} was about to overwrite - `''` for a property
  * with no inline value at all, which is also what removes it again on restore.
  */
 interface ParentStyleSnapshot {
@@ -471,8 +471,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly canvas: HTMLCanvasElement;
   /**
    * The host seam this application runs on. Every part of the engine that has
-   * to reach outside its own state — input events, surface focus, cursor,
-   * pointer capture, gamepads, document visibility, frame scheduling — goes
+   * to reach outside its own state - input events, surface focus, cursor,
+   * pointer capture, gamepads, document visibility, frame scheduling - goes
    * through this one adapter. See {@link ApplicationOptions.platform}.
    */
   public readonly platform: PlatformAdapter;
@@ -485,12 +485,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly tweens: TweenManager = new TweenManager();
   /**
    * Drives frame playback for every {@link AnimatedSprite} that is playing and
-   * attached to this application's scene tree. Registration is automatic — see
+   * attached to this application's scene tree. Registration is automatic - see
    * {@link AnimationManager}.
    */
   public readonly animations: AnimationManager = new AnimationManager();
   /**
-   * App-level system registry for user/extension systems — Application
+   * App-level system registry for user/extension systems - Application
    * lifetime, independent of the active scene. The core managers (input,
    * interaction, audio, tweens, animations, rendering) are driven directly by the
    * internal per-frame prepare stage and never occupy this registry, so any
@@ -517,10 +517,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Dispatched for every engine error: an exception thrown by any part of the
    * per-frame body (systems tick, fixed steps, scene update/draw,
-   * {@link Application.onFrame} subscribers, backend flush — including
+   * {@link Application.onFrame} subscribers, backend flush - including
    * synchronous WebGL2 shader compile/link failures, which surface as
    * {@link RenderError}s), an asynchronous GPU error reported by the backend
-   * ({@link RenderBackend.onRenderError} — WGSL compilation errors, WebGPU
+   * ({@link RenderBackend.onRenderError} - WGSL compilation errors, WebGPU
    * uncaptured validation/OOM/internal errors, and WebGPU device-recovery
    * exhaustion), or a scene-unload failure in {@link Application.stop}.
    *
@@ -543,7 +543,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * What every {@link Extension.install} run against this application handed
-   * back, in installation order — run in reverse and emptied by
+   * back, in installation order - run in reverse and emptied by
    * {@link disposeExtensions}. Field-initialised (like {@link _coreSystems})
    * so the constructor rollback, which can fire mid-installation, always finds
    * a real list holding exactly the extensions that did install.
@@ -555,16 +555,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _activeClock: Clock = new Clock();
   private readonly _frameClock: Clock = new Clock();
   private readonly _fixed: FixedTimestep;
-  // The fixed-step duration — a true constant for the Application's whole
+  // The fixed-step duration - a true constant for the Application's whole
   // lifetime (set from `options.fixedTimeStep` in the constructor and never
   // re-`set()` afterward, unlike `_frameDelta` below). It is handed to user
   // code every fixed step via `systems._fixedUpdate`/`scenes.fixedUpdate`/
-  // `onFixedFrame.dispatch`, so — same bug class as the old `Time.temp` — a
+  // `onFixedFrame.dispatch`, so - same bug class as the old `Time.temp` - a
   // mutation from user code would corrupt every subsequent fixed step for
   // the rest of the app's run, not just the current one. Frozen at
   // construction (see `freezeTime`) so that throws instead.
   private readonly _fixedTime: Time;
-  // Scratch instance for the per-frame variable-step delta — mutated in
+  // Scratch instance for the per-frame variable-step delta - mutated in
   // place every frame instead of allocating a Time. Owned by the frame loop
   // (not exposed publicly, unlike the old `Time.temp`), since it hands out
   // the exact object user code sees as `frameDelta`.
@@ -576,7 +576,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * The startup run that is currently in flight, or `null` while none is.
    * Held so a second {@link Application.start} call made during the `Loading`
    * window can await the same run instead of returning a resolved promise
-   * while startup — including its initial scene navigation — is still going.
+   * while startup - including its initial scene navigation - is still going.
    */
   private _startPromise: Promise<this> | null = null;
   private _frameLoopActive = false;
@@ -597,16 +597,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _snapshot: ExtensionSnapshot;
   private _capabilities: Capabilities | null = null;
   private _documentVisible = true;
-  /** Resolved {@link ApplicationOptions.autoClear} — read once per frame. */
+  /** Resolved {@link ApplicationOptions.autoClear} - read once per frame. */
   private _autoClear = true;
   private _cursor = 'default';
   private _consecutiveFrameErrors = 0;
   private readonly _recentErrors: RecentErrorEntry[] = [];
-  /** Whether {@link Application.platform} was created here — an injected one is not ours to destroy. */
+  /** Whether {@link Application.platform} was created here - an injected one is not ours to destroy. */
   private readonly _ownsPlatform: boolean;
   /**
    * Whether {@link Application.canvas} was created here. A canvas the caller
-   * passed in via `canvas.element` belongs to their page — it stays in the DOM
+   * passed in via `canvas.element` belongs to their page - it stays in the DOM
    * when this application goes down; one the engine created does not.
    */
   private readonly _ownsCanvas: boolean;
@@ -679,7 +679,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // can own something: `'fill'` and `'letterbox'` attach a ResizeObserver
       // to the parent element, and a DOM node holding an observer whose
       // callback closes over a dead Application is a live leak, not an inert
-      // one — the next parent layout change would drive `resize()` into a
+      // one - the next parent layout change would drive `resize()` into a
       // destroyed backend.
       this._mountCanvas(canvasOptions.mount);
       this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
@@ -690,7 +690,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._ownsPlatform = appSettings.platform === undefined;
       this.platform = appSettings.platform ?? new BrowserPlatform(this.canvas);
 
-      // Only an adapter created here is ours to release — an injected one stays
+      // Only an adapter created here is ours to release - an injected one stays
       // the caller's on the failure path, exactly as in `destroy()`.
       if (this._ownsPlatform) {
         constructed.track(this.platform);
@@ -742,8 +742,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       this._backendType = this.resolveInitialBackendType();
       // `createBackend` rolls back a backend whose renderer bindings throw on
-      // its own — it also runs from the post-construction backend fallback,
-      // where there is no construction scope — and rethrows without assigning,
+      // its own - it also runs from the post-construction backend fallback,
+      // where there is no construction scope - and rethrows without assigning,
       // so that failure never reaches the scope as a tracked item.
       this._backend = constructed.track(this.createBackend(this._backendType, this._snapshot));
       this._rendering = constructed.track(new RenderingContext(this._backend));
@@ -776,7 +776,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // The engine's own per-frame work, registered as ordinary systems in the
       // `preUpdate` phase rather than as a separate hard-coded stage. They occupy
       // the negative `order` range, so an application system added without an
-      // `order` runs after all of them — and `before`/`after` can name them.
+      // `order` runs after all of them - and `before`/`after` can name them.
       this.systems._addCoreSystem(this.input, { order: SystemOrder.CoreInput });
       this.systems._addCoreSystem(this.interaction, { order: SystemOrder.CoreInteraction });
       this.systems._addCoreSystem(this._audio, { order: SystemOrder.CoreAudio });
@@ -787,14 +787,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._coreSystems = [this.input, this.interaction, this._audio, this.tweens, this.animations, this._rendering];
 
       // The last construction step, so `install(app)` sees a complete
-      // application — every manager and every materialised binding already in
+      // application - every manager and every materialised binding already in
       // place, so an installer may add its own systems and capture references
       // to the core managers. Its mirror image is the first step of teardown,
       // in both `_disposeManagedResources` and the rollback below.
       installExtensions(this, this._snapshot.extensions, this._extensionDisposers);
     } catch (error) {
       // The caller gets no instance, so this is the only chance to release
-      // what was built. The original failure is what propagates — rollback
+      // what was built. The original failure is what propagates - rollback
       // never rewrites it.
       this._rollbackConstruction(constructed);
 
@@ -805,8 +805,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Release every subsystem a failed constructor had already built, and undo
    * every {@link Extension.install} that had already run. Without it, a throw
-   * from any construction step — most realistically an extension's own
-   * `install()`, the last one — strands the platform adapter, loader, backend, rendering context,
+   * from any construction step - most realistically an extension's own
+   * `install()`, the last one - strands the platform adapter, loader, backend, rendering context,
    * input, interaction and scene director with no owner: the caller never
    * receives an `Application` and so can never call
    * {@link Application.destroy}.
@@ -814,23 +814,23 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * `constructed` covers the members that may or may not exist yet, in reverse
    * construction order. The field-initialised members are handled directly:
    * they run before the constructor body and take no arguments, so they are
-   * either fully built or the constructor never started — there is nothing
+   * either fully built or the constructor never started - there is nothing
    * partial for a scope to track. Two more cannot be scope entries at all,
    * because neither is a `Destroyable`, and both are held from outside:
    * {@link Application._resizeObserver} is held by the parent DOM node it
    * observes, and {@link Application._visibilitySubscription} is a plain
-   * function held by the platform adapter — which, when *injected*, is not
+   * function held by the platform adapter - which, when *injected*, is not
    * ours to destroy and would keep that subscription, and through it this
    * dead application, alive.
    *
    * One entry is only synchronous on the surface: {@link SceneDirector}'s
-   * teardown is asynchronous, and `destroy()` fire-and-forgets it — a
+   * teardown is asynchronous, and `destroy()` fire-and-forgets it - a
    * constructor cannot await. In the common case that is sound here, because
    * a director reached through this path has not navigated: no active scope,
    * no retained scopes, so its teardown reduces to destroying its own
    * Signals. That is not an absolute guarantee, though: an extension's
-   * `install(app)` — the last construction step, invoked with the live `app`
-   * — could itself call `app.scenes.preload()` before a later extension's
+   * `install(app)` - the last construction step, invoked with the live `app`
+   * - could itself call `app.scenes.preload()` before a later extension's
    * `install` throws, leaving a preloaded scope (and its in-flight `load()`)
    * for this fire-and-forget teardown to race. It is *not* a substitute
    * for {@link Application._disposeManagedResources}, which awaits
@@ -840,7 +840,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * Every step is guarded on its own, and a failing one never cancels the
    * rest. That is not defensive padding: the situation that brings us here is
    * a misbehaving extension, so a throwing `destroy()` on an extension system
-   * is precisely the case to expect — and under a single `try` it would abort
+   * is precisely the case to expect - and under a single `try` it would abort
    * the rollback before `constructed.destroy()` ever ran, reinstating the very
    * leak this method exists to close. It is the same contract
    * {@link DestroyScope.destroy} keeps for its own items: attempt all of
@@ -865,7 +865,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       }
     };
 
-    // Neither of these is a `Destroyable`, so neither can be a scope entry —
+    // Neither of these is a `Destroyable`, so neither can be a scope entry -
     // and both outlive us if left: the observer is held by a live DOM node,
     // and an injected platform adapter keeps the visibility subscription.
     attempt(() => {
@@ -884,7 +884,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._releaseDom();
     });
 
-    // Extensions that did install go first — installation is the last
+    // Extensions that did install go first - installation is the last
     // construction step, so undoing it is the first thing rollback owes them.
     // Not wrapped in `attempt`: `disposeExtensions` guards every disposer on
     // its own and never rethrows.
@@ -894,7 +894,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // the last thing constructed before installation, and their own
     // `destroy()` may read the core managers. Those managers are registered
     // here too but are owned by the Application, so unregister them and let
-    // `constructed` destroy each exactly once — same reason
+    // `constructed` destroy each exactly once - same reason
     // `_disposeManagedResources` does it.
     attempt(() => {
       for (const system of [...this._coreSystems].reverse()) {
@@ -934,7 +934,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Where this application currently sits in its lifecycle. Same vocabulary
-   * as {@link Scene.state} — see {@link ApplicationState} for the table.
+   * as {@link Scene.state} - see {@link ApplicationState} for the table.
    */
   public get state(): ApplicationState {
     return this._state;
@@ -966,7 +966,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Interpolation factor `[0, 1)` — the leftover sub-step fraction after this
+   * Interpolation factor `[0, 1)` - the leftover sub-step fraction after this
    * frame's fixed steps. Lerp rendered state between its previous and current
    * fixed-step values by this to smooth motion when the fixed rate is below the
    * frame rate.
@@ -1033,9 +1033,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * The active {@link CanvasSizingMode}. Assigning a new mode re-applies the
    * sizing strategy live: the previous mode's {@link ResizeObserver} (if any)
-   * is disconnected, the CSS that mode owned is undone — including the parent
+   * is disconnected, the CSS that mode owned is undone - including the parent
    * element styling `'letterbox'` applies, which is restored to whatever it was
-   * before — and only then is the new mode's CSS / observer installed, so no
+   * before - and only then is the new mode's CSS / observer installed, so no
    * remnant of the outgoing mode survives the switch. Assigning the current
    * value is a no-op.
    */
@@ -1076,7 +1076,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Logical (design-space) canvas width — the value passed as `canvas.width`
+   * Logical (design-space) canvas width - the value passed as `canvas.width`
    * at construction / {@link resize}, independent of {@link pixelRatio}. Use
    * this for layout math (e.g. `app.width / 2` to center) instead of
    * `app.canvas.width`, which is the physical backing-store size
@@ -1100,7 +1100,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * sizing mode except `'letterbox'`, where the backing store instead tracks
    * the parent's fitted CSS content rect (`contentWidthCss × pixelRatio`,
    * see {@link computeLetterboxLayout}) while {@link Application.width} stays
-   * fixed at the design size — the GL viewport is recomputed separately to
+   * fixed at the design size - the GL viewport is recomputed separately to
    * map the design space onto that backing store.
    */
   public get pixelRatio(): number {
@@ -1108,9 +1108,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Convert a logical/design-space pixel coordinate — the space of
+   * Convert a logical/design-space pixel coordinate - the space of
    * {@link Pointer.x}/{@link Pointer.y} and node positions, e.g. `0..app.width`
-   * — to a world position using the active camera. At the default centered
+   * - to a world position using the active camera. At the default centered
    * camera this is the identity; with a panned/zoomed/rotated camera it undoes
    * the transform. Equivalent to `app.rendering.view.screenToWorld(x, y)`.
    */
@@ -1139,15 +1139,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Initialize the render backend, await capability detection, and start the
    * per-frame loop without activating a scene. Use `start(target, data?)` to
-   * start directly into a registered scene. Idempotent — if the application
+   * start directly into a registered scene. Idempotent - if the application
    * is already running the call is a no-op. On error the state returns to
    * `Stopped` and the error propagates.
    */
   public async start(): Promise<this>;
   /**
    * Initialize the render backend, await capability detection, activate
-   * `target` — a registered string key, or a constructor registered in
-   * `ApplicationOptions.scenes` — and start the per-frame loop. Idempotent —
+   * `target` - a registered string key, or a constructor registered in
+   * `ApplicationOptions.scenes` - and start the per-frame loop. Idempotent -
    * if the application is already running the call is a no-op. On error the
    * state returns to `Stopped` and the error propagates.
    */
@@ -1155,7 +1155,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public async start<C extends NavigableSceneConstructor<Registry>>(target: C, ...args: ChangeSceneArgs<InferSceneData<C>>): Promise<this>;
   /**
    * Concurrency: a call made while an earlier `start()` is still in flight
-   * (state `Loading`) joins that run — it resolves when startup actually
+   * (state `Loading`) joins that run - it resolves when startup actually
    * completes, or rejects with its failure, and its own `target`/`args` are
    * ignored rather than driving a second, overlapping scene navigation
    * ({@link SceneDirector.change} rejects on overlapping navigation). Check
@@ -1179,7 +1179,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._state = ApplicationState.Loading;
 
     // Published before the first await so a `start()` call made from the same
-    // synchronous tick — or any point in the `Loading` window — finds it. The
+    // synchronous tick - or any point in the `Loading` window - finds it. The
     // reset runs in the chained `finally`, i.e. once the run has fully settled
     // (success or failure), leaving a failed application restartable.
     const startPromise = this._runStartup(target, args).finally(() => {
@@ -1193,7 +1193,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /** The actual startup work behind {@link Application.start}, run at most once at a time. */
   private async _runStartup(target: AnySceneConstructor | string | undefined, args: readonly unknown[]): Promise<this> {
-    // Kick off capability detection in parallel with renderer init — both
+    // Kick off capability detection in parallel with renderer init - both
     // are mostly-async startup work, no point serializing them.
     const capabilitiesPromise = Capabilities.ready;
 
@@ -1204,20 +1204,20 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         hello({ backend: this._backendType });
       }
 
-      // The frame loop must be live BEFORE the initial navigation runs —
+      // The frame loop must be live BEFORE the initial navigation runs -
       // a frame-driven SceneTransitionSession needs update()/render()
       // calls to progress, and update()'s gate no longer waits for
       // `_state === Running`. Started as early as
       // possible (ahead of the capabilities await, not just the scene
       // nav) so nothing downstream can observe the loop live and
-      // `_state` already `Running` in the same synchronous tick — a real
+      // `_state` already `Running` in the same synchronous tick - a real
       // RAF callback never fires synchronously anyway, so capabilities
       // (documented as available only once `start()` resolves) is always
       // settled well before any frame body actually runs.
       this._startFrameLoop();
 
       // Guarantee at least one full microtask turn between the loop going
-      // live and `_state` flipping to `Running` — otherwise, when
+      // live and `_state` flipping to `Running` - otherwise, when
       // `capabilitiesPromise` is already settled (e.g. a later `start()`
       // call on a second Application reusing the memoized
       // `Capabilities.ready`), the two awaits below could resolve in the
@@ -1230,7 +1230,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       if (target !== undefined) {
         // `target`'s implementation-level type is a union (registered key
-        // OR constructor) — TS overload resolution does not distribute
+        // OR constructor) - TS overload resolution does not distribute
         // over a union-typed argument, so the cast picks the constructor
         // overload purely for compile-time dispatch; SceneDirector.change()'s
         // own single implementation signature already accepts both shapes
@@ -1253,10 +1253,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Flip the internal "loop is live" flag, schedule the first frame, and
-   * reset every clock the frame body depends on — all in one place so every
+   * reset every clock the frame body depends on - all in one place so every
    * call site that can start the loop does so identically. `_state` is left
    * untouched (still `Loading` at the point {@link Application.start} calls
-   * this) — {@link Application.update}'s gate reads `_frameLoopActive`, a
+   * this) - {@link Application.update}'s gate reads `_frameLoopActive`, a
    * strict superset of `_state === Running`.
    */
   private _startFrameLoop(): void {
@@ -1273,13 +1273,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * from every place the loop can stop (fatal frame error, {@link
    * Application.stop}, {@link Application.destroy} during the `Loading`
    * window) so `_frameLoopActive` is the single source of truth everywhere,
-   * not only where the loop starts. Idempotent — a
+   * not only where the loop starts. Idempotent - a
    * second call while the loop is already stopped is a no-op. Always aborts
    * whatever scene navigation is in flight via
-   * {@link SceneDirector._abortInFlightNavigation} — a transition session
+   * {@link SceneDirector._abortInFlightNavigation} - a transition session
    * cannot progress without frame callbacks, so it must be settled here
    * rather than left to hang, regardless of caller. Deliberately does NOT
-   * unload the active scene itself — a fatal frame error must NOT unload it
+   * unload the active scene itself - a fatal frame error must NOT unload it
    * (see {@link Application._handleFrameError}'s doc comment); that decision
    * belongs to the caller, and {@link Application.stop} makes it by calling
    * {@link SceneDirector._stopAndClearActiveScene}.
@@ -1304,30 +1304,30 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * One iteration of the per-frame loop. Invoked by `requestAnimationFrame`.
    * When the document is hidden and `pauseOnHidden` is `true`, the frame
-   * clock is reset and the body is skipped — preventing a large delta spike
+   * clock is reset and the body is skipped - preventing a large delta spike
    * on the first visible frame after resume.
    *
    * Each normal frame runs, in order:
    *
-   * 1. **Pre-update** — `app.systems` pre-update phase, then the scene's
+   * 1. **Pre-update** - `app.systems` pre-update phase, then the scene's
    *    `preUpdate()` hook and its own systems' pre-update phase. The engine's
    *    input, interaction, audio, tween, animation and rendering managers are
    *    ordinary systems in this phase, pinned to the head of it by their
    *    {@link SystemOrder} `Core*` values, so this frame's input snapshot is
    *    current before anything simulates. An application system registered
    *    without an explicit `order` runs after all of them.
-   * 2. **Fixed steps** (zero or more) — `app.systems` fixed-update phase,
+   * 2. **Fixed steps** (zero or more) - `app.systems` fixed-update phase,
    *    `scenes.fixedUpdate()` + the scene's systems fixed-update phase,
    *    {@link Application.onFixedFrame}.
-   * 3. **Update** — `app.systems` update phase, then `scenes.update()` + the
+   * 3. **Update** - `app.systems` update phase, then `scenes.update()` + the
    *    scene's systems update phase.
-   * 4. **Draw** — the canvas is cleared to {@link Application.clearColor}
+   * 4. **Draw** - the canvas is cleared to {@link Application.clearColor}
    *    (unless `autoClear: false`), then the scene draws (plus its systems and UI layer); an active
    *    transition session's own visual output composites either below or
    *    above the `app.systems` draw phase depending on the session's
    *    `placement` (`'scene'`: below app overlays; `'screen'`: above them,
    *    matching the pre-transition-runtime default).
-   * 5. **Frame dispatch / flush** — {@link Application.onFrame}, backend GPU
+   * 5. **Frame dispatch / flush** - {@link Application.onFrame}, backend GPU
    *    flush, frame-time stat write, RAF reschedule.
    *
    * The simulation `delta` forwarded to all update recipients is clamped to
@@ -1433,7 +1433,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this.scenes._endFrame();
         this.systems._endFrame();
 
-        // RAF rescheduling always happens unless the guard halted the loop —
+        // RAF rescheduling always happens unless the guard halted the loop -
         // this is what keeps the canvas alive through a throwing frame.
         if (this._frameLoopActive) {
           this._frameRequest = this.platform.requestFrame(this._updateHandler);
@@ -1449,7 +1449,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * Frame-guard error pipeline: normalize → log → ring buffer → `onError` →
    * dev banner → halt after {@link maxConsecutiveFrameErrors} consecutive
    * failing frames. Deliberately does NOT call {@link Application.stop} on
-   * halt — unloading the scene could rethrow the same error.
+   * halt - unloading the scene could rethrow the same error.
    */
   private _handleFrameError(error: unknown): void {
     const normalized = error instanceof Error ? error : new Error(String(error));
@@ -1470,7 +1470,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Async render-error pipeline ({@link RenderBackend.onRenderError}): same
    * log + ring buffer + `onError` + banner steps as the frame guard, but no
-   * consecutive-failure counting — async validation errors do not break the
+   * consecutive-failure counting - async validation errors do not break the
    * frame loop, and the backend already deduplicates them.
    */
   private _handleAsyncRenderError(error: RenderError): void {
@@ -1513,12 +1513,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /**
    * Halt the per-frame loop, unload the active scene, and stop the active
-   * + frame clocks. Leaves backend, input, audio, etc. intact — call
+   * + frame clocks. Leaves backend, input, audio, etc. intact - call
    * {@link Application.destroy} to release everything. Acts whenever the
    * frame loop is actually live (`_frameLoopActive`), including mid-`start()`
-   * — not only while `_state` is `Running`.
+   * - not only while `_state` is `Running`.
    *
-   * A stop is allowed to interrupt a navigation — that is the point of it.
+   * A stop is allowed to interrupt a navigation - that is the point of it.
    * Everything scene-related is therefore delegated to the single
    * {@link SceneDirector._stopAndClearActiveScene} operation, which
    * invalidates the navigation generation, aborts an in-flight transition
@@ -1531,14 +1531,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * That does not make the interrupted navigation's own lock disappear. A
    * navigation suspended in a `Scene.load()`/`init()` that never settles keeps
    * `stop()`'s interruption from ever reaching its own `catch`, so it holds
-   * the director's navigation lock indefinitely — and the next
+   * the director's navigation lock indefinitely - and the next
    * {@link Application.start} or {@link SceneDirector.change} after such a
    * stop rejects with {@link ConcurrentSceneNavigationError} for as long as
    * that `load()` stays pending. The stop still unloads the scene; it just
    * cannot cancel a promise the scene never resolves.
    *
-   * Any scene-teardown failure the interruption did not cause — a scene's own
-   * `unload()`/`destroy()` throwing — still surfaces through
+   * Any scene-teardown failure the interruption did not cause - a scene's own
+   * `unload()`/`destroy()` throwing - still surfaces through
    * {@link Application.onError}. Scene teardown is asynchronous and
    * fire-and-forget here: `stop()` returns as soon as the loop is halted, so
    * a scene with an async `unload()` may still be settling afterwards. A
@@ -1556,7 +1556,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
 
     // One reason object for the one abort: `_stopFrameLoop()` performs it (it
-    // has to — halting the loop strands a frame-driven session regardless of
+    // has to - halting the loop strands a frame-driven session regardless of
     // caller), and the same instance is handed to the stop-and-clear operation
     // so the error the navigation actually rejects with is the error this call
     // site names.
@@ -1608,7 +1608,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     const target = typeof mount === 'string' ? document.querySelector(mount) : mount;
 
     if (target === null) {
-      // A string selector that matches nothing is a common typo — warn instead
+      // A string selector that matches nothing is a common typo - warn instead
       // of silently leaving the canvas unattached (a beginner otherwise sees a
       // blank page with no signal as to why).
       logger.warn(
@@ -1628,11 +1628,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * canvas scales to fit the parent (letterboxed via CSS object-fit);
    * `'letterbox'` observes the parent and sizes a native-resolution,
    * design-aspect canvas centered within it, the parent background showing as
-   * bars. `'fixed'` is a no-op — the exact pixel size was already applied.
+   * bars. `'fixed'` is a no-op - the exact pixel size was already applied.
    *
    * `previous` is the mode being replaced, if any. Whatever CSS that mode owned
    * is undone first, so switching modes never leaves the losing mode's rules
-   * layered under the winning one's — `'fit'`'s `100%` box outliving a switch
+   * layered under the winning one's - `'fit'`'s `100%` box outliving a switch
    * to `'fixed'`, say, or `'letterbox'`'s flex centering outliving a switch to
    * `'fill'`.
    */
@@ -1712,7 +1712,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Undo the canvas/parent CSS a sizing mode owns, returning the canvas to the
    * plain design-size box every mode starts from. Only properties the mode
-   * itself wrote are touched — nothing here is a blanket style reset.
+   * itself wrote are touched - nothing here is a blanket style reset.
    */
   private _clearSizingModeStyles(mode: CanvasSizingMode): void {
     const style = this.canvas.style;
@@ -1788,7 +1788,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * Recompute the `'letterbox'` layout for a parent of the given CSS size.
    * Fits the fixed `width`×`height` design space into the parent preserving
    * aspect ratio, sizes the canvas to that content rectangle (backing store at
-   * `content × pixelRatio` — always native-crisp, never upscale-blurred), and
+   * `content × pixelRatio` - always native-crisp, never upscale-blurred), and
    * lets the parent's background show through as letterbox bars around the
    * centered canvas. The render target and camera stay at the design size, so
    * the design space exactly fills the backing store (no crop, no stretch) and
@@ -1833,25 +1833,25 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Tear down every owned subsystem (loader, the core managers — input,
-   * interaction, audio, tweens, animations, rendering — the app system registry, backend,
+   * Tear down every owned subsystem (loader, the core managers - input,
+   * interaction, audio, tweens, animations, rendering - the app system registry, backend,
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
    *
    * The page is left as it was found: any inline styles `'letterbox'` sizing
    * wrote onto the canvas's parent element are restored to their previous
-   * values (and only those — nothing else on the element is touched), and a
+   * values (and only those - nothing else on the element is touched), and a
    * canvas the engine created itself is removed from the document. A canvas
    * supplied through `canvas.element` belongs to the caller and stays in place.
    *
    * Fires the RAF halt synchronously (so no further frame runs after this
    * call returns) and returns a Promise that fulfils once the rest of teardown
-   * has run: `scenes` — including every retained and preloaded scope, and any
-   * scene's own async `unload()` — is fully disposed FIRST, before the Loader,
+   * has run: `scenes` - including every retained and preloaded scope, and any
+   * scene's own async `unload()` - is fully disposed FIRST, before the Loader,
    * rendering context, audio manager, or backend are destroyed, so a scene's
    * teardown code never touches an already-destroyed dependency. This
    * intentionally does not route through the public {@link Application.stop},
-   * which fire-and-forgets its own scene-clear — that would race against
+   * which fire-and-forgets its own scene-clear - that would race against
    * `scenes._dispose()`'s own active-scope teardown for ownership of the same
    * scope. `destroy()` instead halts the frame loop directly and lets
    * `scenes._dispose()` own scene teardown entirely.
@@ -1859,19 +1859,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * `destroy()` called right after a `stop()` is covered by the same
    * guarantee, not an exception to it: the scene teardown `stop()` fired and
    * did not await is published on the director, and `scenes._dispose()` waits
-   * for it — including a still-pending `Scene.unload()` — before any
+   * for it - including a still-pending `Scene.unload()` - before any
    * dependency is destroyed.
    *
    * Every extension goes down with the application: the disposers
    * {@link Extension.install} returned run in reverse installation order,
    * after scene teardown and before any subsystem they might still reach for
-   * is released. An extension's lifetime is exactly this application's — there
+   * is released. An extension's lifetime is exactly this application's - there
    * is no uninstall short of it.
    *
    * The returned Promise **never rejects**: teardown failures go to
    * {@link Application.onError} and the log, exactly as they did when this was
    * a fire-and-forget chain, and the remaining stages still run. Awaiting it
-   * therefore means "teardown is over", not "teardown succeeded" — which is
+   * therefore means "teardown is over", not "teardown succeeded" - which is
    * what a caller reusing the canvas or asserting on released resources needs.
    *
    * Scene teardown is bounded: if `scenes._dispose()` has not settled within
@@ -1924,7 +1924,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * inline styles it had before `'letterbox'` restyled it, and a canvas the
    * engine created itself leaves the document. A canvas passed in through
    * `canvas.element` is the caller's element and stays exactly where they put
-   * it — removing it would delete part of their page.
+   * it - removing it would delete part of their page.
    *
    * Synchronous and part of `destroy()`'s immediate half rather than the async
    * teardown chain: once the frame loop is halted the canvas shows a frozen
@@ -1943,8 +1943,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * @internal Awaited teardown, in order: `scenes` fully disposed first
    * (active + every retained + every preloaded scope, plus any teardown a
    * fire-and-forget {@link Application.stop} left running, including each
-   * one's own async `unload()`) — then the extension disposers, in reverse
-   * installation order — then every other owned subsystem, then clocks, then
+   * one's own async `unload()`) - then the extension disposers, in reverse
+   * installation order - then every other owned subsystem, then clocks, then
    * Signals. See {@link Application.destroy}'s doc comment for why scenes go
    * first.
    */
@@ -1955,7 +1955,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       logger.error('Application.destroy() failed to fully dispose SceneDirector.', { source: 'Application', ...(error instanceof Error && { error }) });
     }
 
-    // Extensions installed last, so they are undone first — while the loader,
+    // Extensions installed last, so they are undone first - while the loader,
     // backend, audio and their own systems are all still alive for a disposer
     // to unhook from. Scenes go ahead of even this, because a scene may hold
     // whatever an extension installed.
@@ -1964,7 +1964,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.loader.destroy();
 
     // The core managers run as systems but belong to the application, not to
-    // the registry — which destroys whatever is still registered when it goes
+    // the registry - which destroys whatever is still registered when it goes
     // down. Unregister them first so they are torn down exactly once, here, in
     // reverse registration order.
     for (const system of [...this._coreSystems].reverse()) {
@@ -2005,7 +2005,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * after the wait starts the engine stops waiting, reports the timeout
    * through the normal error pipeline and lets the rest of teardown proceed.
    *
-   * The abandoned teardown is not cancelled — nothing here can cancel a
+   * The abandoned teardown is not cancelled - nothing here can cancel a
    * Promise a scene never settles. It keeps running against subsystems this
    * method is about to destroy, which is a worse outcome than a clean
    * shutdown and a better one than an application that never goes down at
@@ -2147,7 +2147,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   /**
    * Whether `backend: 'auto'` should pick WebGPU. Presence of `navigator.gpu`
    * is necessary but not sufficient: WebKit ships a WebGPU implementation that
-   * renders this engine incorrectly — SDF text draws as an empty frame, and
+   * renders this engine incorrectly - SDF text draws as an empty frame, and
    * repeated runs of the parity matrix fail a different set of scenes each
    * time, which points at the driver rather than at engine code. Neither has a
    * feature flag to test, and both produce a broken picture with no error, so

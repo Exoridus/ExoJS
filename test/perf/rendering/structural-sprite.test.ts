@@ -1,7 +1,7 @@
 /**
  * Tier-A structural regression tests for the Sprite renderer. Deterministic,
  * GPU-free, CI-safe: they assert draw-call / batching / culling / upload
- * invariants captured by the recording fake context — never wall-clock time.
+ * invariants captured by the recording fake context - never wall-clock time.
  *
  * Baseline facts (measured): the sprite renderer multi-texture-batches up to 16
  * textures into one draw, breaks the batch at a 17th distinct texture or a blend
@@ -39,7 +39,7 @@ describe('structural — Sprite', () => {
       // Zero, not 1000 * 32: the render root is retained by default, so a steady
       // frame replays the recorded batch out of the group-owned instance buffer
       // instead of re-uploading 32 bytes per sprite. The RECORD frame still
-      // uploads them once — that is what the 32-bytes-per-instance shape is now
+      // uploads them once - that is what the 32-bytes-per-instance shape is now
       // pinned by in `retained-instruction-equivalence`, byte for byte.
       expect(m.uploadedBufferBytes).toBe(0);
 
@@ -149,7 +149,7 @@ describe('structural — Sprite', () => {
       const m = measureSteadyFrame(harness, root, 2);
 
       expect(m.visibleNodes).toBe(50);
-      // `culledNodes` counts cull WORK, and a retained steady frame does none —
+      // `culledNodes` counts cull WORK, and a retained steady frame does none -
       // the 50 off-screen sprites were dropped at capture and the replay never
       // revisits them. What the archetype actually asserts is that they are not
       // DRAWN, which `instances` below pins directly.
@@ -204,7 +204,7 @@ describe('structural — Sprite', () => {
       // reconciled as an in-place patch of one group-owned row and the recorded
       // batch is replayed unchanged. `retained-transform-row-patch` pins that the
       // patch really happens and addresses the right row; what belongs HERE is
-      // the structural consequence — motion neither re-uploads nor breaks the
+      // the structural consequence - motion neither re-uploads nor breaks the
       // batch.
       expect(moving.transformUploads).toBe(0);
       expect(moving.drawCalls).toBe(1);

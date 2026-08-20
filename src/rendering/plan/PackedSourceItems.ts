@@ -11,7 +11,7 @@ const initialCapacity = 64;
  * arrays instead of one object per item.
  *
  * The shape is what a million items forces. Cut 1 stored a `PersistentDrawItem`
- * object per drawable and measured 235.8 bytes per item at 1M — an object
+ * object per drawable and measured 235.8 bytes per item at 1M - an object
  * header, eight named slots and the array pointer for seven numbers and one
  * reference. Here the same seven numbers cost 44 bytes in four typed arrays and
  * the reference stays in a plain side table, which is the only field that
@@ -19,7 +19,7 @@ const initialCapacity = 64;
  *
  * Bounds are `Float64Array`, not `Float32Array`. They feed the cull test, and
  * rounding an extent to f32 moves the decision for an item lying exactly on the
- * rect boundary — a visible-set difference, i.e. a pixel difference, bought for
+ * rect boundary - a visible-set difference, i.e. a pixel difference, bought for
  * 16 bytes an item. `zIndex` is f64 for the same reason: it is a sort key, and a
  * narrowed key can tie two entries a wider one separates.
  *
@@ -49,9 +49,9 @@ export class PackedSourceItems {
    *
    * Sized only for a source a backend has accepted for the persistent-indexed
    * path, because that is the only case where it pays: an item entering the view
-   * there is otherwise read out of the scene graph cold — its world transform,
+   * there is otherwise read out of the scene graph cold - its world transform,
    * its local bounds and its texture frame all resolved through objects nothing
-   * has touched for hundreds of frames — and that read, not the write, was the
+   * has touched for hundreds of frames - and that read, not the write, was the
    * measured cost of a camera step. Prepacked, an ENTER is a fixed-size copy
    * between typed arrays.
    *
@@ -116,7 +116,7 @@ export class PackedSourceItems {
    * Resolve every item's canonical render data once, so no later selection has
    * to touch a drawable again.
    *
-   * Returns `false` — and allocates nothing — as soon as one item cannot
+   * Returns `false` - and allocates nothing - as soon as one item cannot
    * describe itself as a quad, because a store fed from a partial table would
    * silently draw stale rows for the rest.
    */

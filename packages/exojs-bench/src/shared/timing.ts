@@ -41,7 +41,7 @@ export const percentile = (samples: readonly number[], p: number): number => {
  * Whether a cell should abort given its timed samples SO FAR.
  *
  * Aborting on a SINGLE slow frame lets one GC pause or scheduler blip mistake
- * an otherwise-valid cell for a runaway one — a cell that aborted after one
+ * an otherwise-valid cell for a runaway one - a cell that aborted after one
  * frame would report median == p95 with no real distribution behind it.
  * Instead this looks at the MEDIAN of the last `window` samples: a lone spike
  * among otherwise-fast frames cannot push that median over budget, only a

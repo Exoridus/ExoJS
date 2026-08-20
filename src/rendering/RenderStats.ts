@@ -56,7 +56,7 @@ export interface RenderStats {
    * the engine-owned footprint, not a driver figure.
    *
    * Unlike the other counters this is a **running total**, not a per-frame
-   * accumulator: it is **not** zeroed by {@link resetRenderStats} — live
+   * accumulator: it is **not** zeroed by {@link resetRenderStats} - live
    * resources outlive frames. It rises when textures/buffers are created and
    * falls when they are destroyed.
    */

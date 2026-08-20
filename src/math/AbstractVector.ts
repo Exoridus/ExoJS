@@ -46,7 +46,7 @@ export abstract class AbstractVector {
   }
 
   /**
-   * Squared Euclidean magnitude. Avoids the `sqrt` — prefer this over
+   * Squared Euclidean magnitude. Avoids the `sqrt` - prefer this over
    * {@link length} when only relative comparisons are needed.
    */
   public get lengthSq(): number {

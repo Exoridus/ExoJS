@@ -31,13 +31,13 @@ const anchorChannel: number = SceneNodeVectorChannel.Anchor;
  */
 export class Drawable extends RenderNode {
   /**
-   * Write this drawable's canonical quad record — {@link SOURCE_QUAD_FLOATS}
-   * floats at `offset` — and report whether it could.
+   * Write this drawable's canonical quad record - {@link SOURCE_QUAD_FLOATS}
+   * floats at `offset` - and report whether it could.
    *
    * The default is a refusal: a drawable that does not describe itself as one
    * textured quad has no such record, and a persistent render source containing
    * one cannot be drawn from prepacked data. Overriding is what opts a drawable
-   * into the persistent-indexed path, and the record must be COMPLETE — a source
+   * into the persistent-indexed path, and the record must be COMPLETE - a source
    * that holds it never reads the drawable again while it stays usable.
    * @internal
    */
@@ -56,8 +56,8 @@ export class Drawable extends RenderNode {
    * `(1, 1)` = bottom-right. Updates `origin` whenever the anchor or the
    * layout box changes.
    *
-   * The mapping is a pure function of the anchor and the box size — the same
-   * anchor value always yields the same origin, whatever it was set to before —
+   * The mapping is a pure function of the anchor and the box size - the same
+   * anchor value always yields the same origin, whatever it was set to before -
    * so `(0, 0)`, the default, always means `origin = (0, 0)`. Set `origin`
    * directly instead when the pivot is not a fraction of the box.
    */
@@ -190,13 +190,13 @@ export class Drawable extends RenderNode {
    * changes after construction (e.g. a sprite switching to a texture sub-frame)
    * must call this to keep an anchored node anchored.
    *
-   * The anchor measures against the drawable's declared LAYOUT BOX — its
-   * extent, taken from its own local origin — and never against where its AABB
+   * The anchor measures against the drawable's declared LAYOUT BOX - its
+   * extent, taken from its own local origin - and never against where its AABB
    * happens to start. Only the size term participates, so the mapping from
    * anchor to origin is a pure function of the anchor and the box size:
    * `anchor = (0, 0)` always means `origin = (0, 0)`, whatever the anchor was
    * set to before. Folding the bounds origin in would make it path-dependent
-   * instead — a drawable whose rectangle starts off-origin would keep that
+   * instead - a drawable whose rectangle starts off-origin would keep that
    * corner baked into its origin after returning to the default anchor.
    *
    * A drawable whose layout box is NOT its local bounds overrides this: text
@@ -230,8 +230,8 @@ export class Drawable extends RenderNode {
    * The cache busts on any tint/blend/texture/material/shader/
    * pixel-snap mutation via {@link invalidateCache}, and on a backend switch.
    *
-   * Drawables that own a {@link Material} are never cached — the material can
-   * change its `pipelineKey`/`bindKey` internally without notifying the node —
+   * Drawables that own a {@link Material} are never cached - the material can
+   * change its `pipelineKey`/`bindKey` internally without notifying the node -
    * so they recompute into the held key (still zero per-frame allocation).
    *
    * @internal

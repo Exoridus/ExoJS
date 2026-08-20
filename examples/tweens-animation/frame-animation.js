@@ -1,4 +1,4 @@
-// Auto-generated from frame-animation.ts — edit the .ts source, not this file.
+// Auto-generated from frame-animation.ts - edit the .ts source, not this file.
 import { AnimatedSprite, Application, Asset, Color, Scene, Spritesheet } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const walkFps = 8;

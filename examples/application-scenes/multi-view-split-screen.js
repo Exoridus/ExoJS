@@ -1,4 +1,4 @@
-// Auto-generated from multi-view-split-screen.ts — edit the .ts source, not this file.
+// Auto-generated from multi-view-split-screen.ts - edit the .ts source, not this file.
 import { Application, Color, Graphics, Keyboard, Scene, Sprite, View } from '@codexo/exojs';
 class SplitScreenScene extends Scene {
     texture;

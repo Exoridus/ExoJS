@@ -310,7 +310,7 @@ export class Graphics extends Container {
   /**
    * Stroke a shape's perimeter. Shape builders return their outline OPEN
    * (first point not repeated), but `buildPath` only closes a path whose
-   * first and last points coincide — so the closing segment (e.g. a
+   * first and last points coincide - so the closing segment (e.g. a
    * rectangle's left edge) went missing. Repeat the first point here.
    */
   private _strokeClosedOutline(points: number[]): void {
@@ -455,7 +455,7 @@ export class Graphics extends Container {
   }
 
   private _appendFill(data: MeshGeometryData): void {
-    // A fully transparent solid fill paints nothing — skip the mesh so an unset
+    // A fully transparent solid fill paints nothing - skip the mesh so an unset
     // fill (the default) or an explicit transparent fill costs nothing and never
     // covers what is drawn underneath. Gradients always produce a fill.
     if (this._fillStyle instanceof Color && this._fillStyle.a === 0) {

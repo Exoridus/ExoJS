@@ -251,7 +251,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "TGS-Soft sub-steps per fixed step (the solver's stiffness scales with this, not iteration count). Default 4. Must be ≥ 1. Values below 2 visibly degrade tall-stack stability (a 10-box tower jitters at 1), so the default is load-bearing — do not lower it for performance."
+          "description": "TGS-Soft sub-steps per fixed step (the solver's stiffness scales with this, not iteration count). Default 4. Must be ≥ 1. Values below 2 visibly degrade tall-stack stability (a 10-box tower jitters at 1), so the default is load-bearing - do not lower it for performance."
         },
         {
           "name": "timeToSleep",

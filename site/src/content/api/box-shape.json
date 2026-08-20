@@ -1,6 +1,6 @@
 {
   "title": "BoxShape",
-  "description": "Axis-aligned box of `width × height` centred on the collider's local origin — a convenience over PolygonShape. The result is a regular polygon, so it participates in the polygon narrow phase like any other convex shape.",
+  "description": "Axis-aligned box of `width × height` centred on the collider's local origin - a convenience over PolygonShape. The result is a regular polygon, so it participates in the polygon narrow phase like any other convex shape.",
   "symbol": "BoxShape",
   "kind": "class",
   "subsystem": "physics",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Axis-aligned box of `width × height` centred on the collider's local origin — a convenience over PolygonShape. The result is a regular polygon, so it participates in the polygon narrow phase like any other convex shape."
+        "Axis-aligned box of `width × height` centred on the collider's local origin - a convenience over PolygonShape. The result is a regular polygon, so it participates in the polygon narrow phase like any other convex shape."
       ],
       "importLine": "import { BoxShape } from '@codexo/exojs-physics'",
       "sourceLink": null

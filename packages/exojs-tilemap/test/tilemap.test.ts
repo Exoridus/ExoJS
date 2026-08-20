@@ -128,7 +128,7 @@ describe('tileTransformLabel', () => {
 
 describe('validatePositiveInteger / validateNonNegativeInteger', () => {
   it('validatePositiveInteger rejects a value beyond Number.MAX_SAFE_INTEGER', () => {
-    // Finite, integer, and positive — passes the first guard — but unsafe.
+    // Finite, integer, and positive - passes the first guard - but unsafe.
     expect(() => validatePositiveInteger(Number.MAX_SAFE_INTEGER * 2, 'x')).toThrow(/exceeds safe integer range/);
   });
 
@@ -428,7 +428,7 @@ describe('TileChunk', () => {
   });
 
   it('rejects non-safe-integer dimensions', () => {
-    // Positive but non-integer — passes the `<= 0` guard, fails isSafeInteger.
+    // Positive but non-integer - passes the `<= 0` guard, fails isSafeInteger.
     expect(() => new TileChunk(0, 0, 1.5, 2)).toThrow();
     expect(() => new TileChunk(0, 0, 2, 1.5)).toThrow();
   });
@@ -443,7 +443,7 @@ describe('TileChunk', () => {
     chunk._setRawAt(0, 0, 42);
     const storage = chunk._getRawStorage();
     expect(storage[0]).toBe(42);
-    // It is the SAME array (not a clone) — mutating it affects the chunk.
+    // It is the SAME array (not a clone) - mutating it affects the chunk.
     storage[1] = 7;
     expect(chunk.getRawAt(1, 0)).toBe(7);
   });
@@ -1019,7 +1019,7 @@ describe('TileLayer', () => {
     });
     const ref = { tileset: ts, localTileId: 2, transform: TILE_TRANSFORM_IDENTITY };
 
-    // Rect extends past every edge — only the in-bounds cells are touched.
+    // Rect extends past every edge - only the in-bounds cells are touched.
     layer.fillRect(-2, -2, 4, 4, ref);
     expect(layer.getTileAt(0, 0)).not.toBeNull();
     expect(layer.revision).toBe(1);
@@ -1037,7 +1037,7 @@ describe('TileLayer', () => {
     });
     const ref = { tileset: ts, localTileId: 2, transform: TILE_TRANSFORM_IDENTITY };
 
-    // No chunk has been created yet anywhere — clearRect must skip cleanly.
+    // No chunk has been created yet anywhere - clearRect must skip cleanly.
     layer.clearRect(0, 0, 4, 4);
     expect(layer.revision).toBe(0);
 
@@ -1063,7 +1063,7 @@ describe('TileLayer', () => {
       tileWidth: 16, tileHeight: 16, tilesets: [smallTs],
     });
 
-    // Directly corrupt the raw storage — bypasses setTileAt's validation, which
+    // Directly corrupt the raw storage - bypasses setTileAt's validation, which
     // can never itself produce these out-of-range packed values.
     const chunk = layer._ensureChunk(0, 0);
     chunk._setRawAt(0, 0, packTile(5, 0, TILE_TRANSFORM_IDENTITY)); // tilesetIndex 5 doesn't exist
@@ -2010,7 +2010,7 @@ describe('TileMap', () => {
     });
     expect(() => map.addImageLayer(new ImageLayer({ id: 7, name: 'bg2', image: 'bg2.png' })))
       .toThrow(/Image layer ID 7 already exists/);
-    // A cross-kind collision (image ID matching a TILE layer ID) stays valid —
+    // A cross-kind collision (image ID matching a TILE layer ID) stays valid -
     // pinned separately by the cross-kind tests above.
   });
 
@@ -2116,7 +2116,7 @@ describe('immutability', () => {
     const ref = { tileset: ts, localTileId: 1, transform: TILE_TRANSFORM_IDENTITY };
     layer.setTileAt(0, 0, ref);
 
-    // Get a readonly chunk view — the chunk is separate from tileset/clone
+    // Get a readonly chunk view - the chunk is separate from tileset/clone
     const chunk = layer.getChunk(0, 0)!;
     const clone = chunk.cloneTiles();
     clone[0] = 0; // mutate clone

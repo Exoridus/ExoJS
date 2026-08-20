@@ -71,7 +71,7 @@ export class Quadtree<T> {
       }
     }
 
-    // No single child fully contains it — keep at this node.
+    // No single child fully contains it - keep at this node.
     this._items.push(item);
   }
 
@@ -180,7 +180,7 @@ export class Quadtree<T> {
    * Walk every subdivided region's bounding rectangle, calling `callback`
    * once per node in the tree (including the root). Used by
    * {@link HitTestLayer} to visualise quadtree partitioning. Not part of
-   * the stable public API — friend-class access only.
+   * the stable public API - friend-class access only.
    *
    * @internal
    */

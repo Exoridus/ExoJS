@@ -126,7 +126,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Raw Gamepad.axes[] index of the axis this one forms a 2D stick with — the Y index on an X axis and vice versa. Set on both halves of a stick so the deadzone is evaluated on the pair's radius instead of each axis on its own; see GamepadAxis.transformValue. Leave unset for a control with no second dimension (a trigger reported through axes[], a standalone auxiliary axis)."
+          "description": "Raw Gamepad.axes[] index of the axis this one forms a 2D stick with - the Y index on an X axis and vice versa. Set on both halves of a stick so the deadzone is evaluated on the pair's radius instead of each axis on its own; see GamepadAxis.transformValue. Leave unset for a control with no second dimension (a trigger reported through axes[], a standalone auxiliary axis)."
         },
         {
           "name": "threshold",

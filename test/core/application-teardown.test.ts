@@ -61,7 +61,7 @@ class ThrowingScene extends Scene {
   }
 }
 
-/** Never settles — the case the grace period exists for. */
+/** Never settles - the case the grace period exists for. */
 class HangingScene extends Scene {
   public override unload(): Promise<void> {
     return new Promise<void>(() => {
@@ -123,7 +123,7 @@ describe('Application.destroy() as an awaitable operation', () => {
 
     const pending = app.destroy();
 
-    // onFrame is destroyed at the very end of the chain — still live here
+    // onFrame is destroyed at the very end of the chain - still live here
     // proves the Promise is not already settled at return time.
     expect(app.onFrame.count).toBe(1);
 
@@ -222,7 +222,7 @@ describe('Application.destroy() scene-teardown grace period', () => {
 
     await app.scenes.change(PlainScene);
 
-    // No timer advance at all — a teardown that settles on its own must not
+    // No timer advance at all - a teardown that settles on its own must not
     // depend on the grace timer firing.
     await app.destroy();
 

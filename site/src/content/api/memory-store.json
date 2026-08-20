@@ -1,6 +1,6 @@
 {
   "title": "MemoryStore",
-  "description": "In-memory KeyValueStore backed by a `Map`. Holds values **by reference** — no cloning, no serialization — so it accepts any value but does not persist across sessions and does not isolate the caller from later mutation of a stored object. Ideal for tests and ephemeral data, and as a drop-in store when persistence is not needed.",
+  "description": "In-memory KeyValueStore backed by a `Map`. Holds values **by reference** - no cloning, no serialization - so it accepts any value but does not persist across sessions and does not isolate the caller from later mutation of a stored object. Ideal for tests and ephemeral data, and as a drop-in store when persistence is not needed.",
   "symbol": "MemoryStore",
   "kind": "class",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "In-memory KeyValueStore backed by a `Map`. Holds values **by reference** — no cloning, no serialization — so it accepts any value but does not persist across sessions and does not isolate the caller from later mutation of a stored object. Ideal for tests and ephemeral data, and as a drop-in store when persistence is not needed."
+        "In-memory KeyValueStore backed by a `Map`. Holds values **by reference** - no cloning, no serialization - so it accepts any value but does not persist across sessions and does not isolate the caller from later mutation of a stored object. Ideal for tests and ephemeral data, and as a drop-in store when persistence is not needed."
       ],
       "importLine": "import { MemoryStore } from '@codexo/exojs'",
       "sourceLink": null

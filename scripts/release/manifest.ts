@@ -4,7 +4,7 @@
  *
  * `prepare` packs one npm tarball per lockstep package, hashes them, and records the
  * digests here. `publish` re-hashes the on-disk tarballs and refuses to proceed
- * if any digest drifts from the manifest — that is the build-once guarantee:
+ * if any digest drifts from the manifest - that is the build-once guarantee:
  * the artifacts that were built, hashed and externally tested are byte-for-byte
  * the artifacts that get published. No build may happen between the two stages.
  */
@@ -13,7 +13,7 @@ import { readFileSync, statSync } from 'node:fs';
 
 import { LOCKSTEP_PACKAGES, type OfficialPackageName } from './lockstep-packages.ts';
 
-/** Lockstep publish order — Core first (peer of the extensions), then the extensions. */
+/** Lockstep publish order - Core first (peer of the extensions), then the extensions. */
 export const PUBLISH_ORDER: readonly OfficialPackageName[] = LOCKSTEP_PACKAGES.map(p => p.name);
 
 export type { OfficialPackageName };
@@ -62,7 +62,7 @@ export interface DriftIssue {
 /**
  * Re-hashes the npm tarballs referenced by the manifest against the files on
  * disk and reports any drift. An empty array means the tarballs are
- * byte-identical to what `prepare` recorded — the build-once invariant the
+ * byte-identical to what `prepare` recorded - the build-once invariant the
  * publish stage relies on. The full-release ZIP is a GitHub release asset (not
  * published to npm) and is excluded here; it carries its own `.sha256` sidecar.
  *
@@ -103,7 +103,7 @@ export const serializeManifest = (manifest: ReleaseManifest): string => `${JSON.
 
 /**
  * Renders a `checksums.sha256` file body (`<hex>  <file>` per line, sorted) for
- * the npm tarballs — the same format `sha256sum -c` consumes. The full-release
+ * the npm tarballs - the same format `sha256sum -c` consumes. The full-release
  * ZIP is intentionally NOT included here: it lives in a different directory than
  * the tarballs (and would be self-referential inside the archive), so it ships
  * its own `<zip>.sha256` sidecar instead.

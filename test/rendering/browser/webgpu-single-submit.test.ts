@@ -4,7 +4,7 @@
  * Guards the pass-lifecycle contract behind the "submit the frame once instead
  * of once per batch flush" performance fix. The WebGPU backend
  * used to open a fresh command encoder + render pass and call
- * `device.queue.submit()` on EVERY batch flush — i.e. once per draw call. In the
+ * `device.queue.submit()` on EVERY batch flush - i.e. once per draw call. In the
  * `batch-breaking` archetype (many interleaved textures overflowing the
  * batcher's texture slots) that is one GPU submit per batch, and Dawn/D3D12's
  * per-submit cost degrades super-linearly, so the frame time explodes.
@@ -13,7 +13,7 @@
  *   1. A single-target sprite scene that forces MANY batch flushes must still
  *      submit the frame exactly ONCE.
  *   2. A render-target switch and a stencil clip must STILL end the pass where
- *      they must — merging those away would silently corrupt rendering — so
+ *      they must - merging those away would silently corrupt rendering - so
  *      those scenes submit more than once AND keep correct pixels.
  *
  * Run via:  pnpm test:browser:webgpu
@@ -160,7 +160,7 @@ const countSubmits = (backend: WebGpuBackend, body: () => void): number => {
 };
 
 // Distinct colours built from four channel levels (black skipped), so any two
-// distinct palette entries differ by at least 0x55 in some channel — far above
+// distinct palette entries differ by at least 0x55 in some channel - far above
 // the probe tolerance. The palette is sized to exceed the sprite batcher's
 // MAXIMUM texture-slot tier (32, see resolveSpriteBatchTextureSlots), so a
 // scene using the full palette always breaks into >= 2 draw calls regardless
@@ -211,8 +211,8 @@ const buildGridScene = (textures: readonly Texture[], columns: number, cell: num
 // A scene that forces a batch break: `corner` at the top-left (0,0) and the
 // rest laid out on an in-canvas grid from y=16 down (off-screen sprites would
 // be culled and never claim a texture slot). With more distinct textures than
-// the batcher's maximum slot tier (32), the batcher flushes a first batch —
-// including the corner sprite — into an open pass, which is exactly the
+// the batcher's maximum slot tier (32), the batcher flushes a first batch -
+// including the corner sprite - into an open pass, which is exactly the
 // "earlier draws recorded into a still-open pass" precondition the deferral
 // defects hinge on. The (0,0) sprite centre (4,4) is the probe point.
 const buildBreakScene = (textures: readonly Texture[], corner: Texture): Container => {
@@ -277,7 +277,7 @@ describe('WebGPU single-submit frame', () => {
 
       // Pixel probes at cell centres across the batches. A broken arena where
       // every batch reads the last batch's bytes would still submit once, but
-      // these cells would paint the wrong colour/position — so the probes are
+      // these cells would paint the wrong colour/position - so the probes are
       // what actually guard the merge. Cell i centre = (col*10+5, row*10+5).
       const readPixel = readWebGpuPixels(backend, canvasSize);
       const probeCell = (index: number): void => {
@@ -304,7 +304,7 @@ describe('WebGPU single-submit frame', () => {
     // Two sprites on the top row and one mesh on the bottom row, rendered
     // sprite -> mesh -> sprite so the backend switches renderers twice. A
     // renderer switch used to end (submit) the pass, and the mesh renderer
-    // additionally ended its own at the tail of every flush — so this frame cost
+    // additionally ended its own at the tail of every flush - so this frame cost
     // a pass plus a submit per alternation, and the sprite flush after the mesh
     // had to open a fresh pass. Both renderers write into the SHARED transform
     // storage and share the texture cache, which is why merging them needs the
@@ -395,7 +395,7 @@ describe('WebGPU single-submit frame', () => {
     // calls) the instant this frame's first sprite draw switches away from it.
     // That flush used to open an empty pass purely to consume the pending
     // clear and close it immediately, even though the sprite flush right
-    // after would have consumed the SAME open pass — costing an extra pass
+    // after would have consumed the SAME open pass - costing an extra pass
     // and submit on every frame that ends on a mesh. Measuring a *steady-state*
     // repetition of this exact frame (not just its first run) is what exposes
     // the defect: it only fires once the previous frame really did end on the
@@ -473,7 +473,7 @@ describe('WebGPU single-submit frame', () => {
     // separate mesh flushes. The mesh renderer used to rewrite its vertex /
     // index / uniform buffers from offset 0 on every flush, so flush k+1's
     // writes would land under the draws flush k had already recorded into the
-    // open pass — which forced each flush to end (submit) that pass first. Cost
+    // open pass - which forced each flush to end (submit) that pass first. Cost
     // was one pass and one submit PER FLUSH, i.e. linear in the alternation
     // count. The flush path now appends at pass-scoped cursors instead, so the
     // whole frame collapses to one pass again.
@@ -481,7 +481,7 @@ describe('WebGPU single-submit frame', () => {
     // Distinct colours AND distinct positions per mesh are what makes an
     // aliasing regression visible: a flush whose bytes were overwritten by a
     // later one paints the later mesh's colour, at the later mesh's coordinates
-    // — leaving its own cell at the black clear.
+    // - leaving its own cell at the black clear.
     const alternations = 6;
     const cell = 8;
     const spriteRow = 0;
@@ -660,7 +660,7 @@ describe('WebGPU single-submit frame', () => {
     }
   });
 
-  // Defect 1 — `reserve()` in the second render's `_beginDrawPlan` grows (frees)
+  // Defect 1 - `reserve()` in the second render's `_beginDrawPlan` grows (frees)
   // the shared transform-storage buffer while the FIRST render's pass is still
   // open and bound to it. Pre-fix the freed buffer invalidated the whole merged
   // command buffer at submit, silently dropping every batch since the last
@@ -710,7 +710,7 @@ describe('WebGPU single-submit frame', () => {
         }
       }
 
-      // renderGuarded asserts no validation error was raised — pre-fix the freed
+      // renderGuarded asserts no validation error was raised - pre-fix the freed
       // storage buffer trips exactly that.
       if (!(await renderGuarded(ctx, backend, () => renderFrame(200)))) {
         return;
@@ -731,7 +731,7 @@ describe('WebGPU single-submit frame', () => {
     }
   });
 
-  // Defect 2 — a mid-frame `clear()` while a pass is open only set a pending flag
+  // Defect 2 - a mid-frame `clear()` while a pass is open only set a pending flag
   // that the next `acquirePass` never consumed, so the clear silently deferred
   // (surviving this frame, detonating at the next pass open). The fix ends the
   // open pass so the clear applies at the point it was requested.
@@ -785,7 +785,7 @@ describe('WebGPU single-submit frame', () => {
     }
   });
 
-  // Defect 3 — a texture re-uploaded between two same-frame render() calls lands
+  // Defect 3 - a texture re-uploaded between two same-frame render() calls lands
   // on the queue timeline before the deferred submit, so the earlier render's
   // draws (recorded into the still-open pass) would sample the NEW content. The
   // fix ends the pass before the re-upload, so the earlier draw keeps the OLD
@@ -815,7 +815,7 @@ describe('WebGPU single-submit frame', () => {
     try {
       // Warm up with a stable colour (still red after repaint) so pipelines and
       // textures are ready and the storage capacity is large enough that the
-      // Defect-1 growth guard does NOT fire on the measured frame — isolating the
+      // Defect-1 growth guard does NOT fire on the measured frame - isolating the
       // texture-mutation split.
       for (let frame = 0; frame < 2; frame++) {
         if (!(await renderGuarded(ctx, backend, () => renderFrame('#ff0000')))) {

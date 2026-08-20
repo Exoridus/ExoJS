@@ -135,7 +135,7 @@ describe('WorkletEffect', () => {
     const filter = new TestWorkletEffect();
     filter.destroy(); // destroy before worklet loads
 
-    // Now resolve the module load — should not throw
+    // Now resolve the module load - should not throw
     await expect(
       new Promise<void>((res, rej) => {
         resolveModule();
@@ -147,7 +147,7 @@ describe('WorkletEffect', () => {
 
   it('_setAudioParam is a no-op if worklet node not ready yet', () => {
     const filter = new TestWorkletEffect();
-    // Before worklet loads, _workletNode is null — should not throw
+    // Before worklet loads, _workletNode is null - should not throw
     expect(() => filter['_setAudioParam']('threshold', -10)).not.toThrow();
     filter.destroy();
   });
@@ -173,7 +173,7 @@ describe('WorkletEffect', () => {
     await filter1.ready;
     const countAfterFirst = addModuleMock.mock.calls.length;
 
-    // Second filter with the same name — should not call addModule again
+    // Second filter with the same name - should not call addModule again
     const filter2 = new CacheTestFilter();
     await filter2.ready;
     expect(addModuleMock.mock.calls.length).toBe(countAfterFirst);
@@ -203,7 +203,7 @@ describe('WorkletEffect', () => {
     });
 
     const filter = new TestWorkletEffect();
-    // input, output, dry, wet — at least 4 gains
+    // input, output, dry, wet - at least 4 gains
     expect(callCount).toBeGreaterThanOrEqual(4);
     expect(filter['_dryGain']).not.toBeNull();
     expect(filter['_wetGain']).not.toBeNull();
@@ -320,7 +320,7 @@ describe('WorkletEffect', () => {
     ctx.state = 'suspended';
 
     const filter = new TestWorkletEffect();
-    // Nothing set up yet — inputNode/outputNode still throw.
+    // Nothing set up yet - inputNode/outputNode still throw.
     expect(gainSpy).not.toHaveBeenCalled();
     expect(() => filter.inputNode).toThrow('input node accessed before audio context is ready.');
     expect(() => filter.outputNode).toThrow('output node accessed before audio context is ready.');

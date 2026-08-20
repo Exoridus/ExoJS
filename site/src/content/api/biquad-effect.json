@@ -1,6 +1,6 @@
 {
   "title": "BiquadEffect",
-  "description": "Native biquad filter effect backed by a single `BiquadFilterNode` — the most common audio-shaping need, covering `lowpass` / `highpass` / `bandpass` / `notch` / `peaking` / `lowshelf` / `highshelf` / `allpass` via one `type` parameter. Insert it on an AudioBus (`bus.addEffect`) or a Voice (`voice.addEffect`). The single node serves as both inputNode and outputNode.",
+  "description": "Native biquad filter effect backed by a single `BiquadFilterNode` - the most common audio-shaping need, covering `lowpass` / `highpass` / `bandpass` / `notch` / `peaking` / `lowshelf` / `highshelf` / `allpass` via one `type` parameter. Insert it on an AudioBus (`bus.addEffect`) or a Voice (`voice.addEffect`). The single node serves as both inputNode and outputNode.",
   "symbol": "BiquadEffect",
   "kind": "class",
   "subsystem": "audio",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Native biquad filter effect backed by a single `BiquadFilterNode` — the most common audio-shaping need, covering `lowpass` / `highpass` / `bandpass` / `notch` / `peaking` / `lowshelf` / `highshelf` / `allpass` via one `type` parameter. Insert it on an AudioBus (`bus.addEffect`) or a Voice (`voice.addEffect`).",
+        "Native biquad filter effect backed by a single `BiquadFilterNode` - the most common audio-shaping need, covering `lowpass` / `highpass` / `bandpass` / `notch` / `peaking` / `lowshelf` / `highshelf` / `allpass` via one `type` parameter. Insert it on an AudioBus (`bus.addEffect`) or a Voice (`voice.addEffect`).",
         "The single node serves as both inputNode and outputNode."
       ],
       "importLine": "import { BiquadEffect } from '@codexo/exojs'",
@@ -184,7 +184,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Gain in dB — applies to peaking, lowshelf, and highshelf types."
+          "description": "Gain in dB - applies to peaking, lowshelf, and highshelf types."
         },
         {
           "name": "inputNode",

@@ -1,4 +1,4 @@
-// Auto-generated from nested-transforms.ts — edit the .ts source, not this file.
+// Auto-generated from nested-transforms.ts - edit the .ts source, not this file.
 import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
 class NestedTransformsScene extends Scene {
     sun;

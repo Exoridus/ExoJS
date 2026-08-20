@@ -277,7 +277,7 @@ describe('AudioStream', () => {
     const stream = new AudioStream(el, { loop: false });
     const first = manager.play(stream) as AudioStreamVoice;
 
-    // Starting a second voice stops the first — both share one `<audio>` element.
+    // Starting a second voice stops the first - both share one `<audio>` element.
     const second = manager.play(stream) as AudioStreamVoice;
     expect(first.ended).toBe(true);
     expect(second.ended).toBe(false);
@@ -302,7 +302,7 @@ describe('AudioStream', () => {
     voice.playbackRate = 3;
 
     expect(el.playbackRate).toBe(1);
-    // The cached base rate is not updated either — reporting a rate the voice
+    // The cached base rate is not updated either - reporting a rate the voice
     // never applied would be a lie, and `seek`/`pause`/`resume`/`loop` are all
     // whole-setter no-ops after the end too.
     expect(voice.playbackRate).toBe(1);
@@ -359,7 +359,7 @@ describe('AudioStream', () => {
     const stream = new AudioStream(el);
 
     const holder: { voice?: AudioStreamVoice } = {};
-    // Registered before the voice's own unlock handler — Signal dispatches in
+    // Registered before the voice's own unlock handler - Signal dispatches in
     // registration order, so this stops the voice before its handler runs.
     const stopFirst = (): void => holder.voice?.stop();
     onAudioContextReady.add(stopFirst);
@@ -458,8 +458,8 @@ describe('AudioStream', () => {
   // `_createVoice` always stops the previous voice (removing its 'ended'
   // listener) before creating a new one, so through the public API the voice
   // whose onEnd fires is always the one `_activeVoice` still points to. To
-  // observe the guard's *other* arm — where a stale voice's end must NOT clear
-  // a newer, already-superseding `_activeVoice` — this test bypasses that
+  // observe the guard's *other* arm - where a stale voice's end must NOT clear
+  // a newer, already-superseding `_activeVoice` - this test bypasses that
   // built-in "stop the previous voice" step by resetting the private
   // `_activeVoice` slot directly between two `_createVoice` calls, leaving the
   // first voice's listener attached to the (shared) element alongside the

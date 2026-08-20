@@ -95,7 +95,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Map from Wang bitmask to local tile ID within the tileset. For blob mode (8-neighbor), keys are 0–255; the 47 valid combinations of the blob encoding must be covered at minimum. For edge mode (4-neighbor), keys are 0–15. Accepts either a ReadonlyMap or a plain Record<number, number>."
+          "description": "Map from Wang bitmask to local tile ID within the tileset. For blob mode (8-neighbor), keys are 0-255; the 47 valid combinations of the blob encoding must be covered at minimum. For edge mode (4-neighbor), keys are 0-15. Accepts either a ReadonlyMap or a plain Record<number, number>."
         },
         {
           "name": "members",
@@ -148,7 +148,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Extra local tile IDs that count as belonging to this Wang group, beyond the variant IDs already present as blobMap *values*. Membership is what autoTile / refreshCell use to decide whether a neighbouring cell is \"part of the terrain\". Because every value in blobMap is itself a member, group membership stays stable no matter which variant a cell currently shows — that is what makes incremental refreshCell correct. Add the *base* tile ID you paint with here if it is not already one of the blobMap variants."
+          "description": "Extra local tile IDs that count as belonging to this Wang group, beyond the variant IDs already present as blobMap *values*. Membership is what autoTile / refreshCell use to decide whether a neighbouring cell is \"part of the terrain\". Because every value in blobMap is itself a member, group membership stays stable no matter which variant a cell currently shows - that is what makes incremental refreshCell correct. Add the *base* tile ID you paint with here if it is not already one of the blobMap variants."
         },
         {
           "name": "tilesetIndex",

@@ -19,7 +19,7 @@ import { View } from '#rendering/View';
  * Cut-2 visibility: the spatial index that answers which of a scope's items a
  * rect admits, and the membership delta that says how that answer changed.
  *
- * Two things are on trial here. That the grid agrees with the flat scan — it is
+ * Two things are on trial here. That the grid agrees with the flat scan - it is
  * a faster way to compute the same set, and the scan is the rule's one
  * implementation, so any disagreement is a pixel difference. And that a camera
  * step really costs O(candidates + delta): the counters are the evidence, since
@@ -268,7 +268,7 @@ describe('source visibility: the grid answers exactly what the scan answers', ()
     addRow(root, 60, 900_000, 17, 200, 'far');
 
     // Two items that dwarf the derived cell size, so they leave the grid and are
-    // answered live — the class that would otherwise widen every query to its
+    // answered live - the class that would otherwise widen every query to its
     // own extent.
     const huge = new Leaf('huge');
 
@@ -375,7 +375,7 @@ describe('source visibility: membership delta', () => {
 
     expect(delta.hadPrevious).toBe(true);
     // The step moved the view by 240 of its 800 units, so most of the set is
-    // the same set — and the counters, not the wall clock, are what say so.
+    // the same set - and the counters, not the wall clock, are what say so.
     expect(delta.stayed).toBeGreaterThan(delta.entered + delta.exited);
     expect(delta.entered).toBe(10);
     expect(delta.exited).toBe(10);

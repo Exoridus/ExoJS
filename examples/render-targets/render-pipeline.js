@@ -1,4 +1,4 @@
-// Auto-generated from render-pipeline.ts — edit the .ts source, not this file.
+// Auto-generated from render-pipeline.ts - edit the .ts source, not this file.
 import { Application, BlurFilter, CallbackRenderPass, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 // A composable frame, configured once: the world renders off-screen, a blur step turns it into its
 // blurred version, a composite step draws that to the screen, and a nested UI pipeline overlays a HUD.
@@ -57,7 +57,7 @@ class RenderPipelineScene extends Scene {
         const app = this.app;
         const { width, height } = app;
         this.time += delta.seconds;
-        // `enabled` lives on the pass — flip it and the composer skips the step next frame.
+        // `enabled` lives on the pass - flip it and the composer skips the step next frame.
         this.blurPass.enabled = Math.floor(this.time / 2.5) % 2 === 0;
         this.orb.clear();
         this.orb.fillColor = new Color(90, 150, 255);

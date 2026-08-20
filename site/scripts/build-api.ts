@@ -56,7 +56,7 @@ const SUBSYSTEMS: ReadonlyArray<Subsystem> = [
 /**
  * Official extension packages documented as their own API surfaces, alongside
  * the core. Each is converted with its own tsconfig (which maps `@codexo/exojs`
- * to the core source) and only the package's OWN symbols are emitted — core
+ * to the core source) and only the package's OWN symbols are emitted - core
  * types the package re-exports are skipped so they are not duplicated.
  */
 interface ExtensionPackage {
@@ -134,7 +134,7 @@ const toApiKind = (kind: ReflectionKind): ApiKind => {
     if (isInterface(kind)) return 'interface';
     if (isEnum(kind)) return 'enum';
     if (isFunction(kind)) return 'function';
-    // An object-literal `const` (MathUtils, Collision, …) documents like a
+    // An object-literal `const` (MathUtils, Collision, ...) documents like a
     // namespace: a bag of function/value members.
     if (isVariable(kind)) return 'namespace';
     return 'type';
@@ -234,8 +234,8 @@ const tokenizeType = (type: any): ApiToken[] => {
         case 'literal':
             return [keyword(JSON.stringify(type.value))];
         case 'reflection': {
-            // An inline function type — `(a: T) => R` — or object-literal type
-            // — `{ a: T; b?: U }`. Without this both collapse to a useless
+            // An inline function type - `(a: T) => R` - or object-literal type
+            // - `{ a: T; b?: U }`. Without this both collapse to a useless
             // `object`, which matters most for function-typed aliases
             // (EasingFunction, callbacks) and object-shaped type aliases.
             const declaration = type.declaration;
@@ -335,7 +335,7 @@ const resolvePropertyComment = (member: any): any =>
  * A member's JSDoc summary as a single-line description for the row cell.
  * Collapses multi-line comments to one line and strips inline-code backticks
  * (they would render as literal text inside the description cell). No MDX
- * escaping is needed — the value is stored in JSON and rendered as text.
+ * escaping is needed - the value is stored in JSON and rendered as text.
  */
 const toMemberDescription = (comment: any): string => {
     const raw = renderComment(comment);
@@ -389,7 +389,7 @@ const renderClassMembers = (reflection: any): ReflectionBody => {
     const children = reflection.children ?? [];
     const constructors = children.filter((child: any) => (child.kind & ReflectionKind.Constructor) > 0);
     const methods = children.filter((child: any) => (child.kind & ReflectionKind.Method) > 0);
-    // Include both Property (1024) and Accessor (262144 — getter/setter) kinds so
+    // Include both Property (1024) and Accessor (262144 - getter/setter) kinds so
     // TypeScript getters like currentScene, scenes, angle, length appear in docs.
     const properties = children.filter((child: any) =>
         !child.name.startsWith('_') &&
@@ -438,7 +438,7 @@ const renderClassMembers = (reflection: any): ReflectionBody => {
 const EMPTY_COUNTS: ApiCounts = { constructors: 0, methods: 0, properties: 0, events: 0 };
 
 /**
- * Sections for an object-literal `const` (MathUtils, Collision, …): its
+ * Sections for an object-literal `const` (MathUtils, Collision, ...): its
  * function members render as Methods, its value members as Properties.
  */
 const buildObjectSections = (declaration: any): ReflectionBody => {
@@ -464,7 +464,7 @@ const buildObjectSections = (declaration: any): ReflectionBody => {
 const renderReflectionBody = (reflection: any): ReflectionBody => {
     if (isEnum(reflection.kind)) {
         // Enum members render as a bare name with no description, matching the
-        // prior output — the signature is the member name itself.
+        // prior output - the signature is the member name itself.
         const members = (reflection.children ?? []).map((member: any): ApiMember => ({
             name: member.name,
             signature: member.name,
@@ -481,7 +481,7 @@ const renderReflectionBody = (reflection: any): ReflectionBody => {
     }
 
     // Interfaces expose the same member shapes as classes (methods, properties,
-    // optional members) — the class renderer handles them directly.
+    // optional members) - the class renderer handles them directly.
     if (isClass(reflection.kind) || isInterface(reflection.kind)) {
         return renderClassMembers(reflection);
     }
@@ -679,7 +679,7 @@ const isNamespace = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Na
  * Collect top-level namespace reflections (flattening the single- vs
  * multi-entry-point shapes like collectSymbols). Several engine symbols are a
  * class merged with a same-named namespace holding channel/id constants
- * (GamepadButton.South, Pointer.X, …); those constants are merged onto the
+ * (GamepadButton.South, Pointer.X, ...); those constants are merged onto the
  * class page rather than emitted as a separate page.
  */
 const collectNamespaces = (project: any): any[] => {
@@ -778,7 +778,7 @@ const convertEntryPoints = async (entryPoints: ReadonlyArray<string>, tsconfig: 
         entryPoints: entryPoints.map(entry => toPosix(path.resolve(repoRoot, entry))),
         tsconfig: toPosix(path.resolve(repoRoot, tsconfig)),
         // Pin the source-path base to the repo root so every package reports
-        // repo-relative file names (packages/<pkg>/src/…). Without this TypeDoc
+        // repo-relative file names (packages/<pkg>/src/...). Without this TypeDoc
         // infers a per-package base for packages that pull in no core *source*
         // files (e.g. physics), yielding package-relative paths that miss the
         // sourceMarker filter and break source links.
@@ -811,7 +811,7 @@ const build = async (): Promise<void> => {
         if (emitReflection(reflection, usedSlugs, { mergeNamespace: coreNamespaces.get(reflection.name) })) coreCount += 1;
     }
 
-    // Free functions, object-literal namespaces (MathUtils, …) and simple
+    // Free functions, object-literal namespaces (MathUtils, ...) and simple
     // constants. Names that clash with a documented class/interface/type are a
     // merge partner already handled above, so they are skipped here.
     const coreExtras = collectExtras(coreProject).filter((e: any) => !coreNames.has(e.name));
@@ -827,7 +827,7 @@ const build = async (): Promise<void> => {
         throw new Error('TypeDoc conversion produced no exportable core symbols.');
     }
 
-    // 2. Official extension packages — each as its own discoverable surface.
+    // 2. Official extension packages - each as its own discoverable surface.
     const packageCounts: Array<{ importPath: string; count: number }> = [];
     for (const pkg of EXTENSION_PACKAGES) {
         const project = await convertEntryPoints([pkg.entryPoint], pkg.tsconfig);

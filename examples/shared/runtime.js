@@ -63,7 +63,7 @@ export function formatErrorMessage(error) {
 //
 // Shared overlays and controls so every example presents itself consistently:
 // an on-screen title + controls legend (`mountControls`) and predictable DOM
-// controls — sliders / toggles / cycles (`mountControlPanel`).
+// controls - sliders / toggles / cycles (`mountControlPanel`).
 //
 // All overlays are fixed-position DOM elements layered over the WebGL canvas, so
 // they never interfere with the rendered scene and stay crisp at any DPR.
@@ -211,8 +211,8 @@ function createControlLabel(text) {
 }
 
 /**
- * Mount a predictable DOM control panel over the canvas — sliders, toggles,
- * cycles, and buttons — so interactive examples expose their parameters in a
+ * Mount a predictable DOM control panel over the canvas - sliders, toggles,
+ * cycles, and buttons - so interactive examples expose their parameters in a
  * consistent, discoverable way instead of hand-rolling canvas hit-tests.
  *
  * @param {{ title?: string, corner?: keyof typeof CORNER_STYLES }} [options]

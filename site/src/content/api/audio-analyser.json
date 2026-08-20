@@ -1,6 +1,6 @@
 {
   "title": "AudioAnalyser",
-  "description": "Lightweight visualisation analyser backed by a Web Audio AnalyserNode. Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is a parallel branch — it does not affect the source's main routing. Tap a bus for a whole submix, or an individual Voice (its `output` node) for a single playing instance.",
+  "description": "Lightweight visualisation analyser backed by a Web Audio AnalyserNode. Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is a parallel branch - it does not affect the source's main routing. Tap a bus for a whole submix, or an individual Voice (its `output` node) for a single playing instance.",
   "symbol": "AudioAnalyser",
   "kind": "class",
   "subsystem": "audio",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Lightweight visualisation analyser backed by a Web Audio AnalyserNode.",
-        "Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is a parallel branch — it does not affect the source's main routing. Tap a bus for a whole submix, or an individual Voice (its `output` node) for a single playing instance."
+        "Accepts any of: AudioBus, Voice, MediaStream, AudioNode, or null. The tap is a parallel branch - it does not affect the source's main routing. Tap a bus for a whole submix, or an individual Voice (its `output` node) for a single playing instance."
       ],
       "importLine": "import { AudioAnalyser } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
@@ -540,7 +540,7 @@
             }
           ],
           "returnType": "Uint8Array<ArrayBuffer>",
-          "description": "Log-scaled spectrum, byte domain (0..255). Output length = bands. Bins are spaced so each output covers an equal fraction of the log2(fMax / fMin) octave range — useful when you want a frequency-axis visualization where each octave gets the same width."
+          "description": "Log-scaled spectrum, byte domain (0..255). Output length = bands. Bins are spaced so each output covers an equal fraction of the log2(fMax / fMin) octave range - useful when you want a frequency-axis visualization where each octave gets the same width."
         },
         {
           "name": "getSpectrumLogFloat",
@@ -1041,7 +1041,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Number of frequency bins available — half of fftSize."
+          "description": "Number of frequency bins available - half of fftSize."
         },
         {
           "name": "maxDecibels",

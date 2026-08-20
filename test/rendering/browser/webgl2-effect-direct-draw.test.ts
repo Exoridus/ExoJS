@@ -58,7 +58,7 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
 
     try {
       sprite.setPosition(16, 16);
-      // Multiplying white by pure red must leave red — a filter that never ran
+      // Multiplying white by pure red must leave red - a filter that never ran
       // would leave white, and one whose quad missed the target leaves black.
       filtered.addFilter(new ColorMatrixFilter().tint(new Color(255, 0, 0)));
       filtered.addChild(sprite);
@@ -176,8 +176,8 @@ describe('effect direct-draw pixel behaviour (WebGL2)', () => {
 
       const first = readWebGl2Pixel(backend, 20, 20);
 
-      // The second frame replays the bake through `_drawTexture` — the direct
-      // draw — with no filter pass at all. Same pixels, different code path.
+      // The second frame replays the bake through `_drawTexture` - the direct
+      // draw - with no filter pass at all. Same pixels, different code path.
       renderWebGl2Once(backend, root);
 
       expectPixelNear(first, [0, 0, 255, 255]);

@@ -4,8 +4,8 @@ import { join } from 'node:path';
 /**
  * Domain-agnostic report-writing primitives.
  *
- * Both domains emit the same three artifacts — a full-fidelity `results.json`, a
- * machine-parseable `results.csv`, and a human-readable `results.md` — and share
+ * Both domains emit the same three artifacts - a full-fidelity `results.json`, a
+ * machine-parseable `results.csv`, and a human-readable `results.md` - and share
  * the same value-formatting and CSV-escaping rules. What differs is the COLUMN
  * SET (draw calls / GPU frame time for rendering, body/contact counts / step
  * time for physics); each domain builds its own rows and table, then hands the

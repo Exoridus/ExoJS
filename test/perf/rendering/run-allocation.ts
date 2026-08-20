@@ -5,7 +5,7 @@
  * printing the resolved path on completion.
  *
  *   pnpm perf:renderers:alloc                 # gate archetypes + extra families
- *   pnpm perf:renderers:alloc --reference     # …plus the 1M scrolling-world stage
+ *   pnpm perf:renderers:alloc --reference     # ...plus the 1M scrolling-world stage
  *
  * SOURCE-ACCURATE. The `perf:renderers:alloc` script passes
  * `--conditions=@codexo/exojs-source` (so the `#*` imports resolve to `src`, NOT to a
@@ -64,8 +64,8 @@ const toSample = (archetype: { id: string; warmup?: number; build(harness: WebGl
 const catalogSamples: readonly Sample[] = [...ALLOCATION_ARCHETYPES, ...ALLOCATION_REPORT_ONLY].map(toSample);
 
 /**
- * Families the gate deliberately leaves out — they allocate little and would
- * only add CI time — but which are still worth a periodic look here.
+ * Families the gate deliberately leaves out - they allocate little and would
+ * only add CI time - but which are still worth a periodic look here.
  */
 const extraSamples: readonly Sample[] = [
   {
@@ -139,7 +139,7 @@ const extraSamples: readonly Sample[] = [
       return { root, teardown: () => root.destroy() };
     },
   },
-  // Tilemap — measurable source-accurate because the GLSL loader handles the
+  // Tilemap - measurable source-accurate because the GLSL loader handles the
   // chunk shaders. static = chunk geometry fully cached; pan = camera moves but
   // geometry is reused (revision unchanged).
   {
@@ -175,7 +175,7 @@ const extraSamples: readonly Sample[] = [
 /**
  * The million-sprite scrolling world. Kept out of the gate (and off by default
  * here) because one reading at this size costs more than the entire rest of the
- * catalog — it is a reference reading for a human, not a budget.
+ * catalog - it is a reference reading for a human, not a budget.
  *
  * ── Why this stage is measured in TWO phases ───────────────────────────────
  * Everything else in this file is a steady-state rate: build the scene, warm a
@@ -183,10 +183,10 @@ const extraSamples: readonly Sample[] = [
  * something else. The scene's start-up work scales with the node count and does
  * not fit in a short warm-up: frame 1 alone allocates ~466 MB (plan build,
  * per-drawable material keys, retained fragment snapshots), and the persistent
- * source + spatial visibility index are still being BUILT around frame 20 — the
+ * source + spatial visibility index are still being BUILT around frame 20 - the
  * frame's draw-call count collapses from 75 to 1 mid-window as that path takes
  * over. A 20-frame window opened after 5 warm-up frames therefore contains
- * nothing but bootstrap, and dividing it by 20 produced ~9 MB/"frame" — a number
+ * nothing but bootstrap, and dividing it by 20 produced ~9 MB/"frame" - a number
  * that describes no frame this scene will ever render again, and ~600x this
  * scene's actual steady-state rate.
  *
@@ -198,7 +198,7 @@ const extraSamples: readonly Sample[] = [
  * (see `ALLOCATION_REPORT_ONLY`) reaches this scene too, and harder: measured in
  * a fresh process with no prior sampling window, this scene reads ~1.9 MB/frame
  * even at a 500-frame warm-up, all of it attributed to `SourceVisibilityIndex.query`
- * — a function that contains no allocation at all. Running any earlier sampling
+ * - a function that contains no allocation at all. Running any earlier sampling
  * window in the same process removes it entirely and the scene reads ~15 KB/frame
  * (verified: identical config, identical camera position and submitted-node count,
  * 1883 vs 15.6 KB/frame, flipped solely by having profiled earlier). It is a V8
@@ -208,7 +208,7 @@ const extraSamples: readonly Sample[] = [
  * one stray window from moving the reported number.
  */
 const REFERENCE_COUNT = 1_000_000;
-/** Frames the bootstrap total covers — long enough to contain the source/index build. */
+/** Frames the bootstrap total covers - long enough to contain the source/index build. */
 const REFERENCE_COLD_FRAMES = 100;
 /** Frames rendered after the bootstrap window before the steady-state windows open. */
 const REFERENCE_STEADY_WARMUP = 600;

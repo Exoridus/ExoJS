@@ -8,7 +8,7 @@ const _pending = new WeakMap<BaseAudioContext, Map<string, Promise<void>>>();
  * protection) share a single in-flight registration promise.
  *
  * Source is bundled at build time as a JavaScript string and turned into a
- * Blob URL at runtime — no separate worklet asset file is shipped.
+ * Blob URL at runtime - no separate worklet asset file is shipped.
  */
 export async function registerAudioWorkletProcessor(audioContext: BaseAudioContext, processorName: string, source: string): Promise<void> {
   let registered = _registered.get(audioContext);

@@ -32,7 +32,7 @@ export { readEngineVersion } from '../shared/viteServer';
  * meaningless: the same matrix on a real GPU and on a software rasterizer
  * produce numbers that look comparable but are not. Extends the shared
  * {@link BaseProvenance} (timestamp + engine version) with the rendering-
- * specific GPU fields. `software` is the honesty bit — when true,
+ * specific GPU fields. `software` is the honesty bit - when true,
  * {@link '../report'.writeReport} marks every timing column untrusted.
  */
 export interface Provenance extends BaseProvenance {
@@ -44,7 +44,7 @@ export interface Provenance extends BaseProvenance {
   readonly flags: readonly string[];
   /** Whether Chromium ran headless. */
   readonly headless: boolean;
-  /** True when the adapter is a software rasterizer — timings are then untrusted. */
+  /** True when the adapter is a software rasterizer - timings are then untrusted. */
   readonly software: boolean;
   /**
    * Resolved WebGPU sprite-batch texture-slot tier for this run's adapter (8 /
@@ -64,7 +64,7 @@ export interface Provenance extends BaseProvenance {
  * `min(maxSampledTexturesPerShaderStage, maxSamplersPerShaderStage)` on the
  * granted device, quantized DOWN to one of these tiers (capped at 32). Every
  * conformant device reaches at least 16; adapters granting 32+ reach 32. Kept in
- * sync with the engine by hand — this Node-side driver does not import engine
+ * sync with the engine by hand - this Node-side driver does not import engine
  * source. Stamped into provenance so a slot-sensitive archetype's measured code
  * path is auditable per run.
  */
@@ -73,7 +73,7 @@ const SPRITE_BATCH_SLOT_TIERS = [8, 16, 32] as const;
 /**
  * Resolve the sprite-batch slot tier from an adapter's texture/sampler limits,
  * or `null` when the limits are unavailable (a non-conformant adapter exposing
- * no limits object — real devices always report them).
+ * no limits object - real devices always report them).
  */
 const resolveSlotTier = (maxSampledTextures: number | null, maxSamplers: number | null): number | null => {
   if (maxSampledTextures === null || maxSamplers === null) {
@@ -101,7 +101,7 @@ export const LAUNCH_FLAGS: readonly string[] = ['--force-device-scale-factor=1']
 /**
  * Chromium flag set for the WebGPU browser. Adds only `--enable-unsafe-webgpu`
  * to the WebGL2 flags: on Windows this keeps WebGPU on the real platform adapter
- * (D3D12). Deliberately NOT `--enable-features=Vulkan` — forcing Vulkan lands on
+ * (D3D12). Deliberately NOT `--enable-features=Vulkan` - forcing Vulkan lands on
  * SwiftShader, which would make every WebGPU timing a software number.
  */
 export const WEBGPU_LAUNCH_FLAGS: readonly string[] = [...LAUNCH_FLAGS, '--enable-unsafe-webgpu'];
@@ -159,7 +159,7 @@ const ADAPTER_CAPABILITIES: readonly EngineAdapter[] = [
   // and the run continues), and it is left out of Vite's pre-bundle set below.
   // Both sit out the scrolling archetypes: neither arm implements a moving
   // camera, so they would render a fixed, fully-visible scene under an id that
-  // promises off-screen content — a row that looks comparable and is not.
+  // promises off-screen content - a row that looks comparable and is not.
   capabilityDescriptor('phaser', 'default', ['webgl2'], spec => !isScrolling(spec)),
   capabilityDescriptor('excalibur', 'default', ['webgl2'], spec => !isScrolling(spec)),
 ];
@@ -176,7 +176,7 @@ export const startViteServer = async (version: string): Promise<ViteDevServer> =
 
 /**
  * In-page snippet: read the unmasked WebGL2 renderer string for provenance
- * FROM THE STAGE CANVAS'S OWN CONTEXT — the same `#stage` element and context
+ * FROM THE STAGE CANVAS'S OWN CONTEXT - the same `#stage` element and context
  * the just-run matrix cells actually measured.
  *
  * A throwaway `document.createElement('canvas').getContext('webgl2')` on a
@@ -184,12 +184,12 @@ export const startViteServer = async (version: string): Promise<ViteDevServer> =
  * (rarely) hand out a different GPU adapter per canvas/context (e.g.
  * multi-GPU laptops), so a throwaway canvas's renderer string is not
  * guaranteed to be the adapter that actually rendered the measured cells.
- * Reading `#stage`'s context instead closes that gap — but only AFTER the
+ * Reading `#stage`'s context instead closes that gap - but only AFTER the
  * matrix has run at least one cell: this
  * function must not be called before the engine's own `init()` has created
  * `#stage`'s WebGL2 context, because `HTMLCanvasElement.getContext` freezes
- * context-creation attributes (antialias, stencil, …) on the FIRST call and
- * ignores the attribute dictionary on every subsequent call — calling it here
+ * context-creation attributes (antialias, stencil, ...) on the FIRST call and
+ * ignores the attribute dictionary on every subsequent call - calling it here
  * before the engine's own `getContext('webgl2', { ...options, stencil: true })`
  * (see `WebGl2Backend.ts`) would silently give the engine a mismatched
  * context. `runBackend` therefore calls this only after
@@ -229,7 +229,7 @@ export interface WebGpuIdentity {
 /**
  * Request the WebGPU adapter in-page and classify it. Returns `usable: false`
  * (with a note naming exactly what was found) when `navigator.gpu` is absent,
- * no adapter is offered, or the adapter names a software implementation — so the
+ * no adapter is offered, or the adapter names a software implementation - so the
  * caller can emit `unavailable` cells instead of measuring a software rasterizer
  * and passing it off as a GPU number.
  */
@@ -332,8 +332,8 @@ export type CellResultSink = (result: CellResult) => void;
  * whole backend's cells inside a SINGLE `page.evaluate`, so one late cell that
  * threw (observed: the Pixi-WebGPU device probe) rejected the entire evaluate
  * and discarded every already-measured cell in that backend. Driving one cell
- * per `page.evaluate` — all in the SAME page, so the same-session timing
- * discipline is untouched — means a failing cell costs only itself: it becomes
+ * per `page.evaluate` - all in the SAME page, so the same-session timing
+ * discipline is untouched - means a failing cell costs only itself: it becomes
  * an `unavailable` datapoint carrying the error, and the run continues.
  */
 const runCellInPage = async (page: import('playwright').Page, spec: CellSpec): Promise<CellResult> => {
@@ -348,7 +348,7 @@ const runCellInPage = async (page: import('playwright').Page, spec: CellSpec): P
 
 /**
  * Node-side wall-clock cap on a single cell. The in-page harness bounds warmup
- * and the timed loop, but those guards only fire BETWEEN frames — they cannot
+ * and the timed loop, but those guards only fire BETWEEN frames - they cannot
  * interrupt a frame that never returns. A weak arm can accumulate GPU-driver
  * state across its cells until one heavy cell stalls the driver mid-frame
  * (observed: Excalibur wedging on 25k full-viewport overdraw / batch-breaking),
@@ -365,7 +365,7 @@ const CELL_WEDGED = Symbol('cell-wedged');
 
 /**
  * Run one cell, resolving to {@link CELL_WEDGED} if it does not finish within
- * {@link CELL_TIMEOUT_MS} — the page is then presumed frozen and its browser must
+ * {@link CELL_TIMEOUT_MS} - the page is then presumed frozen and its browser must
  * be relaunched. The still-pending evaluate is left to reject when the browser
  * closes; its rejection is swallowed so it never surfaces as an unhandled
  * rejection (`runCellInPage` already never rejects on a normal cell error).
@@ -398,8 +398,8 @@ const runCellOrWedge = async (page: import('playwright').Page, spec: CellSpec): 
  * each cell behind a wall-clock timeout. Invokes `onCellResult` after EACH cell so
  * the caller can checkpoint it, and returns the backend's provenance plus results.
  *
- * Isolation model (why not one shared session): timing is measured PER CELL — each
- * cell fully `init`s and `teardown`s its arm — so a shared session buys only warm
+ * Isolation model (why not one shared session): timing is measured PER CELL - each
+ * cell fully `init`s and `teardown`s its arm - so a shared session buys only warm
  * JIT/prebundle, not comparability, while it lets one arm's leaked GPU/driver state
  * wedge a LATER arm's (or its own later) cell. Each arm therefore gets a fresh
  * browser (Vite prebundle is server-side, so relaunch is cheap), and any cell that
@@ -570,7 +570,7 @@ export interface ProfileOutcome {
   readonly totalSelfMs: number;
   /** Self time per source frame, descending. */
   readonly rows: readonly ProfileRow[];
-  /** Self time aggregated per source FILE, descending — the view that answers "which subsystem". */
+  /** Self time aggregated per source FILE, descending - the view that answers "which subsystem". */
   readonly byFile: ReadonlyArray<{ readonly source: string; readonly selfMs: number; readonly selfPercent: number }>;
 }
 
@@ -591,7 +591,7 @@ interface CdpProfile {
  * Shorten a profiler URL to something readable: the Vite dev server serves
  * engine source from the repo root, so `http://127.0.0.1:PORT/@fs/<repo-root>/src/x.ts`
  * and `/src/x.ts` both collapse to `src/x.ts`; a pre-bundled competitor keeps
- * its `node_modules/.vite/deps/…` identity, which is exactly what distinguishes
+ * its `node_modules/.vite/deps/...` identity, which is exactly what distinguishes
  * "time inside Pixi" from "time inside the engine".
  */
 const shortenProfileUrl = (url: string): string => {
@@ -677,7 +677,7 @@ export const profileCell = async (options: {
 
       // Per-node self time. `timeDeltas[i]` is the interval BEFORE `samples[i]`
       // in microseconds, so charging it to `samples[i]` attributes each
-      // observed interval to the frame that was on top at its end — the
+      // observed interval to the frame that was on top at its end - the
       // standard reading of a V8 CPU profile.
       const selfUsByNode = new Map<number, number>();
 
@@ -782,7 +782,7 @@ export const runMatrix = async (options: {
   /**
    * Forces every selected cell's timed-frame count to this value. Reserved for
    * the smoke test, which measures a single tiny cell and needs only a handful
-   * of frames — a real reportable run must never set it (it would flatten the
+   * of frames - a real reportable run must never set it (it would flatten the
    * per-node-count frame budgets recorded in the report).
    */
   timedFramesOverride?: number;

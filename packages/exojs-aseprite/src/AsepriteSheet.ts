@@ -64,7 +64,7 @@ function expandFrameIndices(tag: AsepriteFrameTag): number[] {
 /**
  * Calculates the average frames-per-second for a sequence of frame indices,
  * based on the per-frame `duration` field (milliseconds per frame) exported
- * by Aseprite. Every occurrence of an index counts toward the average — for
+ * by Aseprite. Every occurrence of an index counts toward the average - for
  * ping-pong sequences that means repeated (bounced) frames are weighted twice.
  * Falls back to `12` fps when all durations are zero or the sequence is empty.
  */
@@ -91,7 +91,7 @@ interface TaggedFrame {
 
 /**
  * Resolves a tag's frame indices against the frame array, dropping any that
- * fall outside it — Aseprite exports can reference frames a later edit removed.
+ * fall outside it - Aseprite exports can reference frames a later edit removed.
  */
 function resolveTaggedFrames(frameArray: AsepriteFrameData[], indices: number[]): TaggedFrame[] {
   const resolved: TaggedFrame[] = [];
@@ -112,7 +112,7 @@ function resolveTaggedFrames(frameArray: AsepriteFrameData[], indices: number[])
  *
  * `AsepriteSheet.parse(data, texture)` converts the raw JSON document into:
  * - A {@link Spritesheet} whose frames correspond to the Aseprite frame array
- *   (keyed by zero-based index string: `"0"`, `"1"`, …).
+ *   (keyed by zero-based index string: `"0"`, `"1"`, ...).
  * - A `clips` map of {@link AnimatedSpriteClipDefinition} entries built from
  *   `meta.frameTags`, one per named tag.
  * - The `slices` and `layers` metadata maps, carried through verbatim.
@@ -142,8 +142,8 @@ export class AsepriteSheet {
 
   /**
    * Named slices from the Aseprite `meta.slices` metadata, keyed by slice
-   * name. Slices describe editor-defined regions — hitboxes, nine-patch
-   * borders, UI anchor points — that aren't part of the frame/animation
+   * name. Slices describe editor-defined regions - hitboxes, nine-patch
+   * borders, UI anchor points - that aren't part of the frame/animation
    * data itself. Each {@link AsepriteSlice} carries one {@link AsepriteSliceKey}
    * per frame at which its bounds change; consumers resolve the applicable
    * key for a given frame index themselves.
@@ -154,8 +154,8 @@ export class AsepriteSheet {
    * Layers from the Aseprite `meta.layers` metadata, keyed by layer name and
    * in export order (bottom-most first). Aseprite packs the sheet already
    * composited, so these are descriptive rather than renderable: they tell a
-   * consumer which layers went into a frame and how — opacity, blend mode,
-   * editor user data — and {@link AsepriteLayer.group} names the enclosing
+   * consumer which layers went into a frame and how - opacity, blend mode,
+   * editor user data - and {@link AsepriteLayer.group} names the enclosing
    * group layer, so the flat map still encodes the layer tree.
    *
    * Empty when the export carries no `meta.layers` block. Layer names are
@@ -164,7 +164,7 @@ export class AsepriteSheet {
   public readonly layers: ReadonlyMap<string, AsepriteLayer>;
 
   /**
-   * @internal — use {@link AsepriteSheet.parse} to create instances.
+   * @internal - use {@link AsepriteSheet.parse} to create instances.
    * The public modifier is required for the Loader's `AssetConstructor` token
    * contract; users should call `parse()` instead of constructing directly.
    */
@@ -189,21 +189,21 @@ export class AsepriteSheet {
    * indices are silently skipped.
    *
    * A tag's `direction` determines the expanded frame sequence fed into the
-   * clip — `forward` and `reverse` play the `[from, to]` range in order or
+   * clip - `forward` and `reverse` play the `[from, to]` range in order or
    * in reverse, while `pingpong`/`pingpong_reverse` append a backward pass
    * (excluding both endpoints) so the bounce plays back correctly on the
    * engine's forward-only {@link AnimatedSprite} playback. The tag's
    * `repeat` field maps directly onto {@link AnimatedSpriteClipDefinition.repeat}:
    * absent means the clip loops indefinitely (`repeat: -1`); a numeric
-   * string (`"1"`, `"2"`, …) means it plays exactly that many full cycles
+   * string (`"1"`, `"2"`, ...) means it plays exactly that many full cycles
    * before stopping.
    *
    * Each clip's `frameDurations` carries the real per-frame `duration` from
    * the export (falling back to the tag's average when a frame's duration is
    * non-positive), so uneven hold-frames survive into playback instead of
    * being flattened to a uniform fps. `frameOffsets` carries each frame's
-   * `spriteSourceSize` `{x,y}` — its trimmed content's offset within the
-   * untrimmed canvas — whenever any frame in the tag is trimmed, so frames
+   * `spriteSourceSize` `{x,y}` - its trimmed content's offset within the
+   * untrimmed canvas - whenever any frame in the tag is trimmed, so frames
    * trimmed by different amounts stay anchored instead of jittering; it's
    * omitted entirely for tags with no trimmed frames.
    */
@@ -276,7 +276,7 @@ export class AsepriteSheet {
       slices.set(slice.name, slice);
     }
 
-    // Same for meta.layers — insertion order is the export order, so the map
+    // Same for meta.layers - insertion order is the export order, so the map
     // doubles as the ordered layer list.
     const layers = new Map<string, AsepriteLayer>();
 

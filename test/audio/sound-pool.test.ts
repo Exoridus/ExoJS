@@ -6,7 +6,7 @@ import type { MockInstance } from 'vitest';
  *  - manager.play() is multi-instance (pooled) by default
  *  - _stopAllVoices() stops all active voices (replace mode)
  *  - FIFO eviction (FirstInFirstOut strategy)
- *  - LRU eviction (LeastRecentlyUsed strategy — closest to natural end)
+ *  - LRU eviction (LeastRecentlyUsed strategy - closest to natural end)
  *  - LowestPriority degenerates to FIFO within a single Sound
  *  - Voices are removed from pool when they end naturally
  */
@@ -141,7 +141,7 @@ describe('Sound — pool defaults', () => {
   test('setPoolSize() is a no-op when the normalized size is unchanged', () => {
     const sound = new Sound(createAudioBufferStub(), { poolSize: 4 });
     expect(sound.setPoolSize(4)).toBe(sound);
-    // Fractional/negative inputs normalize to the same 4 — still a no-op.
+    // Fractional/negative inputs normalize to the same 4 - still a no-op.
     expect(sound.setPoolSize(4.9)).toBe(sound);
     expect(sound.poolSize).toBe(4);
   });
@@ -241,11 +241,11 @@ describe('Sound — LeastRecentlyUsed eviction', () => {
       poolStrategy: SoundPoolStrategy.LeastRecentlyUsed,
     });
 
-    // src[0] — started at t=0, duration=4s → remaining at t=3: 4-3=1s
+    // src[0] - started at t=0, duration=4s → remaining at t=3: 4-3=1s
     timeMock.setTime(0);
     manager.play(sound);
 
-    // src[1] — started at t=2, duration=4s → remaining at t=3: 4-(3-2)=3s
+    // src[1] - started at t=2, duration=4s → remaining at t=3: 4-(3-2)=3s
     timeMock.setTime(2);
     manager.play(sound);
 
@@ -269,7 +269,7 @@ describe('Sound — LeastRecentlyUsed eviction while the audio context is not re
 
   // LRU falls back to `now = 0` when the audio context is not running yet.
   // Playing is skipped outright while locked, so the surviving way in is
-  // `setPoolSize()` — a pool shrunk while audio is suspended still has to pick
+  // `setPoolSize()` - a pool shrunk while audio is suspended still has to pick
   // a victim, and must do so without spawning a context to read the clock from.
   test('LRU eviction still picks a victim when isAudioContextReady() is false', () => {
     const factory = setupSourceFactory();
@@ -413,7 +413,7 @@ describe('Sound — natural pool cleanup', () => {
     // After src[1] also ends
     factory.sources[1].onended?.();
 
-    // Pool should now be empty — a 3rd play creates a fresh voice without evicting
+    // Pool should now be empty - a 3rd play creates a fresh voice without evicting
     manager.play(sound); // src[2]
     expect(factory.sources[2].stop).not.toHaveBeenCalled();
 
@@ -473,7 +473,7 @@ describe('Sound — natural pool cleanup', () => {
 });
 
 // A paused voice is frozen exactly where a scene pause or retention suspension
-// left it, waiting to be restored — but its pool bookkeeping keeps aging
+// left it, waiting to be restored - but its pool bookkeeping keeps aging
 // against the still-running context clock. Both strategies would otherwise
 // single it out: FIFO sees the oldest entry, LRU the one with the least time
 // left. Evicting it stops it for good, and `SceneAudio.restore()` skips it

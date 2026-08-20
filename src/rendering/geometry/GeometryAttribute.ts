@@ -1,9 +1,9 @@
 /**
  * GPU buffer ownership strategy used by geometry-aware render paths.
  *
- * - `static`  — immutable after creation; eligible for shared batched buffers.
- * - `dynamic` — occasionally mutated; backend should keep a dedicated buffer.
- * - `stream`  — mutated every frame; backend should treat as immediate data.
+ * - `static`  - immutable after creation; eligible for shared batched buffers.
+ * - `dynamic` - occasionally mutated; backend should keep a dedicated buffer.
+ * - `stream`  - mutated every frame; backend should treat as immediate data.
  */
 export type GeometryUsage = 'static' | 'dynamic' | 'stream';
 

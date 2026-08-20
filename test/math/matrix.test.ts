@@ -123,7 +123,7 @@ describe('Matrix', () => {
   });
 
   test('combine() post-multiplies this matrix by another', () => {
-    // Translate then scale — combine() applies `matrix`'s transform after this one's.
+    // Translate then scale - combine() applies `matrix`'s transform after this one's.
     const matrix = new Matrix().translate(10, 0);
     const point = new Vector(1, 0).transform(matrix.combine(new Matrix().scale(2, 2)));
 

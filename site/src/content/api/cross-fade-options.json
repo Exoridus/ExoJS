@@ -49,7 +49,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Stop the from voice once the fade completes (default true) — the right choice for a one-shot transition, since it frees the outgoing voice. Pass false to leave from playing at volume 0, e.g. when you crossfade back and forth between two looping tracks."
+          "description": "Stop the from voice once the fade completes (default true) - the right choice for a one-shot transition, since it frees the outgoing voice. Pass false to leave from playing at volume 0, e.g. when you crossfade back and forth between two looping tracks."
         },
         {
           "name": "toVolume",

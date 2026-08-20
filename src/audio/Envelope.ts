@@ -1,11 +1,11 @@
 export interface EnvelopeOptions {
-  /** Attack time in ms — gain ramps from 0 to peak (1.0). Default 10. */
+  /** Attack time in ms - gain ramps from 0 to peak (1.0). Default 10. */
   attackMs?: number;
-  /** Decay time in ms — gain ramps from peak to sustain level. Default 100. */
+  /** Decay time in ms - gain ramps from peak to sustain level. Default 100. */
   decayMs?: number;
   /** Sustain level, 0..1. Default 0.7. */
   sustainLevel?: number;
-  /** Release time in ms — gain ramps from current to 0 on release(). Default 200. */
+  /** Release time in ms - gain ramps from current to 0 on release(). Default 200. */
   releaseMs?: number;
 }
 
@@ -108,7 +108,7 @@ export class Envelope {
    * The release starts from wherever the envelope actually is, including
    * mid-attack and mid-decay. A bare `cancelScheduledValues` would drop the
    * in-flight ramp and snap the parameter back to the previous event's value
-   * (0 during attack) — an audible click.
+   * (0 during attack) - an audible click.
    */
   public release(gainParam: AudioParam, atTime: number): void {
     // `cancelAndHoldAtTime` freezes the automation at its current value in one
@@ -155,6 +155,6 @@ export class Envelope {
   }
 
   public destroy(): void {
-    // no-op — Envelope is a configuration value, holds no resources
+    // no-op - Envelope is a configuration value, holds no resources
   }
 }

@@ -1,7 +1,7 @@
 /**
  * Stencil-clipped scenes.
  *
- * A clip shape sends both backends down a path they otherwise never take —
+ * A clip shape sends both backends down a path they otherwise never take -
  * a stencil buffer on WebGL2 against a separate stencil attachment and
  * pipeline state on WebGPU. The sprite inside keeps its coordinate texture, so
  * the surviving pixels remain traceable: this checks not just *that* something

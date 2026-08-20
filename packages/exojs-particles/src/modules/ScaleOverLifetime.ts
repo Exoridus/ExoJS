@@ -17,7 +17,7 @@ const lookupSize = 256;
  * curve up to peak then down), slow-grow (linear ramp).
  *
  * GPU-eligible: the curve is uploaded once as a 256-tap 1D R32F texture and
- * sampled with linear filtering on the GPU — no curve evaluation cost in
+ * sampled with linear filtering on the GPU - no curve evaluation cost in
  * the inner loop.
  */
 export class ScaleOverLifetime extends UpdateModule {

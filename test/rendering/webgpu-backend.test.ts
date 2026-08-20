@@ -26,7 +26,7 @@ import { particlesExtension, ParticleSystem } from '../../packages/exojs-particl
 /**
  * The 2D-context stub `test/setup-env.vitest.ts` installs globally. Tests that
  * swap in a richer context for glyph rasterisation restore this one afterwards,
- * so it has to carry `getImageData` too — the backend reads canvas-sourced
+ * so it has to carry `getImageData` too - the backend reads canvas-sourced
  * textures back through it, and a stub without it fails every later test in the
  * file with a TypeError rather than an assertion.
  */
@@ -67,7 +67,7 @@ interface MockWebGpuEnvironment {
   readonly pipelineDescriptors: GPURenderPipelineDescriptor[];
   readonly buffers: Array<{ destroy: MockInstance }>;
   readonly textures: Array<{ destroy: MockInstance; createView: MockInstance }>;
-  /** `GPUDevice.destroy` — resolves `device.lost` with reason `'destroyed'`, as the platform does. */
+  /** `GPUDevice.destroy` - resolves `device.lost` with reason `'destroyed'`, as the platform does. */
   readonly destroyDevice: MockInstance;
   /** Resolve this to simulate the GPU device being lost. */
   simulateDeviceLost(info?: Partial<GPUDeviceLostInfo>): void;
@@ -848,7 +848,7 @@ describe('WebGpuBackend', () => {
 
       sourceCanvas.width = 16;
       sourceCanvas.height = 16;
-      // Disable mipmaps so the only render passes are content passes — mipmap
+      // Disable mipmaps so the only render passes are content passes - mipmap
       // generation legitimately opens its own (non-coordinator) passes against
       // mip-level targets, which would otherwise inflate the raw mock counts.
       texture.generateMipMap = false;
@@ -1892,7 +1892,7 @@ describe('WebGpuBackend', () => {
       // first shared-buffer write (slot 0), so the sprite is the second and lands
       // in slot 1. Each slot is 8 floats (a, b, c, d, tx, ty, snapMode, 0); tint
       // now uploads separately, right after the transform write (see
-      // WebGpuTransformStorage.getBuffer) — so the transform write is the
+      // WebGpuTransformStorage.getBuffer) - so the transform write is the
       // second-to-last call, not the last (that's the tint upload).
       const slotFloats = 8;
       const spriteBase = 1 * slotFloats; // slot 1
@@ -2404,7 +2404,7 @@ describe('WebGpuBackend', () => {
 
       environment.simulateDeviceLost({ message: 'gpu removed' });
 
-      // The lost promise is async — flush the microtask queue.
+      // The lost promise is async - flush the microtask queue.
       await Promise.resolve();
 
       expect(lostHandler).toHaveBeenCalledTimes(1);
@@ -2593,7 +2593,7 @@ describe('WebGpuBackend', () => {
       await manager.initialize();
 
       // A renderer switch no longer ends the pass, so destroy() can be reached
-      // with one open — which used to be impossible, because switching to a
+      // with one open - which used to be impossible, because switching to a
       // null renderer ended it.
       manager._passCoordinator.acquirePass();
 
@@ -2643,7 +2643,7 @@ describe('WebGpuBackend', () => {
 
       // The coordinator survives recovery and acquirePass short-circuits on an
       // already-open pass. Inheriting the dead device's pass would record every
-      // later frame into an encoder that can never be submitted — silently,
+      // later frame into an encoder that can never be submitted - silently,
       // since operations on a lost device do not throw.
       expect(manager._passCoordinator.hasActivePass).toBe(false);
       expect(manager._passCoordinator.acquirePass()).not.toBe(deadPass);
@@ -2689,7 +2689,7 @@ describe('WebGpuBackend', () => {
       await Promise.resolve();
 
       // 5 retries with exponential backoff (100/200/400/800/1600ms of real
-      // timers) run before recovery gives up — wait for the final dispatch.
+      // timers) run before recovery gives up - wait for the final dispatch.
       await vi.waitFor(
         () => {
           expect(renderErrorHandler).toHaveBeenCalledTimes(1);
@@ -2704,8 +2704,8 @@ describe('WebGpuBackend', () => {
 
       const aggregate = error.cause as AggregateError;
 
-      // Every one of the 5 attempts must be represented — not just the last
-      // failure — since an earlier attempt can fail for a different reason
+      // Every one of the 5 attempts must be represented - not just the last
+      // failure - since an earlier attempt can fail for a different reason
       // than the final one.
       expect(aggregate.errors).toHaveLength(5);
 
@@ -2734,7 +2734,7 @@ describe('WebGpuBackend', () => {
 
       await manager.initialize();
 
-      // All blend modes — including out-of-range values — are silently
+      // All blend modes - including out-of-range values - are silently
       // accepted. Blend state is baked into GPU pipelines at creation time
       // and is not set imperatively on the backend.
       expect(() => manager.setBlendMode(BlendModes.Normal)).not.toThrow();

@@ -101,7 +101,7 @@ describe('VocoderEffect', () => {
   });
 
   // -------------------------------------------------------------------------
-  // 4. Worklet lifecycle — 2 inputs
+  // 4. Worklet lifecycle - 2 inputs
   // -------------------------------------------------------------------------
   describe('worklet lifecycle', () => {
     it('after await filter.ready: workletNode is not null', async () => {

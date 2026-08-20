@@ -42,7 +42,7 @@ describe('Capabilities', () => {
 
   test('jsdom baseline: WebGPU is never reported in the test env', async () => {
     // jsdom does not implement WebGPU. If this ever flips it's worth
-    // a deliberate look — either jsdom upgraded or our probe regressed.
+    // a deliberate look - either jsdom upgraded or our probe regressed.
     const caps = await Capabilities.ready;
 
     expect(caps.webgpu).toBe(false);
@@ -51,7 +51,7 @@ describe('Capabilities', () => {
   });
 
   test('maxTouchPoints is non-negative', async () => {
-    // The two touch indicators aren't strictly tied — jsdom reports
+    // The two touch indicators aren't strictly tied - jsdom reports
     // `'ontouchstart' in window` as true but `navigator.maxTouchPoints`
     // as 0. We only check non-negativity here.
     const caps = await Capabilities.ready;
@@ -91,7 +91,7 @@ describe('Capabilities', () => {
   test('Capabilities cannot be constructed externally via the public API', () => {
     // The constructor is TS-private. Compile-time, `new Capabilities(...)`
     // is rejected. Runtime, TS-private is not enforced, so a cast can
-    // still call it — that's not a hard guard, but the documented
+    // still call it - that's not a hard guard, but the documented
     // contract is "use Capabilities.ready".
     const Ctor = Capabilities as unknown as new (values: unknown) => Capabilities;
     expect(() => new Ctor({})).not.toThrow();

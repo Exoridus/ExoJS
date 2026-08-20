@@ -1,4 +1,4 @@
-// Auto-generated from tween-chains.ts — edit the .ts source, not this file.
+// Auto-generated from tween-chains.ts - edit the .ts source, not this file.
 import { Application, Color, Scene, Sprite } from '@codexo/exojs';
 class TweenChainsScene extends Scene {
     sprite;

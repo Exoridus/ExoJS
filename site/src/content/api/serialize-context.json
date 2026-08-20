@@ -1,6 +1,6 @@
 {
   "title": "SerializeContext",
-  "description": "Context handed to NodeSerializer.write. Carries the framework services a type serializer needs: recursion into children and asset-key resolution. The framework writes the `SceneNode`/`RenderNode`/`Drawable` common fields and the `type` tag itself — a serializer only returns its own type-specific fields.",
+  "description": "Context handed to NodeSerializer.write. Carries the framework services a type serializer needs: recursion into children and asset-key resolution. The framework writes the `SceneNode`/`RenderNode`/`Drawable` common fields and the `type` tag itself - a serializer only returns its own type-specific fields.",
   "symbol": "SerializeContext",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Context handed to NodeSerializer.write. Carries the framework services a type serializer needs: recursion into children and asset-key resolution. The framework writes the `SceneNode`/`RenderNode`/`Drawable` common fields and the `type` tag itself — a serializer only returns its own type-specific fields."
+        "Context handed to NodeSerializer.write. Carries the framework services a type serializer needs: recursion into children and asset-key resolution. The framework writes the `SceneNode`/`RenderNode`/`Drawable` common fields and the `type` tag itself - a serializer only returns its own type-specific fields."
       ],
       "importLine": "import { SerializeContext } from '@codexo/exojs'",
       "sourceLink": null
@@ -144,7 +144,7 @@
             }
           ],
           "returnType": "SerializedNode",
-          "description": "Fully serialize a child node — writes its type tag, common fields, and type-specific fields. Use this from container-like serializers to recurse."
+          "description": "Fully serialize a child node - writes its type tag, common fields, and type-specific fields. Use this from container-like serializers to recurse."
         }
       ],
       "paragraphs": [],

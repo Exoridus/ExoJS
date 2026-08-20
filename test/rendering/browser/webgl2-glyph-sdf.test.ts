@@ -1,19 +1,19 @@
 import { GlyphSdf } from '#rendering/text/GlyphSdf';
 
 /**
- * Regression: assigning `canvas.width`/`height` — which {@link GlyphSdf} does
- * whenever the glyph tile size changes — resets the 2D context to its defaults,
+ * Regression: assigning `canvas.width`/`height` - which {@link GlyphSdf} does
+ * whenever the glyph tile size changes - resets the 2D context to its defaults,
  * including `font = "10px sans-serif"`. GlyphSdf must re-apply its font *after*
  * that reset and before `fillText`; otherwise every glyph whose draw triggers a
  * resize rasterizes at 10px instead of the requested size, producing wildly
  * uneven glyph sizes in rendered text.
  *
  * This is real canvas-2D behaviour: jsdom's mocked context does not reset `font`
- * on resize, so the regression only reproduces with a real canvas — hence the
+ * on resize, so the regression only reproduces with a real canvas - hence the
  * browser project. The test only needs Canvas 2D (`getImageData`), not WebGL.
  */
 
-// Vertical extent (in pixels) of the "inside-glyph" region — SDF value >= 128.
+// Vertical extent (in pixels) of the "inside-glyph" region - SDF value >= 128.
 function verticalInkExtent(result: { data: Uint8ClampedArray; width: number; height: number }): number {
   const { data, width, height } = result;
   let minY = height;
@@ -51,7 +51,7 @@ describe('GlyphSdf SDF rasterization', () => {
 
     // Mixed widths: some draws change the tile size (resize), some reuse the
     // previous tile size (no resize). The original bug only corrupted the
-    // no-resize draws — the glyph kept the previous draw's 10px reset font.
+    // no-resize draws - the glyph kept the previous draw's 10px reset font.
     for (const char of ['W', 'l', 'i', 'H', 'I', 'M']) {
       const result = sdf.draw(char);
 

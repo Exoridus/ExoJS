@@ -77,7 +77,7 @@ describe('invariant', () => {
   });
 
   test('is always-on: not gated by __DEV__, unlike assert/assertDefined', () => {
-    // invariant has no __DEV__ branch at all — it throws unconditionally in
+    // invariant has no __DEV__ branch at all - it throws unconditionally in
     // every build, including production. There's nothing to toggle in a test
     // environment (vitest always sets __DEV__ = true), so this just pins the
     // always-on contract: the condition alone determines the outcome.

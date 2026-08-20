@@ -66,7 +66,7 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 
   wireCoreRenderers(backend);
   await backend.initialize();
-  // The particle renderer is not part of the core renderer bindings — the
+  // The particle renderer is not part of the core renderer bindings - the
   // `@codexo/exojs-particles` package materialises it itself via its
   // Extension descriptor. Browser tests construct a bare backend (bypassing
   // Application), so the particle binding must be wired explicitly, same as
@@ -172,7 +172,7 @@ describe('WebGPU ParticleSystem — solid color', () => {
     try {
       // Deterministic placement: bypass spawn/update modules entirely and
       // write the SoA slot directly. `lifetime` only matters if `update()`
-      // is called — it never is here, so the particle can't expire.
+      // is called - it never is here, so the particle can't expire.
       system.emit();
       // Position the system itself so the particle (system-local quad
       // centered on 0,0, half-extent 8px for a 16x16 texture) lands at
@@ -236,7 +236,7 @@ describe('WebGPU ParticleSystem — ribbon', () => {
     const texture = createSolidTexture('#ffffff');
     const root = new Container();
     // The ribbon mode ships its own WGSL, which only a real device ever
-    // compiles — a broken module draws nothing and fails the interior
+    // compiles - a broken module draws nothing and fails the interior
     // assertions below rather than passing silently in the node lanes.
     const system = new ParticleSystem(texture, { capacity: 8, render: new RibbonParticles({ width: 12 }) });
 
@@ -286,7 +286,7 @@ describe('WebGPU ParticleSystem — mesh', () => {
     const mesh = createTriangleMesh();
     const root = new Container();
     // The mesh mode bakes its own WGSL around the geometry, which only a real
-    // device ever compiles — a broken module draws nothing and fails the
+    // device ever compiles - a broken module draws nothing and fails the
     // interior assertions below rather than passing silently in the node lanes.
     const system = new ParticleSystem(texture, { capacity: 4, render: new MeshParticles({ geometry: mesh }) });
 
@@ -308,7 +308,7 @@ describe('WebGPU ParticleSystem — mesh', () => {
       // Inside, right of it: samples the blue half. Both together prove the mesh
       // UVs reach the sampler rather than the quad's corner UVs.
       expectPixelNear(readPixel(38, 18), [0, 0, 255, 255]);
-      // Inside the mesh's bounding box but past its hypotenuse — the assertion a
+      // Inside the mesh's bounding box but past its hypotenuse - the assertion a
       // mesh drawn as a quad would fail.
       expectPixelNear(readPixel(44, 44), [0, 0, 0, 255]);
       // A safely mesh-free corner remains the clear color.
@@ -389,7 +389,7 @@ describe('WebGPU ParticleSystem — mesh on the GPU compute path', () => {
 
       // The system tears its GPU state down the first time it sees a backend
       // it has not been collected against, so the first frame is always the
-      // CPU path. Render once to bind the backend, then update again — that
+      // CPU path. Render once to bind the backend, then update again - that
       // second update is the one that compiles the compute pipeline.
       if (!(await renderScene(ctx, backend, root))) {
         return;

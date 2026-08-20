@@ -90,7 +90,7 @@ export interface ParticleBufferLayoutOptions {
  *
  * Deliberately not a `Geometry`. A `Geometry` requires a position attribute,
  * requires that attribute to carry at least two components, and validates any
- * index list against the vertex count implied by its `vertexData` — three rules
+ * index list against the vertex count implied by its `vertexData` - three rules
  * that are meaningful for geometry and meaningless for a per-instance record.
  * Satisfying them used to cost the instanced modes a zero-filled placeholder
  * buffer that was never uploaded, sized purely to keep the index check quiet.

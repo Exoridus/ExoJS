@@ -4,7 +4,7 @@ import { Scene } from '#core/Scene';
 import { Time } from '#core/Time';
 
 // SceneDirector is fully mocked in this file's harness (see
-// loadApplicationHarness) — its change() is a plain vi.fn() that never
+// loadApplicationHarness) - its change() is a plain vi.fn() that never
 // validates a registry, so any Scene subclass constructor works as a
 // start()/change() target here.
 class DummyScene extends Scene {}
@@ -254,7 +254,7 @@ describe('Application', () => {
     rawApp['_frameClock'] = frameClock;
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     // Object.create() bypasses the constructor, so the real field
-    // initializer (`= new Time()`) never runs — stand in with a real Time so
+    // initializer (`= new Time()`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
     rawApp['_frameDelta'] = new Time();
     rawApp['_updateHandler'] = vi.fn();

@@ -1,9 +1,9 @@
 /**
- * WebGPU tilemap chunk renderer browser tests — opt-in, capability-aware.
+ * WebGPU tilemap chunk renderer browser tests - opt-in, capability-aware.
  *
  * The parity counterpart of `webgl2-tilemap.test.ts`: single/multi-tileset
  * rendering, all 8 tile orientations, culling, layer opacity, and one-extension
- * Tiled wiring on a real WebGPU backend. All WebGPU renderers use inline WGSL —
+ * Tiled wiring on a real WebGPU backend. All WebGPU renderers use inline WGSL -
  * no shader mocks. CI guarantees a real WebGPU adapter (the required
  * Chromium-WebGPU lane runs against Mesa lavapipe); `renderScene` only skips
  * when the software adapter drops the device mid-test.

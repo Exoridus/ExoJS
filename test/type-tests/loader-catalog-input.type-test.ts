@@ -3,14 +3,14 @@
 //
 // The catalog overloads used to be keyed on `Record<string, AssetInput>`, which
 // covers explicit configs and `Asset` descriptors but NOT the bare path strings
-// a catalog definition may be written with — so `loader.load(Assets.from({ ship:
+// a catalog definition may be written with - so `loader.load(Assets.from({ ship:
 // 'ship.png' }))` matched no overload at all. They are keyed on
 // `Record<string, CatalogEntry>` now: the loader consumes already materialized
 // leaves and must not re-validate the definition entries.
 //
 // `pnpm typecheck:type-tests` compiles this file under all three lanes:
 // `tsconfig.type-tests.json` (the example project's settings),
-// `tsconfig.type-tests-strict.json` (the engine's own profile —
+// `tsconfig.type-tests-strict.json` (the engine's own profile -
 // `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noUnusedLocals`)
 // and `tsconfig.type-tests.json` again with `--strictNullChecks false` on the
 // command line. Every assertion below must hold identically in all three.
@@ -26,7 +26,7 @@ type Expect<T extends true> = T;
 
 /**
  * Assertion as an EXPRESSION rather than a local type alias: the engine's strict
- * profile enables `noUnusedLocals`, under which a `type _X = Expect<…>` inside a
+ * profile enables `noUnusedLocals`, under which a `type _X = Expect<...>` inside a
  * function body is an error.
  */
 declare function expectType<_T extends true>(): void;
@@ -64,7 +64,7 @@ const forest = Assets.from({ tree: 'sprites/tree.png', trees: 'data/trees.json' 
 const composed = Assets.compose(bare, forest);
 const extended = Assets.extend(bare, { enemy: 'sprites/enemy.png' });
 
-// The catalog LEAVES are unchanged by this fix — asserted so a regression in the
+// The catalog LEAVES are unchanged by this fix - asserted so a regression in the
 // loaded-map inference can't be mistaken for a leaf-inference regression.
 type _BareLeafPlayer = Expect<Equal<typeof bare.player, CatalogResourceLeaf<Texture>>>;
 type _BareLeafConfig = Expect<Equal<typeof bare.config, CatalogValueLeaf<unknown>>>;
@@ -107,7 +107,7 @@ export async function loads(): Promise<void> {
   const sceneComposed = await scene.loader.load(composed, { priority: LoadPriority.Background });
   expectType<Equal<typeof sceneComposed.tree, Texture>>();
 
-  // `get()`/`release()` take the very same catalogs — same root cause, same fix.
+  // `get()`/`release()` take the very same catalogs - same root cause, same fix.
   const held = loader.get(bare);
   expectType<Equal<typeof held.player, CatalogResourceLeaf<Texture>>>();
   loader.createScope().release(bare);
@@ -140,15 +140,15 @@ export async function neighbours(): Promise<void> {
 declare const plainRecord: { player: 'sprites/player.png'; config: 'data/config.json' };
 
 export function negatives(): void {
-  // @ts-expect-error — a definition RECORD is not a materialized `Assets`
+  // @ts-expect-error - a definition RECORD is not a materialized `Assets`
   // catalog; the catalog overload takes `Assets.from(...)` output, not the
   // record it was built from.
   loader.load(plainRecord);
 
-  // @ts-expect-error — and the scene-scoped mirror rejects it just the same.
+  // @ts-expect-error - and the scene-scoped mirror rejects it just the same.
   scene.loader.load(plainRecord);
 
-  // @ts-expect-error — an arbitrary object matches no loader input either.
+  // @ts-expect-error - an arbitrary object matches no loader input either.
   loader.load({ nope: 1 });
 }
 

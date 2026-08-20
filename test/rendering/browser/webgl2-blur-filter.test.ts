@@ -47,7 +47,7 @@ describe('BlurFilter kernel shape (WebGL2)', () => {
 
       // A cross-shaped sampler leaves this exactly 0.
       expect(corner[0]!).toBeGreaterThan(20);
-      // …and still less than the on-axis reading: a separable Gaussian falls
+      // ...and still less than the on-axis reading: a separable Gaussian falls
       // off with distance, so a filter that lit the corner as brightly as the
       // axis would not be one either.
       expect(corner[0]!).toBeLessThan(axis[0]!);

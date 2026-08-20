@@ -22,7 +22,7 @@ const getListenerMock = (): {
   upX: { setValueAtTime: MockInstance };
   upY: { setValueAtTime: MockInstance };
   upZ: { setValueAtTime: MockInstance };
-  // NO context property — matches real WebAudio spec
+  // NO context property - matches real WebAudio spec
 } => (getCtx() as unknown as { listener: ReturnType<typeof getListenerMock> }).listener;
 
 const makeSceneNodeStub = (x: number, y: number) => ({
@@ -56,7 +56,7 @@ describe('AudioListener', () => {
     vi.restoreAllMocks();
   });
 
-  // 1. Construction — listener exists, default position 0,0.
+  // 1. Construction - listener exists, default position 0,0.
   test('constructs with default position (0, 0)', () => {
     const listener = new AudioListener();
     expect(listener.position.x).toBe(0);
@@ -149,7 +149,7 @@ describe('AudioListener', () => {
 
   // `ctx.listener` is process-wide, so it is pinned at the origin once
   // at setup and never moved. A moving listener reaches the mix through each
-  // voice's RELATIVE panner position instead — see
+  // voice's RELATIVE panner position instead - see
   // test/audio/listener-virtualization.test.ts.
   test('setup pins the global WebAudio listener at the origin', () => {
     const l = getListenerMock();
@@ -319,12 +319,12 @@ describe('AudioListener', () => {
     const { AudioListener: DeferredAudioListener } = await import('#audio/AudioListener');
     const listener = new DeferredAudioListener();
 
-    // Not set up yet — no orientation has been written.
+    // Not set up yet - no orientation has been written.
     const l = fakeCtx.listener as unknown as { forwardZ: { setValueAtTime: MockInstance } };
     expect(l.forwardZ.setValueAtTime).not.toHaveBeenCalled();
     expect(fakeSignal.count).toBe(1);
 
-    // The AudioContext becomes ready — the listener's deferred setup runs and
+    // The AudioContext becomes ready - the listener's deferred setup runs and
     // it unsubscribes from the (one-shot) global signal.
     fakeSignal.dispatch(fakeCtx);
 

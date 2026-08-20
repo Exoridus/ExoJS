@@ -14,7 +14,7 @@ interface SubtitleIntermediate {
 /**
  * The narrow slice of `Response` that {@link SubtitleFactory.process} actually
  * reads. A real `Response` satisfies it structurally, so the network/cache
- * strategies still pass their fetched response unchanged — but an in-memory
+ * strategies still pass their fetched response unchanged - but an in-memory
  * `{ text, url }` source (see `coreAssetBindings`) also fits without a cast.
  */
 interface SubtitleSource {

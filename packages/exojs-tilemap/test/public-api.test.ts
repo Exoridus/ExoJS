@@ -92,7 +92,7 @@ describe('public chunk boundary', () => {
     // _setRawAt, _clear, or _markDirty. At the JS level the methods
     // exist on the instance (TS-private is compile-time only), but the
     // public contract is: consumers must only use ReadonlyTileChunk methods.
-    // The type system prevents accessing these — see the static import tests.
+    // The type system prevents accessing these - see the static import tests.
 
     // cloneTiles produces an independent copy.
     const copy = chunk!.cloneTiles();
@@ -117,7 +117,7 @@ describe('public chunk boundary', () => {
     expect(layer.revision).toBe(rev + 1);
 
     const chunk = layer.getChunk(0, 0)!;
-    // The chunk is a ReadonlyTileChunk — TypeScript prevents calling
+    // The chunk is a ReadonlyTileChunk - TypeScript prevents calling
     // _setRawAt on it at the type level (would be a compile error).
     expect(chunk.getRawAt(5, 5)).not.toBe(0);
   });

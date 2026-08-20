@@ -1,6 +1,6 @@
 {
   "title": "AxisCompositeBinding",
-  "description": "Two opposing groups of sources forming one signed axis. `negative` and `positive` are the generic one-dimensional terms — use them for left/right, down/up, brake/throttle alike. Either side may be omitted for a one-sided axis.",
+  "description": "Two opposing groups of sources forming one signed axis. `negative` and `positive` are the generic one-dimensional terms - use them for left/right, down/up, brake/throttle alike. Either side may be omitted for a one-sided axis.",
   "symbol": "AxisCompositeBinding",
   "kind": "interface",
   "subsystem": "input",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Two opposing groups of sources forming one signed axis. `negative` and `positive` are the generic one-dimensional terms — use them for left/right, down/up, brake/throttle alike. Either side may be omitted for a one-sided axis."
+        "Two opposing groups of sources forming one signed axis. `negative` and `positive` are the generic one-dimensional terms - use them for left/right, down/up, brake/throttle alike. Either side may be omitted for a one-sided axis."
       ],
       "importLine": "import { AxisCompositeBinding } from '@codexo/exojs'",
       "sourceLink": null

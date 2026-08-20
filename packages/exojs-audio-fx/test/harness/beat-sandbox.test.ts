@@ -4,7 +4,7 @@
  * Acceptance criteria (from Stage-1 plan Task 2):
  *   1. DETERMINISM: Feeding the same fixture twice yields an identical message log.
  *   2. BLOCK-INDEPENDENCE: Block sizes {64, 128, 512, whole-buffer} yield identical
- *      beat.audioTime sequences — proving hop timing is block-size-independent.
+ *      beat.audioTime sequences - proving hop timing is block-size-independent.
  *   3. BASIC DETECTION: A 120-BPM clicktrack produces >= 1 beat message after the
  *      settling period and state messages with tempo > 0.
  */

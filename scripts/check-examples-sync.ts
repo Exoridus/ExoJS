@@ -20,7 +20,7 @@ const normalizeNewlines = (content: string): string => content.replace(/\r\n/g, 
 
 const toDisplayPath = (relPath: string): string => `examples/${relPath.split(path.sep).join('/')}`;
 
-// Only files carrying the generator's header are ours to police — a few
+// Only files carrying the generator's header are ours to police - a few
 // example `.js` files (e.g. examples/shared/runtime.js) are hand-authored
 // with no `.ts` source and must not be flagged as stale.
 const isGeneratedJs = (filePath: string): boolean => {

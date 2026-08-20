@@ -1,4 +1,4 @@
-// Auto-generated from moving-source.ts — edit the .ts source, not this file.
+// Auto-generated from moving-source.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Orbit + attenuation tuned to the wide canvas so the readout reflects what you
@@ -53,7 +53,7 @@ class MovingSourceScene extends Scene {
         // A Sound played while audio is still locked is a no-op: a suspended
         // AudioContext's clock stands still, so nothing can be scheduled
         // honestly. Start the loop from the unlock gesture instead. Subscribing
-        // is safe even if audio unlocked earlier — onUnlock replays.
+        // is safe even if audio unlocked earlier - onUnlock replays.
         // play() returns the narrow Voice interface; Sound voices are spatializable.
         app.audio.onUnlock.add(() => {
             this.voice = app.audio.play(this.sound, {
@@ -94,7 +94,7 @@ class MovingSourceScene extends Scene {
         // Listener.
         this.graphics.fillColor = new Color(120, 255, 160);
         this.graphics.drawCircle(this.listener.x, this.listener.y, 12);
-        // Source — brightness tracks attenuation.
+        // Source - brightness tracks attenuation.
         const glow = Math.floor(90 + volume * 165);
         this.graphics.fillColor = new Color(glow, Math.floor(90 + volume * 60), Math.floor(80 + volume * 40));
         this.graphics.drawCircle(source.x, source.y, 16);

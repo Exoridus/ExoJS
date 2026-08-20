@@ -7,7 +7,7 @@ import type { WgslContribution } from './WgslContribution';
  * Pushes every live particle away from a fixed point in the system's local
  * coordinate space. Acceleration magnitude is `strength` (units / s²)
  * along the direction `(particle − point)`. The optional `radius` controls
- * the influence range — particles farther than `radius` are unaffected.
+ * the influence range - particles farther than `radius` are unaffected.
  * Setting `radius = 0` (default) means infinite range with no falloff.
  *
  * Use cases: shockwaves, explosion blast, mouse-cursor repel field.

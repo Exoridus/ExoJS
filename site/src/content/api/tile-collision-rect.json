@@ -1,6 +1,6 @@
 {
   "title": "TileCollisionRect",
-  "description": "An axis-aligned collision rectangle in tile-layer pixel space (+Y down), covering one or more whole tile cells. Rectangles are synthesized geometry, not source objects: a merged run has no single originating object, so it carries no object `id`/`name`/`properties` — only the `type` string shared by every shape merged into it. Anything that does not exactly cover whole cells stays a TileCollisionShape, which does keep its source object.",
+  "description": "An axis-aligned collision rectangle in tile-layer pixel space (+Y down), covering one or more whole tile cells. Rectangles are synthesized geometry, not source objects: a merged run has no single originating object, so it carries no object `id`/`name`/`properties` - only the `type` string shared by every shape merged into it. Anything that does not exactly cover whole cells stays a TileCollisionShape, which does keep its source object.",
   "symbol": "TileCollisionRect",
   "kind": "interface",
   "subsystem": "tilemap",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "An axis-aligned collision rectangle in tile-layer pixel space (+Y down), covering one or more whole tile cells.",
-        "Rectangles are synthesized geometry, not source objects: a merged run has no single originating object, so it carries no object `id`/`name`/`properties` — only the `type` string shared by every shape merged into it. Anything that does not exactly cover whole cells stays a TileCollisionShape, which does keep its source object."
+        "Rectangles are synthesized geometry, not source objects: a merged run has no single originating object, so it carries no object `id`/`name`/`properties` - only the `type` string shared by every shape merged into it. Anything that does not exactly cover whole cells stays a TileCollisionShape, which does keep its source object."
       ],
       "importLine": "import { TileCollisionRect } from '@codexo/exojs-tilemap'",
       "sourceLink": null

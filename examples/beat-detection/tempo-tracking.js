@@ -1,4 +1,4 @@
-// Auto-generated from tempo-tracking.ts — edit the .ts source, not this file.
+// Auto-generated from tempo-tracking.ts - edit the .ts source, not this file.
 import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
@@ -19,7 +19,7 @@ class TempoTrackingScene extends Scene {
         const app = this.app;
         const { width, height } = app;
         const marginX = width * 0.08;
-        // AudioStream has no seamless adapter — await it explicitly.
+        // AudioStream has no seamless adapter - await it explicitly.
         const track = await this.loader.load(Asset.type('music', 'audio/demo-loop-main.ogg'));
         this.music = track;
         this.detector = new BeatDetector();

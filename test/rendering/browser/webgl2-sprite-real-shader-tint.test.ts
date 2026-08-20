@@ -1,8 +1,8 @@
 /**
- * WebGL2 Sprite browser test — real `sprite.vert` tint pixel proof.
+ * WebGL2 Sprite browser test - real `sprite.vert` tint pixel proof.
  *
  * Sprite tint lives in its own rgba8 texture (`u_tintTexture`, one texel per
- * row, keyed by `nodeIndex`), separate from the fp32 transform texture —
+ * row, keyed by `nodeIndex`), separate from the fp32 transform texture -
  * premultiplied in the vertex shader as `vec4(m2.rgb * m2.a, m2.a)`.
  *
  * This spec pins that arithmetic: it drives the actual `WebGl2SpriteRenderer`

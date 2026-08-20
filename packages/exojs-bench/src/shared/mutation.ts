@@ -8,7 +8,7 @@ import { createRng } from './rng';
  * the leaf when the draw is below `mutationFraction`. The value is drawn for every
  * leaf even when `mutationFraction` is `0` (nothing selected), so any adapter
  * seeded identically consumes the identical stream position and reaches the same
- * selection — the cross-arm fairness contract (see `adapters/README.md`).
+ * selection - the cross-arm fairness contract (see `adapters/README.md`).
  *
  * Factoring the selection here, rather than re-inlining the RNG loop in every
  * engine adapter, turns that contract from prose into a single shared code path
@@ -30,8 +30,8 @@ export const selectMutationIndices = (nodeCount: number, mutationFraction: numbe
 /**
  * Order-sensitive FNV-1a signature of a mutation-index list as an 8-hex-digit
  * string. Two arms that selected the identical indices in the identical order
- * produce the identical signature; any divergence — a different count, different
- * indices, or a different order — changes it. The list length is folded in first
+ * produce the identical signature; any divergence - a different count, different
+ * indices, or a different order - changes it. The list length is folded in first
  * so an empty selection never collides with a single-element one.
  *
  * This is the cross-arm determinism guard: the harness compares each

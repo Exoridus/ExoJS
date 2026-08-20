@@ -7,18 +7,18 @@ import { measureAllocationRate } from './allocationSampler';
 /**
  * Performance gates: steady-state allocation and 1,000-body step time. The
  * 1,000-body scene is a wide field of 200 independent 5-box columns settled on
- * a static floor — ~1,000 dynamic bodies generating ~1,000 persistent contacts
+ * a static floor - ~1,000 dynamic bodies generating ~1,000 persistent contacts
  * plus the broad-phase load of 1,000 AABBs.
  *
  * Step time is **recorded** on the reference machine, not enforced as a
- * tight CI threshold (machine-dependent) — only a generous catastrophic-
+ * tight CI threshold (machine-dependent) - only a generous catastrophic-
  * regression guard is asserted. Allocation is measured with V8's
- * allocation sampling profiler (see allocationSampler.ts — a heapUsed delta
+ * allocation sampling profiler (see allocationSampler.ts - a heapUsed delta
  * cannot see the short-lived per-step garbage; it previously read ~0 and made
  * the engine look allocation-free when it was not). Scratch reuse plus
  * allocation-free ContactGraph iterators and in-place sorts bring the steady-
  * state rate ~1560 → ~810 → ~484 KB/step. The remainder is V8 double-boxing in
- * the scalar float hot loops (solver block LCP, narrow-phase clip — both verified
+ * the scalar float hot loops (solver block LCP, narrow-phase clip - both verified
  * allocation-free), removable only by an invasive typed-array rewrite (post-1.0).
  */
 
@@ -99,11 +99,11 @@ describe('physics dynamics performance', () => {
     //
     // Skipped entirely under istanbul coverage: it instruments the physics package
     // source, which both inflates the per-step allocation ~7× (measured ~5.8 MB vs
-    // ~0.8 MB — the absolute byte gate is meaningless) and slows the 200-iteration
+    // ~0.8 MB - the absolute byte gate is meaningless) and slows the 200-iteration
     // sampling run past the test timeout. The sharp gate runs in the normal
     // `pnpm test` run + `verify:ci`. (Detection: istanbul prefixes every function
-    // with a `cov_…()` prologue; globalThis.__coverage__ is not yet populated at
-    // test time. The render-perf gate needs no guard — its src resolves via
+    // with a `cov_...()` prologue; globalThis.__coverage__ is not yet populated at
+    // test time. The render-perf gate needs no guard - its src resolves via
     // #*-subpath imports istanbul leaves alone.)
     if (world.step.toString().includes('cov_')) {
       console.log('allocation gate skipped under coverage (instrumentation inflates + slows the measurement)');
@@ -122,9 +122,9 @@ describe('physics dynamics performance', () => {
     // buffer), dropping the steady-state rate ~810 → ~484 KB/step. The remainder
     // is not poolable garbage: it is V8 double-boxing + sampler misattribution in
     // the scalar float hot loops (the solver block LCP and narrow-phase clip are
-    // verified allocation-free — see _solveNormalBlock/collide), removable only by
+    // verified allocation-free - see _solveNormalBlock/collide), removable only by
     // an invasive typed-array solver rewrite (post-1.0 follow-up). Measured ~484
-    // KB/step (±1, very stable); the gate sits at 600 KB — tight enough that
+    // KB/step (±1, very stable); the gate sits at 600 KB - tight enough that
     // reverting that reuse (≈810) trips it, with headroom for cross-machine V8
     // boxing variance.
     expect(bytesPerStep).toBeLessThan(600 * 1024);
@@ -168,7 +168,7 @@ describe('physics dynamics performance', () => {
 
     // The vast majority of a settled field naps, and skipping their integration
     // and constraint solve sharply cuts the per-step cost (measured ~3.4× faster
-    // on the reference machine — the remainder is detection, which still runs).
+    // on the reference machine - the remainder is detection, which still runs).
     // The gate is a relative ratio (same machine, sleeping vs awake), so it is
     // machine-independent; ≥2× leaves headroom for variance.
     expect(sleptCount).toBeGreaterThan(4500);

@@ -1,6 +1,6 @@
 {
   "title": "ScaleOverLifetime",
-  "description": "Sets every live particle's scale to a curve sampled at the particle's current lifetime ratio. Both axes share one curve; non-uniform per-axis scaling isn't supported by this module. Common patterns: shrink-to-zero (start at 1, end at 0), pulse (sine-like curve up to peak then down), slow-grow (linear ramp). GPU-eligible: the curve is uploaded once as a 256-tap 1D R32F texture and sampled with linear filtering on the GPU — no curve evaluation cost in the inner loop.",
+  "description": "Sets every live particle's scale to a curve sampled at the particle's current lifetime ratio. Both axes share one curve; non-uniform per-axis scaling isn't supported by this module. Common patterns: shrink-to-zero (start at 1, end at 0), pulse (sine-like curve up to peak then down), slow-grow (linear ramp). GPU-eligible: the curve is uploaded once as a 256-tap 1D R32F texture and sampled with linear filtering on the GPU - no curve evaluation cost in the inner loop.",
   "symbol": "ScaleOverLifetime",
   "kind": "class",
   "subsystem": "particles",
@@ -21,7 +21,7 @@
       "paragraphs": [
         "Sets every live particle's scale to a curve sampled at the particle's current lifetime ratio. Both axes share one curve; non-uniform per-axis scaling isn't supported by this module.",
         "Common patterns: shrink-to-zero (start at 1, end at 0), pulse (sine-like curve up to peak then down), slow-grow (linear ramp).",
-        "GPU-eligible: the curve is uploaded once as a 256-tap 1D R32F texture and sampled with linear filtering on the GPU — no curve evaluation cost in the inner loop."
+        "GPU-eligible: the curve is uploaded once as a 256-tap 1D R32F texture and sampled with linear filtering on the GPU - no curve evaluation cost in the inner loop."
       ],
       "importLine": "import { ScaleOverLifetime } from '@codexo/exojs-particles'",
       "sourceLink": null

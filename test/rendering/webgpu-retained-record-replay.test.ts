@@ -392,14 +392,14 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
       const texture = createCanvasTexture();
       const { root, groups } = buildGroupScene(texture, 3);
 
-      // F1: dirty collect + fragment capture (no recording yet — record
+      // F1: dirty collect + fragment capture (no recording yet - record
       // arms on the first CLEAN frame).
       renderFrame(backend, root);
 
       expect(fragmentOf(groups[0]!).instructions).toBeNull();
 
       // F2: clean entry replay + record. The uncached path pays one pass
-      // split per distinct group matrix — this is the uncached cost.
+      // split per distinct group matrix - this is the uncached cost.
       const submitsBeforeRecord = environment.submitCount();
 
       renderFrame(backend, root);
@@ -413,7 +413,7 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
       expect(countLabel(environment.writes(), retainedInstanceLabel)).toBe(3);
       expect(countLabel(environment.writes(), retainedTransformLabel)).toBe(3);
 
-      // F3: cached path — all three groups replay into ONE open pass, ONE
+      // F3: cached path - all three groups replay into ONE open pass, ONE
       // submit, with the recorded instance counts.
       const submitsBeforeReplay = environment.submitCount();
       const writesBeforeReplay = environment.writes().length;
@@ -436,7 +436,7 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
       // Each bundle's 128-byte UBO is written once on its first replay.
       expect(countLabel(environment.writes(), retainedUniformLabel, writesBeforeReplay)).toBe(3);
 
-      // F4: static cached frame — zero uniform writes, still one submit.
+      // F4: static cached frame - zero uniform writes, still one submit.
       const submitsBeforeStatic = environment.submitCount();
       const writesBeforeStatic = environment.writes().length;
 
@@ -488,7 +488,7 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
       expect(instanceWrites).toHaveLength(1);
 
       // Two 32-byte instances (8 words each); the last word of each is the
-      // (rebased) node index — tint is read from its own shared buffer.
+      // (rebased) node index - tint is read from its own shared buffer.
       const words = new Uint32Array(instanceWrites[0]!.bytes.buffer, instanceWrites[0]!.bytes.byteOffset, instanceWrites[0]!.bytes.byteLength / 4);
 
       expect(words).toHaveLength(16);
@@ -539,7 +539,7 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
       expect(countLabel(environment.writes(), retainedInstanceLabel, mark)).toBe(0); // no re-record
       expect(countLabel(environment.writes(), retainedUniformLabel, mark)).toBe(1);
 
-      // Camera pan: same story — live view, one UBO rewrite, no recapture.
+      // Camera pan: same story - live view, one UBO rewrite, no recapture.
       backend.view.setCenter(backend.view.center.x + 16, backend.view.center.y);
       mark = environment.writes().length;
 
@@ -603,7 +603,7 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
       expect(countLabel(environment.writes(), retainedUniformLabel, mark)).toBe(0);
 
       // Exactly one 32-byte transform sub-range write (a single TransformSlot),
-      // aligned to a slot boundary — the headline O(k) property vs. the O(rows)
+      // aligned to a slot boundary - the headline O(k) property vs. the O(rows)
       // full-range re-upload of a recapture.
       const patchWrites = environment
         .writes()
@@ -652,7 +652,7 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
       renderFrame(backend, root); // F3: replay
 
       // Child move: this fast-patches the row in place rather
-      // than recapturing — either way the bundle is reused and its generation
+      // than recapturing - either way the bundle is reused and its generation
       // stays put (a patch never bumps it, a same-size recapture reuses buffers).
       mover.setPosition(4, 4);
       renderFrame(backend, root); // patch (reconcile) + replay
@@ -662,7 +662,7 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
       expect((bundle as WebGpuRetainedGroupBundle).generation).toBe(initialGeneration);
 
       // Growing recapture: 12 instances (432 B) exceed the initial 256 B
-      // instance capacity — the buffer is recreated and the generation bumps.
+      // instance capacity - the buffer is recreated and the generation bumps.
       for (let i = 0; i < 10; i++) {
         const sprite = new Sprite(texture);
 
@@ -721,7 +721,7 @@ describe('WebGPU retained record/replay: fallback ladder + submit collapse', () 
 
       // Resize: the backend recreates the GPU texture → fresh view identity.
       // The recorded UV words are stale against the new texture, so the set
-      // must NOT replay. No node revision bumps here — only the backend-side
+      // must NOT replay. No node revision bumps here - only the backend-side
       // validation catches this.
       sourceCanvas.width = 32;
       sourceCanvas.height = 32;

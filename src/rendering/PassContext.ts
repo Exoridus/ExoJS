@@ -15,8 +15,8 @@ import type { View } from './View';
  * {@link CallbackRenderPass} callback. `clear`/`render`/`renderTo` route through
  * the owning {@link RenderingContext} (and its pass coordinator), so they act on
  * THIS pass's target and never reset the active view or leak onto another
- * target. Default view for `render`/`draw*` is the pass view — not the world
- * view — so a callback inside an off-screen redirect renders correctly without
+ * target. Default view for `render`/`draw*` is the pass view - not the world
+ * view - so a callback inside an off-screen redirect renders correctly without
  * passing `{ view }` explicitly.
  *
  * Use {@link backend} only for raw draws or GPU state; switching target / view /

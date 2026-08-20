@@ -28,7 +28,7 @@ export interface AssetFactory<T = unknown> {
   create(source: unknown, options?: unknown): Promise<T>;
 
   /**
-   * Releases the resources held by ONE asset this factory produced — the
+   * Releases the resources held by ONE asset this factory produced - the
    * per-resource counterpart of {@link destroy}. Called when the loader evicts
    * that asset at refcount 0; the factory stays alive and keeps serving every
    * other asset it created.
@@ -48,8 +48,8 @@ export interface AssetFactory<T = unknown> {
 
   /**
    * Releases everything this factory owns ACROSS ALL the assets it ever
-   * produced — every object URL it created, every media element it still
-   * tracks — and leaves the factory unusable. Called once, when the owning
+   * produced - every object URL it created, every media element it still
+   * tracks - and leaves the factory unusable. Called once, when the owning
    * loader/handler is destroyed, not per asset; use {@link dispose} for the
    * teardown of a single evicted resource.
    */

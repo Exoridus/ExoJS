@@ -145,7 +145,7 @@ export function EditorCode({
 
     useEffect(() => {
         // Reset the editor buffer when the selected example (sourcePath) or its loaded
-        // source changes — a prop-change reset, not render-derived state.
+        // source changes - a prop-change reset, not render-derived state.
         // eslint-disable-next-line @eslint-react/set-state-in-effect, react-hooks/set-state-in-effect
         setEditorValue(sourceCode ?? '');
         onDirty(false);
@@ -182,7 +182,7 @@ export function EditorCode({
     );
 
     const triggerRefresh = useCallback(async (): Promise<void> => {
-        // A read-only buffer shows already-compiled JS, not new source — refreshing
+        // A read-only buffer shows already-compiled JS, not new source - refreshing
         // from it would feed that compiled text back into `sourceCode` upstream.
         if (readOnly) return;
         const editor = editorRef.current;
@@ -197,7 +197,7 @@ export function EditorCode({
         const executionCode = await getExecutionCode(editor, language);
         if (executionCode === null) {
             // TS worker couldn't emit JS (still warming up, or a transient
-            // failure) — keep the last successfully-compiled preview running
+            // failure) - keep the last successfully-compiled preview running
             // instead of pushing raw, unparseable TypeScript into the iframe.
             return;
         }
@@ -454,7 +454,7 @@ function updateDiagnostics(
 }
 
 // Emits JS for the editor's current TypeScript buffer via Monaco's TS worker.
-// Returns `null` (never the raw TS source) when emission isn't available yet —
+// Returns `null` (never the raw TS source) when emission isn't available yet -
 // raw TypeScript fed into the preview's `<script type="module">` fails with a
 // native parser SyntaxError (e.g. `private sprite!: Sprite` reads as two
 // adjacent identifiers), so callers must treat `null` as "not ready" and keep
@@ -478,7 +478,7 @@ async function getExecutionCode(editor: monaco.editor.IStandaloneCodeEditor, lan
             const jsFile = output.outputFiles.find(file => file.name.endsWith('.js'));
             if (jsFile?.text) return jsFile.text;
         } catch {
-            // Fall through to the retry below — the TS worker may still be warming up.
+            // Fall through to the retry below - the TS worker may still be warming up.
         }
         if (attempt === 0) await new Promise(resolve => setTimeout(resolve, 300));
     }
@@ -664,14 +664,14 @@ function configureLanguageDefaults(): void {
         paths: { '@/*': ['node_modules/@codexo/exojs/dist/esm/*'] },
     };
     // TS examples are strict-clean at the source of truth (tsconfig.examples.json,
-    // enforced by `pnpm typecheck:examples`) — mirror that here so editing one in
+    // enforced by `pnpm typecheck:examples`) - mirror that here so editing one in
     // the Playground surfaces the same errors CI would.
     const tsCompilerOptions = {
         ...sharedCompilerOptions,
         strict: true,
     };
     // JS mode is a deliberate low-friction path for writing/pasting plain JS with
-    // no TypeScript background — checkJs (above) still catches real type errors;
+    // no TypeScript background - checkJs (above) still catches real type errors;
     // only "add an annotation" strict-mode noise is suppressed.
     const jsCompilerOptions = {
         ...sharedCompilerOptions,

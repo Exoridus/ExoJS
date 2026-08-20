@@ -173,7 +173,7 @@ describe('Interval', () => {
       const interval = new Interval(1, 2);
 
       expect(() => interval.destroy()).not.toThrow();
-      // Value class — state is untouched by destroy().
+      // Value class - state is untouched by destroy().
       expect(interval.min).toBe(1);
       expect(interval.max).toBe(2);
     });

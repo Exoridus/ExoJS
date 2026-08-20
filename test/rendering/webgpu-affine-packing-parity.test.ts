@@ -1,5 +1,5 @@
 /**
- * Cross-backend affine transform parity — packing and WGSL slot-math
+ * Cross-backend affine transform parity - packing and WGSL slot-math
  * convention pins for every WebGPU renderer stage.
  *
  * The per-node matrix travels through four structurally different packings
@@ -11,9 +11,9 @@
  *
  * A packing (or WGSL consumption) that transposes the linear part is
  * invisible for axis-aligned transforms (scale + translate) but diverges for
- * every rotated or skewed node — instanced vs. single-draw within WebGPU AND
+ * every rotated or skewed node - instanced vs. single-draw within WebGPU AND
  * WebGPU vs. WebGL2. These tests push a rotation+skew matrix through each
- * packing and require the canonical result — the WebGPU instanced-mesh path
+ * packing and require the canonical result - the WebGPU instanced-mesh path
  * used to apply the per-node affine transposed.
  */
 
@@ -47,7 +47,7 @@ const samplePoints: ReadonlyArray<readonly [number, number]> = [
 const applyMatrix = (m: Matrix, x: number, y: number): readonly [number, number] => [m.a * x + m.b * y + m.x, m.c * x + m.d * y + m.y];
 
 // Interpret 12 floats at `offset` as a WGSL mat3x3<f32> (std140, vec4-padded
-// column-major) and apply it to (x, y, 1) — exactly what the GPU does.
+// column-major) and apply it to (x, y, 1) - exactly what the GPU does.
 const applyMat3Std140 = (data: Float32Array, offset: number, x: number, y: number): readonly [number, number] => [
   data[offset + 0]! * x + data[offset + 4]! * y + data[offset + 8]!,
   data[offset + 1]! * x + data[offset + 5]! * y + data[offset + 9]!,
@@ -142,8 +142,8 @@ describe('WGSL slot math parity across instanced renderers', () => {
   const slotLocal = String.raw`slot\.`;
 
   const cases: ReadonlyArray<{ name: string; source: string; slot?: string; lx: string; ly: string }> = [
-    // Every WGSL sprite path — the streamed default, the custom-material one
-    // and the persistent-indexed one — runs the SAME vertex core, so pinning
+    // Every WGSL sprite path - the streamed default, the custom-material one
+    // and the persistent-indexed one - runs the SAME vertex core, so pinning
     // the core covers all three at once. It takes the two transform rows as
     // parameters rather than reading a local, hence the empty slot prefix.
     { name: 'sprite (shared vertex core)', source: spriteVertexCoreWgsl, slot: '', lx: 'localX', ly: 'localY' },
@@ -170,8 +170,8 @@ describe('WGSL slot math parity across instanced renderers', () => {
 
 describe('WGSL text transform construction', () => {
   test('text vertex shader reconstructs the node/proj/group mat3s in canonical column order', () => {
-    // Node data rows are t0 = (a, c, e, tx), t1 = (b, d, f, ty) — i.e.
-    // toArray(false) columns — so the mat3 columns must be built as
+    // Node data rows are t0 = (a, c, e, tx), t1 = (b, d, f, ty) - i.e.
+    // toArray(false) columns - so the mat3 columns must be built as
     // (t0.x, t0.y), (t1.x, t1.y), (t0.w, t1.w).
     expect(textShaderSource).toMatch(
       /mat3x3<f32>\(\s*vec3<f32>\(t0\.x,\s*t0\.y,\s*0\.0\),\s*vec3<f32>\(t1\.x,\s*t1\.y,\s*0\.0\),\s*vec3<f32>\(t0\.w,\s*t1\.w,\s*1\.0\),?\s*\)/,

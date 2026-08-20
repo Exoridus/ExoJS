@@ -66,7 +66,7 @@ export const isDeviceLoss = (error: unknown): boolean => error instanceof DOMExc
  * `navigator.gpu` being present proves nothing: Firefox exposes it headless
  * and still resolves `requestAdapter()` to `null`, and WebKit ships without
  * the API entirely. A browser that cannot supply an adapter is a measurement
- * result, not a broken test — callers record it rather than failing.
+ * result, not a broken test - callers record it rather than failing.
  */
 export const webGpuAvailable = async (): Promise<boolean> => {
   if (typeof navigator.gpu === 'undefined') return false;
@@ -148,7 +148,7 @@ export const renderWebGpuOnce = async (
  *
  * Cheaper than pulling a whole frame when a spec only samples a few points.
  * The y flip goes through `renderTarget.height`; a spec where that differs
- * from `drawingBufferHeight` — device-pixel-ratio work, say — wants its own
+ * from `drawingBufferHeight` - device-pixel-ratio work, say - wants its own
  * reader.
  */
 export const readWebGl2Pixel = (backend: WebGl2Backend, x: number, y: number): RgbaTuple => {
@@ -182,7 +182,7 @@ export const readWebGl2Frame = (backend: WebGl2Backend, size: number): Uint8Arra
  * Snapshots the presented WebGPU canvas once and returns a sampler over it.
  *
  * The snapshot is taken eagerly, so the returned function reflects the frame
- * as it stood at the call — render again and take a new sampler.
+ * as it stood at the call - render again and take a new sampler.
  */
 export const readWebGpuPixels = (backend: WebGpuBackend, size: number): ((x: number, y: number) => RgbaTuple) => {
   const readback = document.createElement('canvas');

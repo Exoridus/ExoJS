@@ -30,7 +30,7 @@ describe('View projection maps its own viewport exactly', () => {
     const large = new View(0, 0, 4000, 4000);
 
     // The stray term was `2 / size`, so a small view drifted much further than
-    // a large one — the error grew exactly where precision matters most.
+    // a large one - the error grew exactly where precision matters most.
     expect(small.screenToWorld(0, 0).x).toBeCloseTo(-50, 9);
     expect(large.screenToWorld(0, 0).x).toBeCloseTo(-2000, 9);
 

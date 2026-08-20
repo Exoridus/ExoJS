@@ -1,6 +1,6 @@
 {
   "title": "TiledObjectAlignment",
-  "description": "Where a tile object's stored `x`/`y` sits within the tile's bounding box (TiledTilesetData.objectalignment). `'unspecified'` is Tiled's own default and is orientation-dependent — see import('./objectAlignment').resolveTiledObjectAlignment.",
+  "description": "Where a tile object's stored `x`/`y` sits within the tile's bounding box (TiledTilesetData.objectalignment). `'unspecified'` is Tiled's own default and is orientation-dependent - see import('./objectAlignment').resolveTiledObjectAlignment.",
   "symbol": "TiledObjectAlignment",
   "kind": "type",
   "subsystem": "tiled",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Where a tile object's stored `x`/`y` sits within the tile's bounding box (TiledTilesetData.objectalignment).",
-        "`'unspecified'` is Tiled's own default and is orientation-dependent — see import('./objectAlignment').resolveTiledObjectAlignment."
+        "`'unspecified'` is Tiled's own default and is orientation-dependent - see import('./objectAlignment').resolveTiledObjectAlignment."
       ],
       "importLine": "import { TiledObjectAlignment } from '@codexo/exojs-tiled'",
       "sourceLink": null

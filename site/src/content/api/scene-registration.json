@@ -1,6 +1,6 @@
 {
   "title": "SceneRegistration",
-  "description": "A single `ApplicationOptions.scenes` registry entry: either a bare Scene subclass constructor, or a descriptor pairing one with a target-bound default transition. Both forms register identically — `title: TitleScene` and `title: { scene: TitleScene }` are equivalent.",
+  "description": "A single `ApplicationOptions.scenes` registry entry: either a bare Scene subclass constructor, or a descriptor pairing one with a target-bound default transition. Both forms register identically - `title: TitleScene` and `title: { scene: TitleScene }` are equivalent.",
   "symbol": "SceneRegistration",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A single `ApplicationOptions.scenes` registry entry: either a bare Scene subclass constructor, or a descriptor pairing one with a target-bound default transition. Both forms register identically — `title: TitleScene` and `title: { scene: TitleScene }` are equivalent."
+        "A single `ApplicationOptions.scenes` registry entry: either a bare Scene subclass constructor, or a descriptor pairing one with a target-bound default transition. Both forms register identically - `title: TitleScene` and `title: { scene: TitleScene }` are equivalent."
       ],
       "importLine": "import { SceneRegistration } from '@codexo/exojs'",
       "sourceLink": null

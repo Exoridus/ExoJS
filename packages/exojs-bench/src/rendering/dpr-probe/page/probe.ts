@@ -177,9 +177,9 @@ const addButton = (host: HTMLElement, value: string, label: string, onClick: () 
 /**
  * (Re)start the preview.
  *
- * Always tears the previous one down first: §6 of the brief forbids two live
- * scenes at once, and two `Application`s sharing the page would also compete for
- * GPU contexts.
+ * Always tears the previous one down first: only one variant may be on screen at
+ * a time, and two `Application`s sharing the page would also compete for GPU
+ * contexts.
  */
 const refreshPreview = async (): Promise<void> => {
   if (busy) {

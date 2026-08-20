@@ -14,13 +14,13 @@ import type { TextLayoutResult, TextPageQuads, TextSize } from './types';
  * laid-out string has.
  *
  * A mutation never lays text out. It marks the node dirty; the pass runs on
- * the next read — `getLocalBounds()`, `textBounds`, or the renderer's collect
- * phase, whichever comes first — and runs exactly once per actual change no
+ * the next read - `getLocalBounds()`, `textBounds`, or the renderer's collect
+ * phase, whichever comes first - and runs exactly once per actual change no
  * matter how many properties were touched in between.
  *
  * Subclasses:
- * - {@link Text} — runtime Canvas 2D / SDF rasterization
- * - {@link BitmapText}  — offline pre-built atlas (BMFont / MSDF)
+ * - {@link Text} - runtime Canvas 2D / SDF rasterization
+ * - {@link BitmapText}  - offline pre-built atlas (BMFont / MSDF)
  */
 export abstract class AbstractText extends Drawable {
   protected _text: string;
@@ -52,7 +52,7 @@ export abstract class AbstractText extends Drawable {
     this._style.onChange.add(this._onStyleChange);
     // Copied, not aliased: the caller keeps its own options object and may
     // well go on mutating it, which must not silently re-flow this node.
-    // Narrowed to the layout keys too — `TextOptions` is a flat merge of style
+    // Narrowed to the layout keys too - `TextOptions` is a flat merge of style
     // and layout, and `Text` hands that whole bag down.
     this._layout = pickLayoutOptions(layout);
   }
@@ -87,7 +87,7 @@ export abstract class AbstractText extends Drawable {
   }
 
   /**
-   * Flow-control options — `maxWidth`, `letterSpacing`, `whiteSpace` etc.
+   * Flow-control options - `maxWidth`, `letterSpacing`, `whiteSpace` etc.
    *
    * Handed out read-only: the node holds its own copy, so mutating the object
    * would change nothing. Assign a new one to re-flow.
@@ -116,7 +116,7 @@ export abstract class AbstractText extends Drawable {
   }
 
   /**
-   * Advance extent of the laid-out text — where the cursor ends up, which is
+   * Advance extent of the laid-out text - where the cursor ends up, which is
    * the number to size a panel or place a caret against.
    *
    * This is NOT the rectangle the glyphs cover: SDF padding, outlines and
@@ -133,13 +133,13 @@ export abstract class AbstractText extends Drawable {
   }
 
   /**
-   * Local ink extent — the union of the glyph quads, resolving a pending
+   * Local ink extent - the union of the glyph quads, resolving a pending
    * layout pass first.
    *
    * The resolve is not optional. Culling reads the local bounds BEFORE the
    * renderer's collect phase gets a chance to call {@link syncDirty}, so a
    * node that deferred its pass would be culled against the previous string's
-   * extent — and a label going from empty to non-empty would never appear at
+   * extent - and a label going from empty to non-empty would never appear at
    * all. Reading is still cheap: with nothing pending this returns straight
    * away, so no per-frame invalidation is introduced and a static subtree
    * stays skippable.
@@ -175,7 +175,7 @@ export abstract class AbstractText extends Drawable {
     this._setLocalBoundsUnstamped(result.ink.x, result.ink.y, result.ink.width, result.ink.height);
 
     // An anchor is a fraction of the bounds, so a node whose text just changed
-    // width has to re-derive its origin — otherwise a centred label drifts
+    // width has to re-derive its origin - otherwise a centred label drifts
     // left as it grows. Mirrors what Sprite does when it switches sub-frame.
     this._updateOrigin();
   }
@@ -183,7 +183,7 @@ export abstract class AbstractText extends Drawable {
   /**
    * Advance the node by `dt` milliseconds.
    *
-   * Delegates to {@link syncDirty} — kept for manual game-loop patterns,
+   * Delegates to {@link syncDirty} - kept for manual game-loop patterns,
    * but no longer required; the renderer applies pending changes automatically.
    */
   public update(_dt: number): void {
@@ -202,7 +202,7 @@ export abstract class AbstractText extends Drawable {
    * Mark the laid-out geometry stale without laying anything out. Subclasses
    * call this from every setter that affects the glyph run.
    *
-   * The content stamp is not deferred with the pass — see
+   * The content stamp is not deferred with the pass - see
    * {@link _onStyleChange} for why a retained subtree has to learn about the
    * change immediately even though the geometry can wait.
    */
@@ -226,7 +226,7 @@ export abstract class AbstractText extends Drawable {
    * Take the heaviest pending hint and settle the node, folding in whatever
    * the attached {@link TextStyle} has latched since the last pass. A style
    * carries its own dirty flag because it is mutated in place rather than
-   * assigned, so polling it here is what makes `label.style.align = …` land.
+   * assigned, so polling it here is what makes `label.style.align = ...` land.
    */
   protected _consumePendingHint(): StyleChangeHint | null {
     const own = this._pendingHint;

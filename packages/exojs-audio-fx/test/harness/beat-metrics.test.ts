@@ -210,7 +210,7 @@ describe('computeMetrics — missed GT beat', () => {
   });
 });
 
-// ── Octave error — half-octave ────────────────────────────────────────────────
+// ── Octave error - half-octave ────────────────────────────────────────────────
 
 describe('computeMetrics — octave error (half-octave: detecting 0.5x trueBpm)', () => {
   const trueBpm = 120;

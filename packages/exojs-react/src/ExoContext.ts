@@ -13,7 +13,7 @@ ExoContext.displayName = 'ExoContext';
 /**
  * Returns the nearest {@link Application} from the React tree, or `null`
  * when called outside of an {@link ExoCanvas}. Prefer {@link useExoApp} for
- * component-level use — it throws an actionable error instead of returning
+ * component-level use - it throws an actionable error instead of returning
  * null.
  */
 export function useExoContext(): Application | null {

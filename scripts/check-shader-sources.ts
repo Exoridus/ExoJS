@@ -44,7 +44,7 @@ const KNOWN_EXO_DIRECTIVES = new Set(['#exo-include']);
 /** What `fillShaderSource` will substitute: `{{NAME}}` with a word-character name. */
 const VALID_PLACEHOLDER = /\{\{\w+\}\}/g;
 
-/** Anything of the shape `{{…}}` at all, so a malformed one is still seen. */
+/** Anything of the shape `{{...}}` at all, so a malformed one is still seen. */
 const ANY_PLACEHOLDER = /\{\{[^}]*\}\}/g;
 
 const EXO_DIRECTIVE_LINE = /^\s*\/\/\s*(#exo-[\w-]*)/;

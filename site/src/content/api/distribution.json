@@ -1,6 +1,6 @@
 {
   "title": "Distribution",
-  "description": "Value distribution sampled at particle spawn time. Each `sample()` call may return a different value — used to randomize spawn properties (lifetime, position, velocity, scale, tint, ...) without per-particle subclassing. Implementations come in two flavours: - **Stateless / scalar** (e.g. Constant, Range) just return a `T` directly. - **Mutable-target** (Vector / Color distributions) accept an optional `out` parameter and write into it in place. Pass your own scratch instance to avoid per-spawn heap allocations; omit it to use the distribution's internal scratch (only valid until the next call).",
+  "description": "Value distribution sampled at particle spawn time. Each `sample()` call may return a different value - used to randomize spawn properties (lifetime, position, velocity, scale, tint, ...) without per-particle subclassing. Implementations come in two flavours: - **Stateless / scalar** (e.g. Constant, Range) just return a `T` directly. - **Mutable-target** (Vector / Color distributions) accept an optional `out` parameter and write into it in place. Pass your own scratch instance to avoid per-spawn heap allocations; omit it to use the distribution's internal scratch (only valid until the next call).",
   "symbol": "Distribution",
   "kind": "interface",
   "subsystem": "particles",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Value distribution sampled at particle spawn time. Each `sample()` call may return a different value — used to randomize spawn properties (lifetime, position, velocity, scale, tint, ...) without per-particle subclassing.",
+        "Value distribution sampled at particle spawn time. Each `sample()` call may return a different value - used to randomize spawn properties (lifetime, position, velocity, scale, tint, ...) without per-particle subclassing.",
         "Implementations come in two flavours:",
         "- **Stateless / scalar** (e.g. Constant, Range) just return a `T` directly. - **Mutable-target** (Vector / Color distributions) accept an optional `out` parameter and write into it in place. Pass your own scratch instance to avoid per-spawn heap allocations; omit it to use the distribution's internal scratch (only valid until the next call)."
       ],

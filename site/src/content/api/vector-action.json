@@ -196,7 +196,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Current vector. The same instance every frame — copy it if you need to retain a value."
+          "description": "Current vector. The same instance every frame - copy it if you need to retain a value."
         },
         {
           "name": "active",

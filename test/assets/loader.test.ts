@@ -75,7 +75,7 @@ declare module '#assets/AssetDefinitions' {
  * Binds TextAsset to a `bindAsset` handler that fetches raw text through
  * `context.fetchText` (so basePath/fetchOptions/cache-strategy routing stays
  * identical to a first-party binding) and then applies `create` to the raw
- * text — the replacement for the removed `register()`-based factory path used
+ * text - the replacement for the removed `register()`-based factory path used
  * throughout this file. `storageName: 'text'` mirrors the old
  * `MockTextFactory.storageName`, so cache-store assertions keyed on `'text'`
  * keep working unchanged.
@@ -327,7 +327,7 @@ describe('Loader', () => {
   });
 
   // The corrupt-cache-entry delete+retry mechanism itself (a cached value that
-  // makes factory.create() throw) now lives entirely inside CacheFirstStrategy —
+  // makes factory.create() throw) now lives entirely inside CacheFirstStrategy -
   // context.fetchText()'s internal cache factory is a pass-through that never
   // throws, so it's no longer reachable through a Loader-level bindAsset
   // handler. See test/assets/cache-first-strategy.test.ts for direct coverage.
@@ -442,7 +442,7 @@ describe('LoadingQueue progress tracking', () => {
     });
 
     await expect(queue).rejects.toThrow('No constructor registered');
-    // Progress must have settled — pending must be 0
+    // Progress must have settled - pending must be 0
     expect(lastProgress.pending).toBe(0);
     expect(lastProgress.failed).toBe(1);
     expect(lastProgress.loaded).toBe(0);
@@ -742,11 +742,11 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
 
     loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
-    // First load — populates in-memory result
+    // First load - populates in-memory result
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     // Reset the mock so we can check if it was called during the second load
     (global.fetch as MockInstance).mockClear();
-    // Second load — same asset, should be served from _resources (no new fetch call)
+    // Second load - same asset, should be served from _resources (no new fetch call)
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(global.fetch).not.toHaveBeenCalled();
   });
@@ -807,7 +807,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
 
     const [resTmx, resJson] = await Promise.all([loader.load(tmx), loader.load(json)]);
 
-    // Both variants loaded independently — no cross-contamination
+    // Both variants loaded independently - no cross-contamination
     expect(resTmx).toBe('result:tmx');
     expect(resJson).toBe('result:tiled-json');
     expect(loadOrder).toContain('tmx');
@@ -950,9 +950,9 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 
     loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
-    // First load — populates _resources; context.fetchText goes to network, store has no entry yet
+    // First load - populates _resources; context.fetchText goes to network, store has no entry yet
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
-    // Second load — served from _resources, handler not called, store not consulted
+    // Second load - served from _resources, handler not called, store not consulted
     (global.fetch as MockInstance).mockClear();
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
     expect(global.fetch).not.toHaveBeenCalled();
@@ -1063,7 +1063,7 @@ describe('setConcurrency()', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — keyFor()
+// Coverage sweep - keyFor()
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('keyFor()', () => {
@@ -1107,7 +1107,7 @@ describe('keyFor()', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — release() edge cases: unregistered type, never-loaded fallback
+// Coverage sweep - release() edge cases: unregistered type, never-loaded fallback
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('LoaderScope.release() edge cases', () => {
@@ -1155,7 +1155,7 @@ describe('LoaderScope.release() edge cases', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — basePath / fetchOptions property accessors
+// Coverage sweep - basePath / fetchOptions property accessors
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('basePath / fetchOptions property accessors', () => {
@@ -1193,7 +1193,7 @@ describe('basePath / fetchOptions property accessors', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — _resolveUrl absolute-URL passthrough
+// Coverage sweep - _resolveUrl absolute-URL passthrough
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('absolute URL passthrough', () => {
@@ -1210,7 +1210,7 @@ describe('absolute URL passthrough', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — hasLoadable() / hasAssetType() / hasExtension()
+// Coverage sweep - hasLoadable() / hasAssetType() / hasExtension()
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('hasLoadable() / hasAssetType() / hasExtension()', () => {
@@ -1254,7 +1254,7 @@ describe('registerType()', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — bindAsset() direct handler binding
+// Coverage sweep - bindAsset() direct handler binding
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('bindAsset() — direct handler binding', () => {
@@ -1331,7 +1331,7 @@ describe('bindAsset() — direct handler binding', () => {
     );
 
     // `bnd` is not in ExtensionKindMap, so the typed bare-path overload rejects
-    // it at compile time — the runtime override table still resolves it.
+    // it at compile time - the runtime override table still resolves it.
     const result = await loader.load('thing.bnd' as never);
 
     expect(result).toBeInstanceOf(BoundAsset);
@@ -1428,7 +1428,7 @@ describe('bindAsset() — direct handler binding', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — Loader.loadContainer() (exercised from within loader.test.ts's
+// Coverage sweep - Loader.loadContainer() (exercised from within loader.test.ts's
 // own coverage scope; a broader format/roundtrip suite lives in
 // test/assets/asset-container.test.ts)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1492,7 +1492,7 @@ describe('loadContainer()', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — destroy()
+// Coverage sweep - destroy()
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('destroy()', () => {
@@ -1552,7 +1552,7 @@ describe('destroy()', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — _fetchWithHandler error wrapping
+// Coverage sweep - _fetchWithHandler error wrapping
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('handler load() rejection is wrapped with url + cause', () => {
@@ -1579,7 +1579,7 @@ describe('handler load() rejection is wrapped with url + cause', () => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — Asset config: extra config fields surface as handler options
+// Coverage sweep - Asset config: extra config fields surface as handler options
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Asset-based load() — extra config fields as handler options', () => {
@@ -1614,7 +1614,7 @@ describe('Asset-based load() — extra config fields as handler options', () => 
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Coverage sweep — remaining small branch gaps
+// Coverage sweep - remaining small branch gaps
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe('Loader constructor — cache option as an array of stores', () => {
@@ -1762,7 +1762,7 @@ describe('bare-path descriptor normalization', () => {
 
     bindTextType(loader);
 
-    // `.json` → the global `json` type, whose constructor has no handler here —
+    // `.json` → the global `json` type, whose constructor has no handler here -
     // proving the path did NOT route to the bound `text` handler.
     expect(() => loader.get('config.json')).toThrow(/no asset handler bound for type "json"/);
     expect(() => loader.load('config.json')).toThrow(/no asset handler bound for type "json"/);
@@ -1818,7 +1818,7 @@ describe('bare-path loading for non-leaf resource types', () => {
   });
 
   // Non-leaf types (font, bmFont, svg, image, music, video) have no bare-path
-  // inference at the TYPE level — `KindByPath` resolves them to `never`, so these
+  // inference at the TYPE level - `KindByPath` resolves them to `never`, so these
   // calls need the `as never` cast. The RUNTIME branch still resolves them via
   // the app-local override table that `bindAsset`'s `type` + `extensions` feed,
   // which is what these two tests pin.
@@ -1906,7 +1906,7 @@ describe('value-kind leaves for declaration-merged package types', () => {
 
   // The runtime half of the `ValueAssetKind` contract. `defineAsset` computes
   // `isValue ?? seamless === undefined`, so a binding that ships no seamless
-  // adapter — the normal shape for an extension package type — hands out an
+  // adapter - the normal shape for an extension package type - hands out an
   // `AssetRef` wrapper from `get()`, never the bare resource. The type side
   // mirrors this with `isValue: true` on the `AssetDefinitions` entry; this test
   // pins the runtime behaviour that marker claims, so the two cannot drift

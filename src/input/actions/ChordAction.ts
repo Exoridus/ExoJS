@@ -11,7 +11,7 @@ import type { ActionOptions } from './types';
  * A binding accepted by {@link ChordAction}: a `'+'`/`'|'` string of
  * case-insensitive {@link Keyboard} token names (`'Control+S'`,
  * `'Control+S|Meta+S'`), an {@link InputChord} array of channels required
- * together directly, or an {@link InputAlternation} array of such chords —
+ * together directly, or an {@link InputAlternation} array of such chords -
  * any one of which satisfies the binding.
  */
 export type ChordBinding = string | InputChord | InputAlternation;
@@ -36,7 +36,7 @@ function weakestAt(values: Float32Array, indices: readonly number[]): number {
 }
 
 /**
- * Button-like action active while every channel in a chord is held at once —
+ * Button-like action active while every channel in a chord is held at once -
  * `Control+S`, a modifier held alongside a gamepad button, and so on. Exposes
  * the same `active`/`pressed`/`released`/`value` quartet as {@link ButtonAction},
  * but the aggregate is the weakest of every bound channel instead of the
@@ -44,10 +44,10 @@ function weakestAt(values: Float32Array, indices: readonly number[]): number {
  * channel holds if and only if every one of them individually exceeds
  * threshold, so a chord is only ever as "on" as its least-engaged member. For
  * an analog chord (a gamepad trigger held alongside a button, say), {@link value}
- * reports the trigger's pull limited by whether the button is engaged at all —
+ * reports the trigger's pull limited by whether the button is engaged at all -
  * `0` the instant any member releases, never the button's own binary 0/1.
  *
- * `'|'` alternates between whole chords — `'Control+S|Meta+S'` is active
+ * `'|'` alternates between whole chords - `'Control+S|Meta+S'` is active
  * while EITHER modifier is held alongside `S`. This composes the same
  * strongest/weakest reduction one level deeper: each alternative reports its
  * own weakest member as above, and the action reports the strongest of those
@@ -56,7 +56,7 @@ function weakestAt(values: Float32Array, indices: readonly number[]): number {
  *
  * A string binding resolves `+`/`|`-joined tokens as case-insensitive
  * {@link Keyboard} enum names (`'Control+S'`, `'control+s'`). This is a
- * shortcut list syntax for enum lookups, not text or IME input — it never
+ * shortcut list syntax for enum lookups, not text or IME input - it never
  * decodes typed characters, dead keys, or composed input, and rejects any
  * token that is not a known `Keyboard` member. Use an array of
  * {@link InputChannel}s directly to include pointer or gamepad channels, or
@@ -66,8 +66,8 @@ function weakestAt(values: Float32Array, indices: readonly number[]): number {
  * (`'Ctrl+Sv'`), a stray separator (`'A++B'`) or a `'>'` that belongs to
  * {@link SequenceAction} is a type error naming the reason rather than a throw
  * on the first frame that constructs the action. A pattern that is only known
- * at runtime — read from a config file, assembled from parts, or passed in
- * from JavaScript — types as plain `string` and is checked by the parser
+ * at runtime - read from a config file, assembled from parts, or passed in
+ * from JavaScript - types as plain `string` and is checked by the parser
  * alone, exactly as before.
  *
  * @example
@@ -87,7 +87,7 @@ export class ChordAction<const Binding extends ChordBinding = ChordBinding> exte
    * {@link SequenceAction}), an unknown `Keyboard` token, an empty `+`/`|`
    * segment, a mix of a bare channel and a nested alternative within the
    * same binding, or the same channel twice within one alternative. A string
-   * literal is rejected at compile time for the same reasons — see
+   * literal is rejected at compile time for the same reasons - see
    * {@link ValidatedChordBinding}.
    */
   public constructor(binding: ValidatedChordBinding<Binding>, options: ActionOptions = {}) {

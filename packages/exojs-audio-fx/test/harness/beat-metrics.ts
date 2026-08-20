@@ -4,13 +4,13 @@
  * Turns a captured WorkletMessage log + fixture ground truth into the following
  * metrics (per the Stage-1 plan Task 3 spec):
  *
- *   BPM error       — |reportedTempo - trueBpm|, sampled from state after lock.
- *   Beat offset     — per-beat absolute offset (ms) vs nearest GT onset.
- *   False positives — emitted beats with no GT match within ±halfIBI window.
- *   Misses          — GT onsets with no emitted beat within the window.
- *   Lock time       — seconds until state.tempo stays within ±3% for K consecutive msgs.
- *   Confidence-vs-correctness — mean confidence when correct/wrong, correlation.
- *   Octave error    — flag when detected tempo is ~0.5× or ~2× true.
+ *   BPM error       - |reportedTempo - trueBpm|, sampled from state after lock.
+ *   Beat offset     - per-beat absolute offset (ms) vs nearest GT onset.
+ *   False positives - emitted beats with no GT match within ±halfIBI window.
+ *   Misses          - GT onsets with no emitted beat within the window.
+ *   Lock time       - seconds until state.tempo stays within ±3% for K consecutive msgs.
+ *   Confidence-vs-correctness - mean confidence when correct/wrong, correlation.
+ *   Octave error    - flag when detected tempo is ~0.5× or ~2× true.
  */
 
 import type { BeatFixture } from '../fixtures/beat-fixtures';
@@ -77,7 +77,7 @@ export interface BeatMetrics {
 
 export interface T7Stats {
   /**
-   * Emission time (s) of the FIRST emitted beat of ANY status — the reactivity
+   * Emission time (s) of the FIRST emitted beat of ANY status - the reactivity
    * latency the "blink" visualizer feels. Uses the message-posting time
    * (`_audioTimeSec`), not the (possibly back-dated) beat timestamp.
    * null = no beats emitted.
@@ -155,9 +155,9 @@ function pearson(xs: number[], ys: number[]): number {
 /**
  * Greedy one-to-one match: for each emitted beat, find the nearest unmatched
  * GT onset within `windowSec`. Returns:
- *   offsets — matched absolute offsets in seconds
- *   fpTimes — emitted beats with no GT match
- *   missTimes — GT onsets with no matched emitted beat
+ *   offsets - matched absolute offsets in seconds
+ *   fpTimes - emitted beats with no GT match
+ *   missTimes - GT onsets with no matched emitted beat
  */
 function greedyMatch(
   emittedTimes: number[],
@@ -320,7 +320,7 @@ export function computeMetrics(
   // ── Octave error ──
 
   // Heuristic octave-error flag: majority-vote over settled states using broad ±0.1/±0.2
-  // ratio bands. This is intentionally loose — a 180→120 slip (ratio 0.667) is outside
+  // ratio bands. This is intentionally loose - a 180→120 slip (ratio 0.667) is outside
   // the half-octave band and zero settled states makes majority=0 → halfOctave=true.
   // The real quality gates (pct≤3%, lockTimeSec≠null, recall≥90%) do the actual work;
   // these flags are a secondary diagnostic signal, not a primary pass/fail criterion.

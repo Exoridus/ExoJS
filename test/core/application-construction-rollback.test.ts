@@ -1,7 +1,7 @@
 /**
  * A constructor that throws hands the caller nothing to call `destroy()` on,
  * so everything it had already built has to be released on the way out. These
- * tests drive a real `Application` (only the WebGL2 backend is mocked — jsdom
+ * tests drive a real `Application` (only the WebGL2 backend is mocked - jsdom
  * has no GL context) and assert both halves of that contract: the original
  * error propagates untouched, and every subsystem built before the failure is
  * torn down in reverse construction order.
@@ -65,7 +65,7 @@ const recordDestroy = (prototype: { destroy: () => void }, label: string): void 
   });
 };
 
-/** Minimal recording adapter — enough surface to construct an `Application`. */
+/** Minimal recording adapter - enough surface to construct an `Application`. */
 const createRecordingPlatform = (): PlatformAdapter & { readonly calls: string[]; readonly visibilityListenerCount: number } => {
   const calls: string[] = [];
   const visibilityListeners = new Set<(visible: boolean) => void>();
@@ -98,7 +98,7 @@ const createRecordingPlatform = (): PlatformAdapter & { readonly calls: string[]
 };
 
 /**
- * An extension whose `install` throws — the real failure mode, and the last
+ * An extension whose `install` throws - the real failure mode, and the last
  * construction step. `before` is a system the installer registers before it
  * throws, so the rollback has extension-owned state to unwind.
  */
@@ -133,7 +133,7 @@ describe('Application construction rollback', () => {
       caught = error;
     }
 
-    // Same instance — not wrapped, not replaced by a teardown error.
+    // Same instance - not wrapped, not replaced by a teardown error.
     expect(caught).toBe(failure);
   });
 
@@ -235,7 +235,7 @@ describe('Application construction rollback', () => {
 
       // `_applySizingMode` runs before any subsystem exists, so the observer is
       // the earliest thing construction owns. Left connected, the parent node
-      // keeps a callback closing over a dead Application — and the next layout
+      // keeps a callback closing over a dead Application - and the next layout
       // change drives resize() into a destroyed backend.
       expect(observed).toEqual([host]);
       expect(disconnected).toEqual([1]);
@@ -265,7 +265,7 @@ describe('Application construction rollback', () => {
 
     expect(() => new Application({ backend: { type: 'webgl2' }, platform, extensions: [throwingInstallExtension(new Error('boom'))] })).toThrow('boom');
 
-    // Not ours to destroy — the caller injected it and may still be using it.
+    // Not ours to destroy - the caller injected it and may still be using it.
     expect(platform.calls).not.toContain('destroy');
     // But the subscription we took out on it would otherwise keep this dead
     // Application reachable from a live adapter.
@@ -283,7 +283,7 @@ describe('Application construction rollback', () => {
     expect(() => new Application({ backend: { type: 'webgl2' }, extensions: [extension] })).toThrow(/already registered/);
 
     // Backend, rendering, input, interaction and scenes were never built, so
-    // they must not appear — and must not throw on an unassigned field either.
+    // they must not appear - and must not throw on an unassigned field either.
     expect(destroyOrder).toEqual(['loader', 'platform']);
   });
 

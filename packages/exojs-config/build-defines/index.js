@@ -15,7 +15,7 @@ import { resolve } from 'node:path';
 // ---- command runner (injectable for tests) ---------------------------------
 
 /**
- * Minimal inline command-runner interface — intentionally compatible with the
+ * Minimal inline command-runner interface - intentionally compatible with the
  * wider `CommandRunner` from scripts/release without pulling it in as a
  * dependency. Configuration files that need a runner can pass an adapter.
  *
@@ -124,7 +124,7 @@ export const resolveRevision = (opts = {}) => {
  */
 export const isTreeDirty = ({ cwd, runner } = {}) => {
   // When the revision was provided explicitly (EXOJS_REVISION env var), the
-  // caller asserts the value — we do not second-guess by checking the tree.
+  // caller asserts the value - we do not second-guess by checking the tree.
   if (process.env['EXOJS_REVISION']) return false;
 
   // When the revision comes from a CI SHA, local dirty-detection via
@@ -133,7 +133,7 @@ export const isTreeDirty = ({ cwd, runner } = {}) => {
   if (ciShaEnv()) return false;
 
   // Short-circuit: when revision is already "unknown" the dirty flag is
-  // meaningless — the tree could not be compared to a reference.
+  // meaningless - the tree could not be compared to a reference.
   const rev = resolveRevision({ cwd, runner });
   if (rev === 'unknown') return false;
 

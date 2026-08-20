@@ -2,7 +2,7 @@ import type { Matrix } from '#math/Matrix';
 
 /**
  * Shared CPU-side packing of the engine's 2D affine {@link Matrix} into GPU
- * uniform layouts — the single source of truth for the cross-backend
+ * uniform layouts - the single source of truth for the cross-backend
  * transform convention.
  *
  * # Canonical convention
@@ -114,7 +114,7 @@ export function packAffineMat4(matrix: Matrix, out: Float32Array, offset = 0): F
 }
 
 /**
- * Whether `staged` — a group matrix just packed by one of the functions above —
+ * Whether `staged` - a group matrix just packed by one of the functions above -
  * differs from the `staged.length` floats `written` already holds at
  * `writtenOffset` (the group slot of a renderer's projection uniform staging
  * array).
@@ -122,7 +122,7 @@ export function packAffineMat4(matrix: Matrix, out: Float32Array, offset = 0): F
  * Renderers sharing a single per-flush projection UBO must compare group
  * CONTENT here, never the backend's monotonic group-transform id. Rewriting
  * that UBO retroactively re-projects draws already recorded into the still-open
- * render pass, so a projection change is a pass boundary — and a boundary that
+ * render pass, so a projection change is a pass boundary - and a boundary that
  * merely leaves and re-enters a group, restoring byte-identical group bytes,
  * would otherwise split the single-submit frame for no visible difference.
  * @internal

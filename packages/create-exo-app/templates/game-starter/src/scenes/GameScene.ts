@@ -13,7 +13,7 @@ export class GameScene extends Scene {
     const { width, height } = this.app!.canvas;
 
     // Each scene owns its background. The engine clears to `app.clearColor`
-    // before `draw` runs, and `init` fires once per activation — so coming
+    // before `draw` runs, and `init` fires once per activation - so coming
     // back from the game-over screen repaints the frame in this colour.
     this.app!.clearColor.set(18, 28, 48);
 
