@@ -82,6 +82,7 @@ describe('@codexo/exojs-ldtk asset binding — ldtkMapBinding', () => {
       loader: { load: vi.fn() } as unknown as AssetLoaderContext['loader'],
       scope: { load: vi.fn() } as unknown as AssetLoaderContext['scope'],
       identityKey: 'test',
+      resolveUrl: (source: string) => source,
       fetchText: vi.fn(),
       fetchArrayBuffer: vi.fn(),
       fetchJson: fetchJson as AssetLoaderContext['fetchJson'],

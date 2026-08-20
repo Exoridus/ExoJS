@@ -52,6 +52,7 @@ function makeContext(fixtures: Record<string, unknown>) {
     loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
     scope: { load: loaderLoad } as unknown as AssetLoaderContext['scope'],
     identityKey: 'test',
+    resolveUrl: (source: string) => source,
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),
     fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
