@@ -1,30 +1,29 @@
 // Auto-generated from key-rebinding.ts — edit the .ts source, not this file.
-import { Application, Color, Graphics, Keyboard, Scene } from '@codexo/exojs';
+import { ActionMap, Application, BindingProfile, ButtonAction, Color, Graphics, inputToken, Keyboard, Scene, } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
-// Reverse lookup from a Keyboard channel back to a human-readable key name, so
-// the binding is shown as "Space" rather than the raw channel number. The
-// Keyboard enum's reverse map (numeric value -> member name) gives this for free.
-const KEY_NAMES = Keyboard;
-function keyName(channel) {
-    return KEY_NAMES[channel] ?? `Key ${channel}`;
+// A binding is persisted as a stable lowercase token ("keyboard.space"), never
+// as an enum number: tokens survive an engine upgrade, a different browser, and
+// a controller plugged into another port. This turns one back into something a
+// player can read on screen.
+function keyName(token) {
+    return token?.replace(/^keyboard\./, '').replaceAll('-', ' ') ?? 'unbound';
 }
-// A serialisable mapping is exactly what makes a key-binding persist: write the
-// plain object to localStorage on every rebind, read it back on load.
+// A BindingProfile stores only what the player CHANGED, so writing the whole
+// thing to localStorage still leaves every action the game gains later at its
+// own default.
 const STORAGE_KEY = 'exo-example-key-rebinding';
 function loadProfile() {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
-            const parsed = JSON.parse(raw);
-            if (typeof parsed.jump === 'number') {
-                return { jump: parsed.jump };
-            }
+            return BindingProfile.fromJSON(JSON.parse(raw));
         }
     }
     catch {
-        // localStorage may be unavailable (sandboxed) — fall through to default.
+        // Unavailable storage, or a profile written by an older build — either
+        // way, fall through to the developer defaults.
     }
-    return { jump: Keyboard.Space };
+    return new BindingProfile();
 }
 function saveProfile(profile) {
     try {
@@ -36,12 +35,15 @@ function saveProfile(profile) {
 }
 class KeyRebindingScene extends Scene {
     graphics;
+    controls = new ActionMap({
+        jump: new ButtonAction(Keyboard.Space),
+        rebind: new ButtonAction(Keyboard.J),
+    });
     profile = loadProfile();
     rebindRequested = false;
     jumpVelocity = 0;
     heroY = 0;
     groundY = 0;
-    jumpBinding;
     hud;
     init() {
         const app = this.app;
@@ -49,52 +51,52 @@ class KeyRebindingScene extends Scene {
         this.groundY = height - 240;
         this.heroY = this.groundY;
         this.graphics = new Graphics();
-        // Tap J to arm a rebind; the next key pressed becomes the new jump key.
-        // We arm on the *release* (onTrigger) so the J keydown itself isn't
-        // captured as the new binding in the same frame.
-        this.inputs.onTrigger(Keyboard.J, () => {
-            this.rebindRequested = true;
-            this.refreshHud();
-        });
+        this.controls.applyProfile(this.profile);
+        this.inputs.attach(this.controls);
         app.input.onKeyDown.add(channel => {
             if (!this.rebindRequested) {
                 return;
             }
             this.rebindRequested = false;
-            this.profile.jump = channel;
+            // Rebinding is atomic and baseline-safe: the key being pressed right
+            // now does not read as a fresh jump on the very next frame.
+            this.controls.rebind('jump', channel);
+            this.profile.set('jump', this.controls.jump.serialize());
             saveProfile(this.profile);
-            this.bindJump();
             this.refreshHud();
         });
-        this.bindJump();
         this.hud = mountControls({
             title: 'Key Rebinding',
-            controls: [
-                { keys: keyName(this.profile.jump), action: 'jump' },
-                { keys: 'J', action: 'rebind jump' },
-            ],
+            controls: this.hudControls(),
             status: '',
             hint: '',
         });
         this.refreshHud();
     }
-    bindJump() {
-        this.jumpBinding?.unbind();
-        this.jumpBinding = this.inputs.onStart(this.profile.jump, () => {
-            if (this.heroY >= this.groundY - 0.5) {
-                this.jumpVelocity = -560;
-            }
-        });
+    jumpToken() {
+        return this.controls.jump.channels.map(inputToken)[0];
+    }
+    hudControls() {
+        return [
+            { keys: keyName(this.jumpToken()), action: 'jump' },
+            { keys: 'J', action: 'rebind jump' },
+        ];
     }
     refreshHud() {
-        this.hud.setControls([
-            { keys: keyName(this.profile.jump), action: 'jump' },
-            { keys: 'J', action: 'rebind jump' },
-        ]);
-        this.hud.setStatus(`Jump key: ${keyName(this.profile.jump)} (saved)`);
+        this.hud.setControls(this.hudControls());
+        this.hud.setStatus(`Jump key: ${keyName(this.jumpToken())} (saved)`);
         this.hud.setHint(this.rebindRequested ? 'Press any key to assign jump…' : 'Binding restored from localStorage on reload.');
     }
     update(delta) {
+        // Arm on the RELEASE of J, so the J keydown itself is not captured as
+        // the new binding in the same frame.
+        if (this.controls.rebind.released && !this.rebindRequested) {
+            this.rebindRequested = true;
+            this.refreshHud();
+        }
+        if (this.controls.jump.pressed && this.heroY >= this.groundY - 0.5) {
+            this.jumpVelocity = -560;
+        }
         // Simple gravity so the rebound jump is visible.
         this.jumpVelocity = Math.min(900, this.jumpVelocity + 1800 * delta.seconds);
         this.heroY += this.jumpVelocity * delta.seconds;
