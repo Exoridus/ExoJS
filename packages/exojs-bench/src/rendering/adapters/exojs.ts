@@ -6,6 +6,7 @@ import { Geometry } from '#rendering/geometry/Geometry';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Mesh } from '#rendering/mesh/Mesh';
+import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderBatch } from '#rendering/RenderBatch';
 import { RetainedContainer } from '#rendering/RetainedContainer';
@@ -201,11 +202,70 @@ const buildViewGrid = (count: number): View[] => {
  * sequence (`resetStats(); clear(); rendering.render(root); flush()`) is
  * identical on both, so only {@link init} branches on the backend type.
  */
-/** Which ExoJS arm this adapter represents: today's default path, or the Slice-2 RetainedContainer spine. */
-export type ExoJsAdapterConfig = 'current' | 'retained';
+/**
+ * Which ExoJS arm this adapter represents: today's default path, the Slice-2
+ * RetainedContainer spine, or a calibration arm that overrides the retained
+ * capture margin (`cull-margin-<numerator>_<denominator>`, e.g.
+ * `cull-margin-1_8`).
+ *
+ * The calibration arms exist because `RETAINED_CULL_MARGIN_RATIO` is a module
+ * constant in the engine: sweeping it would otherwise mean one source edit and
+ * one build per point, which is not a comparison. The arm patches the builder's
+ * private inflation step instead - the harness page imports engine SOURCE
+ * through the `#` alias, so the same object the engine uses is reachable - and
+ * every other arm, the production default included, is left untouched.
+ */
+export type ExoJsAdapterConfig = 'current' | 'retained' | `cull-margin-${string}`;
+
+/** `cull-margin-1_8` -> `0.125`; anything else -> `null`. */
+const parseCullMarginConfig = (config: string): number | null => {
+  const match = /^cull-margin-(\d+)_(\d+)$/.exec(config);
+
+  if (match === null) {
+    return null;
+  }
+
+  const denominator = Number(match[2]);
+
+  return denominator === 0 ? null : Number(match[1]) / denominator;
+};
+
+/** Builder internals the calibration arm reaches into; `private` is compile-time only. */
+interface CullRectInternals {
+  _captureCullRect: { set(x: number, y: number, width: number, height: number): void };
+  _captureCullActive: boolean;
+  _inflateCaptureCullRect(view: View): void;
+}
+
+const defaultInflateCullRect = (RenderPlanBuilder.prototype as unknown as CullRectInternals)._inflateCaptureCullRect;
+
+/**
+ * Point every capture and every indexed selection at a cull rect grown by
+ * `ratio` per side, or back at the engine's own constant when `ratio` is `null`.
+ * Called on every `init` so an arm never inherits the previous arm's override.
+ */
+const applyCullMarginOverride = (ratio: number | null): void => {
+  const prototype = RenderPlanBuilder.prototype as unknown as CullRectInternals;
+
+  if (ratio === null) {
+    prototype._inflateCaptureCullRect = defaultInflateCullRect;
+
+    return;
+  }
+
+  prototype._inflateCaptureCullRect = function inflate(this: CullRectInternals, view: View): void {
+    const rect = view.getBounds();
+    const marginX = rect.width * ratio;
+    const marginY = rect.height * ratio;
+
+    this._captureCullRect.set(rect.x - marginX, rect.y - marginY, rect.width + 2 * marginX, rect.height + 2 * marginY);
+    this._captureCullActive = true;
+  };
+};
 
 export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: ExoJsAdapterConfig = 'current'): EngineAdapter => {
   const supported: readonly Backend[] = backendFilter ?? ['webgl2', 'webgpu'];
+  const cullMargin = parseCullMarginConfig(config);
 
   let app: Application | null = null;
   let root: Container | null = null;
@@ -304,6 +364,10 @@ export const createExoJsAdapter = (backendFilter?: readonly Backend[], config: E
       if (!supported.includes(backend)) {
         throw new Error(`The exojs adapter was not configured for the '${backend}' backend.`);
       }
+
+      // Per `init` rather than per module load: arms share the page, so an arm
+      // that does not override has to actively restore the engine's own margin.
+      applyCullMarginOverride(cullMargin);
 
       const instance = new Application({
         canvas: { element: canvas, width: VIEWPORT_WIDTH, height: VIEWPORT_HEIGHT, pixelRatio: 1 },
