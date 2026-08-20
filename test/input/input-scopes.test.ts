@@ -382,3 +382,35 @@ describe('scope stack priority', () => {
     expect(menu.confirm.active).toBe(false);
   });
 });
+
+describe('a map lives on exactly one level', () => {
+  test('attaching a map that belongs to a scope is refused', () => {
+    const h = createHarness();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    h.inputs.pushScope(new InputScope(map));
+
+    expect(() => h.inputs.attach(map)).toThrow(/belongs to an InputScope/);
+  });
+
+  test('pushing a scope holding an already-attached map is refused', () => {
+    const h = createHarness();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+
+    h.inputs.attach(map);
+
+    expect(() => h.inputs.pushScope(new InputScope(map))).toThrow(/already attached directly/);
+  });
+
+  test('a map freed from its scope can be attached directly afterwards', () => {
+    const h = createHarness();
+    const map = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
+    const scope = new InputScope(map);
+
+    h.inputs.pushScope(scope);
+    h.inputs.popScope(scope);
+    scope.remove(map);
+
+    expect(() => h.inputs.attach(map)).not.toThrow();
+  });
+});

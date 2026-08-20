@@ -101,6 +101,13 @@ export class InputScope {
 }
 
 /**
+ * The scope `map` currently belongs to, or `undefined`. @internal
+ */
+export function scopeOfActionMap(map: AnyActionMap): InputScope | undefined {
+  return scopeByMap.get(map);
+}
+
+/**
  * Which scope owns a given map.
  *
  * Membership is tracked here rather than on the map so that `ActionMap` stays

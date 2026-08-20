@@ -4,6 +4,7 @@ import { SceneState } from '#core/SceneState';
 import type { Destroyable } from '#core/types';
 import type { ActionMap, ActionRecord, AnyActionMap } from '#input/actions/ActionMap';
 import type { InputScope } from '#input/actions/InputScope';
+import { scopeOfActionMap } from '#input/actions/InputScope';
 import { ScopeLevel } from '#input/actions/ScopeLevel';
 import type { ActionSample } from '#input/actions/types';
 import type { Gamepad } from '#input/Gamepad';
@@ -210,10 +211,16 @@ export class SceneInputs implements Destroyable {
     const when = this._scopeAvailability.get(scope) ?? SceneAvailability.Active;
 
     for (const map of scope.maps) {
-      if (!level.maps.has(map)) {
-        map._attach(this, () => this._allowedNow(when));
-        level.add(map);
+      if (level.maps.has(map)) {
+        continue;
       }
+
+      if (this._base.maps.has(map)) {
+        throw new Error('SceneInputs: this ActionMap is already attached directly. Detach it before putting it in an InputScope.');
+      }
+
+      map._attach(this, () => this._allowedNow(when));
+      level.add(map);
     }
 
     for (const map of [...level.maps]) {
@@ -245,6 +252,14 @@ export class SceneInputs implements Destroyable {
    */
   public attach<T extends ActionRecord>(map: ActionMap<T>, options: SceneActionMapOptions = {}): ActionMap<T> {
     const when = options.when ?? SceneAvailability.Active;
+
+    // A map sits on exactly one level of the stack. On two, it would be
+    // sampled twice per frame against two different (masked and unmasked)
+    // samples, which reads to its ownership tracker as a fresh owner every
+    // single frame and re-baselines every action forever.
+    if (scopeOfActionMap(map) !== undefined) {
+      throw new Error('SceneInputs: this ActionMap belongs to an InputScope. Push the scope instead of attaching the map directly.');
+    }
 
     map._attach(this, () => this._allowedNow(when));
     this._base.add(map);
