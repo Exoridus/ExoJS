@@ -51,6 +51,14 @@ release and includes intentional breaking changes; see **Changed** and
     reload), ending playback and the transfer rather than leaving a released
     video streaming in the background. Cancelling a load in flight does the same
     and rejects with an `AbortError`.
+  - **The transport is not identity, the CORS mode is.** One URL is one asset
+    however its bytes arrived, so a container entry and a network load share a
+    single resident resource - and `download: true` therefore decides how the
+    asset is built by the load that materializes it, not for a load that joins
+    one already resident. A non-default `crossOrigin` is identity instead: it is
+    baked into the element, so `null`, `'anonymous'` and `'use-credentials'` for
+    one URL are separate assets and no consumer is handed an element whose CORS
+    mode it did not ask for.
   - **A container entry never rebuilds a resident asset.** Unpacking an entry
     whose canonical asset is already resident (or already being fetched) now
     claims it and stops there, instead of storing a second payload under one

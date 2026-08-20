@@ -95,20 +95,51 @@ function binaryFactoryHandler<T>(makeFactory: () => FactoryLike<ArrayBuffer, T>,
 }
 
 /**
+ * Identity for streaming media.
+ *
+ * The transport is deliberately absent: the same URL streamed by the browser,
+ * downloaded as bytes, or unpacked from a container is one asset with one
+ * resident resource, so whichever load materializes it first decides how it was
+ * built and every later consumer joins it.
+ *
+ * A non-default CORS mode is identity, because it is baked into the element:
+ * a `null` media element plays but can never be uploaded as a texture, and
+ * `'use-credentials'` can resolve to a different response altogether. Neither
+ * can be handed to a consumer that asked for the other. It is irrelevant to
+ * bytes the application already owns, so a downloaded asset ignores it.
+ */
+function mediaIdentityDiscriminator({ options }: AssetLoadRequest): string {
+  if (typeof options !== 'object') {
+    return '';
+  }
+
+  const { mimeType, crossOrigin, download } = options as MediaLoadOptions & { mimeType?: string };
+  const parts: string[] = [];
+
+  if (mimeType !== undefined) {
+    parts.push(`mimeType=${String(mimeType)}`);
+  }
+
+  if (download !== true && crossOrigin !== undefined && crossOrigin !== 'anonymous') {
+    parts.push(`crossOrigin=${String(crossOrigin)}`);
+  }
+
+  return parts.join(',');
+}
+
+/**
  * Create an AssetHandler for a streaming media factory.
  *
  * A URL-backed load hands the resolved URL to the media element so the browser
  * owns the transport; `download: true` and container bytes take the complete-
- * bytes path instead. Which transport a key ends up with is decided by the load
- * that materializes it: the transport is a property of how an asset was
- * acquired, not of its identity, so a second consumer asking for the same source
- * joins the resident resource rather than building a second one.
+ * bytes path instead. See {@link mediaIdentityDiscriminator} for what of that is
+ * identity and what is not.
  */
-function mediaFactoryHandler<T>(makeFactory: () => MediaFactoryLike<T>, identityOptions: readonly string[] = []): (loader: Loader) => AssetHandler {
+function mediaFactoryHandler<T>(makeFactory: () => MediaFactoryLike<T>): (loader: Loader) => AssetHandler {
   return () => {
     const factory = makeFactory();
     return {
-      ...(identityOptions.length > 0 && { getIdentityDiscriminator: identityDiscriminatorFor(identityOptions) }),
+      getIdentityDiscriminator: mediaIdentityDiscriminator,
       async load({ source, options }: AssetLoadRequest, context: AssetLoaderContext): Promise<T> {
         if ((options as MediaLoadOptions | undefined)?.download === true) {
           return factory.create(await context.fetchArrayBuffer(source), options);
@@ -201,14 +232,14 @@ const musicBinding = defineAsset({
   ctor: AudioStream,
   type: 'music',
   isValue: false,
-  create: mediaFactoryHandler(() => new MusicFactory(), ['mimeType']),
+  create: mediaFactoryHandler(() => new MusicFactory()),
 });
 
 const videoBinding = defineAsset({
   ctor: Video,
   type: 'video',
   isValue: false,
-  create: mediaFactoryHandler(() => new VideoFactory(), ['mimeType']),
+  create: mediaFactoryHandler(() => new VideoFactory()),
 });
 
 const jsonBinding = defineAsset({

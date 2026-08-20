@@ -12,11 +12,24 @@ export interface MediaLoadOptions {
    * Downloading makes the bytes cacheable and available offline, reports real
    * fetch progress, and is what container (`.exoa`) entries always use. It also
    * means nothing plays until the whole file has arrived.
+   *
+   * The transport is not part of asset identity: one URL is one asset however
+   * its bytes arrived, which is what lets a container entry and a network load
+   * share a single resident resource. This option therefore decides how the
+   * asset is built by the load that MATERIALIZES it - a load that joins an
+   * already-resident asset gets what is resident, whichever way that arrived.
+   * Acquire the asset through the download load first when the byte backing
+   * matters to a consumer.
    */
   download?: boolean;
   /**
    * Defaults to `'anonymous'`. Ignored for downloaded or container-backed media,
    * whose bytes are already owned by the application.
+   *
+   * Unlike the transport, a non-default CORS mode IS part of asset identity: it
+   * is baked into the element, so a `null` and an `'anonymous'` media resource
+   * for one URL are two assets, and a consumer never receives an element whose
+   * CORS mode it did not ask for.
    */
   crossOrigin?: MediaCrossOrigin;
   /**

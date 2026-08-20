@@ -221,6 +221,106 @@ describe('container entries', () => {
   });
 });
 
+describe('transport and CORS identity', () => {
+  test('the default and an explicit "anonymous" are one asset', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.createScope({ name: 'level' });
+
+    const queued = scope.load(Asset.type('video', 'intro.mp4'));
+    const element = await reachReadiness();
+    const first = await queued;
+
+    expect(await scope.load(Asset.type('video', 'intro.mp4', { crossOrigin: 'anonymous' }))).toBe(first);
+    expect(capturedMedia.at(-1)).toBe(element);
+    expect(loader.inspect()).toHaveLength(1);
+  });
+
+  test('a non-default CORS mode is a different asset', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.createScope({ name: 'level' });
+
+    const anonymous = scope.load(Asset.type('video', 'intro.mp4'));
+
+    await reachReadiness();
+
+    const streamed = await anonymous;
+    const uncorsed = scope.load(Asset.type('video', 'intro.mp4', { crossOrigin: null }));
+    const second = await reachReadiness();
+
+    expect(await uncorsed).not.toBe(streamed);
+    expect(second.hasAttribute('crossorigin')).toBe(false);
+    expect(loader.inspect()).toHaveLength(2);
+  });
+
+  test('credentialed media never joins an anonymous one', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.createScope({ name: 'level' });
+
+    const anonymous = scope.load(Asset.type('video', 'intro.mp4'));
+
+    await reachReadiness();
+    await anonymous;
+
+    const credentialed = scope.load(Asset.type('video', 'intro.mp4', { crossOrigin: 'use-credentials' }));
+    const second = await reachReadiness();
+
+    await credentialed;
+
+    expect(second.crossOrigin).toBe('use-credentials');
+    expect(loader.inspect()).toHaveLength(2);
+  });
+
+  test('the transport is not identity: a later download joins the resident streamed asset', async () => {
+    const fetchSpy = mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.createScope({ name: 'level' });
+
+    const streamed = scope.load(Asset.type('video', 'intro.mp4'));
+    const element = await reachReadiness();
+    const resource = await streamed;
+
+    // Same canonical asset as a container entry would resolve to, so the second
+    // request joins what is resident instead of building a byte-backed twin.
+    expect(await scope.load(Asset.type('video', 'intro.mp4', { download: true }))).toBe(resource);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(capturedMedia.at(-1)).toBe(element);
+    expect(loader.inspect()).toHaveLength(1);
+  });
+
+  test('the transport is not identity: a later stream joins the resident downloaded asset', async () => {
+    const fetchSpy = mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.createScope({ name: 'level' });
+
+    const downloaded = scope.load(Asset.type('video', 'intro.mp4', { download: true }));
+    const element = await reachReadiness();
+    const resource = await downloaded;
+
+    expect(await scope.load(Asset.type('video', 'intro.mp4'))).toBe(resource);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+    expect(element.getAttribute('src')).toMatch(/^blob:/);
+    expect(loader.inspect()).toHaveLength(1);
+  });
+
+  test('crossOrigin does not split a downloaded asset, whose bytes carry no CORS mode', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.createScope({ name: 'level' });
+
+    const downloaded = scope.load(Asset.type('video', 'intro.mp4', { download: true }));
+
+    await reachReadiness();
+
+    const resource = await downloaded;
+
+    expect(await scope.load(Asset.type('video', 'intro.mp4', { download: true, crossOrigin: null }))).toBe(resource);
+    expect(loader.inspect()).toHaveLength(1);
+  });
+});
+
 describe('failure timing', () => {
   test('a failure before readiness fails the load and reports through the loader', async () => {
     mockFetch();

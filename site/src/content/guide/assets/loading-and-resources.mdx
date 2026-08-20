@@ -422,7 +422,9 @@ async load() {
 
 `download: true` fetches the whole file through the loader's cache pipeline before building the element. That is what makes it cacheable and available offline, gives real byte progress, and it is always what a container (`.exoa`) entry does — container bytes are already owned by the application. The trade is that nothing plays until everything has arrived.
 
-Whichever transport an asset arrives through, it is the same canonical asset: a source loaded over the network and the same source unpacked from a container resolve to one identity and one resident resource, never two.
+Whichever transport an asset arrives through, it is the same canonical asset: a source loaded over the network and the same source unpacked from a container resolve to one identity and one resident resource, never two. That is also the limit of `download: true` — it decides how the asset is built by the load that *materializes* it, so a load that joins an already-resident asset gets what is resident. Acquire it through the downloading load first when a consumer depends on the byte backing.
+
+The CORS mode is the exception, because it is baked into the element rather than into the bytes: `crossOrigin: null` and the default `'anonymous'` for one URL are two assets, and so is `'use-credentials'`. Nobody is ever handed an element whose CORS mode they did not ask for — a video that cannot be a texture never arrives where a texture was expected.
 
 <Callout type="hint" title="Inspecting what's currently loaded">
   `this.app.loader.inspect()` returns a frozen, sorted snapshot — one row per canonical asset, with its state, how many owners hold it, and whether it's in flight or
