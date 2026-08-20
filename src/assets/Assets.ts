@@ -431,11 +431,11 @@ type AssetsFacade = AssetsConstructorFn & {
    * options. Entries do not repeat the `type`.
    *
    * @remarks `group()` is a SAME-KIND helper: every entry is stamped with the
-   * `type` passed here. An entry may therefore NOT carry its own `type` — the
+   * `type` passed here. An entry may therefore NOT carry its own `type` - the
    * type forbids it (`type?: never`) and the runtime rejects it with a guiding
    * error, rather than letting `{ type, ...shared, ...entry }` silently allow
    * an `entry.type` to win. To COMBINE different types,
-   * spread each group into {@link from} (as the example shows) — do not nest one
+   * spread each group into {@link from} (as the example shows) - do not nest one
    * group's output inside another group's entries (nesting produces type-carrying
    * values and is rejected).
    *

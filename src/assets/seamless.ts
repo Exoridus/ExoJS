@@ -15,7 +15,7 @@ export interface PreSizeOptions {
 /**
  * Options honoured by {@link textureSeamlessAdapter.createPlaceholder}: pre-size
  * reservation plus the handle's OWN sampler state. Texture options are per-handle
- * — applied to the placeholder here and NOT overwritten by {@link fill} — so two
+ * - applied to the placeholder here and NOT overwritten by {@link fill} - so two
  * handles for one source can carry independent samplers off a single shared decode.
  * @internal
  */
@@ -55,7 +55,7 @@ export interface SeamlessAdapter<T> {
  * {@link textureSeamlessAdapter.createPlaceholder} from `textureOptions`); fill
  * transplants ONLY the decoded source, so two handles for one source share a
  * single decode yet keep independent samplers; fail shows the shared
- * {@link Texture.missing} checker — visible in production too.
+ * {@link Texture.missing} checker - visible in production too.
  * @internal
  */
 // Pre-size reservations per handle; consumed on the first fill or fail so a
