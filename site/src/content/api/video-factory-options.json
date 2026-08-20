@@ -116,43 +116,6 @@
           "description": "Initial playback settings forwarded to the Video instance."
         },
         {
-          "name": "samplerOptions",
-          "signature": "samplerOptions?: Partial<SamplerOptions>",
-          "signatureTokens": [
-            {
-              "text": "samplerOptions",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Partial",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SamplerOptions",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Sampler parameters forwarded to the Video instance's texture."
-        },
-        {
           "name": "stallTimeout",
           "signature": "stallTimeout?: number",
           "signatureTokens": [
@@ -176,6 +139,43 @@
           "params": [],
           "returnType": null,
           "description": "Milliseconds to wait after a stalled event before rejecting the load promise. When omitted no timeout is applied and a stalled load will wait indefinitely. Each subsequent stalled event resets the timer."
+        },
+        {
+          "name": "textureOptions",
+          "signature": "textureOptions?: Partial<TextureOptions>",
+          "signatureTokens": [
+            {
+              "text": "textureOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Sampling and upload state forwarded to the Video instance's texture."
         }
       ],
       "paragraphs": [],

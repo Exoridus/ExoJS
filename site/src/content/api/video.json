@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, samplerOptions?: Partial<SamplerOptions>): Video",
+          "signature": "new(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, textureOptions?: Partial<TextureOptions>): Video",
           "signatureTokens": [
             {
               "text": "new",
@@ -90,7 +90,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "samplerOptions",
+              "text": "textureOptions",
               "kind": "param"
             },
             {
@@ -110,7 +110,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SamplerOptions",
+              "text": "TextureOptions",
               "kind": "type"
             },
             {
@@ -142,8 +142,8 @@
               "optional": true
             },
             {
-              "name": "samplerOptions",
-              "type": "Partial<SamplerOptions>",
+              "name": "textureOptions",
+              "type": "Partial<TextureOptions>",
               "optional": true
             }
           ],

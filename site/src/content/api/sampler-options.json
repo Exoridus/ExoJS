@@ -1,16 +1,16 @@
 {
   "title": "SamplerOptions",
-  "description": "Full set of texture sampling and upload parameters. Used by both Texture and RenderTexture to configure the GPU sampler and the pixel-store state at upload time.",
+  "description": "GPU sampling state: how a texture is filtered and how UV coordinates outside `[0, 1]` are resolved. Sampling state is independent of a texture's pixel content, so backends realize it as a shared sampler object keyed on these two values alone. Materials can override it per draw without disturbing the texture.",
   "symbol": "SamplerOptions",
   "kind": "interface",
   "subsystem": "rendering",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 2,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 2,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Full set of texture sampling and upload parameters. Used by both Texture and RenderTexture to configure the GPU sampler and the pixel-store state at upload time."
+        "GPU sampling state: how a texture is filtered and how UV coordinates outside `[0, 1]` are resolved.",
+        "Sampling state is independent of a texture's pixel content, so backends realize it as a shared sampler object keyed on these two values alone. Materials can override it per draw without disturbing the texture."
       ],
       "importLine": "import { SamplerOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -28,69 +29,6 @@
       "id": "properties",
       "title": "Properties",
       "members": [
-        {
-          "name": "flipY",
-          "signature": "flipY: boolean",
-          "signatureTokens": [
-            {
-              "text": "flipY",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Whether to flip the image vertically during upload (WebGL's Y-axis convention)."
-        },
-        {
-          "name": "generateMipMap",
-          "signature": "generateMipMap: boolean",
-          "signatureTokens": [
-            {
-              "text": "generateMipMap",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Whether to generate a full mipmap chain after upload."
-        },
-        {
-          "name": "premultiplyAlpha",
-          "signature": "premultiplyAlpha: boolean",
-          "signatureTokens": [
-            {
-              "text": "premultiplyAlpha",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Whether pixel values are premultiplied by their alpha before uploading to the GPU."
-        },
         {
           "name": "scaleMode",
           "signature": "scaleMode: ScaleModes",
@@ -145,11 +83,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/rendering/texture/Sampler.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Sampler.ts"
+        "label": "src/rendering/texture/TextureOptions.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/TextureOptions.ts"
       }
     }
   ],
-  "sourcePath": "src/rendering/texture/Sampler.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/Sampler.ts"
+  "sourcePath": "src/rendering/texture/TextureOptions.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/rendering/texture/TextureOptions.ts"
 }

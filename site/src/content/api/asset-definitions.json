@@ -1134,7 +1134,7 @@
         },
         {
           "name": "texture",
-          "signature": "texture: { config: { mimeType?: string; samplerOptions?: Partial<SamplerOptions>; source: string }; resource: Texture }",
+          "signature": "texture: { config: { mimeType?: string; source: string; textureOptions?: Partial<TextureOptions> }; resource: Texture }",
           "signatureTokens": [
             {
               "text": "texture",
@@ -1181,7 +1181,23 @@
               "kind": "punctuation"
             },
             {
-              "text": "samplerOptions",
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "textureOptions",
               "kind": "name"
             },
             {
@@ -1201,28 +1217,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "SamplerOptions",
+              "text": "TextureOptions",
               "kind": "type"
             },
             {
               "text": ">",
               "kind": "punctuation"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
             },
             {
               "text": " }",
@@ -1255,7 +1255,7 @@
         },
         {
           "name": "video",
-          "signature": "video: { config: { loadEvent?: StreamingLoadEvent; mimeType?: string; playbackOptions?: Partial<PlaybackOptions>; samplerOptions?: Partial<SamplerOptions>; source: string; stallTimeout?: number }; resource: Video }",
+          "signature": "video: { config: { loadEvent?: StreamingLoadEvent; mimeType?: string; playbackOptions?: Partial<PlaybackOptions>; source: string; stallTimeout?: number; textureOptions?: Partial<TextureOptions> }; resource: Video }",
           "signatureTokens": [
             {
               "text": "video",
@@ -1354,38 +1354,6 @@
               "kind": "punctuation"
             },
             {
-              "text": "samplerOptions",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Partial",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "SamplerOptions",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
               "text": "source",
               "kind": "name"
             },
@@ -1416,6 +1384,38 @@
             {
               "text": "number",
               "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "textureOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": " }",

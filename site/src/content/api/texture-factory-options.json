@@ -54,11 +54,11 @@
           "description": "MIME type for the intermediate blob. Inferred from magic bytes when omitted."
         },
         {
-          "name": "samplerOptions",
-          "signature": "samplerOptions?: Partial<SamplerOptions>",
+          "name": "textureOptions",
+          "signature": "textureOptions?: Partial<TextureOptions>",
           "signatureTokens": [
             {
-              "text": "samplerOptions",
+              "text": "textureOptions",
               "kind": "name"
             },
             {
@@ -78,7 +78,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "SamplerOptions",
+              "text": "TextureOptions",
               "kind": "type"
             },
             {
@@ -88,7 +88,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Sampler parameters (wrap mode, filter, etc.) forwarded to the Texture constructor; any subset."
+          "description": "Sampling and upload state forwarded to the Texture constructor; any subset."
         }
       ],
       "paragraphs": [],

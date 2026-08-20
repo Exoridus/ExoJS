@@ -1,6 +1,6 @@
 {
   "title": "TextureFactory",
-  "description": "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a GPU-ready Texture instance. MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` to override. Sampler state (wrap, filter, etc.) can be configured via `samplerOptions`.",
+  "description": "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a GPU-ready Texture instance. MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` to override. Texture state (wrap, filter, etc.) can be configured via `textureOptions`.",
   "symbol": "TextureFactory",
   "kind": "class",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "AssetFactory implementation that loads PNG, JPG, WebP, AVIF, and other browser-supported raster image formats and produces a GPU-ready Texture instance.",
-        "MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` to override. Sampler state (wrap, filter, etc.) can be configured via `samplerOptions`."
+        "MIME type detection is performed automatically from the buffer's magic bytes; pass an explicit `mimeType` to override. Texture state (wrap, filter, etc.) can be configured via `textureOptions`."
       ],
       "importLine": "import { TextureFactory } from '@codexo/exojs'",
       "sourceLink": null
