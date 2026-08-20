@@ -39,6 +39,15 @@ export class ScopeLevel {
   private _batches: ChannelEventBatch[] = [];
   private _derived: ActionSample | null = null;
   private _wasMasked = false;
+  /**
+   * `false` until this level has seen its first claim set.
+   *
+   * The first one is not a CHANGE: the maps on this level were armed when they
+   * were attached, moments earlier, and re-arming them here would swallow
+   * whatever happened in between — a key pressed in the same frame a scope was
+   * pushed would never reach the level it belongs to.
+   */
+  private _maskKnown = false;
 
   public get maps(): ReadonlySet<ActionMap> {
     return this._maps;
@@ -95,14 +104,19 @@ export class ScopeLevel {
     const isMasked = masked.size > 0;
 
     if (isMasked !== this._wasMasked || !sameChannels(this._mask, masked)) {
+      const known = this._maskKnown;
+
       this._wasMasked = isMasked;
+      this._maskKnown = true;
       this._mask.clear();
 
       for (const channel of masked) {
         this._mask.add(channel);
       }
 
-      this._rearm(owner, masked);
+      if (known) {
+        this._rearm(owner, masked);
+      }
     }
 
     if (!isMasked) {
