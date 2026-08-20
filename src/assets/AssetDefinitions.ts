@@ -3,8 +3,8 @@ import type { AudioSpriteClip } from '#audio/Sound';
 import type { Sound } from '#audio/Sound';
 import type { PlaybackOptions, StreamingLoadEvent } from '#core/types';
 import type { BmFont } from '#rendering/text/BmFont';
-import type { SamplerOptions } from '#rendering/texture/Sampler';
 import type { Texture } from '#rendering/texture/Texture';
+import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import type { Video } from '#rendering/video/Video';
 
 import type { Asset, ValueAsset } from './Asset';
@@ -23,7 +23,7 @@ import type { AssetRef } from './AssetRef';
  */
 export interface AssetDefinitions {
   bmFont: { resource: BmFont; config: { source: string } };
-  texture: { resource: Texture; config: { source: string; mimeType?: string; samplerOptions?: Partial<SamplerOptions> } };
+  texture: { resource: Texture; config: { source: string; mimeType?: string; textureOptions?: Partial<TextureOptions> } };
   sound: {
     resource: Sound;
     config: { source: string; playbackOptions?: Partial<PlaybackOptions>; poolSize?: number; sprites?: Readonly<Record<string, AudioSpriteClip>> };
@@ -41,7 +41,7 @@ export interface AssetDefinitions {
       mimeType?: string;
       loadEvent?: StreamingLoadEvent;
       playbackOptions?: Partial<PlaybackOptions>;
-      samplerOptions?: Partial<SamplerOptions>;
+      textureOptions?: Partial<TextureOptions>;
       stallTimeout?: number;
     };
   };

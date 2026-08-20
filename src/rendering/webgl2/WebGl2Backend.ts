@@ -9,7 +9,6 @@ import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
-import type { MaterialSamplerOptions } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
@@ -45,6 +44,7 @@ import {
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import type { SamplerOptions } from '#rendering/texture/TextureOptions';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { BlendModes, type ColorTextureFormat, TextureFormat } from '#rendering/types';
 import type { View } from '#rendering/View';
@@ -1138,7 +1138,7 @@ export class WebGl2Backend implements RenderBackend {
   }
 
   /** Bind a material's base-texture sampler override to one texture unit. @internal */
-  public bindMaterialSampler(options: MaterialSamplerOptions, unit: number): this {
+  public bindMaterialSampler(options: SamplerOptions, unit: number): this {
     const key = `${options.scaleMode}:${options.wrapMode}`;
     let sampler = this._materialSamplers.get(key);
 

@@ -73,14 +73,14 @@ describe('TextureFactory', () => {
       expect(texture.height).toBe(8);
     });
 
-    test('create() forwards samplerOptions to the constructed Texture', async () => {
+    test('create() forwards textureOptions to the constructed Texture', async () => {
       vi.stubGlobal(
         'createImageBitmap',
         vi.fn(async () => ({ width: 2, height: 2 })),
       );
 
       const factory = new TextureFactory();
-      const texture = await factory.create(PNG_HEADER, { samplerOptions: { flipY: true } });
+      const texture = await factory.create(PNG_HEADER, { textureOptions: { flipY: true } });
 
       expect(texture.flipY).toBe(true);
     });

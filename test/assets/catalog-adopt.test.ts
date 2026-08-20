@@ -181,12 +181,12 @@ describe('Loader._adopt', () => {
     warnSpy.mockRestore();
   });
 
-  test('duplicate source, two handles with DIFFERENT samplerOptions: one fetch, independent per-handle samplers', async () => {
+  test('duplicate source, two handles with DIFFERENT textureOptions: one fetch, independent per-handle samplers', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const a = createLeaf('texture', 'x.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } }) as Texture;
-    const b = createLeaf('texture', 'x.png', { samplerOptions: { scaleMode: ScaleModes.Linear } }) as Texture;
+    const a = createLeaf('texture', 'x.png', { textureOptions: { scaleMode: ScaleModes.Nearest } }) as Texture;
+    const b = createLeaf('texture', 'x.png', { textureOptions: { scaleMode: ScaleModes.Linear } }) as Texture;
 
     expect(a.scaleMode).toBe(ScaleModes.Nearest); // applied at createPlaceholder
     expect(b.scaleMode).toBe(ScaleModes.Linear);

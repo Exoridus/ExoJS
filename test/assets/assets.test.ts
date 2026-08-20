@@ -23,10 +23,10 @@ describe('Assets', () => {
 
   test('carries extra config fields into the leaf meta opts', () => {
     const bag = new Assets({
-      logo: { type: 'texture', source: '/logo.png', samplerOptions: { minFilter: 'nearest' } },
+      logo: { type: 'texture', source: '/logo.png', textureOptions: { minFilter: 'nearest' } },
     });
 
-    expect(_readMeta(bag.logo)).toEqual({ kind: 'texture', src: '/logo.png', opts: { samplerOptions: { minFilter: 'nearest' } } });
+    expect(_readMeta(bag.logo)).toEqual({ kind: 'texture', src: '/logo.png', opts: { textureOptions: { minFilter: 'nearest' } } });
   });
 
   test('converts an already-constructed Asset into a fresh handle-hybrid leaf (no longer passed through by reference)', () => {

@@ -1,7 +1,7 @@
 import { AbstractAssetFactory } from '#assets/AbstractAssetFactory';
 import { determineMimeType } from '#assets/utils';
 import type { PlaybackOptions, StreamingLoadEvent } from '#core/types';
-import type { SamplerOptions } from '#rendering/texture/Sampler';
+import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import { Video } from '#rendering/video/Video';
 
 const onceListenerOption = { once: true };
@@ -20,8 +20,8 @@ export interface VideoFactoryOptions {
   loadEvent?: StreamingLoadEvent;
   /** Initial playback settings forwarded to the {@link Video} instance. */
   playbackOptions?: Partial<PlaybackOptions>;
-  /** Sampler parameters forwarded to the {@link Video} instance's texture. */
-  samplerOptions?: Partial<SamplerOptions>;
+  /** Sampling and upload state forwarded to the {@link Video} instance's texture. */
+  textureOptions?: Partial<TextureOptions>;
   /**
    * Milliseconds to wait after a `stalled` event before rejecting the load
    * promise. When omitted no timeout is applied and a stalled load will wait
@@ -62,7 +62,7 @@ export class VideoFactory extends AbstractAssetFactory<Video> {
    * load event is received.
    */
   public async create(source: ArrayBuffer, options: VideoFactoryOptions = {}): Promise<Video> {
-    const { mimeType, loadEvent, playbackOptions, samplerOptions, stallTimeout } = options;
+    const { mimeType, loadEvent, playbackOptions, textureOptions, stallTimeout } = options;
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
     const objectUrl = this.createObjectUrl(blob);
 
@@ -87,7 +87,7 @@ export class VideoFactory extends AbstractAssetFactory<Video> {
       video.addEventListener('error', () => settle(() => reject(new Error('Video loading error.'))), onceListenerOption);
       video.addEventListener('abort', () => settle(() => reject(new Error('Video loading error: cancelled.'))), onceListenerOption);
       video.addEventListener('emptied', () => settle(() => reject(new Error('Video loading error: emptied.'))), onceListenerOption);
-      video.addEventListener(loadEvent ?? 'canplaythrough', () => settle(() => resolve(new Video(video, playbackOptions, samplerOptions))), onceListenerOption);
+      video.addEventListener(loadEvent ?? 'canplaythrough', () => settle(() => resolve(new Video(video, playbackOptions, textureOptions))), onceListenerOption);
 
       // 'stalled' fires transiently during normal buffering on slow connections and is not
       // treated as an error by default. Supply stallTimeout to reject after a stall persists.

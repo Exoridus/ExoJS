@@ -1,7 +1,7 @@
 import { AbstractAssetFactory } from '#assets/AbstractAssetFactory';
 import { determineMimeType } from '#assets/utils';
-import type { SamplerOptions } from '#rendering/texture/Sampler';
 import { Texture } from '#rendering/texture/Texture';
+import type { TextureOptions } from '#rendering/texture/TextureOptions';
 
 /** Construction options for {@link TextureFactory.create}. */
 export interface TextureFactoryOptions {
@@ -10,8 +10,8 @@ export interface TextureFactoryOptions {
    * omitted.
    */
   mimeType?: string;
-  /** Sampler parameters (wrap mode, filter, etc.) forwarded to the {@link Texture} constructor; any subset. */
-  samplerOptions?: Partial<SamplerOptions>;
+  /** Sampling and upload state forwarded to the {@link Texture} constructor; any subset. */
+  textureOptions?: Partial<TextureOptions>;
 }
 
 /**
@@ -20,8 +20,8 @@ export interface TextureFactoryOptions {
  * {@link Texture} instance.
  *
  * MIME type detection is performed automatically from the buffer's magic bytes;
- * pass an explicit `mimeType` to override. Sampler state (wrap, filter, etc.)
- * can be configured via `samplerOptions`.
+ * pass an explicit `mimeType` to override. Texture state (wrap, filter, etc.)
+ * can be configured via `textureOptions`.
  */
 export class TextureFactory extends AbstractAssetFactory<Texture> {
   public readonly storageName = 'texture';
@@ -42,12 +42,12 @@ export class TextureFactory extends AbstractAssetFactory<Texture> {
    * support `createImageBitmap`.
    */
   public async create(source: ArrayBuffer, options: TextureFactoryOptions = {}): Promise<Texture> {
-    const { mimeType, samplerOptions } = options;
+    const { mimeType, textureOptions } = options;
     const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
 
     if (typeof createImageBitmap === 'function') {
       const bitmap = await createImageBitmap(blob);
-      return new Texture(bitmap, samplerOptions);
+      return new Texture(bitmap, textureOptions);
     }
 
     const objectUrl = this.createObjectUrl(blob);
@@ -62,7 +62,7 @@ export class TextureFactory extends AbstractAssetFactory<Texture> {
         'load',
         () => {
           finalize();
-          resolve(new Texture(image, samplerOptions));
+          resolve(new Texture(image, textureOptions));
         },
         { once: true },
       );

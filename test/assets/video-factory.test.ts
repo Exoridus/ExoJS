@@ -95,10 +95,10 @@ describe('VideoFactory', () => {
     video.destroy();
   });
 
-  test('create() forwards samplerOptions to the underlying Texture', async () => {
+  test('create() forwards textureOptions to the underlying Texture', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create(VIDEO_HEADER, { samplerOptions: { flipY: true } });
+    const promise = factory.create(VIDEO_HEADER, { textureOptions: { flipY: true } });
     lastVideo().dispatchEvent(new Event('canplaythrough'));
 
     const video = await promise;

@@ -1,8 +1,9 @@
-import type { MaterialOptions, MaterialSamplerOptions } from '#rendering/material/Material';
+import type { MaterialOptions } from '#rendering/material/Material';
 import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { SpriteMaterial } from '#rendering/material/SpriteMaterial';
 import { Texture } from '#rendering/texture/Texture';
+import type { SamplerOptions } from '#rendering/texture/TextureOptions';
 import { BlendModes, ScaleModes, WrapModes } from '#rendering/types';
 
 const GLSL_VERTEX = /* glsl */ `#version 300 es
@@ -37,12 +38,12 @@ const createMaterialOptions = (overrides: Partial<MaterialOptions> = {}): Materi
   ...overrides,
 });
 
-const linearClamp: MaterialSamplerOptions = {
+const linearClamp: SamplerOptions = {
   scaleMode: ScaleModes.Linear,
   wrapMode: WrapModes.ClampToEdge,
 };
 
-const nearestRepeat: MaterialSamplerOptions = {
+const nearestRepeat: SamplerOptions = {
   scaleMode: ScaleModes.Nearest,
   wrapMode: WrapModes.Repeat,
 };

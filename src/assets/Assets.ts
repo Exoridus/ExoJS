@@ -442,7 +442,7 @@ type AssetsFacade = AssetsConstructorFn & {
    * @example
    * ```ts
    * Assets.from({
-   *   ...Assets.group('texture', { player: 'player.png', enemy: 'enemy.png' }, { samplerOptions: { minFilter: 'nearest' } }),
+   *   ...Assets.group('texture', { player: 'player.png', enemy: 'enemy.png' }, { textureOptions: { minFilter: 'nearest' } }),
    *   ...Assets.group('sound',   { jump: 'jump.wav', hit: 'hit.wav' }),
    * });
    * ```

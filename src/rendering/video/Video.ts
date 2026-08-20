@@ -6,8 +6,8 @@ import { Rectangle } from '#math/Rectangle';
 import { clamp } from '#math/utils';
 import type { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { Sprite } from '#rendering/sprite/Sprite';
-import type { SamplerOptions } from '#rendering/texture/Sampler';
 import { Texture } from '#rendering/texture/Texture';
+import type { TextureOptions } from '#rendering/texture/TextureOptions';
 
 interface VideoAudioSetup {
   readonly audioContext: AudioContext;
@@ -55,8 +55,8 @@ export class Video extends Sprite {
     this.setupWithAudioContext(ctx);
   };
 
-  public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, samplerOptions?: Partial<SamplerOptions>) {
-    super(new Texture(videoElement, samplerOptions));
+  public constructor(videoElement: HTMLVideoElement, playbackOptions?: Partial<PlaybackOptions>, textureOptions?: Partial<TextureOptions>) {
+    super(new Texture(videoElement, textureOptions));
 
     const { duration, volume, playbackRate, loop, muted } = videoElement;
 

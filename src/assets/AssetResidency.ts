@@ -861,7 +861,7 @@ export class AssetResidency {
     return this._areOptionsEquivalent(this._stripPerHandleOptions(left), this._stripPerHandleOptions(right));
   }
 
-  /** Drop the per-handle option keys (`samplerOptions`, `width`, `height`) that never gate the shared decode. */
+  /** Drop the per-handle option keys (`textureOptions`, `width`, `height`) that never gate the shared decode. */
   private _stripPerHandleOptions(options: unknown): unknown {
     if (options === null || typeof options !== 'object' || Array.isArray(options)) {
       return options;
@@ -870,7 +870,7 @@ export class AssetResidency {
     const result: Record<string, unknown> = {};
 
     for (const [key, value] of Object.entries(options as Record<string, unknown>)) {
-      if (key === 'samplerOptions' || key === 'width' || key === 'height') {
+      if (key === 'textureOptions' || key === 'width' || key === 'height') {
         continue;
       }
 

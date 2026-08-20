@@ -49,7 +49,7 @@ const solidDataTexture = (r: number, g: number, b: number): DataTexture =>
     height: 1,
     format: TextureFormat.Rgba8,
     data: new Uint8Array([r, g, b, 255]),
-    samplerOptions: { scaleMode: ScaleModes.Nearest },
+    textureOptions: { scaleMode: ScaleModes.Nearest },
   });
 
 const makeApp = (canvas: HTMLCanvasElement, alphaMode: CanvasAlphaMode): Application =>
@@ -182,7 +182,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
       height: 1,
       format: TextureFormat.Rgba8,
       data: new Uint8Array([255, 0, 0, 255, 0, 0, 0, 0]),
-      samplerOptions: { scaleMode: ScaleModes.Nearest },
+      textureOptions: { scaleMode: ScaleModes.Nearest },
     });
 
     try {
@@ -219,7 +219,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
       height: 2,
       format: TextureFormat.Rgba8,
       data: new Uint8Array([200, 40, 40, 255, 40, 40, 200, 255]),
-      samplerOptions: { scaleMode: ScaleModes.Nearest },
+      textureOptions: { scaleMode: ScaleModes.Nearest },
     });
     // Opaque white under Darken = min(white, backdrop) = backdrop, so the result
     // must match the backdrop spatially (top red, bottom blue) — a V-flip or a
@@ -229,7 +229,7 @@ describe('WebGPU backdrop-aware blend (Darken spike)', () => {
       height: 1,
       format: TextureFormat.Rgba8,
       data: new Uint8Array([255, 255, 255, 255]),
-      samplerOptions: { scaleMode: ScaleModes.Nearest },
+      textureOptions: { scaleMode: ScaleModes.Nearest },
     });
 
     try {

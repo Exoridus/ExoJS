@@ -201,7 +201,7 @@ describe('Loader seamless get (Texture)', () => {
     }
   });
 
-  test('differing per-handle samplerOptions across get() do NOT warn; the first sampler wins on the shared handle', async () => {
+  test('differing per-handle textureOptions across get() do NOT warn; the first sampler wins on the shared handle', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
     const warnings: string[] = [];
@@ -213,9 +213,9 @@ describe('Loader seamless get (Texture)', () => {
       // get() returns the SAME handle per source; sampler options are per-handle
       // now, so a later differing sampler is silently first-wins (no warn). Use a
       // distinct handle (e.g. an Assets catalog leaf) for an independent sampler.
-      const handle = loader.get('ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
+      const handle = loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Nearest } });
 
-      expect(handle).toBe(loader.get('ship.png', { samplerOptions: { scaleMode: ScaleModes.Linear } }));
+      expect(handle).toBe(loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Linear } }));
       expect(warnings).toHaveLength(0);
       expect(handle.scaleMode).toBe(ScaleModes.Nearest); // first call's sampler, baked at createPlaceholder
 
@@ -226,11 +226,11 @@ describe('Loader seamless get (Texture)', () => {
     }
   });
 
-  test('samplerOptions on a background-adopted catalog leaf survive a later bare get()', async () => {
+  test('textureOptions on a background-adopted catalog leaf survive a later bare get()', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png', samplerOptions: { scaleMode: ScaleModes.Nearest } } });
+    const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png', textureOptions: { scaleMode: ScaleModes.Nearest } } });
     loader.load(catalog, { priority: LoadPriority.Background });
 
     // A bare get() for the same source returns the adopted leaf, whose sampler
@@ -246,7 +246,7 @@ describe('Loader seamless get (Texture)', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const handle = loader.get('ship.png', { samplerOptions: { scaleMode: ScaleModes.Nearest } });
+    const handle = loader.get('ship.png', { textureOptions: { scaleMode: ScaleModes.Nearest } });
 
     expect(handle.scaleMode).toBe(ScaleModes.Nearest);
   });
@@ -260,8 +260,8 @@ describe('Loader seamless get (Texture)', () => {
     });
 
     try {
-      loader.get('ship.png', { samplerOptions: { flipY: true } });
-      loader.get('ship.png', { samplerOptions: { flipY: true } });
+      loader.get('ship.png', { textureOptions: { flipY: true } });
+      loader.get('ship.png', { textureOptions: { flipY: true } });
 
       expect(warnings).toHaveLength(0);
     } finally {

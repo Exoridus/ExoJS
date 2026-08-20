@@ -3,10 +3,10 @@ import { isPowerOfTwo } from '#math/utils';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { type ColorTextureFormat, ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 
-import type { SamplerOptions } from './Sampler';
+import type { TextureOptions } from './TextureOptions';
 
 /** Construction options for {@link RenderTexture}. */
-export interface RenderTextureOptions extends Partial<SamplerOptions> {
+export interface RenderTextureOptions extends Partial<TextureOptions> {
   /**
    * Color attachment format. Defaults to {@link TextureFormat.Rgba8}.
    * The float formats ({@link TextureFormat.Rgba16F} / {@link TextureFormat.Rgba32F})
@@ -29,7 +29,7 @@ export interface RenderTextureOptions extends Partial<SamplerOptions> {
  * updated every frame and mip generation is expensive.
  */
 export class RenderTexture extends RenderTarget {
-  public static defaultSamplerOptions: SamplerOptions = {
+  public static defaultOptions: TextureOptions = {
     scaleMode: ScaleModes.Linear,
     wrapMode: WrapModes.ClampToEdge,
     premultiplyAlpha: true,
@@ -55,8 +55,8 @@ export class RenderTexture extends RenderTarget {
     // Float targets are point-sampled by default: linear filtering of a float
     // texture requires OES_texture_float_linear, which is not guaranteed. An
     // explicit `scaleMode` in `options` still overrides this.
-    const defaults: SamplerOptions =
-      format === TextureFormat.Rgba8 ? RenderTexture.defaultSamplerOptions : { ...RenderTexture.defaultSamplerOptions, scaleMode: ScaleModes.Nearest };
+    const defaults: TextureOptions =
+      format === TextureFormat.Rgba8 ? RenderTexture.defaultOptions : { ...RenderTexture.defaultOptions, scaleMode: ScaleModes.Nearest };
 
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
       ...defaults,

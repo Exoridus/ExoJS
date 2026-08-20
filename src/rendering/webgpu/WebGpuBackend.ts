@@ -12,7 +12,6 @@ import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import { dataTextureBytesPerPixel, estimateTextureBytes, GpuResourceAccountant } from '#rendering/GpuResourceAccountant';
-import type { MaterialSamplerOptions } from '#rendering/material/Material';
 import type { Mesh } from '#rendering/mesh/Mesh';
 import type { PersistentSlotBundle } from '#rendering/plan/PersistentSlotDraw';
 import { type DrawCommand, drawCommandUsesSharedTransform, RenderEntryKind } from '#rendering/plan/RenderCommand';
@@ -39,6 +38,7 @@ import { RenderTexturePool } from '#rendering/RenderTexturePool';
 import { DataTexture, type DataTextureFormat } from '#rendering/texture/DataTexture';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import type { SamplerOptions } from '#rendering/texture/TextureOptions';
 import type { BlendModes, ColorTextureFormat } from '#rendering/types';
 import { ScaleModes, TextureFormat, WrapModes } from '#rendering/types';
 import type { View } from '#rendering/View';
@@ -1219,7 +1219,7 @@ export class WebGpuBackend implements RenderBackend {
 
   public getTextureBinding(
     texture: Texture | RenderTexture,
-    samplerOverride: MaterialSamplerOptions | null = null,
+    samplerOverride: SamplerOptions | null = null,
   ): {
     readonly view: GPUTextureView;
     readonly sampler: GPUSampler;
@@ -2864,7 +2864,7 @@ export class WebGpuBackend implements RenderBackend {
     // Float32 textures (r32float, rgba32float) are non-filterable by default
     // in WebGPU; force nearest filtering to avoid validation errors. Apps
     // that need linear filtering on floats can opt into the
-    // 'float32-filterable' device feature and pass linear via samplerOptions
+    // 'float32-filterable' device feature and pass linear via textureOptions
     // (not yet exposed).
     const isFloatData = texture instanceof DataTexture && (texture.format === TextureFormat.R32F || texture.format === TextureFormat.Rgba32F);
     const filter: GPUFilterMode = isFloatData ? 'nearest' : this._getFilterMode(texture.scaleMode);
@@ -2879,7 +2879,7 @@ export class WebGpuBackend implements RenderBackend {
     });
   }
 
-  private _getMaterialSampler(texture: Texture | RenderTexture, options: MaterialSamplerOptions): GPUSampler {
+  private _getMaterialSampler(texture: Texture | RenderTexture, options: SamplerOptions): GPUSampler {
     // Match the managed-texture path: float32 data textures are non-filterable
     // unless an optional device feature is requested, which this backend does
     // not currently expose.

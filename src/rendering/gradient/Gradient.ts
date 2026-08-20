@@ -2,7 +2,7 @@ import type { Color } from '#core/Color';
 import type { Cloneable, Destroyable } from '#core/types';
 import { clamp } from '#math/utils';
 import { DataTexture } from '#rendering/texture/DataTexture';
-import type { SamplerOptions } from '#rendering/texture/Sampler';
+import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import { TextureFormat } from '#rendering/types';
 
 /** Discriminant identifying the concrete gradient kind (`gradient.type`). */
@@ -15,7 +15,7 @@ export interface GradientStop {
 
 export interface GradientToTextureOptions {
   readonly format?: TextureFormat.Rgba8 | TextureFormat.Rgba32F;
-  readonly samplerOptions?: Partial<SamplerOptions>;
+  readonly textureOptions?: Partial<TextureOptions>;
 }
 
 interface InternalGradientStop {
@@ -186,7 +186,7 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
       width,
       height,
       format: TextureFormat.Rgba8,
-      ...(options.samplerOptions !== undefined && { samplerOptions: options.samplerOptions }),
+      ...(options.textureOptions !== undefined && { textureOptions: options.textureOptions }),
     });
     const buffer = texture.buffer;
 
@@ -219,7 +219,7 @@ export abstract class Gradient implements Cloneable<Gradient>, Destroyable {
       width,
       height,
       format: TextureFormat.Rgba32F,
-      ...(options.samplerOptions !== undefined && { samplerOptions: options.samplerOptions }),
+      ...(options.textureOptions !== undefined && { textureOptions: options.textureOptions }),
     });
     const buffer = texture.buffer;
 

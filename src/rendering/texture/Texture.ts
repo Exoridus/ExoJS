@@ -7,7 +7,7 @@ import { isPowerOfTwo } from '#math/utils';
 import { ScaleModes, WrapModes } from '#rendering/types';
 import { createCanvas, createCheckerCanvas } from '#rendering/utils';
 
-import type { SamplerOptions } from './Sampler';
+import type { TextureOptions } from './TextureOptions';
 
 /**
  * A static GPU texture sourced from an image, canvas, or video element.
@@ -18,7 +18,7 @@ import type { SamplerOptions } from './Sampler';
  *
  * Static helpers {@link Texture.black}, {@link Texture.white}, and {@link Texture.empty}
  * provide ready-made placeholder textures. Default sampler options are configurable via
- * {@link Texture.defaultSamplerOptions}.
+ * {@link Texture.defaultOptions}.
  * @stable
  */
 export class Texture {
@@ -26,7 +26,7 @@ export class Texture {
   private static _white: Texture | null = null;
   private static _missing: Texture | null = null;
 
-  public static defaultSamplerOptions: SamplerOptions = {
+  public static defaultOptions: TextureOptions = {
     scaleMode: ScaleModes.Linear,
     wrapMode: WrapModes.ClampToEdge,
     premultiplyAlpha: true,
@@ -99,9 +99,9 @@ export class Texture {
   private _generateMipMap = false;
   private _flipY = false;
 
-  public constructor(source: TextureSource = null, options?: Partial<SamplerOptions>) {
+  public constructor(source: TextureSource = null, options?: Partial<TextureOptions>) {
     const { scaleMode, wrapMode, premultiplyAlpha, generateMipMap, flipY } = {
-      ...Texture.defaultSamplerOptions,
+      ...Texture.defaultOptions,
       ...options,
     };
 

@@ -94,7 +94,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
       data.set([levels[i], levels[i], levels[i], 255], i * 4);
     }
 
-    const texture = new DataTexture({ width, height: 1, format: TextureFormat.Rgba8, data, samplerOptions: { scaleMode: ScaleModes.Nearest } });
+    const texture = new DataTexture({ width, height: 1, format: TextureFormat.Rgba8, data, textureOptions: { scaleMode: ScaleModes.Nearest } });
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
     try {
@@ -120,7 +120,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
       height: 2,
       format: TextureFormat.Rgba8,
       data: new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 255, 255, 255, 255, 255]),
-      samplerOptions: { scaleMode: ScaleModes.Nearest },
+      textureOptions: { scaleMode: ScaleModes.Nearest },
     });
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
@@ -178,7 +178,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
       [0, 0],
       [1, 0],
     );
-    const texture = gradient.toTexture(256, 256, { samplerOptions: { scaleMode: ScaleModes.Linear } });
+    const texture = gradient.toTexture(256, 256, { textureOptions: { scaleMode: ScaleModes.Linear } });
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
     try {
@@ -203,7 +203,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
       height: 1,
       format: TextureFormat.Rgba8,
       data: new Uint8Array([255, 255, 255, 255]),
-      samplerOptions: { scaleMode: ScaleModes.Nearest },
+      textureOptions: { scaleMode: ScaleModes.Nearest },
     });
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
@@ -235,7 +235,7 @@ describe('WebGL2 mesh tint and texture sampling', () => {
       height: 1,
       format: TextureFormat.Rgba8,
       data: new Uint8Array([255, 0, 0, 255]), // start red
-      samplerOptions: { scaleMode: ScaleModes.Nearest },
+      textureOptions: { scaleMode: ScaleModes.Nearest },
     });
     const mesh = new Mesh({ vertices: fullQuadVertices(), uvs: fullQuadUvs(), texture });
 
