@@ -127,7 +127,7 @@ describe('LoaderScope.release() fail-loud contract', () => {
       vi.fn(async () => ({ width: 1, height: 1 })),
     );
 
-    const hasRow = (source: string): boolean => loader.inspect().some(row => row.source === source);
+    const hasRow = (source: string): boolean => loader.inspect().some(row => row.aliases.includes(source));
 
     // 1. Asset descriptor.
     const asset = new Asset({ type: 'texture', source: 'a.png' });
@@ -223,7 +223,7 @@ describe('Loader.inspect() snapshot contract', () => {
 
     const row = snapshot[0]!;
 
-    expect(Object.keys(row).sort()).toEqual(['background', 'claims', 'inFlight', 'key', 'source', 'state', 'type']);
+    expect(Object.keys(row).sort()).toEqual(['aliases', 'background', 'canonicalKey', 'claims', 'inFlight', 'locator', 'owners', 'state', 'type']);
 
     for (const [field, value] of Object.entries(row)) {
       if (field === 'type') {
@@ -233,6 +233,13 @@ describe('Loader.inspect() snapshot contract', () => {
       expect(value).not.toBeInstanceOf(Set);
       expect(value).not.toBeInstanceOf(AssetRef);
       expect(typeof value).not.toBe('symbol');
+
+      // `aliases` and `owners` are frozen arrays of plain data, never live state.
+      if (field === 'aliases' || field === 'owners') {
+        expect(Object.isFrozen(value)).toBe(true);
+        continue;
+      }
+
       expect(typeof value).not.toBe('object');
     }
 
@@ -240,7 +247,7 @@ describe('Loader.inspect() snapshot contract', () => {
     await ref.loaded;
   });
 
-  test('rows are sorted by key regardless of claim order', () => {
+  test('rows are sorted by canonical key regardless of claim order', () => {
     mockFetchText();
     const loader = new Loader();
     loader.bindAsset<string>({ ctor: TextAsset, storageName: 'text' }, { load: async request => `text:${request.source}` });
@@ -249,7 +256,7 @@ describe('Loader.inspect() snapshot contract', () => {
     loader.get('aaa.txt');
     loader.get('mmm.txt');
 
-    expect(loader.inspect().map(row => row.source)).toEqual(['aaa.txt', 'mmm.txt', 'zzz.txt']);
+    expect(loader.inspect().map(row => row.aliases[0])).toEqual(['aaa.txt', 'mmm.txt', 'zzz.txt']);
   });
 
   test('tracks the loading → ready transition; an earlier snapshot never mutates in place', async () => {
@@ -261,14 +268,14 @@ describe('Loader.inspect() snapshot contract', () => {
     const loading = loader.inspect();
 
     expect(loading).toHaveLength(1);
-    expect(loading[0]).toMatchObject({ source: 'note.txt', state: 'loading', claims: 1, inFlight: true, background: false });
+    expect(loading[0]).toMatchObject({ aliases: ['note.txt'], state: 'loading', claims: 1, inFlight: true, background: false });
 
     pending.resolve('ready');
     await ref.loaded;
     await Promise.resolve(); // let the in-flight bookkeeping's own .finally() cleanup run too
 
     const ready = loader.inspect();
-    expect(ready[0]).toMatchObject({ source: 'note.txt', state: 'ready', claims: 1, inFlight: false, background: false });
+    expect(ready[0]).toMatchObject({ aliases: ['note.txt'], state: 'ready', claims: 1, inFlight: false, background: false });
     // The array returned earlier is a detached snapshot, not a live view.
     expect(loading[0]?.state).toBe('loading');
   });
@@ -280,7 +287,7 @@ describe('Loader.inspect() snapshot contract', () => {
     const catalog = new Assets({ late: { type: 'texture', source: 'late.png' } });
     loader.load(catalog, { priority: LoadPriority.Background });
 
-    const row = loader.inspect().find(r => r.source === 'late.png');
+    const row = loader.inspect().find(r => r.aliases.includes('late.png'));
     // `background` here is the inspection row's own field — whether the key is
     // sitting in the queue right now, not the priority it was requested with.
     expect(row).toMatchObject({ state: 'queued', background: true, inFlight: false, claims: 1 });
@@ -293,7 +300,7 @@ describe('Loader.inspect() snapshot contract', () => {
     const handle = loader.get('gone.png');
     await expect(handle.loaded).rejects.toThrow();
 
-    const row = loader.inspect().find(r => r.source === 'gone.png');
+    const row = loader.inspect().find(r => r.aliases.includes('gone.png'));
     expect(row).toMatchObject({ state: 'failed', inFlight: false, background: false, claims: 1 });
   });
 
@@ -311,7 +318,7 @@ describe('Loader.inspect() snapshot contract', () => {
     loader._getClaimed(sceneScope, 'hero.png'); // a second, distinct scope
     await handle.loaded;
 
-    const row = loader.inspect().find(r => r.source === 'hero.png');
+    const row = loader.inspect().find(r => r.aliases.includes('hero.png'));
     expect(row?.claims).toBe(2);
   });
 
@@ -331,7 +338,7 @@ describe('Loader.inspect() snapshot contract', () => {
 
     expect(catalog.bad.state).toBe('failed');
 
-    const row = loader.inspect().find(r => r.source === 'note.txt');
+    const row = loader.inspect().find(r => r.aliases.includes('note.txt'));
     expect(row?.state).toBe('failed');
   });
 
@@ -357,7 +364,7 @@ describe('Loader.inspect() snapshot contract', () => {
 
     expect(catalog.bad.state).toBe('failed');
     await expect(catalog.bad.loaded).rejects.toThrow(/parse\(\) must be synchronous/);
-    expect(loader.inspect().find(r => r.source === 'note.txt')?.state).toBe('failed');
+    expect(loader.inspect().find(r => r.aliases.includes('note.txt'))?.state).toBe('failed');
   });
 
   test('never reports background:true for a row that has already settled', () => {
@@ -384,7 +391,7 @@ describe('Loader.inspect() snapshot contract', () => {
     residency._backgroundQueue.push({ asset, options: undefined });
     residency._resources.set(asset.key, { asset, value: {} });
 
-    const row = loader.inspect().find(r => r.source === 'bundled.bin');
+    const row = loader.inspect().find(r => r.aliases.includes('bundled.bin'));
 
     expect(row?.state).toBe('ready');
     expect(row?.background).toBe(false);

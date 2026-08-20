@@ -479,7 +479,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
 
     expect(fresh.loadState).toBe('loading');
     expect(fetchMock).toHaveBeenCalledTimes(2); // re-armed AND refetched — never 'loading' with nothing in flight
-    expect(loader.inspect().find(r => r.source === 'scene-handoff.png')).toMatchObject({ state: 'loading', inFlight: true });
+    expect(loader.inspect().find(r => r.aliases.includes('scene-handoff.png'))).toMatchObject({ state: 'loading', inFlight: true });
 
     // A THIRD brand-new leaf joining in the SAME tick must not fetch again: the
     // adopt above already re-armed every sibling, so no handle reads 'failed'.
@@ -493,7 +493,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(alsoFresh.loadState).toBe('ready');
     expect(first.loadState).toBe('ready'); // the originally-failed leaf heals in place too
     expect(fetchMock).toHaveBeenCalledTimes(2); // exactly ONE retry fetch served all three
-    expect(loader.inspect().find(r => r.source === 'scene-handoff.png')).toMatchObject({ state: 'ready', inFlight: false });
+    expect(loader.inspect().find(r => r.aliases.includes('scene-handoff.png'))).toMatchObject({ state: 'ready', inFlight: false });
   });
 
   test('a BRAND-NEW leaf adopted onto a still-broken failed key fails honestly again instead of hanging in loading', async () => {
@@ -514,7 +514,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(fresh.loadState).toBe('failed'); // an honest re-failure, not a silent hang
     expect(first.loadState).toBe('failed');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(loader.inspect().find(r => r.source === 'still-down.png')).toMatchObject({ state: 'failed', inFlight: false });
+    expect(loader.inspect().find(r => r.aliases.includes('still-down.png'))).toMatchObject({ state: 'failed', inFlight: false });
   });
 
   test('re-adopting a failed seamless leaf with { priority: LoadPriority.Background } queues the retry instead of fetching immediately', async () => {
@@ -715,7 +715,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
 
     expect(fresh.loadState).toBe('loading');
     expect(fetchMock).toHaveBeenCalledTimes(2); // re-armed AND refetched — never 'loading' with nothing in flight
-    expect(loader.inspect().find(r => r.source === 'scene-handoff.json')).toMatchObject({ state: 'loading', inFlight: true });
+    expect(loader.inspect().find(r => r.aliases.includes('scene-handoff.json'))).toMatchObject({ state: 'loading', inFlight: true });
 
     // A THIRD brand-new ref joining in the SAME tick must not fetch again: the
     // adopt above already re-armed every sibling, so none reads 'failed'.
@@ -729,7 +729,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(alsoFresh.loadState).toBe('ready');
     expect(first.loadState).toBe('ready'); // the originally-failed ref heals in place too
     expect(fetchMock).toHaveBeenCalledTimes(2); // exactly ONE retry fetch served all three
-    expect(loader.inspect().find(r => r.source === 'scene-handoff.json')).toMatchObject({ state: 'ready', inFlight: false });
+    expect(loader.inspect().find(r => r.aliases.includes('scene-handoff.json'))).toMatchObject({ state: 'ready', inFlight: false });
   });
 
   test('a BRAND-NEW value ref adopted onto a still-broken failed key fails honestly again instead of hanging in loading', async () => {
@@ -750,7 +750,7 @@ describe('Loader._adopt — retrying a failed catalog leaf (hardening)', () => {
     expect(fresh.loadState).toBe('failed'); // an honest re-failure, not a silent hang
     expect(first.loadState).toBe('failed');
     expect(fetchMock).toHaveBeenCalledTimes(2);
-    expect(loader.inspect().find(r => r.source === 'still-down.json')).toMatchObject({ state: 'failed', inFlight: false });
+    expect(loader.inspect().find(r => r.aliases.includes('still-down.json'))).toMatchObject({ state: 'failed', inFlight: false });
   });
 
   test('re-adopting a failed value ref with { priority: LoadPriority.Background } queues the retry instead of fetching immediately', async () => {

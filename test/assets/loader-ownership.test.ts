@@ -231,3 +231,88 @@ describe('dependent asset ownership', () => {
     expect(loader.peek('fonts/page0.png')).not.toBeUndefined();
   });
 });
+
+describe('ownership diagnostics', () => {
+  test('inspect() names every owner of a shared asset', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const level = loader.scope('level-1');
+    const hud = loader.scope('ui:hud');
+
+    const handle = level.get('hero.png');
+    hud.get('hero.png');
+    loader.get('hero.png'); // application lifetime
+    await handle.loaded;
+
+    const row = loader.inspect()[0]!;
+
+    expect(row.claims).toBe(3);
+    expect(row.owners.map(owner => owner.kind).sort()).toEqual(['app', 'scope', 'scope']);
+    expect(row.owners.map(owner => owner.name)).toContain('level-1');
+    expect(row.owners.map(owner => owner.name)).toContain('ui:hud');
+    // Owner ids are unique and ordered, so a snapshot reads deterministically.
+    expect(new Set(row.owners.map(owner => owner.id)).size).toBe(3);
+    expect([...row.owners].sort((a, b) => a.id - b.id)).toEqual([...row.owners]);
+  });
+
+  test('inspect() reports the canonical key, locator and every alias that named it', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const scope = loader.scope();
+
+    const handle = scope.get('hero.png');
+    scope.get('./sub/../hero.png');
+    await handle.loaded;
+
+    const row = loader.inspect()[0]!;
+
+    expect(loader.inspect()).toHaveLength(1);
+    expect(row.locator).toBe('url:/hero.png');
+    expect(row.canonicalKey).toContain('url:/hero.png');
+    expect(row.aliases).toEqual(['./sub/../hero.png', 'hero.png']);
+  });
+});
+
+describe('per-scope load progress', () => {
+  test('a scope reports its own batch while the loader reports the aggregate', async () => {
+    mockFetch();
+    const loader = createCoreLoader();
+    const level = loader.scope('level');
+    const hud = loader.scope('hud');
+
+    const levelProgress: number[] = [];
+    const loaderProgress: number[] = [];
+    let levelComplete = 0;
+
+    level.onLoadProgress.add((_loaded, total) => levelProgress.push(total));
+    level.onLoadComplete.add(() => levelComplete++);
+    loader.onLoadProgress.add((_loaded, total) => loaderProgress.push(total));
+
+    await Promise.all([
+      level.load(new Assets({ a: { type: 'texture', source: 'a.png' }, b: { type: 'texture', source: 'b.png' } })),
+      hud.load(new Assets({ c: { type: 'texture', source: 'c.png' } })),
+    ]);
+
+    // The level scope counts only its own two assets…
+    expect(levelProgress.at(-1)).toBe(2);
+    expect(levelComplete).toBe(1);
+    // …while the loader keeps seeing all three.
+    expect(loaderProgress.at(-1)).toBe(3);
+  });
+
+  test('a failing asset reports through the acquiring scope', async () => {
+    const loader = createCoreLoader();
+    const scope = loader.scope('level');
+    const errors: string[] = [];
+
+    global.fetch = vi.fn(
+      async (): Promise<Response> => ({ ok: false, status: 404, statusText: 'Not Found', arrayBuffer: async () => new ArrayBuffer(0) }) as unknown as Response,
+    ) as unknown as typeof fetch;
+
+    scope.onLoadError.add(key => errors.push(key));
+
+    await scope.load(Asset.type('texture', 'gone.png')).catch(() => undefined);
+
+    expect(errors).toEqual(['gone.png']);
+  });
+});

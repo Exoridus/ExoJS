@@ -6,9 +6,9 @@ import type { AssetDecoder } from './AssetDecoder';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
-import type { CanonicalAsset, CanonicalAssetKey } from './canonicalKey';
+import type { AssetLocator, CanonicalAsset, CanonicalAssetKey } from './canonicalKey';
 import type { AssetConstructor } from './FactoryRegistry';
-import type { LoaderScope } from './LoaderScope';
+import type { LoaderScope, LoaderScopeKind } from './LoaderScope';
 import type { SeamlessAdapter } from './seamless';
 import { isAbortError, SharedAbort } from './SharedAbort';
 import { WeakHandleSet } from './WeakHandleSet';
@@ -43,13 +43,23 @@ export interface AssetResidencySignals {
  * handle/ref object, so nothing returned here can be used to mutate residency
  * state.
  */
+export interface AssetOwnerInspection {
+  /** Stable, unique per loader run. */
+  readonly id: number;
+  /** The scope's human-readable label, when it was given one. Never an identity. */
+  readonly name?: string;
+  readonly kind: LoaderScopeKind;
+}
+
 export interface AssetInspection {
   /** The canonical key this row describes — the same key the claim, in-flight and resource maps use. */
-  readonly key: CanonicalAssetKey;
+  readonly canonicalKey: CanonicalAssetKey;
   /** The asset type constructor this key was resolved under. */
   readonly type: AssetConstructor;
-  /** The source string this asset was first requested under. Several sources can name one canonical key. */
-  readonly source: string;
+  /** The canonicalized source this asset resolves to. */
+  readonly locator: AssetLocator;
+  /** Every source string seen for this key, sorted. Several spellings can name one canonical asset. */
+  readonly aliases: readonly string[];
   /**
    * Where this key currently sits in the load lifecycle: `'idle'` (claimed
    * but its fetch has not started), `'queued'` (parked in the low-priority
@@ -76,6 +86,8 @@ export interface AssetInspection {
    * the same source, still report `1` here.
    */
   readonly claims: number;
+  /** The scopes currently holding this key, sorted by id. Empty for a resident-but-unowned asset. */
+  readonly owners: readonly AssetOwnerInspection[];
   /** `true` while a fetch for this key is actively in flight (network request or handler load). */
   readonly inFlight: boolean;
   /**
@@ -126,7 +138,7 @@ export class AssetResidency {
   private readonly _aliases = new Map<CanonicalAssetKey, Set<string>>();
 
   // ── Seamless deferred handles ──────────────────────────────────────────────
-  private readonly _deferred = new Map<CanonicalAssetKey, { readonly handles: WeakHandleSet; readonly options: unknown }>();
+  private readonly _deferred = new Map<CanonicalAssetKey, { readonly asset: CanonicalAsset; readonly handles: WeakHandleSet; readonly options: unknown }>();
   private readonly _deferredFinalization = new FinalizationRegistry<CanonicalAssetKey>((key: CanonicalAssetKey): void => {
     const entry = this._deferred.get(key);
 
@@ -137,7 +149,7 @@ export class AssetResidency {
   });
 
   // Value-asset refs
-  private readonly _refs = new Map<CanonicalAssetKey, { readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
+  private readonly _refs = new Map<CanonicalAssetKey, { readonly asset: CanonicalAsset; readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
   private readonly _claims = new Map<CanonicalAssetKey, { scopes: Set<LoaderScope>; asset: CanonicalAsset }>();
@@ -170,27 +182,55 @@ export class AssetResidency {
     this._hooks = hooks;
   }
 
-  /** Read-only, detached snapshot for diagnostics and support bundles. @internal */
+  /**
+   * Read-only, detached snapshot for diagnostics and support bundles.
+   *
+   * Walks the whole residency, not just the claim map: a payload that is
+   * resident without an owner is exactly the kind of leak a snapshot has to
+   * show, so it must not be the one thing a snapshot cannot see.
+   * @internal
+   */
   public _inspect(): readonly AssetInspection[] {
     const backgroundKeys = new Set(this._backgroundQueue.map(entry => entry.asset.key));
+    const assets = new Map<CanonicalAssetKey, CanonicalAsset>();
+
+    for (const [key, entry] of this._resources) assets.set(key, entry.asset);
+    for (const [key, entry] of this._claims) assets.set(key, entry.asset);
+    for (const [key, entry] of this._deferred) assets.set(key, entry.asset);
+    for (const [key, entry] of this._refs) assets.set(key, entry.asset);
+    for (const entry of this._backgroundQueue) assets.set(entry.asset.key, entry.asset);
+
     const rows: AssetInspection[] = [];
 
-    for (const [key, claim] of this._claims) {
+    for (const [key, asset] of assets) {
       const stored = this._resources.has(key);
       const inFlight = this._inFlight.has(key);
+      const claimed = this._claims.has(key);
+
+      // A key that is neither resident, owned, fetching nor queued costs nothing
+      // but a remembered handle identity kept for healing. Reporting those would
+      // bury the rows that matter — including the one case this walk exists for,
+      // a payload resident with no owner left.
+      if (!stored && !inFlight && !claimed && !backgroundKeys.has(key)) {
+        continue;
+      }
+
       // Raw queue membership only — a settled row must never report `background: true`
       // (see below), so this is an INPUT to `state`, not the field's own value.
       const queuedInBackground = backgroundKeys.has(key);
-      const handleState = this._inspectHandleState(key, claim.asset.type);
+      const handleState = this._inspectHandleState(key, asset.type);
       const state = this._inspectState({ stored, handleState, queuedInBackground, inFlight });
+      const scopes = [...(this._claims.get(key)?.scopes ?? [])].sort((left, right) => left.id - right.id);
 
       rows.push(
         Object.freeze({
-          key,
-          type: claim.asset.type,
-          source: claim.asset.source,
+          canonicalKey: key,
+          type: asset.type,
+          locator: asset.locator,
+          aliases: Object.freeze([...(this._aliases.get(key) ?? [asset.source])].sort()),
           state,
-          claims: claim.scopes.size,
+          claims: scopes.length,
+          owners: Object.freeze(scopes.map(scope => Object.freeze({ id: scope.id, ...(scope.name !== undefined && { name: scope.name }), kind: scope.kind }))),
           inFlight,
           // Derived from `state`, not from raw queue membership: a producer that
           // stores a payload without draining the background queue first must
@@ -203,8 +243,8 @@ export class AssetResidency {
     // A plain codepoint comparison, not `localeCompare`: the sort order is part
     // of a diagnostic snapshot's contract and must not vary by ICU locale/runtime.
     rows.sort((left, right) => {
-      if (left.key < right.key) return -1;
-      if (left.key > right.key) return 1;
+      if (left.canonicalKey < right.canonicalKey) return -1;
+      if (left.canonicalKey > right.canonicalKey) return 1;
       return 0;
     });
     return Object.freeze(rows);
@@ -395,7 +435,7 @@ export class AssetResidency {
       // Keep the handles registered (weakly) so the next claim heals them in
       // place; the entry persists from store time, carrying the original options.
       if (entry === undefined) {
-        this._createDeferredEntry(key, stored as object);
+        this._createDeferredEntry(asset, stored as object);
       }
 
       this._evicted.add(key);
@@ -521,7 +561,7 @@ export class AssetResidency {
       const stored = this._resources.get(key)?.value;
 
       if (existingRef === undefined) {
-        this._refs.set(key, { refs: new Set([handle]), options: meta.opts });
+        this._refs.set(key, { asset, refs: new Set([handle]), options: meta.opts });
         this._registerHandle(handle, key);
 
         // Mirrors _getRef's stored-fast-path: a value already sitting in the
@@ -601,7 +641,7 @@ export class AssetResidency {
     const adapter = this._typeRegistry.getSeamlessAdapter(ctor);
 
     if (deferredEntry === undefined && stored === undefined) {
-      this._createDeferredEntry(key, handle, meta.opts);
+      this._createDeferredEntry(asset, handle, meta.opts);
       this._claim(asset, claimer);
 
       if (background) {
@@ -628,7 +668,7 @@ export class AssetResidency {
       // joins, never displaces it.
       adapter?.fill(handle, stored);
 
-      const entry = deferredEntry ?? this._createDeferredEntry(key, stored as object, meta.opts);
+      const entry = deferredEntry ?? this._createDeferredEntry(asset, stored as object, meta.opts);
 
       this._addDeferredHandle(key, entry, handle);
     } else if (deferredEntry !== undefined && stored === undefined && !deferredEntry.handles.has(handle)) {
@@ -709,7 +749,7 @@ export class AssetResidency {
 
     const handle = adapter.createPlaceholder(options);
 
-    this._createDeferredEntry(asset.key, handle as object, options);
+    this._createDeferredEntry(asset, handle as object, options);
     this._startFetch(asset, options);
 
     return handle;
@@ -747,7 +787,7 @@ export class AssetResidency {
 
     const ref = new AssetRef<unknown>();
 
-    this._refs.set(asset.key, { refs: new Set([ref]), options });
+    this._refs.set(asset.key, { asset, refs: new Set([ref]), options });
     this._registerHandle(ref, asset.key);
 
     const stored = this._resources.get(asset.key)?.value;
@@ -785,12 +825,16 @@ export class AssetResidency {
    * reverse `handle → key` lookup, and arm GC pruning. Returns the entry so the
    * caller can add further co-handles.
    */
-  private _createDeferredEntry(key: CanonicalAssetKey, handle: object, options?: unknown): { readonly handles: WeakHandleSet; readonly options: unknown } {
-    const entry = { handles: new WeakHandleSet(handle), options };
+  private _createDeferredEntry(
+    asset: CanonicalAsset,
+    handle: object,
+    options?: unknown,
+  ): { readonly asset: CanonicalAsset; readonly handles: WeakHandleSet; readonly options: unknown } {
+    const entry = { asset, handles: new WeakHandleSet(handle), options };
 
-    this._deferred.set(key, entry);
-    this._registerHandle(handle, key);
-    this._deferredFinalization.register(handle, key);
+    this._deferred.set(asset.key, entry);
+    this._registerHandle(handle, asset.key);
+    this._deferredFinalization.register(handle, asset.key);
 
     return entry;
   }
@@ -1186,7 +1230,7 @@ export class AssetResidency {
     // already; a plain `load()` donor (no prior get()) is added here. Held
     // weakly, so a fully-released source does not pin its evicted payload.
     if (typeof resource === 'object' && resource !== null && this._typeRegistry.hasSeamlessAdapter(asset.type) && this._deferred.get(key) === undefined) {
-      this._createDeferredEntry(key, resource);
+      this._createDeferredEntry(asset, resource);
     }
 
     this._signals.onLoaded.dispatch(asset.type, asset.source, resource);

@@ -16,7 +16,7 @@ export type {
 export type { AssetNetworkErrorOptions } from './AssetNetworkError';
 export { AssetNetworkError } from './AssetNetworkError';
 export { AssetRef } from './AssetRef';
-export type { AssetInspection } from './AssetResidency';
+export type { AssetInspection, AssetOwnerInspection } from './AssetResidency';
 export type { AnyAssets, InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
 export type { AssetStatus } from './AssetStatus';
