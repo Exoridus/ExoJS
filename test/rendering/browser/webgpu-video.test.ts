@@ -53,7 +53,7 @@ import type { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { readWebGpuPixels } from './_backendSetup';
+import { createWebGpuTestBackend, readWebGpuPixels, renderWebGpuOnce } from './_backendSetup';
 import { wireCoreRenderers } from './_coreRenderers';
 import { expectPixelNear } from './_pixels';
 import { getBackendDevice } from './webgpu-test-helpers';
@@ -63,6 +63,8 @@ import { getBackendDevice } from './webgpu-test-helpers';
 // ---------------------------------------------------------------------------
 
 const canvasSize = 64;
+/** The device-loss cells use their own, smaller surface. */
+const deviceLossCanvasSize = 32;
 
 const makeApp = (canvas: HTMLCanvasElement): Application =>
   ({
@@ -86,6 +88,15 @@ const setupBackend = async (): Promise<WebGpuBackend> => {
 
   return backend;
 };
+
+/**
+ * Budget for the first decoded frame. Generous on purpose: `video.play()` and
+ * the decode behind it compete with every other file in the lane, and a
+ * fixture that gives up early reports a timeout where the engine is not
+ * involved at all. Still bounded, so a genuinely stuck fixture names itself
+ * instead of running into the surrounding test timeout.
+ */
+const decodeWaitMs = 12_000;
 
 /**
  * Create an `HTMLVideoElement` playing a `MediaStream` sourced from a
@@ -133,7 +144,7 @@ const createPaintedVideo = async (paint: (ctx: CanvasRenderingContext2D, size: n
     };
     const timeout = setTimeout(() => {
       fail(new Error(`timed out waiting for video.play() / decoded frame (videoWidth=${video.videoWidth}, readyState=${video.readyState})`));
-    }, 5000);
+    }, decodeWaitMs);
 
     const poll = (): void => {
       if (settled) {
@@ -145,6 +156,11 @@ const createPaintedVideo = async (paint: (ctx: CanvasRenderingContext2D, size: n
         clearTimeout(timeout);
         resolve();
       } else {
+        // Repaint while waiting. `captureStream` emits a frame when the source
+        // canvas is drawn to, so a canvas painted once before the call can
+        // produce no frame at all once the capture misses that first paint -
+        // the decode then never starts, however long the wait.
+        paint(ctx, size);
         setTimeout(poll, 16);
       }
     };
@@ -231,7 +247,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
 // Tests
 // ---------------------------------------------------------------------------
 
-describe('WebGPU Video', () => {
+describe('WebGPU Video', { timeout: 30_000 }, () => {
   test('decoded video frame renders and fills its bounds', async ctx => {
     const backend = await setupBackend();
 
@@ -507,6 +523,124 @@ describe('WebGPU Video', () => {
       root.destroy();
       videoSprite.destroy();
       backend.destroy();
+    }
+  });
+});
+
+/**
+ * Device-loss teardown, on the same fixtures as the draw-path cells above.
+ *
+ * Mechanism: a genuine `GPUDevice.destroy()`, reached through
+ * `WebGpuBackend.destroy()` - the same real device-loss mechanism
+ * `webgpu-device-lifecycle.test.ts` uses (not a synthetic `GPUDeviceLostInfo`
+ * dispatch). `backend.destroy()` calls `rendererRegistry.destroy()`, which
+ * disconnects every bound renderer - `WebGpuVideoRenderer.onDisconnect` among
+ * them - before the device itself is destroyed for real.
+ *
+ * A real WebGPU device that has already resolved its `lost` promise with
+ * reason `'destroyed'` never attempts automatic recovery on the same backend
+ * instance, so there is no event-driven, same-instance reconnect to observe on
+ * real hardware. The reconnect side of the contract is proven the way
+ * `webgpu-device-lifecycle.test.ts` proves it for the backend as a whole: a
+ * second, independently constructed backend - a fresh real device, a fresh
+ * `WebGpuVideoRenderer` built from scratch by `onConnect` - renders the SAME
+ * `Video` the first backend already rendered and lost, and must still produce
+ * correct pixels. That only holds if `onDisconnect` left nothing about the
+ * `Video`/`Texture` corrupted, and if `onConnect` rebuilds every
+ * pipeline/layout/shader-module/buffer/sampler without stale cross-instance
+ * state.
+ *
+ * Kept in this file rather than its own: a second video-fixture file runs
+ * concurrently with this one in the browser lane, and two `captureStream`
+ * pipelines competing for the headless media stack starve each other into
+ * never decoding a first frame.
+ */
+describe('WebGPU Video device-loss teardown', { timeout: 30_000 }, () => {
+  test('a genuine device loss tears down WebGpuVideoRenderer without throwing', async ctx => {
+    const backend = await createWebGpuTestBackend(deviceLossCanvasSize);
+    const video = await createSolidColorVideo('#ff0000', 16);
+    const root = new Container();
+    const videoSprite = new Video(video);
+
+    videoSprite.setPosition(8, 8);
+    root.addChild(videoSprite);
+
+    let backendDestroyed = false;
+
+    try {
+      if (!(await renderWebGpuOnce(ctx, backend, root))) {
+        return;
+      }
+
+      const lost = getBackendDevice(backend).lost;
+
+      // Real production teardown: destroy() -> rendererRegistry.destroy() ->
+      // every bound renderer's disconnect() (WebGpuVideoRenderer.onDisconnect
+      // included) -> the actual GPUDevice.destroy() call.
+      backend.destroy();
+      backendDestroyed = true;
+
+      // Proves the device was genuinely destroyed, not merely abandoned -
+      // the same assertion webgpu-device-lifecycle.test.ts makes for its own
+      // destroy() cycles.
+      expect((await lost).reason).toBe('destroyed');
+    } finally {
+      // A skip (renderWebGpuOnce returning false) returns before the
+      // explicit destroy() above runs; the live-device count is finite (see
+      // webgpu-device-lifecycle.test.ts's file header), so every path out of
+      // this test must still release the device.
+      if (!backendDestroyed) {
+        backend.destroy();
+      }
+
+      root.destroy();
+      videoSprite.destroy();
+      destroyVideo(video);
+    }
+  });
+
+  test('a fresh backend renders the same Video correctly after a prior backend was lost', async ctx => {
+    const first = await createWebGpuTestBackend(deviceLossCanvasSize);
+    const video = await createSolidColorVideo('#00ff00', 16);
+    const root = new Container();
+    const videoSprite = new Video(video);
+
+    videoSprite.setPosition(8, 8);
+    root.addChild(videoSprite);
+
+    let second: WebGpuBackend | null = null;
+    let firstDestroyed = false;
+
+    try {
+      if (!(await renderWebGpuOnce(ctx, first, root))) {
+        return;
+      }
+
+      first.destroy();
+      firstDestroyed = true;
+
+      second = await createWebGpuTestBackend(deviceLossCanvasSize);
+
+      if (!(await renderWebGpuOnce(ctx, second, root))) {
+        return;
+      }
+
+      const readPixel = readWebGpuPixels(second, deviceLossCanvasSize);
+
+      expectPixelNear(readPixel(16, 16), [0, 255, 0, 255]);
+    } finally {
+      // A skip on the FIRST render returns before first.destroy() above
+      // runs; the live-device count is finite (see
+      // webgpu-device-lifecycle.test.ts's file header), so every path out of
+      // this test must still release both backends.
+      if (!firstDestroyed) {
+        first.destroy();
+      }
+
+      root.destroy();
+      videoSprite.destroy();
+      destroyVideo(video);
+      second?.destroy();
     }
   });
 });
