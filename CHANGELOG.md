@@ -56,7 +56,12 @@ release and includes intentional breaking changes; see **Changed** and
   is deliberately absent, because it may already hold a different particle by
   the time the callback runs. Delivery is exactly once per expired particle, in
   slot order, but no longer necessarily in the frame it expired: a GPU death
-  arrives with its readback, typically the next frame. A system without death
+  arrives with its readback, typically the next frame. Readbacks overlap - the
+  records travel through a ring of staging buffers, so consecutive frames that
+  each report deaths do not wait on one another, and neither the frame loop nor
+  the simulation ever blocks on a mapping. Deaths reported while every staging
+  slot is still in flight stay on the device and travel with the next batch;
+  batches are delivered in the order they were submitted. A system without death
   modules allocates no death buffer and reads nothing back.
 
 - **Particle modules can be changed while particles are in flight.**

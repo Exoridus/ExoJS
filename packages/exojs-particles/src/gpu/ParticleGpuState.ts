@@ -47,7 +47,22 @@ const workgroupSize = 64;
 const instanceBytes = 40; // 5 x f32 + 1 x u32 + 4 x f32 (uvMin.xy, uvMax.xy)
 /** 8 x f32 (position, velocity, rotation, scale, elapsed) + 2 x u32 (color, slot). */
 const deathRecordBytes = 40;
+const deathStagingSlots = 3;
+const minDeathStagingRecords = 32;
 const deathRecordFloats = 10;
+
+/** One readback slot of the death staging ring. */
+interface DeathStagingSlot {
+  buffer: GPUBuffer;
+  records: number;
+  busy: boolean;
+}
+
+/** A copy that has been submitted into a staging slot and not yet delivered. */
+interface StagedDeathBatch {
+  slot: DeathStagingSlot;
+  count: number;
+}
 
 /**
  * One particle's state as the compute shader captured it at death, plus the
@@ -95,10 +110,28 @@ export class ParticleGpuState {
    * so a system without them pays neither the memory nor the copy.
    */
   private _deathBuffer: WebGpuStorageBuffer | null = null;
-  private _deathStaging: GPUBuffer | null = null;
-  private _deathStagingRecords = 0;
   private readonly _deathCounterReset = new Uint32Array(1);
-  private _pendingDeaths = 0;
+
+  /**
+   * Readback slots for the death buffer. A slot stays unavailable from the
+   * submit that copies into it until its map resolves, so a single slot would
+   * make every death that happens while a readback is in flight either a
+   * validation error or a lost record. Three slots cover the queue depth a
+   * frame loop runs at; a fourth death batch waits on the device instead.
+   */
+  private readonly _deathStaging: DeathStagingSlot[] = [];
+  private readonly _stagedDeaths: StagedDeathBatch[] = [];
+
+  /**
+   * Whether the death buffer holds records no readback has claimed yet. The
+   * append counter is reset only once a copy has taken them, so a step that
+   * finds no free staging slot leaves its records in place and the next step
+   * appends behind them.
+   */
+  private _deathBufferDirty = false;
+
+  /** Tail of the delivery chain, so batches are reported in submission order. */
+  private _deathDelivery: Promise<void> = Promise.resolve();
 
   private readonly _simUniformBuffer: WebGpuUniformBuffer;
   private readonly _simUniformData: ArrayBuffer = new ArrayBuffer(16);
@@ -301,83 +334,136 @@ export class ParticleGpuState {
   /**
    * Runs one simulation step over `[0, dispatchCount)`.
    *
-   * `expectedDeaths` is how many particles the caller marked as expired for this
-   * step. The shader appends exactly that many records, so the readback copies
-   * the used prefix of the death buffer without first having to read its counter
-   * back - the count is already known on this side.
+   * `pendingDeaths` is how many expired particles the caller is still holding,
+   * including the ones it marked for this step. The shader appends exactly one
+   * record per marked particle, so the readback copies the used prefix of the
+   * death buffer without first having to read its counter back - the count is
+   * already known on this side.
+   *
+   * Returns whether a death batch was staged for readback. Deaths stay on the
+   * device while every staging slot is in flight, so a step can report deaths
+   * without staging any, and a later step can stage a batch spanning several
+   * steps. A caller keeping per-death state has to hold it, and keep counting it
+   * into `pendingDeaths`, until a step stages - then hand over all of it.
    */
-  public dispatch(dt: number, dispatchCount: number, expectedDeaths = 0): void {
+  public dispatch(dt: number, dispatchCount: number, pendingDeaths = 0): boolean {
     const pipeline = this._pipelineWrapper;
     const bindGroup0 = this._bindGroup0;
     const bindGroup1 = this._bindGroup1;
 
-    if (dispatchCount <= 0 || pipeline === null || bindGroup0 === null || bindGroup1 === null) {
-      return;
+    if (pipeline === null || bindGroup0 === null || bindGroup1 === null) {
+      return false;
     }
 
-    this._writeSimUniforms(dt, dispatchCount);
-    this._writeModuleUniforms(dt);
+    const simulating = dispatchCount > 0;
+    const reporting = pendingDeaths > 0 && this._reportsDeaths && this._deathBuffer !== null;
 
-    const reporting = expectedDeaths > 0 && this._reportsDeaths && this._deathBuffer !== null;
+    // A system whose last particles just expired has nothing left to simulate,
+    // but its records still have to reach a staging slot - otherwise the last
+    // deaths of a system are never delivered.
+    if (!simulating && !reporting) {
+      return false;
+    }
 
-    if (reporting) {
+    if (simulating) {
+      this._writeSimUniforms(dt, dispatchCount);
+      this._writeModuleUniforms(dt);
+    }
+
+    if (reporting && !this._deathBufferDirty) {
       this._deathCounterReset[0] = 0;
       this._deathBuffer!.write(this._deathCounterReset, 0);
     }
 
     const encoder = this.device.createCommandEncoder({ label: 'particle-compute' });
-    const pass = encoder.beginComputePass({ label: 'particle-compute-pass' });
 
-    pipeline.dispatch(pass, dispatchCount, [bindGroup0, bindGroup1]);
+    if (simulating) {
+      const pass = encoder.beginComputePass({ label: 'particle-compute-pass' });
 
-    pass.end();
+      pipeline.dispatch(pass, dispatchCount, [bindGroup0, bindGroup1]);
+
+      pass.end();
+    }
+
+    let staged = false;
 
     if (reporting) {
-      encoder.copyBufferToBuffer(this._deathBuffer!.buffer, 4, this._ensureDeathStaging(expectedDeaths), 0, expectedDeaths * deathRecordBytes);
+      this._deathBufferDirty = true;
+
+      // The death buffer holds one record per slot. Records left over several
+      // steps can exceed that when slots are recycled and die again, and appends
+      // past the end are dropped by the device - so the copy must never claim
+      // more than the buffer can hold.
+      const count = Math.min(pendingDeaths, this.capacity);
+      const slot = this._acquireDeathStaging(count);
+
+      if (slot !== null) {
+        encoder.copyBufferToBuffer(this._deathBuffer!.buffer, 4, slot.buffer, 0, count * deathRecordBytes);
+        slot.busy = true;
+        this._stagedDeaths.push({ slot, count });
+        this._deathBufferDirty = false;
+        staged = true;
+      }
     }
 
     this.device.queue.submit([encoder.finish()]);
 
-    if (reporting) {
-      this._pendingDeaths = expectedDeaths;
-    }
+    return staged;
   }
 
   /**
-   * Resolves the death records of the last dispatch that reported any, and hands
-   * them to `receive` once the copy has landed.
+   * Resolves the oldest staged death batch and hands its records to `receive`
+   * once the copy has landed.
    *
    * The mapping is asynchronous by nature, so a death is delivered no earlier
-   * than the frame after it happened. A device that goes away mid-map resolves
-   * to nothing rather than throwing: the deaths are lost with the simulation
-   * that produced them.
+   * than the frame after it happened. Batches are delivered in the order they
+   * were submitted, and nothing blocks on a map: further steps keep staging
+   * into other slots while one is in flight. A device that goes away mid-map
+   * resolves to nothing rather than throwing: the deaths are lost with the
+   * simulation that produced them.
    */
-  public async readDeaths(receive: (records: readonly ParticleDeathRecord[]) => void): Promise<void> {
-    const staging = this._deathStaging;
-    const count = this._pendingDeaths;
+  public readDeaths(receive: (records: readonly ParticleDeathRecord[]) => void): Promise<void> {
+    const batch = this._stagedDeaths.shift();
 
-    this._pendingDeaths = 0;
-
-    if (staging === null || count <= 0 || this._destroyed) {
-      return;
+    if (batch === undefined || this._destroyed) {
+      return Promise.resolve();
     }
 
+    const previous = this._deathDelivery;
+    let settled: () => void;
+
+    // The chain only orders the batches. A death callback that throws must
+    // reach its caller, but it must not leave the batches behind it waiting on
+    // a rejected promise, so the successor waits on this separate handle.
+    this._deathDelivery = new Promise<void>(resolve => {
+      settled = resolve;
+    });
+
+    return this._deliverDeaths(batch, previous, receive).finally(() => settled());
+  }
+
+  private async _deliverDeaths(batch: StagedDeathBatch, previous: Promise<void>, receive: (records: readonly ParticleDeathRecord[]) => void): Promise<void> {
+    const { slot, count } = batch;
+    const bytes = count * deathRecordBytes;
+
     try {
-      await staging.mapAsync(GPUMapMode.READ, 0, count * deathRecordBytes);
+      await slot.buffer.mapAsync(GPUMapMode.READ, 0, bytes);
     } catch {
+      slot.busy = false;
+
       return;
     }
 
     if (this._destroyed) {
-      staging.unmap();
+      slot.busy = false;
 
       return;
     }
 
     const records: ParticleDeathRecord[] = [];
-    const bytes = staging.getMappedRange(0, count * deathRecordBytes);
-    const floats = new Float32Array(bytes);
-    const uints = new Uint32Array(bytes);
+    const mapped = slot.buffer.getMappedRange(0, bytes);
+    const floats = new Float32Array(mapped);
+    const uints = new Uint32Array(mapped);
 
     for (let i = 0; i < count; i++) {
       const base = i * deathRecordFloats;
@@ -396,30 +482,76 @@ export class ParticleGpuState {
       });
     }
 
-    staging.unmap();
+    slot.buffer.unmap();
+    // Released before waiting on the batch ahead: a slot held across that wait
+    // would shrink the ring for no reason.
+    slot.busy = false;
 
     // The shader appends through an atomic, so records arrive in whatever order
     // the workgroups finished. Slot order is reproducible and matches what the
     // CPU compaction pass would have reported.
     records.sort((a, b) => a.slot - b.slot);
+
+    await previous;
+
+    if (this._destroyed) {
+      return;
+    }
+
     receive(records);
   }
 
-  /** Grows the readback staging buffer to hold `records`, reusing it while it is big enough. */
-  private _ensureDeathStaging(records: number): GPUBuffer {
-    if (this._deathStaging !== null && this._deathStagingRecords >= records) {
-      return this._deathStaging;
+  /**
+   * Claims a staging slot able to hold `records`, or null while every slot of
+   * the ring is still in flight.
+   */
+  private _acquireDeathStaging(records: number): DeathStagingSlot | null {
+    let reusable: DeathStagingSlot | null = null;
+
+    for (const slot of this._deathStaging) {
+      if (slot.busy) continue;
+
+      if (slot.records >= records) {
+        return slot;
+      }
+
+      reusable = slot;
     }
 
-    this._deathStaging?.destroy();
-    this._deathStagingRecords = Math.max(records, this._deathStagingRecords * 2, 32);
-    this._deathStaging = this.device.createBuffer({
+    if (reusable === null && this._deathStaging.length >= deathStagingSlots) {
+      return null;
+    }
+
+    const size = Math.max(records, (reusable?.records ?? 0) * 2, minDeathStagingRecords);
+    const buffer = this.device.createBuffer({
       label: 'particle-deaths-staging',
-      size: this._deathStagingRecords * deathRecordBytes,
+      size: size * deathRecordBytes,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
 
-    return this._deathStaging;
+    if (reusable !== null) {
+      reusable.buffer.destroy();
+      reusable.buffer = buffer;
+      reusable.records = size;
+
+      return reusable;
+    }
+
+    const slot: DeathStagingSlot = { buffer, records: size, busy: false };
+
+    this._deathStaging.push(slot);
+
+    return slot;
+  }
+
+  private _releaseDeathStaging(): void {
+    for (const slot of this._deathStaging) {
+      slot.buffer.destroy();
+    }
+
+    this._deathStaging.length = 0;
+    this._stagedDeaths.length = 0;
+    this._deathBufferDirty = false;
   }
 
   public destroy(): void {
@@ -437,10 +569,7 @@ export class ParticleGpuState {
     this._framesUniformBuffer.destroy();
     this._deathBuffer?.destroy();
     this._deathBuffer = null;
-    this._deathStaging?.destroy();
-    this._deathStaging = null;
-    this._deathStagingRecords = 0;
-    this._pendingDeaths = 0;
+    this._releaseDeathStaging();
   }
 
   private _writeFrames(frames: readonly Rectangle[], texture: Texture): void {

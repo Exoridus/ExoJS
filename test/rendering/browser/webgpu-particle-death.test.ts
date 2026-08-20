@@ -198,6 +198,47 @@ describe('WebGPU particle death context', () => {
     expect(gpuDeaths.records[0]!.velocityY).toBeCloseTo(cpuDeaths.records[0]!.velocityY, 2);
   });
 
+  test('deaths in consecutive frames are all delivered exactly once', async () => {
+    const backend = await setupBackend();
+    const texture = createTexture();
+    const system = new ParticleSystem(texture, { capacity: 64 });
+    const deaths = new RecordDeaths();
+
+    system.addDeathModule(deaths);
+    system.render(backend);
+    backend.flush();
+
+    const total = 8;
+
+    for (let i = 0; i < total; i++) {
+      const particle = system.emit()!;
+
+      // Distinct velocity per particle, so a record identifies its particle.
+      particle.velocity.set(100 + i, 0);
+      particle.lifetime = 0.016 * (i + 1) + 0.001;
+    }
+
+    system.update(tick(0));
+    expect(system.gpuMode).toBe(true);
+
+    // No yield between frames: every readback is still in flight when the next
+    // frame reports its own deaths, which is what a real frame loop does when
+    // the map takes longer than a frame.
+    for (let frame = 0; frame < total + 2; frame++) {
+      system.update(tick(0.016));
+      system.render(backend);
+      backend.flush();
+    }
+
+    await runUntil(system, backend, () => deaths.records.length >= total);
+
+    expect(deaths.records).toHaveLength(total);
+
+    const reported = deaths.records.map(record => Math.round(record.velocityX)).sort((a, b) => a - b);
+
+    expect(reported).toEqual(Array.from({ length: total }, (_, i) => 100 + i));
+  });
+
   test('a slot reused before the readback lands does not rewrite the snapshot', async () => {
     const backend = await setupBackend();
     const texture = createTexture();

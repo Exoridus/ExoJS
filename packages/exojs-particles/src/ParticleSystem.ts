@@ -214,12 +214,17 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
    */
   private readonly _gpuDirtySlots = new Set<number>();
   /**
-   * Slot to spawn lifetime for the particles that expired in the dispatch whose
-   * death records have not been read back yet. The device's own record cannot
-   * carry it: by the time the shader sees the particle, the CPU has already
-   * overwritten its lifetime with the expiry sentinel.
+   * Spawn lifetimes, in death order per slot, of the particles that expired
+   * since the last batch the device staged for readback. The device's own
+   * record cannot carry them: by the time the shader sees the particle, the CPU
+   * has already overwritten its lifetime with the expiry sentinel. A slot can
+   * appear more than once when it is recycled and dies again before the batch
+   * is staged, so the lifetimes queue up per slot.
    */
-  private readonly _pendingDeathLifetimes = new Map<number, number>();
+  private _pendingDeathLifetimes = new Map<number, number[]>();
+
+  /** Total entries across `_pendingDeathLifetimes`, which is what the dispatch reports. */
+  private _pendingDeathCount = 0;
   /**
    * Slots handed out by `spawn()` while a recording window is open, or `null`
    * when nothing is recording. Lets callers identify freshly spawned particles
@@ -923,7 +928,15 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
         // the particle was spawned with: it is the CPU's own value, and the
         // record the device appends carries only what the device integrated.
         if (reportsDeaths) {
-          this._pendingDeathLifetimes.set(i, lifetime[i]!);
+          const queued = this._pendingDeathLifetimes.get(i);
+
+          if (queued === undefined) {
+            this._pendingDeathLifetimes.set(i, [lifetime[i]!]);
+          } else {
+            queued.push(lifetime[i]!);
+          }
+
+          this._pendingDeathCount++;
         }
 
         alive[i] = 0;
@@ -948,7 +961,7 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
 
     // Dispatch over the pre-trim range: a slot that expired at the tail still
     // has to be visited once, or its death record is never appended.
-    this._gpuState!.dispatch(dt, liveCount, this._pendingDeathLifetimes.size);
+    const staged = this._gpuState!.dispatch(dt, liveCount, this._pendingDeathCount);
 
     // Trim trailing dead slots for the next frame.
     let newLiveCount = storage.count;
@@ -957,21 +970,25 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
     }
     storage.count = newLiveCount;
 
-    if (this._pendingDeathLifetimes.size > 0) {
-      void this._drainDeaths();
+    // Deaths the device could not stage stay queued here: they are appended
+    // behind the ones already in the death buffer and travel with the batch
+    // that does get staged.
+    if (staged) {
+      const pending = this._pendingDeathLifetimes;
+
+      this._pendingDeathLifetimes = new Map();
+      this._pendingDeathCount = 0;
+
+      void this._drainDeaths(pending);
     }
   }
 
   /**
-   * Delivers the deaths of the dispatch that just ran, once their readback has
-   * landed. Each record carries what the device integrated; the lifetime comes
-   * from the CPU, which is where it was written at spawn.
+   * Delivers a staged batch of deaths once its readback has landed. Each record
+   * carries what the device integrated; the lifetime comes from the CPU, which
+   * is where it was written at spawn.
    */
-  private async _drainDeaths(): Promise<void> {
-    const pending = new Map(this._pendingDeathLifetimes);
-
-    this._pendingDeathLifetimes.clear();
-
+  private async _drainDeaths(pending: Map<number, number[]>): Promise<void> {
     await this._gpuState?.readDeaths(records => {
       for (const record of records) {
         this._reportDeath({
@@ -984,7 +1001,9 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
           scaleY: record.scaleY,
           color: record.color,
           elapsed: record.elapsed,
-          lifetime: pending.get(record.slot) ?? 0,
+          // Records are slot-ordered and, within a slot, in the order the
+          // device appended them - which is the order the lifetimes queued.
+          lifetime: pending.get(record.slot)?.shift() ?? 0,
         });
       }
     });

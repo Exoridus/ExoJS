@@ -167,14 +167,44 @@ const makeMockDevice = () => {
   return { device, encoder, pass, queue, buffers, textures, copies, computePipelineDescriptors, shaderSources };
 };
 
+/** Finds every mock GPUBuffer created with a given `label`, in creation order. */
+const findBuffersByLabel = (env: ReturnType<typeof makeMockDevice>, label: string): MockBuffer[] => {
+  const calls = (env.device.createBuffer as unknown as MockInstance).mock.calls as [GPUBufferDescriptor][];
+
+  return calls.flatMap(([descriptor], index) => (descriptor.label === label ? [env.buffers[index]!] : []));
+};
+
 /** Finds the mock GPUBuffer created with a given `label`, by call order. */
 const findBufferByLabel = (env: ReturnType<typeof makeMockDevice>, label: string): MockBuffer => {
-  const calls = (env.device.createBuffer as unknown as MockInstance).mock.calls as [GPUBufferDescriptor][];
-  const index = calls.findIndex(([descriptor]) => descriptor.label === label);
+  const [first] = findBuffersByLabel(env, label);
 
-  if (index === -1) throw new Error(`No buffer created with label "${label}"`);
+  if (first === undefined) throw new Error(`No buffer created with label "${label}"`);
 
-  return env.buffers[index]!;
+  return first;
+};
+
+/**
+ * Keeps every death readback pending until released, so a test can hold the
+ * staging ring occupied the way a device that maps slower than a frame does.
+ */
+const holdDeathMaps = (env: ReturnType<typeof makeMockDevice>): { release: (index?: number) => void } => {
+  const waiting: (() => void)[] = [];
+  const create = env.device.createBuffer as unknown as MockInstance;
+  const inner = create.getMockImplementation()!;
+
+  create.mockImplementation((descriptor: GPUBufferDescriptor) => {
+    const buffer = inner(descriptor) as MockBuffer;
+
+    if (descriptor.label === 'particle-deaths-staging') {
+      buffer.mapAsync = vi.fn(() => new Promise<undefined>(resolve => waiting.push(() => resolve(undefined))));
+    }
+
+    return buffer;
+  });
+
+  return {
+    release: (index = 0) => waiting.splice(index, 1)[0]?.(),
+  };
 };
 
 interface StagedDeath {
@@ -194,8 +224,8 @@ interface StagedDeath {
  * Writes death records into the staging buffer the readback maps, in the
  * 40-byte layout the compute shader appends.
  */
-const stageDeathRecords = (env: ReturnType<typeof makeMockDevice>, records: readonly StagedDeath[]): void => {
-  const staging = findBufferByLabel(env, 'particle-deaths-staging');
+const stageDeathRecords = (env: ReturnType<typeof makeMockDevice>, records: readonly StagedDeath[], slot = 0): void => {
+  const staging = findBuffersByLabel(env, 'particle-deaths-staging')[slot]!;
   const floats = new Float32Array(staging.bytes);
   const uints = new Uint32Array(staging.bytes);
 
@@ -814,6 +844,93 @@ describe('ParticleSystem GPU mode — natural expiry death modules', () => {
     await flushDeathReadback();
 
     expect(slots).toEqual([0, 1, 2]);
+  });
+
+  test('deaths reported while every staging slot is in flight reach a later readback', async () => {
+    const env = makeMockDevice();
+    const maps = holdDeathMaps(env);
+    const system = new ParticleSystem(makeTexture(), { capacity: 8, device: env.device });
+    const slots: number[] = [];
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.addDeathModule(
+      new (class extends DeathModule {
+        public override onDeath(_system: ParticleSystem, death: ParticleDeathContext): void {
+          slots.push(death.x);
+        }
+      })(),
+    );
+
+    // One particle expires per step, so every step reports a death.
+    for (let i = 0; i < 5; i++) {
+      const particle = system.emit()!;
+
+      particle.lifetime = 0.02 * (i + 1);
+    }
+
+    system.update(tick(0));
+
+    for (let i = 0; i < 5; i++) {
+      system.update(tick(0.02));
+      await flushDeathReadback();
+    }
+
+    const deathBuffer = findBufferByLabel(env, 'particle-deaths');
+    const resets = (env.queue.writeBuffer as unknown as MockInstance).mock.calls.filter(call => call[0] === deathBuffer);
+
+    // Three slots take a copy each; the last two steps find the ring occupied.
+    expect(findBuffersByLabel(env, 'particle-deaths-staging')).toHaveLength(3);
+    expect(env.copies).toHaveLength(3);
+    // The append counter is reset by every step that starts with an empty
+    // buffer - the first three plus the fourth, whose records then stay put.
+    // The fifth appends behind them instead of overwriting them.
+    expect(resets).toHaveLength(4);
+
+    maps.release();
+    await flushDeathReadback();
+
+    system.update(tick(0.02));
+
+    expect(env.copies).toHaveLength(4);
+    expect(env.copies.at(-1)!.size).toBe(2 * 40);
+  });
+
+  test('batches are delivered in submission order even when their maps resolve out of order', async () => {
+    const env = makeMockDevice();
+    const maps = holdDeathMaps(env);
+    const system = new ParticleSystem(makeTexture(), { capacity: 8, device: env.device });
+    const seen: number[] = [];
+
+    system.addUpdateModule(new ApplyForce(0, 0));
+    system.addDeathModule(
+      new (class extends DeathModule {
+        public override onDeath(_system: ParticleSystem, death: ParticleDeathContext): void {
+          seen.push(death.x);
+        }
+      })(),
+    );
+
+    for (let i = 0; i < 2; i++) {
+      const particle = system.emit()!;
+
+      particle.lifetime = 0.02 * (i + 1);
+    }
+
+    system.update(tick(0));
+    system.update(tick(0.02));
+    system.update(tick(0.02));
+
+    expect(env.copies).toHaveLength(2);
+
+    stageDeathRecords(env, [{ x: 10, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 0, elapsed: 0.02 }], 0);
+    stageDeathRecords(env, [{ x: 20, y: 0, velocityX: 0, velocityY: 0, rotation: 0, scaleX: 1, scaleY: 1, color: 0, slot: 1, elapsed: 0.04 }], 1);
+
+    // The second batch resolves first: it still waits for the one ahead of it.
+    maps.release(1);
+    maps.release(0);
+    await flushDeathReadback();
+
+    expect(seen).toEqual([10, 20]);
   });
 
   test('a system without death modules neither allocates nor reads a death buffer', () => {
