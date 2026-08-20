@@ -155,7 +155,7 @@
             }
           ],
           "returnType": "ActionMap<T>",
-          "description": "Start updating map every frame for the application's lifetime. Attaching a map that is already attached elsewhere moves it here. Call ActionMap.detach to stop, or use scene.inputs.attach for a map that should die with its scene."
+          "description": "Start updating map every frame for the application's lifetime. Attaching a map that is already attached elsewhere moves it here. Call ActionMap.detach to stop, or use scene.inputs.attach for a map that should die with its scene. While attached, the keyboard controls the map's actions bind have their browser default suppressed, exactly as a direct on* binding does, and rebinding moves that suppression with them. Reading a key without binding it leaves its default alone."
         },
         {
           "name": "destroy",

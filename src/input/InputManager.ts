@@ -7,7 +7,7 @@ import type { PointLike } from '#math/PointLike';
 import { Vector } from '#math/Vector';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 
-import type { ActionMap, ActionRecord } from './actions/ActionMap';
+import type { ActionMap, ActionRecord, AnyActionMap } from './actions/ActionMap';
 import type { ActionSample, ChannelEvent, ChannelEventBatch } from './actions/types';
 import type { ContextMenuRequest } from './ContextMenuRequest';
 import { Gamepad } from './Gamepad';
@@ -193,24 +193,23 @@ export class InputManager {
    */
   private readonly actionSample: ActionSample;
   private _actionFrameId = 0;
+  /**
+   * How many live owners bind each captured keyboard channel. A refcount
+   * rather than a set because one key can be bound by several bindings and
+   * several action maps at once, and its browser default must stay suppressed
+   * until the last of them goes away.
+   */
   private readonly capturedKeyChannels = new Map<number, number>();
+  /**
+   * The keyboard channels each attached action map currently holds. Kept per
+   * map so a rebind can be applied as a difference: the map is the only thing
+   * that knows which channels it used to claim.
+   */
+  private readonly actionMapCaptures = new Map<AnyActionMap, Set<number>>();
   private readonly bindingDetacher = {
     detach: (binding: InputBinding): void => {
       this.bindings.delete(binding);
-
-      for (const channel of binding.channels) {
-        if (channel < ChannelSize.Category) {
-          const count = this.capturedKeyChannels.get(channel);
-
-          if (count !== undefined) {
-            if (count <= 1) {
-              this.capturedKeyChannels.delete(channel);
-            } else {
-              this.capturedKeyChannels.set(channel, count - 1);
-            }
-          }
-        }
-      }
+      this.releaseCapture(binding.channels);
     },
   };
   private readonly wheelOffset = new Vector();
@@ -498,6 +497,11 @@ export class InputManager {
    * a map that is already attached elsewhere moves it here. Call
    * {@link ActionMap.detach} to stop, or use `scene.inputs.attach` for a map
    * that should die with its scene.
+   *
+   * While attached, the keyboard controls the map's actions bind have their
+   * browser default suppressed, exactly as a direct `on*` binding does, and
+   * rebinding moves that suppression with them. Reading a key without binding
+   * it leaves its default alone.
    */
   public attach<T extends ActionRecord>(map: ActionMap<T>): ActionMap<T> {
     map._attach(this);
@@ -722,6 +726,7 @@ export class InputManager {
     this.bindings.clear();
     this.actionMaps.clear();
     this.capturedKeyChannels.clear();
+    this.actionMapCaptures.clear();
     this.gamepadsByBrowserIndex.clear();
     this.keyEvents.length = 0;
     this.frameBatches.length = 0;
@@ -769,14 +774,112 @@ export class InputManager {
 
     const binding = new InputBinding(resolved, options, this.bindingDetacher, this._batchSequence, constructionBaseline);
     this.bindings.add(binding);
+    this.retainCapture(resolved);
 
-    for (const ch of resolved) {
-      if (ch < ChannelSize.Category) {
-        this.capturedKeyChannels.set(ch, (this.capturedKeyChannels.get(ch) ?? 0) + 1);
+    return binding;
+  }
+
+  /** Claim the browser default of every keyboard channel in `channels`. */
+  private retainCapture(channels: Iterable<number>): void {
+    for (const channel of channels) {
+      if (channel < ChannelSize.Category) {
+        this.capturedKeyChannels.set(channel, (this.capturedKeyChannels.get(channel) ?? 0) + 1);
+      }
+    }
+  }
+
+  /** Give back one claim per keyboard channel in `channels`. */
+  private releaseCapture(channels: Iterable<number>): void {
+    for (const channel of channels) {
+      if (channel >= ChannelSize.Category) {
+        continue;
+      }
+
+      const count = this.capturedKeyChannels.get(channel);
+
+      if (count === undefined) {
+        continue;
+      }
+
+      if (count <= 1) {
+        this.capturedKeyChannels.delete(channel);
+      } else {
+        this.capturedKeyChannels.set(channel, count - 1);
+      }
+    }
+  }
+
+  /** The keyboard channels `map` binds right now. */
+  private claimedKeyChannels(map: AnyActionMap): Set<number> {
+    const channels = new Set<number>();
+
+    map._claimChannels(channels);
+
+    for (const channel of channels) {
+      if (channel >= ChannelSize.Category) {
+        channels.delete(channel);
       }
     }
 
-    return binding;
+    return channels;
+  }
+
+  /**
+   * Start suppressing the browser defaults of everything `map` binds. Called
+   * when a map attaches, whether directly here or through a scene facade.
+   *
+   * @internal
+   */
+  public _retainActionMapCapture(map: AnyActionMap): void {
+    this._releaseActionMapCapture(map);
+
+    const channels = this.claimedKeyChannels(map);
+
+    this.actionMapCaptures.set(map, channels);
+    this.retainCapture(channels);
+  }
+
+  /**
+   * Re-read what `map` binds after a rebind and move the capture accordingly.
+   * Applied as a difference so a key that survives the change never drops to
+   * zero in between, which would hand one frame's default back to the browser.
+   *
+   * @internal
+   */
+  public _refreshActionMapCapture(map: AnyActionMap): void {
+    const previous = this.actionMapCaptures.get(map);
+
+    if (previous === undefined) {
+      return;
+    }
+
+    const next = this.claimedKeyChannels(map);
+
+    for (const channel of next) {
+      if (!previous.has(channel)) {
+        this.retainCapture([channel]);
+      }
+    }
+
+    for (const channel of previous) {
+      if (!next.has(channel)) {
+        this.releaseCapture([channel]);
+      }
+    }
+
+    this.actionMapCaptures.set(map, next);
+  }
+
+  /** Give back everything `map` held. Idempotent. @internal */
+  public _releaseActionMapCapture(map: AnyActionMap): void {
+    const channels = this.actionMapCaptures.get(map);
+
+    if (channels === undefined) {
+      return;
+    }
+
+    this.actionMapCaptures.delete(map);
+    this.releaseCapture(channels);
   }
 
   private wireGamepadEvents(pad: Gamepad): void {

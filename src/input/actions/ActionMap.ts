@@ -81,6 +81,18 @@ export interface ActionMapOwner {
   _detachActionMap(map: ActionMapBase<ActionRecord>): void;
   _currentBatchSequence?(): number;
   /**
+   * Browser-default capture for the keys this map's actions bind, kept by the
+   * owner rather than by the map: a key bound by two maps must stay captured
+   * until the last of them lets go, which only a single ledger can decide.
+   * Retain on attach, refresh after a binding change, release on detach.
+   *
+   * Optional for the same reason `_currentBatchSequence` is - a stub owner
+   * simply captures nothing.
+   */
+  _retainActionMapCapture?(map: ActionMapBase<ActionRecord>): void;
+  _refreshActionMapCapture?(map: ActionMapBase<ActionRecord>): void;
+  _releaseActionMapCapture?(map: ActionMapBase<ActionRecord>): void;
+  /**
    * Immutable snapshot of every live channel at the observation boundary
    * (attach or resync) - optional for the same reason
    * `_currentBatchSequence` is: a stub/legacy owner without it reproduces
@@ -370,6 +382,7 @@ class ActionMapBase<T extends ActionRecord> {
 
     if (owner !== null) {
       this._ownership.arm(owner._currentBatchSequence?.() ?? 0, owner._snapshotActionChannels?.() ?? null);
+      owner._refreshActionMapCapture?.(this);
     }
   }
 
@@ -392,6 +405,7 @@ class ActionMapBase<T extends ActionRecord> {
     this._owner = null;
     this._availability = null;
     this._wasAvailable = true;
+    owner._releaseActionMapCapture?.(this);
     owner._detachActionMap(this);
   }
 
@@ -411,6 +425,7 @@ class ActionMapBase<T extends ActionRecord> {
     this._availability = availability;
     this._wasAvailable = true;
     this._ownership.arm(owner._currentBatchSequence?.() ?? 0, owner._snapshotActionChannels?.() ?? null);
+    owner._retainActionMapCapture?.(this);
   }
 
   /**

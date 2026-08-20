@@ -268,6 +268,27 @@ export class SceneInputs implements Destroyable {
     return map;
   }
 
+  /**
+   * Browser-default capture is forwarded, never held here: the manager keeps
+   * the single refcount, so a key bound by a scene map and by a direct binding
+   * is one entry with two claims rather than two ledgers that can disagree.
+   *
+   * @internal
+   */
+  public _retainActionMapCapture(map: AnyActionMap): void {
+    this._app.input._retainActionMapCapture(map);
+  }
+
+  /** @internal */
+  public _refreshActionMapCapture(map: AnyActionMap): void {
+    this._app.input._refreshActionMapCapture(map);
+  }
+
+  /** @internal */
+  public _releaseActionMapCapture(map: AnyActionMap): void {
+    this._app.input._releaseActionMapCapture(map);
+  }
+
   /** Stop updating `map`. Called by {@link ActionMap.detach}. @internal */
   public _detachActionMap(map: AnyActionMap): void {
     if (this._base.delete(map)) {
