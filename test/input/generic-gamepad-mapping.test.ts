@@ -1,6 +1,6 @@
 import { GamepadAxis } from '#input/GamepadAxis';
 import { GamepadButton } from '#input/GamepadButton';
-import { GenericDualAnalogGamepadMapping } from '#input/GenericDualAnalogGamepadMapping';
+import { createStandardGamepadMapping } from '#input/gamepadMappings';
 import { ChannelSize } from '#input/types';
 
 describe('GamepadAxis.transformValue', () => {
@@ -96,35 +96,24 @@ describe('GamepadButton.transformValue', () => {
   });
 });
 
-describe('GamepadMapping (via GenericDualAnalogGamepadMapping)', () => {
+describe('GamepadMapping', () => {
   test('hasChannel finds axis channels in addition to button channels', () => {
-    const mapping = new GenericDualAnalogGamepadMapping();
+    const mapping = createStandardGamepadMapping();
 
     expect(mapping.hasChannel(GamepadAxis.LeftStickX)).toBe(true);
   });
 
   test('hasChannel returns false for a channel declared by neither buttons nor axes', () => {
-    const mapping = new GenericDualAnalogGamepadMapping();
+    const mapping = createStandardGamepadMapping();
 
     expect(mapping.hasChannel(GamepadAxis.Touchpad2Y)).toBe(false);
   });
 
-  test('destroy empties the buttons and axes arrays', () => {
-    const mapping = new GenericDualAnalogGamepadMapping();
-
-    expect(mapping.buttons.length).toBeGreaterThan(0);
-    expect(mapping.axes.length).toBeGreaterThan(0);
-
-    mapping.destroy();
-
-    expect(mapping.buttons).toHaveLength(0);
-    expect(mapping.axes).toHaveLength(0);
-  });
 });
 
-describe('GenericDualAnalogGamepadMapping', () => {
+describe('the standard dual-analog layout', () => {
   test('maps the menu buttons and stops at the standard layout', () => {
-    const mapping = new GenericDualAnalogGamepadMapping();
+    const mapping = createStandardGamepadMapping();
     const buttonsByIndex = new Map(mapping.buttons.map(button => [button.index, button.channel]));
 
     expect(buttonsByIndex.get(8)).toBe(GamepadButton.Select);
@@ -138,15 +127,15 @@ describe('GenericDualAnalogGamepadMapping', () => {
   // 17 in the baseline made every one of those fire the wrong channel, and 18+
   // were never delivered at all.
   test('claims nothing beyond the standard layout', () => {
-    const mapping = new GenericDualAnalogGamepadMapping();
+    const mapping = createStandardGamepadMapping();
     const indices = mapping.buttons.map(button => button.index);
 
     expect(Math.max(...indices)).toBe(16);
     expect(indices.filter(index => index > 16)).toEqual([]);
   });
 
-  test('appends device-specific buttons handed to the constructor', () => {
-    const mapping = new GenericDualAnalogGamepadMapping([new GamepadButton(17, GamepadButton.Touchpad)]);
+  test('appends the device-specific buttons it is given', () => {
+    const mapping = createStandardGamepadMapping({ extraButtons: [new GamepadButton(17, GamepadButton.Touchpad)] });
     const buttonsByIndex = new Map(mapping.buttons.map(button => [button.index, button.channel]));
 
     expect(buttonsByIndex.get(16)).toBe(GamepadButton.Guide);
@@ -154,7 +143,7 @@ describe('GenericDualAnalogGamepadMapping', () => {
   });
 
   test('maps additional axes and reserves larger per-gamepad channel space', () => {
-    const mapping = new GenericDualAnalogGamepadMapping();
+    const mapping = createStandardGamepadMapping();
     const axisChannels = new Set(mapping.axes.map(axis => axis.channel));
 
     expect(axisChannels.has(GamepadAxis.AuxiliaryAxis0Negative)).toBe(true);

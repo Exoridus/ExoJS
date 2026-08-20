@@ -1,5 +1,4 @@
 export * from './actions';
-export * from './ArcadeStickGamepadMapping';
 export type { ContextMenuRequest } from './ContextMenuRequest';
 export * from './Gamepad';
 export type { GamepadAxisOptions } from './GamepadAxis';
@@ -9,7 +8,19 @@ export { GamepadButton } from './GamepadButton';
 export type { BrowserGamepad, GamepadDefinition, GamepadDefinitionResult, GamepadDescriptor, ResolvedGamepadDefinition } from './GamepadDefinitions';
 export * from './GamepadMapping';
 export * from './GamepadPromptLayouts';
-export * from './GenericDualAnalogGamepadMapping';
+export type { StandardGamepadMappingOptions } from './gamepadMappings';
+export {
+  createArcadeStickGamepadMapping,
+  createJoyConLeftGamepadMapping,
+  createJoyConRightGamepadMapping,
+  createPlayStationGamepadMapping,
+  createStandardGamepadMapping,
+  createSteamControllerGamepadMapping,
+  createSteamDeckGamepadMapping,
+  createSwitchProGamepadMapping,
+  createXboxGamepadMapping,
+  PlayStationGeneration,
+} from './gamepadMappings';
 export * from './InputBinding';
 export type { ActionScopeHost, GamepadSlotStrategy } from './InputManager';
 export { InputManager } from './InputManager';
@@ -17,15 +28,8 @@ export type { InputToken } from './InputToken';
 export { inputChannelFromToken, inputToken } from './InputToken';
 export * from './InteractionEvent';
 export * from './InteractionManager';
-export * from './JoyConLeftGamepadMapping';
-export * from './JoyConRightGamepadMapping';
 export { keyboardChannelFromCode } from './keyboardCodes';
 export * from './KeyEvent';
-export * from './PlayStationGamepadMapping';
 export { Pointer, PointerState } from './Pointer';
 export type { ScopeToken } from './ScopeToken';
-export * from './SteamControllerGamepadMapping';
-export * from './SteamDeckGamepadMapping';
-export * from './SwitchProGamepadMapping';
 export { ChannelOffset, ChannelSize, Keyboard, maxPointers, PointerButton, pointerSlotSize } from './types';
-export * from './XboxGamepadMapping';

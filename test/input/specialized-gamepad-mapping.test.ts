@@ -1,18 +1,10 @@
-import { ArcadeStickGamepadMapping } from '#input/ArcadeStickGamepadMapping';
 import { Gamepad } from '#input/Gamepad';
 import { GamepadButton } from '#input/GamepadButton';
 import { parseGamepadDescriptor, resolveGamepadDefinition } from '#input/GamepadDefinitions';
 import { GamepadMappingFamily, GamepadMappingLayout } from '#input/GamepadMapping';
+import { createArcadeStickGamepadMapping, createJoyConLeftGamepadMapping, createJoyConRightGamepadMapping, createPlayStationGamepadMapping, createStandardGamepadMapping, createSteamControllerGamepadMapping, createSteamDeckGamepadMapping, createSwitchProGamepadMapping, createXboxGamepadMapping } from '#input/gamepadMappings';
 import { GamepadPromptLayouts } from '#input/GamepadPromptLayouts';
-import { GenericDualAnalogGamepadMapping } from '#input/GenericDualAnalogGamepadMapping';
-import { JoyConLeftGamepadMapping } from '#input/JoyConLeftGamepadMapping';
-import { JoyConRightGamepadMapping } from '#input/JoyConRightGamepadMapping';
-import { PlayStationGamepadMapping } from '#input/PlayStationGamepadMapping';
-import { SteamControllerGamepadMapping } from '#input/SteamControllerGamepadMapping';
-import { SteamDeckGamepadMapping } from '#input/SteamDeckGamepadMapping';
-import { SwitchProGamepadMapping } from '#input/SwitchProGamepadMapping';
 import { ChannelSize } from '#input/types';
-import { XboxGamepadMapping } from '#input/XboxGamepadMapping';
 
 type BrowserGamepad = NonNullable<ReturnType<Navigator['getGamepads']>[number]>;
 
@@ -40,12 +32,12 @@ const steamDeckDefinition = () => ({
     productKey: '28de:1205',
     mapping: '' as const,
   },
-  mapping: new SteamDeckGamepadMapping(),
+  mapping: createSteamDeckGamepadMapping(),
 });
 
 describe('specialized gamepad mappings', () => {
   test('arcade stick mapping keeps the fight-stick surface explicit and axis-free', () => {
-    const mapping = new ArcadeStickGamepadMapping();
+    const mapping = createArcadeStickGamepadMapping();
     const buttonsByIndex = new Map(mapping.buttons.map(button => [button.index, button.channel]));
 
     expect(mapping.family).toBe(GamepadMappingFamily.ArcadeStick);
@@ -59,7 +51,7 @@ describe('specialized gamepad mappings', () => {
   });
 
   test('Steam Deck mapping uses SDL-derived non-standard button indices', () => {
-    const mapping = new SteamDeckGamepadMapping();
+    const mapping = createSteamDeckGamepadMapping();
     const buttonsByIndex = new Map(mapping.buttons.map(button => [button.index, button.channel]));
 
     expect(mapping.family).toBe(GamepadMappingFamily.SteamDeck);
@@ -76,7 +68,7 @@ describe('specialized gamepad mappings', () => {
   });
 
   test('Steam Deck triggers read through the raw axes array but route to the canonical trigger button channels', () => {
-    const mapping = new SteamDeckGamepadMapping();
+    const mapping = createSteamDeckGamepadMapping();
     const triggerAxes = mapping.axes.filter(a => a.index === 8 || a.index === 9);
 
     // Triggers come via a8/a9 (not raw buttons 6/7) — left at a9, right at
@@ -163,22 +155,21 @@ describe('specialized gamepad mappings', () => {
   });
 
   test('only the Steam Deck mapping declares a raw layout', () => {
-    const mappings = [
-      new SteamDeckGamepadMapping(),
-      new GenericDualAnalogGamepadMapping(),
-      new SteamControllerGamepadMapping(),
-      new ArcadeStickGamepadMapping(),
-      new JoyConLeftGamepadMapping(),
-      new JoyConRightGamepadMapping(),
-      new PlayStationGamepadMapping(),
-      new XboxGamepadMapping(),
-      new SwitchProGamepadMapping(),
+    expect(createSteamDeckGamepadMapping().layout).toBe(GamepadMappingLayout.Raw);
+
+    const standardLayoutMappings = [
+      createStandardGamepadMapping(),
+      createSteamControllerGamepadMapping(),
+      createArcadeStickGamepadMapping(),
+      createJoyConLeftGamepadMapping(),
+      createJoyConRightGamepadMapping(),
+      createPlayStationGamepadMapping(),
+      createXboxGamepadMapping(),
+      createSwitchProGamepadMapping(),
     ];
 
-    for (const mapping of mappings) {
-      const expected = mapping instanceof SteamDeckGamepadMapping ? GamepadMappingLayout.Raw : GamepadMappingLayout.Standard;
-
-      expect(mapping.layout).toBe(expected);
+    for (const mapping of standardLayoutMappings) {
+      expect(mapping.layout).toBe(GamepadMappingLayout.Standard);
     }
   });
 
@@ -232,7 +223,7 @@ describe('specialized gamepad mappings', () => {
 
     // The solo Joy-Con is standard-mapped *and* deliberately incomplete — the
     // guard must not backfill it with generic channels it does not have.
-    expect(resolved.mapping).toBeInstanceOf(JoyConLeftGamepadMapping);
+    expect(resolved.mapping.family).toBe(GamepadMappingFamily.JoyConLeft);
     expect(resolved.mapping.hasChannel(GamepadButton.RightTrigger)).toBe(false);
     expect(resolved.mapping.hasChannel(GamepadButton.DPadUp)).toBe(false);
   });
