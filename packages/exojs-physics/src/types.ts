@@ -1,12 +1,6 @@
 // Shared value types for the physics package. Kept dependency-light so the
 // shapes, colliders and world modules can all reference them without cycles.
 
-/** A read-only two-component point/vector. `Vector` from core satisfies this. */
-export interface VectorLike {
-  readonly x: number;
-  readonly y: number;
-}
-
 /**
  * Simulation role of a {@link PhysicsBody}.
  *

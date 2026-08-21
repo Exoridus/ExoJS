@@ -1,6 +1,7 @@
-import { applyInverseTransform, applyTransform, type Mutable2D } from '../math';
+import type { PointLike } from '@codexo/exojs';
+
+import { applyInverseTransform, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
-import type { VectorLike } from '../types';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link DistanceJoint}. */
@@ -10,9 +11,9 @@ export interface DistanceJointOptions {
   /** Second body. */
   bodyB: PhysicsBody;
   /** World-space anchor on body A at creation. Default: body A's position. */
-  anchorA?: VectorLike;
+  anchorA?: Readonly<PointLike>;
   /** World-space anchor on body B at creation. Default: body B's position. */
-  anchorB?: VectorLike;
+  anchorB?: Readonly<PointLike>;
   /** Target distance between the anchors. Default: their initial distance. */
   length?: number;
   /** Soft-spring frequency in Hz; `0` (default) makes it a rigid constraint. */
@@ -31,7 +32,7 @@ export interface DistanceJointOptions {
 }
 
 /** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
-const scratch: Mutable2D = { x: 0, y: 0 };
+const scratch: PointLike = { x: 0, y: 0 };
 
 /**
  * Holds the anchor points on two bodies at a target {@link length} along their

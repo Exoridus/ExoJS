@@ -1,6 +1,6 @@
 {
   "title": "Circle",
-  "description": "Mutable circle shape defined by a centre position and radius. Implements ShapeLike for use in the collision pipeline. For SAT-based collision the circle is approximated as a regular polygon with Circle.collisionSegments sides; normals and vertices are cached and regenerated lazily when the shape mutates. `Circle.temp` is a shared scratch instance for intermediate calculations.",
+  "description": "Mutable circle shape defined by a centre position and radius. Implements Collidable for use in the collision pipeline. For SAT-based collision the circle is approximated as a regular polygon with Circle.collisionSegments sides; normals and vertices are cached and regenerated lazily when the shape mutates. `Circle.temp` is a shared scratch instance for intermediate calculations.",
   "symbol": "Circle",
   "kind": "class",
   "subsystem": "math",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Mutable circle shape defined by a centre position and radius. Implements ShapeLike for use in the collision pipeline.",
+        "Mutable circle shape defined by a centre position and radius. Implements Collidable for use in the collision pipeline.",
         "For SAT-based collision the circle is approximated as a regular polygon with Circle.collisionSegments sides; normals and vertices are cached and regenerated lazily when the shape mutates.",
         "`Circle.temp` is a shared scratch instance for intermediate calculations."
       ],
@@ -460,7 +460,7 @@
             }
           ],
           "returnType": "Rectangle",
-          "description": "The axis-aligned bounding box of this object. Pass out to write into a rectangle you own - every implementer honours it, so this form is always safe to retain and never allocates. Without out, the ShapeLike shapes return a **fresh** rectangle, while a node or view that maintains a cached box (see SceneNode.getBounds) returns that cached instance, which the next invalidation overwrites."
+          "description": "The axis-aligned bounding box of this object. Pass out to write into a rectangle you own - every implementer honours it, so this form is always safe to retain and never allocates. Without out, the math shape values (Rectangle, Circle, Polygon, ...) return a **fresh** rectangle, while a node or view that maintains a cached box (see SceneNode.getBounds) returns that cached instance, which the next invalidation overwrites."
         },
         {
           "name": "getNormals",

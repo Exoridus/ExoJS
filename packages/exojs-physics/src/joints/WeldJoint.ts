@@ -1,6 +1,7 @@
-import { applyInverseTransform, applyTransform, type Mutable2D } from '../math';
+import type { PointLike } from '@codexo/exojs';
+
+import { applyInverseTransform, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
-import type { VectorLike } from '../types';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link WeldJoint}. */
@@ -10,7 +11,7 @@ export interface WeldJointOptions {
   /** Second body. */
   bodyB: PhysicsBody;
   /** World-space anchor the linear constraint acts at. Default: the midpoint of the two bodies. */
-  anchor?: VectorLike;
+  anchor?: Readonly<PointLike>;
   /** Locked relative angle `angleB − angleA`. Default: the current relative angle at creation. */
   referenceAngle?: number;
   /** Soft frequency (Hz) for the position lock; `0` (default) is rigid. */
@@ -22,7 +23,7 @@ export interface WeldJointOptions {
 }
 
 /** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
-const scratch: Mutable2D = { x: 0, y: 0 };
+const scratch: PointLike = { x: 0, y: 0 };
 
 interface SoftFactors {
   biasRate: number;

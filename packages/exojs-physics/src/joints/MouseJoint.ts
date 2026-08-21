@@ -1,6 +1,7 @@
-import { applyInverseTransform, applyTransform, type Mutable2D } from '../math';
+import type { PointLike } from '@codexo/exojs';
+
+import { applyInverseTransform, applyTransform } from '../math';
 import { PhysicsBody } from '../PhysicsBody';
-import type { VectorLike } from '../types';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link MouseJoint}. */
@@ -8,7 +9,7 @@ export interface MouseJointOptions {
   /** The body to drag. */
   body: PhysicsBody;
   /** World point to pull the body toward - also the grab point on the body at creation. */
-  target: VectorLike;
+  target: Readonly<PointLike>;
   /** Soft-spring frequency in Hz (higher = snappier). Default `5`. */
   hertz?: number;
   /** Soft-spring damping ratio. Default `0.7`. */
@@ -18,7 +19,7 @@ export interface MouseJointOptions {
 }
 
 /** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
-const scratch: Mutable2D = { x: 0, y: 0 };
+const scratch: PointLike = { x: 0, y: 0 };
 
 /**
  * Softly pulls a single body's grab point toward a movable **target** point
@@ -73,11 +74,11 @@ export class MouseJoint extends Joint {
   }
 
   /** The world point the body is pulled toward. Reassigning wakes the body so a drag tracks live. */
-  public get target(): VectorLike {
+  public get target(): Readonly<PointLike> {
     return { x: this._targetX, y: this._targetY };
   }
 
-  public set target(value: VectorLike) {
+  public set target(value: Readonly<PointLike>) {
     this._targetX = value.x;
     this._targetY = value.y;
     this.bodyB.wake();

@@ -22,7 +22,7 @@ let temp: Line | null = null;
 
 /**
  * Mutable line segment defined by two endpoint positions. Implements
- * {@link ShapeLike} for intersection tests against all shape types.
+ * {@link Collidable} for intersection tests against all shape types.
  *
  * Note: `collidesWith` always returns `null` - lines support boolean
  * intersection only; SAT response is not implemented for line segments.

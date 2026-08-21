@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 12,
+  "memberCount": 9,
   "counts": {
     "constructors": 1,
     "methods": 0,
-    "properties": 11,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -106,27 +106,6 @@
       "title": "Properties",
       "members": [
         {
-          "name": "area",
-          "signature": "area: number",
-          "signatureTokens": [
-            {
-              "text": "area",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Surface area in px². mass = density × area."
-        },
-        {
           "name": "boundingRadius",
           "signature": "boundingRadius: number",
           "signatureTokens": [
@@ -146,48 +125,6 @@
           "params": [],
           "returnType": null,
           "description": "Radius of the smallest circle about the local origin enclosing the shape."
-        },
-        {
-          "name": "centroidX",
-          "signature": "centroidX: number",
-          "signatureTokens": [
-            {
-              "text": "centroidX",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "X of the area centroid in local space."
-        },
-        {
-          "name": "centroidY",
-          "signature": "centroidY: number",
-          "signatureTokens": [
-            {
-              "text": "centroidY",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Y of the area centroid in local space."
         },
         {
           "name": "count",
@@ -230,6 +167,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "massProperties",
+          "signature": "massProperties: ShapeMassProperties",
+          "signatureTokens": [
+            {
+              "text": "massProperties",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShapeMassProperties",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Area-based mass properties, or null for boundary geometry with no interior."
         },
         {
           "name": "normals",
@@ -284,27 +242,6 @@
           "params": [],
           "returnType": null,
           "description": ""
-        },
-        {
-          "name": "unitInertia",
-          "signature": "unitInertia: number",
-          "signatureTokens": [
-            {
-              "text": "unitInertia",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia."
         },
         {
           "name": "vertices",

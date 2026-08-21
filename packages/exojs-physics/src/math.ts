@@ -1,13 +1,9 @@
 // Internal rigid-transform and angle helpers. Physics stores rotations as a
 // precomputed `sin`/`cos` pair so the hot collision paths never call the
-// trigonometric functions per vertex. `Mutable2D` is a tiny `{ x, y }` sink to
-// keep the rotate/transform helpers allocation-free at their call sites.
+// trigonometric functions per vertex. The rotate/transform helpers write into a
+// caller-supplied `PointLike` sink so they allocate nothing at their call sites.
 
-/** A mutable two-component output sink used to avoid per-call allocation. */
-export interface Mutable2D {
-  x: number;
-  y: number;
-}
+import type { PointLike } from '@codexo/exojs';
 
 /** A rigid 2D transform: translation plus the precomputed sin/cos of `angle`. */
 export interface Transform {
@@ -43,7 +39,7 @@ export const setTransform = (transform: Transform, x: number, y: number, angle: 
 };
 
 /** Rotate and translate a local point by `transform`, writing into `out`. */
-export const applyTransform = (transform: Transform, x: number, y: number, out: Mutable2D): Mutable2D => {
+export const applyTransform = (transform: Transform, x: number, y: number, out: PointLike): PointLike => {
   out.x = transform.cos * x - transform.sin * y + transform.x;
   out.y = transform.sin * x + transform.cos * y + transform.y;
 
@@ -51,7 +47,7 @@ export const applyTransform = (transform: Transform, x: number, y: number, out: 
 };
 
 /** Rotate a local direction by `transform` (no translation), writing into `out`. */
-export const applyRotation = (transform: Transform, x: number, y: number, out: Mutable2D): Mutable2D => {
+export const applyRotation = (transform: Transform, x: number, y: number, out: PointLike): PointLike => {
   out.x = transform.cos * x - transform.sin * y;
   out.y = transform.sin * x + transform.cos * y;
 
@@ -59,7 +55,7 @@ export const applyRotation = (transform: Transform, x: number, y: number, out: M
 };
 
 /** Map a world point into `transform`'s local frame, writing into `out`. */
-export const applyInverseTransform = (transform: Transform, x: number, y: number, out: Mutable2D): Mutable2D => {
+export const applyInverseTransform = (transform: Transform, x: number, y: number, out: PointLike): PointLike => {
   const dx = x - transform.x;
   const dy = y - transform.y;
 
@@ -70,7 +66,7 @@ export const applyInverseTransform = (transform: Transform, x: number, y: number
 };
 
 /** Map a world direction into `transform`'s local frame, writing into `out`. */
-export const applyInverseRotation = (transform: Transform, x: number, y: number, out: Mutable2D): Mutable2D => {
+export const applyInverseRotation = (transform: Transform, x: number, y: number, out: PointLike): PointLike => {
   out.x = transform.cos * x + transform.sin * y;
   out.y = -transform.sin * x + transform.cos * y;
 

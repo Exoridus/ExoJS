@@ -1,6 +1,7 @@
-import { applyInverseRotation, applyInverseTransform, applyRotation, applyTransform, type Mutable2D } from '../math';
+import type { PointLike } from '@codexo/exojs';
+
+import { applyInverseRotation, applyInverseTransform, applyRotation, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
-import type { VectorLike } from '../types';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link PrismaticJoint}. */
@@ -10,9 +11,9 @@ export interface PrismaticJointOptions {
   /** Second body (the slider). */
   bodyB: PhysicsBody;
   /** Shared world-space anchor at creation. */
-  anchor: VectorLike;
+  anchor: Readonly<PointLike>;
   /** Slide axis in world space at creation (normalised internally). The body may only translate along this axis. */
-  axis: VectorLike;
+  axis: Readonly<PointLike>;
   /** Enable the linear motor (drives translation along the axis toward {@link motorSpeed}). Default `false`. */
   enableMotor?: boolean;
   /** Target translation speed along the axis (px/s). Default `0`. */
@@ -28,7 +29,7 @@ export interface PrismaticJointOptions {
 }
 
 /** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
-const scratch: Mutable2D = { x: 0, y: 0 };
+const scratch: PointLike = { x: 0, y: 0 };
 
 /**
  * Constrains a body to **slide along a single axis** relative to another: the

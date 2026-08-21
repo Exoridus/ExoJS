@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "anchorA",
-          "signature": "anchorA?: VectorLike",
+          "signature": "anchorA?: Readonly<PointLike>",
           "signatureTokens": [
             {
               "text": "anchorA",
@@ -45,8 +45,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],
@@ -55,7 +67,7 @@
         },
         {
           "name": "anchorB",
-          "signature": "anchorB?: VectorLike",
+          "signature": "anchorB?: Readonly<PointLike>",
           "signatureTokens": [
             {
               "text": "anchorB",
@@ -70,8 +82,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],

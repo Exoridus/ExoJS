@@ -5,7 +5,7 @@ import { aabbOverlap } from '../src/Aabb';
 import { AabbTreeBroadPhase } from '../src/broadphase/AabbTreeBroadPhase';
 import type { CandidatePair } from '../src/broadphase/BroadPhase';
 import type { Collider } from '../src/Collider';
-import { BoxShape, CircleShape, PhysicsWorld } from '../src/index';
+import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '../src/index';
 import { colliderAt } from './support';
 
 const key = (pair: CandidatePair): string => `${pair.a.id}:${pair.b.id}`;
@@ -32,7 +32,8 @@ const bruteForcePairs = (colliders: readonly Collider[]): Set<string> => {
       const a = colliders[i]!;
       const b = colliders[j]!;
 
-      if (aabbOverlap(a.aabb, b.aabb)) {
+      // Colliders of the same body are a compound shape, never a pair.
+      if (a.body !== b.body && aabbOverlap(a.aabb, b.aabb)) {
         out.add(a.id < b.id ? `${a.id}:${b.id}` : `${b.id}:${a.id}`);
       }
     }
@@ -161,5 +162,32 @@ describe('AabbTreeBroadPhase', () => {
 
       expect(new Set(out.map(key))).toEqual(bruteForcePairs(world.colliders));
     }
+  });
+
+  it('never pairs two colliders of the same body', () => {
+    const world = new PhysicsWorld();
+
+    world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        position: { x: 0, y: 0 },
+        colliders: [{ shape: new BoxShape(10, 10) }, { shape: new BoxShape(10, 10), offset: { x: 4, y: 0 } }, { shape: new CircleShape(6), offset: { x: -4, y: 0 } }],
+      }),
+    );
+    const other = colliderAt(world, new BoxShape(10, 10), { x: 6, y: 0 });
+
+    const broadPhase = new AabbTreeBroadPhase();
+    const out: CandidatePair[] = [];
+
+    broadPhase.computePairs(world.colliders, out);
+
+    expect(out.length).toBeGreaterThan(0);
+
+    for (const pair of out) {
+      expect(pair.a.body).not.toBe(pair.b.body);
+    }
+
+    // The separate body is still discovered against every collider it overlaps.
+    expect(out.every(pair => pair.a === other || pair.b === other)).toBe(true);
   });
 });

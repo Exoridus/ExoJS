@@ -3,7 +3,6 @@
 // library, constructed directly (`new PhysicsWorld(...)`), not an Application
 // extension. The tree-shakeable debug overlay lives at `@codexo/exojs-physics/debug`.
 
-export type { Aabb } from './Aabb';
 export { PhysicsBinding } from './binding/PhysicsBinding';
 export type { ColliderOptions } from './Collider';
 export { Collider } from './Collider';
@@ -25,9 +24,9 @@ export type { AnyShape } from './shapes/AnyShape';
 export { BoxShape } from './shapes/BoxShape';
 export { CircleShape } from './shapes/CircleShape';
 export { PolygonShape } from './shapes/PolygonShape';
-export type { ShapeType } from './shapes/Shape';
+export type { ShapeMassProperties, ShapeType } from './shapes/Shape';
 export { Shape } from './shapes/Shape';
 export type { TimeStepperOptions } from './TimeStepper';
 export { TimeStepper } from './TimeStepper';
-export type { BodyType, CollisionFilter, VectorLike } from './types';
+export type { BodyType, CollisionFilter } from './types';
 export { defaultFilter, shouldCollide } from './types';

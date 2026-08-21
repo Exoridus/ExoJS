@@ -1,3 +1,4 @@
+export * from './AabbLike';
 export * from './Circle';
 export * from './CircleLike';
 // `./Collision` provides the collision TYPES (CollisionType, Collidable,
@@ -26,8 +27,6 @@ export * from './Quadtree';
 export * from './Random';
 export * from './Rectangle';
 export * from './RectangleLike';
-export * from './Segment';
-export * from './ShapeLike';
 export * from './Size';
 export type { SweptHit } from './swept-collision';
 export { Sweep } from './swept-collision';

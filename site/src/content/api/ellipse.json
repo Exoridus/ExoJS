@@ -1,6 +1,6 @@
 {
   "title": "Ellipse",
-  "description": "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements ShapeLike for use in the intersection pipeline. `collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and Ellipse. Ellipse-vs-Line always returns `null` - use `intersectsWith`.",
+  "description": "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements Collidable for use in the intersection pipeline. `collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and Ellipse. Ellipse-vs-Line always returns `null` - use `intersectsWith`.",
   "symbol": "Ellipse",
   "kind": "class",
   "subsystem": "math",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements ShapeLike for use in the intersection pipeline.",
+        "Mutable axis-aligned ellipse shape defined by a centre position and separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements Collidable for use in the intersection pipeline.",
         "`collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and Ellipse. Ellipse-vs-Line always returns `null` - use `intersectsWith`."
       ],
       "importLine": "import { Ellipse } from '@codexo/exojs'",
@@ -480,7 +480,7 @@
             }
           ],
           "returnType": "Rectangle",
-          "description": "The axis-aligned bounding box of this object. Pass out to write into a rectangle you own - every implementer honours it, so this form is always safe to retain and never allocates. Without out, the ShapeLike shapes return a **fresh** rectangle, while a node or view that maintains a cached box (see SceneNode.getBounds) returns that cached instance, which the next invalidation overwrites."
+          "description": "The axis-aligned bounding box of this object. Pass out to write into a rectangle you own - every implementer honours it, so this form is always safe to retain and never allocates. Without out, the math shape values (Rectangle, Circle, Polygon, ...) return a **fresh** rectangle, while a node or view that maintains a cached box (see SceneNode.getBounds) returns that cached instance, which the next invalidation overwrites."
         },
         {
           "name": "getNormals",

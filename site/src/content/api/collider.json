@@ -361,7 +361,7 @@
         },
         {
           "name": "aabb",
-          "signature": "aabb: Readonly<Aabb>",
+          "signature": "aabb: Readonly<AabbLike>",
           "signatureTokens": [
             {
               "text": "aabb",
@@ -380,7 +380,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Aabb",
+              "text": "AabbLike",
               "kind": "type"
             },
             {
@@ -490,7 +490,7 @@
         },
         {
           "name": "worldCenter",
-          "signature": "worldCenter: Readonly<Mutable2D>",
+          "signature": "worldCenter: Readonly<PointLike>",
           "signatureTokens": [
             {
               "text": "worldCenter",
@@ -509,7 +509,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Mutable2D",
+              "text": "PointLike",
               "kind": "type"
             },
             {

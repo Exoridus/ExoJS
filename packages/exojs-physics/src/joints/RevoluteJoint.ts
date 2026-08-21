@@ -1,6 +1,7 @@
-import { applyInverseTransform, applyTransform, type Mutable2D } from '../math';
+import type { PointLike } from '@codexo/exojs';
+
+import { applyInverseTransform, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
-import type { VectorLike } from '../types';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link RevoluteJoint}. */
@@ -10,7 +11,7 @@ export interface RevoluteJointOptions {
   /** Second body. */
   bodyB: PhysicsBody;
   /** Shared world-space pivot point at creation. The two bodies are pinned here and may rotate freely about it. */
-  anchor: VectorLike;
+  anchor: Readonly<PointLike>;
   /** Soft-spring frequency in Hz; `0` (default) makes it a rigid pin. */
   hertz?: number;
   /** Soft-spring damping ratio (used when `hertz > 0`). Default `1`. */
@@ -30,7 +31,7 @@ export interface RevoluteJointOptions {
 }
 
 /** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
-const scratch: Mutable2D = { x: 0, y: 0 };
+const scratch: PointLike = { x: 0, y: 0 };
 
 /**
  * Pins a shared anchor point on two bodies (a hinge): the bodies may rotate

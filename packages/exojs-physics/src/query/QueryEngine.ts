@@ -1,13 +1,12 @@
-import type { Aabb } from '../Aabb';
+import type { AabbLike, PointLike } from '@codexo/exojs';
+
 import { aabbContainsPoint, aabbOverlap, createAabb } from '../Aabb';
 import type { Collider } from '../Collider';
 import type { CollisionProxy } from '../collision/CollisionProxy';
 import { testOverlap } from '../collision/narrowphase';
-import type { Mutable2D } from '../math';
 import { applyRotation, applyTransform, createTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
 import type { AnyShape } from '../shapes/AnyShape';
-import type { VectorLike } from '../types';
 import { resolveFilter, shouldCollide } from '../types';
 import type { SpatialIndex } from './SpatialIndex';
 
@@ -38,7 +37,7 @@ export class QueryEngine {
   private readonly _spatialIndex: SpatialIndex | undefined;
   private readonly _scratchHits: Collider[] = [];
   private readonly _scratchHitsForEach: Collider[] = [];
-  private readonly _scratchAabb: Aabb = createAabb();
+  private readonly _scratchAabb: AabbLike = createAabb();
 
   public constructor(colliders: readonly Collider[], spatialIndex?: SpatialIndex) {
     this._colliders = colliders;
@@ -57,7 +56,7 @@ export class QueryEngine {
    * must pass a buffer dedicated to them, so a nested call refilling its own
    * buffer can't truncate/corrupt an outer call's still-live iteration.
    */
-  private _candidatesFor(bounds: Aabb, buffer: Collider[]): readonly Collider[] {
+  private _candidatesFor(bounds: AabbLike, buffer: Collider[]): readonly Collider[] {
     if (this._spatialIndex === undefined) {
       return this._colliders;
     }
@@ -68,7 +67,7 @@ export class QueryEngine {
   }
 
   /** Colliders containing `point`. Allocates a fresh array. */
-  public queryPoint(point: VectorLike, filter?: QueryFilter): Collider[] {
+  public queryPoint(point: Readonly<PointLike>, filter?: QueryFilter): Collider[] {
     const out: Collider[] = [];
     const resolved = filter ? resolveFilter(filter) : null;
     const bounds = this._scratchAabb;
@@ -92,7 +91,7 @@ export class QueryEngine {
   }
 
   /** Colliders whose AABB overlaps `bounds`. Writes into `out` (cleared first) when given, else a fresh array. */
-  public queryAabb(bounds: Aabb, filter?: QueryFilter, out?: Collider[]): Collider[] {
+  public queryAabb(bounds: AabbLike, filter?: QueryFilter, out?: Collider[]): Collider[] {
     const result = out ?? [];
     result.length = 0;
     const resolved = filter ? resolveFilter(filter) : null;
@@ -122,7 +121,7 @@ export class QueryEngine {
    * traversal is still iterating, silently truncating/corrupting it. This
    * mirrors `DynamicAabbTree.query()`'s own non-reentrancy contract.
    */
-  public forEachAabbHit(bounds: Aabb, filter: QueryFilter | undefined, callback: (collider: Collider) => void): void {
+  public forEachAabbHit(bounds: AabbLike, filter: QueryFilter | undefined, callback: (collider: Collider) => void): void {
     const resolved = filter ? resolveFilter(filter) : null;
 
     for (const collider of this._candidatesFor(bounds, this._scratchHitsForEach)) {
@@ -137,7 +136,7 @@ export class QueryEngine {
   }
 
   /** Nearest collider hit by the ray from `origin` along `direction`, or `null`. */
-  public rayCast(origin: VectorLike, direction: VectorLike, filter?: QueryFilter, maxDistance = Infinity): RayHit | null {
+  public rayCast(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, maxDistance = Infinity): RayHit | null {
     const length = Math.hypot(direction.x, direction.y);
 
     if (length < 1e-9) {
@@ -174,7 +173,7 @@ export class QueryEngine {
   }
 
   /** All collider hits along the ray, sorted by distance. Writes into `out` (cleared first) when given. */
-  public rayCastAll(origin: VectorLike, direction: VectorLike, filter?: QueryFilter, out?: RayHit[], maxDistance = Infinity): RayHit[] {
+  public rayCastAll(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, out?: RayHit[], maxDistance = Infinity): RayHit[] {
     const length = Math.hypot(direction.x, direction.y);
 
     if (length < 1e-9) {
@@ -213,7 +212,7 @@ export class QueryEngine {
   }
 
   /** Colliders overlapping `shape` placed at `position`/`angle`. Allocates a fresh array. */
-  public overlapShape(shape: AnyShape, position: VectorLike, filter?: QueryFilter, angle = 0): Collider[] {
+  public overlapShape(shape: AnyShape, position: Readonly<PointLike>, filter?: QueryFilter, angle = 0): Collider[] {
     const proxy = makeProxy(shape, position.x, position.y, angle);
     const out: Collider[] = [];
     const resolved = filter ? resolveFilter(filter) : null;
@@ -387,7 +386,7 @@ const makeProxy = (shape: AnyShape, x: number, y: number, angle: number): Collis
   const transform = createTransform(x, y, angle);
   const worldVertices: number[] = [];
   const worldNormals: number[] = [];
-  const out: Mutable2D = { x: 0, y: 0 };
+  const out: PointLike = { x: 0, y: 0 };
 
   for (let i = 0; i < polygon.count; i++) {
     applyTransform(transform, polygon.vertices[i * 2]!, polygon.vertices[i * 2 + 1]!, out);
@@ -400,7 +399,7 @@ const makeProxy = (shape: AnyShape, x: number, y: number, angle: number): Collis
 };
 
 /** Compute the world AABB of an already-built collision proxy (reuses its cached vertices/centre - no extra transform work). */
-const proxyAabb = (shape: AnyShape, proxy: CollisionProxy, out: Aabb): Aabb => {
+const proxyAabb = (shape: AnyShape, proxy: CollisionProxy, out: AabbLike): AabbLike => {
   if (shape.type === 'circle') {
     const r = shape.radius;
 

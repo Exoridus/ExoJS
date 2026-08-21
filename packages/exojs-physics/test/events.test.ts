@@ -245,4 +245,28 @@ describe('collision filter group override', () => {
     // matches, so it collides via the fallback path.
     expect(start).toHaveBeenCalledTimes(1);
   });
+
+  it('never reports a contact or sensor overlap between two colliders of the same body', () => {
+    const world = new PhysicsWorld({ gravity: { x: 0, y: 0 } });
+
+    world.add(
+      new PhysicsBody({
+        type: 'dynamic',
+        position: { x: 0, y: 0 },
+        colliders: [{ shape: new BoxShape(10, 10) }, { shape: new BoxShape(10, 10), offset: { x: 4, y: 0 } }, { shape: new BoxShape(10, 10), offset: { x: -4, y: 0 }, isSensor: true }],
+      }),
+    );
+
+    const starts: CollisionEvent[] = [];
+    const enters: SensorEvent[] = [];
+    world.onCollisionStart.add(e => starts.push(e));
+    world.onSensorEnter.add(e => enters.push(e));
+
+    for (let i = 0; i < 10; i++) {
+      world.step(DT);
+    }
+
+    expect(starts).toHaveLength(0);
+    expect(enters).toHaveLength(0);
+  });
 });

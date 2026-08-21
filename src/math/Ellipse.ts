@@ -25,7 +25,7 @@ import { Vector } from './Vector';
 /**
  * Mutable axis-aligned ellipse shape defined by a centre position and
  * separate horizontal (`rx`) and vertical (`ry`) half-radii. Implements
- * {@link ShapeLike} for use in the intersection pipeline.
+ * {@link Collidable} for use in the intersection pipeline.
  *
  * `collidesWith` supports: SceneNode (AABB), Rectangle, Circle, Polygon, and
  * Ellipse. Ellipse-vs-Line always returns `null` - use `intersectsWith`.

@@ -1,7 +1,6 @@
 import type { AabbLike } from '@codexo/exojs';
 import { DynamicAabbTree } from '@codexo/exojs';
 
-import type { Aabb } from '../Aabb';
 import { aabbOverlap } from '../Aabb';
 import type { Collider } from '../Collider';
 import { pairKey } from '../ContactGraph';
@@ -118,7 +117,7 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   }
 
   /** Colliders whose AABB overlaps `aabb`. Writes into `out` (cleared first) and returns it. */
-  public queryAabb(aabb: Readonly<Aabb>, out: Collider[]): Collider[] {
+  public queryAabb(aabb: Readonly<AabbLike>, out: Collider[]): Collider[] {
     out.length = 0;
     this._queryTarget = out;
     this._tree.query(aabb.minX, aabb.minY, aabb.maxX, aabb.maxY, this._onQueryHit);
@@ -186,6 +185,14 @@ export class AabbTreeBroadPhase implements BroadPhase, SpatialIndex {
   }
 
   private _addPair(a: Collider, b: Collider): void {
+    // Two colliders of the same body are a compound shape, not a collision.
+    // Rejecting the pair here rather than downstream also keeps it out of the
+    // persistent set, so a compound body costs nothing per step - which matters
+    // once convex decomposition attaches many edge-sharing colliders to one body.
+    if (a.body === b.body) {
+      return;
+    }
+
     const lo = a.id < b.id ? a : b;
     const hi = a.id < b.id ? b : a;
     const key = pairKey(lo.id, hi.id);

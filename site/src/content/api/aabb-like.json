@@ -1,6 +1,6 @@
 {
   "title": "AabbLike",
-  "description": "Structural min/max AABB, compatible with exojs-physics' own `Aabb` interface.",
+  "description": "Structural type for an axis-aligned bounding box given as min/max extents. This is the canonical AABB contract across the engine and its packages - broad phases, spatial trees and AABB queries all read and write these four fields directly rather than a centre/half-extent pair.",
   "symbol": "AabbLike",
   "kind": "interface",
   "subsystem": "math",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Structural min/max AABB, compatible with exojs-physics' own `Aabb` interface."
+        "Structural type for an axis-aligned bounding box given as min/max extents.",
+        "This is the canonical AABB contract across the engine and its packages - broad phases, spatial trees and AABB queries all read and write these four fields directly rather than a centre/half-extent pair."
       ],
       "importLine": "import { AabbLike } from '@codexo/exojs'",
       "sourceLink": null
@@ -124,11 +125,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/math/DynamicAabbTree.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/DynamicAabbTree.ts"
+        "label": "src/math/AabbLike.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/math/AabbLike.ts"
       }
     }
   ],
-  "sourcePath": "src/math/DynamicAabbTree.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/DynamicAabbTree.ts"
+  "sourcePath": "src/math/AabbLike.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/math/AabbLike.ts"
 }

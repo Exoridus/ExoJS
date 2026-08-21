@@ -1,16 +1,18 @@
+import type { PointLike } from '@codexo/exojs';
 import { Vector } from '@codexo/exojs';
 
 import { Collider, type ColliderOptions } from './Collider';
 import type { Transform } from './math';
 import { applyTransform, createTransform, setTransform } from './math';
-import type { BodyType, VectorLike } from './types';
+import type { ShapeMassProperties } from './shapes/Shape';
+import type { BodyType } from './types';
 
 /** Construction options for a body. */
 export interface BodyOptions {
   /** Simulation role. Default `'dynamic'`. */
   type?: BodyType;
   /** Initial world position. Default `(0, 0)`. */
-  position?: VectorLike;
+  position?: Readonly<PointLike>;
   /** Initial rotation in radians. Default `0`. */
   angle?: number;
   /** Linear damping applied to the velocity each sub-step. Default `0`. */
@@ -245,7 +247,7 @@ export class PhysicsBody {
    * Set the body's world transform. Resets the body's cached collider geometry
    * immediately so subsequent queries see the new placement. Returns `this`.
    */
-  public setTransform(position: VectorLike, angle: number = this._transform.angle): this {
+  public setTransform(position: Readonly<PointLike>, angle: number = this._transform.angle): this {
     if (this._destroyed) {
       throw new Error('PhysicsBody: cannot move a destroyed body.');
     }
@@ -538,20 +540,30 @@ export class PhysicsBody {
     const point = { x: 0, y: 0 };
 
     for (const collider of this._colliders) {
-      const shape = collider.shape;
-      const m = collider.density * shape.area;
+      // Read against the base `Shape` contract, not the current `AnyShape` union.
+      // Every shipped shape is solid, so the compiler proves this branch dead
+      // today; boundary geometry (segment, chain) reports no mass properties, and
+      // adding it to the union must not silently feed NaN into the mass model.
+      const massProperties: ShapeMassProperties | null = collider.shape.massProperties;
+
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- guards the not-yet-shipped boundary shapes
+      if (massProperties === null) {
+        continue;
+      }
+
+      const m = collider.density * massProperties.area;
 
       if (m <= 0) {
         continue;
       }
 
       // Shape centroid expressed in body-local space (offset + local rotation).
-      applyTransform(collider.localTransform, shape.centroidX, shape.centroidY, point);
+      applyTransform(collider.localTransform, massProperties.centroidX, massProperties.centroidY, point);
       mass += m;
       cx += m * point.x;
       cy += m * point.y;
       // Parallel-axis to the body origin: I_origin += I_centroid + m·d².
-      inertiaOrigin += collider.density * shape.unitInertia + m * (point.x * point.x + point.y * point.y);
+      inertiaOrigin += collider.density * massProperties.unitInertia + m * (point.x * point.x + point.y * point.y);
     }
 
     if (mass > 0) {

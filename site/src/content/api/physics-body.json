@@ -450,7 +450,7 @@
         },
         {
           "name": "setTransform",
-          "signature": "setTransform(position: VectorLike, angle: number): this",
+          "signature": "setTransform(position: Readonly<PointLike>, angle: number): this",
           "signatureTokens": [
             {
               "text": "setTransform",
@@ -469,8 +469,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -504,7 +516,7 @@
           "params": [
             {
               "name": "position",
-              "type": "VectorLike",
+              "type": "Readonly<PointLike>",
               "optional": false
             },
             {

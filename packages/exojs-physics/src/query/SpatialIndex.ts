@@ -1,4 +1,5 @@
-import type { Aabb } from '../Aabb';
+import type { AabbLike } from '@codexo/exojs';
+
 import type { Collider } from '../Collider';
 
 /**
@@ -20,7 +21,7 @@ export interface SpatialIndex {
    */
   sync(colliders: readonly Collider[]): void;
   /** Colliders whose AABB overlaps `aabb`. Writes into `out` (cleared first) and returns it. */
-  queryAabb(aabb: Readonly<Aabb>, out: Collider[]): Collider[];
+  queryAabb(aabb: Readonly<AabbLike>, out: Collider[]): Collider[];
   /**
    * Invoke `callback` for each collider whose AABB the ray from `originX,
    * originY` along `dirX, dirY` could cross within `maxDistance` (`Infinity`

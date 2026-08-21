@@ -23,7 +23,7 @@ let temp: Polygon | null = null;
 
 /**
  * Mutable convex polygon defined by a world-space offset `(x, y)` and an
- * array of local-space vertex {@link Vector}s. Implements {@link ShapeLike}
+ * array of local-space vertex {@link Vector}s. Implements {@link Collidable}
  * with full SAT collision response.
  *
  * Edge vectors are recomputed whenever `setPoints` is called; normals are

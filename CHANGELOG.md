@@ -436,6 +436,14 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Fixed
 
+- **Two colliders on the same body no longer collide with each other.** Neither
+  the broad phase nor the contact graph excluded a pair whose colliders belong
+  to one body, so a compound body emitted a `collisionStart` — or a sensor
+  enter — against itself, and carried a self-contact through the solver every
+  step. The impulses happened to cancel, so nothing drifted, but the events were
+  real and the work was wasted. The broad phase now never forms such a pair, so
+  it never enters the persistent set either.
+
 - **Capture quantisation no longer drops a pixel at a fractional edge.** An
   effect's render target was sized `floor(origin)` by `ceil(size)`, rounded
   independently, which is short whenever the fractional origin pushes the far
@@ -510,6 +518,32 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   device while measuring `NEU-S4`.
 
 ### Changed
+
+- **BREAKING — a physics `Shape` no longer promises mass.** The abstract base
+  declared `area`, `centroidX`, `centroidY` and `unitInertia`, which is only
+  true of solid geometry. A segment or a chain of edges has no interior, and
+  satisfying that base would have meant inventing `area = 0` and a fake centroid
+  that no reader could tell apart from a degenerate solid.
+
+  Mass is now a capability: `Shape.massProperties` is either a frozen
+  `ShapeMassProperties` (`area`, `centroidX`, `centroidY`, `unitInertia`) or
+  `null` for boundary geometry, and the body's mass model skips a shape that has
+  none. `CircleShape`, `PolygonShape` and `BoxShape` narrow the property to the
+  non-null type, so `shape.massProperties.area` needs no null check; the four
+  loose fields are gone. Nothing about the computed mass, centre of mass or
+  inertia of the shipped shapes changes.
+
+- **BREAKING — one AABB protocol and one point protocol across core and
+  packages.** `@codexo/exojs-physics` published its own `Aabb` and `VectorLike`,
+  structurally identical to core's `AabbLike` and `PointLike` — and imported
+  core's `AabbLike` in the same file it declared `Aabb` in. Two names for one
+  contract is a shape the 1.0 surface should not freeze.
+
+  Physics now uses `AabbLike` and `Readonly<PointLike>` from `@codexo/exojs`;
+  `Aabb` and `VectorLike` are no longer exported from
+  `@codexo/exojs-physics`. `AabbLike` moved to its own module inside core and is
+  exported unchanged. No behaviour changes — the types were mutually assignable
+  already, which is exactly why the duplication was easy to miss.
 
 - **BREAKING — one canonical identity is resolved before every fetch.** Residency
   had two uncoordinated dedup layers: `get()`, bare paths and the background
@@ -777,6 +811,20 @@ FadeSceneTransition({ color: Color.white, duration: 300 })`.
   are unchanged and stay asynchronous.
 
 ### Removed
+
+- **BREAKING — `Segment` is removed.** It modelled the same finite segment as
+  `Line`, differing only in field naming (`startX`/`endX` against
+  `fromX`/`toX`) and in not implementing the collision contract. Its own doc
+  comment claimed it was used by the path and swept-collision utilities; it was
+  not used anywhere — not by `src/`, the packages, the tests, the examples or
+  the guides. Use `Line`.
+
+- **BREAKING — `ShapeLike` is no longer exported.** No API in the repository
+  ever accepted one, and two of its implementers (`Vector`, `Line`) return
+  `null` from `collidesWith` unconditionally, so the type promised a collision
+  response it could not deliver. `Collidable` is the collision contract that is
+  actually consumed. The interface itself stays internal as the conformance
+  check for the concrete shape values.
 
 - **BREAKING — `Loader.release()` is removed.** Claims were held per scope, but
   the only scope a direct `app.loader` call could use was one shared symbol. Two
