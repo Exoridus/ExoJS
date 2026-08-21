@@ -17,6 +17,33 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **Bound nodes can be drawn between fixed steps instead of snapping to the latest one.**
+  Physics runs at a fixed rate and the display does not, so at 60 Hz physics on a 144 Hz
+  screen most frames showed the same fixed state twice and then jumped. `PhysicsBinding`
+  wrote the newest fixed transform verbatim and bodies kept no earlier state to blend
+  from, so there was nothing an application could interpolate either.
+
+  A body now brackets its most recent fixed step: `previousX`, `previousY` and
+  `previousAngle` hold the transform that step started from, `x`/`y`/`angle` the one it
+  produced — including when several fixed steps run inside one `step()` call, where the
+  pair describes the last of them. A body that did not move reports `previous === current`
+  rather than a stale pair, and `setTransform()` collapses the pair, because a teleport is
+  a discontinuity and must not be swept across.
+
+  `PhysicsWorld`'s `interpolation` option (default `false`) switches bindings over to
+  placing the node between the two. The blend factor comes from `frameAlphaSource`, which
+  defaults to the world's own accumulator — correct for a world driven with `step()`. A
+  world registered as a `System` goes through `fixedUpdate()` and bypasses that
+  accumulator, so it has to be pointed at the host's own fraction
+  (`() => app.frameAlpha`); physics deliberately does not run a second clock, which would
+  drift from the host's the moment a step is clamped or dropped. Interpolated presentation
+  moves to the world's new variable-rate `update()` phase, since the factor is only final
+  once the frame's last fixed step has run.
+
+  Angles are blended with a plain lerp: body angles are continuous and unbounded, never
+  wrapped into a range, so there is no shortest-arc case. Interpolation is presentation
+  only — the simulation is bit-identical either way.
+
 - **A world-level contact modifier decides what a contact does this step.** There was no
   `preSolve`/`enableContact` anywhere in the physics API, so a one-way platform — solid
   from above, passable from below — could not be expressed at all: collision filters answer

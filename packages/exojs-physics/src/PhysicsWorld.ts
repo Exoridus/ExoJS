@@ -39,6 +39,22 @@ const ccdRestitutionThreshold = 1;
  * push its passengers, and it is exactly that sub-threshold case where nothing
  * else would keep them awake.
  */
+/**
+ * Keep a host-supplied blend factor inside `[0, 1]`. A caller's own accumulator
+ * can hand over a value outside it (a stale read, a custom scheduler), and an
+ * unclamped one extrapolates the node past the simulated state instead of
+ * blending between two known ones.
+ */
+const clampAlpha = (alpha: number): number => {
+  // Written as two comparisons rather than Math.min/Math.max so a NaN factor
+  // lands on 0 instead of propagating into every bound node's transform.
+  if (!(alpha > 0)) {
+    return 0;
+  }
+
+  return alpha < 1 ? alpha : 1;
+};
+
 const isMovingBoundary = (body: PhysicsBody): boolean =>
   body._teleported || body.linearVelocityX !== 0 || body.linearVelocityY !== 0 || body.angularVelocity !== 0;
 
@@ -107,6 +123,25 @@ export interface PhysicsWorldOptions {
    * see {@link PhysicsWorld.contactModifier}. Default none.
    */
   contactModifier?: ContactModifier | null;
+  /**
+   * Place bound nodes between the last two fixed states instead of snapping them
+   * to the latest one, which smooths motion when the fixed rate is below the
+   * frame rate. Default `false`.
+   *
+   * The blend factor comes from {@link frameAlphaSource}; a world driven as a
+   * `System` has to supply one.
+   */
+  interpolation?: boolean;
+  /**
+   * Where interpolated bindings read their blend factor, in `[0, 1)`.
+   *
+   * Defaults to this world's own accumulator - correct when the world is driven
+   * with {@link PhysicsWorld.step}, which is what advances it. A world driven as
+   * a `System` goes through {@link PhysicsWorld.fixedUpdate} and bypasses that
+   * accumulator entirely, so the host owns the fraction: pass
+   * `() => app.frameAlpha`.
+   */
+  frameAlphaSource?: () => number;
   /** Linear speed at or below which a body is a sleep candidate, px/s. Default `5`. */
   sleepLinearVelocity?: number;
   /** Angular speed at or below which a body is a sleep candidate, rad/s. Default `0.06`. */
@@ -239,6 +274,21 @@ export class PhysicsWorld implements BodyOwner {
    */
   public contactModifier: ContactModifier | null;
 
+  /**
+   * Whether bound nodes are placed between the last two fixed states rather than
+   * snapped to the latest one. Toggleable at runtime; switching it off snaps
+   * every bound node back to the current fixed state on the next sync.
+   */
+  public interpolation: boolean;
+
+  /**
+   * Supplies the `[0, 1)` blend factor for interpolated bindings. Defaults to
+   * this world's own accumulator; point it at the host's own fraction
+   * (`() => app.frameAlpha`) when the world runs as a `System`, because
+   * {@link fixedUpdate} never advances the local accumulator.
+   */
+  public frameAlphaSource: () => number;
+
   private readonly _backend: PhysicsBackend = new NativePhysicsBackend();
   private readonly _bodies: PhysicsBody[] = [];
   private readonly _colliders: Collider[] = [];
@@ -305,6 +355,8 @@ export class PhysicsWorld implements BodyOwner {
     this.sleepAngularVelocity = options.sleepAngularVelocity ?? 0.06;
     this.timeToSleep = options.timeToSleep ?? 0.5;
     this.contactModifier = options.contactModifier ?? null;
+    this.interpolation = options.interpolation ?? false;
+    this.frameAlphaSource = options.frameAlphaSource ?? (() => this.timeStepper.alpha);
     this._query = new QueryEngine(this._colliders, this._backend.spatialIndex);
   }
 
@@ -493,7 +545,9 @@ export class PhysicsWorld implements BodyOwner {
       this._dispatchEvents();
     }
 
-    this._bindings.sync();
+    // `step` is called once per rendered frame, so presenting here is already
+    // the variable-rate slot an interpolated binding needs.
+    this._syncBindings();
     this._drainCommands();
   }
 
@@ -520,8 +574,37 @@ export class PhysicsWorld implements BodyOwner {
     this._stepOnce(h, subStepCount, this.gravity.x, this.gravity.y, this.contactHertz, this.dampingRatio, this._joints.length > 0, this._hasBullets());
 
     this._dispatchEvents();
-    this._bindings.sync();
+
+    // Interpolated presentation is a per-FRAME job and moves to `update`; this
+    // phase can run several times per frame, and the blend factor is only final
+    // once the last of them has run.
+    if (!this.interpolation) {
+      this._bindings.sync();
+    }
+
     this._drainCommands();
+  }
+
+  /**
+   * Variable-rate `System` phase: places bound nodes for the frame that is about
+   * to be drawn. Only does work while {@link interpolation} is on - otherwise
+   * {@link fixedUpdate} has already snapped them to the latest fixed state.
+   */
+  public update(_delta: Time): void {
+    this._assertAlive();
+
+    if (this.interpolation) {
+      this._bindings.syncInterpolated(clampAlpha(this.frameAlphaSource()));
+    }
+  }
+
+  /** Present bound nodes, snapping or interpolating according to {@link interpolation}. */
+  private _syncBindings(): void {
+    if (this.interpolation) {
+      this._bindings.syncInterpolated(clampAlpha(this.frameAlphaSource()));
+    } else {
+      this._bindings.sync();
+    }
   }
 
   private _stepOnce(

@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 38,
+  "memberCount": 41,
   "counts": {
     "constructors": 1,
-    "methods": 19,
-    "properties": 14,
+    "methods": 20,
+    "properties": 16,
     "events": 4
   },
   "sections": [
@@ -1831,6 +1831,53 @@
           ],
           "returnType": "void",
           "description": "Remove a body↔node link."
+        },
+        {
+          "name": "update",
+          "signature": "update(_delta: Time): void",
+          "signatureTokens": [
+            {
+              "text": "update",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "_delta",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Time",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "_delta",
+              "type": "Time",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Variable-rate System phase: places bound nodes for the frame that is about to be drawn. Only does work while interpolation is on - otherwise fixedUpdate has already snapped them to the latest fixed state."
         }
       ],
       "paragraphs": [],
@@ -1934,6 +1981,35 @@
           "description": "Whether resting bodies are put to sleep."
         },
         {
+          "name": "frameAlphaSource",
+          "signature": "frameAlphaSource: () => number",
+          "signatureTokens": [
+            {
+              "text": "frameAlphaSource",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Supplies the [0, 1) blend factor for interpolated bindings. Defaults to this world's own accumulator; point it at the host's own fraction (() => app.frameAlpha) when the world runs as a System, because fixedUpdate never advances the local accumulator."
+        },
+        {
           "name": "gravity",
           "signature": "gravity: Vector",
           "signatureTokens": [
@@ -1953,6 +2029,27 @@
           "params": [],
           "returnType": null,
           "description": "World gravity (px/s², +Y down). Integrated each sub-step."
+        },
+        {
+          "name": "interpolation",
+          "signature": "interpolation: boolean",
+          "signatureTokens": [
+            {
+              "text": "interpolation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether bound nodes are placed between the last two fixed states rather than snapped to the latest one. Toggleable at runtime; switching it off snaps every bound node back to the current fixed state on the next sync."
         },
         {
           "name": "sleepAngularVelocity",
