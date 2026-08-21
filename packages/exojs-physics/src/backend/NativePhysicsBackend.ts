@@ -2,6 +2,7 @@ import { AabbTreeBroadPhase } from '../broadphase/AabbTreeBroadPhase';
 import type { CandidatePair } from '../broadphase/BroadPhase';
 import type { Collider } from '../Collider';
 import { ContactGraph } from '../ContactGraph';
+import type { ContactModifier } from '../ContactModifier';
 import type { SpatialIndex } from '../query/SpatialIndex';
 import { ContactSolver } from '../solver/ContactSolver';
 import type { PhysicsBackend } from './PhysicsBackend';
@@ -27,6 +28,10 @@ export class NativePhysicsBackend implements PhysicsBackend {
   public detect(colliders: readonly Collider[]): void {
     this._broadPhase.computePairs(colliders, this._pairs);
     this.contactGraph.update(this._pairs);
+  }
+
+  public applyContactModifier(modifier: ContactModifier): void {
+    this.contactGraph.applyModifier(modifier);
   }
 
   public prepareSolve(h: number, contactHertz: number, dampingRatio: number): void {

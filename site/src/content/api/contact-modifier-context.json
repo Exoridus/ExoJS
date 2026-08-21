@@ -1,0 +1,283 @@
+{
+  "title": "ContactModifierContext",
+  "description": "A solid contact as the world's ContactModifier sees it: the pair that produced it, the contact normal, and the three per-step controls the modifier may change. Everything else is read-only. The object is reused for every contact and is only valid for the duration of the callback - read what you need, write the controls, do not retain it. Writing a control affects this step only; the values are re-derived from the two colliders before the modifier runs again.",
+  "symbol": "ContactModifierContext",
+  "kind": "interface",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A solid contact as the world's ContactModifier sees it: the pair that produced it, the contact normal, and the three per-step controls the modifier may change. Everything else is read-only.",
+        "The object is reused for every contact and is only valid for the duration of the callback - read what you need, write the controls, do not retain it.",
+        "Writing a control affects this step only; the values are re-derived from the two colliders before the modifier runs again."
+      ],
+      "importLine": "import { ContactModifierContext } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bodyA",
+          "signature": "bodyA: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyA",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "bodyB",
+          "signature": "bodyB: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "bodyB",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "colliderA",
+          "signature": "colliderA: Collider",
+          "signatureTokens": [
+            {
+              "text": "colliderA",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "colliderB",
+          "signature": "colliderB: Collider",
+          "signatureTokens": [
+            {
+              "text": "colliderB",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Collider",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "enabled",
+          "signature": "enabled: boolean",
+          "signatureTokens": [
+            {
+              "text": "enabled",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Set to false to skip this contact in the solver for this step. The contact stays geometrically touching, so collisionStart/collisionEnd still describe the real geometry; it just applies no impulse, and it does not join the two bodies into one sleeping island. Its warm-start impulses are dropped while it is disabled, so re-enabling it starts cold rather than releasing a stale impulse."
+        },
+        {
+          "name": "friction",
+          "signature": "friction: number",
+          "signatureTokens": [
+            {
+              "text": "friction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Coulomb friction for this step. Defaults to √(a.friction × b.friction) over the two colliders."
+        },
+        {
+          "name": "maxPenetration",
+          "signature": "maxPenetration: number",
+          "signatureTokens": [
+            {
+              "text": "maxPenetration",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Deepest penetration across the manifold points, in px."
+        },
+        {
+          "name": "normalX",
+          "signature": "normalX: number",
+          "signatureTokens": [
+            {
+              "text": "normalX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "X of the unit contact normal, pointing from A towards B."
+        },
+        {
+          "name": "normalY",
+          "signature": "normalY: number",
+          "signatureTokens": [
+            {
+              "text": "normalY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Y of the unit contact normal, pointing from A towards B."
+        },
+        {
+          "name": "pointCount",
+          "signature": "pointCount: number",
+          "signatureTokens": [
+            {
+              "text": "pointCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Manifold points backing this contact: 1 for a vertex/face hit, 2 for a face/face hit."
+        },
+        {
+          "name": "restitution",
+          "signature": "restitution: number",
+          "signatureTokens": [
+            {
+              "text": "restitution",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Restitution for this step. Defaults to max(a.restitution, b.restitution) over the two colliders."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/ContactModifier.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/ContactModifier.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/ContactModifier.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/ContactModifier.ts"
+}

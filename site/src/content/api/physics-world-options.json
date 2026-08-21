@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 10,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -52,6 +52,39 @@
           "params": [],
           "returnType": null,
           "description": "Soft-contact stiffness in Hz (the contact behaves as a damped spring at this frequency). Default 30."
+        },
+        {
+          "name": "contactModifier",
+          "signature": "contactModifier?: ContactModifier | null",
+          "signatureTokens": [
+            {
+              "text": "contactModifier",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContactModifier",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Adjust each solid contact for the coming step (one-way platforms, conditional friction, per-pair material overrides). At most one per world; see PhysicsWorld.contactModifier. Default none."
         },
         {
           "name": "dampingRatio",

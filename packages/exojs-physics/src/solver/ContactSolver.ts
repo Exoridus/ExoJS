@@ -127,7 +127,9 @@ export class ContactSolver {
       const manifold = contact.manifold;
       const pointCount = manifold.pointCount;
 
-      if (pointCount === 0) {
+      // A contact the world's `ContactModifier` disabled for this step stays
+      // touching geometrically but applies no impulse.
+      if (pointCount === 0 || !contact.enabled) {
         continue;
       }
 
@@ -155,8 +157,10 @@ export class ContactSolver {
       constraint.ny = ny;
       constraint.tx = tx;
       constraint.ty = ty;
-      constraint.friction = Math.sqrt(contact.a.friction * contact.b.friction);
-      constraint.restitution = Math.max(contact.a.restitution, contact.b.restitution);
+      // Per-step values: derived from the two colliders each pass, then possibly
+      // overridden by the world's `ContactModifier`.
+      constraint.friction = contact.friction;
+      constraint.restitution = contact.restitution;
       constraint.pointCount = pointCount;
       constraint.block = false;
       constraint.biasRate = biasRate;

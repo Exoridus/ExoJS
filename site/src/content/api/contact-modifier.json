@@ -1,0 +1,84 @@
+{
+  "title": "ContactModifier",
+  "description": "Called once per solid contact per fixed step, after contact generation and before the solver runs, to adjust that contact for this step - the hook one-way platforms, conditional friction and per-pair material overrides are built on. A world has at most one modifier. It runs before islands are built, so disabling a contact also keeps the two bodies from sleeping as one.",
+  "symbol": "ContactModifier",
+  "kind": "type",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Called once per solid contact per fixed step, after contact generation and before the solver runs, to adjust that contact for this step - the hook one-way platforms, conditional friction and per-pair material overrides are built on.",
+        "A world has at most one modifier. It runs before islands are built, so disabling a contact also keeps the two bodies from sleeping as one."
+      ],
+      "importLine": "import { ContactModifier } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "ContactModifier",
+          "signature": "(contact: ContactModifierContext) => void",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "contact",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContactModifierContext",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/ContactModifier.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/ContactModifier.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/ContactModifier.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/ContactModifier.ts"
+}

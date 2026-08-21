@@ -17,6 +17,27 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **A world-level contact modifier decides what a contact does this step.** There was no
+  `preSolve`/`enableContact` anywhere in the physics API, so a one-way platform — solid
+  from above, passable from below — could not be expressed at all: collision filters answer
+  "may these two touch", not "should this particular contact push right now".
+
+  `PhysicsWorld.contactModifier` runs once per solid contact per fixed step, after contact
+  generation and before island building and the solver. It gets the two colliders, the two
+  bodies, the A→B normal, the manifold point count and the deepest penetration, and it may
+  change three things: `enabled`, `friction` and `restitution`. All three are re-derived
+  from the two colliders before every step, so a change applies to that step only.
+
+  Disabling a contact skips it in the solver without touching detection: it stays
+  geometrically touching and `onCollisionStart`/`onCollisionEnd` still describe the real
+  geometry. It also does not join its two bodies into one sleeping island — which is why
+  the hook runs before the sleep pass, not after — and its warm-start impulses are dropped,
+  so re-enabling it starts from zero rather than releasing a stale impulse. Sensors never
+  reach the modifier; they produce no contact to solve.
+
+  There is at most one modifier per world. It mutates simulation state, so a multi-listener
+  signal would make the outcome depend on registration order.
+
 - **Particles are addressed by channel, and a death is a snapshot.** The whole
   particle SoA was public and the guide recommended mutating it, which made the
   CPU/GPU packing a permanent contract — and on the GPU path it was not even

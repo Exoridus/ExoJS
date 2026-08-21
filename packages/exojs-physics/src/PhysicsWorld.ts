@@ -9,6 +9,7 @@ import type { PhysicsBinding } from './binding/PhysicsBinding';
 import { Collider } from './Collider';
 import type { SweepHit } from './collision/sweep';
 import { sweepProxies } from './collision/sweep';
+import type { ContactModifier } from './ContactModifier';
 import type { CollisionEvent, SensorEvent } from './events';
 import type { Joint } from './joints/Joint';
 import type { BodyOwner } from './PhysicsBody';
@@ -100,6 +101,12 @@ export interface PhysicsWorldOptions {
   dampingRatio?: number;
   /** Put resting bodies to sleep so they skip integration and solving. Default `true`. */
   enableSleeping?: boolean;
+  /**
+   * Adjust each solid contact for the coming step (one-way platforms,
+   * conditional friction, per-pair material overrides). At most one per world;
+   * see {@link PhysicsWorld.contactModifier}. Default none.
+   */
+  contactModifier?: ContactModifier | null;
   /** Linear speed at or below which a body is a sleep candidate, px/s. Default `5`. */
   sleepLinearVelocity?: number;
   /** Angular speed at or below which a body is a sleep candidate, rad/s. Default `0.06`. */
@@ -220,6 +227,18 @@ export class PhysicsWorld implements BodyOwner {
   /** Seconds below the thresholds before a body sleeps. */
   public readonly timeToSleep: number;
 
+  /**
+   * Runs once per solid contact per fixed step, after contact generation and
+   * before island building and the solver, so a contact it disables applies no
+   * impulse and does not couple its two bodies into one sleeping island.
+   *
+   * At most one modifier per world - it mutates simulation state, so a
+   * multi-listener signal would make the outcome depend on registration order.
+   * Set to `null` to remove it; the per-contact values then stay at the
+   * defaults derived from the two colliders.
+   */
+  public contactModifier: ContactModifier | null;
+
   private readonly _backend: PhysicsBackend = new NativePhysicsBackend();
   private readonly _bodies: PhysicsBody[] = [];
   private readonly _colliders: Collider[] = [];
@@ -285,6 +304,7 @@ export class PhysicsWorld implements BodyOwner {
     this.sleepLinearVelocity = options.sleepLinearVelocity ?? 5;
     this.sleepAngularVelocity = options.sleepAngularVelocity ?? 0.06;
     this.timeToSleep = options.timeToSleep ?? 0.5;
+    this.contactModifier = options.contactModifier ?? null;
     this._query = new QueryEngine(this._colliders, this._backend.spatialIndex);
   }
 
@@ -519,6 +539,13 @@ export class PhysicsWorld implements BodyOwner {
     // reuses the manifolds across the sub-steps below.
     this._backend.detect(this._colliders);
 
+    // The contact modifier runs between detection and the sleep decision: a
+    // contact it disables must neither reach the solver nor union its two bodies
+    // into one island, and both of those are decided below.
+    if (this.contactModifier !== null) {
+      this._backend.applyContactModifier(this.contactModifier);
+    }
+
     // Sleep decision runs after detection (islands need the current contact
     // set) and before the solver (so sleeping contacts are skipped, and a
     // sleeping island touched by an awake body is woken first).
@@ -752,25 +779,7 @@ export class PhysicsWorld implements BodyOwner {
     parent.length = count;
     minSleep.length = count;
 
-    // Union dynamic↔dynamic solid contacts into islands. A dynamic body touching
-    // a MOVING static/kinematic body has its sleep timer reset instead: those
-    // types are island boundaries, not members, so nothing else would keep the
-    // passenger of a slow-moving platform awake - and the solver skips a contact
-    // whose dynamic side is asleep, letting the platform drive straight through it.
-    for (const contact of this._backend.contactGraph.solidContacts) {
-      const bodyA = contact.a.body;
-      const bodyB = contact.b.body;
-      const dynamicA = bodyA.type === 'dynamic';
-      const dynamicB = bodyB.type === 'dynamic';
-
-      if (dynamicA && dynamicB) {
-        this._union(bodyA._islandIndex, bodyB._islandIndex);
-      } else if (dynamicA && isMovingBoundary(bodyB)) {
-        bodyA._sleepTime = 0;
-      } else if (dynamicB && isMovingBoundary(bodyA)) {
-        bodyB._sleepTime = 0;
-      }
-    }
+    this._unionContactIslands();
 
     // Joints couple their two bodies into the same island (sleep/wake together).
     for (const joint of this._joints) {
@@ -804,6 +813,36 @@ export class PhysicsWorld implements BodyOwner {
 
       if (body.type === 'dynamic') {
         body._setSleeping(minSleep[this._find(i)]! >= timeToSleep);
+      }
+    }
+  }
+
+  /**
+   * Union dynamic↔dynamic solid contacts into islands. A dynamic body touching a
+   * MOVING static/kinematic body has its sleep timer reset instead: those types
+   * are island boundaries, not members, so nothing else would keep the passenger
+   * of a slow-moving platform awake - and the solver skips a contact whose
+   * dynamic side is asleep, letting the platform drive straight through it.
+   */
+  private _unionContactIslands(): void {
+    for (const contact of this._backend.contactGraph.solidContacts) {
+      // A contact the modifier disabled carries no load this step, so it neither
+      // forms an island nor keeps a passenger of a moving platform awake.
+      if (!contact.enabled) {
+        continue;
+      }
+
+      const bodyA = contact.a.body;
+      const bodyB = contact.b.body;
+      const dynamicA = bodyA.type === 'dynamic';
+      const dynamicB = bodyB.type === 'dynamic';
+
+      if (dynamicA && dynamicB) {
+        this._union(bodyA._islandIndex, bodyB._islandIndex);
+      } else if (dynamicA && isMovingBoundary(bodyB)) {
+        bodyA._sleepTime = 0;
+      } else if (dynamicB && isMovingBoundary(bodyA)) {
+        bodyB._sleepTime = 0;
       }
     }
   }
