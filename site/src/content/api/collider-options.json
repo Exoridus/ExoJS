@@ -142,7 +142,7 @@
         },
         {
           "name": "offset",
-          "signature": "offset?: VectorLike",
+          "signature": "offset?: Readonly<PointLike>",
           "signatureTokens": [
             {
               "text": "offset",
@@ -157,8 +157,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],

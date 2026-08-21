@@ -1,10 +1,11 @@
-import type { Aabb } from './Aabb';
+import type { AabbLike, PointLike } from '@codexo/exojs';
+
 import { createAabb } from './Aabb';
-import type { Mutable2D, Transform } from './math';
+import type { Transform } from './math';
 import { applyRotation, applyTransform, composeTransforms, createTransform } from './math';
 import type { PhysicsBody } from './PhysicsBody';
 import type { AnyShape } from './shapes/AnyShape';
-import type { CollisionFilter, VectorLike } from './types';
+import type { CollisionFilter } from './types';
 import { resolveFilter } from './types';
 
 /** Construction options for a collider. */
@@ -22,7 +23,7 @@ export interface ColliderOptions {
   /** Category/mask/group filter; partials merge over the defaults. */
   filter?: Partial<CollisionFilter>;
   /** Body-local offset of the shape origin. Default `(0, 0)`. */
-  offset?: VectorLike;
+  offset?: Readonly<PointLike>;
   /** Body-local rotation of the shape in radians (compound colliders). Default `0`. */
   rotation?: number;
 }
@@ -54,12 +55,12 @@ export class Collider {
   private _body: PhysicsBody | null = null;
   private readonly _localTransform: Transform;
   private readonly _worldTransform: Transform = createTransform();
-  private readonly _aabb: Aabb = createAabb();
-  private readonly _worldCenter: Mutable2D = { x: 0, y: 0 };
+  private readonly _aabb: AabbLike = createAabb();
+  private readonly _worldCenter: PointLike = { x: 0, y: 0 };
   // Reused per-vertex scratch for synchronize()'s polygon transform loop so a
   // collider sync allocates nothing. Instance-private: never held across the
   // call, never aliased between colliders.
-  private readonly _syncScratch: Mutable2D = { x: 0, y: 0 };
+  private readonly _syncScratch: PointLike = { x: 0, y: 0 };
   private readonly _worldVertices: number[];
   private readonly _worldNormals: number[];
 
@@ -121,7 +122,7 @@ export class Collider {
   }
 
   /** The collider's world AABB (valid after the latest {@link synchronize}). */
-  public get aabb(): Readonly<Aabb> {
+  public get aabb(): Readonly<AabbLike> {
     return this._aabb;
   }
 
@@ -136,7 +137,7 @@ export class Collider {
   }
 
   /** World-space circle centre (only meaningful for circle shapes). */
-  public get worldCenter(): Readonly<Mutable2D> {
+  public get worldCenter(): Readonly<PointLike> {
     return this._worldCenter;
   }
 

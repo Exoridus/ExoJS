@@ -564,7 +564,7 @@
         },
         {
           "name": "forEachAabbHit",
-          "signature": "forEachAabbHit(bounds: Aabb, filter: Partial<{ category: number; group: number; mask: number }> | undefined, callback: (collider: Collider) => void): void",
+          "signature": "forEachAabbHit(bounds: AabbLike, filter: Partial<{ category: number; group: number; mask: number }> | undefined, callback: (collider: Collider) => void): void",
           "signatureTokens": [
             {
               "text": "forEachAabbHit",
@@ -583,7 +583,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Aabb",
+              "text": "AabbLike",
               "kind": "type"
             },
             {
@@ -722,7 +722,7 @@
           "params": [
             {
               "name": "bounds",
-              "type": "Aabb",
+              "type": "AabbLike",
               "optional": false
             },
             {
@@ -741,7 +741,7 @@
         },
         {
           "name": "overlapShape",
-          "signature": "overlapShape(shape: AnyShape, position: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>, angle?: number): Collider[]",
+          "signature": "overlapShape(shape: AnyShape, position: Readonly<PointLike>, filter?: Partial<{ category: number; group: number; mask: number }>, angle?: number): Collider[]",
           "signatureTokens": [
             {
               "text": "overlapShape",
@@ -776,8 +776,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -904,7 +916,7 @@
             },
             {
               "name": "position",
-              "type": "VectorLike",
+              "type": "Readonly<PointLike>",
               "optional": false
             },
             {
@@ -923,7 +935,7 @@
         },
         {
           "name": "queryAabb",
-          "signature": "queryAabb(bounds: Aabb, filter?: Partial<{ category: number; group: number; mask: number }>, out?: Collider[]): Collider[]",
+          "signature": "queryAabb(bounds: AabbLike, filter?: Partial<{ category: number; group: number; mask: number }>, out?: Collider[]): Collider[]",
           "signatureTokens": [
             {
               "text": "queryAabb",
@@ -942,7 +954,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Aabb",
+              "text": "AabbLike",
               "kind": "type"
             },
             {
@@ -1069,7 +1081,7 @@
           "params": [
             {
               "name": "bounds",
-              "type": "Aabb",
+              "type": "AabbLike",
               "optional": false
             },
             {
@@ -1088,7 +1100,7 @@
         },
         {
           "name": "queryPoint",
-          "signature": "queryPoint(point: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>): Collider[]",
+          "signature": "queryPoint(point: Readonly<PointLike>, filter?: Partial<{ category: number; group: number; mask: number }>): Collider[]",
           "signatureTokens": [
             {
               "text": "queryPoint",
@@ -1107,8 +1119,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -1210,7 +1234,7 @@
           "params": [
             {
               "name": "point",
-              "type": "VectorLike",
+              "type": "Readonly<PointLike>",
               "optional": false
             },
             {
@@ -1224,7 +1248,7 @@
         },
         {
           "name": "rayCast",
-          "signature": "rayCast(origin: VectorLike, direction: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>, maxDistance?: number): RayHit | null",
+          "signature": "rayCast(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: Partial<{ category: number; group: number; mask: number }>, maxDistance?: number): RayHit | null",
           "signatureTokens": [
             {
               "text": "rayCast",
@@ -1243,8 +1267,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -1259,8 +1295,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -1386,12 +1434,12 @@
           "params": [
             {
               "name": "origin",
-              "type": "VectorLike",
+              "type": "Readonly<PointLike>",
               "optional": false
             },
             {
               "name": "direction",
-              "type": "VectorLike",
+              "type": "Readonly<PointLike>",
               "optional": false
             },
             {
@@ -1410,7 +1458,7 @@
         },
         {
           "name": "rayCastAll",
-          "signature": "rayCastAll(origin: VectorLike, direction: VectorLike, filter?: Partial<{ category: number; group: number; mask: number }>, out?: RayHit[], maxDistance?: number): RayHit[]",
+          "signature": "rayCastAll(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: Partial<{ category: number; group: number; mask: number }>, out?: RayHit[], maxDistance?: number): RayHit[]",
           "signatureTokens": [
             {
               "text": "rayCastAll",
@@ -1429,8 +1477,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -1445,8 +1505,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             },
             {
               "text": ", ",
@@ -1592,12 +1664,12 @@
           "params": [
             {
               "name": "origin",
-              "type": "VectorLike",
+              "type": "Readonly<PointLike>",
               "optional": false
             },
             {
               "name": "direction",
-              "type": "VectorLike",
+              "type": "Readonly<PointLike>",
               "optional": false
             },
             {

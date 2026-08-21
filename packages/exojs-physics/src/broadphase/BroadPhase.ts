@@ -9,10 +9,12 @@ export interface CandidatePair {
 /**
  * Broad-phase contract: reduce the O(n²) all-pairs test to a candidate set of
  * AABB-overlapping pairs. The candidate set must contain **every** truly
- * overlapping pair (zero false negatives); false positives are
- * resolved by the narrow phase. This interface is the seam behind which
- * broad-phase implementations (currently the dynamic-AABB-tree-backed
- * `AabbTreeBroadPhase`) can be swapped without touching callers.
+ * overlapping pair of colliders on *different* bodies (zero false negatives);
+ * false positives are resolved by the narrow phase. Two colliders of the same
+ * body form a compound shape and must never be paired. This interface is the
+ * seam behind which broad-phase implementations (currently the
+ * dynamic-AABB-tree-backed `AabbTreeBroadPhase`) can be swapped without
+ * touching callers.
  */
 export interface BroadPhase {
   /**

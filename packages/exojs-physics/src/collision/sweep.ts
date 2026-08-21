@@ -1,4 +1,5 @@
-import type { Mutable2D } from '../math';
+import type { PointLike } from '@codexo/exojs';
+
 import type { AnyShape } from '../shapes/AnyShape';
 import { CircleShape } from '../shapes/CircleShape';
 import type { CollisionProxy } from './CollisionProxy';
@@ -24,8 +25,8 @@ const eps = 1e-9;
 // allocation). Like the narrow-phase clip scratch, the sweep is single-threaded
 // and non-reentrant - the world's CCD pass calls `sweepProxies` strictly
 // sequentially - so module-global scratch is safe.
-const _circleStart: Mutable2D = { x: 0, y: 0 };
-const _circleProxy: { shape: AnyShape; worldCenter: Mutable2D; worldVertices: number[]; worldNormals: number[] } = {
+const _circleStart: PointLike = { x: 0, y: 0 };
+const _circleProxy: { shape: AnyShape; worldCenter: PointLike; worldVertices: number[]; worldNormals: number[] } = {
   shape: new CircleShape(1),
   worldCenter: _circleStart,
   worldVertices: [],

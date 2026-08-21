@@ -212,7 +212,7 @@
         },
         {
           "name": "target",
-          "signature": "target: VectorLike",
+          "signature": "target: Readonly<PointLike>",
           "signatureTokens": [
             {
               "text": "target",
@@ -223,8 +223,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],

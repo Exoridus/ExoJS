@@ -109,7 +109,8 @@ export interface HasBoundingBox {
    *
    * Pass `out` to write into a rectangle you own - every implementer honours
    * it, so this form is always safe to retain and never allocates. Without
-   * `out`, the {@link ShapeLike} shapes return a **fresh** rectangle, while a
+   * `out`, the math shape values ({@link Rectangle}, {@link Circle},
+   * {@link Polygon}, ...) return a **fresh** rectangle, while a
    * node or view that maintains a cached box (see {@link SceneNode.getBounds})
    * returns that cached instance, which the next invalidation overwrites.
    */

@@ -1,4 +1,4 @@
-import type { AabbLike } from '#math/DynamicAabbTree';
+import type { AabbLike } from '#math/AabbLike';
 import { DynamicAabbTree } from '#math/DynamicAabbTree';
 import { Random } from '#math/Random';
 

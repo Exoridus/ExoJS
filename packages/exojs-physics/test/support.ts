@@ -1,15 +1,17 @@
 // Shared test helpers (not a *.test.ts file, so it is not collected as a suite).
+import type { PointLike } from '@codexo/exojs';
+
 import { Collider, type ColliderOptions } from '../src/Collider';
 import { PhysicsBody } from '../src/PhysicsBody';
 import { type PhysicsWorld } from '../src/PhysicsWorld';
 import type { AnyShape } from '../src/shapes/AnyShape';
-import type { BodyType, VectorLike } from '../src/types';
+import type { BodyType } from '../src/types';
 
 /** Create a body with one collider at `position`/`angle`, returning the collider. */
 export const colliderAt = (
   world: PhysicsWorld,
   shape: AnyShape,
-  position: VectorLike,
+  position: Readonly<PointLike>,
   angle = 0,
   type: BodyType = 'static',
   options: Partial<ColliderOptions> = {},

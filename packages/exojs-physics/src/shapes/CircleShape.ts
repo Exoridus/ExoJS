@@ -1,3 +1,4 @@
+import type { ShapeMassProperties } from './Shape';
 import { Shape } from './Shape';
 
 /**
@@ -8,10 +9,7 @@ export class CircleShape extends Shape {
   public readonly type = 'circle' as const;
   public readonly radius: number;
   public readonly boundingRadius: number;
-  public readonly area: number;
-  public readonly centroidX = 0;
-  public readonly centroidY = 0;
-  public readonly unitInertia: number;
+  public readonly massProperties: ShapeMassProperties;
 
   public constructor(radius: number) {
     super();
@@ -20,11 +18,17 @@ export class CircleShape extends Shape {
       throw new RangeError(`CircleShape: radius must be a positive finite number, received ${radius}.`);
     }
 
+    const area = Math.PI * radius * radius;
+
     this.radius = radius;
     this.boundingRadius = radius;
-    this.area = Math.PI * radius * radius;
-    // Second moment of area of a disc about its centre: ∫ r² dA = (π/2) R⁴.
-    this.unitInertia = 0.5 * this.area * radius * radius;
+    this.massProperties = Object.freeze({
+      area,
+      centroidX: 0,
+      centroidY: 0,
+      // Second moment of area of a disc about its centre: ∫ r² dA = (π/2) R⁴.
+      unitInertia: 0.5 * area * radius * radius,
+    });
 
     Object.freeze(this);
   }

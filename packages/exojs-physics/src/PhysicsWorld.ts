@@ -1,7 +1,6 @@
-import type { SceneNode, Time } from '@codexo/exojs';
+import type { AabbLike, PointLike, SceneNode, Time } from '@codexo/exojs';
 import { Signal, Vector } from '@codexo/exojs';
 
-import type { Aabb } from './Aabb';
 import { aabbOverlap, createAabb } from './Aabb';
 import { NativePhysicsBackend } from './backend/NativePhysicsBackend';
 import type { PhysicsBackend } from './backend/PhysicsBackend';
@@ -18,7 +17,7 @@ import type { QueryFilter, RayHit } from './query/QueryEngine';
 import { QueryEngine } from './query/QueryEngine';
 import type { AnyShape } from './shapes/AnyShape';
 import { TimeStepper } from './TimeStepper';
-import type { BodyType, CollisionFilter, VectorLike } from './types';
+import type { BodyType, CollisionFilter } from './types';
 import { shouldCollide } from './types';
 
 /**
@@ -48,7 +47,7 @@ const isMovingBoundary = (body: PhysicsBody): boolean =>
  * real {@link SceneNode}s expose `getWorldTransform()`, test doubles that omit
  * it fall back to `(0, 0)` (the previous, surprising default).
  */
-function worldPositionOf(node: SceneNode): VectorLike {
+function worldPositionOf(node: SceneNode): Readonly<PointLike> {
   const asNode = node as Partial<SceneNode>;
 
   if (typeof asNode.getWorldTransform === 'function') {
@@ -83,7 +82,7 @@ function worldAngleOf(node: SceneNode): number {
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {
   /** Gravity in px/s² (+Y down). Integrated each sub-step. Default `(0, 0)`. */
-  gravity?: VectorLike;
+  gravity?: Readonly<PointLike>;
   /** Fixed timestep in seconds. Default `1 / 60`. */
   fixedDelta?: number;
   /** Maximum fixed steps per `step` call (spiral-of-death guard). Default `8`. */
@@ -117,7 +116,7 @@ export interface AttachOptions {
   /** Simulation role of the created body. Default `'dynamic'`. */
   type?: BodyType;
   /** Initial world position of the body. Default the node's current WORLD position ({@link SceneNode.getWorldTransform}) at attach time. */
-  position?: VectorLike;
+  position?: Readonly<PointLike>;
   /** Initial rotation (radians) of the body. Default the node's current WORLD rotation at attach time. */
   angle?: number;
   /** Per-body multiplier on world gravity. Default `1`. */
@@ -127,7 +126,7 @@ export interface AttachOptions {
   /** The collider geometry. */
   shape: AnyShape;
   /** Body-local offset of the collider. Default `(0, 0)`. */
-  offset?: VectorLike;
+  offset?: Readonly<PointLike>;
   /** Body-local rotation of the collider (radians). Default `0`. */
   rotation?: number;
   /** Collider density (mass per px²). Default `1`. */
@@ -236,7 +235,7 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _ccdClampPosition = { x: 0, y: 0 };
   private readonly _ccdSweepHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
   private readonly _ccdBestHit: SweepHit = { t: 0, normalX: 0, normalY: 0 };
-  private readonly _ccdSweptAabb: Aabb = createAabb();
+  private readonly _ccdSweptAabb: AabbLike = createAabb();
   /** Pooled result buffer for the CCD pass's broad-phase query (refilled per bullet collider). */
   private readonly _ccdCandidates: Collider[] = [];
 
@@ -610,32 +609,32 @@ export class PhysicsWorld implements BodyOwner {
   // ── queries ────────────────────────────────────────────────────────────
 
   /** Colliders containing `point`. Fresh array. */
-  public queryPoint(point: VectorLike, filter?: QueryFilter): Collider[] {
+  public queryPoint(point: Readonly<PointLike>, filter?: QueryFilter): Collider[] {
     return this._query.queryPoint(point, filter);
   }
 
   /** Colliders whose AABB overlaps `bounds`. Writes into `out` (cleared) if given. */
-  public queryAabb(bounds: Aabb, filter?: QueryFilter, out?: Collider[]): Collider[] {
+  public queryAabb(bounds: AabbLike, filter?: QueryFilter, out?: Collider[]): Collider[] {
     return this._query.queryAabb(bounds, filter, out);
   }
 
   /** Invoke `callback` for each collider whose AABB overlaps `bounds`. Allocation-free. */
-  public forEachAabbHit(bounds: Aabb, filter: QueryFilter | undefined, callback: (collider: Collider) => void): void {
+  public forEachAabbHit(bounds: AabbLike, filter: QueryFilter | undefined, callback: (collider: Collider) => void): void {
     this._query.forEachAabbHit(bounds, filter, callback);
   }
 
   /** Nearest collider hit by the ray, or `null`. */
-  public rayCast(origin: VectorLike, direction: VectorLike, filter?: QueryFilter, maxDistance?: number): RayHit | null {
+  public rayCast(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, maxDistance?: number): RayHit | null {
     return this._query.rayCast(origin, direction, filter, maxDistance);
   }
 
   /** All collider hits along the ray, sorted by distance. Writes into `out` (cleared) if given. */
-  public rayCastAll(origin: VectorLike, direction: VectorLike, filter?: QueryFilter, out?: RayHit[], maxDistance?: number): RayHit[] {
+  public rayCastAll(origin: Readonly<PointLike>, direction: Readonly<PointLike>, filter?: QueryFilter, out?: RayHit[], maxDistance?: number): RayHit[] {
     return this._query.rayCastAll(origin, direction, filter, out, maxDistance);
   }
 
   /** Colliders overlapping `shape` placed at `position`/`angle`. Fresh array. */
-  public overlapShape(shape: AnyShape, position: VectorLike, filter?: QueryFilter, angle?: number): Collider[] {
+  public overlapShape(shape: AnyShape, position: Readonly<PointLike>, filter?: QueryFilter, angle?: number): Collider[] {
     return this._query.overlapShape(shape, position, filter, angle);
   }
 

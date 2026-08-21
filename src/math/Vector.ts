@@ -23,7 +23,7 @@ let temp: Vector | null = null;
 
 /**
  * Concrete mutable 2D vector with full {@link AbstractVector} arithmetic and
- * {@link ShapeLike} collision support (treated as a point collider).
+ * {@link Collidable} collision support (treated as a point collider).
  *
  * `Vector.temp` provides a shared scratch instance for intermediate
  * calculations - never store the reference across frames. `Vector.zero` and

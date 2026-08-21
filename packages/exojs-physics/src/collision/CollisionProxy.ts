@@ -1,4 +1,5 @@
-import type { Mutable2D } from '../math';
+import type { PointLike } from '@codexo/exojs';
+
 import type { AnyShape } from '../shapes/AnyShape';
 
 /**
@@ -9,7 +10,7 @@ import type { AnyShape } from '../shapes/AnyShape';
  */
 export interface CollisionProxy {
   readonly shape: AnyShape;
-  readonly worldCenter: Readonly<Mutable2D>;
+  readonly worldCenter: Readonly<PointLike>;
   readonly worldVertices: readonly number[];
   readonly worldNormals: readonly number[];
 }

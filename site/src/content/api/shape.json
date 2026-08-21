@@ -1,16 +1,16 @@
 {
   "title": "Shape",
-  "description": "Immutable local-space collision geometry. A `Shape` carries no transform - a Collider positions it in a body. Shapes also expose the area-based mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive mass and rotational inertia from a density; these are computed once at construction and frozen. `unitInertia` is the second moment of area about the shape's own centroid (∫ r² dA). Multiplying by density yields the rotational inertia contribution of the shape about its centroid.",
+  "description": "Immutable local-space collision geometry. A `Shape` carries no transform - a Collider positions it in a body. Having an interior is a capability, not a given: solid shapes expose massProperties, while boundary geometry (a segment, a chain of edges) reports `null` and contributes nothing to the owning body's mass. Read the property rather than assuming an area exists.",
   "symbol": "Shape",
   "kind": "class",
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 4,
   "counts": {
     "constructors": 1,
     "methods": 0,
-    "properties": 6,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Immutable local-space collision geometry. A `Shape` carries no transform - a Collider positions it in a body. Shapes also expose the area-based mass properties (`area`, `centroid`, `unitInertia`) the body uses to derive mass and rotational inertia from a density; these are computed once at construction and frozen.",
-        "`unitInertia` is the second moment of area about the shape's own centroid (∫ r² dA). Multiplying by density yields the rotational inertia contribution of the shape about its centroid."
+        "Immutable local-space collision geometry. A `Shape` carries no transform - a Collider positions it in a body.",
+        "Having an interior is a capability, not a given: solid shapes expose massProperties, while boundary geometry (a segment, a chain of edges) reports `null` and contributes nothing to the owning body's mass. Read the property rather than assuming an area exists."
       ],
       "importLine": "import { Shape } from '@codexo/exojs-physics'",
       "sourceLink": null
@@ -68,27 +68,6 @@
       "title": "Properties",
       "members": [
         {
-          "name": "area",
-          "signature": "area: number",
-          "signatureTokens": [
-            {
-              "text": "area",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Surface area in px². mass = density × area."
-        },
-        {
           "name": "boundingRadius",
           "signature": "boundingRadius: number",
           "signatureTokens": [
@@ -110,11 +89,11 @@
           "description": "Radius of the smallest circle about the local origin enclosing the shape."
         },
         {
-          "name": "centroidX",
-          "signature": "centroidX: number",
+          "name": "massProperties",
+          "signature": "massProperties: ShapeMassProperties | null",
           "signatureTokens": [
             {
-              "text": "centroidX",
+              "text": "massProperties",
               "kind": "name"
             },
             {
@@ -122,34 +101,21 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "X of the area centroid in local space."
-        },
-        {
-          "name": "centroidY",
-          "signature": "centroidY: number",
-          "signatureTokens": [
-            {
-              "text": "centroidY",
-              "kind": "name"
+              "text": "ShapeMassProperties",
+              "kind": "type"
             },
             {
-              "text": ": ",
+              "text": " | ",
               "kind": "punctuation"
             },
             {
-              "text": "number",
+              "text": "null",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Y of the area centroid in local space."
+          "description": "Area-based mass properties, or null for boundary geometry with no interior."
         },
         {
           "name": "type",
@@ -171,27 +137,6 @@
           "params": [],
           "returnType": null,
           "description": ""
-        },
-        {
-          "name": "unitInertia",
-          "signature": "unitInertia: number",
-          "signatureTokens": [
-            {
-              "text": "unitInertia",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia."
         }
       ],
       "paragraphs": [],

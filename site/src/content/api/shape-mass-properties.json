@@ -1,7 +1,7 @@
 {
-  "title": "Aabb",
-  "description": "",
-  "symbol": "Aabb",
+  "title": "ShapeMassProperties",
+  "description": "Area-based mass properties of a solid shape, from which a Collider's density derives the owning body's mass and rotational inertia. Computed once at shape construction and frozen.",
+  "symbol": "ShapeMassProperties",
   "kind": "interface",
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
@@ -18,8 +18,10 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [],
-      "importLine": "import { Aabb } from '@codexo/exojs-physics'",
+      "paragraphs": [
+        "Area-based mass properties of a solid shape, from which a Collider's density derives the owning body's mass and rotational inertia. Computed once at shape construction and frozen."
+      ],
+      "importLine": "import { ShapeMassProperties } from '@codexo/exojs-physics'",
       "sourceLink": null
     },
     {
@@ -27,11 +29,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "maxX",
-          "signature": "maxX: number",
+          "name": "area",
+          "signature": "area: number",
           "signatureTokens": [
             {
-              "text": "maxX",
+              "text": "area",
               "kind": "name"
             },
             {
@@ -45,14 +47,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Surface area in px². mass = density × area."
         },
         {
-          "name": "maxY",
-          "signature": "maxY: number",
+          "name": "centroidX",
+          "signature": "centroidX: number",
           "signatureTokens": [
             {
-              "text": "maxY",
+              "text": "centroidX",
               "kind": "name"
             },
             {
@@ -66,14 +68,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "X of the area centroid in local space."
         },
         {
-          "name": "minX",
-          "signature": "minX: number",
+          "name": "centroidY",
+          "signature": "centroidY: number",
           "signatureTokens": [
             {
-              "text": "minX",
+              "text": "centroidY",
               "kind": "name"
             },
             {
@@ -87,14 +89,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Y of the area centroid in local space."
         },
         {
-          "name": "minY",
-          "signature": "minY: number",
+          "name": "unitInertia",
+          "signature": "unitInertia: number",
           "signatureTokens": [
             {
-              "text": "minY",
+              "text": "unitInertia",
               "kind": "name"
             },
             {
@@ -108,7 +110,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Second moment of area about the centroid (∫ r² dA). Multiplying by density yields the shape's rotational inertia contribution about its centroid."
         }
       ],
       "paragraphs": [],
@@ -122,11 +124,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-physics/src/Aabb.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/Aabb.ts"
+        "label": "packages/exojs-physics/src/shapes/Shape.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/Shape.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-physics/src/Aabb.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/Aabb.ts"
+  "sourcePath": "packages/exojs-physics/src/shapes/Shape.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/Shape.ts"
 }

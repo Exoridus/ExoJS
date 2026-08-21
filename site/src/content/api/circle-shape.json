@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 5,
   "counts": {
     "constructors": 1,
     "methods": 0,
-    "properties": 7,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -85,27 +85,6 @@
       "title": "Properties",
       "members": [
         {
-          "name": "area",
-          "signature": "area: number",
-          "signatureTokens": [
-            {
-              "text": "area",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Surface area in px². mass = density × area."
-        },
-        {
           "name": "boundingRadius",
           "signature": "boundingRadius: number",
           "signatureTokens": [
@@ -127,11 +106,11 @@
           "description": "Radius of the smallest circle about the local origin enclosing the shape."
         },
         {
-          "name": "centroidX",
-          "signature": "centroidX: 0",
+          "name": "massProperties",
+          "signature": "massProperties: ShapeMassProperties",
           "signatureTokens": [
             {
-              "text": "centroidX",
+              "text": "massProperties",
               "kind": "name"
             },
             {
@@ -139,34 +118,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "0",
-              "kind": "keyword"
+              "text": "ShapeMassProperties",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "X of the area centroid in local space."
-        },
-        {
-          "name": "centroidY",
-          "signature": "centroidY: 0",
-          "signatureTokens": [
-            {
-              "text": "centroidY",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "0",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Y of the area centroid in local space."
+          "description": "Area-based mass properties, or null for boundary geometry with no interior."
         },
         {
           "name": "radius",
@@ -209,27 +167,6 @@
           "params": [],
           "returnType": null,
           "description": ""
-        },
-        {
-          "name": "unitInertia",
-          "signature": "unitInertia: number",
-          "signatureTokens": [
-            {
-              "text": "unitInertia",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Second moment of area (∫ r² dA) about the centroid; inertia = density × unitInertia."
         }
       ],
       "paragraphs": [],

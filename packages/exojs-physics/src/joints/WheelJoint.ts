@@ -1,6 +1,7 @@
-import { applyInverseRotation, applyInverseTransform, applyRotation, applyTransform, type Mutable2D } from '../math';
+import type { PointLike } from '@codexo/exojs';
+
+import { applyInverseRotation, applyInverseTransform, applyRotation, applyTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
-import type { VectorLike } from '../types';
 import { Joint } from './Joint';
 
 /** Construction options for a {@link WheelJoint}. */
@@ -10,9 +11,9 @@ export interface WheelJointOptions {
   /** Second body (the wheel). */
   bodyB: PhysicsBody;
   /** Shared world-space anchor at creation (the wheel hub). */
-  anchor: VectorLike;
+  anchor: Readonly<PointLike>;
   /** Suspension axis in world space at creation (normalised internally). */
-  axis: VectorLike;
+  axis: Readonly<PointLike>;
   /** Suspension spring frequency in Hz (`0` makes the axis rigid). Default `0`. */
   hertz?: number;
   /** Suspension spring damping ratio. Default `1`. */
@@ -32,7 +33,7 @@ export interface WheelJointOptions {
 }
 
 /** Reused output sink - physics steps single-threaded, so a shared scratch is safe. */
-const scratch: Mutable2D = { x: 0, y: 0 };
+const scratch: PointLike = { x: 0, y: 0 };
 
 /**
  * A wheel attached to a chassis: free to **spin** (no rotation lock) and sprung

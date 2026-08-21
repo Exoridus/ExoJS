@@ -1,3 +1,5 @@
+import type { AabbLike } from './AabbLike';
+
 const NULL_NODE = -1;
 
 interface TreeNode<T> {
@@ -12,14 +14,6 @@ interface TreeNode<T> {
   // internal node (1 + max(child heights)).
   height: number;
   payload: T | null;
-}
-
-/** Structural min/max AABB, compatible with exojs-physics' own `Aabb` interface. */
-export interface AabbLike {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
 }
 
 /**

@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "anchor",
-          "signature": "anchor?: VectorLike",
+          "signature": "anchor?: Readonly<PointLike>",
           "signatureTokens": [
             {
               "text": "anchor",
@@ -45,8 +45,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "VectorLike",
+              "text": "Readonly",
               "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
             }
           ],
           "params": [],

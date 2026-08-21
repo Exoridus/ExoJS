@@ -68,7 +68,7 @@ export interface ReadonlyRectangle extends Collidable {
 
 /**
  * Mutable axis-aligned rectangle defined by a top-left origin `(x, y)` and
- * dimensions `(width, height)`. Implements {@link ShapeLike} with full SAT
+ * dimensions `(width, height)`. Implements {@link Collidable} with full SAT
  * collision response for rectangles and polygons, and specialised algorithms
  * for circle and ellipse intersections.
  *

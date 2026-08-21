@@ -26,7 +26,7 @@ let temp: Circle | null = null;
 
 /**
  * Mutable circle shape defined by a centre position and radius. Implements
- * {@link ShapeLike} for use in the collision pipeline.
+ * {@link Collidable} for use in the collision pipeline.
  *
  * For SAT-based collision the circle is approximated as a regular polygon with
  * {@link Circle.collisionSegments} sides; normals and vertices are cached and

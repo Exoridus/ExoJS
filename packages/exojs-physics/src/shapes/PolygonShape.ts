@@ -1,4 +1,6 @@
-import type { VectorLike } from '../types';
+import type { PointLike } from '@codexo/exojs';
+
+import type { ShapeMassProperties } from './Shape';
 import { Shape } from './Shape';
 
 /** Vertices closer than this (px) are treated as coincident → degenerate. */
@@ -24,12 +26,9 @@ export class PolygonShape extends Shape {
 
   public readonly count: number;
   public readonly boundingRadius: number;
-  public readonly area: number;
-  public readonly centroidX: number;
-  public readonly centroidY: number;
-  public readonly unitInertia: number;
+  public readonly massProperties: ShapeMassProperties;
 
-  public constructor(vertices: readonly VectorLike[]) {
+  public constructor(vertices: ReadonlyArray<Readonly<PointLike>>) {
     super();
 
     if (vertices.length < 3) {
@@ -106,11 +105,13 @@ export class PolygonShape extends Shape {
     this.count = count;
     this.vertices = Object.freeze(points);
     this.normals = Object.freeze(normals);
-    this.area = area;
-    this.centroidX = cx;
-    this.centroidY = cy;
-    // ∫ r² dA about the origin, then shifted to the centroid (parallel axis).
-    this.unitInertia = inertiaOrigin / 12 - area * (cx * cx + cy * cy);
+    this.massProperties = Object.freeze({
+      area,
+      centroidX: cx,
+      centroidY: cy,
+      // ∫ r² dA about the origin, then shifted to the centroid (parallel axis).
+      unitInertia: inertiaOrigin / 12 - area * (cx * cx + cy * cy),
+    });
     this.boundingRadius = boundingRadiusOf(points);
 
     // The vertex/normal arrays are frozen; the instance itself is not, so
