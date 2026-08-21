@@ -2,6 +2,8 @@ import type { CandidatePair } from './broadphase/BroadPhase';
 import type { Collider } from './Collider';
 import { Manifold } from './collision/Manifold';
 import { collide, testOverlap } from './collision/narrowphase';
+import type { ContactModifier } from './ContactModifier';
+import { MutableContactModifierContext } from './ContactModifier';
 import type { CollisionEvent, ContactPoint, SensorEvent } from './events';
 import { sortInPlace } from './sort';
 import { shouldCollide } from './types';
@@ -17,6 +19,15 @@ export interface ContactRecord {
   readonly isSensor: boolean;
   touching: boolean;
   seen: boolean;
+  /**
+   * Per-step solver participation. Re-derived to `true` for every touching solid
+   * contact each pass, then optionally cleared by the world's `ContactModifier`.
+   */
+  enabled: boolean;
+  /** Per-step Coulomb friction, re-derived from the two colliders each pass. */
+  friction: number;
+  /** Per-step restitution, re-derived from the two colliders each pass. */
+  restitution: number;
   /** Persistent manifold (solid contacts), refreshed each pass by the narrow phase. */
   readonly manifold: Manifold;
   /** Accumulated normal impulse per contact point, carried across steps (warm-start). */
@@ -53,6 +64,7 @@ export class ContactGraph {
   // Integer pair-keys (`(a.id << 16) | b.id`, a.id < b.id guaranteed by the broad
   // phase) - cheaper than string keys on the per-step solver hot path.
   private readonly _records = new Map<number, ContactRecord>();
+  private readonly _modifierContext = new MutableContactModifierContext();
 
   /** Touching pairs currently tracked (for debug draw). */
   public get recordCount(): number {
@@ -96,6 +108,12 @@ export class ContactGraph {
         }
 
         if (!isSensor) {
+          // Per-step controls start from the collider-derived defaults every
+          // pass, so a modifier that skipped a contact last step does not leak
+          // into this one.
+          record.enabled = true;
+          record.friction = Math.sqrt(a.friction * b.friction);
+          record.restitution = Math.max(a.restitution, b.restitution);
           warmStartMatch(record);
           this.solidContacts.push(record);
         }
@@ -120,6 +138,32 @@ export class ContactGraph {
     sortInPlace(this.sensorEnter, bySensorPair);
     sortInPlace(this.sensorExit, bySensorPair);
     sortInPlace(this.solidContacts, byRecordPair);
+  }
+
+  /**
+   * Run `modifier` over every touching solid contact of this pass. Called after
+   * detection and before island building, so a contact the modifier disables
+   * neither reaches the solver nor couples its two bodies into one sleeping
+   * island. A disabled contact's warm-start cache is dropped, so re-enabling it
+   * later starts from zero instead of releasing a stale impulse.
+   */
+  public applyModifier(modifier: ContactModifier): void {
+    const context = this._modifierContext;
+
+    for (const record of this.solidContacts) {
+      context.bind(record);
+      modifier(context);
+      context.flush(record);
+
+      if (!record.enabled) {
+        record.normalImpulse[0] = 0;
+        record.normalImpulse[1] = 0;
+        record.tangentImpulse[0] = 0;
+        record.tangentImpulse[1] = 0;
+        record.pointIds[0] = 0;
+        record.pointIds[1] = 0;
+      }
+    }
   }
 
   /** Remove every record referencing `collider` (called when a collider is destroyed). */
@@ -197,6 +241,9 @@ const createRecord = (a: Collider, b: Collider, isSensor: boolean): ContactRecor
   isSensor,
   touching: false,
   seen: true,
+  enabled: true,
+  friction: 0,
+  restitution: 0,
   manifold: new Manifold(),
   normalImpulse: [0, 0],
   tangentImpulse: [0, 0],

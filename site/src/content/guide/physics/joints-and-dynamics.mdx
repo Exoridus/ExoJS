@@ -256,6 +256,83 @@ bodies; sensors never block.
 This is ideal for small, point-like projectiles (bullets, pellets), but a **large** fast body can still clip a corner because only its centre is swept. For those, raise [`subStepCount`](/ExoJS/en/api/physics-world/) (or the step rate) so each step covers less distance, or thicken the geometry it must not pass. A full swept-shape time-of-impact for large bodies is a future enhancement.
 </Callout>
 
+## Contact modifier
+
+Filters decide **whether** two colliders may touch at all; the contact modifier decides what
+a contact that already exists **does this step**. It runs once per solid contact per fixed
+step, after collision detection and before the solver, and it is where one-way platforms,
+conditional friction and per-pair material overrides live.
+
+A world has at most one modifier — it mutates simulation state, so a multi-listener signal
+would make the result depend on registration order:
+
+```ts
+import { PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+
+world.contactModifier = contact => {
+  // Ice: no friction wherever the icy collider is involved.
+  if (contact.colliderA.isSensor || contact.colliderB.isSensor) {
+    return;
+  }
+
+  contact.friction = 0;
+  contact.restitution = 0.1;
+};
+```
+
+`enabled`, `friction` and `restitution` are the three controls. Everything else on the
+contact — the two colliders, the two bodies, the A→B normal, the manifold point count and
+the deepest penetration — is read-only, and the object itself is reused for every contact,
+so read what you need inside the callback rather than storing it.
+
+The values are re-derived from the two colliders before every step (`√(fA × fB)` for
+friction, `max(rA, rB)` for restitution), so a change applies to that step only and nothing
+leaks into the next one.
+
+Setting `enabled = false` skips the contact in the solver: no impulse, no push-out. The
+contact is still geometrically touching, so `onCollisionStart`/`onCollisionEnd` keep
+describing the real geometry — the modifier changes the response, not the detection. A
+disabled contact also does **not** join its two bodies into one sleeping island, and its
+warm-start impulses are dropped, so re-enabling it starts from zero instead of releasing a
+stale impulse.
+
+That is the whole of a one-way platform. Sample the direction of travel at the start of the
+step and ignore the contact while the character is moving upward:
+
+```ts
+import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+const platform = world.add(
+  new PhysicsBody({ type: 'static', position: { x: 0, y: 300 }, colliders: [{ shape: new BoxShape(400, 10) }] }),
+);
+const player = world.add(
+  new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 100 }, colliders: [{ shape: new BoxShape(20, 40) }] }),
+);
+
+let jumpingUp = false;
+
+world.contactModifier = contact => {
+  const involvesPlatform = contact.bodyA === platform || contact.bodyB === platform;
+
+  if (involvesPlatform && jumpingUp) {
+    contact.enabled = false;
+  }
+};
+
+// In your update, before stepping the world:
+jumpingUp = player.linearVelocityY < -10;
+```
+
+<Callout type="warning" title="Sample velocity before the step, not inside the modifier">
+Reading `player.linearVelocityY` *inside* the callback looks equivalent but is not: the solver's push-out gives a resting body a hair of upward velocity, which flips the rule on and off every step and leaves the character sunk into the platform. Decide once per step from the state you already have.
+</Callout>
+
+The modifier never sees sensor overlaps — a sensor produces no contact to solve. Use
+`onSensorEnter`/`onSensorExit` for those.
+
 ## Where to go next
 
 - **API reference:** [`DistanceJoint`](/ExoJS/en/api/distance-joint/),

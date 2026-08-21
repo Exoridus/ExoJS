@@ -662,6 +662,9 @@ describe('ContactSolver internals', () => {
       isSensor: false,
       touching: true,
       seen: true,
+      enabled: true,
+      friction: 0.2,
+      restitution: 0,
       manifold: new Manifold(), // freshly constructed — pointCount stays 0
       normalImpulse: [0, 0],
       tangentImpulse: [0, 0],

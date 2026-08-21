@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 37,
+  "memberCount": 38,
   "counts": {
     "constructors": 1,
     "methods": 19,
-    "properties": 13,
+    "properties": 14,
     "events": 4
   },
   "sections": [
@@ -1861,6 +1861,35 @@
           "params": [],
           "returnType": null,
           "description": "Soft-contact stiffness in Hz."
+        },
+        {
+          "name": "contactModifier",
+          "signature": "contactModifier: ContactModifier | null",
+          "signatureTokens": [
+            {
+              "text": "contactModifier",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ContactModifier",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Runs once per solid contact per fixed step, after contact generation and before island building and the solver, so a contact it disables applies no impulse and does not couple its two bodies into one sleeping island. At most one modifier per world - it mutates simulation state, so a multi-listener signal would make the outcome depend on registration order. Set to null to remove it; the per-contact values then stay at the defaults derived from the two colliders."
         },
         {
           "name": "dampingRatio",

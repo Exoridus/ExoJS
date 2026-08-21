@@ -1,6 +1,7 @@
 import type { CandidatePair } from '../broadphase/BroadPhase';
 import type { Collider } from '../Collider';
 import type { ContactGraph } from '../ContactGraph';
+import type { ContactModifier } from '../ContactModifier';
 import type { SpatialIndex } from '../query/SpatialIndex';
 
 /**
@@ -20,6 +21,8 @@ export interface PhysicsBackend {
   readonly spatialIndex?: SpatialIndex;
   /** Run one detection pass over `colliders`, refreshing the contact graph. Once per frame (TGS reuses the manifolds across sub-steps). */
   detect(colliders: readonly Collider[]): void;
+  /** Run the world's contact modifier over this pass's solid contacts. Call between {@link detect} and island building. */
+  applyContactModifier(modifier: ContactModifier): void;
   /** Build the per-frame contact constraints from the solid contacts. `h` is the sub-step duration; the soft factors derive from it plus `contactHertz`/`dampingRatio`. Call once per frame after {@link detect}. */
   prepareSolve(h: number, contactHertz: number, dampingRatio: number): void;
   /** Re-apply the cached warm-start impulses to the contacting bodies (first sub-step only). */
