@@ -109,6 +109,22 @@ export class BindingRegistry {
     }
   }
 
+  /**
+   * Like {@link sync}, but places each node `alpha` of the way from its body's
+   * previous fixed state to its current one - see
+   * {@link PhysicsBinding.syncInterpolated}. Same destroyed-node pruning.
+   */
+  public syncInterpolated(alpha: number): void {
+    for (const [body, binding] of this._bindings) {
+      if (binding.node.destroyed) {
+        this._bindings.delete(body);
+        continue;
+      }
+
+      binding.syncInterpolated(alpha);
+    }
+  }
+
   /** `true` when at least one binding exists. */
   public get size(): number {
     return this._bindings.size;

@@ -234,6 +234,59 @@ sprite.setPosition(body.x, body.y);
 sprite.setRotation(MathUtils.radiansToDegrees(body.angle));
 ```
 
+## Smoothing motion between fixed steps
+
+Physics runs at a fixed rate; the screen does not. At 60 Hz physics on a 144 Hz
+display most frames show the same fixed state twice, then jump — visible judder on
+anything that moves fast. The fix is not a faster simulation but **interpolation**:
+draw the body somewhere between the last two fixed states, using the fraction of a
+step the frame landed on.
+
+Every body brackets its most recent fixed step with `previousX`/`previousY`/
+`previousAngle` and `x`/`y`/`angle`. Turn on `interpolation` and bindings place the
+node between them instead of snapping to the latest one:
+
+```ts
+import { CircleShape, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({
+  gravity: { x: 0, y: 1000 },
+  interpolation: true,
+});
+```
+
+That is enough when you drive the world yourself with `world.step(delta)` — the
+world owns the accumulator, so it already knows the leftover fraction.
+
+A world registered as a **system** is different: the engine's scheduler owns the
+fixed-step accumulator, and `fixedUpdate` bypasses the world's own. Point the world
+at the host's fraction:
+
+```ts
+import { Application, SystemOrder } from '@codexo/exojs';
+import { PhysicsWorld } from '@codexo/exojs-physics';
+
+const app = new Application({ fixedTimeStep: 1 / 60 });
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+
+app.systems.add(world, { order: SystemOrder.Physics });
+
+world.interpolation = true;
+world.frameAlphaSource = () => app.frameAlpha;
+```
+
+<Callout type="warning" title="A system-driven world needs frameAlphaSource">
+Without it the world falls back to its own accumulator, which `fixedUpdate` never advances — the factor stays `0` and every bound node renders a full fixed step behind. There is deliberately no second clock inside physics to paper over this: two accumulators would drift apart the moment the host clamps or drops a step.
+</Callout>
+
+Interpolation is **presentation only**. Nothing written onto a node is read back, the
+simulation is bit-identical either way, and `body.x`/`body.y` remain the authoritative
+fixed-step values. The trade is latency: a bound node renders up to one fixed step
+behind the newest state, which is what makes the motion continuous.
+
+A teleport is not motion, so `setTransform()` collapses the pair — the node appears at
+the destination instead of sweeping across the jump.
+
 ## Worked example: a ball drops onto a floor
 
 Putting it together — a static floor, a dynamic ball bound to a sprite, stepped from

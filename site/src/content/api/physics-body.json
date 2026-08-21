@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 39,
+  "memberCount": 42,
   "counts": {
     "constructors": 1,
     "methods": 9,
-    "properties": 29,
+    "properties": 32,
     "events": 0
   },
   "sections": [
@@ -1110,6 +1110,69 @@
           "params": [],
           "returnType": null,
           "description": "A fresh Vector copy of the body's world position."
+        },
+        {
+          "name": "previousAngle",
+          "signature": "previousAngle: number",
+          "signatureTokens": [
+            {
+              "text": "previousAngle",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rotation in radians at the start of the most recent fixed step; see previousX. Body angles are continuous and unbounded, never wrapped to a range, so this and angle can be blended with a plain lerp."
+        },
+        {
+          "name": "previousX",
+          "signature": "previousX: number",
+          "signatureTokens": [
+            {
+              "text": "previousX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World X at the start of the most recent fixed step. With x it brackets the last step, which is what an interpolating presentation blends between; a teleport collapses it onto x. Never read by the solver."
+        },
+        {
+          "name": "previousY",
+          "signature": "previousY: number",
+          "signatureTokens": [
+            {
+              "text": "previousY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World Y at the start of the most recent fixed step; see previousX."
         },
         {
           "name": "transform",

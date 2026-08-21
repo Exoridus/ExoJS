@@ -116,7 +116,14 @@ export class PhysicsBody {
   private _id = -1;
   private _owner: BodyOwner | null = null;
   private _attached = false;
+
   private readonly _transform: Transform;
+  // Transform at the START of the most recent fixed step. Presentation only:
+  // the solver never reads it, and it is captured before the step writes its
+  // delta so a teleport can collapse it onto the current state.
+  private _previousX: number;
+  private _previousY: number;
+  private _previousAngle: number;
   private readonly _colliders: Collider[] = [];
   private _comX = 0;
   private _comY = 0;
@@ -126,6 +133,9 @@ export class PhysicsBody {
   public constructor(options: BodyOptions = {}) {
     this.type = options.type ?? 'dynamic';
     this._transform = createTransform(options.position?.x ?? 0, options.position?.y ?? 0, options.angle ?? 0);
+    this._previousX = this._transform.x;
+    this._previousY = this._transform.y;
+    this._previousAngle = this._transform.angle;
     this.linearDamping = options.linearDamping ?? 0;
     this.angularDamping = options.angularDamping ?? 0;
     this.gravityScale = options.gravityScale ?? 1;
@@ -165,6 +175,29 @@ export class PhysicsBody {
   /** Rotation in radians. */
   public get angle(): number {
     return this._transform.angle;
+  }
+
+  /**
+   * World X at the start of the most recent fixed step. With {@link x} it
+   * brackets the last step, which is what an interpolating presentation blends
+   * between; a teleport collapses it onto {@link x}. Never read by the solver.
+   */
+  public get previousX(): number {
+    return this._previousX;
+  }
+
+  /** World Y at the start of the most recent fixed step; see {@link previousX}. */
+  public get previousY(): number {
+    return this._previousY;
+  }
+
+  /**
+   * Rotation in radians at the start of the most recent fixed step; see
+   * {@link previousX}. Body angles are continuous and unbounded, never wrapped
+   * to a range, so this and {@link angle} can be blended with a plain lerp.
+   */
+  public get previousAngle(): number {
+    return this._previousAngle;
   }
 
   /** A fresh `Vector` copy of the body's world position. */
@@ -257,6 +290,12 @@ export class PhysicsBody {
     this._teleported = true;
 
     setTransform(this._transform, position.x, position.y, angle);
+
+    // A teleport is a discontinuity, not motion - collapsing the pair keeps an
+    // interpolating presentation from sweeping the node across the jump.
+    this._previousX = this._transform.x;
+    this._previousY = this._transform.y;
+    this._previousAngle = this._transform.angle;
 
     for (const collider of this._colliders) {
       collider.synchronize(this._transform);
@@ -435,6 +474,13 @@ export class PhysicsBody {
     this._forceY = 0;
     this._torque = 0;
     this._teleported = false;
+
+    // Captured before the step's delta is applied, and before the no-motion
+    // early return below - a body that did not move must report previous ===
+    // current rather than a stale pair from the last step it did move in.
+    this._previousX = this._transform.x;
+    this._previousY = this._transform.y;
+    this._previousAngle = this._transform.angle;
 
     if (this.type === 'static' || (this._deltaPosX === 0 && this._deltaPosY === 0 && this._deltaAngle === 0)) {
       this._resetDelta();

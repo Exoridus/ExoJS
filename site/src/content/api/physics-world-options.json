@@ -6,11 +6,11 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 11,
+  "memberCount": 13,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 11,
+    "properties": 13,
     "events": 0
   },
   "sections": [
@@ -162,6 +162,39 @@
           "description": "Fixed timestep in seconds. Default 1 / 60."
         },
         {
+          "name": "frameAlphaSource",
+          "signature": "frameAlphaSource?: () => number",
+          "signatureTokens": [
+            {
+              "text": "frameAlphaSource",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Where interpolated bindings read their blend factor, in [0, 1). Defaults to this world's own accumulator - correct when the world is driven with PhysicsWorld.step, which is what advances it. A world driven as a System goes through PhysicsWorld.fixedUpdate and bypasses that accumulator entirely, so the host owns the fraction: pass () => app.frameAlpha."
+        },
+        {
           "name": "gravity",
           "signature": "gravity?: Readonly<PointLike>",
           "signatureTokens": [
@@ -197,6 +230,31 @@
           "params": [],
           "returnType": null,
           "description": "Gravity in px/s² (+Y down). Integrated each sub-step. Default (0, 0)."
+        },
+        {
+          "name": "interpolation",
+          "signature": "interpolation?: boolean",
+          "signatureTokens": [
+            {
+              "text": "interpolation",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Place bound nodes between the last two fixed states instead of snapping them to the latest one, which smooths motion when the fixed rate is below the frame rate. Default false. The blend factor comes from frameAlphaSource; a world driven as a System has to supply one."
         },
         {
           "name": "maxSubSteps",
