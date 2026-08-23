@@ -110,6 +110,22 @@ export interface TileCollisionGeometry {
 }
 
 /**
+ * Per-cell collision classification for a tile layer, independent of the tiles
+ * the layer renders.
+ *
+ * Returns the class/type string for the cell, or `null` when the cell carries
+ * no collision. The string is opaque: it is the merge key for adjacent cells
+ * and reaches the consumer unchanged, exactly like the `type` of a tile
+ * collision object.
+ *
+ * A source is sampled while geometry is being built and is expected to answer
+ * identically for as long as the geometry is used. Changing what it returns
+ * does not invalidate geometry that was already built; rebuild instead.
+ * @advanced
+ */
+export type TileCellSource = (tx: number, ty: number) => string | null;
+
+/**
  * Options for {@link buildTileCollisionGeometry}.
  * @advanced
  */
@@ -117,9 +133,17 @@ export interface TileCollisionOptions {
   /**
    * Tile-coordinate region to walk. Defaults to the bounding box of the
    * layer's currently loaded chunks, so an unbounded (streamed) layer works
-   * without the caller computing anything.
+   * without the caller computing anything - or, with {@link cells} on a
+   * bounded layer, to the layer's full tile extent.
    */
   readonly region?: TileRegion;
+  /**
+   * Second occupancy source, consulted once per cell of the walked region in
+   * addition to the tiles' own collision shapes. Lets collision authored per
+   * cell rather than per tile reach the same geometry, without the layer
+   * having to render a tile there.
+   */
+  readonly cells?: TileCellSource | undefined;
   /**
    * Merge adjacent whole-cell boxes that share a `type` into larger
    * rectangles. Default `true`. With `false`, every whole-cell box becomes its
@@ -383,6 +407,46 @@ function loadedTileRegion(layer: TileLayer): TileRegion | null {
   return { x: minTx, y: minTy, width: maxTx - minTx + 1, height: maxTy - minTy + 1 };
 }
 
+/**
+ * Region a cell source spans on `layer`: the full tile extent of a bounded
+ * layer, `null` when the layer is unbounded and the caller must scope the
+ * walk itself. Chunk residency deliberately plays no part - the classification
+ * lives outside the layer, so loaded chunks cannot define its domain.
+ */
+function cellSourceRegion(layer: TileLayer): TileRegion | null {
+  if (layer.width === undefined || layer.height === undefined) {
+    return null;
+  }
+
+  return { x: 0, y: 0, width: layer.width, height: layer.height };
+}
+
+/**
+ * The region to walk: the caller's, else the extent a cell source spans, else
+ * whatever is currently resident. `null` when there is nothing to walk.
+ */
+function resolveRegion(layer: TileLayer, options: TileCollisionOptions): TileRegion | null {
+  if (options.region !== undefined) return options.region;
+
+  const fromCells = options.cells !== undefined ? cellSourceRegion(layer) : null;
+
+  return fromCells ?? loadedTileRegion(layer);
+}
+
+/** Claim every cell of `region` the source classifies, into the occupancy grid. */
+function claimSourceCells(cells: Map<string, string>, region: TileRegion, source: TileCellSource): void {
+  const endTx = region.x + region.width;
+  const endTy = region.y + region.height;
+
+  for (let ty = region.y; ty < endTy; ty++) {
+    for (let tx = region.x; tx < endTx; tx++) {
+      const type = source(tx, ty);
+
+      if (type !== null) cells.set(cellKey(tx, ty), type);
+    }
+  }
+}
+
 /** Key of a claimed cell in the occupancy grid. */
 function cellKey(tx: number, ty: number): string {
   return `${tx},${ty}`;
@@ -508,11 +572,19 @@ function mergeCells(
  * else (partial boxes, ellipses, polygons, polylines, points, rotated geometry)
  * passes through individually as a {@link TileCollisionShape}.
  *
+ * A {@link TileCollisionOptions.cells} source feeds the same occupancy grid
+ * from outside the tiles, for collision authored per cell rather than per tile.
+ * It is consulted first, so a whole-cell tile box landing on a cell the source
+ * already claimed passes through as a shape rather than overwriting it. With a
+ * cell source and no explicit region, a bounded layer walks its full tile
+ * extent - a layer that renders nothing at all still produces geometry.
+ *
  * This package has no physics dependency and builds no bodies: the result is
  * plain geometry. Turning it into colliders is a short loop in application code.
  *
  * @param layer - The layer to walk.
- * @param options - Region scoping, merge toggle, and a source-shape filter.
+ * @param options - Region scoping, merge toggle, a source-shape filter, and an
+ *                  optional per-cell occupancy source.
  * @returns Merged rectangles plus pass-through shapes; both empty when the
  *          region holds no tile carrying collision data.
  *
@@ -530,7 +602,8 @@ export function buildTileCollisionGeometry(
   layer: TileLayer,
   options: TileCollisionOptions = {},
 ): TileCollisionGeometry {
-  const region = options.region ?? loadedTileRegion(layer);
+  const cellSource = options.cells;
+  const region = resolveRegion(layer, options);
 
   if (region === null || region.width <= 0 || region.height <= 0) {
     return { rects: [], shapes: [] };
@@ -539,6 +612,8 @@ export function buildTileCollisionGeometry(
   const accept = options.accept;
   const cells = new Map<string, string>();
   const shapes: TileCollisionShape[] = [];
+
+  if (cellSource !== undefined) claimSourceCells(cells, region, cellSource);
 
   for (const { tx, ty, tile } of layer.tilesInRect(region.x, region.y, region.width, region.height)) {
     const definition = tile.tileset.getTileDefinition(tile.localTileId);

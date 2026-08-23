@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "advanced",
-  "memberCount": 3,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 3,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -106,6 +106,31 @@
           "description": "Drop source shapes before any geometry is built (e.g. by a custom property). Return true to keep a shape. Default keeps all of them."
         },
         {
+          "name": "cells",
+          "signature": "cells?: TileCellSource",
+          "signatureTokens": [
+            {
+              "text": "cells",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileCellSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Second occupancy source, consulted once per cell of the walked region in addition to the tiles' own collision shapes. Lets collision authored per cell rather than per tile reach the same geometry, without the layer having to render a tile there."
+        },
+        {
           "name": "merge",
           "signature": "merge?: boolean",
           "signatureTokens": [
@@ -153,7 +178,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Tile-coordinate region to walk. Defaults to the bounding box of the layer's currently loaded chunks, so an unbounded (streamed) layer works without the caller computing anything."
+          "description": "Tile-coordinate region to walk. Defaults to the bounding box of the layer's currently loaded chunks, so an unbounded (streamed) layer works without the caller computing anything - or, with cells on a bounded layer, to the layer's full tile extent."
         }
       ],
       "paragraphs": [],

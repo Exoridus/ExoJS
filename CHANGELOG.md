@@ -56,6 +56,28 @@ release and includes intentional breaking changes; see **Changed** and
   `@codexo/exojs-tilemap` still never imports physics and `@codexo/exojs-physics` still
   never imports tilemap; the bridge is a third package that peer-depends on both.
 
+- **Collision authored per cell reaches the same bridge.** The tilemap collision layer read
+  one source only: the collision shapes hanging off a tile's tileset definition. That is how
+  Tiled authors collision, and it is the only editor the bridge actually served. LDtk authors
+  collision as `IntGrid` — a per-cell classification that is independent of the tiles a layer
+  draws — and a collision layer built that way commonly draws nothing at all. Such a level
+  produced **zero** colliders, not partial ones: with no placed tile there is no tileset
+  definition to read and no chunk to walk.
+
+  `buildTileCollisionGeometry` now accepts a second occupancy source,
+  `cells: (tx, ty) => string | null`, feeding the same internal grid that whole-cell tile
+  boxes claim. The string is a classification, not a meaning: it is the merge key for
+  adjacent cells, so two values never fuse into one rectangle, and it is what a
+  `TileColliderStreamer` `material` resolver sees. Deciding that `Water` is a sensor stays
+  the caller's call. With a cell source and no explicit region, a bounded layer walks its
+  full tile extent, and `TileColliderStreamer` covers every chunk-sized partition of that
+  layer rather than only the resident chunks. A partition that produces nothing is cached as
+  empty, so an unrelated edit elsewhere does not re-walk the map.
+
+  `ldtkIntGridCells(layer)` returns an LDtk `IntGrid` layer in that form, classified by the
+  value's authored identifier. `@codexo/exojs-tilemap-physics` gains no knowledge of either
+  editor: it neither depends on nor names a format adapter, which is now covered by a test.
+
 - **`toConvexPolygonShapes` is public API.** Convex decomposition existed but was
   package-internal, so a caller outside the physics package could not build a collider from
   a concave outline at all. It now ships as `toConvexPolygonShapes(vertices)`, returning the

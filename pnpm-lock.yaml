@@ -304,9 +304,15 @@ importers:
       '@codexo/exojs-config':
         specifier: workspace:*
         version: link:../exojs-config
+      '@codexo/exojs-ldtk':
+        specifier: workspace:*
+        version: link:../exojs-ldtk
       '@codexo/exojs-physics':
         specifier: workspace:*
         version: link:../exojs-physics
+      '@codexo/exojs-tiled':
+        specifier: workspace:*
+        version: link:../exojs-tiled
       '@codexo/exojs-tilemap':
         specifier: workspace:*
         version: link:../exojs-tilemap

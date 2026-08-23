@@ -10,6 +10,7 @@ export { LdtkMap } from './LdtkMap';
 export type { LdtkToTileMapOptions } from './ldtkToTileMap';
 export {
   getLdtkIntGridValueAt,
+  ldtkIntGridCells,
   ldtkIntGridCsvProperty,
   ldtkIntGridValuesProperty,
   ldtkToTileMap,

@@ -19,8 +19,8 @@ npm install @codexo/exojs @codexo/exojs-tilemap @codexo/exojs-physics @codexo/ex
 ## Tile layers
 
 `TileColliderStreamer` keeps a physics world's static tile colliders in sync
-with a `TileLayer`: one static body per resident chunk, rebuilt when that chunk
-is edited, destroyed when it is evicted.
+with a `TileLayer`: one static body per chunk-sized partition of the layer,
+rebuilt when that partition is edited, destroyed when its chunk is evicted.
 
 ```ts
 import { PhysicsWorld } from '@codexo/exojs-physics';
@@ -44,6 +44,31 @@ bounded layer that is fully resident.
 
 Call `destroy()` to remove every body the bridge created. Bodies it did not
 create are untouched.
+
+## Collision authored per cell
+
+Some editors author collision per grid cell rather than per tile - LDtk's
+`IntGrid` is the common case. Pass a `cells` source and the bridge covers the
+whole bounded layer, including partitions that hold no tiles at all:
+
+```ts
+import { ldtkIntGridCells } from '@codexo/exojs-ldtk';
+
+const colliders = new TileColliderStreamer(world, collisionLayer, {
+  cells: ldtkIntGridCells(collisionLayer),
+  material: ({ type }) => (type === 'Water' ? { isSensor: true } : null),
+});
+```
+
+A cell source is a plain `(tx, ty) => string | null`, so a procedural or
+hand-rolled grid works the same way. The returned string is a classification,
+never a meaning: it is the merge key for adjacent cells and it is what the
+`material` resolver sees. Nothing in this package knows what `Solid` or `Water`
+are supposed to do.
+
+The source is sampled while a partition is built and is expected to answer
+identically for the lifetime of the bridge. Changing what it returns does not
+invalidate colliders that already exist - rebuild by recreating the bridge.
 
 ## Object layers
 

@@ -1,4 +1,10 @@
-import type { TileMapObject, TileProperties, TilePropertyValue, TileSet } from '@codexo/exojs-tilemap';
+import type {
+  TileCellSource,
+  TileMapObject,
+  TileProperties,
+  TilePropertyValue,
+  TileSet,
+} from '@codexo/exojs-tilemap';
 import { ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, TilePropertyKind } from '@codexo/exojs-tilemap';
 
 import type {
@@ -378,6 +384,50 @@ export function getLdtkIntGridValueAt(
   if (raw === undefined || raw === 0) return undefined;
 
   return parsed.values.find(v => v.value === raw);
+}
+
+/**
+ * Per-cell collision classification for a `TileLayer` converted from an LDtk
+ * `IntGrid` layer instance, or `undefined` when the layer carries no IntGrid
+ * data (not converted from an IntGrid layer instance, or unbounded).
+ *
+ * The classification is the value's LDtk-authored identifier, falling back to
+ * the raw integer as a string when the value definition declares none. Cells
+ * whose raw value is `0` (empty) classify as `null`. Distinct IntGrid values
+ * stay distinct strings: what they mean - solid, water, hazard - is the
+ * caller's to decide, and an unrecognised value is data, not an error.
+ *
+ * The result reads the layer's frozen IntGrid data, so it is stable for the
+ * lifetime of the layer and safe to hand to a consumer that samples it while
+ * building geometry.
+ *
+ * ```ts
+ * const geometry = buildTileCollisionGeometry(layer, { cells: ldtkIntGridCells(layer) });
+ * ```
+ */
+export function ldtkIntGridCells(layer: TileLayer): TileCellSource | undefined {
+  const parsed = getParsedIntGridData(layer);
+  const width = layer.width;
+
+  // The flat IntGrid CSV is indexed by row stride, which an unbounded layer
+  // has no value for; LDtk never produces one, but `layer` is typed generically.
+  if (!parsed || width === undefined) return undefined;
+
+  const identifiers = new Map<number, string>();
+
+  for (const value of parsed.values) {
+    identifiers.set(value.value, value.identifier ?? String(value.value));
+  }
+
+  return (tx, ty) => {
+    if (!layer.inBounds(tx, ty)) return null;
+
+    const raw = parsed.csv[ty * width + tx];
+
+    if (raw === undefined || raw === 0) return null;
+
+    return identifiers.get(raw) ?? String(raw);
+  };
 }
 
 // ── Helpers: ObjectLayer ──────────────────────────────────────────────────────
