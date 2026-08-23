@@ -87,9 +87,12 @@ its position or drive it later. Collider material is set per collider:
 - `friction` (default `0.2`) — Coulomb friction coefficient.
 - `restitution` (default `0`) — bounciness in `[0, 1]`.
 
-The two built-in shapes are [`BoxShape(width, height)`](/ExoJS/en/api/box-shape/) and
-[`CircleShape(radius)`](/ExoJS/en/api/circle-shape/) (there is also a general
-`PolygonShape` for convex outlines):
+Four shapes enclose an area and therefore carry mass:
+[`BoxShape(width, height)`](/ExoJS/en/api/box-shape/),
+[`CircleShape(radius)`](/ExoJS/en/api/circle-shape/),
+[`CapsuleShape(x0, y0, x1, y1, radius)`](/ExoJS/en/api/capsule-shape/) — the exact
+geometry, never a polygon approximation — and
+[`PolygonShape(points)`](/ExoJS/en/api/polygon-shape/) for a convex outline:
 
 ```ts
 import { CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
@@ -104,6 +107,49 @@ const ball = world.add(
   }),
 );
 ```
+
+### Boundary shapes for level geometry
+
+[`SegmentShape(x0, y0, x1, y1)`](/ExoJS/en/api/segment-shape/) is a single edge and
+[`ChainShape(points)`](/ExoJS/en/api/chain-shape/) a connected run of them. Both are
+**boundaries**: they have no interior, so they contribute collision only, and a
+`dynamic` body carrying nothing but boundary geometry is rejected — give it a solid
+collider too.
+
+Reach for a chain rather than a list of segments whenever the geometry is one
+connected surface. The engine owns the shared vertices, so a body sliding along it
+never snags on a seam, and the whole chain stays **one** collider: one entry in
+`world.colliders`, one `collisionStart`, one query result, however many of its edges
+are touched.
+
+```ts
+import { CapsuleShape, ChainShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1000 } });
+
+// A hillside. Drawn left to right, so it is solid from above.
+world.add(
+  new PhysicsBody({
+    type: 'static',
+    position: { x: 0, y: 0 },
+    colliders: [{ shape: new ChainShape([{ x: -400, y: 0 }, { x: 0, y: 40 }, { x: 400, y: 0 }]) }],
+  }),
+);
+
+world.add(
+  new PhysicsBody({
+    type: 'dynamic',
+    position: { x: -200, y: -100 },
+    colliders: [{ shape: new CapsuleShape(0, -12, 0, 12, 8), density: 1 }],
+  }),
+);
+```
+
+A chain is **one-sided**: the vertex order decides which side is solid, and a body
+may pass through it from behind — which is what makes it the right shape for ground
+you only ever land on. A single `SegmentShape` has no such order and blocks from both
+sides; one-way behaviour there is a contact rule, not geometry, and belongs in the
+[contact modifier](/ExoJS/en/guide/physics/joints-and-dynamics/).
 
 ## Stepping the world
 
@@ -362,7 +408,8 @@ dense clusters that would degrade a sort-and-sweep broad phase.
   and shows how to stop fast projectiles from tunnelling.
 - **API reference:** [`PhysicsWorld`](/ExoJS/en/api/physics-world/),
   [`PhysicsBody`](/ExoJS/en/api/physics-body/), [`Collider`](/ExoJS/en/api/collider/),
-  [`BoxShape`](/ExoJS/en/api/box-shape/), [`CircleShape`](/ExoJS/en/api/circle-shape/) and
-  [`PhysicsBinding`](/ExoJS/en/api/physics-binding/).
+  [`BoxShape`](/ExoJS/en/api/box-shape/), [`CircleShape`](/ExoJS/en/api/circle-shape/),
+  [`CapsuleShape`](/ExoJS/en/api/capsule-shape/), [`SegmentShape`](/ExoJS/en/api/segment-shape/),
+  [`ChainShape`](/ExoJS/en/api/chain-shape/) and [`PhysicsBinding`](/ExoJS/en/api/physics-binding/).
 - **The frame loop:** [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/)
   covers `fixedUpdate`, `update` and `draw` and the order they run in.

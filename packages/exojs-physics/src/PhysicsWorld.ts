@@ -90,9 +90,9 @@ const assertBodyKeepsItsMass = (collider: Collider): void => {
 const warnedUnsweptKinds = new Set<string>();
 
 /**
- * Dev-only: a bullet body carrying a shape the sweep has no implementation for
- * is not protected against tunnelling. Reporting it beats a silent pass-through
- * while the remaining shape casts are still being filled in.
+ * Dev-only: boundary geometry is never swept as the moving operand, so a bullet
+ * body carrying it is not protected against tunnelling on that collider.
+ * Reporting it beats a silent pass-through.
  */
 const warnUnsweptBulletShape = (collider: Collider): void => {
   const kind = collider.shape.type;
@@ -103,8 +103,9 @@ const warnUnsweptBulletShape = (collider: Collider): void => {
 
   warnedUnsweptKinds.add(kind);
   logger.warn(
-    `PhysicsWorld: a bullet body carries a '${kind}' collider, which continuous collision does not sweep yet — ` +
-      'this body can still tunnel through thin geometry. Use a circle or polygon collider for fast projectiles.',
+    `PhysicsWorld: a bullet body carries a '${kind}' collider. Boundary geometry is level structure and is only ever a ` +
+      'sweep target, never the moving operand, so this collider can still cross thin geometry within one step. ' +
+      'Give a fast body a solid collider (circle, capsule or polygon).',
     { source: 'physics' },
   );
 };
@@ -439,6 +440,16 @@ export class PhysicsWorld implements BodyOwner {
   /** Live colliders (read-only view). */
   public get colliders(): readonly Collider[] {
     return this._colliders;
+  }
+
+  /**
+   * @internal - the geometry the broad phase and the narrow phase actually hold:
+   * every authored collider, with a chain replaced by its per-edge proxies.
+   * Consumed by the debug draw layer, which visualises what the solver sees;
+   * public identity stays {@link colliders}.
+   */
+  public get detectionGeometry(): readonly Collider[] {
+    return this._detectionColliders;
   }
 
   // ── lifecycle ──────────────────────────────────────────────────────────
