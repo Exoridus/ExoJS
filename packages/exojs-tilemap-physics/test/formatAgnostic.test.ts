@@ -40,6 +40,15 @@ describe('format agnosticism', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('never resolves a format adapter from the production compile', () => {
+    // The end-to-end tests map the adapters in tsconfig.test.json on purpose.
+    // The production program must stay unable to see them at all, so a src
+    // import fails to compile rather than quietly resolving.
+    const production = readFileSync(join(PACKAGE_ROOT, 'tsconfig.json'), 'utf8');
+
+    expect(FORMAT_ADAPTERS.filter(name => production.includes(name))).toEqual([]);
+  });
+
   it('branches on no format-specific concept', () => {
     // The bridge consumes classification strings; it must never recognise one.
     const forbidden = [/\bintGrid/i, /\bldtk/i, /\btiled\b/i, /\baseprite/i];
