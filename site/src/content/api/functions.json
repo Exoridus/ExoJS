@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 38,
+  "memberCount": 39,
   "counts": {
     "constructors": 0,
-    "methods": 29,
+    "methods": 30,
     "properties": 9,
     "events": 0
   },
@@ -1623,6 +1623,65 @@
           ],
           "returnType": "number",
           "description": "Return the sign of value as -1, 0, or 1. Unlike Math.sign, returns 0 only for strict zero (not -0)."
+        },
+        {
+          "name": "triangulate",
+          "signature": "triangulate(vertices: ArrayLike<number>): Uint32Array",
+          "signatureTokens": [
+            {
+              "text": "triangulate",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "vertices",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayLike",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Uint32Array",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "vertices",
+              "type": "ArrayLike<number>",
+              "optional": false
+            }
+          ],
+          "returnType": "Uint32Array",
+          "description": "Triangulate a simple 2D polygon by ear-clipping. Input: vertices is a flat sequence of (x, y) pairs (length must be even, minimum 6 = 3 vertices). Polygon may be CW or CCW; the algorithm normalises to CCW internally. Output: a Uint32Array of indices in groups of 3 (per triangle), referencing vertex positions (the i-th vertex spans vertices[2*i], vertices[2*i + 1]). Polygons that are degenerate (all collinear), zero-area, or self-intersecting may produce incomplete output but must not throw or hang."
         }
       ],
       "paragraphs": [],
