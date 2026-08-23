@@ -269,6 +269,7 @@ export class PhysicsBody {
     if (this._attached && this._owner) {
       instance._attach(this, this._owner._allocateColliderId());
       this._recomputeMass();
+      this._assertDynamicCarriesMass();
       instance.synchronize(this._transform);
       this._owner._registerCollider(instance);
     }
@@ -550,6 +551,7 @@ export class PhysicsBody {
     }
 
     this._recomputeMass();
+    this._assertDynamicCarriesMass();
 
     for (const collider of this._colliders) {
       collider.synchronize(this._transform);
@@ -563,6 +565,23 @@ export class PhysicsBody {
   /** Internal: mark destroyed (called by the world). */
   public _markDestroyed(): void {
     this._destroyed = true;
+  }
+
+  /**
+   * A dynamic body has to carry mass. Boundary geometry (a segment, a chain)
+   * reports no mass properties, and a collider may also be given zero density,
+   * so a dynamic body can end up with none at all - which the solver cannot tell
+   * apart from a static body, since both have `invMass === 0`. Rejecting it is
+   * the difference between a clear error and a body that silently stops moving.
+   */
+  private _assertDynamicCarriesMass(): void {
+    if (this.type !== 'dynamic' || this._massReady || this._colliders.length === 0) {
+      return;
+    }
+
+    throw new Error(
+      'PhysicsBody: a dynamic body must carry at least one collider with mass — every collider it holds is either boundary geometry (a segment or chain, which has no interior) or has zero density. Add a solid collider, or make the body static or kinematic.',
+    );
   }
 
   /** Recompute mass, centre of mass and rotational inertia from the colliders. */
@@ -586,13 +605,10 @@ export class PhysicsBody {
     const point = { x: 0, y: 0 };
 
     for (const collider of this._colliders) {
-      // Read against the base `Shape` contract, not the current `AnyShape` union.
-      // Every shipped shape is solid, so the compiler proves this branch dead
-      // today; boundary geometry (segment, chain) reports no mass properties, and
-      // adding it to the union must not silently feed NaN into the mass model.
+      // Boundary geometry (a segment, later a chain) has no interior and reports
+      // no mass properties; it contributes collision only.
       const massProperties: ShapeMassProperties | null = collider.shape.massProperties;
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- guards the not-yet-shipped boundary shapes
       if (massProperties === null) {
         continue;
       }

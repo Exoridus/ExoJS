@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "AnyShape",
-          "signature": "CapsuleShape | CircleShape | PolygonShape",
+          "signature": "CapsuleShape | CircleShape | PolygonShape | SegmentShape",
           "signatureTokens": [
             {
               "text": "CapsuleShape",
@@ -50,6 +50,14 @@
             },
             {
               "text": "PolygonShape",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SegmentShape",
               "kind": "type"
             }
           ],

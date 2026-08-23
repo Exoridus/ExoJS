@@ -179,6 +179,15 @@ export class PhysicsDebugDraw extends DebugLayer {
       return;
     }
 
+    if (collider.shape.type === 'segment') {
+      const ends = collider.worldVertices;
+
+      gfx.moveTo(ends[0]!, ends[1]!);
+      gfx.lineTo(ends[2]!, ends[3]!);
+
+      return;
+    }
+
     const verts = collider.worldVertices;
     const count = collider.shape.count;
 

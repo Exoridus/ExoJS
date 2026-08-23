@@ -26,6 +26,7 @@ export { BoxShape } from './shapes/BoxShape';
 export { CapsuleShape } from './shapes/CapsuleShape';
 export { CircleShape } from './shapes/CircleShape';
 export { PolygonShape } from './shapes/PolygonShape';
+export { SegmentShape } from './shapes/SegmentShape';
 export type { ShapeMassProperties, ShapeType } from './shapes/Shape';
 export { Shape } from './shapes/Shape';
 export type { TimeStepperOptions } from './TimeStepper';
