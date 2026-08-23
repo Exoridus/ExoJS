@@ -60,6 +60,10 @@ export class SegmentShape extends Shape {
     this.normals = Object.freeze([nx, ny, -nx, -ny]);
     this.boundingRadius = Math.max(Math.hypot(x0, y0), Math.hypot(x1, y1));
 
-    Object.freeze(this);
+    // A subclass still has its own fields to write, so it freezes itself once
+    // its constructor is done.
+    if (new.target === SegmentShape) {
+      Object.freeze(this);
+    }
   }
 }

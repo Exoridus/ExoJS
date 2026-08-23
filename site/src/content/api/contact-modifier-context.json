@@ -1,6 +1,6 @@
 {
   "title": "ContactModifierContext",
-  "description": "A solid contact as the world's ContactModifier sees it: the pair that produced it, the contact normal, and the three per-step controls the modifier may change. Everything else is read-only. The object is reused for every contact and is only valid for the duration of the callback - read what you need, write the controls, do not retain it. Writing a control affects this step only; the values are re-derived from the two colliders before the modifier runs again.",
+  "description": "A solid contact as the world's ContactModifier sees it: the pair that produced it, the contact normal, and the three per-step controls the modifier may change. Everything else is read-only. The object is reused for every contact and is only valid for the duration of the callback - read what you need, write the controls, do not retain it. Writing a control affects this step only; the values are re-derived from the two colliders before the modifier runs again. A chain collider is solved per edge, so a body touching several edges of one chain reaches the modifier once per edge, each time with the same authored collider pair. Decide from the contact's own normal and penetration rather than from the pair's identity if that distinction matters.",
   "symbol": "ContactModifierContext",
   "kind": "interface",
   "subsystem": "physics",
@@ -21,7 +21,8 @@
       "paragraphs": [
         "A solid contact as the world's ContactModifier sees it: the pair that produced it, the contact normal, and the three per-step controls the modifier may change. Everything else is read-only.",
         "The object is reused for every contact and is only valid for the duration of the callback - read what you need, write the controls, do not retain it.",
-        "Writing a control affects this step only; the values are re-derived from the two colliders before the modifier runs again."
+        "Writing a control affects this step only; the values are re-derived from the two colliders before the modifier runs again.",
+        "A chain collider is solved per edge, so a body touching several edges of one chain reaches the modifier once per edge, each time with the same authored collider pair. Decide from the contact's own normal and penetration rather than from the pair's identity if that distinction matters."
       ],
       "importLine": "import { ContactModifierContext } from '@codexo/exojs-physics'",
       "sourceLink": null

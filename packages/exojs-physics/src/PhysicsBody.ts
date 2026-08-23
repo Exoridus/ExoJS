@@ -267,7 +267,7 @@ export class PhysicsBody {
     // with; `_attachToWorld` does that (and the mass/sync pass) for every held
     // collider. Once attached, mirror the world's create order exactly.
     if (this._attached && this._owner) {
-      instance._attach(this, this._owner._allocateColliderId());
+      attachWithChainEdges(instance, this, this._owner);
       this._recomputeMass();
       this._assertDynamicCarriesMass();
       instance.synchronize(this._transform);
@@ -547,7 +547,7 @@ export class PhysicsBody {
     this._attached = true;
 
     for (const collider of this._colliders) {
-      collider._attach(this, owner._allocateColliderId());
+      attachWithChainEdges(collider, this, owner);
     }
 
     this._recomputeMass();
@@ -645,3 +645,22 @@ export class PhysicsBody {
     this._massReady = mass > 0;
   }
 }
+
+/**
+ * Give a collider its id, and a chain collider's edge proxies theirs. The
+ * proxies are ids in the same space as authored colliders - the contact graph
+ * keys pairs on them - but they never appear in `body.colliders`.
+ */
+const attachWithChainEdges = (collider: Collider, body: PhysicsBody, owner: BodyOwner): void => {
+  collider._attach(body, owner._allocateColliderId());
+
+  const edges = collider.chainEdges;
+
+  if (edges === null) {
+    return;
+  }
+
+  for (const edge of edges) {
+    edge._attach(body, owner._allocateColliderId());
+  }
+};

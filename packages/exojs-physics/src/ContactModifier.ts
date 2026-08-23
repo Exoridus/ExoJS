@@ -12,6 +12,11 @@ import type { PhysicsBody } from './PhysicsBody';
  *
  * Writing a control affects this step only; the values are re-derived from the
  * two colliders before the modifier runs again.
+ *
+ * A chain collider is solved per edge, so a body touching several edges of one
+ * chain reaches the modifier once per edge, each time with the same authored
+ * collider pair. Decide from the contact's own normal and penetration rather
+ * than from the pair's identity if that distinction matters.
  */
 export interface ContactModifierContext {
   readonly colliderA: Collider;
@@ -80,10 +85,10 @@ export class MutableContactModifierContext implements ContactModifierContext {
   public bind(record: ContactRecord): void {
     const manifold = record.manifold;
 
-    this.colliderA = record.a;
-    this.colliderB = record.b;
-    this.bodyA = record.a.body;
-    this.bodyB = record.b.body;
+    this.colliderA = record.ownerA;
+    this.colliderB = record.ownerB;
+    this.bodyA = record.ownerA.body;
+    this.bodyB = record.ownerB.body;
     this.normalX = manifold.normalX;
     this.normalY = manifold.normalY;
     this.pointCount = manifold.pointCount;

@@ -15,6 +15,10 @@ export const shapeKindOrder: Readonly<Record<ShapeType, number>> = {
   capsule: 1,
   segment: 2,
   polygon: 3,
+  // A chain never reaches the narrow phase itself: a chain collider is solved
+  // through its per-edge child proxies, which are segments carrying adjacency.
+  // The slot exists so the tables stay total over `ShapeType`, and stays empty.
+  chain: 4,
 };
 
 export const shapeKindCount = Object.keys(shapeKindOrder).length;

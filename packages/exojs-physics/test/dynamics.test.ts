@@ -659,6 +659,8 @@ describe('ContactSolver internals', () => {
     const record: ContactRecord = {
       a: colliderA,
       b: colliderB,
+      ownerA: colliderA,
+      ownerB: colliderB,
       isSensor: false,
       touching: true,
       seen: true,

@@ -1,0 +1,314 @@
+{
+  "title": "ChainShape",
+  "description": "A connected boundary through a run of local-space vertices: level outlines, terrain, the ground of a side-scroller. Open (a polyline) or closed (a loop). A chain is not an array of SegmentShapes. At a shared vertex two independent segments carry two different normals, so a body sliding across the seam can snag, be launched, or receive a normal pointing into the surface. A chain owns the adjacency between its edges and uses it to suppress exactly those contacts, which is why the adjacency belongs to the engine rather than to the caller. Unlike a segment, a chain is **one-sided**: each edge collides only from the side its outward normal points to. Winding therefore decides which side is solid, following the polygon convention - a counter-clockwise run is solid on the outside (an island), a clockwise run is solid on the inside (a container). Bodies on the hollow side pass through. It has no interior, so Shape.massProperties is `null` and a `dynamic` body needs at least one mass-bearing collider alongside it. A `static` or `kinematic` body carries a chain on its own. Collinear vertices are kept. A straight run is authoring data, and dropping it would move the adjacency of the neighbouring edges.",
+  "symbol": "ChainShape",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A connected boundary through a run of local-space vertices: level outlines, terrain, the ground of a side-scroller. Open (a polyline) or closed (a loop).",
+        "A chain is not an array of SegmentShapes. At a shared vertex two independent segments carry two different normals, so a body sliding across the seam can snag, be launched, or receive a normal pointing into the surface. A chain owns the adjacency between its edges and uses it to suppress exactly those contacts, which is why the adjacency belongs to the engine rather than to the caller.",
+        "Unlike a segment, a chain is **one-sided**: each edge collides only from the side its outward normal points to. Winding therefore decides which side is solid, following the polygon convention - a counter-clockwise run is solid on the outside (an island), a clockwise run is solid on the inside (a container). Bodies on the hollow side pass through.",
+        "It has no interior, so Shape.massProperties is `null` and a `dynamic` body needs at least one mass-bearing collider alongside it. A `static` or `kinematic` body carries a chain on its own.",
+        "Collinear vertices are kept. A straight run is authoring data, and dropping it would move the adjacency of the neighbouring edges."
+      ],
+      "importLine": "import { ChainShape } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(vertices: readonly Readonly<PointLike>[], options: ChainShapeOptions): ChainShape",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "vertices",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChainShapeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ChainShape",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "vertices",
+              "type": "readonly Readonly<PointLike>[]",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ChainShapeOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ChainShape",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "boundingRadius",
+          "signature": "boundingRadius: number",
+          "signatureTokens": [
+            {
+              "text": "boundingRadius",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Radius of the smallest circle about the local origin enclosing the shape."
+        },
+        {
+          "name": "closed",
+          "signature": "closed: boolean",
+          "signatureTokens": [
+            {
+              "text": "closed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "count",
+          "signature": "count: number",
+          "signatureTokens": [
+            {
+              "text": "count",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of vertices in vertices."
+        },
+        {
+          "name": "edgeCount",
+          "signature": "edgeCount: number",
+          "signatureTokens": [
+            {
+              "text": "edgeCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of edges: count when closed, count - 1 otherwise."
+        },
+        {
+          "name": "massProperties",
+          "signature": "massProperties: null",
+          "signatureTokens": [
+            {
+              "text": "massProperties",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Always null: a boundary has no interior and therefore no mass."
+        },
+        {
+          "name": "type",
+          "signature": "type: \"chain\"",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"chain\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vertices",
+          "signature": "vertices: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "vertices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Local-space vertices, flattened, after welding coincident input."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/shapes/ChainShape.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/ChainShape.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/shapes/ChainShape.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/ChainShape.ts"
+}

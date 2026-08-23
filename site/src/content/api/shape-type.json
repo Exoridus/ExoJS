@@ -30,10 +30,18 @@
       "members": [
         {
           "name": "ShapeType",
-          "signature": "\"capsule\" | \"circle\" | \"polygon\" | \"segment\"",
+          "signature": "\"capsule\" | \"chain\" | \"circle\" | \"polygon\" | \"segment\"",
           "signatureTokens": [
             {
               "text": "\"capsule\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"chain\"",
               "kind": "keyword"
             },
             {

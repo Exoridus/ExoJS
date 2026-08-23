@@ -188,6 +188,20 @@ export class PhysicsDebugDraw extends DebugLayer {
       return;
     }
 
+    if (collider.shape.type === 'chain') {
+      // A chain keeps no world geometry of its own - its edge proxies do, and
+      // drawing them is drawing exactly what the solver sees, closing edge
+      // included.
+      for (const edge of collider.chainEdges ?? []) {
+        const ends = edge.worldVertices;
+
+        gfx.moveTo(ends[0]!, ends[1]!);
+        gfx.lineTo(ends[2]!, ends[3]!);
+      }
+
+      return;
+    }
+
     const verts = collider.worldVertices;
     const count = collider.shape.count;
 

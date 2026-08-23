@@ -1,5 +1,5 @@
 /** Discriminant for the concrete shape kinds supported in the MVP. */
-export type ShapeType = 'circle' | 'capsule' | 'segment' | 'polygon';
+export type ShapeType = 'circle' | 'capsule' | 'segment' | 'polygon' | 'chain';
 
 /**
  * Area-based mass properties of a solid shape, from which a {@link Collider}'s

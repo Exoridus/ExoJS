@@ -1,4 +1,5 @@
 import type { CapsuleShape } from './CapsuleShape';
+import type { ChainShape } from './ChainShape';
 import type { CircleShape } from './CircleShape';
 import type { PolygonShape } from './PolygonShape';
 import type { SegmentShape } from './SegmentShape';
@@ -10,4 +11,4 @@ import type { SegmentShape } from './SegmentShape';
  * needed. {@link BoxShape} is a {@link PolygonShape} subclass and carries
  * `type: 'polygon'`.
  */
-export type AnyShape = CapsuleShape | CircleShape | PolygonShape | SegmentShape;
+export type AnyShape = CapsuleShape | ChainShape | CircleShape | PolygonShape | SegmentShape;
