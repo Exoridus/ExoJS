@@ -17,6 +17,12 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **`triangulate` is exported from the core math surface.** The ear-clipping
+  triangulator already backed `MeshBuilder.polygon`, but was module-private, so anything
+  outside core that needed a triangle list for a simple polygon had to reimplement it. It
+  takes a flat `(x, y)` sequence in either winding and returns a `Uint32Array` of triangle
+  indices into it.
+
 - **Bound nodes can be drawn between fixed steps instead of snapping to the latest one.**
   Physics runs at a fixed rate and the display does not, so at 60 Hz physics on a 144 Hz
   screen most frames showed the same fixed state twice and then jumped. `PhysicsBinding`

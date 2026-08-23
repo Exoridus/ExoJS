@@ -265,5 +265,6 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "registerSerializer",
   "resetRenderStats",
   "sign",
+  "triangulate",
 ]
 `;

@@ -579,5 +579,6 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "registerSerializer: function",
   "resetRenderStats: variable",
   "sign: variable",
+  "triangulate: function",
 ]
 `;
