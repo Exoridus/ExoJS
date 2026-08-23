@@ -1,0 +1,73 @@
+{
+  "title": "TileRegionMode",
+  "description": "How a run of solid whole-cell tiles is turned into colliders. `'boxes'` keeps the merged rectangles as solid `BoxShape` colliders: the region has an interior, so point queries, overlaps and sensors behave, and a body that starts inside solid tiles is pushed out. Adjacent rectangles share an internal edge, which a body sliding across can catch on. `'outline'` traces the boundary of each solid region into closed one-sided chains. Nothing is left to catch on inside a region, which is what a side-scroller wants, but the region has no interior: queries inside it find nothing and a body spawned inside it falls through.",
+  "symbol": "TileRegionMode",
+  "kind": "type",
+  "subsystem": "tilemap-physics",
+  "importPath": "@codexo/exojs-tilemap-physics",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How a run of solid whole-cell tiles is turned into colliders.",
+        "`'boxes'` keeps the merged rectangles as solid `BoxShape` colliders: the region has an interior, so point queries, overlaps and sensors behave, and a body that starts inside solid tiles is pushed out. Adjacent rectangles share an internal edge, which a body sliding across can catch on.",
+        "`'outline'` traces the boundary of each solid region into closed one-sided chains. Nothing is left to catch on inside a region, which is what a side-scroller wants, but the region has no interior: queries inside it find nothing and a body spawned inside it falls through."
+      ],
+      "importLine": "import { TileRegionMode } from '@codexo/exojs-tilemap-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TileRegionMode",
+          "signature": "\"boxes\" | \"outline\"",
+          "signatureTokens": [
+            {
+              "text": "\"boxes\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"outline\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap-physics/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap-physics/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap-physics/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap-physics/src/types.ts"
+}

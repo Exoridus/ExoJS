@@ -1,0 +1,282 @@
+{
+  "title": "TileColliderStreamer",
+  "description": "Keeps a physics world's static tile colliders in sync with a TileLayer: one static body per resident chunk, rebuilt when that chunk changes, destroyed when it is evicted. The bridge owns every body it creates and nothing else. It observes the layer through its public revision counters, so it works with any chunk source - import('@codexo/exojs-tilemap').ChunkStreamer, a hand-rolled loader, or a fully resident bounded layer. Tick it from your update loop: ```ts const colliders = new TileColliderStreamer(world, layer); scene.systems.add({ update: () => colliders.sync() }); ``` Two consequences worth knowing before shipping a level: - Whole-cell merging never crosses a chunk boundary, so a solid run spanning two chunks is at least two rectangles. This is what makes the result independent of the order chunks were loaded in. - A dynamic body resting on a chunk that gets evicted falls. Eviction is the chunk source's decision; widen its unload radius if that matters.",
+  "symbol": "TileColliderStreamer",
+  "kind": "class",
+  "subsystem": "tilemap-physics",
+  "importPath": "@codexo/exojs-tilemap-physics",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Keeps a physics world's static tile colliders in sync with a TileLayer: one static body per resident chunk, rebuilt when that chunk changes, destroyed when it is evicted.",
+        "The bridge owns every body it creates and nothing else. It observes the layer through its public revision counters, so it works with any chunk source - import('@codexo/exojs-tilemap').ChunkStreamer, a hand-rolled loader, or a fully resident bounded layer.",
+        "Tick it from your update loop:",
+        "```ts const colliders = new TileColliderStreamer(world, layer); scene.systems.add({ update: () => colliders.sync() }); ```",
+        "Two consequences worth knowing before shipping a level:",
+        "- Whole-cell merging never crosses a chunk boundary, so a solid run spanning two chunks is at least two rectangles. This is what makes the result independent of the order chunks were loaded in. - A dynamic body resting on a chunk that gets evicted falls. Eviction is the chunk source's decision; widen its unload radius if that matters."
+      ],
+      "importLine": "import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(world: PhysicsWorld, layer: TileLayer, options: TileColliderOptions): TileColliderStreamer",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "world",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsWorld",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileColliderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileColliderStreamer",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "world",
+              "type": "PhysicsWorld",
+              "optional": false
+            },
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "TileColliderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "TileColliderStreamer",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "bodies",
+          "signature": "bodies(): IterableIterator<PhysicsBody>",
+          "signatureTokens": [
+            {
+              "text": "bodies",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "IterableIterator",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "IterableIterator<PhysicsBody>",
+          "description": "The bodies this bridge owns, in (cy, cx) chunk order - independent of the order the chunks became resident in."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Destroy every body this bridge created and stop responding to sync. Bodies it did not create are untouched. Idempotent."
+        },
+        {
+          "name": "sync",
+          "signature": "sync(): void",
+          "signatureTokens": [
+            {
+              "text": "sync",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Bring the world's tile colliders up to date with the layer: build bodies for newly resident chunks, rebuild edited ones, destroy evicted ones. Cheap to call every frame. With no change since the last call it performs no work and allocates nothing. No-op once destroyed or once the layer is destroyed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "bodyCount",
+          "signature": "bodyCount: number",
+          "signatureTokens": [
+            {
+              "text": "bodyCount",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Number of bodies currently owned by this bridge."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap-physics/src/TileColliderStreamer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap-physics/src/TileColliderStreamer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap-physics/src/TileColliderStreamer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap-physics/src/TileColliderStreamer.ts"
+}

@@ -16,6 +16,35 @@ function triArea(verts: ArrayLike<number>, a: number, b: number, c: number): num
   return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
 }
 
+/** Shoelace area of a flat point ring. */
+function polygonArea(verts: ArrayLike<number>): number {
+  const count = verts.length / 2;
+  let sum = 0;
+
+  for (let i = 0; i < count; i++) {
+    const j = (i + 1) % count;
+
+    sum += verts[i * 2] * verts[j * 2 + 1] - verts[j * 2] * verts[i * 2 + 1];
+  }
+
+  return Math.abs(sum) / 2;
+}
+
+/**
+ * Assert the triangles cover exactly the polygon's area. Winding and triangle
+ * count alone do not catch a clip across a pinched vertex: the output stays
+ * counter-clockwise and complete while covering area outside the outline.
+ */
+function expectCoversPolygon(verts: ArrayLike<number>, indices: Uint32Array): void {
+  let covered = 0;
+
+  for (let i = 0; i < indices.length; i += 3) {
+    covered += Math.abs(triArea(verts, indices[i], indices[i + 1], indices[i + 2])) / 2;
+  }
+
+  expect(covered).toBeCloseTo(polygonArea(verts), 6);
+}
+
 /** Assert every triangle in `indices` has positive (CCW) signed area. */
 function expectAllCcw(verts: ArrayLike<number>, indices: Uint32Array): void {
   for (let i = 0; i < indices.length; i += 3) {
@@ -51,6 +80,7 @@ test('quad CCW → 2 triangles, all CCW', () => {
   expect(result.length % 3).toBe(0);
   expect(result.length).toBe(6);
   expectAllCcw(verts, result);
+  expectCoversPolygon(verts, result);
 });
 
 // ---------------------------------------------------------------------------
@@ -66,6 +96,7 @@ test('quad CW (reversed) → 2 triangles, all CCW after normalisation', () => {
   expect(result.length % 3).toBe(0);
   expect(result.length).toBe(6);
   expectAllCcw(verts, result);
+  expectCoversPolygon(verts, result);
 });
 
 // ---------------------------------------------------------------------------
@@ -82,6 +113,18 @@ test('L-shape (6 verts, concave) → 4 triangles', () => {
   expect(result.length % 3).toBe(0);
   expect(result.length).toBe(12); // 4 triangles
   expectAllCcw(verts, result);
+  expectCoversPolygon(verts, result);
+});
+
+test('L-shape whose reflex vertex lies on a candidate ear diagonal still covers only its own area', () => {
+  // The reflex corner (10, 10) sits exactly on the (0, 20) → (20, 0) diagonal, so
+  // an ear test that only rejects strictly-interior vertices clips across it.
+  const verts = [0, 0, 20, 0, 20, 10, 10, 10, 10, 20, 0, 20];
+  const result = triangulate(verts);
+
+  expect(result.length).toBe(12);
+  expectAllCcw(verts, result);
+  expectCoversPolygon(verts, result);
 });
 
 // ---------------------------------------------------------------------------
@@ -108,6 +151,7 @@ test('star (10 verts) → 8 triangles, all CCW', () => {
   expect(result.length % 3).toBe(0);
   expect(result.length).toBe(24); // 8 triangles
   expectAllCcw(verts, result);
+  expectCoversPolygon(verts, result);
 });
 
 // ---------------------------------------------------------------------------
@@ -157,6 +201,7 @@ test('pentagon → 3 triangles, all CCW', () => {
   expect(result.length % 3).toBe(0);
   expect(result.length).toBe(9); // 3 triangles
   expectAllCcw(verts, result);
+  expectCoversPolygon(verts, result);
 });
 
 test('hexagon → 4 triangles, all CCW', () => {
@@ -174,6 +219,7 @@ test('hexagon → 4 triangles, all CCW', () => {
   expect(result.length % 3).toBe(0);
   expect(result.length).toBe(12); // 4 triangles
   expectAllCcw(verts, result);
+  expectCoversPolygon(verts, result);
 });
 
 // ---------------------------------------------------------------------------
@@ -203,6 +249,7 @@ test('concave arrowhead pentagon → an ear candidate spanning the reflex vertex
   expect(result.length % 3).toBe(0);
   expect(result.length).toBe(9); // 3 triangles
   expectAllCcw(verts, result);
+  expectCoversPolygon(verts, result);
 });
 
 // ---------------------------------------------------------------------------
@@ -226,6 +273,7 @@ test('irregular concave decagon (found via search) still triangulates cleanly', 
   expect(result.length % 3).toBe(0);
   expect(result.length).toBe(24); // 8 triangles
   expectAllCcw(verts, result);
+  expectCoversPolygon(verts, result);
 });
 
 // ---------------------------------------------------------------------------

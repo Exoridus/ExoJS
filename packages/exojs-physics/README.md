@@ -64,6 +64,7 @@ class GameScene extends Scene {
 | Colliders | `new Collider` + `body.addCollider` / `colliders: [...]`, density/friction/restitution, `isSensor`, filter, offset |
 | Attach | `world.attach(node, def)` — body + collider + `bind` in one call |
 | Shapes | solid: `CircleShape`, `CapsuleShape`, `PolygonShape` (convex-validated), `BoxShape`; boundary: `SegmentShape`, `ChainShape` |
+| Concave outlines | `toConvexPolygonShapes(vertices)` — one possibly-concave outline into the convex `PolygonShape`s for a single body |
 | Dynamics | fixed-step TGS-Soft solver, gravity, forces/impulses, friction/restitution, sleeping islands |
 | Joints | `DistanceJoint`, `RevoluteJoint`, `PrismaticJoint`, `WheelJoint`, `WeldJoint`, `MouseJoint` |
 | Continuous collision | `body.isBullet` — exact translational shape cast of the whole shape, not just its centre |
@@ -73,6 +74,10 @@ class GameScene extends Scene {
 | Queries | `queryPoint`, `queryAabb` (+ `out` / `forEachAabbHit`), `rayCast`, `rayCastAll`, `overlapShape` |
 | Binding | `bind(body, node)` — node tracks the body's position each step |
 | Debug | `@codexo/exojs-physics/debug` → `PhysicsDebugDraw` (shapes/AABBs/contacts/normals/centres/broad-phase/joints) |
+
+Building a level out of a tilemap? `@codexo/exojs-tilemap-physics` turns
+`@codexo/exojs-tilemap` collision geometry into static bodies and keeps them in
+sync with streamed chunks.
 
 ## Determinism & non-goals
 

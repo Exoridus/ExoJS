@@ -1,0 +1,92 @@
+{
+  "title": "TileColliderMaterialResolver",
+  "description": "Per-object collider settings, merged over the call-level defaults. Return `null` to accept the defaults unchanged. Called only while a chunk is being built or rebuilt, never during a no-change import('./TileColliderStreamer').TileColliderStreamer.sync. It is a build-time mapping, not a live rule: changing what the resolver would return has no effect until the layer itself changes.",
+  "symbol": "TileColliderMaterialResolver",
+  "kind": "type",
+  "subsystem": "tilemap-physics",
+  "importPath": "@codexo/exojs-tilemap-physics",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-object collider settings, merged over the call-level defaults. Return `null` to accept the defaults unchanged.",
+        "Called only while a chunk is being built or rebuilt, never during a no-change import('./TileColliderStreamer').TileColliderStreamer.sync. It is a build-time mapping, not a live rule: changing what the resolver would return has no effect until the layer itself changes."
+      ],
+      "importLine": "import { TileColliderMaterialResolver } from '@codexo/exojs-tilemap-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TileColliderMaterialResolver",
+          "signature": "(context: TileColliderContext) => TileColliderMaterial | null",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileColliderContext",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileColliderMaterial",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap-physics/src/types.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap-physics/src/types.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap-physics/src/types.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap-physics/src/types.ts"
+}

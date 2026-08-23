@@ -1,0 +1,92 @@
+{
+  "title": "ObjectCollider",
+  "description": "One static body built from one object, paired with its source.",
+  "symbol": "ObjectCollider",
+  "kind": "interface",
+  "subsystem": "tilemap-physics",
+  "importPath": "@codexo/exojs-tilemap-physics",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One static body built from one object, paired with its source."
+      ],
+      "importLine": "import { ObjectCollider } from '@codexo/exojs-tilemap-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "body",
+          "signature": "body: PhysicsBody",
+          "signatureTokens": [
+            {
+              "text": "body",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsBody",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "object",
+          "signature": "object: TileMapObject",
+          "signatureTokens": [
+            {
+              "text": "object",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapObject",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap-physics/src/objectLayer.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap-physics/src/objectLayer.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap-physics/src/objectLayer.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap-physics/src/objectLayer.ts"
+}

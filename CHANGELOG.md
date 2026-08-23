@@ -17,6 +17,53 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **`@codexo/exojs-tilemap-physics` — tilemap collision geometry as physics bodies.**
+  Tile collision data was fully parsed and fully placeable, but turning it into a world a
+  player can stand on was still copy-paste: an example recipe mapped a few object kinds and
+  built one static body per object, with no lifecycle at all. A streamed map therefore kept
+  colliders for chunks that had scrolled away and had none for chunks that had just arrived.
+
+  The new package is the productised bridge. `TileColliderStreamer` owns **one static body
+  per resident chunk** and keeps them in step with the layer: chunks that load get a body,
+  edited chunks are rebuilt, evicted chunks lose theirs. It observes the layer through the
+  public revision counters, so it works with `ChunkStreamer`, a hand-rolled loader, or a
+  bounded layer that is fully resident, and `sync()` returns immediately when nothing has
+  changed. `buildObjectLayerColliders` covers object layers, which have no residency and
+  therefore no lifecycle.
+
+  Geometry maps as follows, with concave polygons and both polyline forms now handled
+  instead of skipped:
+
+  | Source                   | Collider                                                            |
+  | ------------------------ | ------------------------------------------------------------------- |
+  | Merged whole-cell region | one box per merged rectangle, or one closed chain per boundary loop |
+  | Rectangle                | `BoxShape`                                                          |
+  | Ellipse                  | `CapsuleShape` along the major axis, `CircleShape` when round       |
+  | Convex polygon           | one `PolygonShape`                                                  |
+  | Concave polygon          | several `PolygonShape`s on the same body                            |
+  | Polyline                 | `ChainShape`, closed when its endpoints coincide                    |
+  | Point                    | nothing                                                             |
+
+  `regionMode: 'outline'` traces a solid region's boundary into closed one-sided chains
+  instead of merged boxes. A body sliding across per-tile boxes catches on their shared
+  edges: measured over a 16-tile run whose cells carry two different `type` strings, a
+  sliding box was thrown 227 px/s upward and stalled from 600 px/s to 266 px/s. The traced
+  boundary of the same run is a single collider and carries the body across at exactly its
+  input speed. Boxes stay the default because a chain has no interior — queries inside it
+  find nothing and a body spawned inside falls through — while merged boxes keep the area
+  semantics most maps rely on.
+
+  `@codexo/exojs-tilemap` still never imports physics and `@codexo/exojs-physics` still
+  never imports tilemap; the bridge is a third package that peer-depends on both.
+
+- **`toConvexPolygonShapes` is public API.** Convex decomposition existed but was
+  package-internal, so a caller outside the physics package could not build a collider from
+  a concave outline at all. It now ships as `toConvexPolygonShapes(vertices)`, returning the
+  `PolygonShape`s to attach to one body. An already-convex outline yields exactly one shape,
+  so a caller that does not know whether its input is convex can route everything through
+  it. Part count and order remain explicitly non-contractual; area, centre of mass and
+  rotational inertia of the compound are preserved.
+
 - **Continuous collision now covers the whole shape set.** A bullet was only ever swept
   against circles and polygons, so a fast body crossed a capsule, a segment or a chain
   within one step exactly as if `isBullet` had never been set — the shapes most likely to
@@ -592,6 +639,21 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `unregister`, and no scene-level scope.
 
 ### Fixed
+
+- **Ear clipping no longer clips across a vertex sitting on the diagonal it introduces.**
+  `triangulate` accepted an ear whose new diagonal passed exactly through another vertex:
+  the vertex is not _strictly inside_ the ear triangle, so the containment test let it
+  through. Clipping there pinches the ring, and every later clip works on a polygon that is
+  no longer simple — silently emitting triangles that cover area **outside** the outline.
+  The symptom needed no exotic input: an axis-aligned L whose two arms are the same length
+  puts its reflex corner exactly on that diagonal, and a 20x20 L of area 300 was
+  triangulated into 400 units of coverage. Everything downstream inherited it — a filled
+  `Graphics` polygon rendered the extra area, and `decomposeToConvexParts` rejected the
+  outline outright rather than returning wrong colliders, which is why L-shaped collision
+  polygons could not be decomposed at all. A vertex on the open diagonal is now blocking;
+  vertices on the ear's other two edges stay harmless, since those are collinear points
+  along existing polygon edges. The triangulate suite now asserts that the emitted triangles
+  cover exactly the polygon's area — winding and triangle count alone did not catch this.
 
 - **The physics debug overlay draws the geometry the broad phase actually holds.** Its
   AABB, broad-phase and contact overlays all scanned `world.colliders`, which is the

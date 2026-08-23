@@ -267,6 +267,33 @@ for (const shape of definition?.collision ?? []) {
 shape's local coordinates with the cell's world position (`tx * tileWidth`, `ty * tileHeight`) to
 place it in map space.
 
+`buildTileCollisionGeometry(layer)` does that placement for a whole layer, applying each tile's
+flip/rotation transform plus the tileset and layer offsets and merging adjacent whole-cell boxes
+into as few rectangles as it can. It returns plain geometry — this package has no physics
+dependency.
+
+To go straight to colliders, `@codexo/exojs-tilemap-physics` builds and streams static bodies from
+that geometry:
+
+```ts
+import { PhysicsWorld } from '@codexo/exojs-physics';
+import type { TileLayer } from '@codexo/exojs-tilemap';
+import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+
+declare const ground: TileLayer;
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 } });
+const colliders = new TileColliderStreamer(world, ground);
+
+// Tick this from your update loop.
+colliders.sync();
+```
+
+It owns one static body per resident chunk and keeps them in step with the layer, so a streamed map
+gains and loses collision along with its chunks. See
+[Physics basics](/ExoJS/en/guide/physics/physics-basics/) for the mapping table and the two region
+modes.
+
 ## Base64 and compressed tile data
 
 Tiled can write a tile layer's `data` as a plain CSV array, or as a base64 string that's

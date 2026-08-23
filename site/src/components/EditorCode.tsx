@@ -532,6 +532,7 @@ const EXTENSION_PACKAGES: ReadonlyArray<{ baseUrl: string; packageName: string }
     { baseUrl: 'vendor/exojs-tiled/', packageName: '@codexo/exojs-tiled' },
     { baseUrl: 'vendor/exojs-ldtk/', packageName: '@codexo/exojs-ldtk' },
     { baseUrl: 'vendor/exojs-physics/', packageName: '@codexo/exojs-physics' },
+    { baseUrl: 'vendor/exojs-tilemap-physics/', packageName: '@codexo/exojs-tilemap-physics' },
 ];
 
 async function loadTypingsForVersion(versionId: string): Promise<ReadonlyArray<ExtraLib>> {

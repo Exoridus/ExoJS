@@ -177,8 +177,24 @@ function pointInTriangle(px: number, py: number, ax: number, ay: number, bx: num
 }
 
 /**
+ * Returns true if point (px, py) lies on the open segment (a, b) - its endpoints
+ * excluded.
+ */
+function pointOnOpenSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): boolean {
+  if ((px - ax) * (by - ay) - (py - ay) * (bx - ax) !== 0) {
+    return false;
+  }
+
+  const withinX = px > Math.min(ax, bx) && px < Math.max(ax, bx);
+  const withinY = py > Math.min(ay, by) && py < Math.max(ay, by);
+
+  return withinX || withinY;
+}
+
+/**
  * Returns true if vertex v is an ear: the triangle (previousVertexIndex, v, nextVertexIndex) contains
- * no other polygon vertex strictly inside it.
+ * no other polygon vertex strictly inside it, and no other vertex sits on the
+ * diagonal the clip would introduce.
  */
 function isEar(vertices: ArrayLike<number>, _prev: Uint32Array, next: Uint32Array, previousVertexIndex: number, v: number, nextVertexIndex: number): boolean {
   // The three indices are valid node indices; vertices holds 2n entries.
@@ -200,7 +216,12 @@ function isEar(vertices: ArrayLike<number>, _prev: Uint32Array, next: Uint32Arra
       const px = vertices[node * 2]!;
       const py = vertices[node * 2 + 1]!;
 
-      if (pointInTriangle(px, py, ax, ay, bx, by, cx, cy)) {
+      // A vertex exactly on the prev → next diagonal is not "inside" the ear, but
+      // clipping across it pinches the polygon at that vertex and every later
+      // clip then works on a non-simple ring - which silently produces triangles
+      // outside the outline. Vertices on the other two edges are collinear
+      // points along existing polygon edges and stay harmless.
+      if (pointInTriangle(px, py, ax, ay, bx, by, cx, cy) || pointOnOpenSegment(px, py, ax, ay, cx, cy)) {
         return false;
       }
     }
