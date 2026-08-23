@@ -9,7 +9,17 @@ import type { CollisionFilter } from './types';
 import { resolveFilter } from './types';
 
 /** Number of world-space vertices a shape kind caches on its collider. */
-const worldVertexCount = (shape: AnyShape): number => (shape.type === 'polygon' ? shape.count : 0);
+const worldVertexCount = (shape: AnyShape): number => {
+  switch (shape.type) {
+    case 'polygon':
+      return shape.count;
+    case 'capsule':
+      // The spine endpoints; a capsule is a two-vertex ring plus a radius.
+      return 2;
+    case 'circle':
+      return 0;
+  }
+};
 
 /** Construction options for a collider. */
 export interface ColliderOptions {
@@ -166,12 +176,15 @@ export class Collider {
     switch (this.shape.type) {
       case 'circle':
         this._synchronizeCircle(world, this.shape.radius);
-
-        return;
+        break;
+      case 'capsule':
+        // A capsule is a two-vertex ring plus a radius, so it rides the polygon
+        // path and only the AABB inflation differs.
+        this._synchronizePolygon(world, this.shape.vertices, this.shape.normals, 2, this.shape.radius);
+        break;
       case 'polygon':
         this._synchronizePolygon(world, this.shape.vertices, this.shape.normals, this.shape.count, 0);
-
-        
+        break;
     }
   }
 

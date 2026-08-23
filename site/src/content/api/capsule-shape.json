@@ -1,0 +1,363 @@
+{
+  "title": "CapsuleShape",
+  "description": "A capsule: the set of points within `radius` of the segment between two local-space endpoints. Exact geometry, never a polygon approximation - the mass model and the narrow phase both work on the spine and the radius, so nothing about a capsule depends on a tessellation constant. The spine is given as two points rather than a centre, a half-height and an angle: every consumer needs the two endpoints, and the collider already carries a local rotation, so an angle on the shape would be a second and redundant orientation. A zero-length spine is rejected rather than quietly becoming a circle - use CircleShape to say that.",
+  "symbol": "CapsuleShape",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 7,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A capsule: the set of points within `radius` of the segment between two local-space endpoints. Exact geometry, never a polygon approximation - the mass model and the narrow phase both work on the spine and the radius, so nothing about a capsule depends on a tessellation constant.",
+        "The spine is given as two points rather than a centre, a half-height and an angle: every consumer needs the two endpoints, and the collider already carries a local rotation, so an angle on the shape would be a second and redundant orientation.",
+        "A zero-length spine is rejected rather than quietly becoming a circle - use CircleShape to say that."
+      ],
+      "importLine": "import { CapsuleShape } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(x0: number, y0: number, x1: number, y1: number, radius: number): CapsuleShape",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x0",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y0",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x1",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y1",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "radius",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CapsuleShape",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "x0",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y0",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "x1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "radius",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "CapsuleShape",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "boundingRadius",
+          "signature": "boundingRadius: number",
+          "signatureTokens": [
+            {
+              "text": "boundingRadius",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Radius of the smallest circle about the local origin enclosing the shape."
+        },
+        {
+          "name": "length",
+          "signature": "length: number",
+          "signatureTokens": [
+            {
+              "text": "length",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Spine length; the capsule is length + 2 × radius long overall."
+        },
+        {
+          "name": "massProperties",
+          "signature": "massProperties: ShapeMassProperties",
+          "signatureTokens": [
+            {
+              "text": "massProperties",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ShapeMassProperties",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Area-based mass properties, or null for boundary geometry with no interior."
+        },
+        {
+          "name": "normals",
+          "signature": "normals: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "normals",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Outward unit normals of the two spine sides, flattened."
+        },
+        {
+          "name": "radius",
+          "signature": "radius: number",
+          "signatureTokens": [
+            {
+              "text": "radius",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "type",
+          "signature": "type: \"capsule\"",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"capsule\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vertices",
+          "signature": "vertices: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "vertices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Local spine endpoints, flattened - the same layout a polygon uses."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/shapes/CapsuleShape.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/CapsuleShape.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/shapes/CapsuleShape.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/CapsuleShape.ts"
+}

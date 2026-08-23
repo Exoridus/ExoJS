@@ -30,8 +30,16 @@
       "members": [
         {
           "name": "ShapeType",
-          "signature": "\"circle\" | \"polygon\"",
+          "signature": "\"capsule\" | \"circle\" | \"polygon\"",
           "signatureTokens": [
+            {
+              "text": "\"capsule\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
             {
               "text": "\"circle\"",
               "kind": "keyword"

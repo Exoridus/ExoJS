@@ -4,11 +4,15 @@ import { aabbContainsPoint, aabbOverlap, createAabb } from '../Aabb';
 import type { Collider } from '../Collider';
 import type { CollisionProxy } from '../collision/CollisionProxy';
 import { testOverlap } from '../collision/narrowphase';
+import { closestPointOnSegment, pointSegmentDistanceSquared } from '../collision/segments';
 import { applyRotation, applyTransform, createTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
 import type { AnyShape } from '../shapes/AnyShape';
 import { resolveFilter, shouldCollide } from '../types';
 import type { SpatialIndex } from './SpatialIndex';
+
+/** Reused sink for the closest-point primitives; queries run sequentially. */
+const _pointScratch: PointLike = { x: 0, y: 0 };
 
 /** A category/mask/group filter applied to a query. Omitting it matches everything. */
 export type QueryFilter = Partial<{ category: number; mask: number; group: number }>;
@@ -249,6 +253,12 @@ const pointInCollider = (collider: Collider, px: number, py: number): boolean =>
     return dx * dx + dy * dy <= r * r;
   }
 
+  if (collider.shape.type === 'capsule') {
+    const spine = collider.worldVertices;
+
+    return pointSegmentDistanceSquared(px, py, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _pointScratch) <= collider.shape.radius * collider.shape.radius;
+  }
+
   const verts = collider.worldVertices;
   const normals = collider.worldNormals;
   const count = collider.shape.count;
@@ -269,11 +279,120 @@ const pointInCollider = (collider: Collider, px: number, py: number): boolean =>
 
 /** Cast the (normalised) ray against one collider, returning the entry hit or `null`. */
 const rayCastCollider = (collider: Collider, ox: number, oy: number, dx: number, dy: number, maxDistance: number): RayHit | null => {
-  if (collider.shape.type === 'circle') {
-    return rayCastCircle(collider, ox, oy, dx, dy, maxDistance);
+  switch (collider.shape.type) {
+    case 'circle':
+      return rayCastCircle(collider, ox, oy, dx, dy, maxDistance);
+    case 'capsule':
+      return rayCastCapsule(collider, collider.shape.radius, ox, oy, dx, dy, maxDistance);
+    case 'polygon':
+      return rayCastPolygon(collider, ox, oy, dx, dy, maxDistance);
+  }
+};
+
+/**
+ * Ray against a capsule: the first point along the ray whose distance to the
+ * spine equals the radius.
+ *
+ * Found by scanning for the first sample inside and bisecting the bracket that
+ * produced it, rather than by three closed-form feature tests (two caps and the
+ * side slab). The distance-to-spine function is continuous and, approaching the
+ * capsule from outside, monotone up to the first touch, so the bracket is valid;
+ * a fixed 40 bisections put the result far below the engine's contact slop. The
+ * cost is a query-path concern only - the solver never runs this.
+ */
+const rayCastCapsule = (collider: Collider, radius: number, ox: number, oy: number, dx: number, dy: number, maxDistance: number): RayHit | null => {
+  const spine = collider.worldVertices;
+  const ax = spine[0]!;
+  const ay = spine[1]!;
+  const bx = spine[2]!;
+  const by = spine[3]!;
+  const radiusSquared = radius * radius;
+
+  // An origin already inside the solid has no entry point, matching the circle
+  // and polygon paths.
+  if (pointSegmentDistanceSquared(ox, oy, ax, ay, bx, by, _pointScratch) <= radiusSquared) {
+    return null;
   }
 
-  return rayCastPolygon(collider, ox, oy, dx, dy, maxDistance);
+  // Bound the scan by where the ray crosses the collider's AABB. `maxDistance`
+  // is routinely Infinity, and the box already carries the capsule's radius, so
+  // this is both finite and tight.
+  const box = collider.aabb;
+  let near = 0;
+  let far = maxDistance;
+
+  for (let axis = 0; axis < 2; axis++) {
+    const origin = axis === 0 ? ox : oy;
+    const direction = axis === 0 ? dx : dy;
+    const lo = axis === 0 ? box.minX : box.minY;
+    const hi = axis === 0 ? box.maxX : box.maxY;
+
+    if (Math.abs(direction) < 1e-12) {
+      if (origin < lo || origin > hi) {
+        return null;
+      }
+
+      continue;
+    }
+
+    const t0 = (lo - origin) / direction;
+    const t1 = (hi - origin) / direction;
+
+    near = Math.max(near, Math.min(t0, t1));
+    far = Math.min(far, Math.max(t0, t1));
+  }
+
+  if (near > far) {
+    return null;
+  }
+
+  const steps = 32;
+  const stepLength = (far - near) / steps;
+  let entered = -1;
+
+  for (let i = 1; i <= steps; i++) {
+    const t = near + i * stepLength;
+
+    if (pointSegmentDistanceSquared(ox + dx * t, oy + dy * t, ax, ay, bx, by, _pointScratch) <= radiusSquared) {
+      entered = t;
+
+      break;
+    }
+  }
+
+  if (entered < 0) {
+    return null;
+  }
+
+  let lo = entered - stepLength;
+  let hi = entered;
+
+  for (let i = 0; i < 40; i++) {
+    const mid = (lo + hi) / 2;
+
+    if (pointSegmentDistanceSquared(ox + dx * mid, oy + dy * mid, ax, ay, bx, by, _pointScratch) <= radiusSquared) {
+      hi = mid;
+    } else {
+      lo = mid;
+    }
+  }
+
+  const hitX = ox + dx * hi;
+  const hitY = oy + dy * hi;
+
+  closestPointOnSegment(hitX, hitY, ax, ay, bx, by, _pointScratch);
+
+  const nx = hitX - _pointScratch.x;
+  const ny = hitY - _pointScratch.y;
+  const length = Math.hypot(nx, ny) || 1;
+
+  return {
+    collider,
+    body: collider.body,
+    point: { x: hitX, y: hitY },
+    normal: { x: nx / length, y: ny / length },
+    distance: hi,
+  };
 };
 
 const rayCastCircle = (collider: Collider, ox: number, oy: number, dx: number, dy: number, maxDistance: number): RayHit | null => {
@@ -382,16 +501,16 @@ const makeProxy = (shape: AnyShape, x: number, y: number, angle: number): Collis
     return { shape, worldCenter: { x, y }, worldVertices: [], worldNormals: [] };
   }
 
-  const polygon = shape;
+  const count = shape.type === 'capsule' ? 2 : shape.count;
   const transform = createTransform(x, y, angle);
   const worldVertices: number[] = [];
   const worldNormals: number[] = [];
   const out: PointLike = { x: 0, y: 0 };
 
-  for (let i = 0; i < polygon.count; i++) {
-    applyTransform(transform, polygon.vertices[i * 2]!, polygon.vertices[i * 2 + 1]!, out);
+  for (let i = 0; i < count; i++) {
+    applyTransform(transform, shape.vertices[i * 2]!, shape.vertices[i * 2 + 1]!, out);
     worldVertices.push(out.x, out.y);
-    applyRotation(transform, polygon.normals[i * 2]!, polygon.normals[i * 2 + 1]!, out);
+    applyRotation(transform, shape.normals[i * 2]!, shape.normals[i * 2 + 1]!, out);
     worldNormals.push(out.x, out.y);
   }
 
@@ -427,10 +546,12 @@ const proxyAabb = (shape: AnyShape, proxy: CollisionProxy, out: AabbLike): AabbL
     maxY = y > maxY ? y : maxY;
   }
 
-  out.minX = minX;
-  out.minY = minY;
-  out.maxX = maxX;
-  out.maxY = maxY;
+  const radius = shape.type === 'capsule' ? shape.radius : 0;
+
+  out.minX = minX - radius;
+  out.minY = minY - radius;
+  out.maxX = maxX + radius;
+  out.maxY = maxY + radius;
 
   return out;
 };

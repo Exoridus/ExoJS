@@ -17,6 +17,29 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **`CapsuleShape` — exact capsule geometry for characters and rounded bodies.** The shape
+  vocabulary was circle, polygon and box, so the standard character collider had to be
+  approximated by a box (catches on edges) or a polygon (its mass then depends on how many
+  sides you chose).
+
+  A capsule is the set of points within `radius` of a segment, and it is treated that way
+  everywhere: `new CapsuleShape(x0, y0, x1, y1, radius)` takes the two spine endpoints, and
+  the area, centroid and rotational inertia are the closed-form values for a rectangle plus
+  two end caps. Nothing about a capsule depends on a tessellation - the debug overlay draws
+  its arcs with line segments, the solver never sees them.
+
+  Internally a capsule is a two-vertex ring with a radius, which is what lets it share the
+  polygon narrow phase rather than adding a parallel one: capsule/polygon and
+  capsule/capsule run the same SAT-and-clip routine as polygon/polygon, with the radii
+  moving where "touching" begins. A capsule resting on its side therefore gets the same
+  two-point manifold a box does, instead of rocking on a single point. Circle/capsule is
+  its own one-point routine, since a circle meets a rounded surface in one place.
+
+  Point queries, AABB queries, ray casts and `overlapShape` all handle capsules. Continuous
+  collision does not sweep them yet - a bullet body carrying a capsule collider logs a
+  development-build warning and can still tunnel; the remaining shape casts follow with the
+  segment and chain shapes.
+
 - **`triangulate` is exported from the core math surface.** The ear-clipping
   triangulator already backed `MeshBuilder.polygon`, but was module-private, so anything
   outside core that needed a triangle list for a simple polygon had to reimplement it. It

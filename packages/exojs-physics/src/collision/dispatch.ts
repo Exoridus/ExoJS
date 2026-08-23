@@ -12,7 +12,8 @@ import type { ShapeType } from '../shapes/Shape';
  */
 export const shapeKindOrder: Readonly<Record<ShapeType, number>> = {
   circle: 0,
-  polygon: 1,
+  capsule: 1,
+  polygon: 2,
 };
 
 export const shapeKindCount = Object.keys(shapeKindOrder).length;
@@ -25,7 +26,15 @@ export const shapeKindCount = Object.keys(shapeKindOrder).length;
  */
 export type PairTable<T> = Array<T | undefined>;
 
-const emptyTable = <T>(): PairTable<T> => new Array<T | undefined>(shapeKindCount * shapeKindCount).fill();
+const emptyTable = <T>(): PairTable<T> => {
+  const table: PairTable<T> = [];
+
+  for (let i = 0; i < shapeKindCount * shapeKindCount; i++) {
+    table.push(undefined);
+  }
+
+  return table;
+};
 
 /** Build a table holding one entry per **unordered** pair. */
 export const symmetricTable = <T>(entries: ReadonlyArray<readonly [ShapeType, ShapeType, T]>): PairTable<T> => {
