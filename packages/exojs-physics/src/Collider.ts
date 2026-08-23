@@ -8,6 +8,9 @@ import type { AnyShape } from './shapes/AnyShape';
 import type { CollisionFilter } from './types';
 import { resolveFilter } from './types';
 
+/** Number of world-space vertices a shape kind caches on its collider. */
+const worldVertexCount = (shape: AnyShape): number => (shape.type === 'polygon' ? shape.count : 0);
+
 /** Construction options for a collider. */
 export interface ColliderOptions {
   /** The collision geometry. */
@@ -94,14 +97,10 @@ export class Collider {
     this.filter = resolveFilter(options.filter);
     this._localTransform = createTransform(this.offsetX, this.offsetY, this.localRotation);
 
-    if (this.shape.type === 'polygon') {
-      const polygon = this.shape;
-      this._worldVertices = new Array<number>(polygon.count * 2).fill(0);
-      this._worldNormals = new Array<number>(polygon.count * 2).fill(0);
-    } else {
-      this._worldVertices = [];
-      this._worldNormals = [];
-    }
+    const vertexCount = worldVertexCount(this.shape);
+
+    this._worldVertices = new Array<number>(vertexCount * 2).fill(0);
+    this._worldNormals = new Array<number>(vertexCount * 2).fill(0);
   }
 
   /** Stable id, assigned when the owning body joins a world via `world.add()`; `-1` until then. */
@@ -164,29 +163,41 @@ export class Collider {
   public synchronize(bodyTransform: Transform): void {
     const world = composeTransforms(bodyTransform, this._localTransform, this._worldTransform);
 
-    if (this.shape.type === 'circle') {
-      const radius = this.shape.radius;
+    switch (this.shape.type) {
+      case 'circle':
+        this._synchronizeCircle(world, this.shape.radius);
 
-      this._worldCenter.x = world.x;
-      this._worldCenter.y = world.y;
-      this._aabb.minX = world.x - radius;
-      this._aabb.minY = world.y - radius;
-      this._aabb.maxX = world.x + radius;
-      this._aabb.maxY = world.y + radius;
+        return;
+      case 'polygon':
+        this._synchronizePolygon(world, this.shape.vertices, this.shape.normals, this.shape.count, 0);
 
-      return;
+        
     }
+  }
 
-    const polygon = this.shape;
-    const local = polygon.vertices;
-    const normals = polygon.normals;
+  /** A circle is its transformed centre; the local vertex buffers stay unused. */
+  private _synchronizeCircle(world: Transform, radius: number): void {
+    this._worldCenter.x = world.x;
+    this._worldCenter.y = world.y;
+    this._aabb.minX = world.x - radius;
+    this._aabb.minY = world.y - radius;
+    this._aabb.maxX = world.x + radius;
+    this._aabb.maxY = world.y + radius;
+  }
+
+  /**
+   * Transform a local vertex/normal ring into the world buffers and take the
+   * AABB while doing it. `radius` inflates the box for a rounded outline (a
+   * capsule's spine); it is `0` for a plain polygon.
+   */
+  private _synchronizePolygon(world: Transform, local: readonly number[], normals: readonly number[], count: number, radius: number): void {
     const out = this._syncScratch;
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
     let maxY = -Infinity;
 
-    for (let i = 0; i < polygon.count; i++) {
+    for (let i = 0; i < count; i++) {
       applyTransform(world, local[i * 2]!, local[i * 2 + 1]!, out);
       this._worldVertices[i * 2] = out.x;
       this._worldVertices[i * 2 + 1] = out.y;
@@ -200,10 +211,10 @@ export class Collider {
       this._worldNormals[i * 2 + 1] = out.y;
     }
 
-    this._aabb.minX = minX;
-    this._aabb.minY = minY;
-    this._aabb.maxX = maxX;
-    this._aabb.maxY = maxY;
+    this._aabb.minX = minX - radius;
+    this._aabb.minY = minY - radius;
+    this._aabb.maxX = maxX + radius;
+    this._aabb.maxY = maxY + radius;
   }
 
   /** @internal - bind this collider to its body and id (called when the body joins a world). */

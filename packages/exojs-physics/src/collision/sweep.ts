@@ -2,7 +2,10 @@ import type { PointLike } from '@codexo/exojs';
 
 import type { AnyShape } from '../shapes/AnyShape';
 import { CircleShape } from '../shapes/CircleShape';
+import type { ShapeType } from '../shapes/Shape';
 import type { CollisionProxy } from './CollisionProxy';
+import type { PairTable } from './dispatch';
+import { orderedEntry, orderedTable } from './dispatch';
 import { testOverlap } from './narrowphase';
 
 /**
@@ -46,12 +49,16 @@ const _circleProxy: { shape: AnyShape; worldCenter: PointLike; worldVertices: nu
  * and the discrete solver owns them. Allocation-free.
  */
 export const sweepProxies = (moving: CollisionProxy, dx: number, dy: number, target: CollisionProxy, out: SweepHit): boolean => {
-  if (moving.shape.type === 'circle') {
-    return target.shape.type === 'circle' ? sweepCircleCircle(moving, dx, dy, target, out) : sweepCirclePolygon(moving, dx, dy, target, out);
-  }
+  const cast = orderedEntry(sweepTable, moving.shape.type, target.shape.type);
 
-  return target.shape.type === 'circle' ? sweepPolygonCircle(moving, dx, dy, target, out) : sweepPolygonPolygon(moving, dx, dy, target, out);
+  // Unlike the narrow phase, the sweep distinguishes its operands, so this table
+  // is filled for both orders. A missing entry reports no impact - the pair is
+  // not swept at all rather than swept approximately.
+  return cast === undefined ? false : cast(moving, dx, dy, target, out);
 };
+
+/** `true` when {@link sweepProxies} has an implementation for this ordered pair. */
+export const canSweep = (moving: ShapeType, target: ShapeType): boolean => orderedEntry(sweepTable, moving, target) !== undefined;
 
 // Only called after the dispatch above has matched the shape kind; the fallback
 // is unreachable but keeps the helper cast-free.
@@ -383,3 +390,13 @@ const sweptSatAxes = (
 
   return true;
 };
+
+/** One ordered `(moving, target)` shape cast. */
+type SweepPair = (moving: CollisionProxy, dx: number, dy: number, target: CollisionProxy, out: SweepHit) => boolean;
+
+const sweepTable: PairTable<SweepPair> = orderedTable<SweepPair>([
+  ['circle', 'circle', sweepCircleCircle],
+  ['circle', 'polygon', sweepCirclePolygon],
+  ['polygon', 'circle', sweepPolygonCircle],
+  ['polygon', 'polygon', sweepPolygonPolygon],
+]);

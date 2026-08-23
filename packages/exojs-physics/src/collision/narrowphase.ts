@@ -1,25 +1,41 @@
 import type { CollisionProxy } from './CollisionProxy';
+import type { PairTable } from './dispatch';
+import { needsFlip, symmetricEntry, symmetricTable } from './dispatch';
 import type { Manifold } from './Manifold';
 
 const eps = 1e-9;
 
 /**
+ * Solves one unordered shape pair. `a` is always the operand of the lower shape
+ * kind; `flip` is `true` when the caller's operands were swapped to get there,
+ * and the routine must reverse the manifold normal so it still points from the
+ * caller's `a` toward its `b`.
+ */
+type CollidePair = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold, flip: boolean) => boolean;
+
+/** Boolean form of {@link CollidePair}; no normal, so no flip to honour. */
+type OverlapPair = (a: CollisionProxy, b: CollisionProxy) => boolean;
+
+/**
  * Generate the contact manifold for `a` vs `b`, writing into `manifold` and
  * returning `true` when the colliders touch. The manifold normal is oriented
- * from `a` toward `b`. Dispatches on shape pair; polygon/circle is handled by
- * the circle/polygon routine with a `flip` so the normal stays `a → b`.
+ * from `a` toward `b`.
+ *
+ * A pair with no entry in the table is deliberately unsupported and reports no
+ * contact rather than an approximation.
  */
 export const collide = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold): boolean => {
   manifold.reset();
 
   const ta = a.shape.type;
   const tb = b.shape.type;
+  const solver = symmetricEntry(collideTable, ta, tb);
 
-  if (ta === 'circle') {
-    return tb === 'circle' ? collideCircles(a, b, manifold) : collideCirclePolygon(a, b, manifold, false);
+  if (solver === undefined) {
+    return false;
   }
 
-  return tb === 'circle' ? collideCirclePolygon(b, a, manifold, true) : collidePolygons(a, b, manifold);
+  return needsFlip(ta, tb) ? solver(b, a, manifold, true) : solver(a, b, manifold, false);
 };
 
 // radiusOf/countOf are only ever called after the `collide` dispatch has matched
@@ -28,7 +44,7 @@ export const collide = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold
 const radiusOf = (collider: CollisionProxy): number => (collider.shape.type === 'circle' ? collider.shape.radius : 0);
 const countOf = (collider: CollisionProxy): number => (collider.shape.type === 'polygon' ? collider.shape.count : 0);
 
-const collideCircles = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold): boolean => {
+const collideCircles: CollidePair = (a, b, manifold) => {
   const ca = a.worldCenter;
   const cb = b.worldCenter;
   const ra = radiusOf(a);
@@ -72,7 +88,7 @@ const collideCircles = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold
  * the circle toward the polygon; when `flip` is set (the polygon is collider A),
  * the normal is negated so it stays `a → b`.
  */
-const collideCirclePolygon = (circle: CollisionProxy, polygon: CollisionProxy, manifold: Manifold, flip: boolean): boolean => {
+const collideCirclePolygon: CollidePair = (circle, polygon, manifold, flip) => {
   const c = circle.worldCenter;
   const r = radiusOf(circle);
   const verts = polygon.worldVertices;
@@ -354,7 +370,7 @@ const encodeId = (flip: boolean, refEdge: number, incidentId: number): number =>
   (flip ? 1 << 20 : 0) | ((refEdge & 0xff) << 12) | (incidentId & 0xfff);
 
 /** Convex polygon vs convex polygon: SAT reference face + Sutherland-Hodgman clip. */
-const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold): boolean => {
+const collidePolygons: CollidePair = (a, b, manifold) => {
   const sepA = findMaxSeparation(a, b, _sepA);
 
   if (sepA.separation >= 0) {
@@ -461,29 +477,28 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
 export const testOverlap = (a: CollisionProxy, b: CollisionProxy): boolean => {
   const ta = a.shape.type;
   const tb = b.shape.type;
+  const test = symmetricEntry(overlapTable, ta, tb);
 
-  if (ta === 'circle') {
-    if (tb === 'circle') {
-      const ca = a.worldCenter;
-      const cb = b.worldCenter;
-      const rsum = radiusOf(a) + radiusOf(b);
-      const dx = cb.x - ca.x;
-      const dy = cb.y - ca.y;
-
-      return dx * dx + dy * dy <= rsum * rsum;
-    }
-
-    return circlePolygonOverlap(a, b);
+  if (test === undefined) {
+    return false;
   }
 
-  if (tb === 'circle') {
-    return circlePolygonOverlap(b, a);
-  }
-
-  return findMaxSeparation(a, b, _sepA).separation < 0 && findMaxSeparation(b, a, _sepB).separation < 0;
+  return needsFlip(ta, tb) ? test(b, a) : test(a, b);
 };
 
-const circlePolygonOverlap = (circle: CollisionProxy, polygon: CollisionProxy): boolean => {
+const circlesOverlap: OverlapPair = (a, b) => {
+  const ca = a.worldCenter;
+  const cb = b.worldCenter;
+  const rsum = radiusOf(a) + radiusOf(b);
+  const dx = cb.x - ca.x;
+  const dy = cb.y - ca.y;
+
+  return dx * dx + dy * dy <= rsum * rsum;
+};
+
+const polygonsOverlap: OverlapPair = (a, b) => findMaxSeparation(a, b, _sepA).separation < 0 && findMaxSeparation(b, a, _sepB).separation < 0;
+
+const circlePolygonOverlap: OverlapPair = (circle, polygon) => {
   const c = circle.worldCenter;
   const r = radiusOf(circle);
   const verts = polygon.worldVertices;
@@ -539,3 +554,17 @@ const circlePolygonOverlap = (circle: CollisionProxy, polygon: CollisionProxy): 
 
   return maxSep <= r;
 };
+
+// Pair tables, built once at module init. Every unordered pair the engine
+// supports appears exactly once; anything absent reports no contact.
+const collideTable: PairTable<CollidePair> = symmetricTable<CollidePair>([
+  ['circle', 'circle', collideCircles],
+  ['circle', 'polygon', collideCirclePolygon],
+  ['polygon', 'polygon', collidePolygons],
+]);
+
+const overlapTable: PairTable<OverlapPair> = symmetricTable<OverlapPair>([
+  ['circle', 'circle', circlesOverlap],
+  ['circle', 'polygon', circlePolygonOverlap],
+  ['polygon', 'polygon', polygonsOverlap],
+]);
