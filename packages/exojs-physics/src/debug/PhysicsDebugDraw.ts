@@ -7,6 +7,7 @@ import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
 import { aabbOverlap } from '../Aabb';
 import type { CandidatePair } from '../broadphase/BroadPhase';
 import type { Collider } from '../Collider';
+import { authoredCollider } from '../Collider';
 import { Manifold } from '../collision/Manifold';
 import { collide } from '../collision/narrowphase';
 import type { PhysicsWorld } from '../PhysicsWorld';
@@ -16,7 +17,7 @@ import type { BodyType } from '../types';
 export interface PhysicsDebugDrawOptions {
   /** Collider shape outlines, coloured by body type. Default `true`. */
   drawShapes?: boolean;
-  /** Collider world AABBs. Default `false`. */
+  /** World AABBs of the geometry the broad phase holds - a chain as its per-edge leaves. Default `false`. */
   drawAabb?: boolean;
   /** Contact points. Default `false`. */
   drawContacts?: boolean;
@@ -24,7 +25,7 @@ export interface PhysicsDebugDrawOptions {
   drawNormals?: boolean;
   /** Body origins (centre markers). Default `false`. */
   drawCenters?: boolean;
-  /** Broad-phase candidate links between AABB-overlapping colliders. Default `false`. */
+  /** Broad-phase candidate links between AABB-overlapping leaves - a chain links per edge. Default `false`. */
   drawBroadphase?: boolean;
   /** Tint sleeping bodies distinctly (applies to the shape outline). Default `false`. */
   drawSleeping?: boolean;
@@ -98,7 +99,9 @@ export class PhysicsDebugDraw extends DebugLayer {
     }
 
     if (options.drawAabb) {
-      for (const collider of this._world.colliders) {
+      // The solver-side geometry, so a chain shows the leaves the broad phase
+      // actually holds rather than the union box no phase ever tests.
+      for (const collider of this._world.detectionGeometry) {
         this._strokeAabb(gfx, collider);
       }
     }
@@ -284,7 +287,9 @@ export class PhysicsDebugDraw extends DebugLayer {
    * correctness - it touches no state outside this method.
    */
   private _collectPairs(): void {
-    const colliders = this._world.colliders;
+    // The solver-side geometry: a chain contributes one leaf per edge, which is
+    // both what the broad phase pairs and what the narrow phase can solve.
+    const colliders = this._world.detectionGeometry;
     const pairs = this._pairs;
 
     pairs.length = 0;
@@ -295,7 +300,7 @@ export class PhysicsDebugDraw extends DebugLayer {
       for (let j = i + 1; j < colliders.length; j++) {
         const b = colliders[j]!;
 
-        if (aabbOverlap(a.aabb, b.aabb)) {
+        if (a.body !== b.body && aabbOverlap(a.aabb, b.aabb)) {
           pairs.push(a.id < b.id ? { a, b } : { a: b, b: a });
         }
       }
@@ -322,7 +327,9 @@ export class PhysicsDebugDraw extends DebugLayer {
       const a = pair.a;
       const b = pair.b;
 
-      if (a.isSensor || b.isSensor) {
+      // Material and sensor state live on the authored collider; an edge proxy
+      // reads them from its chain.
+      if (authoredCollider(a).isSensor || authoredCollider(b).isSensor) {
         continue;
       }
 

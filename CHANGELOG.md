@@ -17,6 +17,31 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **Continuous collision now covers the whole shape set.** A bullet was only ever swept
+  against circles and polygons, so a fast body crossed a capsule, a segment or a chain
+  within one step exactly as if `isBullet` had never been set — the shapes most likely to
+  be the thin wall a projectile must not pass.
+
+  Every mass-bearing shape is now cast against every shape kind:
+
+  | Moving shape                                             | Swept against                                |
+  | -------------------------------------------------------- | -------------------------------------------- |
+  | `CircleShape`, `CapsuleShape`, `PolygonShape`/`BoxShape` | circle, capsule, polygon/box, segment, chain |
+  | `SegmentShape`, `ChainShape`                             | not swept as the moving operand              |
+
+  The cast stays exact for a translation. A pair carrying a radius is solved as one
+  configuration-space ring — the Minkowski sum of the target's core and the moving shape's
+  negated start-pose core, cast as a point inflated by both radii — so a capsule meets a
+  corner on its cap arc rather than a radius short of it, which a radius-inflated
+  separating-axis test would report. Radius-free pairs keep the existing swept SAT.
+
+  A chain is swept through its edge proxies and blocks under the same one-sided adjacency
+  rule the discrete narrow phase applies, so a bullet arriving from the hollow side passes
+  through exactly as a slow body does, and the blocking collider handed back is always the
+  authored chain. Boundary geometry as the _moving_ operand stays deliberately unswept: a
+  segment or chain is level structure, and a development build warns once per shape kind if
+  a bullet body carries one.
+
 - **`ChainShape` — connected boundary geometry that a body can slide along.** Level
   outlines, terrain and side-scroller ground are runs of connected edges, and building them
   from independent `SegmentShape`s does not work: at a shared vertex two segments carry two
@@ -567,6 +592,17 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `unregister`, and no scene-level scope.
 
 ### Fixed
+
+- **The physics debug overlay draws the geometry the broad phase actually holds.** Its
+  AABB, broad-phase and contact overlays all scanned `world.colliders`, which is the
+  authored set: a chain contributed one union box that no phase ever tests, and its
+  contacts could not be drawn at all, because an authored chain collider is not a
+  narrow-phase operand. All three now scan the solver-side geometry — a chain as its
+  per-edge leaves — so the boxes are the real leaves, a chain links per overlapping edge,
+  and contacts against a chain appear. Internal edge geometry being visible in a debug
+  overlay does not make it public: `world.colliders`, `body.colliders` and every query
+  result are unchanged. The same pass also stops drawing contacts between two colliders of
+  one body, which the simulation itself has never formed.
 
 - **Two colliders on the same body no longer collide with each other.** Neither
   the broad phase nor the contact graph excluded a pair whose colliders belong

@@ -252,8 +252,17 @@ along the surface (keeping its tangential velocity), while a bouncy one (`restit
 `1`) rebounds elastically. The swept test runs against static, kinematic **and** dynamic
 bodies; sensors never block.
 
-<Callout type="warning" title="CCD sweeps only the body's centre point">
-This is ideal for small, point-like projectiles (bullets, pellets), but a **large** fast body can still clip a corner because only its centre is swept. For those, raise [`subStepCount`](/ExoJS/en/api/physics-world/) (or the step rate) so each step covers less distance, or thicken the geometry it must not pass. A full swept-shape time-of-impact for large bodies is a future enhancement.
+The whole shape is swept, not just its centre, so a large body cannot clip a corner its
+centre line happened to miss. The cast is exact for a translation and covers every solid
+shape against every shape kind:
+
+| Moving shape | Swept against |
+|---|---|
+| `CircleShape`, `CapsuleShape`, `PolygonShape`/`BoxShape` | circle, capsule, polygon/box, segment, chain |
+| `SegmentShape`, `ChainShape` | not swept as the moving shape |
+
+<Callout type="warning" title="Boundary geometry is a target, never a bullet">
+A segment or a chain is level structure: it is what a bullet is swept *against*, and it is never swept itself. A fast **kinematic** boundary can still cross a body within one step — give anything that moves that fast a solid collider instead. The rotation of a bullet is applied before the cast, not swept through it, so a fast *spin* is still resolved by the discrete solver.
 </Callout>
 
 ## Contact modifier

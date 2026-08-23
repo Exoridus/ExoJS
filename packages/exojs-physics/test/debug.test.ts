@@ -1,8 +1,9 @@
-import type { Application } from '@codexo/exojs';
-import { describe, expect, it, vi } from 'vitest';
+import type { Application, PointLike } from '@codexo/exojs';
+import { Graphics } from '@codexo/exojs';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { PhysicsDebugDraw } from '../src/debug/PhysicsDebugDraw';
-import { BoxShape, CircleShape, DistanceJoint, PhysicsBody, PhysicsWorld } from '../src/index';
+import { BoxShape, CapsuleShape, ChainShape, CircleShape, DistanceJoint, PhysicsBody, PhysicsWorld, SegmentShape } from '../src/index';
 import { colliderAt } from './support';
 
 const fakeApp = {} as Application;
@@ -272,5 +273,121 @@ describe('PhysicsDebugDraw', () => {
       expect(() => debug.destroy()).not.toThrow();
       expect(() => debug.destroy()).not.toThrow();
     });
+  });
+});
+
+describe('PhysicsDebugDraw over the whole shape set', () => {
+  /**
+   * These count strokes rather than asserting the render did not throw: what a
+   * chain contributes to each overlay is the question, and every wrong answer
+   * (a union box, a missing contact) renders perfectly happily.
+   */
+  const strokes = () => vi.spyOn(Graphics.prototype, 'lineTo');
+
+  const points = (...coordinates: number[]): PointLike[] => {
+    const out: PointLike[] = [];
+
+    for (let i = 0; i < coordinates.length; i += 2) {
+      out.push({ x: coordinates[i]!, y: coordinates[i + 1]! });
+    }
+
+    return out;
+  };
+
+  /** Three 100px edges from (-150, 0) to (150, 0); solid from above. */
+  const flatFloor = (): ChainShape => new ChainShape(points(-150, 0, -50, 0, 50, 0, 150, 0));
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('outlines a segment as its two endpoints', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new SegmentShape(-10, 0, 10, 0), { x: 0, y: 0 });
+
+    const lines = strokes();
+
+    renderWith(new PhysicsDebugDraw(fakeApp, world));
+
+    expect(lines).toHaveBeenCalledTimes(1);
+  });
+
+  it('outlines a capsule as two sides and two arcs', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, new CapsuleShape(-10, 0, 10, 0, 4), { x: 0, y: 0 });
+
+    const lines = strokes();
+
+    renderWith(new PhysicsDebugDraw(fakeApp, world));
+
+    // One side, one cap arc, the other side's return leg and the second arc.
+    expect(lines).toHaveBeenCalledTimes(25);
+  });
+
+  it('outlines a chain edge by edge', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, flatFloor(), { x: 0, y: 0 });
+
+    const lines = strokes();
+
+    renderWith(new PhysicsDebugDraw(fakeApp, world));
+
+    expect(lines).toHaveBeenCalledTimes(3);
+  });
+
+  it('draws the broad phase leaves a chain actually holds, not its union box', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, flatFloor(), { x: 0, y: 0 });
+
+    const lines = strokes();
+
+    renderWith(new PhysicsDebugDraw(fakeApp, world, { drawAabb: true, drawShapes: false }));
+
+    // Four lines per edge proxy; the authored collider's union box is not a leaf.
+    expect(lines).toHaveBeenCalledTimes(12);
+  });
+
+  it('links a chain per overlapping edge in the broad-phase overlay', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, flatFloor(), { x: 0, y: 0 });
+    // Spans x ∈ [-70, -30]: overlaps the first two edges, not the third.
+    colliderAt(world, new BoxShape(40, 20), { x: -50, y: 0 });
+
+    const lines = strokes();
+
+    renderWith(new PhysicsDebugDraw(fakeApp, world, { drawBroadphase: true, drawShapes: false }));
+
+    expect(lines).toHaveBeenCalledTimes(2);
+  });
+
+  it('draws the contacts a chain produces, one manifold per touched edge', () => {
+    const world = new PhysicsWorld();
+    colliderAt(world, flatFloor(), { x: 0, y: 0 });
+    // Overlaps the floor line by 1px across the seam at x = -50.
+    colliderAt(world, new BoxShape(40, 20), { x: -50, y: -9 });
+
+    const lines = strokes();
+
+    renderWith(new PhysicsDebugDraw(fakeApp, world, { drawShapes: false, drawNormals: true }));
+
+    expect(lines.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it('never draws a contact between two colliders of the same body', () => {
+    const world = new PhysicsWorld();
+
+    world.add(
+      new PhysicsBody({
+        type: 'static',
+        position: { x: 0, y: 0 },
+        colliders: [{ shape: new BoxShape(20, 20) }, { shape: new BoxShape(20, 20), offset: { x: 5, y: 0 } }],
+      }),
+    );
+
+    const lines = strokes();
+
+    renderWith(new PhysicsDebugDraw(fakeApp, world, { drawShapes: false, drawContacts: true, drawNormals: true }));
+
+    expect(lines).not.toHaveBeenCalled();
   });
 });

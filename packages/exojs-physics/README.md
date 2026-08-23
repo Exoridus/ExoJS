@@ -1,13 +1,13 @@
 # @codexo/exojs-physics
 
-Native 2D **collision, query and sensor** runtime for [ExoJS](https://github.com/Exoridus/ExoJS).
+Native 2D **rigid-body** runtime for [ExoJS](https://github.com/Exoridus/ExoJS).
 
-Zero production dependencies, ESM-only, version-locked with the core engine. This
-first release ships a complete **collision/query world without dynamics**:
-shapes, colliders, bodies, a broad phase, a manifold-generating narrow phase,
-collision filters, sensors, events, spatial queries, scene-node binding and a
-debug overlay. Forces, impulses and gravity integration (the rigid-body solver)
-arrive in a follow-up — the public surface here is forward-compatible with it.
+Zero production dependencies, ESM-only, version-locked with the core engine.
+It ships a fixed-step world with a warm-started **TGS-Soft** solver: shapes,
+colliders, bodies, a dynamic-AABB broad phase, a manifold-generating narrow
+phase, joints, sleeping islands, continuous collision for fast bodies, a
+per-contact modifier, collision filters, sensors, events, spatial queries,
+scene-node binding with interpolation, and a debug overlay.
 
 > **Library, not an extension.** Physics contributes no renderer or asset
 > bindings, so there is no `/register` entry. Construct a `PhysicsWorld`
@@ -63,12 +63,16 @@ class GameScene extends Scene {
 | Bodies | `new PhysicsBody` + `world.add` (`dynamic`/`static`/`kinematic`), `setTransform`, mass/inertia from colliders |
 | Colliders | `new Collider` + `body.addCollider` / `colliders: [...]`, density/friction/restitution, `isSensor`, filter, offset |
 | Attach | `world.attach(node, def)` — body + collider + `bind` in one call |
-| Shapes | `CircleShape`, `PolygonShape` (convex-validated), `BoxShape` |
+| Shapes | solid: `CircleShape`, `CapsuleShape`, `PolygonShape` (convex-validated), `BoxShape`; boundary: `SegmentShape`, `ChainShape` |
+| Dynamics | fixed-step TGS-Soft solver, gravity, forces/impulses, friction/restitution, sleeping islands |
+| Joints | `DistanceJoint`, `RevoluteJoint`, `PrismaticJoint`, `WheelJoint`, `WeldJoint`, `MouseJoint` |
+| Continuous collision | `body.isBullet` — exact translational shape cast of the whole shape, not just its centre |
+| Contact policy | `world.contactModifier` — per-contact material/enable decisions (one-way platforms, conditional friction) |
 | Filtering | `CollisionFilter` (category/mask/group), `shouldCollide` |
 | Events | `onCollisionStart` / `onCollisionEnd` / `onSensorEnter` / `onSensorExit` — immutable snapshots |
 | Queries | `queryPoint`, `queryAabb` (+ `out` / `forEachAabbHit`), `rayCast`, `rayCastAll`, `overlapShape` |
 | Binding | `bind(body, node)` — node tracks the body's position each step |
-| Debug | `@codexo/exojs-physics/debug` → `PhysicsDebugDraw` (shapes/AABBs/contacts/normals/centres/broad-phase) |
+| Debug | `@codexo/exojs-physics/debug` → `PhysicsDebugDraw` (shapes/AABBs/contacts/normals/centres/broad-phase/joints) |
 
 ## Determinism & non-goals
 
@@ -94,10 +98,14 @@ tracks how much actually moved rather than the total live collider count
 (there's still a cheap linear pass over all live colliders each step). Scales
 to tens of thousands of simultaneously-live colliders.
 
-This release contains **no dynamics solver**: bodies move only via
-`setTransform`. The narrow phase already produces full contact manifolds (normal,
-1–2 points, stable feature ids) so the solver can be added without changing the
-public API.
+**Solid and boundary geometry.** `CircleShape`, `CapsuleShape`, `PolygonShape`
+and `BoxShape` enclose an area and carry mass; `SegmentShape` and `ChainShape`
+are boundaries with no interior, so they contribute collision only and a
+`dynamic` body needs at least one solid collider alongside them. A chain is one
+authored collider that the engine solves edge by edge with shared-vertex
+adjacency, so a body slides across a seam without snagging. Two boundaries never
+collide with each other, and a boundary is never the *moving* operand of a
+continuous shape cast — level structure is swept against, not swept.
 
 ## License
 
