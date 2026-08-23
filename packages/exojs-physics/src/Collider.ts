@@ -5,6 +5,7 @@ import type { Transform } from './math';
 import { applyRotation, applyTransform, composeTransforms, createTransform } from './math';
 import type { PhysicsBody } from './PhysicsBody';
 import type { AnyShape } from './shapes/AnyShape';
+import type { ChainShape } from './shapes/ChainShape';
 import type { CollisionFilter } from './types';
 import { resolveFilter } from './types';
 
@@ -18,6 +19,9 @@ const worldVertexCount = (shape: AnyShape): number => {
       // Two endpoints. Both are a two-vertex ring, with and without a radius.
       return 2;
     case 'circle':
+    case 'chain':
+      // A chain caches nothing of its own: its geometry lives on the per-edge
+      // child proxies, and its AABB is the union of theirs.
       return 0;
   }
 };
@@ -67,6 +71,8 @@ export class Collider {
 
   private _id = -1;
   private _body: PhysicsBody | null = null;
+  private readonly _chainEdges: readonly Collider[] | null;
+  private _chainParent: Collider | null = null;
   private readonly _localTransform: Transform;
   private readonly _worldTransform: Transform = createTransform();
   private readonly _aabb: AabbLike = createAabb();
@@ -112,6 +118,7 @@ export class Collider {
 
     this._worldVertices = new Array<number>(vertexCount * 2).fill(0);
     this._worldNormals = new Array<number>(vertexCount * 2).fill(0);
+    this._chainEdges = this.shape.type === 'chain' ? this._buildChainEdges(this.shape) : null;
   }
 
   /** Stable id, assigned when the owning body joins a world via `world.add()`; `-1` until then. */
@@ -161,6 +168,23 @@ export class Collider {
     return this._worldNormals;
   }
 
+  /**
+   * @internal - the engine-owned edge proxies a chain collider fans out into,
+   * one per chain edge; `null` for every other shape. They are what the broad
+   * phase, the narrow phase and the solver see, so a chain contact reuses the
+   * one-manifold-per-pair model unchanged. They are never part of
+   * `body.colliders`, `world.colliders` or any query result - the authored
+   * collider is the public identity of every contact they produce.
+   */
+  public get chainEdges(): readonly Collider[] | null {
+    return this._chainEdges;
+  }
+
+  /** @internal - the authored chain collider this edge proxy belongs to; `null` for an authored collider. */
+  public get chainParent(): Collider | null {
+    return this._chainParent;
+  }
+
   /** `true` after the owning world has destroyed this collider. */
   public get destroyed(): boolean {
     return this._destroyed;
@@ -189,7 +213,39 @@ export class Collider {
       case 'polygon':
         this._synchronizePolygon(world, this.shape.vertices, this.shape.normals, this.shape.count, 0);
         break;
+      case 'chain':
+        this._synchronizeChain(bodyTransform);
+        break;
     }
+  }
+
+  /**
+   * A chain's world geometry is its edge proxies': each of them shares the
+   * chain's local placement and syncs its own two endpoints, and the chain's own
+   * AABB is their union. Nothing is transformed twice, and no proxy is rebuilt.
+   */
+  private _synchronizeChain(bodyTransform: Transform): void {
+    const edges = this._chainEdges!;
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+
+    for (const edge of edges) {
+      edge.synchronize(bodyTransform);
+
+      const aabb = edge.aabb;
+
+      minX = aabb.minX < minX ? aabb.minX : minX;
+      minY = aabb.minY < minY ? aabb.minY : minY;
+      maxX = aabb.maxX > maxX ? aabb.maxX : maxX;
+      maxY = aabb.maxY > maxY ? aabb.maxY : maxY;
+    }
+
+    this._aabb.minX = minX;
+    this._aabb.minY = minY;
+    this._aabb.maxX = maxX;
+    this._aabb.maxY = maxY;
   }
 
   /** A circle is its transformed centre; the local vertex buffers stay unused. */
@@ -240,8 +296,50 @@ export class Collider {
     this._id = id;
   }
 
+  /**
+   * Fan a chain out into one proxy per edge. Each proxy carries the chain's own
+   * local placement, so it needs no transform of its own, and its shape carries
+   * the adjacency that keeps a body from snagging at a shared vertex.
+   */
+  private _buildChainEdges(chain: ChainShape): readonly Collider[] {
+    const edges: Collider[] = [];
+
+    for (const edgeShape of chain.edges) {
+      const edge = new Collider({
+        shape: edgeShape,
+        offset: { x: this.offsetX, y: this.offsetY },
+        rotation: this.localRotation,
+        // Material, filter and sensor flag stay mutable on the authored collider
+        // and are read from there per pass, so copying them here would only add a
+        // second, staler source of truth.
+        density: 0,
+      });
+
+      edge._chainParent = this;
+      edges.push(edge);
+    }
+
+    return edges;
+  }
+
   /** Internal: mark destroyed (called by the world). */
   public _markDestroyed(): void {
     this._destroyed = true;
+
+    if (this._chainEdges !== null) {
+      for (const edge of this._chainEdges) {
+        edge._destroyed = true;
+      }
+    }
   }
 }
+
+/**
+ * The authored collider a contact, query hit or sweep target belongs to: the
+ * collider itself, or the chain it is an engine-owned edge proxy of. Every
+ * public identity - events, query results, the contact modifier - goes through
+ * this, so a solver-side partition never reaches a caller.
+ *
+ * @internal
+ */
+export const authoredCollider = (collider: Collider): Collider => collider.chainParent ?? collider;

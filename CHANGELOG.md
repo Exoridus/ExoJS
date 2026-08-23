@@ -17,6 +17,35 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **`ChainShape` — connected boundary geometry that a body can slide along.** Level
+  outlines, terrain and side-scroller ground are runs of connected edges, and building them
+  from independent `SegmentShape`s does not work: at a shared vertex two segments carry two
+  different normals, so a body crossing the seam snags, is launched, or receives a normal
+  pointing into the surface.
+
+  `new ChainShape(vertices, { closed })` is one shape over the whole run, open or closed. It
+  owns the adjacency between its edges and uses it to suppress exactly the contacts that
+  cause that snagging, which is why the adjacency belongs to the engine and not to the
+  caller. Coincident vertices are welded and a repeated closing vertex is dropped; collinear
+  vertices are **kept**, because a straight run is authoring data and removing it would move
+  the adjacency of its neighbours.
+
+  Unlike a segment, a chain is **one-sided**: each edge collides only from the side its
+  outward normal points to, following the polygon winding convention — a counter-clockwise
+  run is solid on the outside, a clockwise run is solid on the inside. It has no interior, so
+  `massProperties` is `null` and a `dynamic` body still needs a mass-bearing collider
+  alongside it; static and kinematic bodies (a moving platform, a rotating level piece) carry
+  one on their own.
+
+  Internally a chain collider fans out into engine-owned per-edge proxies, so a body touching
+  several edges at once produces several solver contacts — which is what the one-manifold-per-
+  pair model requires — without any of that partition becoming public. `body.colliders` lists
+  the authored chain and nothing else, queries report the chain (once, however many edges they
+  overlap), and `collisionStart`/`collisionEnd` and `onSensorEnter`/`onSensorExit` fire once for
+  the whole chain: on the first edge contact that begins and the last that ends. The contact
+  modifier still sees one contact per edge, each carrying the authored collider pair, because
+  that is the granularity it decides at.
+
 - **`SegmentShape` — zero-thickness boundary geometry, and a dynamic body must now carry
   mass.** Level edges and one-off walls had to be modelled as thin boxes, which are solid,
   carry mass, and behave badly once they are thin enough to matter.

@@ -6,7 +6,7 @@ import { NativePhysicsBackend } from './backend/NativePhysicsBackend';
 import type { PhysicsBackend } from './backend/PhysicsBackend';
 import { BindingRegistry } from './binding/BindingRegistry';
 import type { PhysicsBinding } from './binding/PhysicsBinding';
-import { Collider } from './Collider';
+import { authoredCollider, Collider } from './Collider';
 import type { SweepHit } from './collision/sweep';
 import { canSweep, sweepProxies } from './collision/sweep';
 import type { ContactModifier } from './ContactModifier';
@@ -354,6 +354,15 @@ export class PhysicsWorld implements BodyOwner {
   private readonly _backend: PhysicsBackend = new NativePhysicsBackend();
   private readonly _bodies: PhysicsBody[] = [];
   private readonly _colliders: Collider[] = [];
+  /**
+   * What detection actually runs over: the authored colliders, with a chain
+   * replaced by the edge proxies it fans out into. The broad phase, the narrow
+   * phase and the queries all read this list; `_colliders` stays the authored
+   * set every public surface reports.
+   */
+  private readonly _detectionColliders: Collider[] = [];
+  /** Pooled scratch for re-syncing a single body's broad-phase leaves. */
+  private readonly _leafScratch: Collider[] = [];
   private readonly _joints: Joint[] = [];
   private readonly _bindings = new BindingRegistry();
   private readonly _query: QueryEngine;
@@ -419,7 +428,7 @@ export class PhysicsWorld implements BodyOwner {
     this.contactModifier = options.contactModifier ?? null;
     this.interpolation = options.interpolation ?? false;
     this.frameAlphaSource = options.frameAlphaSource ?? (() => this.timeStepper.alpha);
-    this._query = new QueryEngine(this._colliders, this._backend.spatialIndex);
+    this._query = new QueryEngine(this._detectionColliders, this._backend.spatialIndex);
   }
 
   /** Live bodies (read-only view). */
@@ -686,7 +695,7 @@ export class PhysicsWorld implements BodyOwner {
     // Detection runs once per fixed step (collider geometry is already current
     // from the previous frame's finalize / attach / setTransform). TGS-Soft
     // reuses the manifolds across the sub-steps below.
-    this._backend.detect(this._colliders);
+    this._backend.detect(this._detectionColliders);
 
     // The contact modifier runs between detection and the sleep decision: a
     // contact it disables must neither reach the solver nor union its two bodies
@@ -838,6 +847,7 @@ export class PhysicsWorld implements BodyOwner {
 
     this._bodies.length = 0;
     this._colliders.length = 0;
+    this._detectionColliders.length = 0;
     this._joints.length = 0;
     this._commands.length = 0;
     this._bindings.clear();
@@ -856,8 +866,22 @@ export class PhysicsWorld implements BodyOwner {
 
   public _registerCollider(collider: Collider): void {
     this._defer(() => {
-      if (!collider.destroyed) {
-        this._colliders.push(collider);
+      if (collider.destroyed) {
+        return;
+      }
+
+      this._colliders.push(collider);
+
+      const edges = collider.chainEdges;
+
+      if (edges === null) {
+        this._detectionColliders.push(collider);
+
+        return;
+      }
+
+      for (const edge of edges) {
+        this._detectionColliders.push(edge);
       }
     });
   }
@@ -1118,7 +1142,7 @@ export class PhysicsWorld implements BodyOwner {
 
         // The clamp pulled this body back behind the pose the index was synced
         // from; refresh just its own leaves so a later bullet's query still sees it.
-        this._backend.spatialIndex?.sync(body.colliders);
+        this._backend.spatialIndex?.sync(this._detectionLeavesOf(body));
       }
 
       // Reflect about the true surface normal: a slide for a non-bouncy body
@@ -1174,14 +1198,19 @@ export class PhysicsWorld implements BodyOwner {
       // Tree hits are keyed on the leaves' fat AABBs, so the candidate set is a
       // conservative superset - the exact `aabbOverlap` below still decides.
       // A backend without a spatial index falls back to the full collider list.
-      const candidates = spatialIndex === undefined ? this._colliders : spatialIndex.queryAabb(swept, this._ccdCandidates);
+      const candidates = spatialIndex === undefined ? this._detectionColliders : spatialIndex.queryAabb(swept, this._ccdCandidates);
 
       this._ccdBroadPhaseCandidates += candidates.length;
 
       for (const other of candidates) {
+        // A chain edge proxy blocks under its chain's material and filter, and
+        // reports the chain as the blocking collider - the sweep never hands a
+        // caller a solver-side proxy.
+        const target = authoredCollider(other);
+
         // Sweep against every other body (static, kinematic, dynamic) under the
         // discrete narrow phase's rules: sensors never block, filtered pairs never collide.
-        if (other.isSensor || other.body === body || !shouldCollide(collider.filter, other.filter)) {
+        if (target.isSensor || other.body === body || !shouldCollide(collider.filter, target.filter)) {
           continue;
         }
 
@@ -1195,7 +1224,7 @@ export class PhysicsWorld implements BodyOwner {
           best.t = hit.t;
           best.normalX = hit.normalX;
           best.normalY = hit.normalY;
-          blocked = other;
+          blocked = target;
         }
       }
     }
@@ -1274,8 +1303,55 @@ export class PhysicsWorld implements BodyOwner {
     }
 
     this._wakeTouchingBodies(collider);
-    this._backend.removeCollider(collider);
+
+    const edges = collider.chainEdges;
+
+    if (edges === null) {
+      this._removeDetectionCollider(collider);
+    } else {
+      for (const edge of edges) {
+        this._removeDetectionCollider(edge);
+      }
+    }
+
     collider._markDestroyed();
+  }
+
+  /** Drop one broad-phase leaf: an authored collider, or one chain edge proxy. */
+  private _removeDetectionCollider(collider: Collider): void {
+    const index = this._detectionColliders.indexOf(collider);
+
+    if (index !== -1) {
+      this._detectionColliders.splice(index, 1);
+    }
+
+    this._backend.removeCollider(collider);
+  }
+
+  /**
+   * The broad-phase leaves of one body - its colliders, with a chain replaced by
+   * its edge proxies. Returns pooled scratch, valid until the next call.
+   */
+  private _detectionLeavesOf(body: PhysicsBody): Collider[] {
+    const leaves = this._leafScratch;
+
+    leaves.length = 0;
+
+    for (const collider of body.colliders) {
+      const edges = collider.chainEdges;
+
+      if (edges === null) {
+        leaves.push(collider);
+
+        continue;
+      }
+
+      for (const edge of edges) {
+        leaves.push(edge);
+      }
+    }
+
+    return leaves;
   }
 
   /**
@@ -1295,10 +1371,10 @@ export class PhysicsWorld implements BodyOwner {
     for (const contact of this._backend.contactGraph.solidContacts) {
       let other: Collider;
 
-      if (contact.a === collider) {
-        other = contact.b;
-      } else if (contact.b === collider) {
-        other = contact.a;
+      if (contact.ownerA === collider) {
+        other = contact.ownerB;
+      } else if (contact.ownerB === collider) {
+        other = contact.ownerA;
       } else {
         continue;
       }

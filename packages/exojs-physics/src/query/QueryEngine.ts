@@ -2,17 +2,22 @@ import type { AabbLike, PointLike } from '@codexo/exojs';
 
 import { aabbContainsPoint, aabbOverlap, createAabb } from '../Aabb';
 import type { Collider } from '../Collider';
+import { authoredCollider } from '../Collider';
 import type { CollisionProxy } from '../collision/CollisionProxy';
 import { testOverlap } from '../collision/narrowphase';
 import { closestPointOnSegment, pointSegmentDistanceSquared } from '../collision/segments';
 import { applyRotation, applyTransform, createTransform } from '../math';
 import type { PhysicsBody } from '../PhysicsBody';
 import type { AnyShape } from '../shapes/AnyShape';
+import type { ChainShape } from '../shapes/ChainShape';
 import { resolveFilter, shouldCollide } from '../types';
 import type { SpatialIndex } from './SpatialIndex';
 
 /** Reused sink for the closest-point primitives; queries run sequentially. */
 const _pointScratch: PointLike = { x: 0, y: 0 };
+
+/** Every shape kind that can be a collision operand - a chain is solved per edge. */
+type SolverShape = Exclude<AnyShape, ChainShape>;
 
 /** A category/mask/group filter applied to a query. Omitting it matches everything. */
 export type QueryFilter = Partial<{ category: number; mask: number; group: number }>;
@@ -35,12 +40,20 @@ export interface RayHit {
  * body move), so queries always see current placements. Array-returning queries
  * follow the three explicit allocation forms: fresh array, caller-owned `out`,
  * or an allocation-free callback - never a hidden shared buffer.
+ *
+ * The engine scans the geometry the broad phase holds, which for a chain
+ * collider is its per-edge proxies. Every result is reported as the authored
+ * collider, and an overlap query reports a chain once however many of its edges
+ * it touches. A ray still reports one hit per edge it crosses, because those are
+ * distinct intersections.
  */
 export class QueryEngine {
   private readonly _colliders: readonly Collider[];
   private readonly _spatialIndex: SpatialIndex | undefined;
   private readonly _scratchHits: Collider[] = [];
   private readonly _scratchHitsForEach: Collider[] = [];
+  /** Chains already reported by the running `forEachAabbHit`, so one chain is one callback. */
+  private readonly _scratchSeenForEach: Collider[] = [];
   private readonly _scratchAabb: AabbLike = createAabb();
 
   public constructor(colliders: readonly Collider[], spatialIndex?: SpatialIndex) {
@@ -81,6 +94,8 @@ export class QueryEngine {
     bounds.maxX = point.x;
     bounds.maxY = point.y;
 
+    // A chain edge encloses no area, so a chain can never answer a point query
+    // and no de-duplication is needed here.
     for (const collider of this._candidatesFor(bounds, this._scratchHits)) {
       if (resolved && !shouldCollide(resolved, collider.filter)) {
         continue;
@@ -101,12 +116,14 @@ export class QueryEngine {
     const resolved = filter ? resolveFilter(filter) : null;
 
     for (const collider of this._candidatesFor(bounds, this._scratchHits)) {
-      if (resolved && !shouldCollide(resolved, collider.filter)) {
+      const authored = authoredCollider(collider);
+
+      if (resolved && !shouldCollide(resolved, authored.filter)) {
         continue;
       }
 
-      if (aabbOverlap(collider.aabb, bounds)) {
-        result.push(collider);
+      if (aabbOverlap(collider.aabb, bounds) && !alreadyReported(collider, authored, result)) {
+        result.push(authored);
       }
     }
 
@@ -127,15 +144,26 @@ export class QueryEngine {
    */
   public forEachAabbHit(bounds: AabbLike, filter: QueryFilter | undefined, callback: (collider: Collider) => void): void {
     const resolved = filter ? resolveFilter(filter) : null;
+    const reported = this._scratchSeenForEach;
+
+    reported.length = 0;
 
     for (const collider of this._candidatesFor(bounds, this._scratchHitsForEach)) {
-      if (resolved && !shouldCollide(resolved, collider.filter)) {
+      const authored = authoredCollider(collider);
+
+      if (resolved && !shouldCollide(resolved, authored.filter)) {
         continue;
       }
 
-      if (aabbOverlap(collider.aabb, bounds)) {
-        callback(collider);
+      if (!aabbOverlap(collider.aabb, bounds) || alreadyReported(collider, authored, reported)) {
+        continue;
       }
+
+      if (collider !== authored) {
+        reported.push(authored);
+      }
+
+      callback(authored);
     }
   }
 
@@ -153,13 +181,16 @@ export class QueryEngine {
 
     let best: RayHit | null = null;
     const consider = (collider: Collider): void => {
-      if (resolved && !shouldCollide(resolved, collider.filter)) {
+      const authored = authoredCollider(collider);
+
+      if (resolved && !shouldCollide(resolved, authored.filter)) {
         return;
       }
 
       const hit = rayCastCollider(collider, origin.x, origin.y, dx, dy, best ? best.distance : maxDistance);
 
       if (hit && (best === null || hit.distance < best.distance)) {
+        hit.collider = authored;
         best = hit;
       }
     };
@@ -190,13 +221,16 @@ export class QueryEngine {
     const result = out ?? [];
     result.length = 0;
     const consider = (collider: Collider): void => {
-      if (resolved && !shouldCollide(resolved, collider.filter)) {
+      const authored = authoredCollider(collider);
+
+      if (resolved && !shouldCollide(resolved, authored.filter)) {
         return;
       }
 
       const hit = rayCastCollider(collider, origin.x, origin.y, dx, dy, maxDistance);
 
       if (hit) {
+        hit.collider = authored;
         result.push(hit);
       }
     };
@@ -215,20 +249,36 @@ export class QueryEngine {
     return result;
   }
 
-  /** Colliders overlapping `shape` placed at `position`/`angle`. Allocates a fresh array. */
+  /**
+   * Colliders overlapping `shape` placed at `position`/`angle`. Allocates a
+   * fresh array.
+   *
+   * A chain query shape is tested edge by edge, exactly as a chain collider is
+   * solved. Two boundaries have no overlap volume, so a chain - like a segment -
+   * never reports another chain or segment.
+   */
   public overlapShape(shape: AnyShape, position: Readonly<PointLike>, filter?: QueryFilter, angle = 0): Collider[] {
-    const proxy = makeProxy(shape, position.x, position.y, angle);
+    const proxies = queryProxies(shape, position.x, position.y, angle);
     const out: Collider[] = [];
     const resolved = filter ? resolveFilter(filter) : null;
-    const bounds = proxyAabb(shape, proxy, this._scratchAabb);
+    const bounds = proxiesAabb(shape, proxies, this._scratchAabb);
 
     for (const collider of this._candidatesFor(bounds, this._scratchHits)) {
-      if (resolved && !shouldCollide(resolved, collider.filter)) {
+      const authored = authoredCollider(collider);
+
+      if (resolved && !shouldCollide(resolved, authored.filter)) {
         continue;
       }
 
-      if (testOverlap(proxy, collider)) {
-        out.push(collider);
+      if (alreadyReported(collider, authored, out)) {
+        continue;
+      }
+
+      for (const proxy of proxies) {
+        if (testOverlap(proxy, collider)) {
+          out.push(authored);
+          break;
+        }
       }
     }
 
@@ -251,6 +301,12 @@ const pointInCollider = (collider: Collider, px: number, py: number): boolean =>
     const dy = py - c.y;
 
     return dx * dx + dy * dy <= r * r;
+  }
+
+  if (collider.shape.type === 'chain') {
+    // Unreachable through the world's own geometry - a chain is scanned through
+    // its edge proxies - and the same answer as a segment either way.
+    return false;
   }
 
   if (collider.shape.type === 'segment') {
@@ -295,6 +351,9 @@ const rayCastCollider = (collider: Collider, ox: number, oy: number, dx: number,
       return rayCastSegment(collider, ox, oy, dx, dy, maxDistance);
     case 'polygon':
       return rayCastPolygon(collider, ox, oy, dx, dy, maxDistance);
+    case 'chain':
+      // A chain collider is never scanned itself; its edge proxies are.
+      return null;
   }
 };
 
@@ -545,8 +604,58 @@ const rayCastPolygon = (collider: Collider, ox: number, oy: number, dx: number, 
   };
 };
 
+/**
+ * Throwaway collision proxies for a query shape placed at `(x, y)` with `angle`:
+ * one, or one per edge for a chain.
+ */
+const queryProxies = (shape: AnyShape, x: number, y: number, angle: number): readonly CollisionProxy[] => {
+  if (shape.type !== 'chain') {
+    return [makeProxy(shape, x, y, angle)];
+  }
+
+  return shape.edges.map((edge) => makeProxy(edge, x, y, angle));
+};
+
+/** World AABB covering every proxy of a query shape. */
+const proxiesAabb = (shape: AnyShape, proxies: readonly CollisionProxy[], out: AabbLike): AabbLike => {
+  if (shape.type !== 'chain') {
+    return proxyAabb(shape, proxies[0]!, out);
+  }
+
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (const proxy of proxies) {
+    const edgeBounds = proxyAabb(proxy.shape as SolverShape, proxy, _scratchEdgeAabb);
+
+    minX = edgeBounds.minX < minX ? edgeBounds.minX : minX;
+    minY = edgeBounds.minY < minY ? edgeBounds.minY : minY;
+    maxX = edgeBounds.maxX > maxX ? edgeBounds.maxX : maxX;
+    maxY = edgeBounds.maxY > maxY ? edgeBounds.maxY : maxY;
+  }
+
+  out.minX = minX;
+  out.minY = minY;
+  out.maxX = maxX;
+  out.maxY = maxY;
+
+  return out;
+};
+
+/** Scratch for the per-edge bounds a chain query shape unions. */
+const _scratchEdgeAabb: AabbLike = createAabb();
+
+/**
+ * `true` when `authored` is already in `reported`. Only a chain can be reached
+ * twice in one query (once per edge proxy), so nothing else pays for the scan.
+ */
+const alreadyReported = (candidate: Collider, authored: Collider, reported: readonly Collider[]): boolean =>
+  candidate !== authored && reported.includes(authored);
+
 /** Build a throwaway collision proxy for a shape placed at `(x, y)` with `angle`. */
-const makeProxy = (shape: AnyShape, x: number, y: number, angle: number): CollisionProxy => {
+const makeProxy = (shape: SolverShape, x: number, y: number, angle: number): CollisionProxy => {
   if (shape.type === 'circle') {
     return { shape, worldCenter: { x, y }, worldVertices: [], worldNormals: [] };
   }
@@ -568,7 +677,7 @@ const makeProxy = (shape: AnyShape, x: number, y: number, angle: number): Collis
 };
 
 /** Compute the world AABB of an already-built collision proxy (reuses its cached vertices/centre - no extra transform work). */
-const proxyAabb = (shape: AnyShape, proxy: CollisionProxy, out: AabbLike): AabbLike => {
+const proxyAabb = (shape: SolverShape, proxy: CollisionProxy, out: AabbLike): AabbLike => {
   if (shape.type === 'circle') {
     const r = shape.radius;
 

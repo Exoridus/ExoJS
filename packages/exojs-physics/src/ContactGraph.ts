@@ -1,5 +1,6 @@
 import type { CandidatePair } from './broadphase/BroadPhase';
 import type { Collider } from './Collider';
+import { authoredCollider } from './Collider';
 import { Manifold } from './collision/Manifold';
 import { collide, testOverlap } from './collision/narrowphase';
 import type { ContactModifier } from './ContactModifier';
@@ -16,6 +17,13 @@ import { shouldCollide } from './types';
 export interface ContactRecord {
   readonly a: Collider;
   readonly b: Collider;
+  /**
+   * Authored collider behind {@link a} - itself, unless `a` is an engine-owned
+   * chain edge proxy, in which case it is the chain collider the caller made.
+   * Solver identity is the proxy pair; public identity is the authored pair.
+   */
+  readonly ownerA: Collider;
+  readonly ownerB: Collider;
   readonly isSensor: boolean;
   touching: boolean;
   seen: boolean;
@@ -48,6 +56,11 @@ export interface ContactRecord {
  * Touching solid contacts are also collected into {@link solidContacts} (with a
  * warm-start impulse cache) for the dynamics solver. The graph holds no
  * module-level state - each world owns one.
+ *
+ * Records are keyed on the pair the solver sees, which for a chain collider is
+ * one of its edge proxies. Events are not: a body touching several edges of one
+ * chain is one authored contact, so the graph reference-counts the authored pair
+ * behind its records and emits begin/end only on the first and last of them.
  */
 export class ContactGraph {
   /** Immutable solid-contact begin snapshots produced by the latest {@link update}. */
@@ -64,6 +77,9 @@ export class ContactGraph {
   // Integer pair-keys (`(a.id << 16) | b.id`, a.id < b.id guaranteed by the broad
   // phase) - cheaper than string keys on the per-step solver hot path.
   private readonly _records = new Map<number, ContactRecord>();
+  // Live solver contacts per authored collider pair. Only pairs whose records
+  // are engine-owned proxies appear here; everything else emits directly.
+  private readonly _authoredPairs = new Map<number, number>();
   private readonly _modifierContext = new MutableContactModifierContext();
 
   /** Touching pairs currently tracked (for debug draw). */
@@ -85,14 +101,19 @@ export class ContactGraph {
       const a = pair.a;
       const b = pair.b;
 
-      if (!shouldCollide(a.filter, b.filter)) {
+      // Material, filter and sensor flag live on the authored collider; an edge
+      // proxy carries none of its own, so a chain stays one collider to configure.
+      const ownerA = authoredCollider(a);
+      const ownerB = authoredCollider(b);
+
+      if (!shouldCollide(ownerA.filter, ownerB.filter)) {
         continue;
       }
 
-      const isSensor = a.isSensor || b.isSensor;
+      const isSensor = ownerA.isSensor || ownerB.isSensor;
       const key = pairKey(a.id, b.id);
       const existing = this._records.get(key);
-      const record = existing ?? createRecord(a, b, isSensor);
+      const record = existing ?? createRecord(a, b, ownerA, ownerB, isSensor);
       const touching = isSensor ? testOverlap(a, b) : collide(a, b, record.manifold);
 
       if (touching) {
@@ -112,8 +133,8 @@ export class ContactGraph {
           // pass, so a modifier that skipped a contact last step does not leak
           // into this one.
           record.enabled = true;
-          record.friction = Math.sqrt(a.friction * b.friction);
-          record.restitution = Math.max(a.restitution, b.restitution);
+          record.friction = Math.sqrt(ownerA.friction * ownerB.friction);
+          record.restitution = Math.max(ownerA.restitution, ownerB.restitution);
           warmStartMatch(record);
           this.solidContacts.push(record);
         }
@@ -166,10 +187,18 @@ export class ContactGraph {
     }
   }
 
-  /** Remove every record referencing `collider` (called when a collider is destroyed). */
+  /**
+   * Remove every record referencing `collider` (called when a collider is
+   * destroyed). Passing an authored chain collider also drops the records of
+   * every edge proxy it owns.
+   */
   public removeCollider(collider: Collider): void {
     for (const [key, record] of this._records) {
-      if (record.a === collider || record.b === collider) {
+      if (record.a === collider || record.b === collider || record.ownerA === collider || record.ownerB === collider) {
+        if (record.touching) {
+          this._releaseAuthoredPair(record);
+        }
+
         this._records.delete(key);
       }
     }
@@ -178,22 +207,70 @@ export class ContactGraph {
   /** Drop all records (world reset/destroy). */
   public clear(): void {
     this._records.clear();
+    this._authoredPairs.clear();
   }
 
   private _emitBegin(record: ContactRecord): void {
+    if (!this._retainAuthoredPair(record)) {
+      return;
+    }
+
     if (record.isSensor) {
-      this.sensorEnter.push(makeSensorEvent(record.a, record.b));
+      this.sensorEnter.push(makeSensorEvent(record.ownerA, record.ownerB));
     } else {
-      this.collisionStart.push(makeCollisionEvent(record.a, record.b, record.manifold));
+      this.collisionStart.push(makeCollisionEvent(record.ownerA, record.ownerB, record.manifold));
     }
   }
 
   private _emitEnd(record: ContactRecord): void {
-    if (record.isSensor) {
-      this.sensorExit.push(makeSensorEvent(record.a, record.b));
-    } else {
-      this.collisionEnd.push(makeEndEvent(record.a, record.b));
+    if (!this._releaseAuthoredPair(record)) {
+      return;
     }
+
+    if (record.isSensor) {
+      this.sensorExit.push(makeSensorEvent(record.ownerA, record.ownerB));
+    } else {
+      this.collisionEnd.push(makeEndEvent(record.ownerA, record.ownerB));
+    }
+  }
+
+  /**
+   * Count one more solver contact against the authored pair, reporting whether
+   * it is the first - the only one that may emit a begin event. A record whose
+   * colliders are the authored ones needs no counting at all, so a world without
+   * chains never touches the map.
+   */
+  private _retainAuthoredPair(record: ContactRecord): boolean {
+    if (record.a === record.ownerA && record.b === record.ownerB) {
+      return true;
+    }
+
+    const key = authoredPairKey(record);
+    const count = this._authoredPairs.get(key) ?? 0;
+
+    this._authoredPairs.set(key, count + 1);
+
+    return count === 0;
+  }
+
+  /** Counterpart of {@link _retainAuthoredPair}: `true` on the last contact of the pair. */
+  private _releaseAuthoredPair(record: ContactRecord): boolean {
+    if (record.a === record.ownerA && record.b === record.ownerB) {
+      return true;
+    }
+
+    const key = authoredPairKey(record);
+    const count = (this._authoredPairs.get(key) ?? 1) - 1;
+
+    if (count <= 0) {
+      this._authoredPairs.delete(key);
+
+      return true;
+    }
+
+    this._authoredPairs.set(key, count);
+
+    return false;
   }
 
   /**
@@ -235,9 +312,18 @@ export const pairKeyStride = 0x4000000; // 2^26
  */
 export const pairKey = (aId: number, bId: number): number => aId * pairKeyStride + bId;
 
-const createRecord = (a: Collider, b: Collider, isSensor: boolean): ContactRecord => ({
+const authoredPairKey = (record: ContactRecord): number => {
+  const first = record.ownerA.id;
+  const second = record.ownerB.id;
+
+  return first < second ? pairKey(first, second) : pairKey(second, first);
+};
+
+const createRecord = (a: Collider, b: Collider, ownerA: Collider, ownerB: Collider, isSensor: boolean): ContactRecord => ({
   a,
   b,
+  ownerA,
+  ownerB,
   isSensor,
   touching: false,
   seen: true,
