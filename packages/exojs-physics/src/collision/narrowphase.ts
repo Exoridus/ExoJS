@@ -48,12 +48,13 @@ export const collide = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold
 // ring with a radius, which is exactly why it shares the polygon routines: the
 // ring supplies `count` and `worldVertices`/`worldNormals`, the radius rounds
 // the result off.
-const radiusOf = (collider: CollisionProxy): number => (collider.shape.type === 'polygon' ? 0 : collider.shape.radius);
+const radiusOf = (collider: CollisionProxy): number => (collider.shape.type === 'circle' || collider.shape.type === 'capsule' ? collider.shape.radius : 0);
 const countOf = (collider: CollisionProxy): number => {
   switch (collider.shape.type) {
     case 'polygon':
       return collider.shape.count;
     case 'capsule':
+    case 'segment':
       return 2;
     case 'circle':
       return 0;
@@ -544,11 +545,11 @@ const roundedPolygonsOverlap: OverlapPair = (a, b) => {
  * One contact point - a circle meets a rounded surface in one place, and a second
  * would be invented noise for the solver.
  */
-const collideCircleCapsule: CollidePair = (circle, capsule, manifold, flip) => {
-  const spine = capsule.worldVertices;
+const collideCircleSpine: CollidePair = (circle, spineShape, manifold, flip) => {
+  const spine = spineShape.worldVertices;
   const centre = circle.worldCenter;
   const circleRadius = radiusOf(circle);
-  const radiusSum = circleRadius + radiusOf(capsule);
+  const radiusSum = circleRadius + radiusOf(spineShape);
 
   closestPointOnSegment(centre.x, centre.y, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _segmentScratch);
 
@@ -569,8 +570,8 @@ const collideCircleCapsule: CollidePair = (circle, capsule, manifold, flip) => {
     // Centre exactly on the spine: the direction is undefined, so take the
     // capsule's own side normal. It is stable from frame to frame, which an
     // axis-aligned guess would not be.
-    nx = capsule.worldNormals[0]!;
-    ny = capsule.worldNormals[1]!;
+    nx = spineShape.worldNormals[0]!;
+    ny = spineShape.worldNormals[1]!;
   }
 
   manifold.normalX = flip ? -nx : nx;
@@ -589,10 +590,10 @@ const collideCircleCapsule: CollidePair = (circle, capsule, manifold, flip) => {
   return true;
 };
 
-const circleCapsuleOverlap: OverlapPair = (circle, capsule) => {
-  const spine = capsule.worldVertices;
+const circleSpineOverlap: OverlapPair = (circle, spineShape) => {
+  const spine = spineShape.worldVertices;
   const centre = circle.worldCenter;
-  const radiusSum = radiusOf(circle) + radiusOf(capsule);
+  const radiusSum = radiusOf(circle) + radiusOf(spineShape);
 
   return pointSegmentDistanceSquared(centre.x, centre.y, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _segmentScratch) <= radiusSum * radiusSum;
 };
@@ -658,18 +659,25 @@ const circlePolygonOverlap: OverlapPair = (circle, polygon) => {
 // supports appears exactly once; anything absent reports no contact.
 const collideTable: PairTable<CollidePair> = symmetricTable<CollidePair>([
   ['circle', 'circle', collideCircles],
-  ['circle', 'capsule', collideCircleCapsule],
+  ['circle', 'capsule', collideCircleSpine],
+  ['circle', 'segment', collideCircleSpine],
   ['circle', 'polygon', collideCirclePolygon],
   ['capsule', 'capsule', collideRoundedPolygons],
+  ['capsule', 'segment', collideRoundedPolygons],
   ['capsule', 'polygon', collideRoundedPolygons],
+  // segment/segment is deliberately absent - see `collide`.
+  ['segment', 'polygon', collideRoundedPolygons],
   ['polygon', 'polygon', collideRoundedPolygons],
 ]);
 
 const overlapTable: PairTable<OverlapPair> = symmetricTable<OverlapPair>([
   ['circle', 'circle', circlesOverlap],
-  ['circle', 'capsule', circleCapsuleOverlap],
+  ['circle', 'capsule', circleSpineOverlap],
+  ['circle', 'segment', circleSpineOverlap],
   ['circle', 'polygon', circlePolygonOverlap],
   ['capsule', 'capsule', roundedPolygonsOverlap],
+  ['capsule', 'segment', roundedPolygonsOverlap],
   ['capsule', 'polygon', roundedPolygonsOverlap],
+  ['segment', 'polygon', roundedPolygonsOverlap],
   ['polygon', 'polygon', roundedPolygonsOverlap],
 ]);

@@ -13,7 +13,8 @@ import type { ShapeType } from '../shapes/Shape';
 export const shapeKindOrder: Readonly<Record<ShapeType, number>> = {
   circle: 0,
   capsule: 1,
-  polygon: 2,
+  segment: 2,
+  polygon: 3,
 };
 
 export const shapeKindCount = Object.keys(shapeKindOrder).length;

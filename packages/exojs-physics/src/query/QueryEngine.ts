@@ -253,6 +253,13 @@ const pointInCollider = (collider: Collider, px: number, py: number): boolean =>
     return dx * dx + dy * dy <= r * r;
   }
 
+  if (collider.shape.type === 'segment') {
+    // A boundary encloses no area. Reporting a hit within some epsilon would make
+    // the answer depend on an engine constant rather than the authored geometry;
+    // ray casts and AABB queries are the meaningful questions for a segment.
+    return false;
+  }
+
   if (collider.shape.type === 'capsule') {
     const spine = collider.worldVertices;
 
@@ -284,9 +291,52 @@ const rayCastCollider = (collider: Collider, ox: number, oy: number, dx: number,
       return rayCastCircle(collider, ox, oy, dx, dy, maxDistance);
     case 'capsule':
       return rayCastCapsule(collider, collider.shape.radius, ox, oy, dx, dy, maxDistance);
+    case 'segment':
+      return rayCastSegment(collider, ox, oy, dx, dy, maxDistance);
     case 'polygon':
       return rayCastPolygon(collider, ox, oy, dx, dy, maxDistance);
   }
+};
+
+/**
+ * Ray against a segment: a plain segment/segment crossing. The reported normal is
+ * the segment's own side normal, flipped to face the incoming ray - a boundary
+ * blocks from both sides, so which of its two normals applies is decided by where
+ * the ray comes from.
+ */
+const rayCastSegment = (collider: Collider, ox: number, oy: number, dx: number, dy: number, maxDistance: number): RayHit | null => {
+  const ends = collider.worldVertices;
+  const ax = ends[0]!;
+  const ay = ends[1]!;
+  const ex = ends[2]! - ax;
+  const ey = ends[3]! - ay;
+  const denominator = dx * ey - dy * ex;
+
+  // Parallel (or collinear): no single crossing point to report.
+  if (Math.abs(denominator) < 1e-12) {
+    return null;
+  }
+
+  const rx = ax - ox;
+  const ry = ay - oy;
+  const distance = (rx * ey - ry * ex) / denominator;
+  const along = (rx * dy - ry * dx) / denominator;
+
+  if (distance < 0 || distance > maxDistance || along < 0 || along > 1) {
+    return null;
+  }
+
+  const nx = collider.worldNormals[0]!;
+  const ny = collider.worldNormals[1]!;
+  const facing = nx * dx + ny * dy > 0 ? -1 : 1;
+
+  return {
+    collider,
+    body: collider.body,
+    point: { x: ox + dx * distance, y: oy + dy * distance },
+    normal: { x: nx * facing, y: ny * facing },
+    distance,
+  };
 };
 
 /**
@@ -501,7 +551,7 @@ const makeProxy = (shape: AnyShape, x: number, y: number, angle: number): Collis
     return { shape, worldCenter: { x, y }, worldVertices: [], worldNormals: [] };
   }
 
-  const count = shape.type === 'capsule' ? 2 : shape.count;
+  const count = shape.type === 'polygon' ? shape.count : 2;
   const transform = createTransform(x, y, angle);
   const worldVertices: number[] = [];
   const worldNormals: number[] = [];

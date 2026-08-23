@@ -1,0 +1,322 @@
+{
+  "title": "SegmentShape",
+  "description": "A zero-thickness boundary between two local-space endpoints: level edges, one-off walls, the geometry a body may not cross. It has no interior, so Shape.massProperties is `null` and the shape contributes collision only - a `dynamic` body needs at least one mass-bearing collider alongside it. A segment blocks from **both** sides. There is no inside for it to be outside of, and a one-sided segment would be a gameplay rule in a geometry costume: express that with the world's `contactModifier`, which decides per contact and per step whether it is solved. Being zero-thickness makes it the worst case for discrete detection - a body that crosses it entirely within one fixed step misses it. Continuous collision covers a fast body against a segment; a fast segment is not swept.",
+  "symbol": "SegmentShape",
+  "kind": "class",
+  "subsystem": "physics",
+  "importPath": "@codexo/exojs-physics",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A zero-thickness boundary between two local-space endpoints: level edges, one-off walls, the geometry a body may not cross.",
+        "It has no interior, so Shape.massProperties is `null` and the shape contributes collision only - a `dynamic` body needs at least one mass-bearing collider alongside it.",
+        "A segment blocks from **both** sides. There is no inside for it to be outside of, and a one-sided segment would be a gameplay rule in a geometry costume: express that with the world's `contactModifier`, which decides per contact and per step whether it is solved.",
+        "Being zero-thickness makes it the worst case for discrete detection - a body that crosses it entirely within one fixed step misses it. Continuous collision covers a fast body against a segment; a fast segment is not swept."
+      ],
+      "importLine": "import { SegmentShape } from '@codexo/exojs-physics'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(x0: number, y0: number, x1: number, y1: number): SegmentShape",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x0",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y0",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "x1",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "y1",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SegmentShape",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "x0",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y0",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "x1",
+              "type": "number",
+              "optional": false
+            },
+            {
+              "name": "y1",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "SegmentShape",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "boundingRadius",
+          "signature": "boundingRadius: number",
+          "signatureTokens": [
+            {
+              "text": "boundingRadius",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Radius of the smallest circle about the local origin enclosing the shape."
+        },
+        {
+          "name": "length",
+          "signature": "length: number",
+          "signatureTokens": [
+            {
+              "text": "length",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "massProperties",
+          "signature": "massProperties: null",
+          "signatureTokens": [
+            {
+              "text": "massProperties",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Always null: a boundary has no interior and therefore no mass."
+        },
+        {
+          "name": "normals",
+          "signature": "normals: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "normals",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The two opposite outward unit normals, flattened."
+        },
+        {
+          "name": "type",
+          "signature": "type: \"segment\"",
+          "signatureTokens": [
+            {
+              "text": "type",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"segment\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "vertices",
+          "signature": "vertices: readonly number[]",
+          "signatureTokens": [
+            {
+              "text": "vertices",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Local endpoints, flattened - the same layout a polygon uses."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-physics/src/shapes/SegmentShape.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/SegmentShape.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-physics/src/shapes/SegmentShape.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-physics/src/shapes/SegmentShape.ts"
+}

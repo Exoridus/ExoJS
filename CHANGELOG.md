@@ -17,6 +17,32 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **`SegmentShape` — zero-thickness boundary geometry, and a dynamic body must now carry
+  mass.** Level edges and one-off walls had to be modelled as thin boxes, which are solid,
+  carry mass, and behave badly once they are thin enough to matter.
+
+  A `SegmentShape` is a boundary between two local endpoints. It has no interior, so its
+  `massProperties` is `null` and it contributes collision only; it blocks from **both**
+  sides, because there is no inside for it to be outside of. One-way behaviour is the
+  contact modifier's job, not a flag on the geometry. Internally a segment is the same
+  two-vertex ring a capsule is, minus the radius, so segment/polygon and segment/capsule are
+  the routine capsules already added.
+
+  Segment against segment is deliberately **unsupported**: two zero-thickness boundaries
+  have no overlap volume, so there is no stable manifold to report. `collide` produces none
+  and `testOverlap` is `false` — not "sometimes detected but not solved".
+
+  `queryPoint` never hits a segment, at any distance. Answering within an epsilon would make
+  the result depend on an engine constant rather than the authored geometry; AABB queries
+  and ray casts are the meaningful questions, and both work.
+
+  **BREAKING — a `dynamic` body must own at least one collider with mass.** Until now such a
+  body silently ended up with `mass = 0` and `invMass = 0`, which the solver cannot tell
+  apart from a static body; `isMassReady` recorded it and nothing read it. Adding a dynamic
+  body whose colliders are all boundary geometry (or all zero-density) now throws, as does
+  destroying the last mass-bearing collider of a body that still holds others. Removing a
+  body's only collider is still fine — a body with no geometry is one still being assembled.
+
 - **`CapsuleShape` — exact capsule geometry for characters and rounded bodies.** The shape
   vocabulary was circle, polygon and box, so the standard character collider had to be
   approximated by a box (catches on edges) or a polygon (its mass then depends on how many

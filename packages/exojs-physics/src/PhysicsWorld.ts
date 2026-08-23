@@ -32,14 +32,6 @@ const ccdEmbed = 0.05;
 const ccdRestitutionThreshold = 1;
 
 /**
- * `true` when a static/kinematic body - an island boundary, never an island
- * member - is being driven this step, either through its velocity or by a
- * {@link PhysicsBody.setTransform} teleport. Speed is deliberately not compared
- * against the sleep thresholds: a platform creeping along at 1 px/s still has to
- * push its passengers, and it is exactly that sub-threshold case where nothing
- * else would keep them awake.
- */
-/**
  * Keep a host-supplied blend factor inside `[0, 1]`. A caller's own accumulator
  * can hand over a value outside it (a stale read, a custom scheduler), and an
  * unclamped one extrapolates the node past the simulated state instead of
@@ -53,6 +45,45 @@ const clampAlpha = (alpha: number): number => {
   }
 
   return alpha < 1 ? alpha : 1;
+};
+
+/**
+ * Reject removing the last collider a dynamic body's mass rests on while it still
+ * holds others. Such a body keeps colliding but has `invMass === 0`, which the
+ * solver cannot tell apart from a static body - the same state `PhysicsBody`
+ * refuses to be constructed in.
+ *
+ * Removing the body's *only* collider is fine: a body with no geometry at all is
+ * a body still being assembled, not a silently broken one.
+ */
+const assertBodyKeepsItsMass = (collider: Collider): void => {
+  const body = collider.body;
+
+  if (body.type !== 'dynamic' || collider.shape.massProperties === null || collider.density <= 0) {
+    return;
+  }
+
+  let remaining = 0;
+
+  for (const other of body.colliders) {
+    if (other === collider) {
+      continue;
+    }
+
+    if (other.shape.massProperties !== null && other.density > 0) {
+      return;
+    }
+
+    remaining++;
+  }
+
+  if (remaining === 0) {
+    return;
+  }
+
+  throw new Error(
+    'PhysicsWorld.destroyCollider: this is the only collider carrying mass for a dynamic body — removing it would leave the body colliding but massless. Destroy the body instead, or give it another solid collider first.',
+  );
 };
 
 /** Shape kinds already reported as unswept, so the warning fires once per kind. */
@@ -78,6 +109,14 @@ const warnUnsweptBulletShape = (collider: Collider): void => {
   );
 };
 
+/**
+ * `true` when a static/kinematic body - an island boundary, never an island
+ * member - is being driven this step, either through its velocity or by a
+ * {@link PhysicsBody.setTransform} teleport. Speed is deliberately not compared
+ * against the sleep thresholds: a platform creeping along at 1 px/s still has to
+ * push its passengers, and it is exactly that sub-threshold case where nothing
+ * else would keep them awake.
+ */
 const isMovingBoundary = (body: PhysicsBody): boolean =>
   body._teleported || body.linearVelocityX !== 0 || body.linearVelocityY !== 0 || body.angularVelocity !== 0;
 
@@ -478,6 +517,10 @@ export class PhysicsWorld implements BodyOwner {
    * called inside a callback.
    */
   public destroyCollider(collider: Collider): void {
+    // Checked here rather than in the deferred removal so the error surfaces at
+    // the call site that caused it, not out of the middle of a `step()`.
+    assertBodyKeepsItsMass(collider);
+
     this._defer(() => this._removeCollider(collider));
   }
 

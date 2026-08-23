@@ -1,6 +1,7 @@
 import type { CapsuleShape } from './CapsuleShape';
 import type { CircleShape } from './CircleShape';
 import type { PolygonShape } from './PolygonShape';
+import type { SegmentShape } from './SegmentShape';
 
 /**
  * Discriminated union of the concrete shape kinds. Narrow via the literal
@@ -9,4 +10,4 @@ import type { PolygonShape } from './PolygonShape';
  * needed. {@link BoxShape} is a {@link PolygonShape} subclass and carries
  * `type: 'polygon'`.
  */
-export type AnyShape = CapsuleShape | CircleShape | PolygonShape;
+export type AnyShape = CapsuleShape | CircleShape | PolygonShape | SegmentShape;

@@ -14,7 +14,8 @@ const worldVertexCount = (shape: AnyShape): number => {
     case 'polygon':
       return shape.count;
     case 'capsule':
-      // The spine endpoints; a capsule is a two-vertex ring plus a radius.
+    case 'segment':
+      // Two endpoints. Both are a two-vertex ring, with and without a radius.
       return 2;
     case 'circle':
       return 0;
@@ -181,6 +182,9 @@ export class Collider {
         // A capsule is a two-vertex ring plus a radius, so it rides the polygon
         // path and only the AABB inflation differs.
         this._synchronizePolygon(world, this.shape.vertices, this.shape.normals, 2, this.shape.radius);
+        break;
+      case 'segment':
+        this._synchronizePolygon(world, this.shape.vertices, this.shape.normals, 2, 0);
         break;
       case 'polygon':
         this._synchronizePolygon(world, this.shape.vertices, this.shape.normals, this.shape.count, 0);

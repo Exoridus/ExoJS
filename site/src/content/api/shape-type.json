@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "ShapeType",
-          "signature": "\"capsule\" | \"circle\" | \"polygon\"",
+          "signature": "\"capsule\" | \"circle\" | \"polygon\" | \"segment\"",
           "signatureTokens": [
             {
               "text": "\"capsule\"",
@@ -50,6 +50,14 @@
             },
             {
               "text": "\"polygon\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"segment\"",
               "kind": "keyword"
             }
           ],
