@@ -1,5 +1,5 @@
 import type { AabbLike, PointLike, SceneNode, Time } from '@codexo/exojs';
-import { Signal, Vector } from '@codexo/exojs';
+import { logger, Signal, Vector } from '@codexo/exojs';
 
 import { aabbOverlap, createAabb } from './Aabb';
 import { NativePhysicsBackend } from './backend/NativePhysicsBackend';
@@ -8,7 +8,7 @@ import { BindingRegistry } from './binding/BindingRegistry';
 import type { PhysicsBinding } from './binding/PhysicsBinding';
 import { Collider } from './Collider';
 import type { SweepHit } from './collision/sweep';
-import { sweepProxies } from './collision/sweep';
+import { canSweep, sweepProxies } from './collision/sweep';
 import type { ContactModifier } from './ContactModifier';
 import type { CollisionEvent, SensorEvent } from './events';
 import type { Joint } from './joints/Joint';
@@ -53,6 +53,29 @@ const clampAlpha = (alpha: number): number => {
   }
 
   return alpha < 1 ? alpha : 1;
+};
+
+/** Shape kinds already reported as unswept, so the warning fires once per kind. */
+const warnedUnsweptKinds = new Set<string>();
+
+/**
+ * Dev-only: a bullet body carrying a shape the sweep has no implementation for
+ * is not protected against tunnelling. Reporting it beats a silent pass-through
+ * while the remaining shape casts are still being filled in.
+ */
+const warnUnsweptBulletShape = (collider: Collider): void => {
+  const kind = collider.shape.type;
+
+  if (canSweep(kind, 'polygon') || warnedUnsweptKinds.has(kind)) {
+    return;
+  }
+
+  warnedUnsweptKinds.add(kind);
+  logger.warn(
+    `PhysicsWorld: a bullet body carries a '${kind}' collider, which continuous collision does not sweep yet — ` +
+      'this body can still tunnel through thin geometry. Use a circle or polygon collider for fast projectiles.',
+    { source: 'physics' },
+  );
 };
 
 const isMovingBoundary = (body: PhysicsBody): boolean =>
@@ -1090,6 +1113,10 @@ export class PhysicsWorld implements BodyOwner {
     for (const collider of body.colliders) {
       if (collider.isSensor) {
         continue; // Sensors never block — not even their own body's motion.
+      }
+
+      if (__DEV__) {
+        warnUnsweptBulletShape(collider);
       }
 
       // The collider's end-pose AABB unioned with its start pose; anything

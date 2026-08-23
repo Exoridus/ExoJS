@@ -23,6 +23,7 @@ export { PhysicsWorld } from './PhysicsWorld';
 export type { QueryFilter, RayHit } from './query/QueryEngine';
 export type { AnyShape } from './shapes/AnyShape';
 export { BoxShape } from './shapes/BoxShape';
+export { CapsuleShape } from './shapes/CapsuleShape';
 export { CircleShape } from './shapes/CircleShape';
 export { PolygonShape } from './shapes/PolygonShape';
 export type { ShapeMassProperties, ShapeType } from './shapes/Shape';

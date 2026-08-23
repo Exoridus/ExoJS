@@ -173,6 +173,12 @@ export class PhysicsDebugDraw extends DebugLayer {
       return;
     }
 
+    if (collider.shape.type === 'capsule') {
+      this._strokeCapsule(gfx, collider.worldVertices, collider.shape.radius);
+
+      return;
+    }
+
     const verts = collider.worldVertices;
     const count = collider.shape.count;
 
@@ -182,6 +188,35 @@ export class PhysicsDebugDraw extends DebugLayer {
       const j = i % count;
 
       gfx.lineTo(verts[j * 2]!, verts[j * 2 + 1]!);
+    }
+  }
+
+  /**
+   * Capsule outline: the two straight sides offset from the spine, joined by a
+   * half-circle at each end. The arcs are approximated - a visualisation may
+   * tessellate, the solver never does.
+   */
+  private _strokeCapsule(gfx: Graphics, spine: readonly number[], radius: number): void {
+    const ax = spine[0]!;
+    const ay = spine[1]!;
+    const bx = spine[2]!;
+    const by = spine[3]!;
+    const along = Math.atan2(by - ay, bx - ax);
+    const arcSegments = 12;
+
+    gfx.moveTo(ax + Math.cos(along + Math.PI / 2) * radius, ay + Math.sin(along + Math.PI / 2) * radius);
+    gfx.lineTo(bx + Math.cos(along + Math.PI / 2) * radius, by + Math.sin(along + Math.PI / 2) * radius);
+
+    for (let i = 1; i <= arcSegments; i++) {
+      const angle = along + Math.PI / 2 - (Math.PI * i) / arcSegments;
+
+      gfx.lineTo(bx + Math.cos(angle) * radius, by + Math.sin(angle) * radius);
+    }
+
+    for (let i = 1; i <= arcSegments; i++) {
+      const angle = along - Math.PI / 2 - (Math.PI * i) / arcSegments;
+
+      gfx.lineTo(ax + Math.cos(angle) * radius, ay + Math.sin(angle) * radius);
     }
   }
 

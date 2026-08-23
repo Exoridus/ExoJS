@@ -1,34 +1,66 @@
+import type { PointLike } from '@codexo/exojs';
+
 import type { CollisionProxy } from './CollisionProxy';
+import type { PairTable } from './dispatch';
+import { needsFlip, symmetricEntry, symmetricTable } from './dispatch';
 import type { Manifold } from './Manifold';
+import { closestPointOnSegment, pointSegmentDistanceSquared } from './segments';
 
 const eps = 1e-9;
+
+/** Reused closest-point sink; the narrow phase is single-threaded and non-reentrant. */
+const _segmentScratch: PointLike = { x: 0, y: 0 };
+
+/**
+ * Solves one unordered shape pair. `a` is always the operand of the lower shape
+ * kind; `flip` is `true` when the caller's operands were swapped to get there,
+ * and the routine must reverse the manifold normal so it still points from the
+ * caller's `a` toward its `b`.
+ */
+type CollidePair = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold, flip: boolean) => boolean;
+
+/** Boolean form of {@link CollidePair}; no normal, so no flip to honour. */
+type OverlapPair = (a: CollisionProxy, b: CollisionProxy) => boolean;
 
 /**
  * Generate the contact manifold for `a` vs `b`, writing into `manifold` and
  * returning `true` when the colliders touch. The manifold normal is oriented
- * from `a` toward `b`. Dispatches on shape pair; polygon/circle is handled by
- * the circle/polygon routine with a `flip` so the normal stays `a → b`.
+ * from `a` toward `b`.
+ *
+ * A pair with no entry in the table is deliberately unsupported and reports no
+ * contact rather than an approximation.
  */
 export const collide = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold): boolean => {
   manifold.reset();
 
   const ta = a.shape.type;
   const tb = b.shape.type;
+  const solver = symmetricEntry(collideTable, ta, tb);
 
-  if (ta === 'circle') {
-    return tb === 'circle' ? collideCircles(a, b, manifold) : collideCirclePolygon(a, b, manifold, false);
+  if (solver === undefined) {
+    return false;
   }
 
-  return tb === 'circle' ? collideCirclePolygon(b, a, manifold, true) : collidePolygons(a, b, manifold);
+  return needsFlip(ta, tb) ? solver(b, a, manifold, true) : solver(a, b, manifold, false);
 };
 
-// radiusOf/countOf are only ever called after the `collide` dispatch has matched
-// the shape kind, so the discriminant always holds; the fallback is unreachable
-// but keeps these allocation-free helpers cast-free and type-safe.
-const radiusOf = (collider: CollisionProxy): number => (collider.shape.type === 'circle' ? collider.shape.radius : 0);
-const countOf = (collider: CollisionProxy): number => (collider.shape.type === 'polygon' ? collider.shape.count : 0);
+// Both helpers stay cast-free and allocation-free. A capsule is a two-vertex
+// ring with a radius, which is exactly why it shares the polygon routines: the
+// ring supplies `count` and `worldVertices`/`worldNormals`, the radius rounds
+// the result off.
+const radiusOf = (collider: CollisionProxy): number => (collider.shape.type === 'polygon' ? 0 : collider.shape.radius);
+const countOf = (collider: CollisionProxy): number => {
+  switch (collider.shape.type) {
+    case 'polygon':
+      return collider.shape.count;
+    case 'capsule':
+      return 2;
+    case 'circle':
+      return 0;
+  }
+};
 
-const collideCircles = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold): boolean => {
+const collideCircles: CollidePair = (a, b, manifold) => {
   const ca = a.worldCenter;
   const cb = b.worldCenter;
   const ra = radiusOf(a);
@@ -72,7 +104,7 @@ const collideCircles = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold
  * the circle toward the polygon; when `flip` is set (the polygon is collider A),
  * the normal is negated so it stays `a → b`.
  */
-const collideCirclePolygon = (circle: CollisionProxy, polygon: CollisionProxy, manifold: Manifold, flip: boolean): boolean => {
+const collideCirclePolygon: CollidePair = (circle, polygon, manifold, flip) => {
   const c = circle.worldCenter;
   const r = radiusOf(circle);
   const verts = polygon.worldVertices;
@@ -353,24 +385,37 @@ const copyClip = (from: ClipVertex, to: ClipVertex): void => {
 const encodeId = (flip: boolean, refEdge: number, incidentId: number): number =>
   (flip ? 1 << 20 : 0) | ((refEdge & 0xff) << 12) | (incidentId & 0xfff);
 
-/** Convex polygon vs convex polygon: SAT reference face + Sutherland-Hodgman clip. */
-const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifold): boolean => {
+/**
+ * Convex ring vs convex ring: SAT reference face + Sutherland-Hodgman clip, with
+ * each operand allowed a radius that rounds its outline off.
+ *
+ * The separations the SAT computes are between the two **cores**; the radii only
+ * move where touching begins, and since both candidate axes shift by the same
+ * sum, the reference face the SAT picks is unaffected. A capsule is a two-vertex
+ * core with a radius and a polygon a many-vertex core without one, so
+ * polygon/polygon, capsule/polygon and capsule/capsule are all this one routine.
+ */
+const collideRoundedPolygons: CollidePair = (a, b, manifold, callerFlip) => {
+  const totalRadius = radiusOf(a) + radiusOf(b);
   const sepA = findMaxSeparation(a, b, _sepA);
 
-  if (sepA.separation >= 0) {
+  if (sepA.separation >= totalRadius) {
     return false;
   }
 
   const sepB = findMaxSeparation(b, a, _sepB);
 
-  if (sepB.separation >= 0) {
+  if (sepB.separation >= totalRadius) {
     return false;
   }
 
   let ref: CollisionProxy;
   let inc: CollisionProxy;
   let refEdge: number;
-  let flip: boolean;
+  // Whether the REFERENCE role went to `b`. Distinct from `callerFlip`, which
+  // records that the caller's own operands were swapped to reach the canonical
+  // order; the final normal has to undo both.
+  let refSwapped: boolean;
 
   // Bias toward keeping A as the reference for stability (reduces ref/incident
   // role flapping when a body rocks slightly).
@@ -378,12 +423,12 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
     ref = a;
     inc = b;
     refEdge = sepA.edge;
-    flip = false;
+    refSwapped = false;
   } else {
     ref = b;
     inc = a;
     refEdge = sepB.edge;
-    flip = true;
+    refSwapped = true;
   }
 
   const rv = ref.worldVertices;
@@ -416,20 +461,23 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
 
   const clipped1 = _clipped1Scratch;
 
-  if (clipSegment(-tx, -ty, negSide, incident, clipped1, encodeId(flip, refEdge, 0xffe)) < 2) {
+  if (clipSegment(-tx, -ty, negSide, incident, clipped1, encodeId(refSwapped, refEdge, 0xffe)) < 2) {
     return false;
   }
 
   const clipped2 = _clipped2Scratch;
 
-  if (clipSegment(tx, ty, posSide, clipped1, clipped2, encodeId(flip, refEdge, 0xfff)) < 2) {
+  if (clipSegment(tx, ty, posSide, clipped1, clipped2, encodeId(refSwapped, refEdge, 0xfff)) < 2) {
     return false;
   }
 
-  manifold.normalX = flip ? -refNx : refNx;
-  manifold.normalY = flip ? -refNy : refNy;
+  const flipNormal = refSwapped !== callerFlip;
+
+  manifold.normalX = flipNormal ? -refNx : refNx;
+  manifold.normalY = flipNormal ? -refNy : refNy;
 
   const refC = refNx * v1x + refNy * v1y;
+  const incidentRadius = radiusOf(inc);
   const points = manifold.points;
   let cp = 0;
 
@@ -438,13 +486,17 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
     const cv = k === 0 ? clipped2[0] : clipped2[1];
     const separation = refNx * cv.x + refNy * cv.y - refC;
 
-    if (separation <= 0) {
+    if (separation <= totalRadius) {
+      // The clip vertex lies on the incident CORE; pulling it back along the
+      // reference normal by the incident radius puts it on that shape's real
+      // surface. A radius-free incident polygon shifts by zero, so the point is
+      // the clip vertex exactly as it was before capsules existed.
       // cp reaches at most 2 (one per clip vertex); points[0]/points[1] exist.
       const point = cp === 0 ? points[0] : points[1];
-      point.x = cv.x;
-      point.y = cv.y;
-      point.penetration = -separation;
-      point.id = encodeId(flip, refEdge, cv.id);
+      point.x = cv.x - refNx * incidentRadius;
+      point.y = cv.y - refNy * incidentRadius;
+      point.penetration = totalRadius - separation;
+      point.id = encodeId(refSwapped, refEdge, cv.id);
       cp++;
     }
   }
@@ -461,29 +513,91 @@ const collidePolygons = (a: CollisionProxy, b: CollisionProxy, manifold: Manifol
 export const testOverlap = (a: CollisionProxy, b: CollisionProxy): boolean => {
   const ta = a.shape.type;
   const tb = b.shape.type;
+  const test = symmetricEntry(overlapTable, ta, tb);
 
-  if (ta === 'circle') {
-    if (tb === 'circle') {
-      const ca = a.worldCenter;
-      const cb = b.worldCenter;
-      const rsum = radiusOf(a) + radiusOf(b);
-      const dx = cb.x - ca.x;
-      const dy = cb.y - ca.y;
-
-      return dx * dx + dy * dy <= rsum * rsum;
-    }
-
-    return circlePolygonOverlap(a, b);
+  if (test === undefined) {
+    return false;
   }
 
-  if (tb === 'circle') {
-    return circlePolygonOverlap(b, a);
-  }
-
-  return findMaxSeparation(a, b, _sepA).separation < 0 && findMaxSeparation(b, a, _sepB).separation < 0;
+  return needsFlip(ta, tb) ? test(b, a) : test(a, b);
 };
 
-const circlePolygonOverlap = (circle: CollisionProxy, polygon: CollisionProxy): boolean => {
+const circlesOverlap: OverlapPair = (a, b) => {
+  const ca = a.worldCenter;
+  const cb = b.worldCenter;
+  const rsum = radiusOf(a) + radiusOf(b);
+  const dx = cb.x - ca.x;
+  const dy = cb.y - ca.y;
+
+  return dx * dx + dy * dy <= rsum * rsum;
+};
+
+const roundedPolygonsOverlap: OverlapPair = (a, b) => {
+  const totalRadius = radiusOf(a) + radiusOf(b);
+
+  return findMaxSeparation(a, b, _sepA).separation < totalRadius && findMaxSeparation(b, a, _sepB).separation < totalRadius;
+};
+
+/**
+ * Circle vs capsule: a capsule is every point within its radius of the spine, so
+ * this is a circle/circle test against the spine point nearest the circle centre.
+ * One contact point - a circle meets a rounded surface in one place, and a second
+ * would be invented noise for the solver.
+ */
+const collideCircleCapsule: CollidePair = (circle, capsule, manifold, flip) => {
+  const spine = capsule.worldVertices;
+  const centre = circle.worldCenter;
+  const circleRadius = radiusOf(circle);
+  const radiusSum = circleRadius + radiusOf(capsule);
+
+  closestPointOnSegment(centre.x, centre.y, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _segmentScratch);
+
+  let nx = _segmentScratch.x - centre.x;
+  let ny = _segmentScratch.y - centre.y;
+  const distanceSquared = nx * nx + ny * ny;
+
+  if (distanceSquared > radiusSum * radiusSum) {
+    return false;
+  }
+
+  const distance = Math.sqrt(distanceSquared);
+
+  if (distance > eps) {
+    nx /= distance;
+    ny /= distance;
+  } else {
+    // Centre exactly on the spine: the direction is undefined, so take the
+    // capsule's own side normal. It is stable from frame to frame, which an
+    // axis-aligned guess would not be.
+    nx = capsule.worldNormals[0]!;
+    ny = capsule.worldNormals[1]!;
+  }
+
+  manifold.normalX = flip ? -nx : nx;
+  manifold.normalY = flip ? -ny : ny;
+
+  const point = manifold.points[0];
+  // Midway between the two surfaces along the contact normal.
+  const along = circleRadius + (distance - radiusSum) * 0.5;
+
+  point.x = centre.x + nx * along;
+  point.y = centre.y + ny * along;
+  point.penetration = radiusSum - distance;
+  point.id = 0;
+  manifold.pointCount = 1;
+
+  return true;
+};
+
+const circleCapsuleOverlap: OverlapPair = (circle, capsule) => {
+  const spine = capsule.worldVertices;
+  const centre = circle.worldCenter;
+  const radiusSum = radiusOf(circle) + radiusOf(capsule);
+
+  return pointSegmentDistanceSquared(centre.x, centre.y, spine[0]!, spine[1]!, spine[2]!, spine[3]!, _segmentScratch) <= radiusSum * radiusSum;
+};
+
+const circlePolygonOverlap: OverlapPair = (circle, polygon) => {
   const c = circle.worldCenter;
   const r = radiusOf(circle);
   const verts = polygon.worldVertices;
@@ -539,3 +653,23 @@ const circlePolygonOverlap = (circle: CollisionProxy, polygon: CollisionProxy): 
 
   return maxSep <= r;
 };
+
+// Pair tables, built once at module init. Every unordered pair the engine
+// supports appears exactly once; anything absent reports no contact.
+const collideTable: PairTable<CollidePair> = symmetricTable<CollidePair>([
+  ['circle', 'circle', collideCircles],
+  ['circle', 'capsule', collideCircleCapsule],
+  ['circle', 'polygon', collideCirclePolygon],
+  ['capsule', 'capsule', collideRoundedPolygons],
+  ['capsule', 'polygon', collideRoundedPolygons],
+  ['polygon', 'polygon', collideRoundedPolygons],
+]);
+
+const overlapTable: PairTable<OverlapPair> = symmetricTable<OverlapPair>([
+  ['circle', 'circle', circlesOverlap],
+  ['circle', 'capsule', circleCapsuleOverlap],
+  ['circle', 'polygon', circlePolygonOverlap],
+  ['capsule', 'capsule', roundedPolygonsOverlap],
+  ['capsule', 'polygon', roundedPolygonsOverlap],
+  ['polygon', 'polygon', roundedPolygonsOverlap],
+]);
