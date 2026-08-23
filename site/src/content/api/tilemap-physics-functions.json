@@ -1,0 +1,130 @@
+{
+  "title": "Tilemap-physics Functions",
+  "description": "Free functions and constants exported from @codexo/exojs-tilemap-physics.",
+  "symbol": "Tilemap-physics Functions",
+  "kind": "namespace",
+  "subsystem": "tilemap-physics",
+  "importPath": "@codexo/exojs-tilemap-physics",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "overview",
+      "title": "Overview",
+      "members": [],
+      "paragraphs": [
+        "Free functions and constants exported from @codexo/exojs-tilemap-physics. Import any of them directly, for example `import { buildObjectLayerColliders } from '@codexo/exojs-tilemap-physics'`."
+      ],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "functions",
+      "title": "Functions",
+      "members": [
+        {
+          "name": "buildObjectLayerColliders",
+          "signature": "buildObjectLayerColliders(world: PhysicsWorld, layer: ObjectLayer, options: ObjectColliderOptions): ObjectCollider[]",
+          "signatureTokens": [
+            {
+              "text": "buildObjectLayerColliders",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "world",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PhysicsWorld",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectLayer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectColliderOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectCollider",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "world",
+              "type": "PhysicsWorld",
+              "optional": false
+            },
+            {
+              "name": "layer",
+              "type": "ObjectLayer",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ObjectColliderOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ObjectCollider[]",
+          "description": "Build one static body per collision object in an object layer and add them to world. An object layer is static data with no residency, so this is a one-shot build with no lifecycle: the caller owns the returned bodies and destroys them through the world. Use import('./TileColliderStreamer').TileColliderStreamer for tile layers, whose chunks come and go. The layer's pixel offset is applied, so the colliders land where the layer is drawn. Objects with no collision geometry (points, tile and text objects) are skipped, as is any object the decomposition rejects - with a warning, not an exception."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    }
+  ]
+}

@@ -70,6 +70,7 @@ const RUNTIME_PACKAGES = [
   'exojs-aseprite',
   'exojs-ldtk',
   'exojs-react',
+  'exojs-tilemap-physics',
 ];
 
 /**

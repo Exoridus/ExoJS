@@ -44,6 +44,7 @@ export const LOCKSTEP_PACKAGES = [
   { name: '@codexo/exojs-aseprite', dir: 'packages/exojs-aseprite', isExtension: true, inOfflineSmoke: true },
   { name: '@codexo/exojs-ldtk', dir: 'packages/exojs-ldtk', isExtension: true, inOfflineSmoke: true },
   { name: '@codexo/exojs-react', dir: 'packages/exojs-react', isExtension: true, inOfflineSmoke: false },
+  { name: '@codexo/exojs-tilemap-physics', dir: 'packages/exojs-tilemap-physics', isExtension: true, inOfflineSmoke: true },
 ] as const satisfies readonly LockstepPackage[];
 
 /**

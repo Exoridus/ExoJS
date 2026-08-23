@@ -26,6 +26,7 @@ export { BoxShape } from './shapes/BoxShape';
 export { CapsuleShape } from './shapes/CapsuleShape';
 export { ChainShape, type ChainShapeOptions } from './shapes/ChainShape';
 export { CircleShape } from './shapes/CircleShape';
+export { toConvexPolygonShapes } from './shapes/convexParts';
 export { PolygonShape } from './shapes/PolygonShape';
 export { SegmentShape } from './shapes/SegmentShape';
 export type { ShapeMassProperties, ShapeType } from './shapes/Shape';

@@ -2,7 +2,7 @@ import type { CollectionEntry } from 'astro:content';
 
 export type ApiEntry = CollectionEntry<'api'>;
 
-export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'ui', 'input', 'audio', 'animation', 'assets', 'math', 'extensions', 'debug', 'particles', 'tilemap', 'tiled', 'physics', 'aseprite', 'ldtk'] as const;
+export const API_SUBSYSTEM_ORDER = ['core', 'rendering', 'ui', 'input', 'audio', 'animation', 'assets', 'math', 'extensions', 'debug', 'particles', 'tilemap', 'tiled', 'physics', 'tilemap-physics', 'aseprite', 'ldtk'] as const;
 
 export type ApiSubsystem = (typeof API_SUBSYSTEM_ORDER)[number];
 
@@ -70,6 +70,10 @@ export const API_SUBSYSTEM_META: Record<ApiSubsystem, { label: string; descripti
     ldtk: {
         label: 'LDtk (official extension)',
         description: 'The @codexo/exojs-ldtk package: load LDtk levels and layers through the loader.',
+    },
+    'tilemap-physics': {
+        label: 'Tilemap physics (official extension)',
+        description: 'The @codexo/exojs-tilemap-physics package: static physics colliders built and streamed from tilemap collision geometry.',
     },
 };
 

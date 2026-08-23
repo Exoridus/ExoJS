@@ -854,7 +854,7 @@ jobs:
         env:
           # Per-package bundle-analysis uploads (see exojs-config/rolldown).
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
+        run: pnpm --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-tilemap-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" build
 
       # The dist-dependent half of production-stripping.test.ts asserts that the
       # artefacts we actually ship carry no unresolved __DEV__/__VERSION__/
@@ -944,7 +944,7 @@ jobs:
       # line rather than the engine lockstep, so it is packed here and left out
       # of the lockstep/publish-order matrix above.
       - name: Extension package dry runs
-        run: pnpm --filter "@codexo/exojs-build" --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" pack --dry-run
+        run: pnpm --filter "@codexo/exojs-build" --filter "@codexo/exojs-particles" --filter "@codexo/exojs-tilemap" --filter "@codexo/exojs-tiled" --filter "@codexo/exojs-physics" --filter "@codexo/exojs-tilemap-physics" --filter "@codexo/exojs-audio-fx" --filter "@codexo/exojs-aseprite" --filter "@codexo/exojs-ldtk" --filter "@codexo/exojs-react" pack --dry-run
 
       # publint validates the published package.json itself (exports map, files,
       # types resolution, module/main coherence) — the layer attw does NOT cover

@@ -64,6 +64,7 @@ import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { AudioAnalyser, BeatDetector, ReverbEffect } from '@codexo/exojs-audio-fx';
 import { AsepriteSheet, asepriteExtension } from '@codexo/exojs-aseprite';
 import { LdtkMap, ldtkExtension } from '@codexo/exojs-ldtk';
+import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
 
 export class DemoScene extends Scene {}
 
@@ -97,6 +98,7 @@ export function bootstrap(): { app: Application; system: typeof ParticleSystem; 
     void asepriteExtension;
     void LdtkMap;
     void ldtkExtension;
+    void TileColliderStreamer;
     return { app, system: ParticleSystem, tiles: TileMap, map: TiledMap };
 }
 `;
@@ -160,6 +162,7 @@ import * as physicsDebug from '@codexo/exojs-physics/debug';
 import * as audioFx from '@codexo/exojs-audio-fx';
 import * as aseprite from '@codexo/exojs-aseprite';
 import * as ldtk from '@codexo/exojs-ldtk';
+import * as tilemapPhysics from '@codexo/exojs-tilemap-physics';
 
 const checks = [
   ['@codexo/exojs Application', typeof exo.Application === 'function'],
@@ -181,6 +184,8 @@ const checks = [
   ['@codexo/exojs-ldtk LdtkMap', typeof ldtk.LdtkMap === 'function'],
   ['@codexo/exojs-ldtk ldtkExtension', ldtk.ldtkExtension != null],
   ['facade ldtk TileMap identity (ldtk === tilemap)', ldtk.TileMap === tilemap.TileMap],
+  ['@codexo/exojs-tilemap-physics TileColliderStreamer', typeof tilemapPhysics.TileColliderStreamer === 'function'],
+  ['@codexo/exojs-tilemap-physics buildObjectLayerColliders', typeof tilemapPhysics.buildObjectLayerColliders === 'function'],
 ];
 const failed = checks.filter(([, ok]) => !ok).map(([name]) => name);
 if (failed.length > 0) {

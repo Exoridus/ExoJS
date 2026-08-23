@@ -6,10 +6,10 @@
   "subsystem": "physics",
   "importPath": "@codexo/exojs-physics",
   "tier": "stable",
-  "memberCount": 3,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
-    "methods": 1,
+    "methods": 2,
     "properties": 2,
     "events": 0
   },
@@ -95,6 +95,81 @@
           ],
           "returnType": "boolean",
           "description": "Decide whether two filters permit a collision/overlap. Implements the standard category/mask rule with the signed-group override (Box2D/Matter semantics)."
+        },
+        {
+          "name": "toConvexPolygonShapes",
+          "signature": "toConvexPolygonShapes(vertices: readonly Readonly<PointLike>[]): PolygonShape[]",
+          "signatureTokens": [
+            {
+              "text": "toConvexPolygonShapes",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "vertices",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PointLike",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PolygonShape",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "vertices",
+              "type": "readonly Readonly<PointLike>[]",
+              "optional": false
+            }
+          ],
+          "returnType": "PolygonShape[]",
+          "description": "Turn one possibly-concave outline into the convex solver shapes that represent it. Attach all of them to a single body: together they are the original area, and a PolygonShape stays exactly one convex shape rather than secretly standing for several. The number of shapes and their order follow from the current decomposition and are not a stable contract; the preserved properties are the area, the centre of mass and the rotational inertia of the compound. An already-convex outline yields exactly one shape, so a caller that does not know whether its input is convex can route everything through here."
         }
       ],
       "paragraphs": [],

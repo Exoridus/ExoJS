@@ -296,6 +296,21 @@ importers:
         specifier: workspace:*
         version: link:../exojs-config
 
+  packages/exojs-tilemap-physics:
+    devDependencies:
+      '@codexo/exojs':
+        specifier: workspace:*
+        version: link:../..
+      '@codexo/exojs-config':
+        specifier: workspace:*
+        version: link:../exojs-config
+      '@codexo/exojs-physics':
+        specifier: workspace:*
+        version: link:../exojs-physics
+      '@codexo/exojs-tilemap':
+        specifier: workspace:*
+        version: link:../exojs-tilemap
+
   site:
     dependencies:
       '@astrojs/mdx':

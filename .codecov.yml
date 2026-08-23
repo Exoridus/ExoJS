@@ -90,6 +90,10 @@ component_management:
       name: physics
       paths:
         - packages/exojs-physics/src/**
+    - component_id: tilemap-physics
+      name: tilemap-physics
+      paths:
+        - packages/exojs-tilemap-physics/src/**
     - component_id: audio-fx
       name: audio-fx
       paths:

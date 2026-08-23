@@ -112,6 +112,13 @@ const EXTENSION_PACKAGES: ReadonlyArray<ExtensionPackage> = [
         sourceMarker: 'packages/exojs-aseprite/src/',
     },
     {
+        importPath: '@codexo/exojs-tilemap-physics',
+        subsystem: 'tilemap-physics',
+        entryPoint: 'packages/exojs-tilemap-physics/src/index.ts',
+        tsconfig: 'packages/exojs-tilemap-physics/tsconfig.json',
+        sourceMarker: 'packages/exojs-tilemap-physics/src/',
+    },
+    {
         importPath: '@codexo/exojs-ldtk',
         subsystem: 'ldtk',
         entryPoint: 'packages/exojs-ldtk/src/index.ts',

@@ -2,7 +2,7 @@ import { Application, Asset, Color, type RenderingContext, Scene, Sprite, Sprite
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { ObjectKind, ObjectLayer, type RectangleObject, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
-import { buildCollidersFromObjectLayer } from '@examples/physics-tilemap';
+import { buildObjectLayerColliders } from '@codexo/exojs-tilemap-physics';
 import { mountControls } from '@examples/runtime';
 
 // Combined Tiled + physics demo.
@@ -11,8 +11,10 @@ import { mountControls } from '@examples/runtime';
 //      extension installed below).
 //   2. An `ObjectLayer` carries the level's solid regions - exactly the data a
 //      Tiled "collision" object layer would hold.
-//   3. `buildCollidersFromObjectLayer` (the shared bridge recipe) walks that
-//      layer and adds one static `PhysicsBody` per region to the world.
+//   3. `buildObjectLayerColliders` from `@codexo/exojs-tilemap-physics` walks
+//      that layer and adds one static `PhysicsBody` per region to the world.
+//      (For a tile layer whose chunks stream in and out, the same package's
+//      `TileColliderStreamer` keeps the colliders in sync instead.)
 //   4. A dynamic actor is dropped in with `world.attach` and falls onto the
 //      generated colliders, bouncing between the walls.
 //
@@ -110,13 +112,13 @@ class TiledMapPhysicsActorScene extends Scene {
         const collision = map.getObjectLayer('collision');
 
         if (collision) {
-            const built = buildCollidersFromObjectLayer(this.world, collision, { friction: 0.7, restitution: 0.05 });
+            const built = buildObjectLayerColliders(this.world, collision, { friction: 0.7, restitution: 0.05 });
 
             this.hud = mountControls({
                 title: 'Tiled Map + Physics Actor',
                 controls: [{ keys: 'Auto', action: 'actor falls and bounces across the level' }],
                 status: `${built.length} static colliders built from the object layer`,
-                hint: 'buildCollidersFromObjectLayer() turns a Tiled object layer into static bodies; the actor falls onto them via world.attach.',
+                hint: 'buildObjectLayerColliders() turns a Tiled object layer into static bodies; the actor falls onto them via world.attach.',
             });
         }
 

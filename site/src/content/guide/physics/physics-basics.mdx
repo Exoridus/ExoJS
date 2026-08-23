@@ -400,6 +400,66 @@ large the world is, and sleeping bodies skip it entirely — scaling
 comfortably to tens of thousands of simultaneously-live colliders, including
 dense clusters that would degrade a sort-and-sweep broad phase.
 
+## Colliders from a tilemap
+
+`@codexo/exojs-tilemap-physics` turns tilemap collision geometry into static
+bodies, so a level authored in Tiled or LDtk becomes solid world without a
+hand-written loop. It is a separate package because tilemap and physics
+deliberately do not depend on each other:
+
+```sh
+npm install @codexo/exojs-tilemap @codexo/exojs-physics @codexo/exojs-tilemap-physics
+```
+
+For a tile layer, `TileColliderStreamer` owns one static body per resident
+chunk and keeps them in sync with the layer - building bodies for chunks that
+load, rebuilding edited ones, destroying evicted ones:
+
+```ts
+import { PhysicsWorld } from '@codexo/exojs-physics';
+import type { TileLayer } from '@codexo/exojs-tilemap';
+import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+
+declare const groundLayer: TileLayer;
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 } });
+const colliders = new TileColliderStreamer(world, groundLayer, { friction: 0.8 });
+
+// Tick this from your update loop, before stepping the world.
+colliders.sync();
+```
+
+`sync()` is cheap every frame: with no change since the last call it returns
+immediately. Call `destroy()` to remove every body it created.
+
+For an object layer - spawn regions, triggers, hand-drawn collision - there is
+nothing to stream, so it is a one-shot build:
+
+```ts
+import { PhysicsWorld } from '@codexo/exojs-physics';
+import type { ObjectLayer } from '@codexo/exojs-tilemap';
+import { buildObjectLayerColliders } from '@codexo/exojs-tilemap-physics';
+
+declare const collisionLayer: ObjectLayer;
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 } });
+const built = buildObjectLayerColliders(world, collisionLayer, {
+  friction: 0.7,
+  restitution: 0.05,
+});
+
+console.log(`${built.length} static colliders`);
+```
+
+Rectangles become boxes, ellipses become capsules (a circle when round), convex
+polygons become one polygon each, concave polygons become several convex
+polygons on one body, and polylines become chains. Points carry no collision
+area and are skipped.
+
+<Callout type="info" title="Two ways to represent a solid tile region">
+By default a solid run of tiles becomes merged boxes, which keep an interior: queries and sensors work inside them, and a body that starts inside is pushed out. With `regionMode: 'outline'` the region becomes a closed one-sided chain instead - no internal edges for a sliding body to catch on, but no interior either, so a body spawned inside falls through.
+</Callout>
+
 ## Where to go next
 
 - **Joints, sleeping & CCD:** the next chapter,
@@ -411,5 +471,7 @@ dense clusters that would degrade a sort-and-sweep broad phase.
   [`BoxShape`](/ExoJS/en/api/box-shape/), [`CircleShape`](/ExoJS/en/api/circle-shape/),
   [`CapsuleShape`](/ExoJS/en/api/capsule-shape/), [`SegmentShape`](/ExoJS/en/api/segment-shape/),
   [`ChainShape`](/ExoJS/en/api/chain-shape/) and [`PhysicsBinding`](/ExoJS/en/api/physics-binding/).
+- **Tilemap collision:** [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) covers the
+  authoring side of the per-tile collision shapes the bridge consumes.
 - **The frame loop:** [Scenes & lifecycle](/ExoJS/en/guide/runtime/scenes-and-lifecycle/)
   covers `fixedUpdate`, `update` and `draw` and the order they run in.

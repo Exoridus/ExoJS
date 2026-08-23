@@ -1272,6 +1272,18 @@ export default defineConfig([
     },
   },
 
+  // The tilemap outline tracer walks a flat `[x, y, ...]` coordinate list and a
+  // per-vertex direction table by computed index, the same convention the
+  // physics package's math paths use above. The bounds are established by the
+  // surrounding loop, so `arr[i]!` says what the reader already knows.
+  {
+    files: ['packages/exojs-tilemap-physics/src/outline.ts'],
+    rules: {
+      '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/strict-boolean-expressions': 'off',
+    },
+  },
+
   // `Map.forEach` is the allocation-free way to walk a Map: `for...of` builds a
   // fresh iterator on every step, which these two per-frame paths cannot
   // afford. Deleting the current entry mid-`forEach` is well-defined and both

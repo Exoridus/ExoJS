@@ -1,0 +1,50 @@
+{
+  "name": "@codexo/exojs-tilemap-physics",
+  "version": "0.15.2",
+  "description": "Static physics colliders from ExoJS tilemap collision geometry.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Exoridus/ExoJS.git",
+    "directory": "packages/exojs-tilemap-physics"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/esm/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/esm/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/esm/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "default": "./dist/esm/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/esm/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsx ../../scripts/build-extension.ts",
+    "build:dev": "tsx ../../scripts/build-extension.ts --dev",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.test.json",
+    "lint": "eslint \"src/**/*.ts\" \"test/**/*.ts\"",
+    "test": "vitest run --root ../.. --project=exojs-tilemap-physics"
+  },
+  "peerDependencies": {
+    "@codexo/exojs": "0.15.x",
+    "@codexo/exojs-physics": "0.15.x",
+    "@codexo/exojs-tilemap": "0.15.x"
+  },
+  "devDependencies": {
+    "@codexo/exojs": "workspace:*",
+    "@codexo/exojs-config": "workspace:*",
+    "@codexo/exojs-physics": "workspace:*",
+    "@codexo/exojs-tilemap": "workspace:*"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  }
+}
