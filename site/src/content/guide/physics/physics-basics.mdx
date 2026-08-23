@@ -438,7 +438,7 @@ layer draws - a collision layer there often renders nothing at all. Pass its
 cells in and the same bridge covers it:
 
 ```ts
-import { ldtkIntGridCells } from '@codexo/exojs-ldtk';
+import { createLdtkIntGridCellSource } from '@codexo/exojs-ldtk';
 import { PhysicsWorld } from '@codexo/exojs-physics';
 import type { TileLayer } from '@codexo/exojs-tilemap';
 import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
@@ -447,7 +447,7 @@ declare const intGridLayer: TileLayer;
 
 const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 } });
 const colliders = new TileColliderStreamer(world, intGridLayer, {
-  cells: ldtkIntGridCells(intGridLayer),
+  cells: createLdtkIntGridCellSource(intGridLayer),
   material: ({ type }) => (type === 'Water' ? { isSensor: true } : null),
 });
 ```

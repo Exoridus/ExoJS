@@ -11,7 +11,7 @@ import type {
   LdtkLevel,
 } from '../src/LdtkData';
 import { LDTK_FLIP_NONE, LDTK_FLIP_X, LDTK_FLIP_XY, LDTK_FLIP_Y } from '../src/LdtkData';
-import { getLdtkIntGridValueAt, ldtkIntGridCells, ldtkToTileMap } from '../src/ldtkToTileMap';
+import { createLdtkIntGridCellSource, getLdtkIntGridValueAt, ldtkToTileMap } from '../src/ldtkToTileMap';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -1557,7 +1557,7 @@ function makeEntityLevel(identifier: string, uid: number): LdtkLevel {
   };
 }
 
-describe('ldtkIntGridCells', () => {
+describe('createLdtkIntGridCellSource', () => {
   const collisionDoc = (csv: readonly number[], width: number, height: number): LdtkData => {
     const data = docWithLayer({
       __identifier: 'Collision',
@@ -1594,7 +1594,7 @@ describe('ldtkIntGridCells', () => {
 
   it('classifies cells by their authored identifier', () => {
     const layer = ldtkToTileMap(collisionDoc([1, 0, 2, 1], 4, 1)).levels[0]!.layers[0]!;
-    const cells = ldtkIntGridCells(layer)!;
+    const cells = createLdtkIntGridCellSource(layer)!;
 
     expect([0, 1, 2, 3].map(tx => cells(tx, 0))).toEqual(['Wall', null, '2', 'Wall']);
   });
@@ -1602,12 +1602,12 @@ describe('ldtkIntGridCells', () => {
   it('falls back to the raw value for an undeclared value', () => {
     const layer = ldtkToTileMap(collisionDoc([7], 1, 1)).levels[0]!.layers[0]!;
 
-    expect(ldtkIntGridCells(layer)!(0, 0)).toBe('7');
+    expect(createLdtkIntGridCellSource(layer)!(0, 0)).toBe('7');
   });
 
   it('classifies out-of-bounds coordinates as empty', () => {
     const layer = ldtkToTileMap(collisionDoc([1], 1, 1)).levels[0]!.layers[0]!;
-    const cells = ldtkIntGridCells(layer)!;
+    const cells = createLdtkIntGridCellSource(layer)!;
 
     expect(cells(-1, 0)).toBeNull();
     expect(cells(0, 9)).toBeNull();
@@ -1626,6 +1626,6 @@ describe('ldtkIntGridCells', () => {
       iid: 'tiles-1',
     });
 
-    expect(ldtkIntGridCells(ldtkToTileMap(data).levels[0]!.layers[0]!)).toBeUndefined();
+    expect(createLdtkIntGridCellSource(ldtkToTileMap(data).levels[0]!.layers[0]!)).toBeUndefined();
   });
 });

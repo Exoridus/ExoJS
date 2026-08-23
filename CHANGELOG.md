@@ -74,7 +74,7 @@ release and includes intentional breaking changes; see **Changed** and
   layer rather than only the resident chunks. A partition that produces nothing is cached as
   empty, so an unrelated edit elsewhere does not re-walk the map.
 
-  `ldtkIntGridCells(layer)` returns an LDtk `IntGrid` layer in that form, classified by the
+  `createLdtkIntGridCellSource(layer)` returns an LDtk `IntGrid` layer in that form, classified by the
   value's authored identifier. `@codexo/exojs-tilemap-physics` gains no knowledge of either
   editor: it neither depends on nor names a format adapter, which is now covered by a test.
 
@@ -661,6 +661,22 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `unregister`, and no scene-level scope.
 
 ### Fixed
+
+- **Eight public exports were missing from the full IIFE bundle.** `window.Exo` is assembled
+  from a hand-written entry file: most packages come in through `export *`, but tilemap,
+  tiled, ldtk and tilemap-physics are listed symbol by symbol, because tiled and ldtk
+  re-export tilemap's runtime classes and each of those must appear in the bundle exactly
+  once. The lists were never completed as those packages grew, and nothing failed when they
+  fell behind. Missing were `TILED_OBJECT_ALIGNMENTS`, `resolveTiledObjectAlignment`,
+  `tiledObjectAnchorOffset`, `tiledWangSetToWangSet`, `getLdtkIntGridValueAt`,
+  `ldtkIntGridCsvProperty`, `ldtkIntGridValuesProperty` and `createLdtkIntGridCellSource` —
+  so a `<script>`-tag consumer could not wire up LDtk collision at all.
+
+  All eight are now exported, and a gate keeps the entry honest: a public **value** export may
+  be absent only when the identical binding already reaches the bundle through an earlier
+  package, or when it is recorded as a deliberate omission with a reason. The gate also
+  catches the reverse — an entry listing a symbol its package does not export. Type-only
+  exports stay out of scope, since an IIFE global carries no types.
 
 - **Ear clipping no longer clips across a vertex sitting on the diagonal it introduces.**
   `triangulate` accepted an ear whose new diagonal passed exactly through another vertex:

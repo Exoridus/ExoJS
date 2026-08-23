@@ -96,6 +96,7 @@
     "docs:api:generate": "pnpm site:build:api",
     "docs:api:check": "tsx scripts/check-api-docs-sync.ts",
     "examples:sync:check": "tsx scripts/check-examples-sync.ts",
+    "full-bundle:exports:check": "tsx scripts/check-full-bundle-exports.ts",
     "typecheck": "tsc --noEmit",
     "typecheck:full-bundle": "tsc --noEmit -p tsconfig.full-bundle.json",
     "typecheck:examples": "tsc --noEmit -p tsconfig.examples.json",

@@ -22,7 +22,7 @@ the versions outside your control. Keep the engine and every adapter on the same
 - `ldtkToTileMap` — convert a single LDtk level to a `TileMap` (used internally; available for
   custom pipelines), plus its `LdtkToTileMapOptions`
 - `getLdtkIntGridValueAt` — the named/coloured IntGrid value at a tile coordinate
-- `ldtkIntGridCells` — the layer's IntGrid as a `TileCellSource`, ready to hand to
+- `createLdtkIntGridCellSource` — the layer's IntGrid as a `TileCellSource`, ready to hand to
   `buildTileCollisionGeometry` or `TileColliderStreamer` for collision authored per cell
 - `ldtkExtension` — extension descriptor; depends on `tilemapExtension` automatically
 - `ldtkMapBinding` — the underlying `AssetBinding` (advanced/custom wiring)

@@ -1,6 +1,6 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
 import type { LdtkData } from '@codexo/exojs-ldtk';
-import { ldtkIntGridCells, ldtkToTileMap } from '@codexo/exojs-ldtk';
+import { createLdtkIntGridCellSource, ldtkToTileMap } from '@codexo/exojs-ldtk';
 import { ChainShape, PhysicsWorld, PolygonShape } from '@codexo/exojs-physics';
 import { TiledMap, TiledTileset } from '@codexo/exojs-tiled';
 import type { TileLayer } from '@codexo/exojs-tilemap';
@@ -171,7 +171,7 @@ describe('LDtk end to end', () => {
 
     expect(layer.countNonEmptyTiles()).toBe(0);
 
-    const streamer = new TileColliderStreamer(world(), layer, { cells: ldtkIntGridCells(layer) });
+    const streamer = new TileColliderStreamer(world(), layer, { cells: createLdtkIntGridCellSource(layer) });
 
     streamer.sync();
 
@@ -185,7 +185,7 @@ describe('LDtk end to end', () => {
     const layer = ldtkIntGridLayer([1, 1, 1, 1], 2, 2);
     const streamer = new TileColliderStreamer(world(), layer, {
       regionMode: 'outline',
-      cells: ldtkIntGridCells(layer),
+      cells: createLdtkIntGridCellSource(layer),
     });
 
     streamer.sync();
@@ -200,7 +200,7 @@ describe('LDtk end to end', () => {
     const layer = ldtkIntGridLayer([1, 2], 2, 1);
     const seen: string[] = [];
     const streamer = new TileColliderStreamer(world(), layer, {
-      cells: ldtkIntGridCells(layer),
+      cells: createLdtkIntGridCellSource(layer),
       material: context => {
         seen.push(context.type);
 

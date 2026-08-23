@@ -9,8 +9,8 @@ export { ldtkExtension } from './ldtkExtension';
 export { LdtkMap } from './LdtkMap';
 export type { LdtkToTileMapOptions } from './ldtkToTileMap';
 export {
+  createLdtkIntGridCellSource,
   getLdtkIntGridValueAt,
-  ldtkIntGridCells,
   ldtkIntGridCsvProperty,
   ldtkIntGridValuesProperty,
   ldtkToTileMap,

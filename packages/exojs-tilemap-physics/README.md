@@ -52,10 +52,10 @@ Some editors author collision per grid cell rather than per tile - LDtk's
 whole bounded layer, including partitions that hold no tiles at all:
 
 ```ts
-import { ldtkIntGridCells } from '@codexo/exojs-ldtk';
+import { createLdtkIntGridCellSource } from '@codexo/exojs-ldtk';
 
 const colliders = new TileColliderStreamer(world, collisionLayer, {
-  cells: ldtkIntGridCells(collisionLayer),
+  cells: createLdtkIntGridCellSource(collisionLayer),
   material: ({ type }) => (type === 'Water' ? { isSensor: true } : null),
 });
 ```

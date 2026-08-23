@@ -402,10 +402,10 @@ export function getLdtkIntGridValueAt(
  * building geometry.
  *
  * ```ts
- * const geometry = buildTileCollisionGeometry(layer, { cells: ldtkIntGridCells(layer) });
+ * const geometry = buildTileCollisionGeometry(layer, { cells: createLdtkIntGridCellSource(layer) });
  * ```
  */
-export function ldtkIntGridCells(layer: TileLayer): TileCellSource | undefined {
+export function createLdtkIntGridCellSource(layer: TileLayer): TileCellSource | undefined {
   const parsed = getParsedIntGridData(layer);
   const width = layer.width;
 
