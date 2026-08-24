@@ -72,8 +72,7 @@ import {
     RateSpawn,
 } from '@codexo/exojs-particles';
 
-const app = new Application({ extensions: [particlesExtension] });
-document.body.append(app.canvas);
+const app = new Application({ extensions: [particlesExtension], canvas: { mount: document.body } });
 
 class DemoScene extends Scene {
     private system!: ParticleSystem;

@@ -1,13 +1,22 @@
 #!/usr/bin/env sh
 # Pre-push verification.
 #
-# Branch pushes:  `verify:quick` — the fast static CI-parity gates that most
-#                 often pass locally but fail on CI: typecheck (core + guides +
-#                 examples + extension packages), lint:all, format:check, and
-#                 docs:api:check (the API-doc sync gate). No test/build here so
-#                 the hook stays fast enough not to be bypassed; run the full
-#                 local parity with `pnpm verify:ci` (adds the test suite). CI
-#                 still runs test + browser + package-build + site.
+# Branch pushes:  `verify:quick` — the static CI-parity gates: typecheck (core
+#                 + guides + examples + extension packages), lint:all,
+#                 format:check, docs:api:check and the site gates. Then the test
+#                 lanes the pushed range actually requires, chosen by
+#                 `scripts/ci/select-lanes.mjs` — the same module CI's detector
+#                 job uses, so the two agree by construction. `--tests-only`
+#                 drops the gate lanes verify:quick just ran, so nothing runs
+#                 twice.
+#
+#                 The point of running suites here rather than leaving them to
+#                 CI: a push that fails remote costs a round trip and blocks an
+#                 auto-merge, and every lane below is one a developer could have
+#                 run locally in less time than that round trip takes. What it
+#                 does NOT run is a lane the change cannot affect — a src-only
+#                 change never waits for the audio or tilemap-worker browser
+#                 lanes.
 # Tag pushes:     full `verify:release` (mirrors CI's verify job, including
 #                 verify:exports + npm pack --dry-run) so a release tag is
 #                 never published until the same checks CI runs have all
@@ -66,6 +75,23 @@ if [ "$is_tag_push" = "1" ]; then
 elif [ "$is_branch_push" = "1" ]; then
     echo "[pre-push] running verify:quick (static CI-parity gates)"
     npm run verify:quick || exit 1
+
+    # Range for lane selection. A branch with no remote tracking ref yet has no
+    # base to diff against, so fall back to the merge base with origin/main —
+    # and to running every lane if even that is unavailable, because a push
+    # whose scope cannot be determined must not be validated partially.
+    lane_base="$push_base_sha"
+    if [ -z "$lane_base" ] && [ -n "$push_head_sha" ]; then
+        lane_base=$(git merge-base "$push_head_sha" origin/main 2>/dev/null || true)
+    fi
+
+    if [ -n "$lane_base" ]; then
+        echo "[pre-push] running the test lanes this push requires"
+        npm run lanes -- --run --tests-only --base "$lane_base" || exit 1
+    else
+        echo "[pre-push] no base commit to scope lanes against — running every lane"
+        npm run lanes -- --run --tests-only --all || exit 1
+    fi
 fi
 
 # Path-gated bench typecheck. @codexo/exojs-bench is deliberately kept out of

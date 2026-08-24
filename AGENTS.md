@@ -100,15 +100,20 @@ both backends.
 
 During iteration, run the smallest relevant validation:
 
-- affected test files or Vitest project;
-- affected package typecheck;
-- targeted lint/typecheck where useful.
+- named test files, never a whole Vitest project;
+- a single gate group (`pnpm gates typecheck` / `lint` / `sync` / `site`),
+  never `pnpm gates all`;
+- the affected package's typecheck.
 
-Do not repeatedly run full-repository verification while iterating.
+Never run a full test project or the full gate set to find out what a change
+broke. Re-run only the check that was red, on the files that were red.
 
-Before completion, run the relevant targeted checks and `git diff --check`.
-Use broader repository gates when the change is cross-cutting, affects shared
-contracts, or is ready for integration.
+Before completion, run `pnpm lanes` to see which lanes the change requires,
+run those, and run `git diff --check`.
+
+Do not run a full suite immediately before pushing. The pre-push hook already
+runs `verify:quick` plus the lanes `scripts/ci/select-lanes.mjs` selects for
+the pushed range, so a full local run beforehand is the same work twice.
 
 Do not weaken, delete, skip, or baseline a failing test or gate merely to make
 the change pass without establishing that the expectation itself is wrong.

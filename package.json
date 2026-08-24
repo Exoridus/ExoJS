@@ -84,6 +84,7 @@
     "create:package": "tsx scripts/create-package.ts",
     "verify:release": "pnpm verify:lockstep && pnpm typecheck && pnpm typecheck:guides && pnpm typecheck:examples && pnpm lint:all && pnpm format:check && pnpm test && pnpm verify:package && pnpm verify:create-exo-app && pnpm site:build",
     "gates": "tsx ./scripts/ci/gates.ts",
+    "lanes": "tsx ./scripts/lanes.ts",
     "verify:quick": "pnpm gates all",
     "verify:ci": "pnpm verify:quick && pnpm test",
     "release": "tsx ./scripts/release.ts",
