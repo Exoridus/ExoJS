@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -52,31 +52,6 @@
           "params": [],
           "returnType": null,
           "description": "Defaults to 'anonymous'. Ignored for media built from data the application already owns, whose object URL is same-origin by construction. Unlike the transport, a non-default CORS mode IS part of asset identity: it is baked into the element, so a null and an 'anonymous' media resource for one URL are two assets, and a consumer never receives an element whose CORS mode it did not ask for."
-        },
-        {
-          "name": "download",
-          "signature": "download?: boolean",
-          "signatureTokens": [
-            {
-              "text": "download",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Fetch the complete resource through the loader's acquisition pipeline before the media element is built, instead of letting the browser stream it from its URL. Downloading is what makes the data cacheable and therefore available offline, and it is what Loader.cacheSource needs in order to have anything to persist. It also means nothing plays until the whole file has arrived, which is what streaming exists to avoid - so it is opt-in, per request. The transport is not part of asset identity: one URL is one asset however its data arrived, which is what lets a container entry, a cache hit and a network load share a single resident resource. This option therefore decides how the asset is built by the load that MATERIALIZES it - a load that joins an already-resident asset gets what is resident, whichever way that arrived. Acquire the asset through the downloading load first when the data backing matters to a consumer."
         },
         {
           "name": "loadEvent",

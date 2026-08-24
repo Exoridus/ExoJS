@@ -192,6 +192,10 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
    * cache path, where it either hits or misses honestly. A type whose source is
    * derived rather than transported ignores it.
    *
+   * This governs an ordinary load only. `Loader.cacheSource` asks for the
+   * acquisition by name and does not consult this hook, so a type that
+   * transports its own data is still explicitly cacheable through its codec.
+   *
    * The result is wrapped so that a type whose source is legitimately
    * `undefined` can still say "do not acquire".
    */

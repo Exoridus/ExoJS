@@ -412,17 +412,17 @@ A streamed asset is **ready when it can start playing**, not when it has fully a
 
 Streamed elements get `crossOrigin: 'anonymous'` by default. This matters for video: a cross-origin element without it plays, but cannot be uploaded as a texture. Pass `crossOrigin: null` for playback-only media on a host that sends no CORS headers, accepting that it cannot be rendered.
 
-Ask for the complete bytes when you want ExoJS to own them:
+Ask for the complete bytes when you want ExoJS to own them — that is a separate operation, not a variant of the load:
 
 ```ts
 async load() {
-    const intro = await this.loader.load(Asset.type('video', 'video/intro.mp4', { download: true }));
+    await this.app.loader.cacheSource(Asset.type('video', 'video/intro.mp4'));
 }
 ```
 
-`download: true` fetches the whole file through the loader's cache pipeline before building the element. That is what makes it cacheable and available offline, gives real byte progress, and it is always what a container (`.exoa`) entry does — container bytes are already owned by the application. The trade is that nothing plays until everything has arrived.
+`cacheSource` fetches the whole file through the loader's cache pipeline and persists it, without building an element or making anything resident. It is on the application's loader rather than a scene's: nothing it does belongs to a scope, because nothing it does is owned. That is what makes media available offline, and it is the same thing a container (`.exoa`) entry does — container bytes are already owned by the application. See [Working offline](/guide/assets/offline/).
 
-Whichever transport an asset arrives through, it is the same canonical asset: a source loaded over the network and the same source unpacked from a container resolve to one identity and one resident resource, never two. That is also the limit of `download: true` — it decides how the asset is built by the load that *materializes* it, so a load that joins an already-resident asset gets what is resident. Acquire it through the downloading load first when a consumer depends on the byte backing.
+The descriptor is the same one you load. Whichever transport an asset arrives through, it is the same canonical asset: a source streamed from the network, one unpacked from a container and one read back from a cache resolve to one identity and one resident resource, never two.
 
 The CORS mode is the exception, because it is baked into the element rather than into the bytes: `crossOrigin: null` and the default `'anonymous'` for one URL are two assets, and so is `'use-credentials'`. Nobody is ever handed an element whose CORS mode they did not ask for — a video that cannot be a texture never arrives where a texture was expected.
 

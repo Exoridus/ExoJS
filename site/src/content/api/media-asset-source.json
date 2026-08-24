@@ -1,6 +1,6 @@
 {
   "title": "MediaAssetSource",
-  "description": "What a media resource is built from. A URL is streamed by the browser, which owns the transfer for the whole life of the element and never holds more than it is playing. A blob is data the application already owns - a download, a container entry, a cached representation - and the element reads it through an object URL the resource keeps alive for as long as it exists.",
+  "description": "What a media resource is built from. A URL is streamed by the browser, which owns the transfer for the whole life of the element and never holds more than it is playing. A blob is data the application already owns - an acquired source, a container entry, a cached representation - and the element reads it through an object URL the resource keeps alive for as long as it exists.",
   "symbol": "MediaAssetSource",
   "kind": "type",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "What a media resource is built from.",
-        "A URL is streamed by the browser, which owns the transfer for the whole life of the element and never holds more than it is playing. A blob is data the application already owns - a download, a container entry, a cached representation - and the element reads it through an object URL the resource keeps alive for as long as it exists."
+        "A URL is streamed by the browser, which owns the transfer for the whole life of the element and never holds more than it is playing. A blob is data the application already owns - an acquired source, a container entry, a cached representation - and the element reads it through an object URL the resource keeps alive for as long as it exists."
       ],
       "importLine": "import { MediaAssetSource } from '@codexo/exojs'",
       "sourceLink": null

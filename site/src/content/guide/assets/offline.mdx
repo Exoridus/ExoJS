@@ -44,16 +44,14 @@ Nothing is constructed, nothing is claimed, and nothing stays in memory. What re
 
 Run it where a delay is acceptable and a connection is likely: a title screen, a settings toggle, the pause before a chapter.
 
-<Callout type="hint" title="Warming media has to be asked">
-Music and video are streamed by the browser while the network is available: the element owns the transfer and never holds more than it is playing, so the loader acquires nothing and there is nothing to cache. Pass `download: true` to acquire it instead:
+<Callout type="hint" title="Media is warmed the same way">
+Music and video are streamed by the browser while the network is available: the element owns the transfer and never holds more than it is playing, so an ordinary `load()` acquires nothing and caches nothing. `cacheSource` is you asking for the acquisition by name, so it applies to media too, from the very same descriptor:
 
 ```ts no-check -- continues the configuration above; on its own it has no app to call
-await app.loader.cacheSource(Asset.type('music', 'theme.mp3', { download: true }));
+await app.loader.cacheSource(Asset.type('music', 'theme.mp3'));
 ```
 
-Without it, `cacheSource` rejects and says so rather than appearing to succeed.
-
-You only need the flag for the **warm**. Loading it later needs nothing special - see below.
+Warming a source does not take streaming away. While the network is there, `load()` still streams that URL; the record is for when it is not.
 
 </Callout>
 
@@ -75,6 +73,8 @@ Streamed media follows the same rule, without the caller doing anything:
 // Offline: the same call reads the warmed blob, or misses.
 const theme = await this.loader.load(Asset.type('music', 'theme.mp3'));
 ```
+
+One descriptor covers all of it: `cacheSource` warms it, `load` streams or reads it back, and nothing in the descriptor names a transport.
 
 Streaming reaches the network directly, past the cache and therefore past every policy. So when the network is forbidden, a normally-streamed request stops streaming and takes the acquisition path instead - which is the only way `mode = 'offline'` can mean what it says. No network-backed source is ever installed on the element.
 
