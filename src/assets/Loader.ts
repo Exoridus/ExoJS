@@ -345,10 +345,19 @@ export class Loader {
    * the only route by which an asset type reaches the network, and it hands back
    * the representation rather than a resource: what to build from it stays with
    * the factory, and where it was served from stays with the loader.
+   *
+   * The store is keyed by the request's source identity rather than by its URL,
+   * so two source variants negotiated on one URL do not overwrite each other.
    * @internal
    */
-  public _fetchRepresentation<T>(source: string, read: (response: Response) => Promise<T>, storageName: string, signal?: AbortSignal): Promise<T> {
-    return this._decoder._contextFetch<T>(source, storageName, read, signal);
+  public _fetchRepresentation<T>(
+    source: string,
+    read: (response: Response) => Promise<T>,
+    storageName: string,
+    cacheKey: SourceKey,
+    signal?: AbortSignal,
+  ): Promise<T> {
+    return this._decoder._contextFetch<T>(source, storageName, read, signal, cacheKey);
   }
 
   // ── Refcount / claims ───────────────────────────────────────────────────────

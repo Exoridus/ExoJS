@@ -57,8 +57,8 @@ function createAssetTypeHandler(assetType: AnyAssetType, loader: Loader): AssetH
   const resourceIdentity = assetType.resourceIdentity?.bind(assetType);
   const sourceIdentity = assetType.sourceIdentity?.bind(assetType);
 
-  const codecContext = (context: AssetLoaderContext, source: string): SourceCodecContext => ({
-    locator: context.resolveUrl(source),
+  const codecContext = (context: AssetLoaderContext): SourceCodecContext => ({
+    locator: context.locator,
     signal: context.signal,
   });
 
@@ -67,18 +67,24 @@ function createAssetTypeHandler(assetType: AnyAssetType, loader: Loader): AssetH
     ...(sourceIdentity && { getSourceIdentity: (request: AssetLoadRequest) => sourceIdentity(request) }),
 
     async load({ source, options }: AssetLoadRequest, context: AssetLoaderContext): Promise<unknown> {
-      const forCodec = codecContext(context, source);
+      const forCodec = codecContext(context);
       // The representation the codec reads off the response is what a cache gets
       // to keep, so it is acquired through the loader's own policy rather than
       // decoded first and handed over afterwards.
-      const stored = await loader._fetchRepresentation(source, response => codec.fromResponse(response, forCodec), assetType.id, context.signal);
+      const stored = await loader._fetchRepresentation(
+        source,
+        response => codec.fromResponse(response, forCodec),
+        assetType.id,
+        context.sourceKey,
+        context.signal,
+      );
 
       return factory.create(await codec.decode(stored, forCodec), factoryContext(context, options));
     },
 
     ...(fromBytes && {
       async createFromBytes(bytes: ArrayBuffer, options: unknown, context: AssetLoaderContext): Promise<unknown> {
-        const forCodec: SourceCodecContext = { locator: context.locator, signal: context.signal };
+        const forCodec = codecContext(context);
         const stored = await fromBytes(bytes, forCodec);
 
         return factory.create(await codec.decode(stored, forCodec), factoryContext(context, options));

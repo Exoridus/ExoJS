@@ -428,3 +428,61 @@ describe('AssetSourceCodec', () => {
     expect(await settled).toBe('AbortError');
   });
 });
+
+describe('AssetType source-variant storage', () => {
+  test('two source variants of one URL are cached apart, not on top of each other', async () => {
+    const saved: Array<{ storageName: string; key: string }> = [];
+    const store = {
+      load: () => Promise.resolve(null),
+      save: (storageName: string, key: string) => {
+        saved.push({ storageName, key });
+        return Promise.resolve();
+      },
+      delete: () => Promise.resolve(true),
+      clear: () => Promise.resolve(true),
+      destroy: () => undefined,
+    };
+
+    mockJsonFetch();
+
+    const worldType = new WorldAssetType();
+    const loader = new Loader({ basePath: 'https://assets.test/', cache: store });
+
+    materializeAssetBindings(loader, [worldType]);
+
+    await loader.load(worldType.asset('level.world', { locale: 'de' }));
+    await loader.load(worldType.asset('level.world', { locale: 'en' }));
+
+    expect(saved).toEqual([
+      { storageName: 'com.example.world', key: 'url:https://assets.test/level.world|de' },
+      { storageName: 'com.example.world', key: 'url:https://assets.test/level.world|en' },
+    ]);
+  });
+
+  test('the codec sees the canonical locator on both the network and the bytes path', async () => {
+    const seen: string[] = [];
+
+    class ProbeCodecType extends NoteAssetType {
+      public override readonly id = 'com.example.probe-codec';
+      public override readonly codec: AssetSourceCodec<string> = {
+        fromResponse: (response, context) => {
+          seen.push(context.locator);
+          return response.text();
+        },
+        fromBytes: (bytes, context) => {
+          seen.push(context.locator);
+          return Promise.resolve(new TextDecoder().decode(bytes));
+        },
+        decode: stored => Promise.resolve(stored),
+      };
+    }
+
+    vi.stubGlobal('fetch', () => Promise.resolve(new Response('a\nb')));
+
+    const probeType = new ProbeCodecType();
+
+    await createLoader([probeType]).load(probeType.asset('notes/../notes/a.note'));
+
+    expect(seen).toEqual(['url:https://assets.test/notes/a.note']);
+  });
+});

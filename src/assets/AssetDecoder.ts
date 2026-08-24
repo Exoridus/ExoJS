@@ -120,9 +120,20 @@ export class AssetDecoder {
    * `process` converts the raw `Response` to the storable intermediate form
    * (e.g. `r.text()`, `r.arrayBuffer()`, `r.json()`).  `create` is always the
    * identity function - the cached value is returned unchanged.
+   *
+   * `cacheKey` overrides the lookup key for a source whose URL alone does not
+   * identify what comes back - a locale or content variant negotiated on the
+   * request. Without it two variants of one URL would overwrite each other in
+   * the store. Defaults to the resolved URL.
    * @internal
    */
-  public _contextFetch<T>(source: string, storageName: string, process: (response: Response) => Promise<T>, signal?: AbortSignal): Promise<T> {
+  public _contextFetch<T>(
+    source: string,
+    storageName: string,
+    process: (response: Response) => Promise<T>,
+    signal?: AbortSignal,
+    cacheKey?: string,
+  ): Promise<T> {
     const url = this._resolveUrl(source);
     const factory: CacheRequestFactory = {
       process,
@@ -133,7 +144,7 @@ export class AssetDecoder {
     const requestOptions = signal === undefined ? this._fetchOptions : { ...this._fetchOptions, signal };
 
     return this._cacheStrategy.resolve(
-      { storageName, key: url, url, requestOptions, factory, options: undefined, reportCacheError: this._reportCacheError },
+      { storageName, key: cacheKey ?? url, url, requestOptions, factory, options: undefined, reportCacheError: this._reportCacheError },
       this._stores,
     ) as Promise<T>;
   }
