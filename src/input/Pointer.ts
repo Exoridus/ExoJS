@@ -2,7 +2,7 @@ import type { Application } from '#core/Application';
 import { Size } from '#math/Size';
 import { getDistance } from '#math/utils';
 import { Vector } from '#math/Vector';
-import type { PlatformAdapter } from '#platform/PlatformAdapter';
+import type { PlatformAdapter, PlatformPointerEvent } from '#platform/PlatformAdapter';
 
 import { ChannelOffset, pointerSlotSize } from './types';
 
@@ -199,7 +199,7 @@ export class Pointer {
    */
   private readonly _frameBaseline = new Vector();
 
-  public constructor(event: PointerEvent, app: Application, platform: PlatformAdapter, channels: Float32Array, slotIndex: number) {
+  public constructor(event: PlatformPointerEvent, app: Application, platform: PlatformAdapter, channels: Float32Array, slotIndex: number) {
     const { pointerId, pointerType, clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist, isPrimary } = event;
 
     this._app = app;
@@ -328,21 +328,21 @@ export class Pointer {
     return this._maxDistanceFromPress;
   }
 
-  public handleEnter(event: PointerEvent): void {
+  public handleEnter(event: PlatformPointerEvent): void {
     this.handleEvent(event);
     this._currentState = PointerState.InsideCanvas;
     this._writeChannels(true);
     this._pushPhase(PointerStateFlag.Over);
   }
 
-  public handleLeave(event: PointerEvent): void {
+  public handleLeave(event: PlatformPointerEvent): void {
     this.handleEvent(event);
     this._currentState = PointerState.OutsideCanvas;
     this._writeChannels(false);
     this._pushPhase(PointerStateFlag.Leave);
   }
 
-  public handlePress(event: PointerEvent): void {
+  public handlePress(event: PlatformPointerEvent): void {
     this.handleEvent(event);
     this.pressPosition.copy(this.position);
     this._maxDistanceFromPress = 0;
@@ -352,7 +352,7 @@ export class Pointer {
     this._pushPhase(PointerStateFlag.Down);
   }
 
-  public handleMove(event: PointerEvent): void {
+  public handleMove(event: PlatformPointerEvent): void {
     this.handleEvent(event);
     this.movePosition.copy(this.position);
     this._currentState = PointerState.Moving;
@@ -368,7 +368,7 @@ export class Pointer {
    * journal entry it builds for this occurrence, rather than reading it back
    * off internal state that a later phase in the same flush could overwrite.
    */
-  public handleRelease(event: PointerEvent): { closedPress: boolean; maxDistance: number } {
+  public handleRelease(event: PlatformPointerEvent): { closedPress: boolean; maxDistance: number } {
     this.handleEvent(event);
     this.releasePosition.copy(this.position);
 
@@ -383,7 +383,7 @@ export class Pointer {
     return { closedPress, maxDistance };
   }
 
-  public handleCancel(event: PointerEvent): void {
+  public handleCancel(event: PlatformPointerEvent): void {
     this.handleEvent(event);
     this.cancelPosition.copy(this.position);
     this._pressActive = false;
@@ -470,7 +470,7 @@ export class Pointer {
     this._channels = null;
   }
 
-  private handleEvent(event: PointerEvent): this {
+  private handleEvent(event: PlatformPointerEvent): this {
     const { clientX, clientY, width, height, tiltX, tiltY, buttons, pressure, twist, isPrimary } = event;
     const geometry = this._computeDesignGeometry(clientX, clientY, width, height);
 

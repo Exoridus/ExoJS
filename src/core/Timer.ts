@@ -1,3 +1,5 @@
+import type { TimeSource } from '#platform/PlatformAdapter';
+
 import { Clock } from './Clock';
 import { Time } from './Time';
 
@@ -10,8 +12,8 @@ import { Time } from './Time';
 export class Timer extends Clock {
   private readonly _limit: Time;
 
-  public constructor(limit: Time, autoStart = false) {
-    super();
+  public constructor(limit: Time, autoStart = false, timeSource?: TimeSource) {
+    super(Time.zero, false, timeSource);
 
     this._limit = limit.clone();
 

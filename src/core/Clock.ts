@@ -1,9 +1,16 @@
+import type { TimeSource } from '#platform/PlatformAdapter';
+
 import { Time } from './Time';
 import { getPreciseTime } from './utils';
 
+/** The host's own monotonic clock, used by any clock given no other source. */
+const hostTimeSource: TimeSource = { now: getPreciseTime };
+
 /**
- * High-precision wall-clock that accumulates elapsed time while running.
- * Reads from {@link performance.now} via `getPreciseTime`. Use
+ * High-precision clock that accumulates elapsed time while running.
+ * Reads the host's monotonic clock unless a {@link TimeSource} is supplied -
+ * pass an {@link PlatformAdapter} to follow the application's time, or any
+ * object with a `now()` to drive the clock deterministically from a test. Use
  * {@link Clock.start}, {@link Clock.stop}, {@link Clock.reset}, and
  * {@link Clock.restart} to control the running state; read elapsed time via
  * {@link Clock.elapsedTime} (the {@link Time} instance is shared - copy it
@@ -16,8 +23,11 @@ export class Clock {
   private _elapsedTime: Time = new Time(0);
   private _running = false;
 
-  public constructor(startTime: Time = Time.zero, autoStart = false) {
+  private readonly _timeSource: TimeSource;
+
+  public constructor(startTime: Time = Time.zero, autoStart = false, timeSource: TimeSource = hostTimeSource) {
     this._startTime = startTime.clone();
+    this._timeSource = timeSource;
 
     if (autoStart) {
       this.start();
@@ -37,7 +47,7 @@ export class Clock {
    */
   public get elapsedTime(): Time {
     if (this._running) {
-      const now = getPreciseTime();
+      const now = this._timeSource.now();
 
       this._elapsedTime.add(now - this._startTime.milliseconds);
       this._startTime.milliseconds = now;
@@ -66,7 +76,7 @@ export class Clock {
   public start(): this {
     if (!this._running) {
       this._running = true;
-      this._startTime.milliseconds = getPreciseTime();
+      this._startTime.milliseconds = this._timeSource.now();
     }
 
     return this;
@@ -76,7 +86,7 @@ export class Clock {
   public stop(): this {
     if (this._running) {
       this._running = false;
-      this._elapsedTime.add(getPreciseTime() - this._startTime.milliseconds);
+      this._elapsedTime.add(this._timeSource.now() - this._startTime.milliseconds);
     }
 
     return this;

@@ -5,7 +5,14 @@ import { getPreciseTime, stopEvent } from '#core/utils';
 import { Flags } from '#math/Flags';
 import type { PointLike } from '#math/PointLike';
 import { Vector } from '#math/Vector';
-import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
+import type {
+  PlatformAdapter,
+  PlatformKeyboardEvent,
+  PlatformPointerEvent,
+  PlatformPositionalEvent,
+  PlatformSubscription,
+  PlatformWheelEvent,
+} from '#platform/PlatformAdapter';
 
 import type { ActionMap, ActionRecord, AnyActionMap } from './actions/ActionMap';
 import type { ActionSample, ChannelEvent, ChannelEventBatch } from './actions/types';
@@ -996,7 +1003,7 @@ export class InputManager {
    * held key whose browser default is suppressed on the first event must stay
    * suppressed while it is held.
    */
-  private handleKeyDown(event: KeyboardEvent): void {
+  private handleKeyDown(event: PlatformKeyboardEvent): void {
     if (!this.canvasFocusedValue) {
       return;
     }
@@ -1037,7 +1044,7 @@ export class InputManager {
    * releasing left `Control` while right `Control` is still held must not
    * clear {@link Keyboard.Control} - see {@link keyboardModifierChannelInfo}.
    */
-  private handleKeyUp(event: KeyboardEvent): void {
+  private handleKeyUp(event: PlatformKeyboardEvent): void {
     if (!this.canvasFocusedValue) {
       return;
     }
@@ -1082,7 +1089,7 @@ export class InputManager {
    * pending Leave/Cancel phase and leak the discarded `Pointer` (nothing else
    * ever reaches or destroys it once the map no longer points to it).
    */
-  private handlePointerOver(event: PointerEvent): void {
+  private handlePointerOver(event: PlatformPointerEvent): void {
     const existing = this.pointers.get(event.pointerId);
 
     if (existing !== undefined) {
@@ -1106,7 +1113,7 @@ export class InputManager {
     this._pushPointerPhase(pointer, PointerStateFlag.Over, pointer.x, pointer.y);
   }
 
-  private handlePointerLeave(event: PointerEvent): void {
+  private handlePointerLeave(event: PlatformPointerEvent): void {
     const pointer = this.pointers.get(event.pointerId);
 
     if (!pointer) {
@@ -1119,7 +1126,7 @@ export class InputManager {
     this._pushPointerPhase(pointer, PointerStateFlag.Leave, pointer.x, pointer.y);
   }
 
-  private handlePointerDown(event: PointerEvent): void {
+  private handlePointerDown(event: PlatformPointerEvent): void {
     this.platform.focusSurface();
     this.canvasFocusedValue = true;
 
@@ -1137,7 +1144,7 @@ export class InputManager {
     stopEvent(event);
   }
 
-  private handlePointerMove(event: PointerEvent): void {
+  private handlePointerMove(event: PlatformPointerEvent): void {
     const pointer = this.pointers.get(event.pointerId);
 
     if (!pointer) {
@@ -1150,7 +1157,7 @@ export class InputManager {
     this.gestureRecognizer.onPointerMove(pointer, this.pointerDistanceThreshold);
   }
 
-  private handlePointerUp(event: PointerEvent): void {
+  private handlePointerUp(event: PlatformPointerEvent): void {
     const pointer = this.pointers.get(event.pointerId);
 
     if (!pointer) {
@@ -1166,7 +1173,7 @@ export class InputManager {
     stopEvent(event);
   }
 
-  private handlePointerCancel(event: PointerEvent): void {
+  private handlePointerCancel(event: PlatformPointerEvent): void {
     const pointer = this.pointers.get(event.pointerId);
 
     if (!pointer) {
@@ -1222,7 +1229,7 @@ export class InputManager {
    * already queued this flush reflects the platform's true arrival order
    * rather than a fixed type-order.
    */
-  private handleContextMenu(event: MouseEvent): void {
+  private handleContextMenu(event: PlatformPositionalEvent): void {
     if (!this.allowNativeContextMenu) {
       stopEvent(event);
     }
@@ -1250,7 +1257,7 @@ export class InputManager {
     return null;
   }
 
-  private handleMouseWheel(event: WheelEvent): void {
+  private handleMouseWheel(event: PlatformWheelEvent): void {
     if (!this.canvasFocusedValue) {
       return;
     }

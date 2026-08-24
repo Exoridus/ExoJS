@@ -1,5 +1,7 @@
 import { Size } from '#math/Size';
 
+import type { PlatformEvent } from '#platform/PlatformAdapter';
+
 import type { TextureSource } from './types';
 
 interface CanvasSourceWithDisplaySize {
@@ -63,7 +65,7 @@ export const noop = (): void => {
 };
 
 /** `preventDefault()` + `stopImmediatePropagation()` on an event in one call. */
-export const stopEvent = (event: Event): void => {
+export const stopEvent = (event: PlatformEvent): void => {
   event.preventDefault();
   event.stopImmediatePropagation();
 };

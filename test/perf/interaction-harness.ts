@@ -89,6 +89,10 @@ class FakePlatformAdapter implements PlatformAdapter {
     return () => undefined;
   }
 
+  public now(): number {
+    return 0;
+  }
+
   public requestFrame(): number {
     return 0;
   }

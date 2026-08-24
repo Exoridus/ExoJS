@@ -4,6 +4,7 @@ import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
+import type { RenderSurface } from '#platform/RenderSurface';
 import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
@@ -284,7 +285,7 @@ export class WebGl2Backend implements RenderBackend {
   private _stencilClipperConnected = false;
   private _passCoordinatorInstance: WebGl2PassCoordinator | null = null;
 
-  private _canvas: HTMLCanvasElement;
+  private _canvas: RenderSurface;
   private _contextLost: boolean;
   private _destroyed = false;
   private _pendingRestore: ReturnType<typeof setTimeout> | null = null;

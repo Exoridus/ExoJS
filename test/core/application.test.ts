@@ -264,7 +264,7 @@ describe('Application', () => {
 
     const rafSpy = vi.fn().mockReturnValue(1);
 
-    rawApp['platform'] = { requestFrame: rafSpy, cancelFrame: vi.fn() };
+    rawApp['platform'] = { now: () => 0, requestFrame: rafSpy, cancelFrame: vi.fn() };
 
     app.update();
 

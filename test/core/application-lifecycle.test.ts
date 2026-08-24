@@ -1146,12 +1146,12 @@ describe('Application lifecycle / getters / sizing', () => {
       ).not.toThrow();
     });
 
-    test('throws a targeted message when canvas.element is not an HTMLCanvasElement', async () => {
+    test('throws a targeted message when canvas.element is not a render surface', async () => {
       const { Application } = await loadHarness();
       const div = document.createElement('div');
 
       expect(() => new Application({ canvas: { element: div as unknown as HTMLCanvasElement }, backend: { type: 'webgl2' } })).toThrow(
-        'Application canvas.element must be an HTMLCanvasElement (got HTMLDivElement). Pass a real <canvas> element, or omit canvas.element to let Application create one.',
+        'Application canvas.element must be an HTMLCanvasElement or an OffscreenCanvas (got HTMLDivElement). Pass a real canvas, or omit canvas.element to let Application create one.',
       );
     });
   });

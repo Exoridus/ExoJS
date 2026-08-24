@@ -125,7 +125,11 @@ export class BrowserPlatform implements PlatformAdapter {
     });
   }
 
-  public requestFrame(callback: () => void): number {
+  public now(): number {
+    return performance.now();
+  }
+
+  public requestFrame(callback: (timestamp: number) => void): number {
     return requestAnimationFrame(callback);
   }
 

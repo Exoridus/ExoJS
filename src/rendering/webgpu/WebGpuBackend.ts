@@ -1,12 +1,14 @@
 /// <reference types="@webgpu/types" />
 
 import type { Application, CanvasAlphaMode } from '#core/Application';
+import type { TextureSource } from '#core/types';
 import { Color } from '#core/Color';
 import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
 import { type Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
+import type { RenderSurface } from '#platform/RenderSurface';
 import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
@@ -174,7 +176,7 @@ export class WebGpuBackend implements RenderBackend {
    */
   public readonly onRenderError = new Signal<[RenderError]>();
 
-  private readonly _canvas: HTMLCanvasElement;
+  private readonly _canvas: RenderSurface;
   // Browser-side composite mode of the root canvas. Read once at construction
   // and re-applied by every `context.configure()`, including the one that
   // follows device-loss recovery.
@@ -2736,7 +2738,9 @@ export class WebGpuBackend implements RenderBackend {
         // path rather than failing the upload. On Safari that leaves them
         // subject to the very bug worked around here, but no fallback exists:
         // their pixels are not readable from the CPU side.
-        if (source instanceof HTMLCanvasElement && this._canvasExternalImageCopySupported !== true) {
+        const canvasSource = isCanvasTextureSource(source) ? source : null;
+
+        if (canvasSource !== null && this._canvasExternalImageCopySupported !== true) {
           if (!this._canvasExternalImageCopyProbeStarted) {
             this._canvasExternalImageCopyProbeStarted = true;
             void this._probeCanvasExternalImageCopy().then(supported => {
@@ -2745,7 +2749,7 @@ export class WebGpuBackend implements RenderBackend {
           }
         }
 
-        const canvasReadbackContext = source instanceof HTMLCanvasElement && this._canvasExternalImageCopySupported !== true ? source.getContext('2d') : null;
+        const canvasReadbackContext = canvasSource !== null && this._canvasExternalImageCopySupported !== true ? canvasSource.getContext('2d') : null;
 
         if (canvasReadbackContext !== null) {
           const { data } = canvasReadbackContext.getImageData(0, 0, texture.width, texture.height);
@@ -3170,6 +3174,15 @@ interface WebGpuDataTextureFormatInfo {
 }
 
 /** Map a {@link RenderTexture} color format to its WebGPU render-target format. */
+/**
+ * Whether the source is a canvas whose pixels can be read back from the CPU
+ * side, which is what the Safari external-image workaround needs. Both canvas
+ * kinds qualify; an image, bitmap or video frame does not.
+ */
+function isCanvasTextureSource(source: TextureSource): source is HTMLCanvasElement | OffscreenCanvas {
+  return (typeof HTMLCanvasElement !== 'undefined' && source instanceof HTMLCanvasElement) || (typeof OffscreenCanvas !== 'undefined' && source instanceof OffscreenCanvas);
+}
+
 function webgpuColorTextureFormat(format: ColorTextureFormat): GPUTextureFormat {
   switch (format) {
     case TextureFormat.Rgba8:

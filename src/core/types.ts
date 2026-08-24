@@ -55,10 +55,17 @@ export type Mutable<T> = {
 
 /**
  * Anything the rendering pipeline can sample as a texture source: a loaded
- * image, an offscreen canvas, a playing video, or `null` when no source has
- * been assigned yet.
+ * image, a canvas of either kind, a playing video, a decoded bitmap, a decoded
+ * video frame, or `null` when no source has been assigned yet.
+ *
+ * A `VideoFrame` is the one member with a lifetime of its own. It holds a
+ * decoder resource that is released only by `close()`, and the engine never
+ * calls it: a texture reads the frame during upload and does not retain it
+ * afterwards, so closing the frame stays the responsibility of whoever decoded
+ * it. Close it no earlier than the flush that uploaded it, and re-assign the
+ * texture's source before closing it if the texture is to keep drawing.
  */
-export type TextureSource = HTMLImageElement | HTMLCanvasElement | HTMLVideoElement | ImageBitmap | null;
+export type TextureSource = HTMLImageElement | HTMLCanvasElement | OffscreenCanvas | HTMLVideoElement | ImageBitmap | VideoFrame | null;
 
 /** Common playback configuration for {@link Sound} and {@link AudioStream}. */
 export interface PlaybackOptions {

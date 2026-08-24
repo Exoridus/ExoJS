@@ -14,7 +14,9 @@ import { InteractionManager } from '#input/InteractionManager';
 import type { PointLike } from '#math/PointLike';
 import { Random } from '#math/Random';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
+import { OffscreenPlatform } from '#platform/OffscreenPlatform';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
+import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderError, type RenderErrorCode } from '#rendering/RenderError';
@@ -101,12 +103,18 @@ export type CanvasAlphaMode = 'opaque' | 'premultiplied';
 
 export interface CanvasApplicationOptions {
   /**
-   * Existing canvas element to use. If omitted, Application creates one - and
-   * a canvas it created is also one it removes from the document again in
-   * {@link Application.destroy}. A canvas passed in here stays yours: it is
-   * left in the DOM untouched when the application goes down.
+   * Existing surface to render into. If omitted, Application creates a canvas
+   * element - and a canvas it created is also one it removes from the document
+   * again in {@link Application.destroy}. A surface passed in here stays
+   * yours: it is left untouched when the application goes down.
+   *
+   * An `OffscreenCanvas` is accepted and makes the application surface-only:
+   * it has no layout box, no styling and no events, so `mount`, `sizingMode`,
+   * `tabIndex` and `imageRendering` do not apply, and the host has to supply
+   * its own {@link ApplicationOptions.platform} affordances for input. See
+   * {@link OffscreenPlatform}.
    */
-  element?: HTMLCanvasElement;
+  element?: RenderSurface;
   /** Logical canvas width. Default: 800. */
   width?: number;
   /** Logical canvas height. Default: 600. */
@@ -353,7 +361,18 @@ const frameMeasure = 'exojs:frame';
 const systemsStartMark = 'exojs:systems:start';
 const systemsMeasure = 'exojs:systems';
 
-const createDefaultCanvas = (): HTMLCanvasElement => document.createElement('canvas');
+const createDefaultCanvas = (): HTMLCanvasElement => {
+  assert(
+    typeof document !== 'undefined',
+    'Application has no document to create a canvas in. Outside a browser window - in a worker, say - pass the surface yourself via `canvas.element` (an OffscreenCanvas transferred from the host).',
+  );
+
+  return document.createElement('canvas');
+};
+
+/** Whether `value` can be used as a {@link RenderSurface} at all. */
+const isRenderSurface = (value: unknown): value is RenderSurface =>
+  isDomCanvas(value as RenderSurface) || (typeof OffscreenCanvas !== 'undefined' && value instanceof OffscreenCanvas);
 
 /**
  * The parent-element inline style properties `'letterbox'` mode writes. Kept as
@@ -468,7 +487,21 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
  */
 export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly options: ApplicationOptions<Registry>;
-  public readonly canvas: HTMLCanvasElement;
+  /**
+   * The surface this application renders into - the canvas element it created
+   * or was given, or an `OffscreenCanvas` it was handed. `width`/`height` are
+   * the backing store in device pixels, not the CSS box; see
+   * {@link Application.width} for the design size.
+   *
+   * Use {@link Application.element} for anything that needs the surrounding
+   * document: styling, layout, or the element itself.
+   */
+  public readonly canvas: RenderSurface;
+  /**
+   * The render surface as a document canvas, or `null` when the application
+   * renders into an `OffscreenCanvas` and there is no element to reach.
+   */
+  public readonly element: HTMLCanvasElement | null;
   /**
    * The host seam this application runs on. Every part of the engine that has
    * to reach outside its own state - input events, surface focus, cursor,
@@ -550,10 +583,17 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private readonly _extensionDisposers: ExtensionDisposer[] = [];
 
-  private readonly _updateHandler: () => void;
-  private readonly _startupClock: Clock = new Clock();
-  private readonly _activeClock: Clock = new Clock();
-  private readonly _frameClock: Clock = new Clock();
+  private readonly _updateHandler: (timestamp: number) => void;
+  private readonly _startupClock: Clock;
+  private readonly _activeClock: Clock;
+  private readonly _frameClock: Clock;
+  /**
+   * Host timestamp of the frame the loop most recently began. The frame delta
+   * is the distance between two of these rather than two readings taken inside
+   * the callback, so a frame that starts late does not also report a short
+   * delta.
+   */
+  private _lastFrameTimestamp = 0;
   private readonly _fixed: FixedTimestep;
   // The fixed-step duration - a true constant for the Application's whole
   // lifetime (set from `options.fixedTimeStep` in the constructor and never
@@ -634,8 +674,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // does not support WebGL." from the backend, once `canvas.getContext` turns
     // out not to be a function. Catch the real cause here instead.
     assert(
-      canvas instanceof HTMLCanvasElement,
-      `Application canvas.element must be an HTMLCanvasElement (got ${(canvas as object).constructor?.name ?? typeof canvas}). Pass a real <canvas> element, or omit canvas.element to let Application create one.`,
+      isRenderSurface(canvas),
+      `Application canvas.element must be an HTMLCanvasElement or an OffscreenCanvas (got ${(canvas as object).constructor?.name ?? typeof canvas}). Pass a real canvas, or omit canvas.element to let Application create one.`,
     );
 
     const logicalWidth = canvasOptions.width ?? defaultCanvasSettings.width;
@@ -648,16 +688,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._designHeight = logicalHeight;
     this._ownsCanvas = canvasOptions.element === undefined;
     this.canvas = canvas;
+    this.element = isDomCanvas(canvas) ? canvas : null;
     this._applyCanvasSize(logicalWidth, logicalHeight);
 
-    if (canvasOptions.tabIndex !== undefined) {
-      this.canvas.tabIndex = canvasOptions.tabIndex;
-    } else if (!this.canvas.hasAttribute('tabindex')) {
-      this.canvas.tabIndex = defaultCanvasSettings.tabIndex;
-    }
+    if (this.element !== null) {
+      if (canvasOptions.tabIndex !== undefined) {
+        this.element.tabIndex = canvasOptions.tabIndex;
+      } else if (!this.element.hasAttribute('tabindex')) {
+        this.element.tabIndex = defaultCanvasSettings.tabIndex;
+      }
 
-    if (canvasOptions.imageRendering !== undefined) {
-      this.canvas.style.imageRendering = canvasOptions.imageRendering;
+      if (canvasOptions.imageRendering !== undefined) {
+        this.element.style.imageRendering = canvasOptions.imageRendering;
+      }
     }
 
     // Ownership record for every subsystem built from here on. Construction is
@@ -688,7 +731,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // Established before any subsystem, because input, interaction and the
       // frame loop all read the host through it.
       this._ownsPlatform = appSettings.platform === undefined;
-      this.platform = appSettings.platform ?? new BrowserPlatform(this.canvas);
+      this.platform = appSettings.platform ?? (this.element === null ? new OffscreenPlatform(this.canvas) : new BrowserPlatform(this.element));
+
+      // Every runtime clock reads the host through the adapter, so a platform
+      // with a deterministic time source makes the whole frame loop
+      // deterministic - there is no second, global clock behind it.
+      this._startupClock = new Clock(Time.zero, false, this.platform);
+      this._activeClock = new Clock(Time.zero, false, this.platform);
+      this._frameClock = new Clock(Time.zero, false, this.platform);
 
       // Only an adapter created here is ours to release - an injected one stays
       // the caller's on the failure path, exactly as in `destroy()`.
@@ -705,7 +755,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           width: logicalWidth,
           height: logicalHeight,
           pixelRatio: this._pixelRatio,
-          tabIndex: this.canvas.tabIndex,
+          ...(this.element !== null && { tabIndex: this.element.tabIndex }),
           ...(canvasOptions.imageRendering !== undefined && { imageRendering: canvasOptions.imageRendering }),
         },
         loader: {
@@ -751,7 +801,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.interaction = constructed.track(new InteractionManager(this));
       this.scenes = constructed.track(new SceneDirector<Registry>(this, appSettings.scenes));
       this.random = new Random(this.options.seed);
-      this._updateHandler = this.update.bind(this);
+      this._updateHandler = (timestamp: number): void => {
+        this.update(timestamp);
+      };
 
       const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
 
@@ -1262,6 +1314,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _startFrameLoop(): void {
     this._frameLoopActive = true;
     this._frameRequest = this.platform.requestFrame(this._updateHandler);
+    this._lastFrameTimestamp = this.platform.now();
     this._frameClock.restart();
     this._fixed.reset();
     this._activeClock.start();
@@ -1336,9 +1389,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * advancement. Real wall-clock time and RAF cadence are unaffected; the raw
    * elapsed delta is recorded separately in `backend.stats.rawFrameDeltaMs`.
    */
-  public update(): this {
+  public update(timestamp: number = this.platform.now()): this {
     if (this._frameLoopActive) {
       if (this.pauseOnHidden && !this._documentVisible) {
+        this._lastFrameTimestamp = timestamp;
         this._frameClock.restart();
         this._fixed.reset();
         this._frameRequest = this.platform.requestFrame(this._updateHandler);
@@ -1353,18 +1407,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // through the error pipeline instead of killing the RAF loop; the loop
       // halts only after `maxConsecutiveFrameErrors` consecutive failures.
       try {
-        const rawDeltaMs = this._frameClock.elapsedTime.milliseconds;
+        const rawDeltaMs = Math.max(0, timestamp - this._lastFrameTimestamp);
 
-        // Restart the moment the delta is read, not at the end of the frame:
-        // the clock has to span frame start to frame start. Restarting after
-        // the frame's own work would leave that work out of the next delta,
-        // so a frame that runs long would report the gap it caused as
-        // *shorter*, slowing the simulation exactly when it is already behind.
+        this._lastFrameTimestamp = timestamp;
+
+        // Separate domain from the delta above: this one is the in-frame
+        // stopwatch behind `app.frameTime`, restarted at the top of the frame
+        // so a reader inside `onFrame` sees how long the frame has been
+        // running rather than how long the previous one took.
         this._frameClock.restart();
 
         const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
         const frameDelta = this._frameDelta.set(clampedDeltaMs);
-        const frameStart = performance.now();
+        const frameStart = this.platform.now();
 
         if (__DEV__) Perf.mark(frameStartMark);
 
@@ -1416,7 +1471,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
         this.onFrame.dispatch(frameDelta);
         this.backend.flush();
-        this.backend.stats.frameTimeMs = performance.now() - frameStart;
+        this.backend.stats.frameTimeMs = this.platform.now() - frameStart;
 
         if (__DEV__) {
           Perf.measure(frameMeasure, frameStartMark);
@@ -1507,7 +1562,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     if (__DEV__) {
       const detail = isRenderError && error.detail !== null ? `\n${error.detail}` : '';
 
-      showDevErrorOverlay(this.canvas, `${error.message}${detail}`, { fatal });
+      if (this.element !== null) {
+        showDevErrorOverlay(this.element, `${error.message}${detail}`, { fatal });
+      }
     }
   }
 
@@ -1601,7 +1658,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /** Append the canvas to a mount element or CSS selector, if provided. */
   private _mountCanvas(mount?: HTMLElement | string): void {
-    if (mount === undefined || typeof document === 'undefined') {
+    if (mount === undefined || typeof document === 'undefined' || this.element === null) {
       return;
     }
 
@@ -1612,14 +1669,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // of silently leaving the canvas unattached (a beginner otherwise sees a
       // blank page with no signal as to why).
       logger.warn(
-        `Application canvas.mount selector "${mount as string}" did not match any element — the canvas was created but never attached to the page. Check the selector for typos, or append \`app.canvas\` to the DOM yourself.`,
+        `Application canvas.mount selector "${mount as string}" did not match any element — the canvas was created but never attached to the page. Check the selector for typos, or append \`app.element\` to the DOM yourself.`,
         { source: 'Application', once: `application:mount-miss:${mount as string}` },
       );
 
       return;
     }
 
-    target.append(this.canvas);
+    target.append(this.element);
   }
 
   /**
@@ -1637,7 +1694,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * `'fill'`.
    */
   private _applySizingMode(mode: CanvasSizingMode, previous: CanvasSizingMode | null = null): void {
-    const style = this.canvas.style;
+    if (this.element === null) {
+      return;
+    }
+
+    const style = this.element.style;
 
     if (previous !== null) {
       this._clearSizingModeStyles(previous);
@@ -1645,7 +1706,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     switch (mode) {
       case 'fill': {
-        const target = this.canvas.parentElement;
+        const target = this.element.parentElement;
 
         if (typeof ResizeObserver === 'undefined' || !target) {
           break;
@@ -1663,7 +1724,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         break;
       }
       case 'letterbox': {
-        const target = this.canvas.parentElement;
+        const target = this.element.parentElement;
 
         if (typeof ResizeObserver === 'undefined' || !target) {
           break;
@@ -1715,7 +1776,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * itself wrote are touched - nothing here is a blanket style reset.
    */
   private _clearSizingModeStyles(mode: CanvasSizingMode): void {
-    const style = this.canvas.style;
+    if (this.element === null) {
+      return;
+    }
+
+    const style = this.element.style;
 
     switch (mode) {
       case 'fit':
@@ -1799,8 +1864,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this.canvas.width = layout.backingWidth;
     this.canvas.height = layout.backingHeight;
-    this.canvas.style.width = `${layout.contentWidthCss}px`;
-    this.canvas.style.height = `${layout.contentHeightCss}px`;
+
+    if (this.element !== null) {
+      this.element.style.width = `${layout.contentWidthCss}px`;
+      this.element.style.height = `${layout.contentHeightCss}px`;
+    }
   }
 
   /**
@@ -1935,7 +2003,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._restoreParentStyles();
 
     if (this._ownsCanvas) {
-      this.canvas.remove();
+      this.element?.remove();
     }
   }
 
@@ -2169,7 +2237,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this.canvas.width = renderWidth;
     this.canvas.height = renderHeight;
-    this.canvas.style.width = `${width}px`;
-    this.canvas.style.height = `${height}px`;
+
+    // An OffscreenCanvas has no CSS box: its backing store is the whole story,
+    // so the display size the caller asked for is already expressed above.
+    if (this.element !== null) {
+      this.element.style.width = `${width}px`;
+      this.element.style.height = `${height}px`;
+    }
   }
 }
