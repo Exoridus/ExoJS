@@ -18,7 +18,7 @@ import { PhysicsBody } from './PhysicsBody';
 import type { QueryFilter, RayHit } from './query/QueryEngine';
 import { QueryEngine } from './query/QueryEngine';
 import type { AnyShape } from './shapes/AnyShape';
-import { maxRestingPenetration } from './solver/tolerances';
+import { sleepPenetrationTolerance } from './solver/tolerances';
 import { TimeStepper } from './TimeStepper';
 import type { BodyType, CollisionFilter } from './types';
 import { shouldCollide } from './types';
@@ -132,7 +132,7 @@ const isMovingBoundary = (body: PhysicsBody): boolean =>
 const isUnresolved = (manifold: Manifold): boolean => {
   for (let i = 0; i < manifold.pointCount; i++) {
     // i in 0..pointCount-1 and pointCount ≤ 2, so the manifold point exists.
-    if ((i === 0 ? manifold.points[0] : manifold.points[1]).penetration > maxRestingPenetration) {
+    if ((i === 0 ? manifold.points[0] : manifold.points[1]).penetration > sleepPenetrationTolerance) {
       return true;
     }
   }
@@ -1057,7 +1057,10 @@ export class PhysicsWorld implements BodyOwner {
         bodyB._sleepTime = 0;
       }
 
-      if (isUnresolved(contact.manifold)) {
+      // Unresolved overlap only matters where there is a dynamic body to hold
+      // awake; a static↔static pair reaches the contact set but has no sleep
+      // decision to gate.
+      if ((dynamicA || dynamicB) && isUnresolved(contact.manifold)) {
         if (dynamicA) {
           bodyA._sleepTime = 0;
         }
