@@ -197,15 +197,18 @@ export const supportsCodec = (...codecs: string[]): boolean => codecs.some(codec
 export const getCanvasSourceSize = (source: CanvasImageSource): Size => {
   const dynamicSource = source as CanvasSourceWithDisplaySize;
 
-  if (source instanceof HTMLImageElement) {
+  // The `instanceof` checks are guarded on the constructor rather than written
+  // bare: a worker realm defines none of the document element types, and an
+  // unguarded reference to one is a ReferenceError, not a `false`.
+  if (typeof HTMLImageElement !== 'undefined' && source instanceof HTMLImageElement) {
     return Size.temp.set(source.naturalWidth, source.naturalHeight);
   }
 
-  if (source instanceof HTMLVideoElement) {
+  if (typeof HTMLVideoElement !== 'undefined' && source instanceof HTMLVideoElement) {
     return Size.temp.set(source.videoWidth, source.videoHeight);
   }
 
-  if (source instanceof SVGElement) {
+  if (typeof SVGElement !== 'undefined' && source instanceof SVGElement) {
     return Size.temp.copy(source.getBoundingClientRect());
   }
 

@@ -20,10 +20,23 @@ export const createQuadIndices = (size: number): Uint16Array => {
   return data;
 };
 
+/** A blank canvas of whichever kind this realm can produce. */
+const createBlankCanvas = (width: number, height: number): HTMLCanvasElement | OffscreenCanvas => {
+  if (typeof document !== 'undefined') {
+    return document.createElement('canvas');
+  }
+
+  if (typeof OffscreenCanvas === 'undefined') {
+    throw new Error('This host offers neither a document nor an OffscreenCanvas to draw a placeholder texture on.');
+  }
+
+  return new OffscreenCanvas(width, height);
+};
+
 /** Options for {@link createCanvas}. All fields are optional. */
 export interface CreateCanvasOptions {
-  /** Existing canvas element to reuse instead of creating a new one. */
-  canvas?: HTMLCanvasElement;
+  /** Existing canvas to reuse instead of creating a new one. */
+  canvas?: HTMLCanvasElement | OffscreenCanvas;
   /** 2D fill colour string applied to the entire canvas surface. Defaults to `'#6495ed'`. */
   fillStyle?: string;
   /** Canvas pixel width. Defaults to `10`. */
@@ -33,14 +46,19 @@ export interface CreateCanvasOptions {
 }
 
 /**
- * Create or reuse an `HTMLCanvasElement` filled with a solid colour.
- * Used internally to produce placeholder textures (e.g. {@link Texture.black}, {@link Texture.white}).
+ * Create or reuse a canvas filled with a solid colour. Used internally to
+ * produce placeholder textures (e.g. {@link Texture.black},
+ * {@link Texture.white}).
+ *
+ * Returns an `OffscreenCanvas` in a realm with no document. Both kinds are
+ * valid texture sources, and a placeholder texture is not something a
+ * worker-hosted application should have to do without.
  */
-export const createCanvas = (options: CreateCanvasOptions = {}): HTMLCanvasElement => {
+export const createCanvas = (options: CreateCanvasOptions = {}): HTMLCanvasElement | OffscreenCanvas => {
   const { canvas, fillStyle, width, height } = options;
 
-  const newCanvas = canvas ?? document.createElement('canvas');
-  const context = newCanvas.getContext('2d')!;
+  const newCanvas = canvas ?? createBlankCanvas(width ?? 10, height ?? 10);
+  const context = newCanvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
   newCanvas.width = width ?? 10;
   newCanvas.height = height ?? 10;
@@ -62,13 +80,14 @@ export interface CreateCheckerCanvasOptions {
 }
 
 /**
- * Create an `HTMLCanvasElement` filled with a 2×2 checkerboard pattern.
- * Backs {@link Texture.missing}, the error placeholder shown for failed loads.
+ * Create a canvas filled with a 2x2 checkerboard pattern. Backs
+ * {@link Texture.missing}, the error placeholder shown for failed loads. Same
+ * surface-kind rule as {@link createCanvas}.
  */
-export const createCheckerCanvas = (options: CreateCheckerCanvasOptions = {}): HTMLCanvasElement => {
+export const createCheckerCanvas = (options: CreateCheckerCanvasOptions = {}): HTMLCanvasElement | OffscreenCanvas => {
   const { size = 8, colorA = '#ff00ff', colorB = '#000' } = options;
   const canvas = createCanvas({ fillStyle: colorA, width: size, height: size });
-  const context = canvas.getContext('2d')!;
+  const context = canvas.getContext('2d') as CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
   const half = size / 2;
 
   context.fillStyle = colorB;

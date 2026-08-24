@@ -2,6 +2,7 @@ import type { BrowserGamepad } from '#input/GamepadDefinitions';
 
 import type {
   PlatformAdapter,
+  PlatformEventData,
   PlatformSubscription,
   PlatformSurfaceEventMap,
   PlatformSurfaceMetrics,
@@ -136,14 +137,23 @@ export class OffscreenPlatform implements PlatformAdapter {
     this._gamepads = gamepads;
   }
 
-  /** Deliver a surface event to whatever the input pipeline subscribed. */
-  public emitSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(type: K, event: PlatformSurfaceEventMap[K]): void {
-    this._emit(this._surfaceListeners, type, event);
+  /**
+   * Deliver a surface event to whatever the input pipeline subscribed. Takes
+   * the event's data alone, which is what survives a `postMessage`; the
+   * suppression calls are supplied here.
+   *
+   * Returns whether the engine asked for the host's default handling of this
+   * event to be suppressed. Across a worker boundary that answer necessarily
+   * arrives after the host's own event has finished dispatching, so it informs
+   * the host's policy for later events rather than cancelling this one.
+   */
+  public emitSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(type: K, event: PlatformEventData<PlatformSurfaceEventMap[K]>): boolean {
+    return this._emit(this._surfaceListeners, type, event);
   }
 
-  /** Deliver a window-level event to whatever the input pipeline subscribed. */
-  public emitWindowEvent<K extends keyof PlatformWindowEventMap>(type: K, event: PlatformWindowEventMap[K]): void {
-    this._emit(this._windowListeners, type, event);
+  /** Deliver a window-level event. See {@link OffscreenPlatform.emitSurfaceEvent}. */
+  public emitWindowEvent<K extends keyof PlatformWindowEventMap>(type: K, event: PlatformEventData<PlatformWindowEventMap[K]>): boolean {
+    return this._emit(this._windowListeners, type, event);
   }
 
   /** No document to move focus in. */
@@ -243,18 +253,29 @@ export class OffscreenPlatform implements PlatformAdapter {
     this._gamepads = noGamepads;
   }
 
-  private _emit(registry: Map<string, Set<Listener>>, type: string, event: unknown): void {
+  private _emit(registry: Map<string, Set<Listener>>, type: string, event: object): boolean {
     const listeners = registry.get(type);
 
     if (listeners === undefined) {
-      return;
+      return false;
     }
+
+    let suppressed = false;
+    const suppress = (): void => {
+      suppressed = true;
+    };
+    // The data arrives without the suppression calls, and the pipeline above
+    // this seam calls them unconditionally. Binding them per dispatch is what
+    // turns "the engine consumed this" into an answer the host can act on.
+    const delivered = { ...event, preventDefault: suppress, stopImmediatePropagation: suppress };
 
     // Copied because a listener may unsubscribe itself, or another, while the
     // event is being delivered.
     for (const listener of [...listeners]) {
-      (listener as (event: unknown) => void)(event);
+      (listener as (event: unknown) => void)(delivered);
     }
+
+    return suppressed;
   }
 }
 

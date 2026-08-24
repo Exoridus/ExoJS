@@ -4,6 +4,7 @@ export type {
   FrameScheduler,
   PlatformAdapter,
   PlatformEvent,
+  PlatformEventData,
   PlatformKeyboardEvent,
   PlatformListenerOptions,
   PlatformPointerEvent,

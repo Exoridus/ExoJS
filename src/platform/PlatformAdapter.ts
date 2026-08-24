@@ -85,6 +85,13 @@ export interface PlatformEvent {
 }
 
 /**
+ * The data half of a platform event: every field, none of the suppression
+ * calls. Structured-cloneable, so this is the shape an event takes when it has
+ * to cross a worker boundary - a DOM event object never can.
+ */
+export type PlatformEventData<E extends PlatformEvent> = Omit<E, keyof PlatformEvent>;
+
+/**
  * A pointer contact. Field-for-field a subset of the DOM's `PointerEvent`,
  * carrying the identity, position, geometry, tilt, pressure and button state
  * the engine's pointer model reads, and nothing else.

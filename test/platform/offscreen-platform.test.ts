@@ -4,12 +4,12 @@
  */
 
 import { OffscreenPlatform } from '#platform/OffscreenPlatform';
-import type { PlatformPointerEvent, RenderSurface } from '#platform/index';
+import type { PlatformEventData, PlatformPointerEvent, RenderSurface } from '#platform/index';
 
 /** A stand-in for a sized render surface - jsdom has no `OffscreenCanvas`. */
 const createSurface = (width = 800, height = 600): RenderSurface => ({ width, height }) as RenderSurface;
 
-const createPointerEvent = (pointerId: number): PlatformPointerEvent => ({
+const createPointerEvent = (pointerId: number): PlatformEventData<PlatformPointerEvent> => ({
   pointerId,
   pointerType: 'mouse',
   clientX: 0,
@@ -22,8 +22,6 @@ const createPointerEvent = (pointerId: number): PlatformPointerEvent => ({
   pressure: 0.5,
   buttons: 1,
   isPrimary: true,
-  preventDefault: () => undefined,
-  stopImmediatePropagation: () => undefined,
 });
 
 describe('OffscreenPlatform', () => {
@@ -62,10 +60,23 @@ describe('OffscreenPlatform', () => {
     platform.onWindowEvent('keydown', event => void keys.push(event.code));
 
     platform.emitSurfaceEvent('pointerdown', createPointerEvent(7));
-    platform.emitWindowEvent('keydown', { code: 'KeyW', repeat: false, preventDefault: () => undefined, stopImmediatePropagation: () => undefined });
+    platform.emitWindowEvent('keydown', { code: 'KeyW', repeat: false });
 
     expect(pointers).toEqual([7]);
     expect(keys).toEqual(['KeyW']);
+
+    platform.destroy();
+  });
+
+  it('reports back whether the engine asked for the host default to be suppressed', () => {
+    const platform = new OffscreenPlatform(createSurface());
+
+    platform.onSurfaceEvent('pointerdown', event => event.preventDefault());
+    platform.onSurfaceEvent('pointermove', () => undefined);
+
+    expect(platform.emitSurfaceEvent('pointerdown', createPointerEvent(1))).toBe(true);
+    expect(platform.emitSurfaceEvent('pointermove', createPointerEvent(1))).toBe(false);
+    expect(platform.emitSurfaceEvent('pointerup', createPointerEvent(1))).toBe(false);
 
     platform.destroy();
   });
@@ -130,7 +141,7 @@ describe('OffscreenPlatform', () => {
     platform.destroy();
 
     platform.emitSurfaceEvent('pointerdown', createPointerEvent(1));
-    platform.emitWindowEvent('keydown', { code: 'KeyW', repeat: false, preventDefault: () => undefined, stopImmediatePropagation: () => undefined });
+    platform.emitWindowEvent('keydown', { code: 'KeyW', repeat: false });
     platform.setVisible(false);
 
     expect(seen).toEqual([]);
