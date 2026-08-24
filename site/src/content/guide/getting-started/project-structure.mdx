@@ -38,7 +38,7 @@ Two files hold the code you will edit most: `main.ts` and the scene under `src/s
   title="src/main.ts"
 />
 
-The application owns runtime configuration — canvas size, clear color, render backend, and the frame loop. `app.start(scene)` hands control to a scene and begins ticking. `document.body.append(app.canvas)` mounts the canvas; in a real layout you place it wherever your page needs it.
+The application owns runtime configuration — canvas size, clear color, render backend, and the frame loop. `app.start(scene)` hands control to a scene and begins ticking. `canvas.mount` places the canvas; in a real layout you place it wherever your page needs it.
 
 ## The scene
 

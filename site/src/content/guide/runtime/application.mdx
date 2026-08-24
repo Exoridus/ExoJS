@@ -78,7 +78,17 @@ application.clearColor.set(20, 20, 40, 1); // dusk
 
 ## Choosing the canvas
 
-By default the application creates its own canvas. Read it from `app.canvas` and place it in your page wherever your layout needs it:
+By default the application creates its own canvas. Point `canvas.mount` at the element (or CSS selector) that should hold it:
+
+```ts
+import { Application } from '@codexo/exojs';
+
+const app = new Application({
+    canvas: { width: 800, height: 600, mount: document.body },
+});
+```
+
+To place it by hand instead, read the element from `app.element`:
 
 ```ts
 import { Application } from '@codexo/exojs';
@@ -86,7 +96,10 @@ import { Application } from '@codexo/exojs';
 const app = new Application({
     canvas: { width: 800, height: 600 },
 });
-document.body.append(app.canvas);
+
+if (app.element !== null) {
+    document.body.append(app.element);
+}
 ```
 
 If your page already has a canvas — for example because the layout is owned by a framework that renders the element for you — pass it in via `canvas.element`:
@@ -102,7 +115,27 @@ const app = new Application({
 });
 ```
 
-Either way, `app.canvas` is the active `HTMLCanvasElement`. CSS rules, ResizeObserver, event listeners, and `getBoundingClientRect()` all work as expected.
+Either way, `app.element` is the active `HTMLCanvasElement`. CSS rules, ResizeObserver, event listeners, and `getBoundingClientRect()` all work as expected.
+
+## Rendering without a document
+
+`app.canvas` is the surface the renderer draws into, and that is not always an element: `canvas.element` also accepts an `OffscreenCanvas`, which is what makes it possible to run an application off the main thread.
+
+```ts
+import { Application, OffscreenPlatform } from '@codexo/exojs';
+
+declare const surface: OffscreenCanvas;
+
+const platform = new OffscreenPlatform(surface);
+const app = new Application({
+    platform,
+    canvas: { element: surface, width: 800, height: 600 },
+});
+```
+
+An `OffscreenCanvas` has no layout box, no styling and no events, so `mount`, `sizingMode`, `tabIndex` and `imageRendering` do not apply and `app.element` is `null`. The document keeps ownership of everything the surface lacks: forward pointer and key events into `platform.emitSurfaceEvent()` / `platform.emitWindowEvent()` as plain data, keep `platform.setSurfaceRect()` in step with the on-screen rect so pointer positions map correctly, and report focus and visibility through their setters.
+
+Inside a worker, `Capabilities` answers for the worker's realm, not the document's: `capabilities.realm` is `'worker'`, `pointer` and `audio` are `false`, and `devicePixelRatio` is `1` because there is no document to ask. The host decides the surface's backing size before transferring it.
 
 ## High-DPI and pixel ratio
 
@@ -168,7 +201,8 @@ To stop the loop, call `app.stop()`. To release the canvas and all GPU resources
 
 Once an application exists, its subsystems are accessible as properties:
 
-- `app.canvas` — the render target.
+- `app.canvas` — the render surface, an `HTMLCanvasElement` or an `OffscreenCanvas`.
+- `app.element` — the same surface as a document canvas, or `null` when there is none.
 - `app.loader` — the [`Loader`](/ExoJS/en/api/loader/) used by every scene to register and resolve assets.
 - `app.input` — the `InputManager` for keyboard, pointer, and gamepad routing.
 - `app.scenes` — the [`SceneDirector`](/ExoJS/en/api/scene-director/) that holds the single active scene; switch scenes via `change` (with an optional transition).

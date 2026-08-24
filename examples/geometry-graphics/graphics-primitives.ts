@@ -64,6 +64,6 @@ const app = new Application({
 });
 
 app.start(GraphicsPrimitivesScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });

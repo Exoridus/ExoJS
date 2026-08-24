@@ -4,7 +4,6 @@ export type {
   BackendConfig,
   CanvasAlphaMode,
   CanvasApplicationOptions,
-  CanvasSizingMode,
   InputApplicationOptions,
   RecentErrorEntry,
   RenderingApplicationOptions,
@@ -15,7 +14,8 @@ export { Application, ApplicationState } from './Application';
 export { Bounds } from './Bounds';
 export type { BuildInfo } from './BuildInfo';
 export { buildInfo } from './BuildInfo';
-export { Capabilities } from './capabilities';
+export type { CanvasSizingMode } from './CanvasSizing';
+export { Capabilities, type HostRealm } from './capabilities';
 export { Clock } from './Clock';
 export type { DecompressFormat } from './Codec';
 export { Codec } from './Codec';

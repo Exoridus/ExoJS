@@ -6,7 +6,7 @@
  *   - internal MAX_DELTA_MS clamp applied to simulation delta
  */
 import { Application, ApplicationState } from '#core/Application';
-import { Time } from '#core/Time';
+import { type Time } from '#core/Time';
 
 // ---------------------------------------------------------------------------
 // Backend stubs - keep WebGL2 / WebGPU out of jsdom.
@@ -119,10 +119,14 @@ function frameClock(app: Application): import('#core/Clock').Clock {
   return (app as unknown as Record<string, unknown>)['_frameClock'] as import('#core/Clock').Clock;
 }
 
-/** Mock _frameClock.elapsedTime getter to return a fixed Time value. */
+/**
+ * Make the next `app.update()` see exactly `ms` of frame-to-frame time: the
+ * loop derives its delta from the host frame timestamp, so pinning the host
+ * clock one gap ahead of the last frame is all a fixed delta needs.
+ */
 function mockFrameElapsed(app: Application, ms: number): MockInstance {
-  const fixed = new Time(ms);
-  return vi.spyOn(frameClock(app), 'elapsedTime', 'get').mockReturnValue(fixed);
+  const previous = (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] as number;
+  return vi.spyOn(app.platform, 'now').mockReturnValue(previous + ms);
 }
 
 // ---------------------------------------------------------------------------
@@ -338,34 +342,15 @@ describe('Application.update() — loop timing', () => {
 
   describe('frame delta spans the full gap between frames', () => {
     /**
-     * Replace `_frameClock` with a clock driven by an explicit virtual
-     * timeline, so a frame's own processing cost can be injected at a chosen
-     * point without depending on real wall-clock timing. Returns a handle that
-     * advances the timeline.
+     * Put the application's host clock on a timeline the test moves by hand,
+     * so a frame's own processing cost and the wait that follows it can be
+     * charged separately.
      */
-    function installVirtualFrameClock(target: Application): { advance: (ms: number) => void } {
+    function installVirtualHostClock(target: Application): { advance: (ms: number) => void } {
       let nowMs = 0;
-      let startedAtMs = 0;
 
-      const virtualClock = {
-        get elapsedTime(): Time {
-          return new Time(nowMs - startedAtMs);
-        },
-        restart(): void {
-          startedAtMs = nowMs;
-        },
-        start(): void {
-          startedAtMs = nowMs;
-        },
-        stop(): void {
-          /* the virtual timeline only moves when a test advances it */
-        },
-        destroy(): void {
-          /* nothing to release */
-        },
-      };
-
-      (target as unknown as Record<string, unknown>)['_frameClock'] = virtualClock;
+      vi.spyOn(target.platform, 'now').mockImplementation(() => nowMs);
+      (target as unknown as Record<string, unknown>)['_lastFrameTimestamp'] = 0;
 
       return {
         advance: (ms: number): void => {
@@ -375,7 +360,7 @@ describe('Application.update() — loop timing', () => {
     }
 
     test('a frame that spends CPU time still reports the full frame-to-frame gap on the next frame', () => {
-      const timeline = installVirtualFrameClock(app);
+      const timeline = installVirtualHostClock(app);
       const frameProcessingMs = 12;
       const framePeriodMs = 16;
       const observedDeltas: number[] = [];
@@ -403,8 +388,69 @@ describe('Application.update() — loop timing', () => {
       expect(observedDeltas[1]).toBe(framePeriodMs);
     });
 
+    test('the frame delta is the distance between two frame timestamps', () => {
+      const observedDeltas: number[] = [];
+
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
+        observedDeltas.push(delta.milliseconds);
+      });
+
+      (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] = 0;
+
+      app.update(16);
+      app.update(48);
+
+      expect(observedDeltas).toEqual([16, 32]);
+    });
+
+    test('a frame with no timestamp reads the host clock through the platform adapter', () => {
+      const observedDeltas: number[] = [];
+      const globalNow = vi.spyOn(performance, 'now');
+
+      vi.spyOn(app.platform, 'now').mockReturnValue(25);
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
+        observedDeltas.push(delta.milliseconds);
+      });
+
+      (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] = 0;
+
+      app.update();
+
+      expect(observedDeltas).toEqual([25]);
+      expect(globalNow).not.toHaveBeenCalled();
+    });
+
+    test('the loop runs on the timestamp the adapter hands its frame callback', () => {
+      const observedDeltas: number[] = [];
+      let scheduled: ((timestamp: number) => void) | null = null;
+
+      vi.spyOn(app.platform, 'now').mockReturnValue(0);
+      vi.spyOn(app.platform, 'requestFrame').mockImplementation((callback: (timestamp: number) => void) => {
+        scheduled = callback;
+
+        return 1;
+      });
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
+        observedDeltas.push(delta.milliseconds);
+      });
+
+      (app as unknown as { _startFrameLoop: () => void })._startFrameLoop();
+
+      const runFrame = (timestamp: number): void => {
+        const callback = scheduled;
+
+        scheduled = null;
+        callback?.(timestamp);
+      };
+
+      runFrame(16);
+      runFrame(33);
+
+      expect(observedDeltas).toEqual([16, 17]);
+    });
+
     test('rawFrameDeltaMs reports elapsed wall time, not wall time minus the previous frame cost', () => {
-      const timeline = installVirtualFrameClock(app);
+      const timeline = installVirtualHostClock(app);
 
       app.onFrame.add(() => {
         timeline.advance(12);

@@ -168,7 +168,7 @@ describe('AudioManager.update()', () => {
     rawApp['onFrame'] = { dispatch: vi.fn() };
     rawApp['onFixedFrame'] = { dispatch: vi.fn() };
 
-    rawApp['platform'] = { requestFrame: vi.fn().mockReturnValue(1), cancelFrame: vi.fn() };
+    rawApp['platform'] = { now: () => 0, requestFrame: vi.fn().mockReturnValue(1), cancelFrame: vi.fn() };
 
     app.update();
 

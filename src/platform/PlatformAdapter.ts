@@ -6,6 +6,43 @@ import type { BrowserGamepad } from '#input/GamepadDefinitions';
  */
 export type PlatformSubscription = () => void;
 
+/**
+ * A monotonic millisecond clock. Values are only meaningful relative to each
+ * other: the origin is the host's, never the wall clock, and the source never
+ * jumps backwards when the system clock is adjusted.
+ *
+ * This is the seam every runtime clock reads instead of a global
+ * `performance.now()`, which is what makes a deterministic time source
+ * possible in tests. {@link PlatformAdapter} is one, so an adapter can be
+ * handed straight to {@link Clock}.
+ */
+export interface TimeSource {
+  /** Milliseconds elapsed since this source's own origin. */
+  now(): number;
+}
+
+/**
+ * Display-synchronised frame scheduling. The timestamp handed to the callback
+ * shares its origin with {@link TimeSource.now}, so the two can be compared
+ * and subtracted without conversion.
+ */
+export interface FrameScheduler {
+  /**
+   * Schedule `callback` for the next display frame and return a handle for
+   * {@link FrameScheduler.cancelFrame}. One-shot - a frame loop reschedules
+   * itself every frame.
+   *
+   * `timestamp` is the host's frame time. It is the time the frame was
+   * *scheduled for*, not the time the callback happened to run, so deltas
+   * derived from it are free of the jitter that reading a clock at the top of
+   * the callback introduces.
+   */
+  requestFrame(callback: (timestamp: number) => void): number;
+
+  /** Cancel a frame scheduled by {@link FrameScheduler.requestFrame}. */
+  cancelFrame(handle: number): void;
+}
+
 /** Listener flags the input pipeline needs when it subscribes to a platform event. */
 export interface PlatformListenerOptions {
   /** Receive the event during the capture phase rather than while bubbling. */
@@ -33,33 +70,98 @@ export interface PlatformSurfaceMetrics {
 }
 
 /**
+ * The part of a host event the input pipeline can act on: suppressing the
+ * host's own default handling of it.
+ *
+ * Both calls are the DOM's, and a real `Event` satisfies this interface as it
+ * is - the browser's events cross the seam untouched, with no wrapper and no
+ * copy. What the interface adds is that an adapter with no DOM behind it can
+ * satisfy the same contract with a plain object, which a DOM event class could
+ * never be reconstructed as on the far side of a `postMessage`.
+ */
+export interface PlatformEvent {
+  preventDefault(): void;
+  stopImmediatePropagation(): void;
+}
+
+/**
+ * The data half of a platform event: every field, none of the suppression
+ * calls. Structured-cloneable, so this is the shape an event takes when it has
+ * to cross a worker boundary - a DOM event object never can.
+ */
+export type PlatformEventData<E extends PlatformEvent> = Omit<E, keyof PlatformEvent>;
+
+/**
+ * A pointer contact. Field-for-field a subset of the DOM's `PointerEvent`,
+ * carrying the identity, position, geometry, tilt, pressure and button state
+ * the engine's pointer model reads, and nothing else.
+ */
+export interface PlatformPointerEvent extends PlatformEvent {
+  readonly pointerId: number;
+  readonly pointerType: string;
+  readonly clientX: number;
+  readonly clientY: number;
+  readonly width: number;
+  readonly height: number;
+  readonly tiltX: number;
+  readonly tiltY: number;
+  readonly twist: number;
+  readonly pressure: number;
+  readonly buttons: number;
+  readonly isPrimary: boolean;
+}
+
+/**
+ * A key transition, identified by physical position (`code`) rather than by
+ * the character the active layout produces. `repeat` marks an OS auto-repeat
+ * rather than a fresh press.
+ */
+export interface PlatformKeyboardEvent extends PlatformEvent {
+  readonly code: string;
+  readonly repeat: boolean;
+}
+
+/** A scroll gesture. `deltaMode` selects the unit the deltas are expressed in. */
+export interface PlatformWheelEvent extends PlatformEvent {
+  readonly deltaX: number;
+  readonly deltaY: number;
+  readonly deltaMode: number;
+}
+
+/** A positioned host event with no pointer identity of its own, such as a context-menu request. */
+export interface PlatformPositionalEvent extends PlatformEvent {
+  readonly clientX: number;
+  readonly clientY: number;
+}
+
+/**
  * Events the input pipeline sources from the drawing surface itself.
  *
- * The payload types are the browser's, because the engine's pointer model is
- * `PointerEvent`-shaped end to end. That is a deliberate limit of this seam,
- * not an oversight: replacing the event vocabulary would be a rewrite of the
- * input pipeline rather than a platform port, and nothing in the engine needs
- * it yet.
+ * The payload types are the browser's event shapes, narrowed to the fields the
+ * engine reads. Keeping the vocabulary this close to the DOM is deliberate:
+ * {@link BrowserPlatform} forwards the browser's own event objects verbatim,
+ * so the main-thread path pays nothing for the abstraction, while a host
+ * without a DOM can deliver the same information as an ordinary object.
  */
 export interface PlatformSurfaceEventMap {
-  focus: FocusEvent;
-  blur: FocusEvent;
-  wheel: WheelEvent;
-  pointerover: PointerEvent;
-  pointerleave: PointerEvent;
-  pointerdown: PointerEvent;
-  pointermove: PointerEvent;
-  pointerup: PointerEvent;
-  pointercancel: PointerEvent;
-  contextmenu: MouseEvent;
-  selectstart: Event;
+  focus: PlatformEvent;
+  blur: PlatformEvent;
+  wheel: PlatformWheelEvent;
+  pointerover: PlatformPointerEvent;
+  pointerleave: PlatformPointerEvent;
+  pointerdown: PlatformPointerEvent;
+  pointermove: PlatformPointerEvent;
+  pointerup: PlatformPointerEvent;
+  pointercancel: PlatformPointerEvent;
+  contextmenu: PlatformPositionalEvent;
+  selectstart: PlatformEvent;
 }
 
 /** Events the input pipeline sources from the host window rather than the surface. */
 export interface PlatformWindowEventMap {
-  keydown: KeyboardEvent;
-  keyup: KeyboardEvent;
-  blur: FocusEvent;
+  keydown: PlatformKeyboardEvent;
+  keyup: PlatformKeyboardEvent;
+  blur: PlatformEvent;
 }
 
 /**
@@ -83,7 +185,7 @@ export interface PlatformWindowEventMap {
  * moved and captures it on request; whether that movement is a drag, a tap or
  * an action is decided entirely by the input system above it.
  */
-export interface PlatformAdapter {
+export interface PlatformAdapter extends TimeSource, FrameScheduler {
   /** Whether the drawing surface currently holds host focus. */
   readonly surfaceFocused: boolean;
 
@@ -116,16 +218,6 @@ export interface PlatformAdapter {
 
   /** Subscribe to {@link PlatformAdapter.documentVisible} changes. */
   onVisibilityChange(listener: (visible: boolean) => void): PlatformSubscription;
-
-  /**
-   * Schedule `callback` for the next display frame and return a handle for
-   * {@link PlatformAdapter.cancelFrame}. One-shot - the frame loop reschedules
-   * itself every frame.
-   */
-  requestFrame(callback: () => void): number;
-
-  /** Cancel a frame scheduled by {@link PlatformAdapter.requestFrame}. */
-  cancelFrame(handle: number): void;
 
   /**
    * Subscribe to a surface event. Which events are listened for - and whether

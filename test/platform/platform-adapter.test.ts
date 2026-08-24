@@ -75,6 +75,7 @@ const createRecordingPlatform = (): PlatformAdapter & { readonly calls: string[]
 
       return () => void visibilityListeners.delete(listener);
     },
+    now: () => 0,
     requestFrame: () => {
       calls.push('requestFrame');
 

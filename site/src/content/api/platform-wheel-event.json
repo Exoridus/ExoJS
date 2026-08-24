@@ -1,0 +1,180 @@
+{
+  "title": "PlatformWheelEvent",
+  "description": "A scroll gesture. `deltaMode` selects the unit the deltas are expressed in.",
+  "symbol": "PlatformWheelEvent",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A scroll gesture. `deltaMode` selects the unit the deltas are expressed in."
+      ],
+      "importLine": "import { PlatformWheelEvent } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "preventDefault",
+          "signature": "preventDefault(): void",
+          "signatureTokens": [
+            {
+              "text": "preventDefault",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "stopImmediatePropagation",
+          "signature": "stopImmediatePropagation(): void",
+          "signatureTokens": [
+            {
+              "text": "stopImmediatePropagation",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "deltaMode",
+          "signature": "deltaMode: number",
+          "signatureTokens": [
+            {
+              "text": "deltaMode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "deltaX",
+          "signature": "deltaX: number",
+          "signatureTokens": [
+            {
+              "text": "deltaX",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "deltaY",
+          "signature": "deltaY: number",
+          "signatureTokens": [
+            {
+              "text": "deltaY",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformAdapter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformAdapter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+}

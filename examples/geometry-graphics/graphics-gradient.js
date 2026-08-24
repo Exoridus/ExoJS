@@ -64,6 +64,6 @@ const app = new Application({
     clearColor: Color.midnightBlue,
 });
 app.start(GraphicsGradientScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });

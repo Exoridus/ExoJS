@@ -14,7 +14,9 @@ import { InteractionManager } from '#input/InteractionManager';
 import type { PointLike } from '#math/PointLike';
 import { Random } from '#math/Random';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
+import { OffscreenPlatform } from '#platform/OffscreenPlatform';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
+import { isDomCanvas, type RenderSurface } from '#platform/RenderSurface';
 import { buildCoreRendererBindings } from '#rendering/coreRendererBindings';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderError, type RenderErrorCode } from '#rendering/RenderError';
@@ -25,6 +27,7 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
+import { CanvasSizing, type CanvasSizingMode } from './CanvasSizing';
 import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
 import { Color } from './Color';
@@ -32,7 +35,6 @@ import { DestroyScope } from './DestroyScope';
 import { assert, invariant } from './dev';
 import { showDevErrorOverlay } from './devErrorOverlay';
 import { FixedTimestep } from './FixedTimestep';
-import { computeLetterboxLayout } from './letterbox';
 import { hello, logger } from './logging';
 import { Perf } from './Perf';
 import { SceneDirector } from './SceneDirector';
@@ -80,9 +82,6 @@ export enum ApplicationState {
   Destroyed = 'destroyed',
 }
 
-/** How {@link Application} sizes its canvas within the parent element. */
-export type CanvasSizingMode = 'fixed' | 'fill' | 'fit' | 'shrink' | 'letterbox';
-
 /**
  * How the finished frame composites against the page behind the canvas.
  *
@@ -101,12 +100,18 @@ export type CanvasAlphaMode = 'opaque' | 'premultiplied';
 
 export interface CanvasApplicationOptions {
   /**
-   * Existing canvas element to use. If omitted, Application creates one - and
-   * a canvas it created is also one it removes from the document again in
-   * {@link Application.destroy}. A canvas passed in here stays yours: it is
-   * left in the DOM untouched when the application goes down.
+   * Existing surface to render into. If omitted, Application creates a canvas
+   * element - and a canvas it created is also one it removes from the document
+   * again in {@link Application.destroy}. A surface passed in here stays
+   * yours: it is left untouched when the application goes down.
+   *
+   * An `OffscreenCanvas` is accepted and makes the application surface-only:
+   * it has no layout box, no styling and no events, so `mount`, `sizingMode`,
+   * `tabIndex` and `imageRendering` do not apply, and the host has to supply
+   * its own {@link ApplicationOptions.platform} affordances for input. See
+   * {@link OffscreenPlatform}.
    */
-  element?: HTMLCanvasElement;
+  element?: RenderSurface;
   /** Logical canvas width. Default: 800. */
   width?: number;
   /** Logical canvas height. Default: 600. */
@@ -353,26 +358,18 @@ const frameMeasure = 'exojs:frame';
 const systemsStartMark = 'exojs:systems:start';
 const systemsMeasure = 'exojs:systems';
 
-const createDefaultCanvas = (): HTMLCanvasElement => document.createElement('canvas');
+const createDefaultCanvas = (): HTMLCanvasElement => {
+  assert(
+    typeof document !== 'undefined',
+    'Application has no document to create a canvas in. Outside a browser window - in a worker, say - pass the surface yourself via `canvas.element` (an OffscreenCanvas transferred from the host).',
+  );
 
-/**
- * The parent-element inline style properties `'letterbox'` mode writes. Kept as
- * one list so the snapshot taken before styling and the restore performed on
- * teardown / mode change can never drift apart.
- */
-const letterboxParentProperties = ['display', 'alignItems', 'justifyContent', 'overflow', 'background'] as const;
+  return document.createElement('canvas');
+};
 
-type LetterboxParentProperty = (typeof letterboxParentProperties)[number];
-
-/**
- * A parent element together with the exact inline values it had for every
- * property {@link Application} was about to overwrite - `''` for a property
- * with no inline value at all, which is also what removes it again on restore.
- */
-interface ParentStyleSnapshot {
-  readonly element: HTMLElement;
-  readonly styles: Readonly<Record<LetterboxParentProperty, string>>;
-}
+/** Whether `value` can be used as a {@link RenderSurface} at all. */
+const isRenderSurface = (value: unknown): value is RenderSurface =>
+  isDomCanvas(value as RenderSurface) || (typeof OffscreenCanvas !== 'undefined' && value instanceof OffscreenCanvas);
 
 /**
  * Upper bound for the auto-resolved device-pixel ratio. Caps the backing-store
@@ -468,7 +465,21 @@ const defaultInputSettings: Required<InputApplicationOptions> = {
  */
 export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly options: ApplicationOptions<Registry>;
-  public readonly canvas: HTMLCanvasElement;
+  /**
+   * The surface this application renders into - the canvas element it created
+   * or was given, or an `OffscreenCanvas` it was handed. `width`/`height` are
+   * the backing store in device pixels, not the CSS box; see
+   * {@link Application.width} for the design size.
+   *
+   * Use {@link Application.element} for anything that needs the surrounding
+   * document: styling, layout, or the element itself.
+   */
+  public readonly canvas: RenderSurface;
+  /**
+   * The render surface as a document canvas, or `null` when the application
+   * renders into an `OffscreenCanvas` and there is no element to reach.
+   */
+  public readonly element: HTMLCanvasElement | null;
   /**
    * The host seam this application runs on. Every part of the engine that has
    * to reach outside its own state - input events, surface focus, cursor,
@@ -550,10 +561,17 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private readonly _extensionDisposers: ExtensionDisposer[] = [];
 
-  private readonly _updateHandler: () => void;
-  private readonly _startupClock: Clock = new Clock();
-  private readonly _activeClock: Clock = new Clock();
-  private readonly _frameClock: Clock = new Clock();
+  private readonly _updateHandler: (timestamp: number) => void;
+  private readonly _startupClock: Clock;
+  private readonly _activeClock: Clock;
+  private readonly _frameClock: Clock;
+  /**
+   * Host timestamp of the frame the loop most recently began. The frame delta
+   * is the distance between two of these rather than two readings taken inside
+   * the callback, so a frame that starts late does not also report a short
+   * delta.
+   */
+  private _lastFrameTimestamp = 0;
   private readonly _fixed: FixedTimestep;
   // The fixed-step duration - a true constant for the Application's whole
   // lifetime (set from `options.fixedTimeStep` in the constructor and never
@@ -616,10 +634,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * from this touches only the properties the engine wrote, so a page that
    * styles its own game container inline keeps everything else.
    */
-  private _parentStyleSnapshot: ParentStyleSnapshot | null = null;
   private _visibilitySubscription: PlatformSubscription | null = null;
-  private _resizeObserver: ResizeObserver | null = null;
   private _sizingMode: CanvasSizingMode = 'fixed';
+  private readonly _sizing: CanvasSizing;
   private readonly _audio: AudioManager = new AudioManager();
 
   public constructor(appSettings: ApplicationOptions<Registry> = {}) {
@@ -634,8 +651,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // does not support WebGL." from the backend, once `canvas.getContext` turns
     // out not to be a function. Catch the real cause here instead.
     assert(
-      canvas instanceof HTMLCanvasElement,
-      `Application canvas.element must be an HTMLCanvasElement (got ${(canvas as object).constructor?.name ?? typeof canvas}). Pass a real <canvas> element, or omit canvas.element to let Application create one.`,
+      isRenderSurface(canvas),
+      `Application canvas.element must be an HTMLCanvasElement or an OffscreenCanvas (got ${(canvas as object).constructor?.name ?? typeof canvas}). Pass a real canvas, or omit canvas.element to let Application create one.`,
     );
 
     const logicalWidth = canvasOptions.width ?? defaultCanvasSettings.width;
@@ -648,16 +665,20 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._designHeight = logicalHeight;
     this._ownsCanvas = canvasOptions.element === undefined;
     this.canvas = canvas;
-    this._applyCanvasSize(logicalWidth, logicalHeight);
+    this.element = isDomCanvas(canvas) ? canvas : null;
+    this._sizing = new CanvasSizing(canvas, this.element, this._pixelRatio, logicalWidth, logicalHeight, (width, height) => void this.resize(width, height));
+    this._sizing.applySize(logicalWidth, logicalHeight);
 
-    if (canvasOptions.tabIndex !== undefined) {
-      this.canvas.tabIndex = canvasOptions.tabIndex;
-    } else if (!this.canvas.hasAttribute('tabindex')) {
-      this.canvas.tabIndex = defaultCanvasSettings.tabIndex;
-    }
+    if (this.element !== null) {
+      if (canvasOptions.tabIndex !== undefined) {
+        this.element.tabIndex = canvasOptions.tabIndex;
+      } else if (!this.element.hasAttribute('tabindex')) {
+        this.element.tabIndex = defaultCanvasSettings.tabIndex;
+      }
 
-    if (canvasOptions.imageRendering !== undefined) {
-      this.canvas.style.imageRendering = canvasOptions.imageRendering;
+      if (canvasOptions.imageRendering !== undefined) {
+        this.element.style.imageRendering = canvasOptions.imageRendering;
+      }
     }
 
     // Ownership record for every subsystem built from here on. Construction is
@@ -675,7 +696,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     const constructed = new DestroyScope();
 
     try {
-      // Inside the boundary because `_applySizingMode` is the first step that
+      // Inside the boundary because the sizing host is the first step that
       // can own something: `'fill'` and `'letterbox'` attach a ResizeObserver
       // to the parent element, and a DOM node holding an observer whose
       // callback closes over a dead Application is a live leak, not an inert
@@ -683,12 +704,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // destroyed backend.
       this._mountCanvas(canvasOptions.mount);
       this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
-      this._applySizingMode(this._sizingMode);
+      this._sizing.applyMode(this._sizingMode);
 
       // Established before any subsystem, because input, interaction and the
       // frame loop all read the host through it.
       this._ownsPlatform = appSettings.platform === undefined;
-      this.platform = appSettings.platform ?? new BrowserPlatform(this.canvas);
+      this.platform = appSettings.platform ?? (this.element === null ? new OffscreenPlatform(this.canvas) : new BrowserPlatform(this.element));
+
+      // Every runtime clock reads the host through the adapter, so a platform
+      // with a deterministic time source makes the whole frame loop
+      // deterministic - there is no second, global clock behind it.
+      this._startupClock = new Clock(Time.zero, false, this.platform);
+      this._activeClock = new Clock(Time.zero, false, this.platform);
+      this._frameClock = new Clock(Time.zero, false, this.platform);
 
       // Only an adapter created here is ours to release - an injected one stays
       // the caller's on the failure path, exactly as in `destroy()`.
@@ -705,7 +733,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           width: logicalWidth,
           height: logicalHeight,
           pixelRatio: this._pixelRatio,
-          tabIndex: this.canvas.tabIndex,
+          ...(this.element !== null && { tabIndex: this.element.tabIndex }),
           ...(canvasOptions.imageRendering !== undefined && { imageRendering: canvasOptions.imageRendering }),
         },
         loader: {
@@ -751,7 +779,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.interaction = constructed.track(new InteractionManager(this));
       this.scenes = constructed.track(new SceneDirector<Registry>(this, appSettings.scenes));
       this.random = new Random(this.options.seed);
-      this._updateHandler = this.update.bind(this);
+      this._updateHandler = (timestamp: number): void => {
+        this.update(timestamp);
+      };
 
       const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
 
@@ -817,7 +847,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * either fully built or the constructor never started - there is nothing
    * partial for a scope to track. Two more cannot be scope entries at all,
    * because neither is a `Destroyable`, and both are held from outside:
-   * {@link Application._resizeObserver} is held by the parent DOM node it
+   * The sizing host's `ResizeObserver` is held by the parent DOM node it
    * observes, and {@link Application._visibilitySubscription} is a plain
    * function held by the platform adapter - which, when *injected*, is not
    * ours to destroy and would keep that subscription, and through it this
@@ -869,8 +899,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // and both outlive us if left: the observer is held by a live DOM node,
     // and an injected platform adapter keeps the visibility subscription.
     attempt(() => {
-      this._resizeObserver?.disconnect();
-      this._resizeObserver = null;
+      this._sizing.releaseObserver();
     });
     attempt(() => {
       this._visibilitySubscription?.();
@@ -1049,10 +1078,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     }
     const previous = this._sizingMode;
 
-    this._resizeObserver?.disconnect();
-    this._resizeObserver = null;
+    this._sizing.releaseObserver();
     this._sizingMode = mode;
-    this._applySizingMode(mode, previous);
+    this._sizing.applyMode(mode, previous);
   }
 
   /**
@@ -1262,6 +1290,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _startFrameLoop(): void {
     this._frameLoopActive = true;
     this._frameRequest = this.platform.requestFrame(this._updateHandler);
+    this._lastFrameTimestamp = this.platform.now();
     this._frameClock.restart();
     this._fixed.reset();
     this._activeClock.start();
@@ -1336,9 +1365,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * advancement. Real wall-clock time and RAF cadence are unaffected; the raw
    * elapsed delta is recorded separately in `backend.stats.rawFrameDeltaMs`.
    */
-  public update(): this {
+  public update(timestamp: number = this.platform.now()): this {
     if (this._frameLoopActive) {
       if (this.pauseOnHidden && !this._documentVisible) {
+        this._lastFrameTimestamp = timestamp;
         this._frameClock.restart();
         this._fixed.reset();
         this._frameRequest = this.platform.requestFrame(this._updateHandler);
@@ -1353,18 +1383,19 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // through the error pipeline instead of killing the RAF loop; the loop
       // halts only after `maxConsecutiveFrameErrors` consecutive failures.
       try {
-        const rawDeltaMs = this._frameClock.elapsedTime.milliseconds;
+        const rawDeltaMs = Math.max(0, timestamp - this._lastFrameTimestamp);
 
-        // Restart the moment the delta is read, not at the end of the frame:
-        // the clock has to span frame start to frame start. Restarting after
-        // the frame's own work would leave that work out of the next delta,
-        // so a frame that runs long would report the gap it caused as
-        // *shorter*, slowing the simulation exactly when it is already behind.
+        this._lastFrameTimestamp = timestamp;
+
+        // Separate domain from the delta above: this one is the in-frame
+        // stopwatch behind `app.frameTime`, restarted at the top of the frame
+        // so a reader inside `onFrame` sees how long the frame has been
+        // running rather than how long the previous one took.
         this._frameClock.restart();
 
         const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
         const frameDelta = this._frameDelta.set(clampedDeltaMs);
-        const frameStart = performance.now();
+        const frameStart = this.platform.now();
 
         if (__DEV__) Perf.mark(frameStartMark);
 
@@ -1416,7 +1447,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
         this.onFrame.dispatch(frameDelta);
         this.backend.flush();
-        this.backend.stats.frameTimeMs = performance.now() - frameStart;
+        this.backend.stats.frameTimeMs = this.platform.now() - frameStart;
 
         if (__DEV__) {
           Perf.measure(frameMeasure, frameStartMark);
@@ -1507,7 +1538,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     if (__DEV__) {
       const detail = isRenderError && error.detail !== null ? `\n${error.detail}` : '';
 
-      showDevErrorOverlay(this.canvas, `${error.message}${detail}`, { fatal });
+      if (this.element !== null) {
+        showDevErrorOverlay(this.element, `${error.message}${detail}`, { fatal });
+      }
     }
   }
 
@@ -1584,7 +1617,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._designWidth = width;
     this._designHeight = height;
-    this._applyCanvasSize(width, height);
+    this._sizing.applySize(width, height);
     this.options.canvas = {
       ...(this.options.canvas ?? {}),
       width,
@@ -1601,7 +1634,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
   /** Append the canvas to a mount element or CSS selector, if provided. */
   private _mountCanvas(mount?: HTMLElement | string): void {
-    if (mount === undefined || typeof document === 'undefined') {
+    if (mount === undefined || typeof document === 'undefined' || this.element === null) {
       return;
     }
 
@@ -1612,195 +1645,14 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // of silently leaving the canvas unattached (a beginner otherwise sees a
       // blank page with no signal as to why).
       logger.warn(
-        `Application canvas.mount selector "${mount as string}" did not match any element — the canvas was created but never attached to the page. Check the selector for typos, or append \`app.canvas\` to the DOM yourself.`,
+        `Application canvas.mount selector "${mount as string}" did not match any element — the canvas was created but never attached to the page. Check the selector for typos, or append \`app.element\` to the DOM yourself.`,
         { source: 'Application', once: `application:mount-miss:${mount as string}` },
       );
 
       return;
     }
 
-    target.append(this.canvas);
-  }
-
-  /**
-   * Apply the chosen {@link CanvasSizingMode}. `'fill'` observes the parent and
-   * re-renders to its size; `'fit'`/`'shrink'` set CSS so the fixed-resolution
-   * canvas scales to fit the parent (letterboxed via CSS object-fit);
-   * `'letterbox'` observes the parent and sizes a native-resolution,
-   * design-aspect canvas centered within it, the parent background showing as
-   * bars. `'fixed'` is a no-op - the exact pixel size was already applied.
-   *
-   * `previous` is the mode being replaced, if any. Whatever CSS that mode owned
-   * is undone first, so switching modes never leaves the losing mode's rules
-   * layered under the winning one's - `'fit'`'s `100%` box outliving a switch
-   * to `'fixed'`, say, or `'letterbox'`'s flex centering outliving a switch to
-   * `'fill'`.
-   */
-  private _applySizingMode(mode: CanvasSizingMode, previous: CanvasSizingMode | null = null): void {
-    const style = this.canvas.style;
-
-    if (previous !== null) {
-      this._clearSizingModeStyles(previous);
-    }
-
-    switch (mode) {
-      case 'fill': {
-        const target = this.canvas.parentElement;
-
-        if (typeof ResizeObserver === 'undefined' || !target) {
-          break;
-        }
-
-        this._resizeObserver = new ResizeObserver(() => {
-          const width = target.clientWidth;
-          const height = target.clientHeight;
-
-          if (width > 0 && height > 0) {
-            this.resize(width, height);
-          }
-        });
-        this._resizeObserver.observe(target);
-        break;
-      }
-      case 'letterbox': {
-        const target = this.canvas.parentElement;
-
-        if (typeof ResizeObserver === 'undefined' || !target) {
-          break;
-        }
-
-        // Center the canvas in the parent and let the parent background show as
-        // letterbox bars around it. Snapshot first: these are the caller's
-        // element, and teardown has to hand it back the way it was found.
-        const parentStyle = target.style;
-
-        this._snapshotParentStyles(target);
-
-        parentStyle.display = 'flex';
-        parentStyle.alignItems = 'center';
-        parentStyle.justifyContent = 'center';
-        parentStyle.overflow = 'hidden';
-        parentStyle.background = '#000';
-
-        this._resizeObserver = new ResizeObserver(() => {
-          const width = target.clientWidth;
-          const height = target.clientHeight;
-
-          if (width > 0 && height > 0) {
-            this._applyLetterboxLayout(width, height);
-          }
-        });
-        this._resizeObserver.observe(target);
-        break;
-      }
-      case 'fit':
-        style.width = '100%';
-        style.height = '100%';
-        style.objectFit = 'contain';
-        break;
-      case 'shrink':
-        style.maxWidth = '100%';
-        style.maxHeight = '100%';
-        style.objectFit = 'contain';
-        break;
-      case 'fixed':
-      default:
-        break;
-    }
-  }
-
-  /**
-   * Undo the canvas/parent CSS a sizing mode owns, returning the canvas to the
-   * plain design-size box every mode starts from. Only properties the mode
-   * itself wrote are touched - nothing here is a blanket style reset.
-   */
-  private _clearSizingModeStyles(mode: CanvasSizingMode): void {
-    const style = this.canvas.style;
-
-    switch (mode) {
-      case 'fit':
-        style.width = '';
-        style.height = '';
-        style.objectFit = '';
-        break;
-      case 'shrink':
-        style.maxWidth = '';
-        style.maxHeight = '';
-        style.objectFit = '';
-        break;
-      case 'letterbox':
-        this._restoreParentStyles();
-        break;
-      case 'fill':
-      case 'fixed':
-      default:
-        break;
-    }
-
-    // `'fit'` and `'letterbox'` replaced the explicit pixel box (the former by
-    // clearing it just above, the latter by writing a fitted one along with a
-    // parent-sized backing store), and `'fill'` last sized it to the parent.
-    // Restate the design size so the next mode starts from a known box.
-    this._applyCanvasSize(this._designWidth, this._designHeight);
-  }
-
-  /**
-   * Record the parent's inline values for every property `'letterbox'` is about
-   * to overwrite. The {@link ParentStyleSnapshot} record type is exhaustive over
-   * {@link letterboxParentProperties}, so a property added to the mode without
-   * being captured here fails to compile rather than silently escaping restore.
-   */
-  private _snapshotParentStyles(target: HTMLElement): void {
-    const style = target.style;
-
-    this._parentStyleSnapshot = {
-      element: target,
-      styles: {
-        display: style.display,
-        alignItems: style.alignItems,
-        justifyContent: style.justifyContent,
-        overflow: style.overflow,
-        background: style.background,
-      },
-    };
-  }
-
-  /**
-   * Put the parent element's inline styles back exactly as they were before
-   * `'letterbox'` mode touched them, and forget the snapshot. A no-op when no
-   * parent was ever restyled, so it is safe to call from every teardown path.
-   */
-  private _restoreParentStyles(): void {
-    const snapshot = this._parentStyleSnapshot;
-
-    if (snapshot === null) {
-      return;
-    }
-
-    this._parentStyleSnapshot = null;
-
-    for (const property of letterboxParentProperties) {
-      snapshot.element.style[property] = snapshot.styles[property];
-    }
-  }
-
-  /**
-   * Recompute the `'letterbox'` layout for a parent of the given CSS size.
-   * Fits the fixed `width`×`height` design space into the parent preserving
-   * aspect ratio, sizes the canvas to that content rectangle (backing store at
-   * `content × pixelRatio` - always native-crisp, never upscale-blurred), and
-   * lets the parent's background show through as letterbox bars around the
-   * centered canvas. The render target and camera stay at the design size, so
-   * the design space exactly fills the backing store (no crop, no stretch) and
-   * the camera's gameplay center / zoom survive a window resize untouched.
-   */
-  private _applyLetterboxLayout(parentWidthCss: number, parentHeightCss: number): void {
-    const layout = computeLetterboxLayout(parentWidthCss, parentHeightCss, this._designWidth, this._designHeight, this._pixelRatio);
-
-    this.canvas.width = layout.backingWidth;
-    this.canvas.height = layout.backingHeight;
-    this.canvas.style.width = `${layout.contentWidthCss}px`;
-    this.canvas.style.height = `${layout.contentHeightCss}px`;
+    target.append(this.element);
   }
 
   /**
@@ -1893,8 +1745,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._visibilitySubscription?.();
     this._visibilitySubscription = null;
-    this._resizeObserver?.disconnect();
-    this._resizeObserver = null;
+    this._sizing.releaseObserver();
     this._releaseDom();
 
     if (this._frameLoopActive) {
@@ -1932,10 +1783,10 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * settles is a visible artefact, not an implementation detail.
    */
   private _releaseDom(): void {
-    this._restoreParentStyles();
+    this._sizing.restoreParentStyles();
 
     if (this._ownsCanvas) {
-      this.canvas.remove();
+      this.element?.remove();
     }
   }
 
@@ -2161,15 +2012,5 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     const gpuNavigator = navigator as Navigator & Partial<{ gpu: GPU }>;
 
     return !!gpuNavigator.gpu && !isWebKitUserAgent(navigator.userAgent);
-  }
-
-  private _applyCanvasSize(width: number, height: number): void {
-    const renderWidth = Math.round(width * this._pixelRatio);
-    const renderHeight = Math.round(height * this._pixelRatio);
-
-    this.canvas.width = renderWidth;
-    this.canvas.height = renderHeight;
-    this.canvas.style.width = `${width}px`;
-    this.canvas.style.height = `${height}px`;
   }
 }

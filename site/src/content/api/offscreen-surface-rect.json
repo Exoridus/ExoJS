@@ -1,0 +1,134 @@
+{
+  "title": "OffscreenSurfaceRect",
+  "description": "Where the surface is displayed, in the coordinate space the forwarded pointer events use.",
+  "symbol": "OffscreenSurfaceRect",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Where the surface is displayed, in the coordinate space the forwarded pointer events use."
+      ],
+      "importLine": "import { OffscreenSurfaceRect } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "left",
+          "signature": "left: number",
+          "signatureTokens": [
+            {
+              "text": "left",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "top",
+          "signature": "top: number",
+          "signatureTokens": [
+            {
+              "text": "top",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/OffscreenPlatform.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/OffscreenPlatform.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/OffscreenPlatform.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/OffscreenPlatform.ts"
+}

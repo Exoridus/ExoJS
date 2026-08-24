@@ -15,6 +15,7 @@ import { expect } from 'vitest';
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import type { RenderSurface } from '#platform/RenderSurface';
 import type { RenderNode } from '#rendering/RenderNode';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -28,7 +29,7 @@ import { getBackendDevice } from './webgpu-test-helpers';
  * construction. The canvas keeps the default opaque `alphaMode` and
  * `preserveDrawingBuffer` is on so a rendered frame can be read back unmodified.
  */
-export const makeTestApp = (canvas: HTMLCanvasElement, size: number, pixelRatio?: number): Application =>
+export const makeTestApp = (canvas: RenderSurface, size: number, pixelRatio?: number): Application =>
   ({
     canvas,
     options: {
@@ -55,6 +56,28 @@ export const makeTestCanvas = (size: number): HTMLCanvasElement => {
   canvas.height = size;
 
   return canvas;
+};
+
+/** The same surface with no document behind it. */
+export const makeTestOffscreenCanvas = (size: number): OffscreenCanvas => new OffscreenCanvas(size, size);
+
+export const createWebGl2OffscreenBackend = async (size: number): Promise<WebGl2Backend> => {
+  const app = makeTestApp(makeTestOffscreenCanvas(size), size);
+  const backend = new WebGl2Backend(app);
+
+  await backend.initialize();
+  wireCoreRenderers(backend, app.options.rendering);
+
+  return backend;
+};
+
+export const createWebGpuOffscreenBackend = async (size: number): Promise<WebGpuBackend> => {
+  const backend = new WebGpuBackend(makeTestApp(makeTestOffscreenCanvas(size), size));
+
+  wireCoreRenderers(backend);
+  await backend.initialize();
+
+  return backend;
 };
 
 /** Software WebGPU adapters drop the device under load; such a run is skipped, not failed. */

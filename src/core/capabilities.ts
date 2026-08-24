@@ -10,11 +10,41 @@
 // `app.capabilities` after `await app.start(...)`); there is no global
 // sync mirror, by design.
 
+import { getWebGl2Context, type RenderSurface } from '#platform/RenderSurface';
+
+/**
+ * Which kind of global scope the probes ran in. Capabilities are realm-local:
+ * the same browser reports different answers on its main thread and inside a
+ * worker, and neither answer is wrong.
+ *
+ * - `'window'`: a document's main thread. Input, audio and layout exist.
+ * - `'worker'`: a dedicated worker. No document, so no DOM input, no CSS
+ *   pixel ratio and no `AudioContext`, but `OffscreenCanvas` rendering and
+ *   nested workers are available.
+ * - `'unknown'`: neither - a server-side render, or an embedding host.
+ */
+export type HostRealm = 'window' | 'worker' | 'unknown';
+
 const hasWindow = typeof window !== 'undefined';
 const hasDocument = typeof document !== 'undefined';
 const hasNavigator = typeof navigator !== 'undefined';
+// `WorkerGlobalScope` rather than `DedicatedWorkerGlobalScope`, and reached
+// through `Reflect.get` rather than referenced directly: the worker lib is not
+// in scope for a DOM build, and module workers - unlike classic ones - have no
+// `importScripts` to detect instead.
+const workerGlobalScope = Reflect.get(globalThis, 'WorkerGlobalScope') as (abstract new () => object) | undefined;
+const hasWorkerScope = workerGlobalScope !== undefined && globalThis instanceof workerGlobalScope;
+
+function detectRealm(): HostRealm {
+  if (hasWindow && hasDocument) return 'window';
+  if (hasWorkerScope) return 'worker';
+  return 'unknown';
+}
+
+const realm: HostRealm = detectRealm();
 
 interface CapabilityValues {
+  readonly realm: HostRealm;
   readonly webgl2: boolean;
   readonly webgpu: boolean;
   readonly webgpuAdapter: GPUAdapter | null;
@@ -31,6 +61,7 @@ interface CapabilityValues {
   readonly imageBitmap: boolean;
   readonly deviceMemory: number;
   readonly offscreenCanvas: boolean;
+  readonly offscreenWebgl2: boolean;
   readonly webWorkers: boolean;
   readonly devicePixelRatio: number;
 }
@@ -74,6 +105,8 @@ export class Capabilities {
     return Capabilities._readyPromise;
   }
 
+  /** The global scope the probes ran in. See {@link HostRealm}. */
+  public readonly realm: HostRealm;
   public readonly webgl2: boolean;
   public readonly webgpu: boolean;
   public readonly webgpuAdapter: GPUAdapter | null;
@@ -90,10 +123,23 @@ export class Capabilities {
   public readonly imageBitmap: boolean;
   public readonly deviceMemory: number;
   public readonly offscreenCanvas: boolean;
+  /**
+   * Whether a WebGL2 context can actually be created on an `OffscreenCanvas`
+   * in this realm - probed by creating one, not inferred from the constructor
+   * being defined. The two can differ: a host may expose `OffscreenCanvas`
+   * and still refuse it a GPU-backed context.
+   */
+  public readonly offscreenWebgl2: boolean;
   public readonly webWorkers: boolean;
+  /**
+   * The host's CSS-to-device pixel ratio, or `1` where there is no document to
+   * ask - a worker has no ratio of its own and inherits whatever its host
+   * decided the surface's backing size should be.
+   */
   public readonly devicePixelRatio: number;
 
   private constructor(values: CapabilityValues) {
+    this.realm = values.realm;
     this.webgl2 = values.webgl2;
     this.webgpu = values.webgpu;
     this.webgpuAdapter = values.webgpuAdapter;
@@ -110,6 +156,7 @@ export class Capabilities {
     this.imageBitmap = values.imageBitmap;
     this.deviceMemory = values.deviceMemory;
     this.offscreenCanvas = values.offscreenCanvas;
+    this.offscreenWebgl2 = values.offscreenWebgl2;
     this.webWorkers = values.webWorkers;
     this.devicePixelRatio = values.devicePixelRatio;
 
@@ -120,6 +167,7 @@ export class Capabilities {
     const [webgpuAdapter, webgpuInfo] = await probeWebGpu();
 
     return new Capabilities({
+      realm,
       webgl2: probeWebGl2(),
       webgpu: probeWebGpuApiSurface(),
       webgpuAdapter,
@@ -136,6 +184,7 @@ export class Capabilities {
       imageBitmap: probeImageBitmap(),
       deviceMemory: probeDeviceMemory(),
       offscreenCanvas: probeOffscreenCanvas(),
+      offscreenWebgl2: probeOffscreenWebGl2(),
       webWorkers: probeWebWorkers(),
       devicePixelRatio: hasWindow ? window.devicePixelRatio : 1,
     });
@@ -144,13 +193,58 @@ export class Capabilities {
 
 // --- probes ---------------------------------------------------------------
 
-function probeWebGl2(): boolean {
-  if (!hasDocument) return false;
+/**
+ * A 1x1 scratch surface to acquire a probe context on: a canvas element where
+ * there is a document, an `OffscreenCanvas` otherwise. `null` when the realm
+ * offers neither.
+ */
+function createProbeSurface(offscreenOnly = false): RenderSurface | null {
+  if (!offscreenOnly && hasDocument) {
+    return document.createElement('canvas');
+  }
 
+  if (typeof OffscreenCanvas === 'undefined') {
+    return null;
+  }
+
+  return new OffscreenCanvas(1, 1);
+}
+
+/**
+ * Whether `surface` hands out a WebGL2 context, releasing it again.
+ *
+ * The release matters: browsers cap how many live WebGL contexts a page may
+ * hold and evict the oldest once the cap is reached, so a probe that keeps its
+ * context is one slot the application can no longer use. Two probes run here,
+ * which without this would cost two of them.
+ */
+function acquiresWebGl2(surface: RenderSurface): boolean {
+  const gl = getWebGl2Context(surface);
+
+  if (gl === null) {
+    return false;
+  }
+
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
+
+  return true;
+}
+
+function probeWebGl2(): boolean {
   try {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl2');
-    return gl !== null;
+    const surface = createProbeSurface();
+
+    return surface !== null && acquiresWebGl2(surface);
+  } catch {
+    return false;
+  }
+}
+
+function probeOffscreenWebGl2(): boolean {
+  try {
+    const surface = createProbeSurface(true);
+
+    return surface !== null && acquiresWebGl2(surface);
   } catch {
     return false;
   }
@@ -199,6 +293,9 @@ async function probeWebGpu(): Promise<[GPUAdapter | null, GPUAdapterInfo | null]
   }
 }
 
+// Pointer and keyboard are document-scoped: a worker can construct neither the
+// event nor a target to receive it, so a realm without a document has no input
+// of its own regardless of which constructors happen to be defined in it.
 function probePointer(): boolean {
   return hasWindow && 'PointerEvent' in window;
 }
@@ -224,6 +321,8 @@ function probeMaxTouchPoints(): number {
   return typeof points === 'number' ? points : 0;
 }
 
+// `AudioContext` is window-scoped by specification - a worker cannot construct
+// one even where the identifier resolves.
 function probeAudio(): boolean {
   if (!hasWindow) return false;
   const w = window as typeof window & { webkitAudioContext?: unknown };
@@ -250,18 +349,13 @@ function probeDeviceMemory(): number {
   return typeof mem === 'number' ? mem : 0;
 }
 
+// Both are realm globals rather than window properties: a dedicated worker has
+// `OffscreenCanvas` and can spawn nested workers, and reading them off `window`
+// would report "unsupported" for the one realm that most needs them.
 function probeOffscreenCanvas(): boolean {
-  // The browser global is verbatim `OffscreenCanvas`; eslint's
-  // strict-camelCase rule rejects the property name even though we
-  // can't rename a web standard.
-
-  return hasWindow && window.OffscreenCanvas !== undefined;
+  return typeof OffscreenCanvas !== 'undefined';
 }
 
 function probeWebWorkers(): boolean {
-  // The browser global is verbatim `Worker`; eslint's strict-camelCase
-  // rule rejects the property name even though we can't rename a web
-  // standard.
-
-  return hasWindow && typeof window.Worker === 'function';
+  return typeof Worker === 'function';
 }

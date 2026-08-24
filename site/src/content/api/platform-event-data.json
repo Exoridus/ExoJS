@@ -1,0 +1,91 @@
+{
+  "title": "PlatformEventData",
+  "description": "The data half of a platform event: every field, none of the suppression calls. Structured-cloneable, so this is the shape an event takes when it has to cross a worker boundary - a DOM event object never can.",
+  "symbol": "PlatformEventData",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The data half of a platform event: every field, none of the suppression calls. Structured-cloneable, so this is the shape an event takes when it has to cross a worker boundary - a DOM event object never can."
+      ],
+      "importLine": "import { PlatformEventData } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "PlatformEventData",
+          "signature": "Omit<E, keyof PlatformEvent>",
+          "signatureTokens": [
+            {
+              "text": "Omit",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "E",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "keyof",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformEvent",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformAdapter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformAdapter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+}

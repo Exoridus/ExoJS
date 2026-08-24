@@ -5,7 +5,6 @@
  * phase - and deregisters again on stop, detach, completion and destroy.
  */
 import { Application, ApplicationState } from '#core/Application';
-import { Time } from '#core/Time';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
@@ -81,10 +80,9 @@ const forceRunning = (app: Application): void => {
 
 /** Run one frame of the real per-frame loop with a fixed `milliseconds` delta. */
 const advanceFrame = (app: Application, milliseconds: number): void => {
-  const clock = (app as unknown as Record<string, unknown>)['_frameClock'] as import('#core/Clock').Clock;
+  const previous = (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] as number;
 
-  vi.spyOn(clock, 'elapsedTime', 'get').mockReturnValue(new Time(milliseconds));
-  app.update();
+  app.update(previous + milliseconds);
 };
 
 const createFrames = (): Rectangle[] => [new Rectangle(0, 0, 16, 16), new Rectangle(16, 0, 16, 16), new Rectangle(32, 0, 16, 16)];

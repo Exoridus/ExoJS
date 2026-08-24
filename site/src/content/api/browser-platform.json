@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 17,
+  "memberCount": 18,
   "counts": {
     "constructors": 1,
-    "methods": 13,
+    "methods": 14,
     "properties": 3,
     "events": 0
   },
@@ -130,7 +130,7 @@
             }
           ],
           "returnType": "void",
-          "description": "Cancel a frame scheduled by PlatformAdapter.requestFrame."
+          "description": "Cancel a frame scheduled by FrameScheduler.requestFrame."
         },
         {
           "name": "capturePointer",
@@ -265,6 +265,35 @@
           "params": [],
           "returnType": "PlatformSurfaceMetrics",
           "description": "Current position, display size and backing-store resolution of the drawing surface. Read per pointer event, so implementations should keep it cheap."
+        },
+        {
+          "name": "now",
+          "signature": "now(): number",
+          "signatureTokens": [
+            {
+              "text": "now",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "number",
+          "description": "Milliseconds elapsed since this source's own origin."
         },
         {
           "name": "onSurfaceEvent",
@@ -681,7 +710,7 @@
         },
         {
           "name": "requestFrame",
-          "signature": "requestFrame(callback: () => void): number",
+          "signature": "requestFrame(callback: (timestamp: number) => void): number",
           "signatureTokens": [
             {
               "text": "requestFrame",
@@ -702,6 +731,18 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "timestamp",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             },
             {
               "text": ") => ",
@@ -727,12 +768,12 @@
           "params": [
             {
               "name": "callback",
-              "type": "() => void",
+              "type": "(timestamp: number) => void",
               "optional": false
             }
           ],
           "returnType": "number",
-          "description": "Schedule callback for the next display frame and return a handle for PlatformAdapter.cancelFrame. One-shot - the frame loop reschedules itself every frame."
+          "description": "Schedule callback for the next display frame and return a handle for FrameScheduler.cancelFrame. One-shot - a frame loop reschedules itself every frame. timestamp is the host's frame time. It is the time the frame was *scheduled for*, not the time the callback happened to run, so deltas derived from it are free of the jitter that reading a clock at the top of the callback introduces."
         },
         {
           "name": "setCursor",

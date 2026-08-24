@@ -1,6 +1,6 @@
 {
   "title": "TextureSource",
-  "description": "Anything the rendering pipeline can sample as a texture source: a loaded image, an offscreen canvas, a playing video, or `null` when no source has been assigned yet.",
+  "description": "Anything the rendering pipeline can sample as a texture source: a loaded image, a canvas of either kind, a playing video, a decoded bitmap, a decoded video frame, or `null` when no source has been assigned yet. A `VideoFrame` is the one member with a lifetime of its own. It holds a decoder resource that is released only by `close()`, and the engine never calls it: a texture reads the frame during upload and does not retain it afterwards, so closing the frame stays the responsibility of whoever decoded it. Close it no earlier than the flush that uploaded it, and re-assign the texture's source before closing it if the texture is to keep drawing.",
   "symbol": "TextureSource",
   "kind": "type",
   "subsystem": "core",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Anything the rendering pipeline can sample as a texture source: a loaded image, an offscreen canvas, a playing video, or `null` when no source has been assigned yet."
+        "Anything the rendering pipeline can sample as a texture source: a loaded image, a canvas of either kind, a playing video, a decoded bitmap, a decoded video frame, or `null` when no source has been assigned yet.",
+        "A `VideoFrame` is the one member with a lifetime of its own. It holds a decoder resource that is released only by `close()`, and the engine never calls it: a texture reads the frame during upload and does not retain it afterwards, so closing the frame stays the responsibility of whoever decoded it. Close it no earlier than the flush that uploaded it, and re-assign the texture's source before closing it if the texture is to keep drawing."
       ],
       "importLine": "import { TextureSource } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +31,7 @@
       "members": [
         {
           "name": "TextureSource",
-          "signature": "HTMLCanvasElement | HTMLImageElement | HTMLVideoElement | ImageBitmap | null",
+          "signature": "HTMLCanvasElement | HTMLImageElement | HTMLVideoElement | ImageBitmap | OffscreenCanvas | VideoFrame | null",
           "signatureTokens": [
             {
               "text": "HTMLCanvasElement",
@@ -58,6 +59,22 @@
             },
             {
               "text": "ImageBitmap",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OffscreenCanvas",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VideoFrame",
               "kind": "type"
             },
             {

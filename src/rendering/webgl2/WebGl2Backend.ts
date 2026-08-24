@@ -4,6 +4,7 @@ import { Signal } from '#core/Signal';
 import { Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
+import { getWebGl2Context, type RenderSurface } from '#platform/RenderSurface';
 import { assertLiveRenderTarget, assertLiveTexture } from '#rendering/assertLiveResource';
 import type { BackendRenderPass } from '#rendering/BackendRenderPass';
 import type { Drawable } from '#rendering/Drawable';
@@ -284,7 +285,7 @@ export class WebGl2Backend implements RenderBackend {
   private _stencilClipperConnected = false;
   private _passCoordinatorInstance: WebGl2PassCoordinator | null = null;
 
-  private _canvas: HTMLCanvasElement;
+  private _canvas: RenderSurface;
   private _contextLost: boolean;
   private _destroyed = false;
   private _pendingRestore: ReturnType<typeof setTimeout> | null = null;
@@ -1920,7 +1921,7 @@ export class WebGl2Backend implements RenderBackend {
       // `premultipliedAlpha` is unconditionally true because the engine always
       // writes premultiplied colour; with `alpha: false` the browser ignores it.
       // Both are likewise excluded from the public type for the same reason.
-      return this._canvas.getContext('webgl2', {
+      return getWebGl2Context(this._canvas, {
         ...options,
         alpha: alphaMode === 'premultiplied',
         premultipliedAlpha: true,

@@ -64,7 +64,7 @@ const boot = (type: 'webgl2' | 'webgpu'): void => {
     }
     if (app !== null) {
         app.destroy();
-        app.canvas.remove();
+        app.element?.remove();
         app = null;
     }
     app = new Application({ ...options, scenes: { DemoScene }, backend: { type } });

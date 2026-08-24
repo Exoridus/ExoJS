@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 52,
+  "memberCount": 53,
   "counts": {
     "constructors": 1,
     "methods": 10,
-    "properties": 33,
+    "properties": 34,
     "events": 8
   },
   "sections": [
@@ -755,7 +755,7 @@
         },
         {
           "name": "update",
-          "signature": "update(): this",
+          "signature": "update(timestamp: number): this",
           "signatureTokens": [
             {
               "text": "update",
@@ -764,6 +764,18 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "timestamp",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
             },
             {
               "text": ")",
@@ -778,7 +790,13 @@
               "kind": "keyword"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "timestamp",
+              "type": "number",
+              "optional": false
+            }
+          ],
           "returnType": "this",
           "description": "One iteration of the per-frame loop. Invoked by requestAnimationFrame. When the document is hidden and pauseOnHidden is true, the frame clock is reset and the body is skipped - preventing a large delta spike on the first visible frame after resume. Each normal frame runs, in order: 1. **Pre-update** - app.systems pre-update phase, then the scene's preUpdate() hook and its own systems' pre-update phase. The engine's input, interaction, audio, tween, animation and rendering managers are ordinary systems in this phase, pinned to the head of it by their SystemOrder Core* values, so this frame's input snapshot is current before anything simulates. An application system registered without an explicit order runs after all of them. 2. **Fixed steps** (zero or more) - app.systems fixed-update phase, scenes.fixedUpdate() + the scene's systems fixed-update phase, Application.onFixedFrame. 3. **Update** - app.systems update phase, then scenes.update() + the scene's systems update phase. 4. **Draw** - the canvas is cleared to Application.clearColor (unless autoClear: false), then the scene draws (plus its systems and UI layer); an active transition session's own visual output composites either below or above the app.systems draw phase depending on the session's placement ('scene': below app overlays; 'screen': above them, matching the pre-transition-runtime default). 5. **Frame dispatch / flush** - Application.onFrame, backend GPU flush, frame-time stat write, RAF reschedule. The simulation delta forwarded to all update recipients is clamped to an internal maximum (100 ms) so that debugger pauses, device sleep/resume, or severe browser scheduling gaps cannot produce runaway animation advancement. Real wall-clock time and RAF cadence are unaffected; the raw elapsed delta is recorded separately in backend.stats.rawFrameDeltaMs."
         }
@@ -814,7 +832,7 @@
         },
         {
           "name": "canvas",
-          "signature": "canvas: HTMLCanvasElement",
+          "signature": "canvas: RenderSurface",
           "signatureTokens": [
             {
               "text": "canvas",
@@ -825,13 +843,42 @@
               "kind": "punctuation"
             },
             {
-              "text": "HTMLCanvasElement",
+              "text": "RenderSurface",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The surface this application renders into - the canvas element it created or was given, or an OffscreenCanvas it was handed. width/height are the backing store in device pixels, not the CSS box; see Application.width for the design size. Use Application.element for anything that needs the surrounding document: styling, layout, or the element itself."
+        },
+        {
+          "name": "element",
+          "signature": "element: HTMLCanvasElement | null",
+          "signatureTokens": [
+            {
+              "text": "element",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLCanvasElement",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The render surface as a document canvas, or null when the application renders into an OffscreenCanvas and there is no element to reach."
         },
         {
           "name": "input",

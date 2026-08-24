@@ -50,6 +50,6 @@ const app = new Application({
     backend: { type: 'webgpu' },
 });
 app.start(GraphicsPrimitivesScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });

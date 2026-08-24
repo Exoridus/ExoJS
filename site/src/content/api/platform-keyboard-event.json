@@ -1,0 +1,159 @@
+{
+  "title": "PlatformKeyboardEvent",
+  "description": "A key transition, identified by physical position (`code`) rather than by the character the active layout produces. `repeat` marks an OS auto-repeat rather than a fresh press.",
+  "symbol": "PlatformKeyboardEvent",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A key transition, identified by physical position (`code`) rather than by the character the active layout produces. `repeat` marks an OS auto-repeat rather than a fresh press."
+      ],
+      "importLine": "import { PlatformKeyboardEvent } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "preventDefault",
+          "signature": "preventDefault(): void",
+          "signatureTokens": [
+            {
+              "text": "preventDefault",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "stopImmediatePropagation",
+          "signature": "stopImmediatePropagation(): void",
+          "signatureTokens": [
+            {
+              "text": "stopImmediatePropagation",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "code",
+          "signature": "code: string",
+          "signatureTokens": [
+            {
+              "text": "code",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "repeat",
+          "signature": "repeat: boolean",
+          "signatureTokens": [
+            {
+              "text": "repeat",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformAdapter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformAdapter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+}
