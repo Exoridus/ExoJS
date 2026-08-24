@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 6,
+    "properties": 7,
     "events": 0
   },
   "sections": [
@@ -141,6 +141,27 @@
           "params": [],
           "returnType": null,
           "description": "Cancellation signal of this load. It aborts once no claim scope needs the result any more; undefined means the caller started the load without a cancellation channel."
+        },
+        {
+          "name": "source",
+          "signature": "source: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The source as the request named it, before base-path resolution. A reference the asset itself carries - a font's page image, an atlas's sheet - is relative to this, not to the resolved URL: resolving it here and loading the result would apply the loader's base path to it a second time."
         },
         {
           "name": "sourceKey",

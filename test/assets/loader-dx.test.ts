@@ -2,17 +2,18 @@ import { Asset } from '#assets/Asset';
 import { AssetRef } from '#assets/AssetRef';
 import type { AssetInspection } from '#assets/AssetResidency';
 import { Assets } from '#assets/Assets';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
-import { defineAsset } from '#assets/defineAsset';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
 import type { LoaderScope } from '#assets/LoaderScope';
 import { TextAsset } from '#assets/tokens';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
-// A test-only, non-leaf asset kind - no seamless adapter, `isValue: false` -
-// the exact shape `LoaderScope.release()` calls out (a resource loaded
-// with `load(Asset.type('bmFont', ...))`): it never goes through `createLeaf`,
+import { testAssetType } from './test-asset-type';
+
+// A test-only asset type with no catalog leaf - the exact shape
+// `LoaderScope.release()` calls out (a resource loaded with
+// `load(Asset.type('bmFont', ...))`): it never goes through `createLeaf`,
 // so it carries no `_assetMeta` stamp and is never adopted/registered in the
 // handle→key map either.
 declare module '#assets/AssetDefinitions' {
@@ -27,7 +28,7 @@ class DxNonLeafResource {
 
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
 
@@ -75,12 +76,13 @@ describe('LoaderScope.release() fail-loud contract', () => {
   test('throws for a resolved non-leaf resource, and the corrective guidance it points to actually works', async () => {
     const loader = new Loader({ basePath: '/' });
 
-    materializeAssetBindings(loader, [
-      defineAsset<DxNonLeafResource>({
-        ctor: DxNonLeafResource,
-        type: 'dxNonLeafAsset',
-        isValue: false,
-        create: () => ({ load: async request => new DxNonLeafResource(request.source) }),
+    materializeAssetTypes(loader, [
+      testAssetType<string, DxNonLeafResource>({
+        id: 'dxNonLeafAsset',
+        token: DxNonLeafResource,
+        leaf: 'none',
+        acquires: false,
+        create: async (_source, context) => new DxNonLeafResource(context.source),
       }),
     ]);
 
@@ -209,7 +211,9 @@ describe('Loader.inspect() snapshot contract', () => {
   test('rows are plain, frozen, and expose no internal Set/symbol/handle', async () => {
     const pending = deferred<string>();
     const loader = new Loader();
-    loader.bindAsset<string>({ ctor: TextAsset, storageName: 'text' }, { load: async () => pending.promise });
+    loader._installAssetTypes([
+      testAssetType<string, string>({ id: 'text', token: TextAsset, extensions: ['txt'], acquires: false, create: async () => pending.promise }),
+    ]);
 
     const ref = loader.get('note.txt') as AssetRef<string>;
     const snapshot = loader.inspect();
@@ -250,7 +254,15 @@ describe('Loader.inspect() snapshot contract', () => {
   test('rows are sorted by canonical key regardless of claim order', () => {
     mockFetchText();
     const loader = new Loader();
-    loader.bindAsset<string>({ ctor: TextAsset, storageName: 'text' }, { load: async request => `text:${request.source}` });
+    loader._installAssetTypes([
+      testAssetType<string, string>({
+        id: 'text',
+        token: TextAsset,
+        extensions: ['txt'],
+        acquires: false,
+        create: async (_source, context) => `text:${context.source}`,
+      }),
+    ]);
 
     loader.get('zzz.txt');
     loader.get('aaa.txt');
@@ -262,7 +274,9 @@ describe('Loader.inspect() snapshot contract', () => {
   test('tracks the loading → ready transition; an earlier snapshot never mutates in place', async () => {
     const pending = deferred<string>();
     const loader = new Loader();
-    loader.bindAsset<string>({ ctor: TextAsset, storageName: 'text' }, { load: async () => pending.promise });
+    loader._installAssetTypes([
+      testAssetType<string, string>({ id: 'text', token: TextAsset, extensions: ['txt'], acquires: false, create: async () => pending.promise }),
+    ]);
 
     const ref = loader.get('note.txt') as AssetRef<string>;
     const loading = loader.inspect();
@@ -374,6 +388,8 @@ describe('Loader.inspect() snapshot contract', () => {
     // leave a settled row also claiming to still be queued.
     const loader = new Loader();
     class FakeType {}
+
+    loader._installAssetTypes([testAssetType<string, string>({ id: 'fakeType', token: FakeType, acquires: false, create: async () => 'payload' })]);
 
     const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string): { key: string } })._canonicalize.bind(loader);
     const asset = canonicalize(FakeType, 'bundled.bin');

@@ -1,11 +1,11 @@
 import { AnimationManager } from '#animation/AnimationManager';
 import { TweenManager } from '#animation/TweenManager';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, type LoaderOptions } from '#assets/Loader';
 import { AudioManager } from '#audio/AudioManager';
 import type { Extension, ExtensionDisposer } from '#extensions/Extension';
 import { disposeExtensions, installExtensions } from '#extensions/lifetime';
-import { materializeAssetBindings, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
+import { materializeAssetTypes, materializeRendererBindings, materializeSerializerBindings } from '#extensions/materialize';
 import { buildSnapshot, type ExtensionSnapshot } from '#extensions/snapshot';
 import type { GamepadDefinition } from '#input/GamepadDefinitions';
 import type { GamepadSlotStrategy } from '#input/InputManager';
@@ -782,7 +782,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
       this.loader = constructed.track(new Loader(this.options.loader));
 
-      materializeAssetBindings(this.loader, [...coreAssetBindings, ...this._snapshot.assets]);
+      materializeAssetTypes(this.loader, [...coreAssetTypes, ...this._snapshot.assets]);
       materializeSerializerBindings(this.serializers, this._snapshot.serializers);
 
       this._backendType = this.resolveInitialBackendType();

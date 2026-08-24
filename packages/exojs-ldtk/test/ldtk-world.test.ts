@@ -1,9 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import type { AssetLoaderContext, Destroyable, LoaderScope, Texture } from '@codexo/exojs';
+import type { AssetFactoryContext, Destroyable, LoaderScope, Texture } from '@codexo/exojs';
 import { MapLevelSide, mapObjectDescriptors, MapObjectSpawner, TileMap } from '@codexo/exojs-tilemap';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 import type { LdtkData } from '../src/LdtkData';
 import { ldtkToMapWorld } from '../src/ldtkToMapWorld';
@@ -64,22 +64,14 @@ function fakeScope(name: string, claims: string[], fixtures: Record<string, unkn
   return scope as unknown as FakeScope;
 }
 
-function makeContext(claims: string[], fixtures: Record<string, unknown>): AssetLoaderContext {
+function makeContext(claims: string[], fixtures: Record<string, unknown>, source: string): AssetFactoryContext {
   return {
-    loader: {} as AssetLoaderContext['loader'],
-    scope: fakeScope('asset', claims, fixtures),
-    resourceKey: 'test',
-    sourceKey: 'test',
-    locator: 'url:test',
-    resolveUrl: (source: string) => source,
-    fetchText: vi.fn(),
-    fetchArrayBuffer: vi.fn(),
-    fetchJson: vi.fn(async (source: string) => {
-      claims.push(source);
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
-      throw new Error(`ldtk-world.test: no fixture registered for "${source}"`);
-    }) as unknown as AssetLoaderContext['fetchJson'],
-  };
+    source,
+    resourceKey: `test|${source}`,
+    sourceKey: `url:${source}`,
+    locator: `url:${source}`,
+    dependencies: fakeScope('asset', claims, fixtures) as unknown as AssetFactoryContext['dependencies'],
+  } as AssetFactoryContext;
 }
 
 const STREAMING_FIXTURES: Record<string, unknown> = {
@@ -167,7 +159,7 @@ describe('LDtk object normalisation', () => {
   });
 
   it('recovers the bounding-box corner from the pivot and exposes size and rotation', async () => {
-    const project = await loadLdtkProject('streaming.ldtk', makeContext([], STREAMING_FIXTURES));
+    const project = await loadLdtkProject(makeContext([], STREAMING_FIXTURES, 'streaming.ldtk'));
     const runtime = project.createRuntime({ scope: fakeScope('root', [], STREAMING_FIXTURES) });
     const forest = await runtime.loadLevel('level-forest');
 
@@ -179,7 +171,7 @@ describe('LDtk object normalisation', () => {
   });
 
   it('passes the raw entity instance through as the object source', async () => {
-    const project = await loadLdtkProject('streaming.ldtk', makeContext([], STREAMING_FIXTURES));
+    const project = await loadLdtkProject(makeContext([], STREAMING_FIXTURES, 'streaming.ldtk'));
     const runtime = project.createRuntime({ scope: fakeScope('root', [], STREAMING_FIXTURES) });
     const forest = await runtime.loadLevel('level-forest');
 
@@ -200,7 +192,7 @@ describe('LDtk object normalisation', () => {
 describe('LdtkProject streaming', () => {
   it('loads the document and tilesets but no external level payload', async () => {
     const claims: string[] = [];
-    const project = await loadLdtkProject('streaming.ldtk', makeContext(claims, STREAMING_FIXTURES));
+    const project = await loadLdtkProject(makeContext(claims, STREAMING_FIXTURES, 'streaming.ldtk'));
 
     expect(claims).toEqual(['streaming.ldtk', 'tiles.png']);
     expect(project.tilesets.size).toBe(1);
@@ -209,7 +201,7 @@ describe('LdtkProject streaming', () => {
 
   it('fetches only the level being loaded, and releases it on unload', async () => {
     const claims: string[] = [];
-    const project = await loadLdtkProject('streaming.ldtk', makeContext(claims, STREAMING_FIXTURES));
+    const project = await loadLdtkProject(makeContext(claims, STREAMING_FIXTURES, 'streaming.ldtk'));
     const root = fakeScope('root', claims, STREAMING_FIXTURES);
     const runtime = project.createRuntime({ scope: root });
 
@@ -230,7 +222,7 @@ describe('LdtkProject streaming', () => {
 
   it('needs no fetch for an inlined level', async () => {
     const claims: string[] = [];
-    const project = await loadLdtkProject('streaming.ldtk', makeContext(claims, STREAMING_FIXTURES));
+    const project = await loadLdtkProject(makeContext(claims, STREAMING_FIXTURES, 'streaming.ldtk'));
     const runtime = project.createRuntime({ scope: fakeScope('root', claims, STREAMING_FIXTURES) });
 
     claims.length = 0;
@@ -242,7 +234,7 @@ describe('LdtkProject streaming', () => {
 
   it('spawns a loaded level and ties its objects to the level lifetime', async () => {
     const claims: string[] = [];
-    const project = await loadLdtkProject('streaming.ldtk', makeContext(claims, STREAMING_FIXTURES));
+    const project = await loadLdtkProject(makeContext(claims, STREAMING_FIXTURES, 'streaming.ldtk'));
     const runtime = project.createRuntime({ scope: fakeScope('root', claims, STREAMING_FIXTURES) });
     const spawner = new MapObjectSpawner<void, Thing>({
       Enemy: descriptor => new Thing(descriptor.id),
@@ -261,7 +253,7 @@ describe('LdtkProject streaming', () => {
 
   it('reloads an external level after it was unloaded', async () => {
     const claims: string[] = [];
-    const project = await loadLdtkProject('streaming.ldtk', makeContext(claims, STREAMING_FIXTURES));
+    const project = await loadLdtkProject(makeContext(claims, STREAMING_FIXTURES, 'streaming.ldtk'));
     const runtime = project.createRuntime({ scope: fakeScope('root', claims, STREAMING_FIXTURES) });
 
     const first = await runtime.loadLevel('level-forest');
@@ -285,7 +277,7 @@ describe('LdtkProject streaming', () => {
 
     const fixtures = { 'maps/world.ldtk': nested, 'levels/Forest.ldtkl': loadFixture('Forest.ldtkl') };
     const claims: string[] = [];
-    const project = await loadLdtkProject('maps/world.ldtk', makeContext(claims, fixtures));
+    const project = await loadLdtkProject(makeContext(claims, fixtures, 'maps/world.ldtk'));
     const runtime = project.createRuntime({ scope: fakeScope('root', claims, fixtures) });
 
     claims.length = 0;
@@ -298,7 +290,7 @@ describe('LdtkProject streaming', () => {
   it('fails the level load, not the project load, when an external level is missing', async () => {
     const claims: string[] = [];
     const fixtures = { 'streaming.ldtk': loadFixture('streaming.ldtk') };
-    const project = await loadLdtkProject('streaming.ldtk', makeContext(claims, fixtures));
+    const project = await loadLdtkProject(makeContext(claims, fixtures, 'streaming.ldtk'));
     const root = fakeScope('root', claims, fixtures);
     const runtime = project.createRuntime({ scope: root });
 
@@ -316,7 +308,7 @@ describe('LdtkProject streaming', () => {
       'streaming.ldtk': loadFixture('streaming.ldtk'),
       'levels/Forest.ldtkl': { identifier: 'Forest', uid: 1, iid: 'level-forest', worldX: 0 },
     };
-    const project = await loadLdtkProject('streaming.ldtk', makeContext(claims, fixtures));
+    const project = await loadLdtkProject(makeContext(claims, fixtures, 'streaming.ldtk'));
     const root = fakeScope('root', claims, fixtures);
     const runtime = project.createRuntime({ scope: root });
 
@@ -328,7 +320,7 @@ describe('LdtkProject streaming', () => {
   });
 
   it('rejects a world name the project does not have', async () => {
-    const project = await loadLdtkProject('streaming.ldtk', makeContext([], STREAMING_FIXTURES));
+    const project = await loadLdtkProject(makeContext([], STREAMING_FIXTURES, 'streaming.ldtk'));
 
     expect(() => project.createRuntime({ scope: fakeScope('root', [], STREAMING_FIXTURES), world: 'nope' })).toThrow(
       /has no world named "nope"/,
@@ -337,7 +329,7 @@ describe('LdtkProject streaming', () => {
 
   it('streams a named world of a multi-world project', async () => {
     const fixtures = { 'multi-world.ldtk': loadFixture('multi-world.ldtk') };
-    const project = await loadLdtkProject('multi-world.ldtk', makeContext([], fixtures));
+    const project = await loadLdtkProject(makeContext([], fixtures, 'multi-world.ldtk'));
     const runtime = project.createRuntime({ scope: fakeScope('root', [], fixtures), world: 'WorldB' });
 
     const level = await runtime.loadLevel('dddddddd-0000-0000-0000-000000000003');

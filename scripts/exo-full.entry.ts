@@ -74,8 +74,6 @@ export {
   tiledBuildInfo,
   tiledExtension,
   tiledObjectAnchorOffset,
-  tiledRuntimeMapBinding,
-  tiledSourceBinding,
   tiledWangSetToWangSet,
   TiledFormatError,
   TiledGroupLayer,
@@ -84,8 +82,12 @@ export {
   TiledMap,
   TiledObject,
   TiledObjectLayer,
+  TiledSourceAssetType,
+  tiledSourceType,
   TiledTileLayer,
   TiledTileset,
+  TileMapAssetType,
+  tileMapType,
 } from '@codexo/exojs-tiled';
 
 // ── LDtk ──────────────────────────────────────────────────────────────────────
@@ -101,10 +103,12 @@ export {
   LdtkFormatError,
   ldtkIntGridCsvProperty,
   ldtkIntGridValuesProperty,
-  ldtkMapBinding,
   LdtkMap,
+  LdtkMapAssetType,
+  ldtkMapType,
   LdtkProject,
-  ldtkProjectBinding,
+  LdtkProjectAssetType,
+  ldtkProjectType,
   ldtkToMapWorld,
   ldtkToTileMap,
 } from '@codexo/exojs-ldtk';

@@ -12,15 +12,28 @@ import type { Loader } from '#assets/Loader';
 import { LoaderScope } from '#assets/LoaderScope';
 import type { SeamlessAdapter } from '#assets/seamless';
 
+import { testAssetType } from './test-asset-type';
+
 class TypeA {}
 
 const fakeLoader = {} as Loader;
 
-/** Binds TypeA to a bindAsset handler whose load() routes through context.fetchText - the
- * replacement for the removed `register()`-based factory path used to make a bare
- * constructor "loadable" for these AssetResidency-level tests. */
-function bindTypeA(typeRegistry: AssetTypeRegistry): void {
-  typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+/**
+ * Installs `TypeA` as an acquiring text type, which is what makes a bare
+ * constructor loadable for these AssetResidency-level tests. `leaf` supplies the
+ * seamless adapter for the cases that need one; `dispose` the per-resource
+ * teardown for the cases that assert it.
+ */
+function installTypeA(typeRegistry: AssetTypeRegistry, options: { leaf?: unknown; dispose?: (resource: unknown) => void } = {}): void {
+  typeRegistry.installAll([
+    testAssetType<string, unknown>({
+      id: 'typeA',
+      token: TypeA,
+      ...(options.leaf !== undefined && { leaf: options.leaf as never }),
+      ...(options.dispose !== undefined && { dispose: options.dispose }),
+      create: async source => source,
+    }),
+  ]);
 }
 
 /** Fake cache whose policy resolves to a canned value (or rejects, via mockRejectedValueOnce on .resolve). */
@@ -64,8 +77,11 @@ function createResidency(overrides: { cache?: AssetCache; concurrency?: number }
   const onLoaded = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[unknown, string, unknown]>;
   const onError = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[unknown, string, Error]>;
 
+  // Several cases here drive the residency with no type installed at all, which
+  // is a legitimate state for it: the identity is spelled out rather than looked
+  // up so those cases still get a stable key.
   const canonical = (type: AssetConstructor, source: string, options?: unknown): CanonicalAsset => ({
-    key: resourceKey(typeRegistry._typeIdentity(type), canonicalizeSource('', source), typeRegistry._identityDiscriminator(type, source, options)),
+    key: resourceKey('typeA', canonicalizeSource('', source), typeRegistry._identityDiscriminator(type, source, options)),
     sourceKey: sourceKey(canonicalizeSource('', source), typeRegistry._sourceDiscriminator(type, source, options)),
     locator: canonicalizeSource('', source),
     type,
@@ -93,7 +109,7 @@ describe('AssetResidency', () => {
     test('claim then release at refcount 0 evicts a stored, seamless-adapted resource', async () => {
       const { residency, typeRegistry, canonical } = createResidency();
       const adapter = createFakeSeamlessAdapter();
-      typeRegistry.registerSeamlessAdapter(TypeA, adapter);
+      installTypeA(typeRegistry, { leaf: adapter });
 
       const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const handle = residency._getSeamless(canonical(TypeA, 'a.png'), adapter);
@@ -112,8 +128,7 @@ describe('AssetResidency', () => {
       const { cache, resolve } = createFakeCache(() => 'decoded');
       const { residency, typeRegistry, canonical } = createResidency({ cache });
       const adapter = createFakeSeamlessAdapter();
-      typeRegistry.registerSeamlessAdapter(TypeA, adapter);
-      bindTypeA(typeRegistry);
+      installTypeA(typeRegistry, { leaf: adapter });
 
       const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const key = canonical(TypeA, 'a.png').key;
@@ -144,7 +159,7 @@ describe('AssetResidency', () => {
     test('claim then release at refcount 0 disposes and frees a stored value asset', () => {
       const { residency, typeRegistry, canonical } = createResidency();
       const dispose = vi.fn();
-      typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source), dispose });
+      installTypeA(typeRegistry, { dispose });
 
       const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const key = canonical(TypeA, 'a.json').key;
@@ -171,7 +186,7 @@ describe('AssetResidency', () => {
 
     test('a value asset whose handler implements no dispose is still freed at refcount 0', () => {
       const { residency, typeRegistry, canonical } = createResidency();
-      typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+      installTypeA(typeRegistry);
 
       const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const key = canonical(TypeA, 'a.json').key;
@@ -184,7 +199,7 @@ describe('AssetResidency', () => {
 
     test('claim on an evicted value key re-drives the fetch and heals the same ref', async () => {
       const { residency, typeRegistry, canonical } = createResidency({ cache: createFakeCache(() => 'decoded').cache });
-      typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+      installTypeA(typeRegistry);
 
       const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const key = canonical(TypeA, 'a.json').key;
@@ -210,7 +225,7 @@ describe('AssetResidency', () => {
     test('releaseScope releases every key held under that scope', () => {
       const { residency, typeRegistry, canonical } = createResidency();
       const adapter = createFakeSeamlessAdapter();
-      typeRegistry.registerSeamlessAdapter(TypeA, adapter);
+      installTypeA(typeRegistry, { leaf: adapter });
 
       const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const keyA = canonical(TypeA, 'a.png').key;
@@ -232,7 +247,7 @@ describe('AssetResidency', () => {
     test('fills every deferred handle registered for the key from one decode (multi-handle fill)', () => {
       const { residency, typeRegistry, onLoaded, canonical } = createResidency();
       const adapter = createFakeSeamlessAdapter();
-      typeRegistry.registerSeamlessAdapter(TypeA, adapter);
+      installTypeA(typeRegistry, { leaf: adapter });
 
       const key = canonical(TypeA, 'a.png').key;
       const handleA = residency._getSeamless(canonical(TypeA, 'a.png'), adapter);
@@ -253,7 +268,7 @@ describe('AssetResidency', () => {
     test('free-on-arrival: a key whose last claim released mid-fetch evicts immediately once the fetch lands', () => {
       const { residency, typeRegistry, canonical } = createResidency();
       const adapter = createFakeSeamlessAdapter();
-      typeRegistry.registerSeamlessAdapter(TypeA, adapter);
+      installTypeA(typeRegistry, { leaf: adapter });
 
       const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
       const key = canonical(TypeA, 'a.png').key;
@@ -270,7 +285,7 @@ describe('AssetResidency', () => {
     test('a key unloaded mid-fetch (_preventStoreKeys) fails its deferred handles instead of storing', () => {
       const { residency, typeRegistry, canonical } = createResidency();
       const adapter = createFakeSeamlessAdapter();
-      typeRegistry.registerSeamlessAdapter(TypeA, adapter);
+      installTypeA(typeRegistry, { leaf: adapter });
 
       const handle = residency._getSeamless(canonical(TypeA, 'a.png'), adapter);
       residency._unloadOne(canonical(TypeA, 'a.png')); // marks in-flight prevent-store, since nothing is stored yet but a deferred entry exists
@@ -286,8 +301,7 @@ describe('AssetResidency', () => {
       resolve.mockRejectedValueOnce(new Error('network down'));
       const { residency, typeRegistry, onError, canonical } = createResidency({ cache });
       const adapter = createFakeSeamlessAdapter();
-      typeRegistry.registerSeamlessAdapter(TypeA, adapter);
-      bindTypeA(typeRegistry);
+      installTypeA(typeRegistry, { leaf: adapter });
 
       residency._getSeamless(canonical(TypeA, 'fail.png'), adapter);
       await new Promise(r => setTimeout(r, 0));
@@ -301,7 +315,7 @@ describe('AssetResidency', () => {
       const contexts: Array<CacheContext<unknown>> = [];
       const { cache } = createFakeCache(context => (contexts.push(context), 'bg-value'));
       const { residency, typeRegistry, onProgress, canonical } = createResidency({ cache });
-      bindTypeA(typeRegistry);
+      installTypeA(typeRegistry);
 
       residency._enqueueBackgroundFetch(canonical(TypeA, 'bg.png'), undefined);
       await residency.awaitBackground();
@@ -317,7 +331,7 @@ describe('AssetResidency', () => {
       const contexts: Array<CacheContext<unknown>> = [];
       const { cache } = createFakeCache(context => (contexts.push(context), 'boosted-value'));
       const { residency, typeRegistry, canonical } = createResidency({ cache, concurrency: 0 });
-      bindTypeA(typeRegistry);
+      installTypeA(typeRegistry);
 
       residency._enqueueBackgroundFetch(canonical(TypeA, 'boost.png'), undefined);
       expect(contexts).toHaveLength(0); // concurrency 0: nothing started yet
@@ -331,7 +345,7 @@ describe('AssetResidency', () => {
       const contexts: Array<CacheContext<unknown>> = [];
       const { cache } = createFakeCache(context => (contexts.push(context), 'value'));
       const { residency, typeRegistry, canonical } = createResidency({ cache, concurrency: 0 });
-      bindTypeA(typeRegistry);
+      installTypeA(typeRegistry);
 
       residency._enqueueBackgroundFetch(canonical(TypeA, 'a.png'), undefined);
       residency._enqueueBackgroundFetch(canonical(TypeA, 'b.png'), undefined);
@@ -390,7 +404,7 @@ describe('AssetResidency', () => {
     test('two spellings of one source share a single canonical key, fetch and resident entry', async () => {
       const { cache, resolve } = createFakeCache(() => 'v');
       const { residency, typeRegistry, canonical } = createResidency({ cache });
-      bindTypeA(typeRegistry);
+      installTypeA(typeRegistry);
 
       const [direct, viaDotSegments] = await Promise.all([
         residency._loadSingle(canonical(TypeA, 'a.png')),
@@ -403,29 +417,29 @@ describe('AssetResidency', () => {
       expect(canonical(TypeA, './sub/../a.png').key).toBe(canonical(TypeA, 'a.png').key);
     });
 
-    test('_loadSingle rejects with a clear error when no bindAsset handler is registered for the type', async () => {
+    test('_loadSingle rejects with a clear error when no type is installed for the token', async () => {
       const { residency, canonical } = createResidency();
 
-      await expect(residency._loadSingle(canonical(TypeA, 'a.png'))).rejects.toThrow(/No asset handler registered for TypeA/);
+      await expect(residency._loadSingle(canonical(TypeA, 'a.png'))).rejects.toThrow(/No asset type is installed for TypeA/);
     });
 
-    test('_loadSingle routes context.fetchText through the bindAsset binding storageName instead of the shared namespace', async () => {
+    test('_loadSingle acquires under the type own namespace', async () => {
       const contexts: Array<CacheContext<unknown>> = [];
       const { cache } = createFakeCache(context => (contexts.push(context), 'ns-value'));
       const { residency, typeRegistry, canonical } = createResidency({ cache });
 
-      typeRegistry.bindAsset({ ctor: TypeA, storageName: 'my-type-ns' }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+      installTypeA(typeRegistry);
 
       const result = await residency._loadSingle(canonical(TypeA, 'a.png'));
 
-      expect(contexts[0]?.namespace).toBe('my-type-ns');
+      expect(contexts[0]?.namespace).toBe('typeA');
       expect(result).toBe('ns-value');
     });
 
     test('_getHandleKey resolves a deferred handle back to its resource key', () => {
       const { residency, typeRegistry, canonical } = createResidency();
       const adapter = createFakeSeamlessAdapter();
-      typeRegistry.registerSeamlessAdapter(TypeA, adapter);
+      installTypeA(typeRegistry, { leaf: adapter });
 
       const handle = residency._getSeamless(canonical(TypeA, 'a.png'), adapter) as object;
 

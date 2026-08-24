@@ -1,14 +1,14 @@
 import { Asset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import { BmFont } from '#rendering/text/BmFont';
 import type { Texture } from '#rendering/texture/Texture';
 
 function createCoreLoader(): Loader {
   const loader = new Loader({ basePath: '/' });
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
 }

@@ -11,6 +11,7 @@ import type { Loader } from '#assets/Loader';
 import type { LoaderScope } from '#assets/LoaderScope';
 
 import { createCacheStoreDouble, createRecordingPolicy } from './cache-test-doubles';
+import { testAssetType } from './test-asset-type';
 
 class TypeA {}
 
@@ -38,7 +39,7 @@ function createDecoder(overrides: { cache?: AssetCache | null; basePath?: string
   decoder._bindResourceStore(storeResource);
 
   const canonical = (type: AssetConstructor, source: string): CanonicalAsset => ({
-    key: resourceKey(typeRegistry._typeIdentity(type), canonicalizeSource('', source)),
+    key: resourceKey('typeA', canonicalizeSource('', source)),
     sourceKey: sourceKey(canonicalizeSource('', source)),
     locator: canonicalizeSource('', source),
     type,
@@ -50,7 +51,7 @@ function createDecoder(overrides: { cache?: AssetCache | null; basePath?: string
 
 describe('AssetDecoder', () => {
   test('basePath/fetchOptions round-trip', () => {
-    const { decoder, canonical } = createDecoder();
+    const { decoder } = createDecoder();
 
     decoder.basePath = 'assets/';
     expect(decoder.basePath).toBe('assets/');
@@ -59,109 +60,135 @@ describe('AssetDecoder', () => {
     expect(decoder.fetchOptions).toEqual({ credentials: 'include' });
   });
 
-  test('_fetchWithHandler invokes the handler with the built context and stores the result', async () => {
-    const { decoder, storeResource, canonical } = createDecoder();
-    const handler = vi.fn(async () => 'handler-result');
-    const context = decoder._buildHandlerContext(canonical(TypeA, 'hero.png'), fakeScope);
+  test('_dispatchFetch stores what the factory built', async () => {
+    const { decoder, typeRegistry, storeResource, canonical } = createDecoder();
 
-    const result = await decoder._fetchWithHandler(canonical(TypeA, 'hero.png'), { source: 'hero.png' }, handler, context);
+    typeRegistry.installAll([testAssetType<string, string>({ id: 'typeA', token: TypeA, acquires: false, create: async () => 'factory-result' })]);
 
-    expect(handler).toHaveBeenCalledWith({ source: 'hero.png' }, context);
-    expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), 'handler-result');
-    expect(result).toBe('handler-result');
+    const result = await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope);
+
+    expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), 'factory-result');
+    expect(result).toBe('factory-result');
   });
 
-  test('_fetchWithHandler wraps a handler rejection and never stores', async () => {
-    const { decoder, storeResource, canonical } = createDecoder();
-    const handler = vi.fn(async () => {
-      throw new Error('bad payload');
-    });
-    const context = decoder._buildHandlerContext(canonical(TypeA, 'hero.png'), fakeScope);
+  test('_dispatchFetch wraps a factory rejection with the url and never stores', async () => {
+    const { decoder, typeRegistry, storeResource, canonical } = createDecoder();
 
-    await expect(decoder._fetchWithHandler(canonical(TypeA, 'hero.png'), {}, handler, context)).rejects.toThrow(
+    typeRegistry.installAll([
+      testAssetType<string, string>({
+        id: 'typeA',
+        token: TypeA,
+        acquires: false,
+        create: async () => {
+          throw new Error('bad payload');
+        },
+      }),
+    ]);
+
+    await expect(decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope)).rejects.toThrow(
       /Failed to load "hero.png" from "hero.png": bad payload/,
     );
     expect(storeResource).not.toHaveBeenCalled();
   });
 
-  test('_dispatchFetch rejects with a clear error when no bindAsset handler is registered for the type', async () => {
+  test('_dispatchFetch rejects with a clear error when no type is installed for the token', async () => {
     const { decoder, storeResource, canonical } = createDecoder();
 
-    await expect(decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope)).rejects.toThrow(
-      /No asset handler registered for TypeA/,
-    );
+    await expect(decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope)).rejects.toThrow(/No asset type is installed for TypeA/);
     expect(storeResource).not.toHaveBeenCalled();
   });
 
-  test('_dispatchFetch routes through the bindAsset handler when one is registered, merging options into the config', async () => {
+  test('_dispatchFetch hands the request options to the factory', async () => {
     const { decoder, typeRegistry, storeResource, canonical } = createDecoder();
-    const load = vi.fn(async (config: unknown) => ({ config }));
+    let seenOptions: unknown;
+    let seenSource: unknown;
 
-    typeRegistry.bindAsset({ ctor: TypeA }, { load });
+    typeRegistry.installAll([
+      testAssetType<string, unknown, { scale: number }>({
+        id: 'typeA',
+        token: TypeA,
+        acquires: false,
+        create: async (_source, context) => {
+          seenOptions = context.options;
+          seenSource = context.source;
+
+          return { ok: true };
+        },
+      }),
+    ]);
 
     await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), { scale: 2 }, undefined, fakeScope);
 
-    expect(load).toHaveBeenCalledWith({ source: 'hero.png', options: { scale: 2 } }, expect.objectContaining({ resourceKey: expect.any(String) }));
-    expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), { config: { source: 'hero.png', options: { scale: 2 } } });
+    expect(seenOptions).toEqual({ scale: 2 });
+    expect(seenSource).toBe('hero.png');
+    expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), { ok: true });
   });
 
-  test('_dispatchFetch routes context.fetchText through the bindAsset binding storageName instead of the shared namespace', async () => {
+  test('_dispatchFetch acquires under the type own namespace and the request source key', async () => {
     const { cache, contexts } = createFakeCache(() => 'ns-value');
     const { decoder, typeRegistry, storeResource, canonical } = createDecoder({ cache });
 
-    typeRegistry.bindAsset({ ctor: TypeA, storageName: 'my-type-ns' }, { load: async (_config, ctx) => ctx.fetchText('hero.png') });
+    typeRegistry.installAll([testAssetType<string, string>({ id: 'typeA', token: TypeA, create: async source => source })]);
 
     await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope);
 
-    expect(contexts[0]?.namespace).toBe('my-type-ns');
+    expect(contexts[0]?.namespace).toBe('typeA');
+    expect(contexts[0]?.sourceKey).toBe(canonicalizeSource('', 'hero.png'));
     expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), 'ns-value');
   });
 
-  test('_injectSource uses createFromBytes when the handler provides it, and stores via the callback', async () => {
-    const { decoder, typeRegistry, storeResource, canonical } = createDecoder();
-    const createFromBytes = vi.fn(async (bytes: ArrayBuffer) => `from-bytes:${bytes.byteLength}`);
+  test('a type that supplies its own source never reaches the cache at all', async () => {
+    const { cache, contexts } = createFakeCache(() => 'never-used');
+    const { decoder, typeRegistry, canonical } = createDecoder({ cache });
 
-    typeRegistry.bindAsset({ ctor: TypeA }, { load: vi.fn(), createFromBytes });
+    typeRegistry.installAll([testAssetType<string, string>({ id: 'typeA', token: TypeA, acquires: false, create: async () => 'streamed' })]);
 
-    await decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(4), fakeScope);
+    await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope);
 
-    expect(createFromBytes).toHaveBeenCalled();
-    expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), 'from-bytes:4');
+    expect(contexts).toHaveLength(0);
   });
 
-  test('_injectSource throws when the bound handler has no createFromBytes, and never stores', async () => {
+  test('_injectSource reads container bytes through the codec and stores the result', async () => {
     const { decoder, typeRegistry, storeResource, canonical } = createDecoder();
 
-    typeRegistry.bindAsset({ ctor: TypeA }, { load: vi.fn() });
+    typeRegistry.installAll([testAssetType<string, string>({ id: 'typeA', token: TypeA, create: async source => `from-bytes:${source}` })]);
+
+    await decoder._injectSource(canonical(TypeA, 'hero.dat'), new TextEncoder().encode('hi').buffer, fakeScope);
+
+    expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), 'from-bytes:hi');
+  });
+
+  test('_injectSource throws when the codec cannot read bytes, and never stores', async () => {
+    const { decoder, typeRegistry, storeResource, canonical } = createDecoder();
+
+    typeRegistry.installAll([
+      testAssetType<string, string>({
+        id: 'typeA',
+        token: TypeA,
+        codec: { fromResponse: response => response.text(), decode: stored => Promise.resolve(stored as string) },
+        create: async source => source,
+      }),
+    ]);
 
     await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(8), fakeScope)).rejects.toThrow(/cannot be built from container bytes/);
     expect(storeResource).not.toHaveBeenCalled();
   });
 
-  test('_injectSource throws when the type has no bound handler at all, and never stores', async () => {
+  test('_injectSource throws when no type is installed for the token, and never stores', async () => {
     const { decoder, storeResource, canonical } = createDecoder();
 
-    await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(4), fakeScope)).rejects.toThrow(/cannot be built from container bytes/);
+    await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(4), fakeScope)).rejects.toThrow(/No asset type is installed/);
     expect(storeResource).not.toHaveBeenCalled();
   });
 
-  test('_buildHandlerContext exposes the owning loader and routes fetch* through the application cache', async () => {
-    const { cache, contexts } = createFakeCache(() => 'ctx-text-value');
-    const { decoder, canonical } = createDecoder({ cache });
+  test('_acquireContainer reads a container under its own namespace', async () => {
+    const { cache, contexts } = createFakeCache(() => new ArrayBuffer(2));
+    const { decoder } = createDecoder({ cache });
 
-    const asset = canonical(TypeA, 'hero.txt');
-    const context = decoder._buildHandlerContext(asset, fakeScope);
+    await decoder._acquireContainer('pack.exoa');
 
-    expect(context.loader).toBe(fakeLoader);
-    expect(context.resourceKey).toBe(asset.key);
-    expect(context.sourceKey).toBe(asset.sourceKey);
-    expect(context.locator).toBe(asset.locator);
-
-    const value = await context.fetchText('hero.txt');
-
-    expect(value).toBe('ctx-text-value');
-    expect(contexts[0]?.namespace).toBe('__ctx_text');
-    expect(contexts[0]?.sourceKey).toBe(canonicalizeSource('', 'hero.txt'));
+    expect(contexts[0]?.namespace).toBe('exoa');
+    expect(contexts[0]?.sourceKey).toBe(canonicalizeSource('', 'pack.exoa'));
   });
 
   test('destroy() destroys every store of a cache it owns', () => {

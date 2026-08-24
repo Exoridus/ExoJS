@@ -1,16 +1,16 @@
 import { Asset } from '#assets/Asset';
 import { encodeContainer } from '#assets/AssetContainer';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import type { AudioStream } from '#audio/AudioStream';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import type { Video } from '#rendering/video/Video';
 
 const VIDEO_BYTES = new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]);
 
 function createCoreLoader(): Loader {
   const loader = new Loader({ basePath: '/assets/' });
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
 }

@@ -1,13 +1,13 @@
 import { Asset } from '#assets/Asset';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import type { Application } from '#core/Application';
 import { SceneLoader } from '#core/scene/SceneLoader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 function createCoreLoader(): Loader {
   const loader = new Loader({ basePath: '/' });
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
 }

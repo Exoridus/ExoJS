@@ -1,4 +1,5 @@
 import type { AnyAssetConfig, AssetDefinitions, AssetTypeName, OptionsForKind, ValueAssetKind } from './AssetDefinitions';
+import type { AnyAssetType } from './AssetType';
 
 // ---------------------------------------------------------------------------
 // Internal implementation
@@ -9,8 +10,22 @@ export class AssetImpl {
   /** @internal */
   public readonly _config: AnyAssetConfig;
 
-  public constructor(config: AnyAssetConfig) {
+  /**
+   * The type that minted this descriptor, when one did.
+   *
+   * A catalog needs the type to know what leaf to hand out, and a type an
+   * application installs of its own is unknown to every table outside it - so
+   * the descriptor carries it rather than being looked up by name.
+   * @internal
+   */
+  public readonly _assetType?: AnyAssetType;
+
+  public constructor(config: AnyAssetConfig, assetType?: AnyAssetType) {
     this._config = config;
+
+    if (assetType !== undefined) {
+      this._assetType = assetType;
+    }
   }
 
   public get type(): AssetTypeName {
@@ -30,6 +45,8 @@ export class AssetImpl {
 export interface Asset<T> {
   /** @internal */
   readonly _config: AnyAssetConfig;
+  /** @internal */
+  readonly _assetType?: AnyAssetType;
   readonly type: AssetTypeName;
   readonly source: string;
   /** Phantom type marker - never actually present at runtime. */

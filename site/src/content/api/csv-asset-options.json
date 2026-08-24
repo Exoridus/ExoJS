@@ -1,0 +1,75 @@
+{
+  "title": "CsvAssetOptions",
+  "description": "Options accepted by an asset of the built-in `csv` type.",
+  "symbol": "CsvAssetOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options accepted by an asset of the built-in `csv` type."
+      ],
+      "importLine": "import { CsvAssetOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "delimiter",
+          "signature": "delimiter?: string",
+          "signatureTokens": [
+            {
+              "text": "delimiter",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Field delimiter. Defaults to ','; use '\\t' for TSV or ';' where that is the local convention."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/factories/parseCsv.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/parseCsv.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/factories/parseCsv.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/parseCsv.ts"
+}

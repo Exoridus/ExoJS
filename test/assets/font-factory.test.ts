@@ -1,5 +1,7 @@
-import type { FontFactoryOptions } from '#assets/factories/FontFactory';
+import type { FontAssetOptions } from '#assets/factories/FontFactory';
 import { FontFactory } from '#assets/factories/FontFactory';
+
+import { factoryContext } from './factory-context';
 
 // ---------------------------------------------------------------------------
 // FontFace / document.fonts polyfill
@@ -62,47 +64,35 @@ beforeEach(() => {
 });
 
 describe('FontFactory', () => {
-  test('storageName is "font"', () => {
-    const factory = new FontFactory();
-    expect(factory.storageName).toBe('font');
-  });
-
-  test('process() reads the response body as an ArrayBuffer', async () => {
-    const factory = new FontFactory();
-    const buffer = new ArrayBuffer(8);
-    const response = { arrayBuffer: async () => buffer } as unknown as Response;
-
-    const result = await factory.process(response);
-
-    expect(result).toBe(buffer);
-  });
-
   test('rejects clearly when font data is too short', async () => {
     const factory = new FontFactory();
 
     await expect(
-      factory.create(new ArrayBuffer(3), {
-        family: 'TestFont',
-      }),
+      factory.create(
+        new ArrayBuffer(3),
+        factoryContext({
+          family: 'TestFont',
+        }),
+      ),
     ).rejects.toThrow('expected at least 4 bytes');
   });
 
   test('rejects clearly when no options are supplied', async () => {
     const factory = new FontFactory();
 
-    await expect(factory.create(new ArrayBuffer(8))).rejects.toThrow('requires options with a "family" property');
+    await expect(factory.create(new ArrayBuffer(8), factoryContext())).rejects.toThrow('requires a "family" option');
   });
 
   test('rejects clearly when family is missing from options', async () => {
     const factory = new FontFactory();
 
-    await expect(factory.create(new ArrayBuffer(8), {} as unknown as FontFactoryOptions)).rejects.toThrow('requires options with a "family" property');
+    await expect(factory.create(new ArrayBuffer(8), factoryContext({} as unknown as FontAssetOptions))).rejects.toThrow('requires a "family" option');
   });
 
   test('create() resolves with a FontFace and registers it with document.fonts by default', async () => {
     const factory = new FontFactory();
 
-    const fontFace = await factory.create(new ArrayBuffer(8), { family: 'TestFont' });
+    const fontFace = await factory.create(new ArrayBuffer(8), factoryContext({ family: 'TestFont' }));
 
     expect(fontFace).toBeInstanceOf(MockFontFace);
     expect(fontsAdd).toHaveBeenCalledWith(fontFace);
@@ -111,7 +101,7 @@ describe('FontFactory', () => {
   test('create() skips document.fonts registration when addToDocument is false', async () => {
     const factory = new FontFactory();
 
-    await factory.create(new ArrayBuffer(8), { family: 'TestFont', addToDocument: false });
+    await factory.create(new ArrayBuffer(8), factoryContext({ family: 'TestFont', addToDocument: false }));
 
     expect(fontsAdd).not.toHaveBeenCalled();
   });
@@ -119,10 +109,13 @@ describe('FontFactory', () => {
   test('create() forwards descriptors to the FontFace constructor', async () => {
     const factory = new FontFactory();
 
-    const fontFace = (await factory.create(new ArrayBuffer(8), {
-      family: 'TestFont',
-      descriptors: { weight: '700' },
-    })) as unknown as MockFontFace;
+    const fontFace = (await factory.create(
+      new ArrayBuffer(8),
+      factoryContext({
+        family: 'TestFont',
+        descriptors: { weight: '700' },
+      }),
+    )) as unknown as MockFontFace;
 
     expect(fontFace.descriptors).toEqual({ weight: '700' });
   });
@@ -131,14 +124,14 @@ describe('FontFactory', () => {
     shouldFailToLoad = true;
     const factory = new FontFactory();
 
-    await expect(factory.create(new ArrayBuffer(8), { family: 'TestFont' })).rejects.toThrow('Invalid font data in ArrayBuffer');
+    await expect(factory.create(new ArrayBuffer(8), factoryContext({ family: 'TestFont' }))).rejects.toThrow('Invalid font data in ArrayBuffer');
   });
 
   test('destroy() removes every registered font face from document.fonts', async () => {
     const factory = new FontFactory();
 
-    const first = await factory.create(new ArrayBuffer(8), { family: 'First' });
-    const second = await factory.create(new ArrayBuffer(8), { family: 'Second' });
+    const first = await factory.create(new ArrayBuffer(8), factoryContext({ family: 'First' }));
+    const second = await factory.create(new ArrayBuffer(8), factoryContext({ family: 'Second' }));
 
     factory.destroy();
 
@@ -150,7 +143,7 @@ describe('FontFactory', () => {
   test('destroy() does not remove fonts that were created with addToDocument: false', async () => {
     const factory = new FontFactory();
 
-    await factory.create(new ArrayBuffer(8), { family: 'Untracked', addToDocument: false });
+    await factory.create(new ArrayBuffer(8), factoryContext({ family: 'Untracked', addToDocument: false }));
     factory.destroy();
 
     expect(fontsDelete).not.toHaveBeenCalled();

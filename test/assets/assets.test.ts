@@ -1,4 +1,4 @@
-import '#assets/coreAssetBindings';
+import '#assets/coreAssetTypes';
 
 import { Asset } from '#assets/Asset';
 import { _readMeta } from '#assets/assetMeta';
@@ -58,7 +58,7 @@ describe('Assets.from bare-string inference', () => {
     expect(Assets.from({ level: 'levels/1.json' }).level).toBeInstanceOf(AssetRef);
   });
   it('throws a guiding error for an unregistered suffix', () => {
-    expect(() => Assets.from({ x: 'a/b.zzz' })).toThrow(/no asset type|Asset\.type\(\)/);
+    expect(() => Assets.from({ x: 'a/b.zzz' })).toThrow(/no built-in asset type claims|Asset\.type\(\)/);
   });
   it('still accepts explicit configs (existing form) unchanged', () => {
     expect(Assets.from({ ship: { type: 'texture', source: 's.png' } }).ship).toBeInstanceOf(Texture);

@@ -1,0 +1,94 @@
+{
+  "title": "AssetLeaf",
+  "description": "What an asset type hands out for one of its assets inside a catalog, before the payload has arrived. `'ref'` hands out a deferred AssetRef that resolves once the load settles - the right shape for a decoded value nobody can render early. A SeamlessAdapter hands out the resource itself, empty, and transplants the payload into that same object when it arrives, so consumers wired to it need no re-wiring. `'none'` declares that the type has no meaningful placeholder at all. Its assets cannot appear in a catalog by bare path and must be named explicitly with AssetType.asset.",
+  "symbol": "AssetLeaf",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What an asset type hands out for one of its assets inside a catalog, before the payload has arrived.",
+        "`'ref'` hands out a deferred AssetRef that resolves once the load settles - the right shape for a decoded value nobody can render early.",
+        "A SeamlessAdapter hands out the resource itself, empty, and transplants the payload into that same object when it arrives, so consumers wired to it need no re-wiring.",
+        "`'none'` declares that the type has no meaningful placeholder at all. Its assets cannot appear in a catalog by bare path and must be named explicitly with AssetType.asset."
+      ],
+      "importLine": "import { AssetLeaf } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AssetLeaf",
+          "signature": "\"none\" | \"ref\" | SeamlessAdapter<Resource>",
+          "signatureTokens": [
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"ref\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SeamlessAdapter",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetType.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetType.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetType.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetType.ts"
+}

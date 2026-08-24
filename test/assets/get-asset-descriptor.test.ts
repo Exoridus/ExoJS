@@ -2,15 +2,15 @@ import { afterEach, beforeEach, describe, expect, expectTypeOf, test, vi } from 
 
 import { Asset } from '#assets/Asset';
 import { AssetRef } from '#assets/AssetRef';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
 /** Loader with all core asset bindings (mirrors the sibling asset-access tests). */
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
 
@@ -90,7 +90,7 @@ describe('get(Asset.type()) descriptor access', () => {
     const loader = createCoreLoader();
 
     // bmFont is a non-leaf resource kind (no seamless adapter, not a value kind).
-    expect(() => loader.get(Asset.type('bmFont', 'font.fnt'))).toThrow(/get\(\) is for seamless\/value assets/);
+    expect(() => loader.get(Asset.type('bmFont', 'font.fnt'))).toThrow(/get\(\) hands out a catalog leaf/);
   });
 
   test('type: get(Asset.type<primitive>(json)) is AssetRef, get(Asset.type(texture)) is Texture', () => {

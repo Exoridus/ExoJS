@@ -1,6 +1,6 @@
 {
   "title": "SerializerBinding",
-  "description": "Binds a SceneNode type to a NodeSerializer under a stable type name, so an extension's own node types participate in Scene.serialize/Scene.deserialize. Pure descriptor - the serializer is a stateless write/read pair, materialised into the scene serialization registry once at Application construction. `target` is the constructor serialize resolves via prototype walk; `typeName` is the tag written to JSON and the key deserialize resolves by. Mirrors the shape of RendererBinding/AssetBinding.",
+  "description": "Binds a SceneNode type to a NodeSerializer under a stable type name, so an extension's own node types participate in Scene.serialize/Scene.deserialize. Pure descriptor - the serializer is a stateless write/read pair, materialised into the scene serialization registry once at Application construction. `target` is the constructor serialize resolves via prototype walk; `typeName` is the tag written to JSON and the key deserialize resolves by. Mirrors the shape of RendererBinding.",
   "symbol": "SerializerBinding",
   "kind": "interface",
   "subsystem": "extensions",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Binds a SceneNode type to a NodeSerializer under a stable type name, so an extension's own node types participate in Scene.serialize/Scene.deserialize. Pure descriptor - the serializer is a stateless write/read pair, materialised into the scene serialization registry once at Application construction.",
-        "`target` is the constructor serialize resolves via prototype walk; `typeName` is the tag written to JSON and the key deserialize resolves by. Mirrors the shape of RendererBinding/AssetBinding."
+        "`target` is the constructor serialize resolves via prototype walk; `typeName` is the tag written to JSON and the key deserialize resolves by. Mirrors the shape of RendererBinding."
       ],
       "importLine": "import { SerializerBinding } from '@codexo/exojs/extensions'",
       "sourceLink": null

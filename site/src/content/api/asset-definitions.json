@@ -1,16 +1,16 @@
 {
   "title": "AssetDefinitions",
-  "description": "Every asset type known to the engine, keyed by its `type` string. Extension packages add their own via declaration merging. An entry declares the runtime `resource` it produces and the `config` it accepts; it may also carry `isValue: true` to mirror a binding whose leaf is a deferred AssetRef rather than a heal-in-place handle - required whenever `defineAsset` is called without a `seamless` adapter (see ValueAssetKind).",
+  "description": "Every built-in asset type, keyed by its id, plus whatever extension packages declaration-merge into it. An entry declares the runtime `resource` it produces and the `config` it accepts; it may also carry `isValue: true` to mirror a type whose leaf is a deferred AssetRef rather than a heal-in-place handle - required for every type that ships no seamless adapter (see ValueAssetKind).",
   "symbol": "AssetDefinitions",
   "kind": "interface",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 16,
+  "memberCount": 15,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 16,
+    "properties": 15,
     "events": 0
   },
   "sections": [
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Every asset type known to the engine, keyed by its `type` string.",
-        "Extension packages add their own via declaration merging. An entry declares the runtime `resource` it produces and the `config` it accepts; it may also carry `isValue: true` to mirror a binding whose leaf is a deferred AssetRef rather than a heal-in-place handle - required whenever `defineAsset` is called without a `seamless` adapter (see ValueAssetKind)."
+        "Every built-in asset type, keyed by its id, plus whatever extension packages declaration-merge into it.",
+        "An entry declares the runtime `resource` it produces and the `config` it accepts; it may also carry `isValue: true` to mirror a type whose leaf is a deferred AssetRef rather than a heal-in-place handle - required for every type that ships no seamless adapter (see ValueAssetKind)."
       ],
       "importLine": "import { AssetDefinitions } from '@codexo/exojs'",
       "sourceLink": null
@@ -922,11 +922,11 @@
           "description": ""
         },
         {
-          "name": "srt",
-          "signature": "srt: { config: { source: string }; resource: VTTCue[] }",
+          "name": "subtitle",
+          "signature": "subtitle: { config: { source: string }; resource: VTTCue[] }",
           "signatureTokens": [
             {
-              "text": "srt",
+              "text": "subtitle",
               "kind": "name"
             },
             {
@@ -1516,79 +1516,6 @@
             {
               "text": "Video",
               "kind": "type"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "vtt",
-          "signature": "vtt: { config: { source: string }; resource: VTTCue[] }",
-          "signatureTokens": [
-            {
-              "text": "vtt",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "config",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "{ ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "source",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": " }",
-              "kind": "punctuation"
-            },
-            {
-              "text": "; ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "resource",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "VTTCue",
-              "kind": "type"
-            },
-            {
-              "text": "[]",
-              "kind": "punctuation"
             },
             {
               "text": " }",

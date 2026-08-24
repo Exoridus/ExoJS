@@ -18,7 +18,7 @@ import { serializeCacheRecordKey } from '#assets/CacheRecordKey';
 import { CacheRoute } from '#assets/CacheRoute';
 import { Loader } from '#assets/Loader';
 import { SingleEntryLayout } from '#assets/SingleEntryLayout';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 import { createCacheStoreDouble } from './cache-test-doubles';
 
@@ -37,7 +37,7 @@ class WorldAssetType extends AssetType<WorldData, World, undefined, string> {
   public readonly id = 'com.example.world';
   public override readonly extensions = ['world'];
 
-  public readonly codec: AssetSourceCodec<WorldData, string> = {
+  public override readonly codec: AssetSourceCodec<WorldData, string> = {
     fromResponse: response => response.text(),
     fromBytes: bytes => Promise.resolve(new TextDecoder().decode(bytes)),
     decode: stored => {
@@ -56,7 +56,7 @@ class WorldAssetType extends AssetType<WorldData, World, undefined, string> {
 class RawWorldAssetType extends AssetType<string, string, undefined, string> {
   public readonly id = 'com.example.world-raw';
 
-  public readonly codec: AssetSourceCodec<string> = {
+  public override readonly codec: AssetSourceCodec<string> = {
     fromResponse: response => response.text(),
     decode: stored => Promise.resolve(stored.toUpperCase()),
   };
@@ -82,7 +82,7 @@ function mockFetch(): ReturnType<typeof vi.fn> {
 function createLoader(cache: AssetCache, ...types: Array<AssetType<never, never, never, never>>): Loader {
   const loader = new Loader({ basePath: 'https://assets.test/', cache });
 
-  materializeAssetBindings(loader, types as never[]);
+  materializeAssetTypes(loader, types as never[]);
 
   return loader;
 }

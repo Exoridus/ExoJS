@@ -1,10 +1,10 @@
 import { Assets } from '#assets/Assets';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import type { LoadingQueue } from '#assets/LoadingQueue';
 import type { Application } from '#core/Application';
 import { SceneLoader } from '#core/scene/SceneLoader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
 // Mirrors test/assets/catalog-adopt.test.ts's texture harness (createImageBitmap
@@ -40,7 +40,7 @@ function mockFetchJson(payload: unknown): void {
 
 function makeSceneLoaderWithTextures(): { sceneLoader: SceneLoader; loader: Loader } {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   const app = { loader } as unknown as Application;
   const sceneLoader = new SceneLoader(app);
 
@@ -117,7 +117,7 @@ describe('SceneLoader catalog adopt', () => {
 
   test('load(single value leaf) resolves the raw value, mirroring Loader.load(AssetRef leaf)', async () => {
     mockFetchJson({ hp: 3 });
-    const { sceneLoader } = makeSceneLoaderWithTextures(); // loader carries coreAssetBindings, incl. json
+    const { sceneLoader } = makeSceneLoaderWithTextures(); // loader carries coreAssetTypes, incl. json
     const assets = new Assets({ config: { type: 'json', source: 'cfg.json' } });
 
     const result = await sceneLoader.load(assets.config);

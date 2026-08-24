@@ -2,6 +2,8 @@ import type { MockInstance } from 'vitest';
 
 import { ImageFactory } from '#assets/factories/ImageFactory';
 
+import { factoryContext } from './factory-context';
+
 // PNG magic bytes - enough for determineMimeType()'s pattern match without a
 // real, fully-formed PNG payload.
 const PNG_HEADER = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).buffer;
@@ -44,20 +46,6 @@ describe('ImageFactory', () => {
     vi.restoreAllMocks();
   });
 
-  test('storageName is "image"', () => {
-    const factory = new ImageFactory();
-    expect(factory.storageName).toBe('image');
-  });
-
-  test('process() reads the response body as an ArrayBuffer', async () => {
-    const factory = new ImageFactory();
-    const response = { arrayBuffer: async () => PNG_HEADER } as unknown as Response;
-
-    const result = await factory.process(response);
-
-    expect(result).toBe(PNG_HEADER);
-  });
-
   describe('createImageBitmap path', () => {
     test('create() resolves with the decoded ImageBitmap', async () => {
       const fakeBitmap = { width: 4, height: 4, close: vi.fn() };
@@ -67,7 +55,7 @@ describe('ImageFactory', () => {
       );
 
       const factory = new ImageFactory();
-      const result = await factory.create(PNG_HEADER);
+      const result = await factory.create(PNG_HEADER, factoryContext());
 
       expect(result).toBe(fakeBitmap);
     });
@@ -83,7 +71,7 @@ describe('ImageFactory', () => {
       );
 
       const factory = new ImageFactory();
-      await factory.create(PNG_HEADER);
+      await factory.create(PNG_HEADER, factoryContext());
 
       expect(seenBlob?.type).toBe('image/png');
     });
@@ -99,7 +87,7 @@ describe('ImageFactory', () => {
       );
 
       const factory = new ImageFactory();
-      await factory.create(PNG_HEADER, { mimeType: 'image/custom' });
+      await factory.create(PNG_HEADER, factoryContext({ mimeType: 'image/custom' }));
 
       expect(seenBlob?.type).toBe('image/custom');
     });
@@ -116,7 +104,7 @@ describe('ImageFactory', () => {
     test('create() resolves with the HTMLImageElement once "load" fires', async () => {
       const factory = new ImageFactory();
 
-      const promise = factory.create(PNG_HEADER);
+      const promise = factory.create(PNG_HEADER, factoryContext());
       lastImage().dispatchEvent(new Event('load'));
 
       const image = await promise;
@@ -127,18 +115,18 @@ describe('ImageFactory', () => {
     test('create() rejects with a clear message on "error"', async () => {
       const factory = new ImageFactory();
 
-      const promise = factory.create(PNG_HEADER);
+      const promise = factory.create(PNG_HEADER, factoryContext());
       lastImage().dispatchEvent(new Event('error'));
 
       await expect(promise).rejects.toThrow(
-        'Failed to decode image source — the bytes may be corrupted, an unsupported format, or (if loaded with the wrong Asset.type) not an image at all.',
+        'Failed to decode image source - the bytes may be corrupted, an unsupported format, or (if loaded as the wrong asset type) not an image at all.',
       );
     });
 
     test('create() rejects with a clear message on "abort"', async () => {
       const factory = new ImageFactory();
 
-      const promise = factory.create(PNG_HEADER);
+      const promise = factory.create(PNG_HEADER, factoryContext());
       lastImage().dispatchEvent(new Event('abort'));
 
       await expect(promise).rejects.toThrow('Image loading was canceled.');
@@ -147,7 +135,7 @@ describe('ImageFactory', () => {
     test('create() revokes the object URL once loading settles', async () => {
       const factory = new ImageFactory();
 
-      const promise = factory.create(PNG_HEADER);
+      const promise = factory.create(PNG_HEADER, factoryContext());
       lastImage().dispatchEvent(new Event('load'));
       await promise;
 
@@ -157,7 +145,7 @@ describe('ImageFactory', () => {
     test('create() sets the image src to the created object URL', async () => {
       const factory = new ImageFactory();
 
-      const promise = factory.create(PNG_HEADER);
+      const promise = factory.create(PNG_HEADER, factoryContext());
       const returnedUrl = createObjectUrlSpy.mock.results[0]?.value as string;
 
       expect(lastImage().src).toContain(returnedUrl);

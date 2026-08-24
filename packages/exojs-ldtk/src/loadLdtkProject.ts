@@ -1,4 +1,5 @@
-import type { AssetLoaderContext } from '@codexo/exojs';
+import type { AssetFactoryContext } from '@codexo/exojs';
+import { Asset } from '@codexo/exojs';
 import type { TileSet } from '@codexo/exojs-tilemap';
 
 import { LdtkProject } from './LdtkProject';
@@ -6,7 +7,7 @@ import { loadLdtkTileset } from './loadLdtkMap';
 import { validateLdtkData } from './validate';
 
 /**
- * Fetch and validate a `.ldtk` file and load every tileset atlas it
+ * Read and validate a `.ldtk` document and load every tileset atlas it
  * references, without touching any level payload.
  *
  * External `.ldtkl` levels are deliberately left unfetched - that is the whole
@@ -18,8 +19,9 @@ import { validateLdtkData } from './validate';
  * embed-atlas tileset (`relPath = null`) is skipped with a warning instead.
  * @internal
  */
-export async function loadLdtkProject(source: string, context: AssetLoaderContext): Promise<LdtkProject> {
-  const data = validateLdtkData(await context.fetchJson(source), source);
+export async function loadLdtkProject(context: AssetFactoryContext): Promise<LdtkProject> {
+  const source = context.source;
+  const data = validateLdtkData(await context.dependencies.load(Asset.type('json', source)), source);
 
   const tilesetEntries = await Promise.all(
     data.defs.tilesets.map(async (def) => [def.uid, await loadLdtkTileset(def, source, context)] as const),

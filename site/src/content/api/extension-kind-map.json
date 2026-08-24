@@ -1,6 +1,6 @@
 {
   "title": "ExtensionKindMap",
-  "description": "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()`. Restricted to LEAF-CAPABLE types, exactly mirroring the runtime `registerExtensionKind` calls made by `defineAsset`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```",
+  "description": "Type-level twin of the built-in suffix table: file suffix to asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()`. Restricted to types that hand out a catalog leaf, exactly mirroring the runtime table built from the built-in types' own `extensions`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```",
   "symbol": "ExtensionKindMap",
   "kind": "interface",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()`. Restricted to LEAF-CAPABLE types, exactly mirroring the runtime `registerExtensionKind` calls made by `defineAsset`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```"
+        "Type-level twin of the built-in suffix table: file suffix to asset type, for bare-string path inference in `Assets.from()`/`get()`/`load()`. Restricted to types that hand out a catalog leaf, exactly mirroring the runtime table built from the built-in types' own `extensions`. This is the single declaration-merging surface for bare-path suffix inference: ```ts declare module '@codexo/exojs' { interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; } } ```"
       ],
       "importLine": "import { ExtensionKindMap } from '@codexo/exojs'",
       "sourceLink": null
@@ -282,7 +282,7 @@
         },
         {
           "name": "srt",
-          "signature": "srt: \"srt\"",
+          "signature": "srt: \"subtitle\"",
           "signatureTokens": [
             {
               "text": "srt",
@@ -293,7 +293,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"srt\"",
+              "text": "\"subtitle\"",
               "kind": "keyword"
             }
           ],
@@ -324,7 +324,7 @@
         },
         {
           "name": "vtt",
-          "signature": "vtt: \"vtt\"",
+          "signature": "vtt: \"subtitle\"",
           "signatureTokens": [
             {
               "text": "vtt",
@@ -335,7 +335,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"vtt\"",
+              "text": "\"subtitle\"",
               "kind": "keyword"
             }
           ],

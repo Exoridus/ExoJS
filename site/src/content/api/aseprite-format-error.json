@@ -230,11 +230,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "packages/exojs-aseprite/src/asepriteBinding.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/asepriteBinding.ts"
+        "label": "packages/exojs-aseprite/src/asepriteType.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/asepriteType.ts"
       }
     }
   ],
-  "sourcePath": "packages/exojs-aseprite/src/asepriteBinding.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/asepriteBinding.ts"
+  "sourcePath": "packages/exojs-aseprite/src/asepriteType.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-aseprite/src/asepriteType.ts"
 }

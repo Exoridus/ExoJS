@@ -1,0 +1,601 @@
+{
+  "title": "FontAssetType",
+  "description": "Web fonts (WOFF, WOFF2, TTF, OTF) parsed into a loaded `FontFace`.",
+  "symbol": "FontAssetType",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Web fonts (WOFF, WOFF2, TTF, OTF) parsed into a loaded `FontFace`."
+      ],
+      "importLine": "import { FontAssetType } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): FontAssetType",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "FontAssetType",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "asset",
+          "signature": "asset(source: string, options?: FontAssetOptions): Asset<FontFace>",
+          "signatureTokens": [
+            {
+              "text": "asset",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontAssetOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Asset",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontFace",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "FontAssetOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Asset<FontFace>",
+          "description": "A typed, loadable descriptor for one asset of this type. The resource and option types come from the type instance, so a custom type is fully typed at every call site without declaring anything to the module system: ts const world = await loader.load(worldType.asset('level.world')); "
+        },
+        {
+          "name": "createFactory",
+          "signature": "createFactory(): AssetFactory<ArrayBuffer, FontFace, FontAssetOptions>",
+          "signatureTokens": [
+            {
+              "text": "createFactory",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetFactory",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontFace",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontAssetOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "AssetFactory<ArrayBuffer, FontFace, FontAssetOptions>",
+          "description": "Creates the factory for one application, at install time. Called once per Loader, never per request and never at module import, so loader-local state a factory needs - a worker, a compiled module, a lookup shared across every resource of this type - can be built here and torn down with the loader."
+        },
+        {
+          "name": "resourceIdentity",
+          "signature": "resourceIdentity(__namedParameters: AssetRequest<FontAssetOptions>): string",
+          "signatureTokens": [
+            {
+              "text": "resourceIdentity",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "__namedParameters",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRequest",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontAssetOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "__namedParameters",
+              "type": "AssetRequest<FontAssetOptions>",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "The family name is baked into the face, so one file registered under two families is two resources."
+        },
+        {
+          "name": "sourceIdentity",
+          "signature": "sourceIdentity?(request: AssetRequest<FontAssetOptions>): string",
+          "signatureTokens": [
+            {
+              "text": "sourceIdentity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "request",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRequest",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontAssetOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "request",
+              "type": "AssetRequest<FontAssetOptions>",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "The part of a request that changes WHICH SOURCE DATA is acquired - a locale, a content variant, an explicit variant token, a known content identity. This is not resourceIdentity. An option that changes only how already-acquired data is interpreted belongs there and must not appear here, or one download would be fetched once per interpretation. The value can outlive the session inside a persistent cache namespace, so it must carry no credentials, no tokens and no request headers. Omit the hook entirely when the locator alone identifies the source."
+        },
+        {
+          "name": "unacquiredSource",
+          "signature": "unacquiredSource?(request: AssetRequest<FontAssetOptions>, url: string): undefined | { source: ArrayBuffer }",
+          "signatureTokens": [
+            {
+              "text": "unacquiredSource",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "request",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRequest",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontAssetOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "url",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "request",
+              "type": "AssetRequest<FontAssetOptions>",
+              "optional": false
+            },
+            {
+              "name": "url",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "undefined | { source: ArrayBuffer }",
+          "description": "The source for a request the loader must NOT acquire data for. Returning a source skips acquisition completely: nothing is fetched, decoded or cached for that request, codec is never consulted, and the factory receives what this returns, built from the resolved url alone. Returning undefined acquires normally. Two kinds of asset need this. One transports its own data - a media element streaming from a URL, where downloading the whole file up front is exactly what streaming avoids. The other has no source data of its own at all, because it is derived from assets its factory loads as dependencies. The result is wrapped so that a type whose source is legitimately undefined can still say \"do not acquire\"."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "codec",
+          "signature": "codec: AssetSourceCodec<ArrayBuffer>",
+          "signatureTokens": [
+            {
+              "text": "codec",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetSourceCodec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How an acquired representation is read back into the source a factory consumes. Required for every type the loader acquires data for, which is nearly all of them. A type whose unacquiredSource always answers has no representation to read and needs none; a type that reaches acquisition without one fails that load with a message saying so."
+        },
+        {
+          "name": "extensions",
+          "signature": "extensions: string[]",
+          "signatureTokens": [
+            {
+              "text": "extensions",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "File suffixes this type claims, without the leading dot. They are app-local: a suffix claimed here is resolved to this type by the applications that installed it and is unknown to every other application in the process. Leave it empty for a type whose assets are always named explicitly."
+        },
+        {
+          "name": "id",
+          "signature": "id: \"font\"",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"font\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The type's stable identity - a non-empty string chosen by whoever defines the type, and never changed afterwards. It names the type wherever a name is needed: in resource identities, in diagnostics, and in the storage namespaces a persistent cache derives from it. Because it survives a reload, it must not be derived from anything that does not: a class name a minifier may rewrite, an installation order, or a value generated at runtime. Reverse-DNS ('com.example.world') keeps independently authored types apart. Two types with the same id cannot be installed on one application."
+        },
+        {
+          "name": "layout",
+          "signature": "layout: CacheLayout<ArrayBuffer>",
+          "signatureTokens": [
+            {
+              "text": "layout",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheLayout",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How an acquired representation is laid out when an application caches it. The default keeps the representation in one record, which is what a codec producing a single value needs. Override it to raise the version when the stored representation changes shape - records written under the old version are then no longer found, and the source is acquired again - or to supply a layout that spreads one representation across several records. Whether anything is cached at all, and where, is the application's decision. A type describes only how its representation would be laid out."
+        },
+        {
+          "name": "leaf",
+          "signature": "leaf: \"none\"",
+          "signatureTokens": [
+            {
+              "text": "leaf",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"none\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What this type hands out for one of its assets in a catalog, before the payload arrives. The default is a deferred AssetRef. A type whose resource can be handed out empty and healed in place supplies a SeamlessAdapter instead; a type with no meaningful placeholder declares 'none', which also takes its suffixes out of bare-path catalog resolution."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/types/fontTypes.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/fontTypes.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/types/fontTypes.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/types/fontTypes.ts"
+}

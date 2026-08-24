@@ -5,8 +5,8 @@ import '../src/index';
 import { describe, expect, it } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';
-import { asepriteBinding } from '../src/asepriteBinding';
 import { asepriteExtension } from '../src/asepriteExtension';
+import { asepriteType } from '../src/asepriteType';
 
 // ── Descriptor ───────────────────────────────────────────────────────────────
 
@@ -21,7 +21,7 @@ describe('asepriteExtension descriptor', () => {
 
   it('registers exactly one asset binding (the aseprite binding)', () => {
     expect(asepriteExtension.assets).toHaveLength(1);
-    expect(asepriteExtension.assets![0]).toBe(asepriteBinding);
+    expect(asepriteExtension.assets![0]).toBe(asepriteType);
   });
 
   it('declares no dependencies, renderers, or serializers', () => {
@@ -38,7 +38,7 @@ describe('buildSnapshot([asepriteExtension])', () => {
     const snapshot = buildSnapshot([asepriteExtension]);
     expect(snapshot.extensions.map(e => e.id)).toEqual(['@codexo/exojs-aseprite']);
     expect(snapshot.assets).toHaveLength(1);
-    expect(snapshot.assets).toContain(asepriteBinding);
+    expect(snapshot.assets).toContain(asepriteType);
   });
 
   it('contributes no renderers or serializers', () => {

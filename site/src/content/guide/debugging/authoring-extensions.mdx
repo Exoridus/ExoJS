@@ -22,7 +22,7 @@ const myExtension: Extension = {
     id: 'com.example.confetti', // globally unique; reverse-DNS or the npm package name
     dependencies: [], // other Extensions this one needs materialised first
     renderers: [], // RendererBinding[] — drawable type → renderer factory
-    assets: [], // AssetBinding[] — asset type + lookup keys → loader-local handler
+    assets: [], // AssetType[] — installed on this application, and on no other
     serializers: [], // SerializerBinding[] — node type ↔ serialize/deserialize pair
     install(app) {
         /* anything the arrays cannot express; return a disposer to undo it */
@@ -33,7 +33,7 @@ const myExtension: Extension = {
 Every field except `id` is optional, so the smallest possible extension is just an id. The three binding arrays are the interesting part:
 
 - **`renderers`** — a [`RendererBinding`](/ExoJS/en/api/extension/) maps one or more `Drawable` constructors to a renderer factory. This is the typesafe custom-renderer path (below).
-- **`assets`** — an `AssetBinding` maps an asset constructor, its `AssetDefinitions` type, and optional file suffixes to a loader-local `AssetHandler` factory. This is how `@codexo/exojs-tiled` teaches the `Loader` about `.tmj` files.
+- **`assets`** — an `AssetType` carries a stable id, the file suffixes it claims, how its data is read, and the factory that builds its resource. This is how `@codexo/exojs-tiled` teaches the `Loader` about `.tmj` files. Importing the package installs nothing; listing the type here does.
 - **`serializers`** — a `SerializerBinding` maps a custom `SceneNode` type to a `NodeSerializer`, so your node type survives [`Scene.serialize`/`deserialize`](/ExoJS/en/guide/runtime/serialization-and-prefabs/).
 
 Bindings are **pure descriptors** — no active renderer, no GPU resources, no side effects until their `create(...)` is called once per backend/loader during `Application` construction. `install` is the escape hatch for the rest — see [Lifetime](#lifetime-install-and-dispose) below.
@@ -150,7 +150,7 @@ A renderer implements the [`Renderer`](/ExoJS/en/guide/debugging/custom-renderer
 Build your renderer by subclassing the abstract base renderers from `@codexo/exojs/renderer-sdk` (`AbstractWebGpuRenderer`, `AbstractWebGl2Renderer` / `AbstractWebGl2BatchedRenderer`) — exactly how the particles and tilemap packages build theirs. The engine's *concrete* renderers (e.g. `WebGl2SpriteRenderer`) are internal, coupled to private data paths, and not part of the SDK surface; subclassing them will break.
 </Callout>
 
-Asset and serializer bindings follow the same shape — a descriptor plus a factory. Use `satisfies AssetBinding<MyAsset, MyLoadOptions>` on the object literal to get typed load options in the handler and enforce the produced result type without repeating it. See the [Loader](/ExoJS/en/api/loader/) reference for the handler lifecycle and the [serialization chapter](/ExoJS/en/guide/runtime/serialization-and-prefabs/) for registering a serializer for a custom node type.
+A serializer binding follows the same shape — a descriptor plus a factory. An asset type is a class instead: its option type flows from the class to every call site, so nothing has to be repeated. See the [Loader](/ExoJS/en/api/loader/) reference for the factory lifecycle and the [serialization chapter](/ExoJS/en/guide/runtime/serialization-and-prefabs/) for registering a serializer for a custom node type.
 
 ## Packaging policy
 

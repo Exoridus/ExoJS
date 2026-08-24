@@ -35,9 +35,9 @@ export abstract class SvgAsset {
 /**
  * Dispatch token for subtitle loading (WebVTT and SRT).
  *
- * `loader.load(Asset.type('vtt', 'subs.vtt'))` returns `Promise<VTTCue[]>`.
- * `loader.load(Asset.type('vtt', 'subs.srt'))` returns `Promise<VTTCue[]>`.
- * Format is detected from the file extension; unknown extensions default to VTT.
+ * `loader.load(Asset.type('subtitle', 'subs.vtt'))` returns `Promise<VTTCue[]>`,
+ * and so does the same call for a `.srt` file. The format is taken from the file
+ * extension; anything else reads as WebVTT.
  */
 export abstract class SubtitleAsset {
   declare protected readonly _token: 'subtitle';

@@ -1,11 +1,11 @@
 import { Asset } from '#assets/Asset';
-import type { AssetDefinitions } from '#assets/AssetDefinitions';
-import { createLeaf, registerAssetKind } from '#assets/assetKindRegistry';
+import { createLeaf } from '#assets/catalogLeaf';
 import { Loader } from '#assets/Loader';
 import type { SeamlessAdapter } from '#assets/seamless';
 import type { LoadStateValue } from '#core/LoadState';
 import { LoadState } from '#core/LoadState';
-import type { AssetHandler } from '#extensions/Extension';
+
+import { testAssetType } from './test-asset-type';
 
 /**
  * Hardening coverage for the readiness (`idle`/`loading`/`ready`/`failed`) x
@@ -27,7 +27,7 @@ import type { AssetHandler } from '#extensions/Extension';
  * A synthetic `stub` asset type (not a real `AssetDefinitions` member) is
  * used instead of a built-in type so the fetch itself is fully
  * test-controlled (no network/audio/image decoding to mock) while still
- * exercising the REAL `AssetTypeRegistry`/`AssetResidency`/`assetKindRegistry`
+ * exercising the REAL `AssetTypeRegistry`/`AssetResidency`/leaf
  * machinery - the same code every built-in type runs through.
  *
  * Two disjoint key namespaces drive two complementary sub-machines per step,
@@ -95,10 +95,6 @@ const stubAdapter: SeamlessAdapter<StubHandle> = {
   },
 };
 
-// `registerAssetKind` is idempotent for a matching entry, so re-running this
-// module (or another file registering the same synthetic kind) is safe.
-registerAssetKind('stub' as keyof AssetDefinitions, { isValue: false, adapter: stubAdapter });
-
 test('readiness x residency: seeded random claim/release/fetch/fail sequence keeps every invariant', async () => {
   const R_KEYS = ['r0', 'r1', 'r2'];
   const L_KEYS = ['l0', 'l1', 'l2'];
@@ -111,21 +107,25 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
   ];
 
   let fetchCount = 0;
-  // Handler invocations are synchronous up to their own Promise executor (verified
-  // against AssetDecoder._dispatchFetch/_fetchWithHandler), so `pending` always
+  // Factory invocations are synchronous up to their own Promise executor
+  // (verified against AssetDecoder._dispatchFetch), so `pending` always
   // reflects the current in-flight set immediately after a triggering call -
   // no `await` needed between issuing a fetch and observing it here.
   const pending = new Map<string, { resolve: (h: StubHandle) => void; reject: (e: Error) => void }>();
 
-  const handler: AssetHandler<StubHandle> = {
-    load: request =>
-      new Promise<StubHandle>((resolve, reject) => {
-        fetchCount++;
-        pending.set(request.source, { resolve, reject });
-      }),
-  };
-
-  loader.bindAsset<StubHandle>({ ctor: StubHandle, typeNames: ['stub'], seamless: stubAdapter }, handler);
+  loader._installAssetTypes([
+    testAssetType<string, StubHandle>({
+      id: 'stub',
+      token: StubHandle,
+      leaf: stubAdapter,
+      acquires: false,
+      create: (_source, context) =>
+        new Promise<StubHandle>((resolve, reject) => {
+          fetchCount++;
+          pending.set(context.source, { resolve, reject });
+        }),
+    }),
+  ]);
 
   interface Ch1Model {
     handle: StubHandle | null;
@@ -175,7 +175,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
         if (model.handle === null) {
           // A freshly-minted catalog-style leaf is idle until adopted - exercise
           // that state explicitly before it ever gets claimed.
-          const leaf = createLeaf('stub' as keyof AssetDefinitions, key) as StubHandle;
+          const leaf = createLeaf(stubAdapter, 'stub', key) as StubHandle;
           expect(leaf.loadState).toBe('idle');
           model.handle = leaf;
         }

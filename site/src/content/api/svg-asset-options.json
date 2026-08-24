@@ -1,0 +1,100 @@
+{
+  "title": "SvgAssetOptions",
+  "description": "Options accepted by an asset of the built-in `svg` type.",
+  "symbol": "SvgAssetOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options accepted by an asset of the built-in `svg` type."
+      ],
+      "importLine": "import { SvgAssetOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "height",
+          "signature": "height?: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Render height in pixels. See width."
+        },
+        {
+          "name": "width",
+          "signature": "width?: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Render width in pixels, written into the root <svg> element before the browser rasterises it. A file carrying only a viewBox has no intrinsic size and rasterises as a 0x0 image; giving it a width and height here is what fixes that."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/factories/SvgFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SvgFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/factories/SvgFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SvgFactory.ts"
+}

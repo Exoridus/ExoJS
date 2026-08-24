@@ -164,3 +164,28 @@ export const determineMimeType = (arrayBuffer: ArrayBuffer): string => {
 
   return 'text/plain';
 };
+
+/**
+ * Resolves a reference a parent asset names (a BMFont page image, an atlas
+ * image) against that parent's own locator.
+ *
+ * `new URL(ref, base)` only works when `base` is an absolute URL, and asset
+ * locators are routinely relative paths. A root-absolute parent must yield a
+ * root-absolute result: dropping the leading slash would make the browser
+ * re-resolve the reference against the document base URL instead.
+ * @internal
+ */
+export function resolveSubAssetPath(ref: string, source: string): string {
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/|\/)/i.test(ref)) {
+    return ref;
+  }
+
+  try {
+    return new URL(ref, source).href;
+  } catch {
+    const base = 'https://exojs.invalid/';
+    const resolved = new URL(ref, base + source.replace(/^\/+/, '')).href.slice(base.length);
+
+    return source.startsWith('/') ? `/${resolved}` : resolved;
+  }
+}

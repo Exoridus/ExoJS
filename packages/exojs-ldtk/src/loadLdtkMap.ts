@@ -1,5 +1,5 @@
-import { Asset } from '@codexo/exojs';
-import { type AssetLoaderContext, logger, TextureRegion } from '@codexo/exojs';
+import type { AssetFactoryContext } from '@codexo/exojs';
+import { Asset, logger, TextureRegion } from '@codexo/exojs';
 import { TileSet } from '@codexo/exojs-tilemap';
 
 import type { LdtkData, LdtkLevel, LdtkTilesetDef } from './LdtkData';
@@ -24,11 +24,7 @@ import { LdtkFormatError, validateLdtkData, validateLdtkLevelData } from './vali
  * would make every cell and entity referencing it vanish without a diagnostic.
  * @internal
  */
-export async function loadLdtkTileset(
-  def: LdtkTilesetDef,
-  ldtkSource: string,
-  context: AssetLoaderContext,
-): Promise<TileSet | null> {
+export async function loadLdtkTileset(def: LdtkTilesetDef, ldtkSource: string, context: AssetFactoryContext): Promise<TileSet | null> {
   if (def.relPath === null || def.relPath === '') {
     logger.warn(
       `LDtk: tileset "${def.identifier}" in "${ldtkSource}" has no atlas image (relPath is null) — it is an ` +
@@ -41,7 +37,7 @@ export async function loadLdtkTileset(
   }
 
   const imageUrl = resolveLdtkUrl(def.relPath, ldtkSource);
-  const texture = await context.scope.load(Asset.type('texture', imageUrl));
+  const texture = await context.dependencies.load(Asset.type('texture', imageUrl));
 
   const tileSize = def.tileGridSize;
   const spacing = def.spacing ?? 0;
@@ -96,11 +92,7 @@ export async function loadLdtkTileset(
  * levels. Levels that already carry `layerInstances` (not externalized) are
  * returned unchanged.
  */
-async function loadExternalLevel(
-  level: LdtkLevel,
-  ldtkSource: string,
-  context: AssetLoaderContext,
-): Promise<LdtkLevel> {
+async function loadExternalLevel(level: LdtkLevel, ldtkSource: string, context: AssetFactoryContext): Promise<LdtkLevel> {
   // Already-inlined level, or no external file to fetch: return as-is.
   if (level.layerInstances !== null || level.externalRelPath === undefined || level.externalRelPath === null || level.externalRelPath === '') {
     return level;
@@ -110,7 +102,7 @@ async function loadExternalLevel(
   // Validated against the same level shape as an inlined level, with the
   // `.ldtkl` file itself as the error source - a malformed external payload
   // must fail as loudly as a malformed root document.
-  const external = validateLdtkLevelData(await context.fetchJson(externalUrl), externalUrl);
+  const external = validateLdtkLevelData(await context.dependencies.load(Asset.type('json', externalUrl)), externalUrl);
   const fieldInstances = external.fieldInstances ?? level.fieldInstances;
 
   return {
@@ -149,7 +141,7 @@ function withResolvedLevels(data: LdtkData, resolvedLevels: readonly LdtkLevel[]
 // ── Public loader ─────────────────────────────────────────────────────────────
 
 /**
- * Fetch a `.ldtk` file, load all referenced tileset images, resolve any
+ * Read a `.ldtk` document, load all referenced tileset images, resolve any
  * externalized (`.ldtkl`) levels, and return a fully assembled {@link LdtkMap}
  * with one runtime {@link import('@codexo/exojs-tilemap').TileMap} per level.
  *
@@ -165,11 +157,9 @@ function withResolvedLevels(data: LdtkData, resolvedLevels: readonly LdtkLevel[]
  * rejected, since its image lives inside the LDtk editor; that skip warns.
  * @internal
  */
-export async function loadLdtkMap(
-  source: string,
-  context: AssetLoaderContext,
-): Promise<LdtkMap> {
-  const data = validateLdtkData(await context.fetchJson(source), source);
+export async function loadLdtkMap(context: AssetFactoryContext): Promise<LdtkMap> {
+  const source = context.source;
+  const data = validateLdtkData(await context.dependencies.load(Asset.type('json', source)), source);
 
   // Load all referenced tilesets and resolve externalized levels concurrently.
   // Iterate the flattened level list (not raw data.levels) so multi-world

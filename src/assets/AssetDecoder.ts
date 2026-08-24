@@ -1,12 +1,13 @@
-import type { AssetHandler } from '#extensions/Extension';
-
 import type { AssetCache } from './AssetCache';
 import type { AssetCacheError } from './AssetCacheError';
+import type { AssetFactoryContext } from './AssetFactory';
+import type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
+import type { AnyAssetType, AssetRequest } from './AssetType';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { CacheLayout } from './CacheLayout';
 import { type CanonicalAsset, canonicalizeSource, resolveAssetUrl, type SourceKey } from './canonicalKey';
 import { fetchAsset } from './fetchAsset';
-import type { AssetLoaderContext, Loader } from './Loader';
+import type { Loader } from './Loader';
 import type { LoaderScope } from './LoaderScope';
 import { isAbortError } from './SharedAbort';
 import { SingleEntryLayout } from './SingleEntryLayout';
@@ -27,24 +28,26 @@ export interface AssetDecoderOptions {
   ownsCache: boolean;
 }
 
-/**
- * The layout a source acquired through a handler context uses. Those fetches
- * hand back exactly what the response yielded, so one record holds it.
- */
-const contextLayout = SingleEntryLayout.version(1);
+/** The cache namespace asset containers are acquired under. */
+const CONTAINER_NAMESPACE = 'exoa';
+
+/** A container is acquired whole, so one record holds it. */
+const containerLayout = SingleEntryLayout.version<ArrayBuffer>(1);
+
+/** The shape an identity hook sees. Options are omitted entirely when the request carried none. */
+function toRequest(source: string, options: unknown): AssetRequest<unknown> {
+  return options === undefined || options === null ? { source } : { source, options };
+}
 
 /**
- * Turns "a type + a path, or a `bindAsset` handler" into a decoded resource:
- * URL resolution, cache-strategy dispatch, `bindAsset` handler invocation
- * (including the {@link AssetLoaderContext} handlers receive), and the
- * container byte-injection path. Extracted from `Loader` - every method here
- * is a direct, behavior-preserving relocation.
+ * Turns a canonical request into a built resource: URL resolution, acquisition
+ * through the application's cache configuration, the type's codec, and its
+ * factory - over the network or from container bytes.
  *
  * Deliberately does not know about claims, deferred handles, or the
- * resident-resource map: every method that resolves a resource hands it to
- * the `storeResource` callback supplied at construction instead of storing
- * it directly, so this class stays "identity + bytes/handler in, resource
- * out."
+ * resident-resource map: every method that resolves a resource hands it to the
+ * `storeResource` callback its owner bound instead of storing it directly, so
+ * this class stays "identity in, resource out."
  */
 export class AssetDecoder {
   private readonly _loader: Loader;
@@ -161,136 +164,137 @@ export class AssetDecoder {
   }
 
   /**
-   * The acquisition a handler context's `fetch*` helpers perform: one record,
-   * keyed by the canonical locator of the source they were given.
+   * Acquires the bytes of an asset container.
+   *
+   * A container is not an asset of any type - it is a transport that yields
+   * several - so it caches under its own namespace rather than borrowing one
+   * from whatever happens to be inside it.
    * @internal
    */
-  public _acquireForContext<T>(source: string, namespace: string, read: (response: Response) => Promise<T>, signal?: AbortSignal): Promise<T> {
-    return this._acquire(source, namespace, contextLayout as CacheLayout<T>, canonicalizeSource(this._basePath, source), read, signal);
+  public _acquireContainer(url: string): Promise<ArrayBuffer> {
+    return this._acquire(url, CONTAINER_NAMESPACE, containerLayout, canonicalizeSource(this._basePath, url), response => response.arrayBuffer());
   }
 
-  /**
-   * Builds an {@link AssetLoaderContext} for a handler invocation.
-   *
-   * The `fetch*` helpers on the returned context route through the
-   * application's cache configuration, keyed by the canonical locator of the
-   * source, so the same representation is never fetched or cached twice
-   * however it was spelled.
-   *
-   * `storageName`, when given by the handler's binding, replaces the shared
-   * `__ctx_binary`/`__ctx_text`/`__ctx_json` namespace for every `fetch*` call
-   * made through this context, giving the binding its own cache namespace
-   * instead of sharing one with every other handler.
-   *
-   * `signal` is the cancellation signal of the load this handler invocation
-   * belongs to. Every `fetch*` helper forwards it automatically; it is also
-   * exposed on the context so a handler doing its own fetching or decoding can
-   * honor it.
-   *
-   * `scope` owns whatever sub-assets this handler loads, and lives exactly as
-   * long as the asset being built.
-   * @internal
-   */
-  public _buildHandlerContext(asset: CanonicalAsset, scope: LoaderScope, storageName?: string, signal?: AbortSignal): AssetLoaderContext {
-    const ctx: AssetLoaderContext = {
-      loader: this._loader,
-      scope,
+  /** The context a factory sees for one request. */
+  private _factoryContext(asset: CanonicalAsset, scope: LoaderScope, options: unknown, signal?: AbortSignal): AssetFactoryContext<unknown> {
+    return {
+      ...(options !== undefined && options !== null && { options }),
+      signal,
+      source: asset.source,
+      locator: asset.locator,
       resourceKey: asset.key,
       sourceKey: asset.sourceKey,
-      locator: asset.locator,
-      signal,
-      resolveUrl: (source: string) => this._resolveUrl(source),
-      fetchText: (source: string) => this._acquireForContext<string>(source, storageName ?? '__ctx_text', r => r.text(), signal),
-      fetchArrayBuffer: (source: string) => this._acquireForContext<ArrayBuffer>(source, storageName ?? '__ctx_binary', r => r.arrayBuffer(), signal),
-      fetchJson: <T = unknown>(source: string) => this._acquireForContext<T>(source, storageName ?? '__ctx_json', r => r.json() as Promise<T>, signal),
+      // A `LoaderScope` is structurally wider than the dependency seam; the
+      // narrowing is what keeps release and teardown of the parent's scope out
+      // of a factory's reach.
+      dependencies: scope,
     };
-    return ctx;
+  }
+
+  /** Acquires this request's representation and reads it back as the source its factory consumes. */
+  private async _acquireSource(asset: CanonicalAsset, type: AnyAssetType, signal?: AbortSignal): Promise<unknown> {
+    const codec = type.codec as AssetSourceCodec<unknown, unknown> | undefined;
+
+    if (codec === undefined) {
+      throw new Error(`Asset type "${type.id}" declares no source codec, so "${asset.source}" cannot be acquired.`);
+    }
+    const context: SourceCodecContext = { locator: asset.locator, signal };
+    // What the codec reads off the response is what a cache gets to keep, so it
+    // is acquired through the loader's own policy rather than decoded first and
+    // handed over afterwards.
+    const stored = await this._acquire(
+      asset.source,
+      type.id,
+      type.layout as CacheLayout<unknown>,
+      asset.sourceKey,
+      response => codec.fromResponse(response, context),
+      signal,
+    );
+
+    return codec.decode(stored, context);
   }
 
   /**
-   * Calls a handler-based custom asset loader and hands the result to the
-   * `storeResource` callback.
+   * Wraps a construction failure in the "which asset, from where" envelope
+   * callers see.
    *
-   * This does NOT automatically bypass caching - the handler controls caching
-   * by calling `context.fetchText` / `context.fetchArrayBuffer` /
-   * `context.fetchJson`, which route through the application's cache
-   * configuration.
+   * A cancellation rejection is rethrown unwrapped: the envelope would hide the
+   * `AbortError` name the residency dispatches on to tell a deliberate cancel
+   * apart from a genuine load failure.
+   */
+  private _describeFailure(asset: CanonicalAsset, error: unknown): unknown {
+    if (isAbortError(error)) {
+      return error;
+    }
+
+    const message = error instanceof Error ? error.message : String(error);
+
+    return new Error(`Failed to load "${asset.source}" from "${this._resolveUrl(asset.source)}": ${message}`, { cause: error });
+  }
+
+  /**
+   * Builds one asset: acquire a representation, read it back as source, hand it
+   * to the factory.
    *
-   * A cancellation rejection is rethrown unwrapped: the "Failed to load ... from
-   * ..." envelope would hide the `AbortError` name the residency dispatches on to
-   * tell a deliberate cancel apart from a genuine load failure.
+   * A type that supplies its own source skips the first two steps - see
+   * {@link AssetType.unacquiredSource} - and never touches the cache.
+   *
+   * `signal` cancels the dispatched work and reaches the network through the
+   * acquisition.
    * @internal
    */
-  public async _fetchWithHandler(
-    asset: CanonicalAsset,
-    fullConfig: unknown,
-    handler: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>,
-    context: AssetLoaderContext,
-  ): Promise<unknown> {
+  public async _dispatchFetch(asset: CanonicalAsset, options: unknown, signal: AbortSignal | undefined, scope: LoaderScope): Promise<unknown> {
+    const installed = this._typeRegistry.getInstalled(asset.type);
+
+    if (installed === undefined) {
+      throw this._typeRegistry._missingTypeError(asset.type);
+    }
+
+    const { type, factory } = installed;
+
     try {
-      const resource = await handler(fullConfig, context);
+      const unacquired = type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source)) as { source: unknown } | undefined;
+      const source = unacquired === undefined ? await this._acquireSource(asset, type, signal) : unacquired.source;
 
-      return this._storeResource(asset, resource);
+      return this._storeResource(asset, await factory.create(source, this._factoryContext(asset, scope, options, signal)));
     } catch (error: unknown) {
-      if (isAbortError(error)) {
-        throw error;
-      }
-
-      const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to load "${asset.source}" from "${this._resolveUrl(asset.source)}": ${message}`, { cause: error });
+      throw this._describeFailure(asset, error);
     }
   }
 
   /**
-   * Dispatches a load through the `bindAsset` handler bound for `type`.
-   * Shared by the foreground and background fetch dispatchers on `Loader` so
-   * both honor `bindAsset` handlers identically.
+   * Builds one asset from bytes the application already holds - a container
+   * slice - with no fetch and no cache in the path.
    *
-   * `signal` cancels the dispatched work - it reaches the network through the
-   * handler context's `fetch*` helpers.
-   * @internal
-   */
-  public _dispatchFetch(asset: CanonicalAsset, options: unknown, signal: AbortSignal | undefined, scope: LoaderScope): Promise<unknown> {
-    const handlerEntry = this._typeRegistry.getHandler(asset.type);
-
-    if (!handlerEntry) {
-      return Promise.reject(this._typeRegistry._missingHandlerError(asset.type));
-    }
-
-    const config: Record<string, unknown> = { source: asset.source };
-
-    if (options !== null && options !== undefined && typeof options === 'object') {
-      Object.assign(config, options as Record<string, unknown>);
-    }
-
-    const context = this._buildHandlerContext(asset, scope, handlerEntry.storageName, signal);
-
-    return this._fetchWithHandler(asset, config, handlerEntry.load, context);
-  }
-
-  /**
-   * Construct an asset from in-memory `bytes` (no fetch) and hand it to the
-   * `storeResource` callback under `alias`. Uses the type's
-   * {@link AssetHandler.createFromBytes} when present; throws if the bound
-   * handler does not support byte-source construction. The backing path for
-   * `Loader.loadContainer`.
+   * The bytes go through the same codec and factory as a network load, so a
+   * container entry is the same resource, built the same way, as the asset it
+   * stands in for. A type whose codec cannot read bytes alone cannot be packed
+   * into a container, and says so specifically rather than failing inside a
+   * decode.
    *
-   * `scope` owns whatever sub-assets the construction loads, exactly as on the
-   * network path: an entry unpacked from a container must not own its
-   * dependencies differently from the same entry fetched over the network.
+   * `scope` owns whatever the construction loads, exactly as on the network
+   * path: an entry unpacked from a container must not own its dependencies
+   * differently from the same entry fetched over the network.
    * @internal
    */
   public async _injectSource(asset: CanonicalAsset, bytes: ArrayBuffer, scope: LoaderScope, options?: unknown): Promise<void> {
-    const handlerEntry = this._typeRegistry.getHandler(asset.type);
+    const installed = this._typeRegistry.getInstalled(asset.type);
 
-    if (!handlerEntry?.createFromBytes) {
-      throw new Error(`Asset type "${asset.type.name}" cannot be built from container bytes (no createFromBytes handler).`);
+    if (installed === undefined) {
+      throw this._typeRegistry._missingTypeError(asset.type);
     }
 
-    const context = this._buildHandlerContext(asset, scope, handlerEntry.storageName);
-    const resource = await handlerEntry.createFromBytes(bytes, options, context);
+    const { type, factory } = installed;
+    const codec = type.codec as AssetSourceCodec<unknown, unknown> | undefined;
 
-    this._storeResource(asset, resource);
+    if (codec?.fromBytes === undefined) {
+      throw new Error(`Asset type "${type.id}" cannot be built from container bytes: its source codec reads a response, not bytes.`);
+    }
+
+    const context: SourceCodecContext = { locator: asset.locator, signal: undefined };
+    const source = await codec.decode(await codec.fromBytes(bytes, context), context);
+
+    this._storeResource(asset, await factory.create(source, this._factoryContext(asset, scope, options)));
   }
 
   /**

@@ -1,52 +1,30 @@
-import { AbstractAssetFactory } from '#assets/AbstractAssetFactory';
+import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import { decodeAudioData } from '#audio/audio-context';
 import { type AudioSpriteClip, Sound } from '#audio/Sound';
 import type { PlaybackOptions } from '#core/types';
 
-/** Construction options for {@link SoundFactory.create}. */
-export interface SoundFactoryOptions {
+/** Options accepted by an asset of the built-in `sound` type. */
+export interface SoundAssetOptions {
   /** Initial playback settings forwarded to the {@link Sound} instance. */
   playbackOptions?: Partial<PlaybackOptions>;
-  /**
-   * Number of concurrent voices the {@link Sound} instance pre-allocates.
-   * Higher values allow more simultaneous plays of the same clip. Default
-   * 8 (chosen by {@link Sound} when omitted).
-   */
+  /** Concurrent voices the {@link Sound} pre-allocates; {@link Sound}'s own default when omitted. */
   poolSize?: number;
-  /**
-   * Named sub-regions of the decoded {@link AudioBuffer} for use as an audio
-   * sprite sheet. Each entry maps a clip name to a {@link AudioSpriteClip}
-   * descriptor.
-   */
+  /** Named sub-regions of the decoded buffer, for use as an audio sprite sheet. */
   sprites?: Readonly<Record<string, AudioSpriteClip>>;
 }
 
 /**
- * {@link AssetFactory} implementation that loads short audio assets
- * (MP3, OGG, WAV, AAC, and other Web Audio API-supported formats), fully
- * decodes them into an {@link AudioBuffer}, and produces a {@link Sound}
- * instance ready for low-latency playback.
+ * Fully decodes short audio into an `AudioBuffer` and wraps it in a
+ * {@link Sound} ready for low-latency playback.
  *
- * For long-form background music use {@link MusicFactory} instead, which
- * streams audio without up-front decoding. Supports audio sprite sheets via
- * the `sprites` option.
+ * Long-form audio belongs to the `music` type, which streams instead of
+ * decoding up front.
+ * @internal
  */
-export class SoundFactory extends AbstractAssetFactory<Sound> {
-  public readonly storageName = 'sound';
+export class SoundFactory implements AssetFactory<ArrayBuffer, Sound, SoundAssetOptions> {
+  public async create(source: ArrayBuffer, context: AssetFactoryContext<SoundAssetOptions>): Promise<Sound> {
+    const options = context.options ?? {};
 
-  /**
-   * Reads the full response body as an {@link ArrayBuffer} for decoding
-   * by the Web Audio API.
-   */
-  public async process(response: Response): Promise<ArrayBuffer> {
-    return response.arrayBuffer();
-  }
-
-  /**
-   * Fully decodes the audio buffer via the shared `AudioContext` and
-   * constructs a {@link Sound} with the given options.
-   */
-  public async create(source: ArrayBuffer, options: SoundFactoryOptions = {}): Promise<Sound> {
     let audioBuffer: AudioBuffer;
 
     try {
@@ -54,17 +32,15 @@ export class SoundFactory extends AbstractAssetFactory<Sound> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
 
-      throw new Error(`Failed to decode audio data: ${message} (if loaded with the wrong Asset.type, this file may not be an audio format at all).`, {
+      throw new Error(`Failed to decode audio data: ${message} (if loaded as the wrong asset type, this file may not be an audio format at all).`, {
         cause: error,
       });
     }
 
-    const sound = new Sound(audioBuffer, {
+    return new Sound(audioBuffer, {
       ...options.playbackOptions,
       ...(options.poolSize !== undefined && { poolSize: options.poolSize }),
       ...(options.sprites !== undefined && { sprites: options.sprites }),
     });
-
-    return sound;
   }
 }

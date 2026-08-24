@@ -430,14 +430,14 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Default immutable Tiled extension descriptor. Registers two asset bindings: - tiledRuntimeMapBinding - loader.load(Asset.type('tileMap', 'world.tmj')) → returns a format-independent runtime TileMap (common case). - tiledSourceBinding - loader.load(Asset.type('tiledSource', 'world.tmj')) → returns the raw parsed TiledMap source model (advanced/diagnostic). Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the Tiled adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
+          "description": "Default immutable Tiled extension descriptor. Installs two asset types: - tileMapType - loader.load(tileMapType.asset('world.tmj')) returns a format-independent runtime TileMap (common case). - tiledSourceType - loader.load(tiledSourceType.asset('world.tmj')) returns the raw parsed TiledMap source model (advanced/diagnostic). Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the Tiled adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
         },
         {
-          "name": "tiledRuntimeMapBinding",
-          "signature": "tiledRuntimeMapBinding: AssetBinding<TileMap, TiledLoadOptions>",
+          "name": "tiledSourceType",
+          "signature": "tiledSourceType: TiledSourceAssetType",
           "signatureTokens": [
             {
-              "text": "tiledRuntimeMapBinding",
+              "text": "tiledSourceType",
               "kind": "name"
             },
             {
@@ -445,40 +445,20 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetBinding",
+              "text": "TiledSourceAssetType",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TileMap",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TiledLoadOptions",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Declarative asset binding for the runtime TileMap produced from a .tmj Tiled map file. This is the common-case binding: loader.load(Asset.type('tileMap', 'world.tmj')) fetches and validates the TMJ, resolves external .tsj tilesets, loads tileset textures via the sub-load loader.load(Asset.type('tiledSource', source)), and synchronously converts the parsed TiledMap source model into a format-independent runtime TileMap via TiledMap.toTileMap. The sub-load flow guarantees that calling both load(TileMap) and load(TiledMap) for the same URL shares the Loader's cached TiledMap (no duplicate JSON fetches). Claiming the tmj extension enables the auto-routing shorthand loader.load('world.tmj') - the ExtensionKindMap augmentation in this package maps the tmj suffix to the 'tileMap' type."
+          "description": "The Tiled source-model asset type. Install it through tiledExtension."
         },
         {
-          "name": "tiledSourceBinding",
-          "signature": "tiledSourceBinding: AssetBinding<TiledMap, TiledLoadOptions>",
+          "name": "tileMapType",
+          "signature": "tileMapType: TileMapAssetType",
           "signatureTokens": [
             {
-              "text": "tiledSourceBinding",
+              "text": "tileMapType",
               "kind": "name"
             },
             {
@@ -486,33 +466,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetBinding",
+              "text": "TileMapAssetType",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TiledMap",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TiledLoadOptions",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Declarative asset binding for TiledMap. loader.load(Asset.type('tiledSource', 'world.tmj')) resolves through this binding, but no extensions are claimed, so a plain loader.load('world.tmj') does not resolve to TiledMap. The .tmj extension (and generic .json Tiled loading) is reserved for the format-independent TileMap runtime asset binding. The type name is tiledSource, not tiledMap: the runtime binding next to it is called tileMap, and two descriptor strings one letter apart is a typo that resolves to the wrong asset type instead of failing."
+          "description": "The runtime tilemap asset type for Tiled maps. Install it through tiledExtension."
         }
       ],
       "paragraphs": [],

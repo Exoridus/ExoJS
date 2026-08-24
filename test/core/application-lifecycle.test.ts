@@ -50,7 +50,7 @@ class MockResizeObserver implements ResizeObserver {
 // ---------------------------------------------------------------------------
 
 interface LifecycleHarnessOptions {
-  materializeAssetBindings?: MockInstance;
+  materializeAssetTypes?: MockInstance;
   materializeRendererBindings?: MockInstance;
   materializeSerializerBindings?: MockInstance;
   loaderDestroy?: MockInstance;
@@ -210,7 +210,7 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
     }),
   }));
   vi.doMock('#extensions/materialize', () => ({
-    materializeAssetBindings: options.materializeAssetBindings ?? vi.fn(),
+    materializeAssetTypes: options.materializeAssetTypes ?? vi.fn(),
     materializeRendererBindings: options.materializeRendererBindings ?? vi.fn(),
     materializeSerializerBindings: options.materializeSerializerBindings ?? vi.fn(),
   }));
@@ -1063,12 +1063,12 @@ describe('Application lifecycle / getters / sizing', () => {
   // -------------------------------------------------------------------------
 
   describe('constructor materialization failures', () => {
-    test('rethrows and destroys the loader when materializeAssetBindings throws', async () => {
+    test('rethrows and destroys the loader when materializeAssetTypes throws', async () => {
       const materializeError = new Error('asset materialize failed');
-      const materializeAssetBindings = vi.fn(() => {
+      const materializeAssetTypes = vi.fn(() => {
         throw materializeError;
       });
-      const { Application, loader } = await loadHarness({ materializeAssetBindings });
+      const { Application, loader } = await loadHarness({ materializeAssetTypes });
 
       expect(() => new Application({ backend: { type: 'webgl2' } })).toThrow(materializeError);
       expect(loader.destroy).toHaveBeenCalledTimes(1);
@@ -1076,13 +1076,13 @@ describe('Application lifecycle / getters / sizing', () => {
 
     test('swallows a secondary loader.destroy() failure and still rethrows the original error', async () => {
       const materializeError = new Error('asset materialize failed');
-      const materializeAssetBindings = vi.fn(() => {
+      const materializeAssetTypes = vi.fn(() => {
         throw materializeError;
       });
       const loaderDestroy = vi.fn(() => {
         throw new Error('destroy also failed');
       });
-      const { Application, loader } = await loadHarness({ materializeAssetBindings, loaderDestroy });
+      const { Application, loader } = await loadHarness({ materializeAssetTypes, loaderDestroy });
 
       expect(() => new Application({ backend: { type: 'webgl2' } })).toThrow(materializeError);
       expect(loader.destroy).toHaveBeenCalledTimes(1);

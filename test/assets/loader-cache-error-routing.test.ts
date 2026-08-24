@@ -12,7 +12,9 @@ import { AssetCache } from '#assets/AssetCache';
 import { AssetCacheError } from '#assets/AssetCacheError';
 import type { AssetDecoder } from '#assets/AssetDecoder';
 import { CacheFirstPolicy } from '#assets/cachePolicies';
+import { canonicalizeSource } from '#assets/canonicalKey';
 import { Loader } from '#assets/Loader';
+import { SingleEntryLayout } from '#assets/SingleEntryLayout';
 
 import { type CacheStoreDouble, createCacheStoreDouble } from './cache-test-doubles';
 
@@ -30,7 +32,7 @@ const decoderOf = (loader: Loader): AssetDecoder => (loader as unknown as { _dec
 
 /** Drive one acquisition through the real cache path of `loader`. */
 const fetchThrough = (loader: Loader, source: string): Promise<string> =>
-  decoderOf(loader)._acquireForContext(source, 'text', async response => response.text());
+  decoderOf(loader)._acquire(source, 'text', SingleEntryLayout.version<string>(1), canonicalizeSource('', source), async response => response.text());
 
 describe('Loader.onCacheError routing', () => {
   const originalFetch = global.fetch;

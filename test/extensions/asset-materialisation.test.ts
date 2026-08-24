@@ -1,15 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { Asset } from '#assets/Asset';
-import type { AssetLoaderContext } from '#assets/Loader';
+import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
+import type { AssetSourceCodec } from '#assets/AssetSourceCodec';
+import type { AnyAssetType } from '#assets/AssetType';
+import { AssetType } from '#assets/AssetType';
 import { Loader } from '#assets/Loader';
-import type { AssetBinding, AssetHandler, AssetLoadRequest } from '#extensions/Extension';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 // Minimal test asset types
 class TypeA {}
 class TypeB {}
-class TypeC {}
 
 declare module '#assets/AssetDefinitions' {
   interface AssetDefinitions {
@@ -19,225 +20,179 @@ declare module '#assets/AssetDefinitions' {
   }
 }
 
-function createTestHandler(): AssetHandler {
-  return {
-    load: vi.fn(async (_req: AssetLoadRequest, _ctx: AssetLoaderContext) => ({})),
-    destroy: vi.fn(),
-  };
+interface SpiedType {
+  readonly type: AnyAssetType;
+  readonly createFactory: ReturnType<typeof vi.fn>;
+  readonly create: ReturnType<typeof vi.fn>;
+  readonly destroy: ReturnType<typeof vi.fn>;
 }
 
-describe('materializeAssetBindings', () => {
+/**
+ * An installable type whose `createFactory`, `create` and `destroy` are all
+ * observable, so the install contract can be asserted without a real asset.
+ */
+function spiedType(spec: { id: string; token?: object; extensions?: readonly string[] } = { id: 'testType' }): SpiedType {
+  const create = vi.fn(async (_source: string, _context: AssetFactoryContext<Record<string, unknown>>) => ({}));
+  const destroy = vi.fn();
+  const createFactory = vi.fn((): AssetFactory<string, unknown, Record<string, unknown>> => ({ create, destroy }));
+
+  class Spied extends AssetType<string, unknown, Record<string, unknown>> {
+    public readonly id = spec.id;
+    public override readonly extensions = spec.extensions ?? [];
+    public override readonly leaf = 'none' as const;
+    public override readonly _token = spec.token as never;
+    public override readonly codec: AssetSourceCodec<string> = {
+      fromResponse: response => response.text(),
+      fromBytes: bytes => Promise.resolve(new TextDecoder().decode(bytes)),
+      decode: stored => Promise.resolve(stored),
+    };
+
+    public override unacquiredSource(): { source: string } {
+      return { source: '' };
+    }
+
+    public createFactory(): AssetFactory<string, unknown, Record<string, unknown>> {
+      return createFactory();
+    }
+  }
+
+  return { type: new Spied() as AnyAssetType, createFactory, create, destroy };
+}
+
+describe('materializeAssetTypes', () => {
   beforeEach(() => {});
 
-  it('creates one handler per Loader per Binding', () => {
-    const handler = createTestHandler();
-    const createFn = vi.fn(() => handler);
-    const binding: AssetBinding = { ctor: TypeA as never, create: createFn };
+  it('builds one factory per loader per type', () => {
+    const spied = spiedType({ id: 'testType', token: TypeA });
     const loader = new Loader();
 
-    materializeAssetBindings(loader, [binding]);
+    materializeAssetTypes(loader, [spied.type]);
 
-    expect(createFn).toHaveBeenCalledTimes(1);
-    expect(createFn).toHaveBeenCalledWith(loader);
+    expect(spied.createFactory).toHaveBeenCalledTimes(1);
     loader.destroy();
   });
 
-  it('multiple Applications receive distinct handlers', () => {
-    const handler1 = createTestHandler();
-    const handler2 = createTestHandler();
-    let callCount = 0;
-    const createFn = vi.fn(() => (callCount++ === 0 ? handler1 : handler2));
-    const binding: AssetBinding = { ctor: TypeA as never, create: createFn };
-
+  it('two applications sharing one descriptor still get their own factory', () => {
+    const spied = spiedType({ id: 'testType', token: TypeA });
     const loaderA = new Loader();
     const loaderB = new Loader();
-    materializeAssetBindings(loaderA, [binding]);
-    materializeAssetBindings(loaderB, [binding]);
 
-    expect(createFn).toHaveBeenCalledTimes(2);
+    materializeAssetTypes(loaderA, [spied.type]);
+    materializeAssetTypes(loaderB, [spied.type]);
+
+    expect(spied.createFactory).toHaveBeenCalledTimes(2);
     loaderA.destroy();
     loaderB.destroy();
   });
 
-  it('loader.hasLoadable returns true after bindAsset', () => {
-    const handler = createTestHandler();
-    const binding: AssetBinding = { ctor: TypeA as never, create: () => handler };
+  it('loader.hasLoadable reflects the install', () => {
+    const spied = spiedType({ id: 'testType', token: TypeA });
     const loader = new Loader();
 
-    materializeAssetBindings(loader, [binding]);
+    materializeAssetTypes(loader, [spied.type]);
 
     expect(loader.hasLoadable(TypeA as never)).toBe(true);
     loader.destroy();
   });
 
-  it('duplicate type key throws before any mutation', () => {
-    const bindingA: AssetBinding = { ctor: TypeA as never, create: () => createTestHandler() };
-    const bindingB: AssetBinding = { ctor: TypeA as never, create: () => createTestHandler() };
+  it('two types dispatching on one constructor throw before any mutation', () => {
+    const first = spiedType({ id: 'first', token: TypeA });
+    const second = spiedType({ id: 'second', token: TypeA, extensions: ['late'] });
     const loader = new Loader();
 
-    expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('An asset handler is already registered for TypeA');
-    // Verify no partial mutation
+    expect(() => materializeAssetTypes(loader, [first.type, second.type])).toThrow('another installed type already uses');
     expect(loader.hasLoadable(TypeA as never)).toBe(false);
+    expect(loader.hasExtension('late')).toBe(false);
     loader.destroy();
   });
 
-  it('duplicate typeName throws before any mutation', () => {
-    const bindingA: AssetBinding = { ctor: TypeA as never, typeNames: ['myType'], create: () => createTestHandler() };
-    const bindingB: AssetBinding = { ctor: TypeB as never, typeNames: ['myType'], create: () => createTestHandler() };
+  it('a duplicate id throws before any mutation', () => {
+    const first = spiedType({ id: 'testType', token: TypeA });
+    const second = spiedType({ id: 'testType', token: TypeB, extensions: ['late'] });
     const loader = new Loader();
 
-    expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('Asset type name "myType" is already registered');
+    expect(() => materializeAssetTypes(loader, [first.type, second.type])).toThrow('Asset type id "testType" is already installed');
+    expect(loader.hasAssetType('testType')).toBe(false);
+    expect(loader.hasExtension('late')).toBe(false);
     loader.destroy();
   });
 
-  it('extension handler receives per-load options nested under request.options', async () => {
-    // Regression: the loader builds a flat internal config `{ source, ...fields }`,
-    // but the public AssetLoadRequest is `{ source, options? }`. The bindAsset
-    // wrapper must reshape it so handlers (e.g. the core FontAsset adapter) see
-    // their options. A flat config would leave `request.options` undefined.
-    let seen: AssetLoadRequest | undefined;
-    const handler: AssetHandler = {
-      load: async (req: AssetLoadRequest) => {
-        seen = req;
-        return {};
-      },
-    };
-    const binding: AssetBinding = { ctor: TypeA as never, typeNames: ['withOpts'], create: () => handler };
+  it('a duplicate suffix throws before any mutation', () => {
+    const first = spiedType({ id: 'first', token: TypeA, extensions: ['shared'] });
+    const second = spiedType({ id: 'second', token: TypeB, extensions: ['shared'] });
     const loader = new Loader();
-    materializeAssetBindings(loader, [binding]);
 
-    await loader.load(new Asset({ type: 'withOpts', source: 'thing.dat', family: 'Kenney Future', size: 32 })).catch(() => undefined);
-
-    expect(seen?.source).toBe('thing.dat');
-    expect(seen?.options).toEqual({ family: 'Kenney Future', size: 32 });
+    expect(() => materializeAssetTypes(loader, [first.type, second.type])).toThrow('already claimed by asset type');
+    expect(loader.hasAssetType('first')).toBe(false);
+    expect(loader.hasExtension('shared')).toBe(false);
     loader.destroy();
   });
 
-  it('extension handler receives no options key when none are passed', async () => {
-    let seen: AssetLoadRequest | undefined;
-    const handler: AssetHandler = {
-      load: async (req: AssetLoadRequest) => {
-        seen = req;
-        return {};
-      },
-    };
-    const binding: AssetBinding = { ctor: TypeA as never, typeNames: ['noOpts'], create: () => handler };
+  it('equivalent suffix spellings collide, because every table normalizes the same way', () => {
+    const first = spiedType({ id: 'first', token: TypeA, extensions: ['.PNGX'] });
+    const second = spiedType({ id: 'second', token: TypeB, extensions: ['pngx'] });
     const loader = new Loader();
-    materializeAssetBindings(loader, [binding]);
 
-    await loader.load(new Asset({ type: 'noOpts', source: 'thing.dat' })).catch(() => undefined);
-
-    expect(seen?.source).toBe('thing.dat');
-    expect(seen?.options).toBeUndefined();
+    expect(() => materializeAssetTypes(loader, [first.type, second.type])).toThrow('already claimed by asset type');
     loader.destroy();
   });
 
-  it('multiple typeNames on a single binding all register', () => {
-    const handler = createTestHandler();
-    const binding: AssetBinding = { ctor: TypeA as never, typeNames: ['alpha', 'beta'], create: () => handler };
+  it('a suffix is normalised on install: dots stripped, lower-cased', () => {
+    const spied = spiedType({ id: 'testType', token: TypeA, extensions: ['..MiXeD'] });
     const loader = new Loader();
 
-    materializeAssetBindings(loader, [binding]);
+    materializeAssetTypes(loader, [spied.type]);
 
-    expect(loader.hasAssetType('alpha')).toBe(true);
-    expect(loader.hasAssetType('beta')).toBe(true);
+    expect(loader.hasExtension('mixed')).toBe(true);
+    expect(loader.hasExtension('.MIXED')).toBe(true);
+    expect(loader.resolveExtensionType('mixed')).toBe('testType');
     loader.destroy();
   });
 
-  it('a typeName conflict across the two names of one binding is detected', () => {
-    const bindingA: AssetBinding = { ctor: TypeA as never, typeNames: ['shared'], create: () => createTestHandler() };
-    const bindingB: AssetBinding = { ctor: TypeB as never, typeNames: ['other', 'shared'], create: () => createTestHandler() };
+  it('an installed id is reported by hasAssetType', () => {
+    const spied = spiedType({ id: 'testType', token: TypeA });
     const loader = new Loader();
 
-    expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('Asset type name "shared" is already registered');
-    // No partial mutation from bindingB
-    expect(loader.hasAssetType('other')).toBe(false);
+    materializeAssetTypes(loader, [spied.type]);
+
+    expect(loader.hasAssetType('testType')).toBe(true);
     loader.destroy();
   });
 
-  it('duplicate extension key throws before any mutation', () => {
-    const bindingA: AssetBinding = { ctor: TypeA as never, extensions: ['tmj'], create: () => createTestHandler() };
-    const bindingB: AssetBinding = { ctor: TypeB as never, extensions: ['tmj'], create: () => createTestHandler() };
+  it('the factory receives per-load options under its own options key', async () => {
+    const spied = spiedType({ id: 'withOpts', token: TypeA });
     const loader = new Loader();
 
-    expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('File extension ".tmj" is already mapped');
+    materializeAssetTypes(loader, [spied.type]);
+
+    await loader.load(new Asset({ type: 'withOpts', source: 'x.dat', family: 'Inter', size: 12 }));
+
+    expect(spied.create).toHaveBeenCalledWith('', expect.objectContaining({ source: 'x.dat', options: { family: 'Inter', size: 12 } }));
     loader.destroy();
   });
 
-  it('equivalent extension spellings are rejected during pre-validation, before any binding is materialized', () => {
-    const createA = vi.fn(() => createTestHandler());
-    const createB = vi.fn(() => createTestHandler());
-    const bindingA: AssetBinding = { ctor: TypeA as never, extensions: ['.TMJ'], create: createA };
-    const bindingB: AssetBinding = { ctor: TypeB as never, extensions: ['...tmj'], create: createB };
+  it('a request with no options carries no options key at all', async () => {
+    const spied = spiedType({ id: 'noOpts', token: TypeA });
     const loader = new Loader();
 
-    expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow('File extension ".tmj" is already mapped');
-    expect(createA).not.toHaveBeenCalled();
-    expect(createB).not.toHaveBeenCalled();
-    expect(loader.hasLoadable(TypeA as never)).toBe(false);
-    expect(loader.hasLoadable(TypeB as never)).toBe(false);
+    materializeAssetTypes(loader, [spied.type]);
+
+    await loader.load(new Asset({ type: 'noOpts', source: 'x.dat' }));
+
+    const context = spied.create.mock.calls[0]![1] as AssetFactoryContext<Record<string, unknown>>;
+
+    expect(context.options).toBeUndefined();
+    expect(Object.prototype.hasOwnProperty.call(context, 'options')).toBe(false);
     loader.destroy();
   });
 
-  it('an existing seamless adapter conflict is found before any binding is materialized', () => {
-    const adapter = { createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() };
-    const createA = vi.fn(() => createTestHandler());
-    const createB = vi.fn(() => createTestHandler());
-    const bindingA: AssetBinding = { ctor: TypeA as never, create: createA };
-    const bindingB: AssetBinding = { ctor: TypeB as never, seamless: adapter as never, create: createB };
-    const loader = new Loader();
-    loader.registerSeamlessAdapter(TypeB as never, adapter as never);
-
-    expect(() => materializeAssetBindings(loader, [bindingA, bindingB])).toThrow(/seamless adapter is already registered/);
-    expect(createA).not.toHaveBeenCalled();
-    expect(createB).not.toHaveBeenCalled();
-    expect(loader.hasLoadable(TypeA as never)).toBe(false);
-    expect(loader.hasLoadable(TypeB as never)).toBe(false);
-    loader.destroy();
-  });
-
-  it('extension keys are normalised (dot stripped, lowercased)', () => {
-    const handler = createTestHandler();
-    const binding: AssetBinding = { ctor: TypeA as never, extensions: ['.TMJ', '.PNG'], create: () => handler };
+  it('the factory is destroyed with the loader', () => {
+    const spied = spiedType({ id: 'testType', token: TypeA });
     const loader = new Loader();
 
-    materializeAssetBindings(loader, [binding]);
-
-    expect(loader.hasExtension('tmj')).toBe(true);
-    expect(loader.hasExtension('png')).toBe(true);
-    expect(loader.hasExtension('.TMJ')).toBe(true);
-    loader.destroy();
-  });
-
-  it('typeName registers hasAssetType', () => {
-    const handler = createTestHandler();
-    const binding: AssetBinding = { ctor: TypeA as never, typeNames: ['typeAlpha'], create: () => handler };
-    const loader = new Loader();
-
-    materializeAssetBindings(loader, [binding]);
-
-    expect(loader.hasAssetType('typeAlpha')).toBe(true);
-    loader.destroy();
-  });
-
-  it('handler.destroy() is called on loader.destroy()', () => {
-    const handler = createTestHandler();
-    const binding: AssetBinding = { ctor: TypeA as never, create: () => handler };
-    const loader = new Loader();
-
-    materializeAssetBindings(loader, [binding]);
+    materializeAssetTypes(loader, [spied.type]);
     loader.destroy();
 
-    expect(handler.destroy).toHaveBeenCalledTimes(1);
-  });
-
-  it('handler.destroy() is called at most once even with multi-target sharing', () => {
-    const handler = createTestHandler();
-    const loader = new Loader();
-
-    loader.bindAsset({ ctor: TypeA as never }, handler);
-    loader.destroy();
-
-    expect(handler.destroy).toHaveBeenCalledTimes(1);
+    expect(spied.destroy).toHaveBeenCalledTimes(1);
   });
 });

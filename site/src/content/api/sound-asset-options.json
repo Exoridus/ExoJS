@@ -1,0 +1,169 @@
+{
+  "title": "SoundAssetOptions",
+  "description": "Options accepted by an asset of the built-in `sound` type.",
+  "symbol": "SoundAssetOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options accepted by an asset of the built-in `sound` type."
+      ],
+      "importLine": "import { SoundAssetOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "playbackOptions",
+          "signature": "playbackOptions?: Partial<PlaybackOptions>",
+          "signatureTokens": [
+            {
+              "text": "playbackOptions",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Partial",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlaybackOptions",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Initial playback settings forwarded to the Sound instance."
+        },
+        {
+          "name": "poolSize",
+          "signature": "poolSize?: number",
+          "signatureTokens": [
+            {
+              "text": "poolSize",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Concurrent voices the Sound pre-allocates; Sound's own default when omitted."
+        },
+        {
+          "name": "sprites",
+          "signature": "sprites?: Readonly<Record<string, AudioSpriteClip>>",
+          "signatureTokens": [
+            {
+              "text": "sprites",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Readonly",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Record",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AudioSpriteClip",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Named sub-regions of the decoded buffer, for use as an audio sprite sheet."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/factories/SoundFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SoundFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/factories/SoundFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/SoundFactory.ts"
+}

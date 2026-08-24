@@ -472,8 +472,7 @@ export class AssetResidency {
 
   /**
    * Value twin of the seamless eviction in {@link _evictKey}: hand the stored
-   * payload to the bound handler's per-resource `dispose` (a factory-backed
-   * handler forwards it to `AssetFactory.dispose`), drop it from the resource
+   * payload to its type's `AssetFactory.dispose`, drop it from the resource
    * map, and re-arm every live ref for the key in place - `AssetRef._begin()`
    * is exactly what `adapter.evict(handle)` is for a seamless handle: payload
    * dropped, state back to `'loading'`, identity kept, so the next claim heals
@@ -484,13 +483,13 @@ export class AssetResidency {
    * it for as long as any consumer holds the ref - the eviction would free
    * nothing at all.
    *
-   * `dispose` is optional on the handler: most value types (parsed JSON, text,
+   * `dispose` is optional on a factory: most value types (parsed JSON, text,
    * a compiled `WebAssembly.Module`) own nothing the garbage collector cannot
    * reclaim once the last reference drops, so the delete below IS the whole
    * teardown for them.
    */
   private _evictValueKey(asset: CanonicalAsset, stored: unknown): void {
-    this._typeRegistry.getHandler(asset.type)?.dispose?.(stored);
+    this._typeRegistry.getInstalled(asset.type)?.factory.dispose?.(stored);
     this._resources.delete(asset.key);
 
     const entry = this._refs.get(asset.key);

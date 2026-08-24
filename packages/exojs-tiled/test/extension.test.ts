@@ -2,19 +2,14 @@
 // this package's asset type. Without it the augmentation is not in the program.
 import '../src/index';
 
-import type { Loader } from '@codexo/exojs';
-import { TileMap,tilemapExtension } from '@codexo/exojs-tilemap';
-import { describe, expect, it, vi } from 'vitest';
+import { TileMap, tilemapExtension } from '@codexo/exojs-tilemap';
+import { describe, expect, it } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';
 import { tiledExtension } from '../src/tiledExtension';
 import { TiledMap } from '../src/TiledMap';
-import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
-import { tiledSourceBinding } from '../src/tiledSourceBinding';
-
-function fakeLoader(): Loader {
-  return { load: vi.fn() } as unknown as Loader;
-}
+import { tiledSourceType } from '../src/tiledSourceType';
+import { tileMapType } from '../src/tileMapType';
 
 describe('@codexo/exojs-tiled extension descriptor', () => {
   it('has correct id', () => {
@@ -26,93 +21,64 @@ describe('@codexo/exojs-tiled extension descriptor', () => {
     expect(tiledExtension.dependencies).toContain(tilemapExtension);
   });
 
-  it('has exactly two asset bindings', () => {
+  it('installs exactly two asset types', () => {
     expect(tiledExtension.assets).toBeDefined();
     expect(tiledExtension.assets!.length).toBe(2);
   });
 
-  it('runtime binding (TileMap) is listed first', () => {
-    expect(tiledExtension.assets![0]).toBe(tiledRuntimeMapBinding);
+  it('the runtime type (TileMap) is listed first', () => {
+    expect(tiledExtension.assets![0]).toBe(tileMapType);
   });
 
-  it('source binding (TiledMap) is listed second', () => {
-    expect(tiledExtension.assets![1]).toBe(tiledSourceBinding);
+  it('the source type (TiledMap) is listed second', () => {
+    expect(tiledExtension.assets![1]).toBe(tiledSourceType);
   });
 
-  // ── tiledRuntimeMapBinding
-  it('runtime binding targets TileMap constructor', () => {
-    expect(tiledRuntimeMapBinding.ctor).toBe(TileMap);
+  it('the runtime type dispatches on the TileMap constructor and claims .tmj', () => {
+    expect(tileMapType._token).toBe(TileMap);
+    expect(tileMapType.id).toBe('tileMap');
+    expect(tileMapType.extensions).toEqual(['tmj']);
   });
 
-  it('runtime binding has typeNames ["tileMap"]', () => {
-    expect(tiledRuntimeMapBinding.typeNames).toEqual(['tileMap']);
-  });
-
-  it('runtime binding claims the .tmj file extension', () => {
-    expect((tiledRuntimeMapBinding as { extensions?: readonly string[] }).extensions).toEqual(['tmj']);
-  });
-
-  // ── tiledSourceBinding (advanced/source)
-  it('source binding targets TiledMap constructor', () => {
-    expect(tiledSourceBinding.ctor).toBe(TiledMap);
-  });
-
-  it('source binding has typeNames ["tiledSource"]', () => {
-    expect(tiledSourceBinding.typeNames).toEqual(['tiledSource']);
-  });
-
-  it('source binding does NOT claim file extensions (token-only)', () => {
-    expect((tiledSourceBinding as { extensions?: unknown }).extensions).toBeUndefined();
+  it('the source type dispatches on the TiledMap constructor and claims no suffix', () => {
+    expect(tiledSourceType._token).toBe(TiledMap);
+    expect(tiledSourceType.id).toBe('tiledSource');
+    expect(tiledSourceType.extensions).toEqual([]);
   });
 
   it('buildSnapshot([tiledExtension]) materializes tilemapExtension before tiledExtension', () => {
     const snapshot = buildSnapshot([tiledExtension]);
+
     expect(snapshot.extensions.map(e => e.id)).toEqual(['@codexo/exojs-tilemap', '@codexo/exojs-tiled']);
   });
 
-  it('buildSnapshot([tiledExtension]) collects both asset bindings', () => {
+  it('buildSnapshot([tiledExtension]) collects both asset types', () => {
     const snapshot = buildSnapshot([tiledExtension]);
+
     expect(snapshot.assets).toHaveLength(2);
-    expect(snapshot.assets).toContain(tiledRuntimeMapBinding);
-    expect(snapshot.assets).toContain(tiledSourceBinding);
+    expect(snapshot.assets).toContain(tileMapType);
+    expect(snapshot.assets).toContain(tiledSourceType);
   });
 
   it('buildSnapshot([tiledExtension]) pulls in the tilemap renderer binding (one-extension rendering)', () => {
     const snapshot = buildSnapshot([tiledExtension]);
+
     // The tilemap dependency contributes its tile chunk renderer binding, so a
     // Tiled-only setup can both load AND render without manual registration.
     expect(snapshot.renderers).toHaveLength(1);
   });
 });
 
-describe('@codexo/exojs-tiled asset handler — tiledSourceBinding', () => {
-  it('create() returns an object with a load function', () => {
-    const handler = tiledSourceBinding.create(fakeLoader());
-    expect(typeof handler.load).toBe('function');
+describe('the two Tiled types agree on the format they discriminate by', () => {
+  it('contributes only the format - the loader owns type and locator', () => {
+    expect(tiledSourceType.resourceIdentity!({ source: 'world.tmj' })).toBe('tiled');
+    expect(tiledSourceType.resourceIdentity!({ source: 'other.tmj' })).toBe('tiled');
   });
 
-  it('create() returns an object with a getIdentityDiscriminator function', () => {
-    const handler = tiledSourceBinding.create(fakeLoader());
-    expect(typeof handler.getIdentityDiscriminator).toBe('function');
-  });
-});
+  it('the runtime type and the source type answer the same, and the loader keeps their keys apart by id', () => {
+    const request = { source: 'world.tmj' };
 
-describe('tiledSourceBinding.getIdentityDiscriminator', () => {
-  const handler = tiledSourceBinding.create(fakeLoader());
-
-  it('contributes only the format — the loader owns type and locator', () => {
-    expect(handler.getIdentityDiscriminator!({ source: 'world.tmj' })).toBe('tiled');
-    expect(handler.getIdentityDiscriminator!({ source: 'other.tmj' })).toBe('tiled');
+    expect(tileMapType.resourceIdentity!(request)).toBe(tiledSourceType.resourceIdentity!(request));
+    expect(tileMapType.id).not.toBe(tiledSourceType.id);
   });
 });
-
-describe('tiledRuntimeMapBinding and tiledSourceBinding discriminators', () => {
-  it('agree on the format, and the loader keeps their keys apart by type', () => {
-    const runtimeHandler = tiledRuntimeMapBinding.create(fakeLoader());
-    const sourceHandler = tiledSourceBinding.create(fakeLoader());
-    const req = { source: 'world.tmj' };
-
-    expect(runtimeHandler.getIdentityDiscriminator!(req)).toBe(sourceHandler.getIdentityDiscriminator!(req));
-  });
-});
-

@@ -1,6 +1,6 @@
 {
   "title": "AssetEntry",
-  "description": "One entry of an Extension's `assets` list: a first-class AssetType, or a constructor-bound AssetBinding. An `AssetType` carries its own stable identity, identity hooks, source codec and factory provider, and is the form new types should take. An `AssetBinding` binds a handler to a runtime constructor instead, and is what the built-in types still use.",
+  "description": "One entry of an Extension's `assets` list: a first-class AssetType. The type carries its own stable identity, identity hooks, source codec and factory provider, and is installed on the applications that list it and on no other - importing the module that defines it installs nothing.",
   "symbol": "AssetEntry",
   "kind": "type",
   "subsystem": "extensions",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "One entry of an Extension's `assets` list: a first-class AssetType, or a constructor-bound AssetBinding.",
-        "An `AssetType` carries its own stable identity, identity hooks, source codec and factory provider, and is the form new types should take. An `AssetBinding` binds a handler to a runtime constructor instead, and is what the built-in types still use."
+        "One entry of an Extension's `assets` list: a first-class AssetType.",
+        "The type carries its own stable identity, identity hooks, source codec and factory provider, and is installed on the applications that list it and on no other - importing the module that defines it installs nothing."
       ],
       "importLine": "import { AssetEntry } from '@codexo/exojs/extensions'",
       "sourceLink": null
@@ -31,18 +31,10 @@
       "members": [
         {
           "name": "AssetEntry",
-          "signature": "AnyAssetType | AssetBinding",
+          "signature": "AnyAssetType",
           "signatureTokens": [
             {
               "text": "AnyAssetType",
-              "kind": "type"
-            },
-            {
-              "text": " | ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetBinding",
               "kind": "type"
             }
           ],

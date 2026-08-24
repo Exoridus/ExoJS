@@ -1,15 +1,16 @@
-import { createLeaf } from '#assets/assetKindRegistry';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { WeakHandleSet } from '#assets/WeakHandleSet';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
+
+import { createBuiltinLeaf } from './builtin-leaf';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling suites). */
 function createCoreLoader(): Loader {
   const loader = new Loader();
   const owner = loader.createScope({ name: 'owner' });
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
 
@@ -148,7 +149,7 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
     expect(donor.source).not.toBeNull();
 
     // A distinct leaf for the SAME source (what Assets.from() hands back).
-    const coHandle = createLeaf('texture', 'x.png') as Texture;
+    const coHandle = createBuiltinLeaf('texture', 'x.png') as Texture;
     expect(coHandle).not.toBe(donor);
 
     loader._adopt(coHandle, loader.createScope({ name: 'adopter' }));
@@ -171,7 +172,7 @@ describe('deferred handle bookkeeping (audit A4 / A5)', () => {
     const donor = owner.get('x.png'); // claims under the app-lifetime root scope
     await donor.loaded;
 
-    const coHandle = createLeaf('texture', 'x.png') as Texture;
+    const coHandle = createBuiltinLeaf('texture', 'x.png') as Texture;
     loader._adopt(coHandle, adopter); // claims under `adopter`
     expect(coHandle.source).not.toBeNull();
 

@@ -1,13 +1,13 @@
 import { Assets } from '#assets/Assets';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { logger, LogSeverity } from '#core/logging';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts). */
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
 

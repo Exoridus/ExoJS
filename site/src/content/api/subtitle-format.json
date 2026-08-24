@@ -1,0 +1,71 @@
+{
+  "title": "SubtitleFormat",
+  "description": "The two subtitle formats the built-in `subtitle` type reads.",
+  "symbol": "SubtitleFormat",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The two subtitle formats the built-in `subtitle` type reads."
+      ],
+      "importLine": "import { SubtitleFormat } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SubtitleFormat",
+          "signature": "\"srt\" | \"vtt\"",
+          "signatureTokens": [
+            {
+              "text": "\"srt\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"vtt\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/factories/parseSubtitles.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/parseSubtitles.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/factories/parseSubtitles.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/parseSubtitles.ts"
+}

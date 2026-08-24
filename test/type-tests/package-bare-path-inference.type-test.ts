@@ -48,9 +48,9 @@ type _LdtkLoadResolves = Expect<Equal<typeof ldtkQueue, LoadingQueue<LdtkMap>>>;
 
 // ── get() must agree with the RUNTIME leaf shape ─────────────────────────────
 //
-// `defineAsset` computes `isValue` at runtime as `isValue ?? seamless === undefined`,
-// so a package binding that ships no seamless adapter hands out an `AssetRef`
-// wrapper - never the bare resource. `LeafForPath` decides the same question
+// An asset type's `leaf` defaults to `'ref'` at runtime, so a package type
+// that ships no seamless adapter hands out an `AssetRef` wrapper - never the
+// bare resource. `LeafForPath` decides the same question
 // from `ValueAssetKind`, which the package mirrors with `isValue: true` on its
 // `AssetDefinitions` entry. If the two ever drift, `get(path)` type-checks as
 // the unwrapped resource while returning an `AssetRef` at runtime, and

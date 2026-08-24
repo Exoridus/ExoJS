@@ -1,16 +1,16 @@
-import type { AssetBinding, Extension } from '@codexo/exojs/extensions';
+import type { Extension } from '@codexo/exojs/extensions';
 import { tilemapExtension } from '@codexo/exojs-tilemap';
 
-import { tiledRuntimeMapBinding } from './tiledRuntimeMapBinding';
-import { tiledSourceBinding } from './tiledSourceBinding';
+import { tiledSourceType } from './tiledSourceType';
+import { tileMapType } from './tileMapType';
 
 /**
  * Default immutable Tiled extension descriptor.
  *
- * Registers two asset bindings:
- * - {@link tiledRuntimeMapBinding} - `loader.load(Asset.type('tileMap', 'world.tmj'))` →
- *   returns a format-independent runtime {@link TileMap} (common case).
- * - {@link tiledSourceBinding} - `loader.load(Asset.type('tiledSource', 'world.tmj'))` →
+ * Installs two asset types:
+ * - {@link tileMapType} - `loader.load(tileMapType.asset('world.tmj'))` returns
+ *   a format-independent runtime {@link TileMap} (common case).
+ * - {@link tiledSourceType} - `loader.load(tiledSourceType.asset('world.tmj'))`
  *   returns the raw parsed {@link TiledMap} source model (advanced/diagnostic).
  *
  * Depends on {@link tilemapExtension} so that snapshot construction always
@@ -22,9 +22,7 @@ import { tiledSourceBinding } from './tiledSourceBinding';
 export const tiledExtension: Extension = Object.freeze({
   id: '@codexo/exojs-tiled',
   dependencies: [tilemapExtension],
-  // Localized erasure cast: typed bindings (Options=TiledLoadOptions) meet the
-  // untyped Extension.assets contract here. Runtime behavior is unaffected -
-  // materializeAssetBindings calls create() and bindAsset() correctly regardless
-  // of the erased Options type.
-  assets: [tiledRuntimeMapBinding, tiledSourceBinding] as unknown as AssetBinding[],
+  // Localized erasure cast: typed types (Options=TiledLoadOptions) meet the
+  // untyped Extension.assets contract here. Runtime behavior is unaffected.
+  assets: [tileMapType, tiledSourceType],
 });

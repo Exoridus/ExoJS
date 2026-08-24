@@ -35,6 +35,14 @@ export interface AssetFactoryContext<Options = undefined> {
    * cancellation channel.
    */
   readonly signal?: AbortSignal | undefined;
+  /**
+   * The source as the request named it, before base-path resolution.
+   *
+   * A reference the asset itself carries - a font's page image, an atlas's
+   * sheet - is relative to this, not to the resolved URL: resolving it here and
+   * loading the result would apply the loader's base path to it a second time.
+   */
+  readonly source: string;
   /** The canonical locator the source data was acquired from. */
   readonly locator: AssetLocator;
   /** The identity of the resource being built. */

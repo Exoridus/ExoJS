@@ -12,14 +12,13 @@ import type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 import type { AssetRef } from './AssetRef';
 
 /**
- * Every asset type known to the engine, keyed by its `type` string.
+ * Every built-in asset type, keyed by its id, plus whatever extension packages
+ * declaration-merge into it.
  *
- * Extension packages add their own via declaration merging. An entry declares
- * the runtime `resource` it produces and the `config` it accepts; it may also
- * carry `isValue: true` to mirror a binding whose leaf is a deferred
- * {@link AssetRef} rather than a heal-in-place handle - required whenever
- * `defineAsset` is called without a `seamless` adapter (see
- * {@link ValueAssetKind}).
+ * An entry declares the runtime `resource` it produces and the `config` it
+ * accepts; it may also carry `isValue: true` to mirror a type whose leaf is a
+ * deferred {@link AssetRef} rather than a heal-in-place handle - required for
+ * every type that ships no seamless adapter (see {@link ValueAssetKind}).
  */
 export interface AssetDefinitions {
   bmFont: { resource: BmFont; config: { source: string } };
@@ -59,11 +58,10 @@ export interface AssetDefinitions {
   text: { resource: string; config: { source: string } };
   font: { resource: FontFace; config: { source: string; family: string; descriptors?: FontFaceDescriptors; addToDocument?: boolean } };
   binary: { resource: ArrayBuffer; config: { source: string } };
-  vtt: { resource: VTTCue[]; config: { source: string } };
+  subtitle: { resource: VTTCue[]; config: { source: string } };
   wasm: { resource: WebAssembly.Module; config: { source: string } };
   xml: { resource: Document; config: { source: string } };
   csv: { resource: string[][]; config: { source: string; delimiter?: string } };
-  srt: { resource: VTTCue[]; config: { source: string } };
 }
 
 /**
@@ -86,25 +84,24 @@ export type AnyAssetConfig = {
 
 /**
  * The built-in types whose catalog leaf is a deferred {@link AssetRef} rather
- * than a heal-in-place resource handle - the type-level mirror of the core
- * `isValue: true` registrations in `coreAssetBindings.ts`.
+ * than a heal-in-place resource handle - the type-level mirror of the built-in
+ * types whose `leaf` is `'ref'`.
  *
  * A structural `R extends object` heuristic cannot classify these, because
  * several value resources (`Document`, `VTTCue[]`, `ArrayBuffer`,
  * `WebAssembly.Module`) are object types; only an explicit type list is correct.
  */
-export type CoreValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'srt' | 'vtt' | 'binary' | 'wasm';
+export type CoreValueAssetKind = 'json' | 'text' | 'csv' | 'xml' | 'subtitle' | 'binary' | 'wasm';
 
 /**
  * Types that a declaration-merged {@link AssetDefinitions} entry marks as value
  * types with `isValue: true`.
  *
- * `defineAsset` decides this at RUNTIME as `isValue ?? seamless === undefined`,
- * so a binding that ships no seamless adapter - the common case for a package
- * type like `tileMap` or `ldtkMap` - is a value type and hands out an
- * `AssetRef`. The type system cannot see seamless adapters, so an extension
- * package that omits `seamless` must say so here, or `get(...)` would be typed
- * as the bare resource while returning an `AssetRef` wrapper at runtime.
+ * A type decides this at RUNTIME through its `leaf`, which defaults to `'ref'`
+ * - the common case for a package type like `tileMap` or `ldtkMap`. The type
+ * system cannot see a runtime leaf strategy, so an extension package whose type
+ * hands out an `AssetRef` must say so here, or `get(...)` would be typed as the
+ * bare resource while returning an `AssetRef` wrapper at runtime.
  *
  * ```ts
  * declare module '@codexo/exojs' {
@@ -142,15 +139,15 @@ export type InferAssetResource<I extends AssetInput> =
         : never;
 
 // ---------------------------------------------------------------------------
-// Type-level bare-path inference (mirror of the runtime extensionKindRegistry)
+// Type-level bare-path inference (mirror of the runtime built-in suffix table)
 // ---------------------------------------------------------------------------
 
 /**
- * Type-level twin of the runtime `extensionKindRegistry`: file suffix → asset
- * type, for bare-string path inference in `Assets.from()`/`get()`/`load()`.
- * Restricted to LEAF-CAPABLE types, exactly mirroring the
- * runtime `registerExtensionKind` calls made by `defineAsset`. This is the
- * single declaration-merging surface for bare-path suffix inference:
+ * Type-level twin of the built-in suffix table: file suffix to asset type, for
+ * bare-string path inference in `Assets.from()`/`get()`/`load()`. Restricted to
+ * types that hand out a catalog leaf, exactly mirroring the runtime table built
+ * from the built-in types' own `extensions`. This is the single
+ * declaration-merging surface for bare-path suffix inference:
  * ```ts
  * declare module '@codexo/exojs' {
  *   interface ExtensionKindMap { 'atlas.json': 'spriteAtlas'; }
@@ -173,8 +170,8 @@ export interface ExtensionKindMap {
   txt: 'text';
   csv: 'csv';
   xml: 'xml';
-  vtt: 'vtt';
-  srt: 'srt';
+  vtt: 'subtitle';
+  srt: 'subtitle';
   bin: 'binary';
   wasm: 'wasm';
 }

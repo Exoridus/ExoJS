@@ -1,10 +1,30 @@
 import type { Asset } from './Asset';
 import { AssetImpl } from './Asset';
+import type { AssetConstructor } from './AssetConstructor';
 import type { AnyAssetConfig } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import type { AssetSourceCodec } from './AssetSourceCodec';
 import type { CacheLayout } from './CacheLayout';
+import type { SeamlessAdapter } from './seamless';
 import { SingleEntryLayout } from './SingleEntryLayout';
+
+/**
+ * What an asset type hands out for one of its assets inside a catalog, before
+ * the payload has arrived.
+ *
+ * `'ref'` hands out a deferred {@link AssetRef} that resolves once the load
+ * settles - the right shape for a decoded value nobody can render early.
+ *
+ * A {@link SeamlessAdapter} hands out the resource itself, empty, and
+ * transplants the payload into that same object when it arrives, so consumers
+ * wired to it need no re-wiring.
+ *
+ * `'none'` declares that the type has no meaningful placeholder at all. Its
+ * assets cannot appear in a catalog by bare path and must be named explicitly
+ * with {@link AssetType.asset}.
+ * @advanced
+ */
+export type AssetLeaf<Resource> = 'ref' | 'none' | SeamlessAdapter<Resource>;
 
 /**
  * One request for an asset of a given type, as an identity hook sees it.
@@ -33,7 +53,8 @@ export interface AssetRequest<Options = undefined> {
  * - when two requests are the same runtime resource ({@link resourceIdentity});
  * - when two requests acquire the same source data ({@link sourceIdentity});
  * - how a representation is read ({@link codec}), laid out in a cache
- *   ({@link layout}) and turned into a resource ({@link createFactory}).
+ *   ({@link layout}) and turned into a resource ({@link createFactory});
+ * - what a catalog hands out before the payload arrives ({@link leaf}).
  *
  * Acquisition, caching and residency are the loader's, and the type is
  * deliberately given no way to reach them.
@@ -91,8 +112,38 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
    */
   public readonly extensions: readonly string[] = [];
 
-  /** How an acquired representation is read back into the source a factory consumes. */
-  public abstract readonly codec: AssetSourceCodec<Source, Stored>;
+  /**
+   * What this type hands out for one of its assets in a catalog, before the
+   * payload arrives.
+   *
+   * The default is a deferred {@link AssetRef}. A type whose resource can be
+   * handed out empty and healed in place supplies a {@link SeamlessAdapter}
+   * instead; a type with no meaningful placeholder declares `'none'`, which
+   * also takes its suffixes out of bare-path catalog resolution.
+   */
+  public readonly leaf: AssetLeaf<Resource> = 'ref';
+
+  /**
+   * The constructor the loader dispatches this type on, for a type whose
+   * resource has a public class callers already name.
+   *
+   * Constructor-addressed loader APIs (`scope.release(Texture, 'hero.png')`,
+   * `loader.keyFor`, `onLoaded`) answer with this. A type that supplies none is
+   * given a loader-local token, which those APIs then report instead.
+   * @internal
+   */
+  public readonly _token?: AssetConstructor;
+
+  /**
+   * How an acquired representation is read back into the source a factory
+   * consumes.
+   *
+   * Required for every type the loader acquires data for, which is nearly all
+   * of them. A type whose {@link unacquiredSource} always answers has no
+   * representation to read and needs none; a type that reaches acquisition
+   * without one fails that load with a message saying so.
+   */
+  public readonly codec?: AssetSourceCodec<Source, Stored>;
 
   /**
    * How an acquired representation is laid out when an application caches it.
@@ -117,6 +168,24 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
    * here and torn down with the loader.
    */
   public abstract createFactory(): AssetFactory<Source, Resource, Options>;
+
+  /**
+   * The source for a request the loader must NOT acquire data for.
+   *
+   * Returning a source skips acquisition completely: nothing is fetched,
+   * decoded or cached for that request, {@link codec} is never consulted, and
+   * the factory receives what this returns, built from the resolved `url`
+   * alone. Returning `undefined` acquires normally.
+   *
+   * Two kinds of asset need this. One transports its own data - a media element
+   * streaming from a URL, where downloading the whole file up front is exactly
+   * what streaming avoids. The other has no source data of its own at all,
+   * because it is derived from assets its factory loads as dependencies.
+   *
+   * The result is wrapped so that a type whose source is legitimately
+   * `undefined` can still say "do not acquire".
+   */
+  public unacquiredSource?(request: AssetRequest<Options>, url: string): { readonly source: Source } | undefined;
 
   /**
    * The part of a request's identity the source alone does not capture: what
@@ -168,7 +237,7 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
     // lifting that constraint is what this API exists for - but both names are
     // resolved through the same app-local lookup, so the widening is a naming
     // question rather than a dispatch one.
-    return new AssetImpl({ type: this.id, source, ...(options ?? {}) } as unknown as AnyAssetConfig);
+    return new AssetImpl({ type: this.id, source, ...(options ?? {}) } as unknown as AnyAssetConfig, this as AnyAssetType);
   }
 }
 

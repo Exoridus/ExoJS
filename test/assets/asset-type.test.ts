@@ -5,7 +5,7 @@ import { type AssetSourceCodec, jsonSourceCodec, textSourceCodec } from '#assets
 import { type AnyAssetType, type AssetRequest, AssetType } from '#assets/AssetType';
 import { Loader } from '#assets/Loader';
 import type { Extension } from '#extensions/Extension';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 import { createCacheStoreDouble } from './cache-test-doubles';
 
@@ -33,7 +33,7 @@ let nextFactoryId = 1;
 class WorldAssetType extends AssetType<WorldData, World, WorldOptions, string> {
   public readonly id: string = 'com.example.world';
   public override readonly extensions: readonly string[] = ['world'];
-  public readonly codec = jsonSourceCodec as AssetSourceCodec<WorldData, string>;
+  public override readonly codec = jsonSourceCodec as AssetSourceCodec<WorldData, string>;
 
   public override resourceIdentity({ options }: AssetRequest<WorldOptions>): string {
     return options?.palette === undefined ? '' : `palette=${options.palette}`;
@@ -61,7 +61,7 @@ class WorldAssetType extends AssetType<WorldData, World, WorldOptions, string> {
 class NoteAssetType extends AssetType<string, string[]> {
   public readonly id: string = 'com.example.note';
   public override readonly extensions: readonly string[] = ['note'];
-  public readonly codec: AssetSourceCodec<string> = textSourceCodec;
+  public override readonly codec: AssetSourceCodec<string> = textSourceCodec;
 
   public createFactory(): AssetFactory<string, string[]> {
     return { create: text => Promise.resolve(text.split('\n')) };
@@ -76,7 +76,7 @@ function extensionFor(...assets: AnyAssetType[]): Extension {
 function createLoader(types: readonly AnyAssetType[]): Loader {
   const loader = new Loader({ basePath: 'https://assets.test/' });
 
-  materializeAssetBindings(loader, types);
+  materializeAssetTypes(loader, types);
 
   return loader;
 }
@@ -206,7 +206,7 @@ describe('AssetType installation locality', () => {
   test('installing one id twice on one application is a named error', () => {
     const loader = new Loader();
 
-    expect(() => materializeAssetBindings(loader, [new WorldAssetType(), new WorldAssetType()])).toThrow(
+    expect(() => materializeAssetTypes(loader, [new WorldAssetType(), new WorldAssetType()])).toThrow(
       /Asset type id "com\.example\.world" is already installed on this application/,
     );
   });
@@ -216,14 +216,14 @@ describe('AssetType installation locality', () => {
       public override readonly id = '';
     }
 
-    expect(() => materializeAssetBindings(new Loader(), [new NamelessType()])).toThrow(/"id" must be a non-empty string/);
+    expect(() => materializeAssetTypes(new Loader(), [new NamelessType()])).toThrow(/needs a non-empty string id/);
   });
 
   test('a type installed through an Extension descriptor reaches the loader', () => {
     const worldType = new WorldAssetType();
     const loader = new Loader();
 
-    materializeAssetBindings(loader, [...(extensionFor(worldType).assets ?? [])]);
+    materializeAssetTypes(loader, [...(extensionFor(worldType).assets ?? [])]);
 
     expect(loader.hasAssetType('com.example.world')).toBe(true);
   });
@@ -299,7 +299,7 @@ describe('AssetType factory boundary', () => {
   test('the factory context exposes no fetch, cache store or cache policy', async () => {
     const context = await captureContext();
 
-    expect(Object.keys(context).sort()).toEqual(['dependencies', 'locator', 'options', 'resourceKey', 'signal', 'sourceKey']);
+    expect(Object.keys(context).sort()).toEqual(['dependencies', 'locator', 'options', 'resourceKey', 'signal', 'source', 'sourceKey']);
 
     for (const reachable of ['fetch', 'fetchText', 'fetchJson', 'fetchArrayBuffer', 'cache', 'stores', 'cacheStrategy', 'loader']) {
       expect(reachable in context).toBe(false);
@@ -440,7 +440,7 @@ describe('AssetType source-variant storage', () => {
     const worldType = new WorldAssetType();
     const loader = new Loader({ basePath: 'https://assets.test/', cache: store });
 
-    materializeAssetBindings(loader, [worldType]);
+    materializeAssetTypes(loader, [worldType]);
 
     await loader.load(worldType.asset('level.world', { locale: 'de' }));
     await loader.load(worldType.asset('level.world', { locale: 'en' }));

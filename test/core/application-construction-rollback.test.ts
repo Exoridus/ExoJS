@@ -15,12 +15,14 @@ import { SceneDirector } from '#core/SceneDirector';
 import { ResponsiveCanvasSizing } from '#core/sizing/ResponsiveCanvasSizing';
 import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
-import type { AssetBinding, Extension } from '#extensions/Extension';
+import type { Extension } from '#extensions/Extension';
 import { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 import { RenderingContext } from '#rendering/RenderingContext';
+
+import { testAssetType } from '../assets/test-asset-type';
 
 const { destroyOrder } = vi.hoisted(() => ({ destroyOrder: [] as string[] }));
 
@@ -278,11 +280,10 @@ describe('Application construction rollback', () => {
     recordDestroy(BrowserPlatform.prototype, 'platform');
     recordDestroy(Loader.prototype, 'loader');
 
-    const ctor = class Duplicate {} as unknown as AssetBinding['ctor'];
-    const binding: AssetBinding = { ctor, create: () => ({}) as never };
-    const extension: Extension = { id: 'duplicate-asset', assets: [binding, binding] };
+    const duplicate = testAssetType({ id: 'duplicate', create: async source => source });
+    const extension: Extension = { id: 'duplicate-asset', assets: [duplicate, duplicate] };
 
-    expect(() => new Application({ backend: { type: 'webgl2' }, extensions: [extension] })).toThrow(/already registered/);
+    expect(() => new Application({ backend: { type: 'webgl2' }, extensions: [extension] })).toThrow(/already installed/);
 
     // Backend, rendering, input, interaction and scenes were never built, so
     // they must not appear - and must not throw on an unassigned field either.

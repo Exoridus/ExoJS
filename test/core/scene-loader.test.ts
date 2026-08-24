@@ -1,9 +1,9 @@
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneLoader } from '#core/scene/SceneLoader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 // SoundFactory.create() decodes bytes via the shared OfflineAudioContext
 // (`decodeAudioData` from '#audio/audio-context'). jsdom has no real audio
@@ -33,7 +33,7 @@ function mockFetchAudio(): void {
 function makeAppWithAudio(): { app: Application; fetchMock: typeof fetch } {
   mockFetchAudio();
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   const app = { loader } as unknown as Application;
 
   return { app, fetchMock: global.fetch };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveSubAssetPath } from '#assets/coreAssetBindings';
+import { resolveSubAssetPath } from '#assets/utils';
 
 describe('resolveSubAssetPath', () => {
   it('returns absolute refs unchanged', () => {

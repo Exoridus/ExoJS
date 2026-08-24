@@ -1,74 +1,19 @@
-import { readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
-
-import { type AssetLoaderContext,Texture, View } from '@codexo/exojs';
+import { View } from '@codexo/exojs';
 import { ChunkStreamer, ImageLayer, TileLayer, TileMap, TileSet } from '@codexo/exojs-tilemap';
-import { describe, expect, it,vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { loadTiledMap } from '../src/loadTiledMap';
 import { TiledGroupLayer, TiledImageLayer, TiledObjectLayer, TiledTileLayer } from '../src/TiledLayer';
-import { tiledRuntimeMapBinding } from '../src/tiledRuntimeMapBinding';
 import { TiledFormatError } from '../src/validate';
+import { loadFixture, makeTiledContext } from './type-context';
 
-// ── Fixture loading ──────────────────────────────────────────────────────────
-
-const PKG_DIR = basename(process.cwd()) === 'exojs-tiled' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-tiled');
-const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
-
-function loadFixture(name: string): unknown {
-  return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
-}
-
-// ── Mock context factory ─────────────────────────────────────────────────────
-//
-// loader.load resolves Texture sub-loads (sized to match each fixture atlas so
-// the runtime TileSet's atlas-dimension validation passes) and TiledMap
-// sub-loads (used by the runtime binding to share the Loader cache).
-
+// Texture sizes for the fixtures that declare a specific atlas.
 const TEXTURE_SIZES: Record<string, { w: number; h: number }> = {
   'tiles-a.png': { w: 64, h: 32 },
   'tiles-b.png': { w: 80, h: 20 },
 };
 
 function makeContext(fixtures: Record<string, unknown>) {
-  const loaderLoad = vi.fn();
-
-  const fetchJson = vi.fn(async (source: string): Promise<unknown> => {
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
-      throw new Error(`toTileMap.test: no fixture for "${source}"`);
-    });
-
-  const context: AssetLoaderContext = {
-    loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
-    scope: { load: loaderLoad } as unknown as AssetLoaderContext['scope'],
-    resourceKey: 'test',
-    sourceKey: 'test',
-    locator: 'url:test',
-    resolveUrl: (source: string) => source,
-    fetchText: vi.fn(),
-    fetchArrayBuffer: vi.fn(),
-    fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
-  };
-
-  loaderLoad.mockImplementation(async (token: unknown): Promise<unknown> => {
-    // Both Texture and TiledMap sub-loads now arrive as `Asset.type(kind, src)` descriptors
-    // (asset form); read the source from the descriptor.
-    const asset = token as { type?: unknown; source?: unknown } | null;
-    if (asset?.type === 'texture') {
-      const src = asset.source as string;
-      const tex = new Texture();
-      const size = TEXTURE_SIZES[src] ?? { w: 256, h: 256 };
-      tex.width = size.w;
-      tex.height = size.h;
-      return tex;
-    }
-    if (asset?.type === 'tiledSource') {
-      return loadTiledMap(asset.source as string, context);
-    }
-    throw new Error(`toTileMap.test: unexpected loader.load token: ${String(token)}`);
-  });
-
-  return { context, loaderLoad };
+  return makeTiledContext(fixtures, TEXTURE_SIZES);
 }
 
 const richFixtures = {
@@ -92,10 +37,10 @@ const EXPECTED_FLIPS: readonly { flipX: boolean; flipY: boolean; diagonal: boole
 // ── Source-model parsing breadth ─────────────────────────────────────────────
 
 describe('TiledMap source model — orthogonal-rich.tmj', () => {
-  const { context } = makeContext(richFixtures);
+  const { loadSource } = makeContext(richFixtures);
 
   it('parses two tilesets sorted by firstGid (embedded + external)', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     expect(map.tilesets).toHaveLength(2);
     expect(map.tilesets[0].name).toBe('tiles-a');
     expect(map.tilesets[0].firstGid).toBe(1);
@@ -105,13 +50,13 @@ describe('TiledMap source model — orthogonal-rich.tmj', () => {
   });
 
   it('preserves spacing and margin from the external .tsj', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     expect(map.tilesets[1].spacing).toBe(4);
     expect(map.tilesets[1].margin).toBe(2);
   });
 
   it('parses all four layer types (tile, object, image, group)', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     expect(map.layers).toHaveLength(4);
     expect(map.layers[0]).toBeInstanceOf(TiledTileLayer);
     expect(map.layers[1]).toBeInstanceOf(TiledObjectLayer);
@@ -120,7 +65,7 @@ describe('TiledMap source model — orthogonal-rich.tmj', () => {
   });
 
   it('preserves layer offsets, opacity, visibility, and properties', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     const ground = map.layers[0] as TiledTileLayer;
     expect(ground.offsetX).toBe(8);
     expect(ground.offsetY).toBe(-4);
@@ -130,14 +75,14 @@ describe('TiledMap source model — orthogonal-rich.tmj', () => {
   });
 
   it('preserves map properties and tile-level properties', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     expect(map.getProperty('mood')?.value).toBe('calm');
     const tileDef = map.tilesets[0].getTile(0);
     expect(tileDef?.properties?.find(p => p.name === 'solid')?.value).toBe(true);
   });
 
   it('parses object-layer objects including a tile-object gid', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     const objects = (map.layers[1] as TiledObjectLayer).objects;
     expect(objects).toHaveLength(3);
     expect(objects[0].name).toBe('hero');
@@ -147,7 +92,7 @@ describe('TiledMap source model — orthogonal-rich.tmj', () => {
   });
 
   it('preserves a group layer with a nested tile layer', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     const group = map.layers[3] as TiledGroupLayer;
     expect(group.layers).toHaveLength(1);
     expect(group.layers[0]).toBeInstanceOf(TiledTileLayer);
@@ -158,30 +103,29 @@ describe('TiledMap source model — orthogonal-rich.tmj', () => {
 // ── toTileMap conversion ─────────────────────────────────────────────────────
 
 describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
-  const { context, loaderLoad } = makeContext(richFixtures);
+  const { loadSource, load } = makeContext(richFixtures);
 
   it('is synchronous and performs no I/O', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
-    loaderLoad.mockClear();
-    (context.fetchJson as ReturnType<typeof vi.fn>).mockClear();
+    const map = await loadSource('orthogonal-rich.tmj');
+
+    load.mockClear();
 
     const runtime = map.toTileMap();
 
     expect(runtime).toBeInstanceOf(TileMap);
     expect(runtime).not.toBeInstanceOf(Promise);
-    expect(loaderLoad).not.toHaveBeenCalled();
-    expect(context.fetchJson).not.toHaveBeenCalled();
+    expect(load).not.toHaveBeenCalled();
   });
 
   it('runtime.layers contains only tile layers (Spawns → objectLayers, Background → imageLayers, group flattened)', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     const runtime = map.toTileMap();
     // Ground + DecorTiles (flattened out of the group); object/image layers are separate.
     expect(runtime.layers.map(l => l.name)).toEqual(['Ground', 'DecorTiles']);
   });
 
   it('converts both tilesets and transfers spacing/margin', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     const runtime = map.toTileMap();
     expect(runtime.tilesets).toHaveLength(2);
     const tsB = runtime.getTileset('tiles-b');
@@ -191,7 +135,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
   });
 
   it('decodes all 8 flip/transform combinations on the Ground layer', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     const runtime = map.toTileMap();
     const ground = runtime.getTileLayer('Ground')!;
 
@@ -206,7 +150,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
   });
 
   it('resolves multi-tileset GIDs to the correct runtime tileset', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     const runtime = map.toTileMap();
     const decor = runtime.getTileLayer('DecorTiles')!;
     const tile = decor.getTileAt(0, 0);
@@ -216,7 +160,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
   });
 
   it('carries map/layer/tileset metadata (class, tint, offset, background, renderorder, draworder)', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     const runtime = map.toTileMap();
 
     // Map level.
@@ -241,7 +185,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
   });
 
   it('carries per-tile properties and animation frames into the runtime tileset', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     const runtime = map.toTileMap();
     const tsA = runtime.getTileset('tiles-a')!;
 
@@ -262,7 +206,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
   });
 
   it('is deterministic across repeated calls and does not take texture ownership', async () => {
-    const map = await loadTiledMap('orthogonal-rich.tmj', context);
+    const map = await loadSource('orthogonal-rich.tmj');
     const first = map.toTileMap();
     const second = map.toTileMap();
 
@@ -280,7 +224,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
 // ── Direct (runtime binding) vs source (.toTileMap) equivalence ───────────────
 
 describe('runtime binding vs source.toTileMap() equivalence', () => {
-  const { context } = makeContext(richFixtures);
+  const { loadSource, loadRuntime } = makeContext(richFixtures);
 
   function sampleLayers(map: TileMap): unknown {
     return map.layers.map(layer => ({
@@ -308,8 +252,8 @@ describe('runtime binding vs source.toTileMap() equivalence', () => {
   }
 
   it('produces semantically equivalent runtime maps via both load paths', async () => {
-    const direct = await tiledRuntimeMapBinding.create(context.loader).load({ source: 'orthogonal-rich.tmj' }, context);
-    const source = await loadTiledMap('orthogonal-rich.tmj', context);
+    const direct = await loadRuntime('orthogonal-rich.tmj');
+    const source = await loadSource('orthogonal-rich.tmj');
     const converted = source.toTileMap();
 
     expect(direct).toBeInstanceOf(TileMap);
@@ -333,14 +277,14 @@ describe('TiledMap.toTileMap() — rejects maps it cannot convert faithfully', (
   };
 
   it('throws TiledFormatError for a non-orthogonal (isometric) map', async () => {
-    const { context } = makeContext({
+    const { loadSource } = makeContext({
       'iso.tmj': {
         type: 'map', version: '1.10', orientation: 'isometric', width: 2, height: 1,
         tilewidth: 16, tileheight: 16, infinite: false,
         layers: [baseLayer], tilesets: [baseTileset],
       },
     });
-    const map = await loadTiledMap('iso.tmj', context);
+    const map = await loadSource('iso.tmj');
     expect(() => map.toTileMap()).toThrow(TiledFormatError);
     expect(() => map.toTileMap()).toThrow(/orthogonal/);
   });
@@ -370,14 +314,14 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
   }
 
   it('getChunkSource returns undefined before toTileMap() has run', async () => {
-    const { context } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
-    const map = await loadTiledMap('inf.tmj', context);
+    const { loadSource } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
+    const map = await loadSource('inf.tmj');
     expect(map.getChunkSource(1)).toBeUndefined();
   });
 
   it('does not throw for infinite:true, and converts the layer as unbounded with width/height undefined', async () => {
-    const { context } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
-    const map = await loadTiledMap('inf.tmj', context);
+    const { loadSource } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
+    const map = await loadSource('inf.tmj');
     const runtime = map.toTileMap();
     const layer = runtime.getTileLayer('Ground')!;
     expect(layer.bounded).toBe(false);
@@ -386,7 +330,7 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
   });
 
   it('getChunkSource returns undefined for a non-chunked (finite) layer id, whose layer stays bounded', async () => {
-    const { context } = makeContext({
+    const { loadSource } = makeContext({
       'finite.tmj': {
         type: 'map', version: '1.10', orientation: 'orthogonal', width: 2, height: 1,
         tilewidth: 16, tileheight: 16, infinite: false,
@@ -397,7 +341,7 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
         tilesets: [baseTileset],
       },
     });
-    const map = await loadTiledMap('finite.tmj', context);
+    const map = await loadSource('finite.tmj');
     const runtime = map.toTileMap();
     const layer = runtime.getTileLayer('Ground')!;
     expect(layer.bounded).toBe(true);
@@ -407,8 +351,8 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
   });
 
   it('getChunkSource returns a ChunkSource for a chunked layer after toTileMap()', async () => {
-    const { context } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
-    const map = await loadTiledMap('inf.tmj', context);
+    const { loadSource } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
+    const map = await loadSource('inf.tmj');
     map.toTileMap();
     const source = map.getChunkSource(1);
     expect(source).toBeDefined();
@@ -416,21 +360,21 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
   });
 
   it('throws TiledFormatError for non-uniform on-disk chunk size within one layer', async () => {
-    const { context } = makeInfiniteMapContext([
+    const { loadSource } = makeInfiniteMapContext([
       { x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) },
       { x: 16, y: 0, width: 8, height: 8, data: new Array(64).fill(1) },
     ]);
-    const map = await loadTiledMap('inf.tmj', context);
+    const map = await loadSource('inf.tmj');
     expect(() => map.toTileMap()).toThrow(TiledFormatError);
     expect(() => map.toTileMap()).toThrow(/non-uniform/);
   });
 
   it('throws TiledFormatError for a chunk whose x is not aligned to the on-disk chunk width', async () => {
-    const { context } = makeInfiniteMapContext([
+    const { loadSource } = makeInfiniteMapContext([
       { x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) },
       { x: 8, y: 0, width: 16, height: 16, data: new Array(256).fill(1) },
     ]);
-    const map = await loadTiledMap('inf.tmj', context);
+    const map = await loadSource('inf.tmj');
     expect(() => map.toTileMap()).toThrow(TiledFormatError);
     expect(() => map.toTileMap()).toThrow(/misaligned/);
     expect(() => map.toTileMap()).toThrow(/layer 1/);
@@ -438,8 +382,8 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
   });
 
   it('getChunk returns null when no on-disk chunk overlaps the query', async () => {
-    const { context } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
-    const map = await loadTiledMap('inf.tmj', context);
+    const { loadSource } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);
+    const map = await loadSource('inf.tmj');
     map.toTileMap();
     const source = map.getChunkSource(1)!;
 
@@ -454,11 +398,11 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     // Two 16x16 on-disk chunks side by side (x=0 and x=16) both fall inside
     // runtime chunk (0,0)'s tile rect [0,32)x[0,32). Left chunk is gid 1
     // (tileset-local id 0), right chunk is gid 2 (tileset-local id 1).
-    const { context } = makeInfiniteMapContext([
+    const { loadSource } = makeInfiniteMapContext([
       { x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) },
       { x: 16, y: 0, width: 16, height: 16, data: new Array(256).fill(2) },
     ]);
-    const map = await loadTiledMap('inf.tmj', context);
+    const map = await loadSource('inf.tmj');
     map.toTileMap();
     const source = map.getChunkSource(1)!;
 
@@ -480,10 +424,10 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
   it('getChunk resolves flip flags through the same path as populateTileLayer', async () => {
     // 2147483649 = base gid 1 with the horizontal-flip flag (0x80000000) set -
     // same literal convention as fixtures/orthogonal-rich.tmj's flip-combination row.
-    const { context } = makeInfiniteMapContext([
+    const { loadSource } = makeInfiniteMapContext([
       { x: 0, y: 0, width: 16, height: 16, data: [2147483649, ...new Array(255).fill(0)] },
     ]);
-    const map = await loadTiledMap('inf.tmj', context);
+    const map = await loadSource('inf.tmj');
     map.toTileMap();
     const source = map.getChunkSource(1)!;
 
@@ -498,11 +442,11 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     // [-32,0) x [-32,0), so this only covers part of it).
     // On-disk chunk B at (x=0,y=0): gid 2 -> localTileId 1, fills tile rect
     // [0,16) x [0,16) (part of runtime chunk (0,0)'s [0,32) x [0,32)).
-    const { context } = makeInfiniteMapContext([
+    const { loadSource } = makeInfiniteMapContext([
       { x: -16, y: -16, width: 16, height: 16, data: new Array(256).fill(1) },
       { x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(2) },
     ]);
-    const map = await loadTiledMap('inf.tmj', context);
+    const map = await loadSource('inf.tmj');
     const runtime = map.toTileMap();
     const layer = runtime.getTileLayer('Ground')!;
     const source = map.getChunkSource(1)!;
@@ -531,10 +475,10 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
 });
 
 describe('TiledMap.toTileMap() — object layers', () => {
-  const { context } = makeContext(richFixtures);
+  const { loadSource } = makeContext(richFixtures);
 
   it('converts an objectgroup into a data-only ObjectLayer', async () => {
-    const tiled = await loadTiledMap('orthogonal-rich.tmj', context);
+    const tiled = await loadSource('orthogonal-rich.tmj');
     const runtime = tiled.toTileMap();
 
     expect(runtime.objectLayers).toHaveLength(1);
@@ -544,7 +488,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
   });
 
   it('maps a point object and a gid object to the right kinds with resolved tiles', async () => {
-    const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();
+    const runtime = (await loadSource('orthogonal-rich.tmj')).toTileMap();
     const layer = runtime.getObjectLayer('Spawns');
 
     const hero = layer?.getObjectByName('hero');
@@ -560,7 +504,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
   });
 
   it('reports a tile object at its bounding-box corner, not at the Tiled anchor', async () => {
-    const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();
+    const runtime = (await loadSource('orthogonal-rich.tmj')).toTileMap();
     const chest = runtime.getObjectLayer('Spawns')?.getObjectByName('chest');
 
     // The fixture stores chest at (32, 0) with a 16×16 body and no
@@ -574,7 +518,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
   });
 
   it('leaves a rotated tile object pivoting about the Tiled anchor, not about (x, y)', async () => {
-    const { context: rotatedContext } = makeContext({
+    const { loadSource: rotatedLoad } = makeContext({
       'rotated-tile-object.tmj': {
         type: 'map', version: '1.10', orientation: 'orthogonal',
         width: 4, height: 4, tilewidth: 16, tileheight: 16, infinite: false,
@@ -593,7 +537,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
       },
     });
 
-    const runtime = (await loadTiledMap('rotated-tile-object.tmj', rotatedContext)).toTileMap();
+    const runtime = (await rotatedLoad('rotated-tile-object.tmj')).toTileMap();
     const crate = runtime.getObjectLayer('Spawns')!.getObjectByName('crate')!;
 
     // The corner is derived from the UNROTATED anchor offset, and `rotation` is
@@ -605,7 +549,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
   });
 
   it('keeps the tileset tileoffset out of a tile object position, but reachable through its tileset', async () => {
-    const { context: offsetContext } = makeContext({
+    const { loadSource: offsetLoad } = makeContext({
       'tileoffset-object.tmj': {
         type: 'map', version: '1.10', orientation: 'orthogonal',
         width: 4, height: 4, tilewidth: 16, tileheight: 16, infinite: false,
@@ -625,7 +569,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
       },
     });
 
-    const runtime = (await loadTiledMap('tileoffset-object.tmj', offsetContext)).toTileMap();
+    const runtime = (await offsetLoad('tileoffset-object.tmj')).toTileMap();
     const crate = runtime.getObjectLayer('Spawns')!.getObjectByName('crate')!;
 
     // Object layers are data-only: nothing here draws a tile object, so the
@@ -642,7 +586,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
   });
 
   it('query selects objects by class/type', async () => {
-    const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();
+    const runtime = (await loadSource('orthogonal-rich.tmj')).toTileMap();
     const layer = runtime.getObjectLayer('Spawns');
 
     expect(layer?.query({ type: 'spawn' })).toHaveLength(1);
@@ -650,7 +594,7 @@ describe('TiledMap.toTileMap() — object layers', () => {
   });
 
   it('converts a text object to kind "text" with mapped TextStyle fields', async () => {
-    const runtime = (await loadTiledMap('orthogonal-rich.tmj', context)).toTileMap();
+    const runtime = (await loadSource('orthogonal-rich.tmj')).toTileMap();
     const layer = runtime.getObjectLayer('Spawns');
 
     const sign = layer?.getObjectByName('sign');
@@ -666,10 +610,10 @@ describe('TiledMap.toTileMap() — object layers', () => {
 });
 
 describe('TiledMap.toTileMap() — image layers', () => {
-  const { context } = makeContext(richFixtures);
+  const { loadSource } = makeContext(richFixtures);
 
   it('converts an imagelayer into a data-only ImageLayer with texture pre-loaded', async () => {
-    const tiled = await loadTiledMap('orthogonal-rich.tmj', context);
+    const tiled = await loadSource('orthogonal-rich.tmj');
     const runtime = tiled.toTileMap();
 
     expect(runtime.imageLayers).toHaveLength(1);
@@ -684,7 +628,7 @@ describe('TiledMap.toTileMap() — image layers', () => {
   });
 
   it('carries the image layer custom properties through toTileMap()', async () => {
-    const tiled = await loadTiledMap('orthogonal-rich.tmj', context);
+    const tiled = await loadSource('orthogonal-rich.tmj');
     const runtime = tiled.toTileMap();
 
     const layer = runtime.getImageLayer('Background');
@@ -702,7 +646,7 @@ describe('TiledMap.toTileMap() — combined document order (renderableLayers)', 
   const baseTile = { id: 1, name: 'TileA', type: 'tilelayer', visible: true, opacity: 1, x: 0, y: 0, width: 2, height: 1, data: [1, 1] };
 
   it('renderableLayers preserves flat tile -> image -> tile document order', async () => {
-    const { context } = makeContext({
+    const { loadSource } = makeContext({
       'order-flat.tmj': {
         type: 'map', version: '1.10', orientation: 'orthogonal',
         width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
@@ -714,7 +658,7 @@ describe('TiledMap.toTileMap() — combined document order (renderableLayers)', 
         tilesets: [baseTileset],
       },
     });
-    const tiled = await loadTiledMap('order-flat.tmj', context);
+    const tiled = await loadSource('order-flat.tmj');
     const runtime = tiled.toTileMap();
 
     const order = runtime.renderableLayers;
@@ -727,7 +671,7 @@ describe('TiledMap.toTileMap() — combined document order (renderableLayers)', 
   });
 
   it('renderableLayers preserves flattened document order when the image layer sits inside a group between two tile layers', async () => {
-    const { context } = makeContext({
+    const { loadSource } = makeContext({
       'order-grouped.tmj': {
         type: 'map', version: '1.10', orientation: 'orthogonal',
         width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
@@ -744,7 +688,7 @@ describe('TiledMap.toTileMap() — combined document order (renderableLayers)', 
         tilesets: [baseTileset],
       },
     });
-    const tiled = await loadTiledMap('order-grouped.tmj', context);
+    const tiled = await loadSource('order-grouped.tmj');
     const runtime = tiled.toTileMap();
 
     const order = runtime.renderableLayers;
@@ -766,7 +710,7 @@ describe('TiledMap.toTileMap() — parallax forwarding', () => {
   };
 
   it('forwards parallaxX and parallaxY from Tiled layer data to runtime TileLayer', async () => {
-    const { context } = makeContext({
+    const { loadSource } = makeContext({
       'parallax.tmj': {
         type: 'map', version: '1.10', orientation: 'orthogonal',
         width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
@@ -781,7 +725,7 @@ describe('TiledMap.toTileMap() — parallax forwarding', () => {
         tilesets: [baseTileset],
       },
     });
-    const tiled = await loadTiledMap('parallax.tmj', context);
+    const tiled = await loadSource('parallax.tmj');
     const runtime = tiled.toTileMap();
 
     const layer = runtime.getTileLayer('Background')!;
@@ -791,7 +735,7 @@ describe('TiledMap.toTileMap() — parallax forwarding', () => {
   });
 
   it('defaults parallaxX and parallaxY to 1.0 when absent from Tiled data', async () => {
-    const { context } = makeContext({
+    const { loadSource } = makeContext({
       'no-parallax.tmj': {
         type: 'map', version: '1.10', orientation: 'orthogonal',
         width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
@@ -805,7 +749,7 @@ describe('TiledMap.toTileMap() — parallax forwarding', () => {
         tilesets: [baseTileset],
       },
     });
-    const tiled = await loadTiledMap('no-parallax.tmj', context);
+    const tiled = await loadSource('no-parallax.tmj');
     const runtime = tiled.toTileMap();
 
     const layer = runtime.getTileLayer('Ground')!;
@@ -833,7 +777,7 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
   });
 
   const convert = async (layers: unknown[]): Promise<TileMap> => {
-    const { context } = makeContext({
+    const { loadSource } = makeContext({
       'groups.tmj': {
         type: 'map', version: '1.10', orientation: 'orthogonal',
         width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
@@ -842,7 +786,7 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
       },
     });
 
-    return (await loadTiledMap('groups.tmj', context)).toTileMap();
+    return (await loadSource('groups.tmj')).toTileMap();
   };
 
   it('a hidden group hides its children', async () => {

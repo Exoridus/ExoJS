@@ -16,9 +16,9 @@ const rootDir = resolve(import.meta.dirname!, '..', '..');
  * The fix is architectural, not a `sideEffects` array entry: every
  * registration in these files funnels through an explicit, function-wrapped
  * seam - `buildCoreRendererBindings` + `materializeRendererBindings` for
- * renderers, `defineAsset`'s declarative descriptor (including its `aliases`
- * list) for asset kinds - invoked by Application's bootstrap rather than
- * fired as an automatic consequence of importing the module.
+ * renderers, the frozen `coreAssetTypes` list + `materializeAssetTypes` for
+ * asset types - invoked by Application's bootstrap rather than fired as an
+ * automatic consequence of importing the module.
  *
  * This is a source-level regression test, not a behavioural one: it catches
  * a bare `registerX(...)` statement reappearing at module scope in one of
@@ -31,7 +31,7 @@ function topLevelRegisterCallLines(relativePath: string): string[] {
 }
 
 describe('no bare top-level register*() calls (sideEffects:false safety)', () => {
-  it.each(['src/rendering/sprite/Sprite.ts', 'src/rendering/coreRendererBindings.ts', 'src/assets/coreAssetBindings.ts'] as const)(
+  it.each(['src/rendering/sprite/Sprite.ts', 'src/rendering/coreRendererBindings.ts', 'src/assets/coreAssetTypes.ts'] as const)(
     '%s has zero module-scope register*() statements',
     relativePath => {
       expect(topLevelRegisterCallLines(relativePath)).toEqual([]);
