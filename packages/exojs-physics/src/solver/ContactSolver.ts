@@ -1,16 +1,9 @@
 import type { ContactRecord } from '../ContactGraph';
 import type { PhysicsBody } from '../PhysicsBody';
+import { contactSlop } from './tolerances';
 
 /** Relative normal speed (px/s) below which a contact is treated as resting (no restitution). */
 const restitutionThreshold = 1;
-/**
- * Penetration allowance (px) the soft bias leaves uncorrected. The narrow phase
- * only produces a manifold while the colliders overlap, so pushing penetration
- * fully to zero lets a resting contact wink out for a frame (free-fall, then
- * re-detect) - a periodic energy spike. Leaving a small slop keeps the contact
- * persistently overlapping and the warm-start cache alive.
- */
-const slop = 0.25;
 /**
  * Cap on the soft-constraint push-out velocity (px/s). Bounds how fast the bias
  * resolves deep penetration so a large overlap cannot fling bodies apart; the
@@ -348,7 +341,7 @@ export class ContactSolver {
     for (let i = 0; i < constraint.pointCount; i++) {
       // Push out only the penetration beyond the slop, capped - leaving the slop
       // keeps the contact overlapping so the narrow phase does not drop it.
-      const excess = -currentSeparation(constraint, i) - slop;
+      const excess = -currentSeparation(constraint, i) - contactSlop;
 
       constraint.velocityBias[i] = useBias && excess > 0 ? Math.min(constraint.biasRate * excess, maxBiasVelocity) : 0;
     }

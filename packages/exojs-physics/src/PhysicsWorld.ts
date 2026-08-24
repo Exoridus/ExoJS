@@ -7,6 +7,7 @@ import type { PhysicsBackend } from './backend/PhysicsBackend';
 import { BindingRegistry } from './binding/BindingRegistry';
 import type { PhysicsBinding } from './binding/PhysicsBinding';
 import { authoredCollider, Collider } from './Collider';
+import type { Manifold } from './collision/Manifold';
 import type { SweepHit } from './collision/sweep';
 import { canSweep, sweepProxies } from './collision/sweep';
 import type { ContactModifier } from './ContactModifier';
@@ -17,6 +18,7 @@ import { PhysicsBody } from './PhysicsBody';
 import type { QueryFilter, RayHit } from './query/QueryEngine';
 import { QueryEngine } from './query/QueryEngine';
 import type { AnyShape } from './shapes/AnyShape';
+import { maxRestingPenetration } from './solver/tolerances';
 import { TimeStepper } from './TimeStepper';
 import type { BodyType, CollisionFilter } from './types';
 import { shouldCollide } from './types';
@@ -120,6 +122,23 @@ const warnUnsweptBulletShape = (collider: Collider): void => {
  */
 const isMovingBoundary = (body: PhysicsBody): boolean =>
   body._teleported || body.linearVelocityX !== 0 || body.linearVelocityY !== 0 || body.angularVelocity !== 0;
+
+/**
+ * `true` while a contact still carries more overlap than the solver leaves
+ * behind at rest. Read from the manifold detection just produced, which is the
+ * same separation the solver's push-out bias is about to act on - the sleep gate
+ * and the constraint it gates therefore agree by construction.
+ */
+const isUnresolved = (manifold: Manifold): boolean => {
+  for (let i = 0; i < manifold.pointCount; i++) {
+    // i in 0..pointCount-1 and pointCount ≤ 2, so the manifold point exists.
+    if ((i === 0 ? manifold.points[0] : manifold.points[1]).penetration > maxRestingPenetration) {
+      return true;
+    }
+  }
+
+  return false;
+};
 
 /**
  * {@link PhysicsWorld.attach}'s default `position`: `node`'s current WORLD
@@ -937,8 +956,11 @@ export class PhysicsWorld implements BodyOwner {
    * any member does (e.g. an awake body merges into it via a new contact).
    * A boundary that is itself moving resets the sleep timer of every dynamic
    * body it touches, so a platform keeps its passengers awake however slowly it
-   * travels. Deterministic: union-find roots break ties by lower index and the
-   * contact set is id-sorted.
+   * travels; so does a contact still carrying more penetration than the solver
+   * leaves at rest, because the push-out that resolves it is slower than the
+   * sleep velocity threshold and a body would otherwise be frozen embedded.
+   * Deterministic: union-find roots break ties by lower index and the contact
+   * set is id-sorted.
    */
   private _updateSleeping(dt: number): void {
     const bodies = this._bodies;
@@ -1007,11 +1029,17 @@ export class PhysicsWorld implements BodyOwner {
    * are island boundaries, not members, so nothing else would keep the passenger
    * of a slow-moving platform awake - and the solver skips a contact whose
    * dynamic side is asleep, letting the platform drive straight through it.
+   *
+   * The same traversal resets the sleep timer of both sides of a contact whose
+   * penetration the solver has not worked off yet, so the island it belongs to
+   * stays awake until the overlap is within the tolerance the solver itself
+   * converges to.
    */
   private _unionContactIslands(): void {
     for (const contact of this._backend.contactGraph.solidContacts) {
       // A contact the modifier disabled carries no load this step, so it neither
-      // forms an island nor keeps a passenger of a moving platform awake.
+      // forms an island, nor keeps a passenger of a moving platform awake, nor
+      // has an overlap anything is going to resolve.
       if (!contact.enabled) {
         continue;
       }
@@ -1027,6 +1055,16 @@ export class PhysicsWorld implements BodyOwner {
         bodyA._sleepTime = 0;
       } else if (dynamicB && isMovingBoundary(bodyA)) {
         bodyB._sleepTime = 0;
+      }
+
+      if (isUnresolved(contact.manifold)) {
+        if (dynamicA) {
+          bodyA._sleepTime = 0;
+        }
+
+        if (dynamicB) {
+          bodyB._sleepTime = 0;
+        }
       }
     }
   }

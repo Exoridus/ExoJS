@@ -200,6 +200,14 @@ island) sleep and wake as a unit, so a tower never half-sleeps. A body wakes the
 is touched by an awake body, hit by an `applyImpulse`/`applyForce`, or moved with
 `setTransform`.
 
+Low velocity alone is not enough. A body that landed hard is overlapping the ground by more
+than one step of push-out, and the solver corrects that overlap at a speed below the sleep
+threshold — so an island also stays awake while any of its solid contacts still carries
+more penetration than a resting contact keeps. A body therefore always comes to rest on the
+surface rather than embedded in it, at the cost of a fraction of a second of extra
+simulation after a fast impact. Sensor overlaps and contacts a `contactModifier` disabled
+are not solved and never delay sleep.
+
 It is on by default; tune it through `PhysicsWorld` options:
 
 ```ts
