@@ -12,18 +12,23 @@ import { Video } from '#rendering/video/Video';
 /**
  * How a media type reads an acquisition it did not stream.
  *
- * Only a request that opted out of streaming ever reaches this: the bytes came
- * from a download, a container slice or a cache, and the element is built over
- * them instead of over a URL.
+ * The representation is a `Blob`, not an `ArrayBuffer`: it is what a media
+ * element can be pointed at directly, it survives structured clone into a
+ * persistent store, and it lets the browser keep the data out of the JavaScript
+ * heap - which is the difference between caching a 200 MB video and running out
+ * of memory trying.
+ *
+ * Only a request that opted out of streaming ever reaches this: the data came
+ * from a download, a container slice or a cache.
  */
-const mediaSourceCodec: AssetSourceCodec<MediaAssetSource, ArrayBuffer> = {
-  fromResponse: response => response.arrayBuffer(),
-  fromBytes: bytes => Promise.resolve(bytes),
-  decode: bytes => Promise.resolve({ bytes }),
+const mediaSourceCodec: AssetSourceCodec<MediaAssetSource, Blob> = {
+  fromResponse: response => response.blob(),
+  fromBytes: bytes => Promise.resolve(new Blob([bytes])),
+  decode: blob => Promise.resolve({ blob }),
 };
 
 /**
- * The identity a streaming media request contributes beyond its locator.
+ * The identity a media request contributes beyond its locator.
  *
  * The transport is deliberately absent: one URL is one asset whether the
  * browser streamed it, the loader downloaded it, or a container carried it, so
@@ -34,7 +39,7 @@ const mediaSourceCodec: AssetSourceCodec<MediaAssetSource, ArrayBuffer> = {
  * `null` element plays but can never be uploaded as a texture, and
  * `'use-credentials'` can resolve to a different response altogether. Neither
  * can be handed to a consumer that asked for the other. It is irrelevant to
- * bytes the application already owns, so a downloaded asset ignores it.
+ * data the application already owns, so a downloaded asset ignores it.
  */
 function mediaIdentity({ options }: AssetRequest<MediaAssetOptions & { mimeType?: string }>): string {
   const parts: string[] = [];
@@ -51,7 +56,7 @@ function mediaIdentity({ options }: AssetRequest<MediaAssetOptions & { mimeType?
 }
 
 /** Streaming audio backed by an `<audio>` element. */
-export class MusicAssetType extends AssetType<MediaAssetSource, AudioStream, MusicAssetOptions, ArrayBuffer> {
+export class MusicAssetType extends AssetType<MediaAssetSource, AudioStream, MusicAssetOptions, Blob> {
   public readonly id = 'music';
   public override readonly leaf = 'none';
   public override readonly _token: AssetConstructor = AudioStream;
@@ -71,7 +76,7 @@ export class MusicAssetType extends AssetType<MediaAssetSource, AudioStream, Mus
 }
 
 /** Streaming video backed by a `<video>` element, usable as a texture source. */
-export class VideoAssetType extends AssetType<MediaAssetSource, Video, VideoAssetOptions, ArrayBuffer> {
+export class VideoAssetType extends AssetType<MediaAssetSource, Video, VideoAssetOptions, Blob> {
   public readonly id = 'video';
   public override readonly leaf = 'none';
   public override readonly _token: AssetConstructor = Video;

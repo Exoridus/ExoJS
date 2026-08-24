@@ -1,5 +1,6 @@
 import type { AssetCache } from './AssetCache';
-import type { AssetCacheError } from './AssetCacheError';
+import { AssetCacheError } from './AssetCacheError';
+import { AssetCacheMissError } from './AssetCacheMissError';
 import type { AssetFactoryContext } from './AssetFactory';
 import type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
 import type { AnyAssetType, AssetRequest } from './AssetType';
@@ -191,18 +192,24 @@ export class AssetDecoder {
     };
   }
 
-  /** Acquires this request's representation and reads it back as the source its factory consumes. */
-  private async _acquireSource(asset: CanonicalAsset, type: AnyAssetType, signal?: AbortSignal): Promise<unknown> {
+  /**
+   * Acquires this request's representation, through the application's cache
+   * configuration and the type's own codec.
+   *
+   * What the codec reads off the response is what a cache gets to keep, so it is
+   * acquired in that form rather than decoded first and handed over afterwards.
+   * @internal
+   */
+  public _acquireStored(asset: CanonicalAsset, type: AnyAssetType, signal?: AbortSignal): Promise<unknown> {
     const codec = type.codec as AssetSourceCodec<unknown, unknown> | undefined;
 
     if (codec === undefined) {
       throw new Error(`Asset type "${type.id}" declares no source codec, so "${asset.source}" cannot be acquired.`);
     }
+
     const context: SourceCodecContext = { locator: asset.locator, signal };
-    // What the codec reads off the response is what a cache gets to keep, so it
-    // is acquired through the loader's own policy rather than decoded first and
-    // handed over afterwards.
-    const stored = await this._acquire(
+
+    return this._acquire(
       asset.source,
       type.id,
       type.layout as CacheLayout<unknown>,
@@ -210,20 +217,30 @@ export class AssetDecoder {
       response => codec.fromResponse(response, context),
       signal,
     );
+  }
 
-    return codec.decode(stored, context);
+  /** Acquires this request's representation and reads it back as the source its factory consumes. */
+  private async _acquireSource(asset: CanonicalAsset, type: AnyAssetType, signal?: AbortSignal): Promise<unknown> {
+    const stored = await this._acquireStored(asset, type, signal);
+    const codec = type.codec as AssetSourceCodec<unknown, unknown>;
+
+    return codec.decode(stored, { locator: asset.locator, signal });
   }
 
   /**
    * Wraps a construction failure in the "which asset, from where" envelope
    * callers see.
    *
-   * A cancellation rejection is rethrown unwrapped: the envelope would hide the
-   * `AbortError` name the residency dispatches on to tell a deliberate cancel
-   * apart from a genuine load failure.
+   * Three kinds of failure are rethrown unwrapped, because the envelope would
+   * cost more than it adds. A cancellation would lose the `AbortError` name the
+   * residency dispatches on to tell a deliberate cancel from a genuine failure.
+   * A cache miss and a store failure are already named, carry the namespace and
+   * source they concern, and are the errors an offline-capable caller
+   * dispatches on - `instanceof AssetCacheMissError` is how "not cached" is
+   * told from "could not load", and wrapping it takes that away.
    */
   private _describeFailure(asset: CanonicalAsset, error: unknown): unknown {
-    if (isAbortError(error)) {
+    if (isAbortError(error) || error instanceof AssetCacheMissError || error instanceof AssetCacheError) {
       return error;
     }
 
@@ -260,6 +277,42 @@ export class AssetDecoder {
     } catch (error: unknown) {
       throw this._describeFailure(asset, error);
     }
+  }
+
+  /**
+   * Acquires and persists this request's representation, and stops there.
+   *
+   * No factory runs, no resource is built and nothing becomes resident: the
+   * point is to fill the cache, not to hold anything in memory. The
+   * representation is discarded once the route's policy has had its chance to
+   * write it.
+   *
+   * A type that supplies its own source acquires nothing at all, so there is
+   * nothing here to persist - and saying so beats appearing to succeed.
+   * @internal
+   */
+  public async _acquireOnly(asset: CanonicalAsset, options: unknown, signal?: AbortSignal): Promise<void> {
+    const installed = this._typeRegistry.getInstalled(asset.type);
+
+    if (installed === undefined) {
+      throw this._typeRegistry._missingTypeError(asset.type);
+    }
+
+    const { type } = installed;
+
+    if (type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source)) !== undefined) {
+      throw new Error(
+        `Asset type "${type.id}" supplies its own source for "${asset.source}", so the loader acquires nothing and there ` +
+          `is nothing to cache. A streaming media asset needs "download: true" to be cacheable.`,
+      );
+    }
+
+    // Deliberately unwrapped. The "Failed to load X from Y" envelope belongs to
+    // construction, and nothing is being built here: an acquisition failure is
+    // already a typed `AssetNetworkError`, `AssetCacheError`,
+    // `AssetCacheMissError` or `AbortError`, and hiding which one behind a
+    // load-shaped message would cost the caller the only thing it can act on.
+    await this._acquireStored(asset, type, signal);
   }
 
   /**

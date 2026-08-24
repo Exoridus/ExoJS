@@ -1,0 +1,92 @@
+{
+  "title": "CachePolicyResolutionContext",
+  "description": "What a CachePolicyResolver is told about the acquisition it is choosing a policy for.",
+  "symbol": "CachePolicyResolutionContext",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a CachePolicyResolver is told about the acquisition it is choosing a policy for."
+      ],
+      "importLine": "import { CachePolicyResolutionContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "namespace",
+          "signature": "namespace: string",
+          "signatureTokens": [
+            {
+              "text": "namespace",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The storage namespace of the acquisition, which is the asset type's id."
+        },
+        {
+          "name": "sourceKey",
+          "signature": "sourceKey: string",
+          "signatureTokens": [
+            {
+              "text": "sourceKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The source identity being acquired."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/CachePolicyResolver.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicyResolver.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/CachePolicyResolver.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicyResolver.ts"
+}

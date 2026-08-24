@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "policy",
-          "signature": "policy?: CachePolicy",
+          "signature": "policy?: CachePolicySource",
           "signatureTokens": [
             {
               "text": "policy",
@@ -45,13 +45,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "CachePolicy",
+              "text": "CachePolicySource",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "How the cache and the network are ordered. Defaults to CacheFirstPolicy."
+          "description": "How the cache and the network are ordered. Defaults to CacheFirstPolicy. A CachePolicyResolver chooses per acquisition instead of once, for a decision that depends on something outside the route."
         },
         {
           "name": "promote",

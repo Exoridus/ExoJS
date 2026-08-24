@@ -47,7 +47,7 @@ describe('VideoFactory', () => {
   test('create() resolves with a Video once the default "canplay" event fires', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext());
     lastVideo().dispatchEvent(new Event('canplay'));
 
     const video = await promise;
@@ -61,7 +61,7 @@ describe('VideoFactory', () => {
   test('create() honors a custom loadEvent option', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext({ loadEvent: 'loadedmetadata' }));
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext({ loadEvent: 'loadedmetadata' }));
     lastVideo().dispatchEvent(new Event('loadedmetadata'));
 
     const video = await promise;
@@ -72,7 +72,7 @@ describe('VideoFactory', () => {
   test('create() forwards playbackOptions to the Video', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext({ playbackOptions: { volume: 0.3, loop: true } }));
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext({ playbackOptions: { volume: 0.3, loop: true } }));
     lastVideo().dispatchEvent(new Event('canplay'));
 
     const video = await promise;
@@ -86,7 +86,7 @@ describe('VideoFactory', () => {
   test('create() forwards textureOptions to the underlying Texture', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext({ textureOptions: { flipY: true } }));
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext({ textureOptions: { flipY: true } }));
     lastVideo().dispatchEvent(new Event('canplay'));
 
     const video = await promise;
@@ -99,7 +99,7 @@ describe('VideoFactory', () => {
   test('create() rejects with a clear message on "error"', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext());
     lastVideo().dispatchEvent(new Event('error'));
 
     await expect(promise).rejects.toThrow('Video loading error.');
@@ -108,7 +108,7 @@ describe('VideoFactory', () => {
   test('create() rejects with a clear message on "abort"', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext());
     lastVideo().dispatchEvent(new Event('abort'));
 
     await expect(promise).rejects.toThrow('Video loading error: cancelled.');
@@ -117,7 +117,7 @@ describe('VideoFactory', () => {
   test('create() rejects with a clear message on "emptied"', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext());
     lastVideo().dispatchEvent(new Event('emptied'));
 
     await expect(promise).rejects.toThrow('Video loading error: emptied.');
@@ -127,7 +127,7 @@ describe('VideoFactory', () => {
     vi.useFakeTimers();
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext({ stallTimeout: 50 }));
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext({ stallTimeout: 50 }));
     lastVideo().dispatchEvent(new Event('stalled'));
     vi.advanceTimersByTime(50);
 
@@ -138,7 +138,7 @@ describe('VideoFactory', () => {
     vi.useFakeTimers();
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext({ stallTimeout: 50 }));
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext({ stallTimeout: 50 }));
     const videoElement = lastVideo();
 
     videoElement.dispatchEvent(new Event('stalled'));
@@ -161,7 +161,7 @@ describe('VideoFactory', () => {
     vi.useFakeTimers();
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext({ stallTimeout: 50 }));
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext({ stallTimeout: 50 }));
     const videoElement = lastVideo();
 
     videoElement.dispatchEvent(new Event('canplay'));
@@ -177,7 +177,7 @@ describe('VideoFactory', () => {
     const factory = new VideoFactory();
     const revokeSpy = vi.spyOn(URL, 'revokeObjectURL');
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext());
     const videoElement = lastVideo();
 
     videoElement.dispatchEvent(new Event('canplay'));
@@ -199,7 +199,7 @@ describe('VideoFactory', () => {
     const factory = new VideoFactory();
     const clearTimeoutSpy = vi.spyOn(globalThis, 'clearTimeout');
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext({ stallTimeout: 50 }));
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext({ stallTimeout: 50 }));
     const videoElement = lastVideo();
 
     videoElement.dispatchEvent(new Event('stalled'));
@@ -216,21 +216,37 @@ describe('VideoFactory', () => {
     video.destroy();
   });
 
-  test('create() revokes the object URL once loading settles', async () => {
+  test('the object URL lives as long as the resource, and is revoked when it is disposed', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext());
     lastVideo().dispatchEvent(new Event('canplay'));
-    const video = await promise;
+
+    const stream = await promise;
+
+    // Still alive: an element re-reads its source when a seek leaves the
+    // buffered range, so revoking here would break playback that had started.
+    expect(revokeObjectUrlSpy).not.toHaveBeenCalled();
+
+    factory.dispose(stream);
 
     expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
-    video.destroy();
+  });
+
+  test('a streamed element creates no object URL at all', async () => {
+    const factory = new VideoFactory();
+
+    const promise = factory.create({ url: '/video/intro.mp4' }, factoryContext());
+    lastVideo().dispatchEvent(new Event('canplay'));
+    await promise;
+
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
   test('destroy() pauses and detaches every created <video> element', async () => {
     const factory = new VideoFactory();
 
-    const promise = factory.create({ bytes: VIDEO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([VIDEO_HEADER]) }, factoryContext());
     const videoElement = lastVideo();
     const pauseSpy = vi.spyOn(videoElement, 'pause');
     videoElement.dispatchEvent(new Event('canplay'));

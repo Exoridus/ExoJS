@@ -5,26 +5,28 @@ const onceListenerOption = { once: true };
 /** Options shared by the streaming media factories. */
 export interface MediaAssetOptions {
   /**
-   * Fetch the complete resource through the loader's byte/cache pipeline before
+   * Fetch the complete resource through the loader's acquisition pipeline before
    * the media element is built, instead of letting the browser stream it from
    * its URL.
    *
-   * Downloading makes the bytes cacheable and available offline, reports real
-   * fetch progress, and is what container (`.exoa`) entries always use. It also
-   * means nothing plays until the whole file has arrived.
+   * Downloading is what makes the data cacheable and therefore available
+   * offline, and it is what {@link Loader.cacheSource} needs in order to have
+   * anything to persist. It also means nothing plays until the whole file has
+   * arrived, which is what streaming exists to avoid - so it is opt-in, per
+   * request.
    *
    * The transport is not part of asset identity: one URL is one asset however
-   * its bytes arrived, which is what lets a container entry and a network load
-   * share a single resident resource. This option therefore decides how the
+   * its data arrived, which is what lets a container entry, a cache hit and a
+   * network load share a single resident resource. This option therefore decides how the
    * asset is built by the load that MATERIALIZES it - a load that joins an
    * already-resident asset gets what is resident, whichever way that arrived.
-   * Acquire the asset through the download load first when the byte backing
+   * Acquire the asset through the downloading load first when the data backing
    * matters to a consumer.
    */
   download?: boolean;
   /**
-   * Defaults to `'anonymous'`. Ignored for downloaded or container-backed media,
-   * whose bytes are already owned by the application.
+   * Defaults to `'anonymous'`. Ignored for media built from data the application
+   * already owns, whose object URL is same-origin by construction.
    *
    * Unlike the transport, a non-default CORS mode IS part of asset identity: it
    * is baked into the element, so a `null` and an `'anonymous'` media resource
@@ -52,11 +54,12 @@ export interface MediaAssetOptions {
  * What a media resource is built from.
  *
  * A URL is streamed by the browser, which owns the transfer for the whole life
- * of the element. Bytes are already owned by the application - a download, a
- * container entry, a cached representation - and are wrapped in a blob the
- * resource holds until it is released.
+ * of the element and never holds more than it is playing. A blob is data the
+ * application already owns - a download, a container entry, a cached
+ * representation - and the element reads it through an object URL the resource
+ * keeps alive for as long as it exists.
  */
-export type MediaAssetSource = { readonly url: string; readonly bytes?: undefined } | { readonly url?: undefined; readonly bytes: ArrayBuffer };
+export type MediaAssetSource = { readonly url: string; readonly blob?: undefined } | { readonly url?: undefined; readonly blob: Blob };
 
 /** Diagnostic messages a media factory reports for each failure mode. */
 export interface MediaLoadMessages {

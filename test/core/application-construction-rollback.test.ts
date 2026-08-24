@@ -19,7 +19,7 @@ import type { Extension } from '#extensions/Extension';
 import { InputManager } from '#input/InputManager';
 import { InteractionManager } from '#input/InteractionManager';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
-import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
+import type { NetworkHint, PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 import { RenderingContext } from '#rendering/RenderingContext';
 
 import { testAssetType } from '../assets/test-asset-type';
@@ -69,17 +69,26 @@ const recordDestroy = (prototype: { destroy: () => void }, label: string): void 
 };
 
 /** Minimal recording adapter - enough surface to construct an `Application`. */
-const createRecordingPlatform = (): PlatformAdapter & { readonly calls: string[]; readonly visibilityListenerCount: number } => {
+const createRecordingPlatform = (): PlatformAdapter & {
+  readonly calls: string[];
+  readonly visibilityListenerCount: number;
+  readonly networkListenerCount: number;
+} => {
   const calls: string[] = [];
   const visibilityListeners = new Set<(visible: boolean) => void>();
+  const networkListeners = new Set<(hint: NetworkHint) => void>();
 
   return {
     calls,
     get visibilityListenerCount(): number {
       return visibilityListeners.size;
     },
+    get networkListenerCount(): number {
+      return networkListeners.size;
+    },
     surfaceFocused: false,
     documentVisible: true,
+    networkHint: 'online',
     focusSurface: () => undefined,
     getSurfaceMetrics: () => ({ left: 0, top: 0, width: 800, height: 600, backingWidth: 800, backingHeight: 600 }),
     setCursor: () => undefined,
@@ -91,6 +100,11 @@ const createRecordingPlatform = (): PlatformAdapter & { readonly calls: string[]
       visibilityListeners.add(listener);
 
       return () => void visibilityListeners.delete(listener);
+    },
+    onNetworkHintChange(listener: (hint: NetworkHint) => void): PlatformSubscription {
+      networkListeners.add(listener);
+
+      return () => void networkListeners.delete(listener);
     },
     now: () => 0,
     requestFrame: () => 1,

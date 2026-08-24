@@ -6,10 +6,10 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 36,
+  "memberCount": 37,
   "counts": {
     "constructors": 1,
-    "methods": 25,
+    "methods": 26,
     "properties": 2,
     "events": 8
   },
@@ -127,6 +127,122 @@
           "params": [],
           "returnType": "Promise<void>",
           "description": "Resolves when the low-priority background queue has fully drained - every leaf enqueued via load(target, { priority: LoadPriority.Background }) has finished loading (successfully or not). Kicks the queue first, so a concurrency change that left pending entries unstarted still makes progress. Individual asset errors are reported via onError but do not reject the returned promise."
+        },
+        {
+          "name": "cacheSource",
+          "signature": "cacheSource(asset: Asset<unknown>, options?: { signal?: AbortSignal }): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "cacheSource",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "asset",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Asset",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "signal",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "asset",
+              "type": "Asset<unknown>",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "{ signal?: AbortSignal }",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Acquires an asset's SOURCE and lets the cache keep it, without building the asset. This is how an application fills a persistent cache ahead of time - before a level, before going offline, on a fast connection - for assets it does not want resident yet. Nothing is constructed, nothing is claimed, and nothing stays in memory: what remains afterwards is a cache record, which a later load() of the same asset finds because both derive the same source identity from the same descriptor. Whether a hit is served from the cache or the network comes down to the route's policy, exactly as it does for a load. A cached source is not re-fetched. A type that supplies its own source acquires nothing, so there is nothing to cache and this rejects saying so - streaming media needs download: true to be cacheable."
         },
         {
           "name": "createScope",

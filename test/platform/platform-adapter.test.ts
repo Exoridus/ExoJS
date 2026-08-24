@@ -5,7 +5,7 @@
  */
 
 import { BrowserPlatform } from '#platform/BrowserPlatform';
-import type { PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
+import type { NetworkHint, PlatformAdapter, PlatformSubscription } from '#platform/PlatformAdapter';
 
 /**
  * `Application` with a stubbed render backend. jsdom has no WebGL context, so
@@ -45,13 +45,22 @@ const loadApplication = async (): Promise<typeof import('#core/Application').App
 };
 
 /** A recording adapter - enough surface for construction and a frame or two. */
-const createRecordingPlatform = (): PlatformAdapter & { readonly calls: string[]; visible: boolean; emitVisibility: (visible: boolean) => void } => {
+const createRecordingPlatform = (): PlatformAdapter & {
+  readonly calls: string[];
+  visible: boolean;
+  networkHint: NetworkHint;
+  emitVisibility: (visible: boolean) => void;
+  emitNetworkHint: (hint: NetworkHint) => void;
+} => {
   const calls: string[] = [];
   const visibilityListeners = new Set<(visible: boolean) => void>();
+  const networkListeners = new Set<(hint: NetworkHint) => void>();
 
   return {
     calls,
     visible: true,
+    networkHint: 'online' as NetworkHint,
+
     surfaceFocused: false,
     get documentVisible(): boolean {
       return this.visible;
@@ -70,10 +79,22 @@ const createRecordingPlatform = (): PlatformAdapter & { readonly calls: string[]
     capturePointer: (id: number) => void calls.push(`capturePointer:${id}`),
     releasePointer: (id: number) => void calls.push(`releasePointer:${id}`),
     pollGamepads: () => [],
+    emitNetworkHint(hint: NetworkHint): void {
+      this.networkHint = hint;
+
+      for (const listener of networkListeners) {
+        listener(hint);
+      }
+    },
     onVisibilityChange(listener: (visible: boolean) => void): PlatformSubscription {
       visibilityListeners.add(listener);
 
       return () => void visibilityListeners.delete(listener);
+    },
+    onNetworkHintChange(listener: (hint: NetworkHint) => void): PlatformSubscription {
+      networkListeners.add(listener);
+
+      return () => void networkListeners.delete(listener);
     },
     now: () => 0,
     requestFrame: () => {

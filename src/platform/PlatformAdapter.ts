@@ -7,6 +7,27 @@ import type { BrowserGamepad } from '#input/GamepadDefinitions';
 export type PlatformSubscription = () => void;
 
 /**
+ * What a host reports about network reachability.
+ *
+ * `'unknown'` is an answer, not a missing one: a host that cannot say whether a
+ * network exists is genuinely not saying it, and reading that as `'online'`
+ * would hide the difference from everything that has to decide on it.
+ */
+export type NetworkHint = 'online' | 'offline' | 'unknown';
+
+/**
+ * Anything that can report network reachability and say when it changed.
+ *
+ * A {@link PlatformAdapter} satisfies it, and so does the standalone browser
+ * source - which is what lets a {@link Connectivity} exist before an
+ * application does.
+ */
+export interface NetworkHintSource {
+  readonly networkHint: NetworkHint;
+  onNetworkHintChange(listener: (hint: NetworkHint) => void): PlatformSubscription;
+}
+
+/**
  * A monotonic millisecond clock. Values are only meaningful relative to each
  * other: the origin is the host's, never the wall clock, and the source never
  * jumps backwards when the system clock is adjusted.
@@ -219,6 +240,18 @@ export interface PlatformAdapter extends TimeSource, FrameScheduler {
 
   /** Subscribe to {@link PlatformAdapter.documentVisible} changes. */
   onVisibilityChange(listener: (visible: boolean) => void): PlatformSubscription;
+
+  /**
+   * What the host reports about network reachability.
+   *
+   * A hint, and nothing more: a host saying `'online'` has a network interface,
+   * not a route to any particular origin. `'unknown'` is what a host that
+   * reports nothing means, and is deliberately not folded into `'online'`.
+   */
+  readonly networkHint: NetworkHint;
+
+  /** Subscribe to {@link PlatformAdapter.networkHint} changes. */
+  onNetworkHintChange(listener: (hint: NetworkHint) => void): PlatformSubscription;
 
   /**
    * Subscribe to a surface event. Which events are listened for - and whether

@@ -48,6 +48,7 @@ function mockFetch(body: ArrayBuffer = VIDEO_BYTES.buffer as ArrayBuffer): Retur
         status: 200,
         statusText: 'OK',
         arrayBuffer: async () => body,
+        blob: async () => new Blob([body]),
       }) as unknown as Response,
   );
 
@@ -146,7 +147,7 @@ describe('URL-backed media', () => {
 });
 
 describe('download: true', () => {
-  test('fetches the complete bytes and builds the element from a blob', async () => {
+  test('acquires the whole resource and builds the element from a blob', async () => {
     const fetchSpy = mockFetch();
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });

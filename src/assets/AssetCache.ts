@@ -114,8 +114,11 @@ export class AssetCache {
    */
   public resolve<T>(acquisition: CacheAcquisition<T>): Promise<T> {
     const route = this.routeFor(acquisition.namespace);
+    // Resolved here and nowhere else: one acquisition, one policy, decided
+    // before any of it runs.
+    const policy = route.policyFor({ namespace: acquisition.namespace, sourceKey: acquisition.sourceKey });
 
-    return route.policy.resolve(new RoutedCacheContext(route, acquisition));
+    return policy.resolve(new RoutedCacheContext(route, acquisition));
   }
 
   /**

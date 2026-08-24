@@ -19,6 +19,8 @@ export { Clock } from './Clock';
 export type { DecompressFormat } from './Codec';
 export { Codec } from './Codec';
 export { Color } from './Color';
+export type { ConnectivityState, NetworkMode } from './Connectivity';
+export { Connectivity } from './Connectivity';
 export { DestroyScope } from './DestroyScope';
 export type { LoadStateValue } from './LoadState';
 export type { LogEntry, LogOptions, LogSink } from './logging';

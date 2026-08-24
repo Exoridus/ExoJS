@@ -1,0 +1,157 @@
+{
+  "title": "ConnectivityPolicyResolver",
+  "description": "Routes acquisitions through the cache alone whenever the application is not allowed to reach the network, and through the configured online policy whenever it is. The decision reads Connectivity.allowsNetwork, so it honours both halves of that question - the environment's hint and the application's own mode - without having to know which one said no. `'unknown'` counts as allowed: the host is not claiming the network is gone, and refusing on no evidence would break every environment that reports nothing.",
+  "symbol": "ConnectivityPolicyResolver",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Routes acquisitions through the cache alone whenever the application is not allowed to reach the network, and through the configured online policy whenever it is.",
+        "The decision reads Connectivity.allowsNetwork, so it honours both halves of that question - the environment's hint and the application's own mode - without having to know which one said no. `'unknown'` counts as allowed: the host is not claiming the network is gone, and refusing on no evidence would break every environment that reports nothing."
+      ],
+      "importLine": "import { ConnectivityPolicyResolver } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(connectivity: Connectivity, options: ConnectivityPolicyResolverOptions): ConnectivityPolicyResolver",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "connectivity",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Connectivity",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ConnectivityPolicyResolverOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ConnectivityPolicyResolver",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "connectivity",
+              "type": "Connectivity",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "ConnectivityPolicyResolverOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "ConnectivityPolicyResolver",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "policyFor",
+          "signature": "policyFor(): CachePolicy",
+          "signatureTokens": [
+            {
+              "text": "policyFor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CachePolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "CachePolicy",
+          "description": "The policy this acquisition runs under. Named apart from CachePolicy.resolve on purpose: the two are accepted in the same position, and one method name meaning \"run the acquisition\" on one and \"pick who runs it\" on the other would make the union undiscriminable and the mistake silent."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/ConnectivityPolicyResolver.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/ConnectivityPolicyResolver.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/ConnectivityPolicyResolver.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/ConnectivityPolicyResolver.ts"
+}

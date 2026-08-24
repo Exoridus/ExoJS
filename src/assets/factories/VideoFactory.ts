@@ -1,5 +1,4 @@
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
-import { determineMimeType } from '#assets/utils';
 import type { PlaybackOptions } from '#core/types';
 import type { TextureOptions } from '#rendering/texture/TextureOptions';
 import { Video } from '#rendering/video/Video';
@@ -16,7 +15,10 @@ const MESSAGES: MediaLoadMessages = {
 
 /** Options accepted by an asset of the built-in `video` type. */
 export interface VideoAssetOptions extends MediaAssetOptions {
-  /** MIME type for the video blob. Inferred from the magic bytes when omitted, and unused by streamed media. */
+  /**
+   * MIME type for the media data. Overrides what the response or the container
+   * declared; unused by streamed media, whose type comes from the response.
+   */
   mimeType?: string;
   /** Initial playback settings forwarded to the {@link Video} instance. */
   playbackOptions?: Partial<PlaybackOptions>;
@@ -26,64 +28,79 @@ export interface VideoAssetOptions extends MediaAssetOptions {
 
 /**
  * Builds a {@link Video} over a `<video>` element usable as a dynamic texture
- * source, streaming from a URL or from bytes the application already owns.
+ * source, streaming from a URL or reading data the application already owns.
  *
  * Streamed video defaults to `crossOrigin: 'anonymous'`: a cross-origin element
- * without it plays but can never be uploaded as a texture.
+ * without it plays but can never be uploaded as a texture. Blob-backed video
+ * needs no such attribute - the object URL is same-origin by construction.
+ *
+ * An object URL made for a blob-backed element lives exactly as long as that
+ * element: revoking it earlier would break a seek past the buffered range,
+ * which re-reads the source.
  * @internal
  */
 export class VideoFactory implements AssetFactory<MediaAssetSource, Video, VideoAssetOptions> {
-  private readonly _videoElements = new Set<HTMLVideoElement>();
+  /** Each element this factory made, and the object URL it owns on that element's behalf. */
+  private readonly _elements = new Map<HTMLMediaElement, string | undefined>();
   private readonly _objectUrls = new ObjectUrlPool();
 
   public async create(source: MediaAssetSource, context: AssetFactoryContext<VideoAssetOptions>): Promise<Video> {
     const options = context.options ?? {};
     const video = document.createElement('video');
+    // A streamed element points at the URL; one built from data the application
+    // owns points at an object URL this factory then owns on its behalf.
+    let objectUrl: string | undefined;
+    let src: string;
 
-    this._videoElements.add(video);
-
-    if (source.bytes !== undefined) {
-      const objectUrl = this._objectUrls.create(new Blob([source.bytes], { type: options.mimeType ?? determineMimeType(source.bytes) }));
-
-      await attachMediaSource({
-        element: video,
-        src: objectUrl,
-        messages: MESSAGES,
-        loadEvent: options.loadEvent,
-        stallTimeout: options.stallTimeout,
-        signal: context.signal,
-        onSettled: () => this._objectUrls.revoke(objectUrl),
-      });
+    if (source.blob === undefined) {
+      src = source.url;
     } else {
-      await attachMediaSource({
-        element: video,
-        src: source.url,
-        messages: MESSAGES,
-        loadEvent: options.loadEvent,
-        stallTimeout: options.stallTimeout,
-        crossOrigin: options.crossOrigin === undefined ? 'anonymous' : options.crossOrigin,
-        signal: context.signal,
-      });
+      objectUrl = this._objectUrls.create(retyped(source.blob, options.mimeType));
+      src = objectUrl;
     }
+
+    this._elements.set(video, objectUrl);
+
+    await attachMediaSource({
+      element: video,
+      src,
+      messages: MESSAGES,
+      loadEvent: options.loadEvent,
+      stallTimeout: options.stallTimeout,
+      ...(objectUrl === undefined && { crossOrigin: options.crossOrigin === undefined ? 'anonymous' : options.crossOrigin }),
+      signal: context.signal,
+    });
 
     return new Video(video, options.playbackOptions, options.textureOptions);
   }
 
-  /** Ends playback and the transfer behind a released video. */
+  /** Ends playback and the transfer behind a released video, and frees its data. */
   public dispose(resource: Video): void {
     const video = resource.videoElement;
 
     resource.destroy();
     detachMediaElement(video);
-    this._videoElements.delete(video);
+
+    const objectUrl = this._elements.get(video);
+
+    if (objectUrl !== undefined) {
+      this._objectUrls.revoke(objectUrl);
+    }
+
+    this._elements.delete(video);
   }
 
   public destroy(): void {
-    for (const video of this._videoElements) {
+    for (const video of this._elements.keys()) {
       detachMediaElement(video);
     }
 
-    this._videoElements.clear();
+    this._elements.clear();
     this._objectUrls.revokeAll();
   }
+}
+
+/** Re-wrap a blob only when the request asked for a MIME type it does not already carry. */
+function retyped(blob: Blob, mimeType: string | undefined): Blob {
+  return mimeType === undefined || mimeType === blob.type ? blob : new Blob([blob], { type: mimeType });
 }

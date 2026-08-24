@@ -144,7 +144,7 @@
       "members": [
         {
           "name": "policy",
-          "signature": "policy: CachePolicy",
+          "signature": "policy: CachePolicySource",
           "signatureTokens": [
             {
               "text": "policy",
@@ -155,13 +155,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "CachePolicy",
+              "text": "CachePolicySource",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The policy, or the resolver that picks one per acquisition."
         },
         {
           "name": "promote",

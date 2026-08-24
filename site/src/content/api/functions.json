@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 62,
+  "memberCount": 63,
   "counts": {
     "constructors": 0,
-    "methods": 33,
+    "methods": 34,
     "properties": 29,
     "events": 0
   },
@@ -19,7 +19,7 @@
       "title": "Overview",
       "members": [],
       "paragraphs": [
-        "Free functions and constants exported from @codexo/exojs. Import any of them directly, for example `import { cacheHit } from '@codexo/exojs'`."
+        "Free functions and constants exported from @codexo/exojs. Import any of them directly, for example `import { browserNetworkHints } from '@codexo/exojs'`."
       ],
       "importLine": null,
       "sourceLink": null
@@ -28,6 +28,35 @@
       "id": "functions",
       "title": "Functions",
       "members": [
+        {
+          "name": "browserNetworkHints",
+          "signature": "browserNetworkHints(): OwnedNetworkHintSource",
+          "signatureTokens": [
+            {
+              "text": "browserNetworkHints",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OwnedNetworkHintSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "OwnedNetworkHintSource",
+          "description": "The browser's own network-reachability hint: navigator.onLine, kept current by the online and offline window events. What the browser reports is whether it has a usable network interface. A captive portal, a dead resolver and a firewalled origin all report as online, so this can say \"probably reachable\" and \"definitely not\", never \"reachable\". Shared by BrowserPlatform and by a standalone Connectivity, so the two window listeners and the navigator read exist once."
+        },
         {
           "name": "cacheHit",
           "signature": "cacheHit(value: T): CacheReadResult<T>",

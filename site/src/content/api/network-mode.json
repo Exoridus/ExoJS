@@ -1,0 +1,80 @@
+{
+  "title": "NetworkMode",
+  "description": "What the application allows. `'auto'` follows Connectivity.state. `'online'` and `'offline'` are the application's own decision and override it - `'offline'` in particular is a hard rule rather than a hint, and is what a \"play offline\" setting sets.",
+  "symbol": "NetworkMode",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What the application allows.",
+        "`'auto'` follows Connectivity.state. `'online'` and `'offline'` are the application's own decision and override it - `'offline'` in particular is a hard rule rather than a hint, and is what a \"play offline\" setting sets."
+      ],
+      "importLine": "import { NetworkMode } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "NetworkMode",
+          "signature": "\"auto\" | \"offline\" | \"online\"",
+          "signatureTokens": [
+            {
+              "text": "\"auto\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"offline\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"online\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Connectivity.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Connectivity.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Connectivity.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Connectivity.ts"
+}

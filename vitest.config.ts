@@ -614,6 +614,9 @@ export default defineConfig({
           name: 'browser-assets-chromium',
           globals: true,
           include: ['test/assets/browser/**/*.test.ts'],
+          // The offline round trip drives a real `Loader`, which reaches engine
+          // modules that read the bare build-flag globals - see the setup file.
+          setupFiles: browserSetupFiles,
           browser: {
             enabled: true,
             headless: true,

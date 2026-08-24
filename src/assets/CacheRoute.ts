@@ -1,5 +1,6 @@
 import { CacheFirstPolicy } from './cachePolicies';
 import type { CachePolicy } from './CachePolicy';
+import { type CachePolicyResolutionContext, type CachePolicySource, isPolicyResolver } from './CachePolicyResolver';
 import type { CacheStore } from './CacheStore';
 
 /** Normalize the single-or-many store shorthand every route option accepts. */
@@ -18,8 +19,14 @@ export interface CacheRouteOptions {
    * every type that no earlier route claimed.
    */
   readonly types?: readonly string[];
-  /** How the cache and the network are ordered. Defaults to {@link CacheFirstPolicy}. */
-  readonly policy?: CachePolicy;
+  /**
+   * How the cache and the network are ordered. Defaults to
+   * {@link CacheFirstPolicy}.
+   *
+   * A {@link CachePolicyResolver} chooses per acquisition instead of once, for
+   * a decision that depends on something outside the route.
+   */
+  readonly policy?: CachePolicySource;
   /** Stores this route both reads and writes. Shorthand for passing the same list as `read` and `write`. */
   readonly stores?: CacheStore | readonly CacheStore[];
   /** Stores consulted on a read, in order. The first hit wins; later stores are not consulted. */
@@ -58,7 +65,8 @@ export interface CacheRouteOptions {
 export class CacheRoute {
   /** The asset type ids this route claims, or `null` when it claims every type. */
   public readonly types: readonly string[] | null;
-  public readonly policy: CachePolicy;
+  /** The policy, or the resolver that picks one per acquisition. */
+  public readonly policy: CachePolicySource;
   /** Stores consulted on a read, in order. */
   public readonly readStores: readonly CacheStore[];
   /** Stores a write goes to. */
@@ -78,5 +86,16 @@ export class CacheRoute {
   /** Whether this route claims `namespace`. */
   public matches(namespace: string): boolean {
     return this.types === null || this.types.includes(namespace);
+  }
+
+  /**
+   * The policy one acquisition runs under.
+   *
+   * Asked once, when the acquisition starts. A request already in flight keeps
+   * what it began with - see {@link CachePolicyResolver}.
+   * @internal
+   */
+  public policyFor(context: CachePolicyResolutionContext): CachePolicy {
+    return isPolicyResolver(this.policy) ? this.policy.policyFor(context) : this.policy;
   }
 }
