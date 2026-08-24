@@ -390,6 +390,14 @@ jobs:
       - name: Browser tests (inline worklet/worker sources, headless Chromium)
         run: pnpm test:browser:build
 
+      # The asset cache's persistent store rides along for the same reasons:
+      # the same headless Chromium, seconds to run, and a subject in the engine
+      # path set that already gates this job. No coverage - it asserts that a
+      # real IndexedDB commits, clones and ranges the way the store assumes,
+      # not that engine lines execute.
+      - name: Browser tests (IndexedDB cache store, headless Chromium)
+        run: pnpm test:browser:assets
+
       - name: Upload coverage to Codecov (browser flag)
         if: ${{ !cancelled() }}
         uses: codecov/codecov-action@v6.0.2

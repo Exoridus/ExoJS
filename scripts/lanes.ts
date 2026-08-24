@@ -68,6 +68,7 @@ export const LOCAL_LANES: readonly Lane[] = [
   { key: 'unit', name: 'allocation gate', command: ['pnpm', 'test:alloc'] },
   { key: 'browserWebgl2', name: 'browser: Chromium WebGL2', command: ['pnpm', 'test:browser:webgl'], browser: true },
   { key: 'browserWebgl2', name: 'browser: inline worklet/worker sources', command: ['pnpm', 'test:browser:build'], browser: true },
+  { key: 'browserWebgl2', name: 'browser: IndexedDB cache store', command: ['pnpm', 'test:browser:assets'], browser: true },
   { key: 'browserWebgpu', name: 'browser: Chromium WebGPU', command: ['pnpm', 'test:browser:webgpu'], browser: true },
   { key: 'browserAudio', name: 'browser: audio worklets', command: ['pnpm', 'test:browser:audio'], browser: true },
   { key: 'browserTilemapWorker', name: 'browser: tilemap worker', command: ['pnpm', 'test:browser:tilemap'], browser: true },
