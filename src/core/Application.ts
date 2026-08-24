@@ -30,6 +30,7 @@ import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
 import { Color } from './Color';
+import { Connectivity } from './Connectivity';
 import { DestroyScope } from './DestroyScope';
 import { assert, invariant } from './dev';
 import { showDevErrorOverlay } from './devErrorOverlay';
@@ -256,6 +257,17 @@ export interface ApplicationOptions<Registry extends SceneRegistryShape<Registry
    * {@link Application.destroy} - it stays yours to dispose.
    */
   platform?: PlatformAdapter;
+  /**
+   * Whether the application may reach the network, and what the host reports
+   * about it. Defaults to one built over {@link ApplicationOptions.platform}.
+   *
+   * Pass your own when something outside the application needs the same
+   * instance - a {@link ConnectivityPolicyResolver} is configured on an
+   * `AssetCache` the caller builds, which happens before an `Application`
+   * exists to own one. An injected `Connectivity` is *not* destroyed by
+   * {@link Application.destroy} - it stays yours to dispose.
+   */
+  connectivity?: Connectivity;
   /** Seed for the per-Application {@link Application.random} RNG. Omit for a non-deterministic seed. */
   seed?: number;
   /**
@@ -497,6 +509,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * through this one adapter. See {@link ApplicationOptions.platform}.
    */
   public readonly platform: PlatformAdapter;
+  /**
+   * Whether the application may reach the network right now, and what the host
+   * reports about it.
+   *
+   * An ordinary runtime service, not a cache detail: UI reads it for an offline
+   * banner, and the asset cache reaches it only through a
+   * {@link ConnectivityPolicyResolver} the application was configured with.
+   */
+  public readonly connectivity: Connectivity;
   public readonly loader: Loader;
   public readonly input: InputManager;
   public readonly interaction: InteractionManager;
@@ -647,6 +668,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _recentErrors: RecentErrorEntry[] = [];
   /** Whether {@link Application.platform} was created here - an injected one is not ours to destroy. */
   private readonly _ownsPlatform: boolean;
+  private readonly _ownsConnectivity: boolean;
   /**
    * Whether {@link Application.canvas} was created here. A canvas the caller
    * passed in via `canvas.element` belongs to their page - it stays in the DOM
@@ -728,6 +750,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // frame loop all read the host through it.
       this._ownsPlatform = appSettings.platform === undefined;
       this.platform = appSettings.platform ?? (this.element === null ? new OffscreenPlatform(this.canvas) : new BrowserPlatform(this.element));
+
+      // Reads the host through the same adapter as everything else, so a
+      // platform that reports no network makes the whole application agree.
+      this._ownsConnectivity = appSettings.connectivity === undefined;
+      this.connectivity = appSettings.connectivity ?? new Connectivity(this.platform);
+
+      if (this._ownsConnectivity) {
+        constructed.track(this.connectivity);
+      }
 
       // Every runtime clock reads the host through the adapter, so a platform
       // with a deterministic time source makes the whole frame loop
@@ -2031,8 +2062,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this.input.destroy();
     this._backend.destroy();
 
-    // Only an adapter this application created is ours to tear down; an
-    // injected one may outlive us or be shared.
+    // Only what this application created is ours to tear down; an injected
+    // adapter or connectivity may outlive us or be shared.
+    if (this._ownsConnectivity) {
+      this.connectivity.destroy();
+    }
+
     if (this._ownsPlatform) {
       this.platform.destroy();
     }

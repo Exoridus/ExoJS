@@ -1,0 +1,71 @@
+{
+  "title": "CachePolicySource",
+  "description": "Either shape a route accepts for its policy.",
+  "symbol": "CachePolicySource",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Either shape a route accepts for its policy."
+      ],
+      "importLine": "import { CachePolicySource } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "CachePolicySource",
+          "signature": "CachePolicy | CachePolicyResolver",
+          "signatureTokens": [
+            {
+              "text": "CachePolicy",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CachePolicyResolver",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/CachePolicyResolver.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicyResolver.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/CachePolicyResolver.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicyResolver.ts"
+}

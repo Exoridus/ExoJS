@@ -1,6 +1,8 @@
 import type { BrowserGamepad } from '#input/GamepadDefinitions';
 
+import { browserNetworkHints, type OwnedNetworkHintSource, readBrowserNetworkHint } from './networkHints';
 import type {
+  NetworkHint,
   PlatformAdapter,
   PlatformListenerOptions,
   PlatformSubscription,
@@ -14,8 +16,9 @@ const noGamepads: ReadonlyArray<BrowserGamepad | null> = [];
 /**
  * The {@link PlatformAdapter} backed by the browser: a canvas element for the
  * drawing surface, `window` for keyboard and blur, `document` for visibility,
- * and `navigator` for gamepads. Used automatically by {@link Application} when
- * no adapter was injected.
+ * `navigator` for gamepads, and `navigator.onLine` plus the `online`/`offline`
+ * window events for the network hint. Used automatically by
+ * {@link Application} when no adapter was injected.
  *
  * Every capability degrades rather than throws when the host does not provide
  * it - pointer capture is rejected by jsdom and by browsers asked to release a
@@ -43,6 +46,12 @@ export class BrowserPlatform implements PlatformAdapter {
 
   private _lastVisible: boolean;
   private _visibilityBound = false;
+  /**
+   * Bound on first subscription rather than in the constructor: an application
+   * that never asks about connectivity should install no window listeners for
+   * it.
+   */
+  private _networkHints: OwnedNetworkHintSource | null = null;
 
   public constructor(canvas: HTMLCanvasElement) {
     this._canvas = canvas;
@@ -125,6 +134,18 @@ export class BrowserPlatform implements PlatformAdapter {
     });
   }
 
+  public get networkHint(): NetworkHint {
+    return this._networkHints?.networkHint ?? readBrowserNetworkHint();
+  }
+
+  public onNetworkHintChange(listener: (hint: NetworkHint) => void): PlatformSubscription {
+    this._networkHints ??= browserNetworkHints();
+
+    const unsubscribe = this._networkHints.onNetworkHintChange(listener);
+
+    return this._track(unsubscribe);
+  }
+
   public now(): number {
     return performance.now();
   }
@@ -161,6 +182,8 @@ export class BrowserPlatform implements PlatformAdapter {
     this._subscriptions.clear();
     this._visibilityListeners.clear();
     this._unbindVisibility();
+    this._networkHints?.destroy();
+    this._networkHints = null;
   }
 
   /**

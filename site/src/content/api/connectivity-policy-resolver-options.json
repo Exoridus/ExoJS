@@ -1,0 +1,100 @@
+{
+  "title": "ConnectivityPolicyResolverOptions",
+  "description": "Construction options for a ConnectivityPolicyResolver.",
+  "symbol": "ConnectivityPolicyResolverOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for a ConnectivityPolicyResolver."
+      ],
+      "importLine": "import { ConnectivityPolicyResolverOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "offline",
+          "signature": "offline?: CachePolicy",
+          "signatureTokens": [
+            {
+              "text": "offline",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CachePolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The policy used while it is not. Defaults to CacheOnlyPolicy, whose whole point here is that a missing record fails immediately with an AssetCacheMissError instead of waiting out a fetch that cannot succeed."
+        },
+        {
+          "name": "online",
+          "signature": "online?: CachePolicy",
+          "signatureTokens": [
+            {
+              "text": "online",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CachePolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The policy used while the network is allowed. Defaults to CacheFirstPolicy, which is also the loader's default."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/ConnectivityPolicyResolver.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/ConnectivityPolicyResolver.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/ConnectivityPolicyResolver.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/ConnectivityPolicyResolver.ts"
+}

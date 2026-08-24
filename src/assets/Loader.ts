@@ -226,6 +226,44 @@ export class Loader {
   }
 
   /**
+   * Acquires an asset's SOURCE and lets the cache keep it, without building the
+   * asset.
+   *
+   * This is how an application fills a persistent cache ahead of time - before
+   * a level, before going offline, on a fast connection - for assets it does not
+   * want resident yet. Nothing is constructed, nothing is claimed, and nothing
+   * stays in memory: what remains afterwards is a cache record, which a later
+   * `load()` of the same asset finds because both derive the same source
+   * identity from the same descriptor.
+   *
+   * Whether a hit is served from the cache or the network comes down to the
+   * route's policy, exactly as it does for a load. A cached source is not
+   * re-fetched.
+   *
+   * A type that supplies its own source acquires nothing, so there is nothing
+   * to cache and this rejects saying so - streaming media needs
+   * `download: true` to be cacheable.
+   *
+   * @example
+   * ```ts
+   * await app.loader.cacheSource(assets.world);
+   * await app.loader.cacheSource(Asset.type('music', 'theme.mp3', { download: true }));
+   * ```
+   */
+  public cacheSource(asset: Asset<unknown>, options?: { readonly signal?: AbortSignal }): Promise<void> {
+    const ctor = this._typeRegistry.resolveTypeName(asset.type);
+
+    if (ctor === undefined) {
+      throw new Error(`Loader: no asset type "${asset.type}" is installed on this application.`);
+    }
+
+    const { type: _type, source, ...rest } = asset._config;
+    const requestOptions = Object.keys(rest).length > 0 ? rest : undefined;
+
+    return this._decoder._acquireOnly(this._canonicalize(ctor, source, requestOptions), requestOptions, options?.signal);
+  }
+
+  /**
    * Acquire a representation of `source` through the application's cache
    * configuration.
    *

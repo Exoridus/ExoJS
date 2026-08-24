@@ -1,0 +1,148 @@
+{
+  "title": "NetworkHintSource",
+  "description": "Anything that can report network reachability and say when it changed. A PlatformAdapter satisfies it, and so does the standalone browser source - which is what lets a Connectivity exist before an application does.",
+  "symbol": "NetworkHintSource",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Anything that can report network reachability and say when it changed.",
+        "A PlatformAdapter satisfies it, and so does the standalone browser source - which is what lets a Connectivity exist before an application does."
+      ],
+      "importLine": "import { NetworkHintSource } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "onNetworkHintChange",
+          "signature": "onNetworkHintChange(listener: (hint: NetworkHint) => void): PlatformSubscription",
+          "signatureTokens": [
+            {
+              "text": "onNetworkHintChange",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "hint",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkHint",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformSubscription",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "(hint: NetworkHint) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "PlatformSubscription",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "networkHint",
+          "signature": "networkHint: NetworkHint",
+          "signatureTokens": [
+            {
+              "text": "networkHint",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkHint",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformAdapter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformAdapter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+}

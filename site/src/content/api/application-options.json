@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 13,
+  "memberCount": 14,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 13,
+    "properties": 14,
     "events": 0
   },
   "sections": [
@@ -125,6 +125,31 @@
           "params": [],
           "returnType": null,
           "description": "The colour every frame starts from. Applied by the engine's own per-frame clear (see ApplicationOptions.autoClear) and readable/assignable later as Application.clearColor. Default: cornflower blue."
+        },
+        {
+          "name": "connectivity",
+          "signature": "connectivity?: Connectivity",
+          "signatureTokens": [
+            {
+              "text": "connectivity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Connectivity",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the application may reach the network, and what the host reports about it. Defaults to one built over ApplicationOptions.platform. Pass your own when something outside the application needs the same instance - a ConnectivityPolicyResolver is configured on an AssetCache the caller builds, which happens before an Application exists to own one. An injected Connectivity is *not* destroyed by Application.destroy - it stays yours to dispose."
         },
         {
           "name": "extensions",

@@ -1,0 +1,132 @@
+---
+title: 'Offline-capable asset loading'
+description: 'Warm a persistent cache ahead of time, and keep the application working - and failing honestly - when the network is gone.'
+---
+
+import Callout from '../../../components/Callout.astro';
+
+# Offline-capable asset loading
+
+A cache makes a second session faster. It only makes an application _work offline_ if two more things are true: the assets were put there **before** the connection went away, and the loader **refuses** to reach for the network once it has.
+
+Both are explicit. Nothing here happens by itself.
+
+## The shape of it
+
+```ts
+import { Application, AssetCache, Connectivity, ConnectivityPolicyResolver, IndexedDbStore, type LoaderOptions } from '@codexo/exojs';
+
+// Built first, so the same instance reaches both the cache and the application.
+const connectivity = new Connectivity();
+
+const loader: LoaderOptions = {
+  basePath: '/assets/',
+  cache: new AssetCache({
+    stores: new IndexedDbStore('my-game'),
+    policy: new ConnectivityPolicyResolver(connectivity),
+  }),
+};
+
+const app = new Application({ connectivity, loader });
+```
+
+`app.connectivity` is that same object. The resolver is what ties it to the cache: it is asked, once per acquisition, which policy that acquisition runs under.
+
+## Warm the cache while you can
+
+`loader.cacheSource(asset)` acquires an asset's **source** and lets the cache keep it - without building the asset:
+
+```ts no-check -- continues the configuration above; on its own it has no app to call
+await app.loader.cacheSource(Asset.type('json', 'levels/01.json'));
+await app.loader.cacheSource(Asset.type('json', 'text/dialogue.json'));
+```
+
+Nothing is constructed, nothing is claimed, and nothing stays in memory. What remains is a cache record, which a later `load()` of the same asset finds because both derive the same source identity from the same descriptor.
+
+Run it where a delay is acceptable and a connection is likely: a title screen, a settings toggle, the pause before a chapter.
+
+<Callout type="hint" title="Streaming media has to be asked">
+Music and video are streamed by the browser by default: the element owns the transfer and never holds more than it is playing, so the loader acquires nothing and there is nothing to cache. Pass `download: true` to acquire it instead:
+
+```ts no-check -- continues the configuration above; on its own it has no app to call
+await app.loader.cacheSource(Asset.type('music', 'theme.mp3', { download: true }));
+```
+
+Without it, `cacheSource` rejects and says so rather than appearing to succeed.
+
+</Callout>
+
+## Go offline
+
+```ts no-check -- continues the configuration above; on its own it has no app to call
+app.connectivity.mode = 'offline';
+```
+
+From the next acquisition on, the resolver picks a cache-only policy. That has two consequences, and both are the point:
+
+- an asset whose source was warmed **loads normally** - the cache answers, and no request is made;
+- an asset that was never warmed **fails immediately** with an `AssetCacheMissError`, instead of waiting out a fetch that cannot succeed.
+
+```ts no-check -- the recovery branch calls into an application's own UI, which the guide cannot define
+import { AssetCacheMissError } from '@codexo/exojs';
+
+try {
+  const world = await this.loader.load(assets.world);
+} catch (error) {
+  if (error instanceof AssetCacheMissError) {
+    // Not "loading failed" - "this was never cached". A different message,
+    // and often a different recovery.
+    showNotDownloadedYet();
+  }
+}
+```
+
+Set `mode` back to `'auto'` to follow the environment again, or to `'online'` to keep using the network whatever the host reports.
+
+## The two questions, kept apart
+
+`Connectivity` answers two different questions, and never confuses them:
+
+| | Means | Values |
+| --- | --- | --- |
+| `state` | what the environment appears to provide | `'online'` \| `'offline'` \| `'unknown'` |
+| `mode` | what the application allows | `'auto'` \| `'online'` \| `'offline'` |
+
+`state` is a **hint**. `navigator.onLine === true` says the device has a network interface, not that your origin answers - a captive portal, a dead resolver and a firewalled host all report as online. `'unknown'` is a real answer for a host that reports nothing, and it counts as permitted: refusing on no evidence would break every environment that stays silent.
+
+`mode` is your decision, and it wins. `'auto'` follows `state`, which is what makes a dropped connection switch the application over without any code running.
+
+## Show it in the UI
+
+The same object drives an offline banner. It is an ordinary runtime service - nothing about it is cache-specific:
+
+```ts no-check -- both listeners drive an application's own UI objects, which the guide cannot define
+app.connectivity.onStateChange.add(state => {
+  offlineBanner.visible = state === 'offline';
+});
+
+app.connectivity.onModeChange.add(mode => {
+  downloadButton.enabled = mode !== 'offline';
+});
+```
+
+## Where media data lives
+
+A downloaded or cached media asset is persisted as a `Blob`, not as bytes on the JavaScript heap - which is the difference between caching a large video and running out of memory trying. On a cache hit the element is pointed at an object URL over that blob, and the URL lives exactly as long as the resource does:
+
+```
+Blob -> URL.createObjectURL -> <audio> / <video>
+```
+
+Releasing the asset revokes it. Revoking earlier would break a seek that leaves the buffered range, because the element re-reads its source.
+
+<Callout type="warning" title="A policy change never re-routes a request in flight">
+The policy is chosen when an acquisition **starts**. A request that was allowed to reach the network keeps that contract to completion, even if the connection drops or the application switches to offline mid-transfer. Only the next acquisition sees the new answer.
+
+That is deliberate: a half-finished transfer being cancelled by an event it never observed is harder to reason about than one that simply finishes.
+
+</Callout>
+
+## What this is not
+
+This is a cache policy, not a service worker. The application still has to be loaded from somewhere: `Connectivity` and `cacheSource` cover the assets an already-running application needs, and say nothing about the document, the bundle, or a request your own code makes with `fetch`.

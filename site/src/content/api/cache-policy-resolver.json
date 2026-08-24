@@ -1,0 +1,99 @@
+{
+  "title": "CachePolicyResolver",
+  "description": "Chooses the CachePolicy for one acquisition, at the moment it starts. A route is configured with a policy or with a resolver. A resolver is for a decision that depends on something outside the route - connectivity, an application mode, a per-type rule - and is asked once per acquisition, never per record. Resolution happens at the START of an acquisition and never again: a request that was allowed to reach the network keeps that contract to completion. Only the NEXT acquisition sees a changed answer, which is what keeps a load from being re-routed mid-transfer by an event it never observed.",
+  "symbol": "CachePolicyResolver",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Chooses the CachePolicy for one acquisition, at the moment it starts.",
+        "A route is configured with a policy or with a resolver. A resolver is for a decision that depends on something outside the route - connectivity, an application mode, a per-type rule - and is asked once per acquisition, never per record.",
+        "Resolution happens at the START of an acquisition and never again: a request that was allowed to reach the network keeps that contract to completion. Only the NEXT acquisition sees a changed answer, which is what keeps a load from being re-routed mid-transfer by an event it never observed."
+      ],
+      "importLine": "import { CachePolicyResolver } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "policyFor",
+          "signature": "policyFor(context: CachePolicyResolutionContext): CachePolicy",
+          "signatureTokens": [
+            {
+              "text": "policyFor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CachePolicyResolutionContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CachePolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "CachePolicyResolutionContext",
+              "optional": false
+            }
+          ],
+          "returnType": "CachePolicy",
+          "description": "The policy this acquisition runs under. Named apart from CachePolicy.resolve on purpose: the two are accepted in the same position, and one method name meaning \"run the acquisition\" on one and \"pick who runs it\" on the other would make the union undiscriminable and the mistake silent."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/CachePolicyResolver.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicyResolver.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/CachePolicyResolver.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicyResolver.ts"
+}

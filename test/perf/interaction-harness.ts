@@ -49,6 +49,7 @@ type WindowListener = (event: never) => void;
 class FakePlatformAdapter implements PlatformAdapter {
   public surfaceFocused = false;
   public readonly documentVisible = true;
+  public readonly networkHint = 'online' as const;
   private readonly _metrics: PlatformSurfaceMetrics;
   private readonly _surfaceListeners = new Map<string, SurfaceListener[]>();
   private readonly _windowListeners = new Map<string, WindowListener[]>();
@@ -86,6 +87,10 @@ class FakePlatformAdapter implements PlatformAdapter {
   }
 
   public onVisibilityChange(): PlatformSubscription {
+    return () => undefined;
+  }
+
+  public onNetworkHintChange(): PlatformSubscription {
     return () => undefined;
   }
 

@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 16,
+  "memberCount": 18,
   "counts": {
     "constructors": 0,
-    "methods": 14,
-    "properties": 2,
+    "methods": 15,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -240,6 +240,73 @@
           "params": [],
           "returnType": "number",
           "description": "Milliseconds elapsed since this source's own origin."
+        },
+        {
+          "name": "onNetworkHintChange",
+          "signature": "onNetworkHintChange(listener: (hint: NetworkHint) => void): PlatformSubscription",
+          "signatureTokens": [
+            {
+              "text": "onNetworkHintChange",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "listener",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "hint",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkHint",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformSubscription",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "listener",
+              "type": "(hint: NetworkHint) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "PlatformSubscription",
+          "description": "Subscribe to PlatformAdapter.networkHint changes."
         },
         {
           "name": "onSurfaceEvent",
@@ -844,6 +911,27 @@
           "params": [],
           "returnType": null,
           "description": "Whether the document showing the surface is currently visible to the user."
+        },
+        {
+          "name": "networkHint",
+          "signature": "networkHint: NetworkHint",
+          "signatureTokens": [
+            {
+              "text": "networkHint",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkHint",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What the host reports about network reachability. A hint, and nothing more: a host saying 'online' has a network interface, not a route to any particular origin. 'unknown' is what a host that reports nothing means, and is deliberately not folded into 'online'."
         },
         {
           "name": "surfaceFocused",

@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 53,
+  "memberCount": 54,
   "counts": {
     "constructors": 1,
     "methods": 10,
-    "properties": 34,
+    "properties": 35,
     "events": 8
   },
   "sections": [
@@ -850,6 +850,27 @@
           "params": [],
           "returnType": null,
           "description": "The surface this application renders into - the canvas element it created or was given, or an OffscreenCanvas it was handed. width/height are the backing store in device pixels, not the CSS box; see Application.width for the design size. Use Application.element for anything that needs the surrounding document: styling, layout, or the element itself."
+        },
+        {
+          "name": "connectivity",
+          "signature": "connectivity: Connectivity",
+          "signatureTokens": [
+            {
+              "text": "connectivity",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Connectivity",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the application may reach the network right now, and what the host reports about it. An ordinary runtime service, not a cache detail: UI reads it for an offline banner, and the asset cache reaches it only through a ConnectivityPolicyResolver the application was configured with."
         },
         {
           "name": "element",

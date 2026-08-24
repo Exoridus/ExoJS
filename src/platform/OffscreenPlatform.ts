@@ -1,6 +1,7 @@
 import type { BrowserGamepad } from '#input/GamepadDefinitions';
 
 import type {
+  NetworkHint,
   PlatformAdapter,
   PlatformEventData,
   PlatformSubscription,
@@ -63,6 +64,7 @@ export class OffscreenPlatform implements PlatformAdapter {
   private readonly _surfaceListeners = new Map<string, Set<Listener>>();
   private readonly _windowListeners = new Map<string, Set<Listener>>();
   private readonly _visibilityListeners = new Set<(visible: boolean) => void>();
+  private readonly _networkListeners = new Set<(hint: NetworkHint) => void>();
   private readonly _timerHandles = new Map<number, ReturnType<typeof setTimeout>>();
   private readonly _requestFrame: ((callback: (timestamp: number) => void) => number) | null;
   private readonly _cancelFrame: ((handle: number) => void) | null;
@@ -71,6 +73,11 @@ export class OffscreenPlatform implements PlatformAdapter {
   private _gamepads: ReadonlyArray<BrowserGamepad | null> = noGamepads;
   private _visible = true;
   private _focused = false;
+  /**
+   * A worker sees no `online`/`offline` events, so the hint is whatever the
+   * host forwards. `'unknown'` until it does, because nothing here knows.
+   */
+  private _networkHint: NetworkHint = 'unknown';
   private _nextTimerHandle = 1;
 
   public constructor(surface: RenderSurface) {
@@ -96,6 +103,10 @@ export class OffscreenPlatform implements PlatformAdapter {
     return this._visible;
   }
 
+  public get networkHint(): NetworkHint {
+    return this._networkHint;
+  }
+
   /**
    * Record whether the host considers the surface focused. Keyboard input is
    * gated on this, so a host forwarding key events must forward focus too.
@@ -118,6 +129,25 @@ export class OffscreenPlatform implements PlatformAdapter {
 
     for (const listener of [...this._visibilityListeners]) {
       listener(visible);
+    }
+  }
+
+  /**
+   * Record what the host reports about network reachability. Drives
+   * {@link PlatformAdapter.networkHint} and its subscribers.
+   *
+   * A realm without `online`/`offline` events has no way to learn this on its
+   * own, so a host that wants connectivity to work here has to forward it.
+   */
+  public setNetworkHint(hint: NetworkHint): void {
+    if (hint === this._networkHint) {
+      return;
+    }
+
+    this._networkHint = hint;
+
+    for (const listener of [...this._networkListeners]) {
+      listener(hint);
     }
   }
 
@@ -195,6 +225,12 @@ export class OffscreenPlatform implements PlatformAdapter {
     return once(() => this._visibilityListeners.delete(listener));
   }
 
+  public onNetworkHintChange(listener: (hint: NetworkHint) => void): PlatformSubscription {
+    this._networkListeners.add(listener);
+
+    return once(() => this._networkListeners.delete(listener));
+  }
+
   public now(): number {
     return performance.now();
   }
@@ -247,6 +283,7 @@ export class OffscreenPlatform implements PlatformAdapter {
     this._surfaceListeners.clear();
     this._windowListeners.clear();
     this._visibilityListeners.clear();
+    this._networkListeners.clear();
     this._gamepads = noGamepads;
   }
 

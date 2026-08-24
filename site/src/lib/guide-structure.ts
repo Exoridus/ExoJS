@@ -247,6 +247,17 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 apiLinks: ['loader', 'texture'],
             },
             {
+                slug: 'offline',
+                level: 'advanced',
+                learningGoals: [
+                    'warm a persistent cache with loader.cacheSource before the connection is gone',
+                    'tell what the environment provides apart from what the application allows',
+                    'let a missing asset fail as a cache miss instead of a timed-out fetch',
+                ],
+                prerequisites: ['assets/loading-and-resources'],
+                apiLinks: ['loader', 'connectivity', 'asset-cache', 'connectivity-policy-resolver'],
+            },
+            {
                 slug: 'tiled-maps',
                 level: 'intermediate',
                 learningGoals: [

@@ -1,0 +1,306 @@
+{
+  "title": "Connectivity",
+  "description": "Whether the application should reach the network at all, right now. Two separate questions, deliberately never equated: - state - what the environment appears to provide; - mode - what the application allows. The state is a hint. `navigator.onLine === true` means the host has a network interface, not that a given origin answers; a captive portal, a dead DNS server and a firewalled origin all report as online. Nothing here promises reachability, and code that needs certainty has to try. Connectivity is not cache-specific. It is an ordinary runtime service: UI subscribes to it for an offline banner, and the cache uses it through a CachePolicyResolver rather than reaching into it.",
+  "symbol": "Connectivity",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 3,
+    "events": 2
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Whether the application should reach the network at all, right now.",
+        "Two separate questions, deliberately never equated:",
+        "- state - what the environment appears to provide; - mode - what the application allows.",
+        "The state is a hint. `navigator.onLine === true` means the host has a network interface, not that a given origin answers; a captive portal, a dead DNS server and a firewalled origin all report as online. Nothing here promises reachability, and code that needs certainty has to try.",
+        "Connectivity is not cache-specific. It is an ordinary runtime service: UI subscribes to it for an offline banner, and the cache uses it through a CachePolicyResolver rather than reaching into it."
+      ],
+      "importLine": "import { Connectivity } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(source?: NetworkHintSource): Connectivity",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkHintSource",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Connectivity",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "NetworkHintSource",
+              "optional": true
+            }
+          ],
+          "returnType": "Connectivity",
+          "description": "source is normally the application's PlatformAdapter, which satisfies NetworkHintSource. Omit it to build one over the browser's own signals - which is what lets a Connectivity exist BEFORE an application does, so the same instance can be handed to a ConnectivityPolicyResolver and to ApplicationOptions.connectivity."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Stops listening to the host and clears the signals. A hint source handed in belongs to whoever built it - normally the application's platform adapter, which outlives this - and is left alone; one this instance built for itself is torn down here."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "allowsNetwork",
+          "signature": "allowsNetwork: boolean",
+          "signatureTokens": [
+            {
+              "text": "allowsNetwork",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether an acquisition starting now may use the network. 'unknown' counts as permitted: the host is not saying the network is gone, and refusing on no evidence would break every environment that reports nothing."
+        },
+        {
+          "name": "mode",
+          "signature": "mode: NetworkMode",
+          "signatureTokens": [
+            {
+              "text": "mode",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkMode",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What the application allows. Defaults to 'auto', which follows state. Changing it affects acquisitions that START afterwards. One already in flight keeps the contract it began under: a request that was allowed to reach the network is not retroactively forbidden mid-transfer."
+        },
+        {
+          "name": "state",
+          "signature": "state: NetworkHint",
+          "signatureTokens": [
+            {
+              "text": "state",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkHint",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What the environment appears to provide. A hint from the host, never a promise that any particular origin is reachable."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "events",
+      "title": "Events",
+      "members": [
+        {
+          "name": "onModeChange",
+          "signature": "onModeChange: Signal<[NetworkMode]>",
+          "signatureTokens": [
+            {
+              "text": "onModeChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkMode",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when mode changes, with the new mode."
+        },
+        {
+          "name": "onStateChange",
+          "signature": "onStateChange: Signal<[NetworkHint]>",
+          "signatureTokens": [
+            {
+              "text": "onStateChange",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Signal",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkHint",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Fires when state changes, with the new state."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/Connectivity.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Connectivity.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/Connectivity.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Connectivity.ts"
+}

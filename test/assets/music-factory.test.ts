@@ -49,7 +49,7 @@ describe('MusicFactory', () => {
   test('create() resolves with an AudioStream once the default "canplay" event fires', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext());
     lastAudio().dispatchEvent(new Event('canplay'));
 
     const stream = await promise;
@@ -61,7 +61,7 @@ describe('MusicFactory', () => {
   test('create() honors a custom loadEvent option', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext({ loadEvent: 'loadedmetadata' }));
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext({ loadEvent: 'loadedmetadata' }));
     lastAudio().dispatchEvent(new Event('loadedmetadata'));
 
     await expect(promise).resolves.toBeInstanceOf(AudioStream);
@@ -70,7 +70,7 @@ describe('MusicFactory', () => {
   test('create() forwards playbackOptions to the AudioStream', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext({ playbackOptions: { volume: 0.4, loop: true } }));
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext({ playbackOptions: { volume: 0.4, loop: true } }));
     lastAudio().dispatchEvent(new Event('canplay'));
 
     const stream = await promise;
@@ -82,7 +82,7 @@ describe('MusicFactory', () => {
   test('create() rejects with a clear message on "error"', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext());
     lastAudio().dispatchEvent(new Event('error'));
 
     await expect(promise).rejects.toThrow('Error loading audio source.');
@@ -91,7 +91,7 @@ describe('MusicFactory', () => {
   test('create() rejects with a clear message on "abort"', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext());
     lastAudio().dispatchEvent(new Event('abort'));
 
     await expect(promise).rejects.toThrow('Audio loading was canceled.');
@@ -100,7 +100,7 @@ describe('MusicFactory', () => {
   test('create() rejects with a clear message on "emptied"', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext());
     lastAudio().dispatchEvent(new Event('emptied'));
 
     await expect(promise).rejects.toThrow('Audio loading was emptied.');
@@ -110,7 +110,7 @@ describe('MusicFactory', () => {
     vi.useFakeTimers();
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext({ stallTimeout: 50 }));
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext({ stallTimeout: 50 }));
     lastAudio().dispatchEvent(new Event('stalled'));
     vi.advanceTimersByTime(50);
 
@@ -121,7 +121,7 @@ describe('MusicFactory', () => {
     vi.useFakeTimers();
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext({ stallTimeout: 50 }));
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext({ stallTimeout: 50 }));
     const audio = lastAudio();
 
     audio.dispatchEvent(new Event('stalled'));
@@ -147,7 +147,7 @@ describe('MusicFactory', () => {
     vi.useFakeTimers();
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext({ stallTimeout: 50 }));
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext({ stallTimeout: 50 }));
     const audio = lastAudio();
 
     audio.dispatchEvent(new Event('canplay'));
@@ -161,7 +161,7 @@ describe('MusicFactory', () => {
   test('a subsequent load event after settling on error is ignored (no double-settle)', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext());
     const audio = lastAudio();
 
     audio.dispatchEvent(new Event('error'));
@@ -170,20 +170,37 @@ describe('MusicFactory', () => {
     await expect(promise).rejects.toThrow('Error loading audio source.');
   });
 
-  test('create() revokes the object URL once loading settles', async () => {
+  test('the object URL lives as long as the resource, and is revoked when it is disposed', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext());
+    lastAudio().dispatchEvent(new Event('canplay'));
+
+    const stream = await promise;
+
+    // Still alive: an element re-reads its source when a seek leaves the
+    // buffered range, so revoking here would break playback that had started.
+    expect(revokeObjectUrlSpy).not.toHaveBeenCalled();
+
+    factory.dispose(stream);
+
+    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
+  });
+
+  test('a streamed element creates no object URL at all', async () => {
+    const factory = new MusicFactory();
+
+    const promise = factory.create({ url: '/audio/theme.mp3' }, factoryContext());
     lastAudio().dispatchEvent(new Event('canplay'));
     await promise;
 
-    expect(revokeObjectUrlSpy).toHaveBeenCalledTimes(1);
+    expect(URL.createObjectURL).not.toHaveBeenCalled();
   });
 
   test('destroy() pauses and detaches every created <audio> element', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
+    const promise = factory.create({ blob: new Blob([AUDIO_HEADER]) }, factoryContext());
     const audio = lastAudio();
     const pauseSpy = vi.spyOn(audio, 'pause');
     audio.dispatchEvent(new Event('canplay'));

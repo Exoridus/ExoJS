@@ -1,0 +1,80 @@
+{
+  "title": "NetworkHint",
+  "description": "What a host reports about network reachability. `'unknown'` is an answer, not a missing one: a host that cannot say whether a network exists is genuinely not saying it, and reading that as `'online'` would hide the difference from everything that has to decide on it.",
+  "symbol": "NetworkHint",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a host reports about network reachability.",
+        "`'unknown'` is an answer, not a missing one: a host that cannot say whether a network exists is genuinely not saying it, and reading that as `'online'` would hide the difference from everything that has to decide on it."
+      ],
+      "importLine": "import { NetworkHint } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "NetworkHint",
+          "signature": "\"offline\" | \"online\" | \"unknown\"",
+          "signatureTokens": [
+            {
+              "text": "\"offline\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"online\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"unknown\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformAdapter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformAdapter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+}

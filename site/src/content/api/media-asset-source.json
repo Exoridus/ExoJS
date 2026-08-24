@@ -1,6 +1,6 @@
 {
   "title": "MediaAssetSource",
-  "description": "What a media resource is built from. A URL is streamed by the browser, which owns the transfer for the whole life of the element. Bytes are already owned by the application - a download, a container entry, a cached representation - and are wrapped in a blob the resource holds until it is released.",
+  "description": "What a media resource is built from. A URL is streamed by the browser, which owns the transfer for the whole life of the element and never holds more than it is playing. A blob is data the application already owns - a download, a container entry, a cached representation - and the element reads it through an object URL the resource keeps alive for as long as it exists.",
   "symbol": "MediaAssetSource",
   "kind": "type",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "What a media resource is built from.",
-        "A URL is streamed by the browser, which owns the transfer for the whole life of the element. Bytes are already owned by the application - a download, a container entry, a cached representation - and are wrapped in a blob the resource holds until it is released."
+        "A URL is streamed by the browser, which owns the transfer for the whole life of the element and never holds more than it is playing. A blob is data the application already owns - a download, a container entry, a cached representation - and the element reads it through an object URL the resource keeps alive for as long as it exists."
       ],
       "importLine": "import { MediaAssetSource } from '@codexo/exojs'",
       "sourceLink": null
@@ -31,14 +31,14 @@
       "members": [
         {
           "name": "MediaAssetSource",
-          "signature": "{ bytes: ArrayBuffer; url?: undefined } | { bytes?: undefined; url: string }",
+          "signature": "{ blob: Blob; url?: undefined } | { blob?: undefined; url: string }",
           "signatureTokens": [
             {
               "text": "{ ",
               "kind": "punctuation"
             },
             {
-              "text": "bytes",
+              "text": "blob",
               "kind": "name"
             },
             {
@@ -46,7 +46,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "ArrayBuffer",
+              "text": "Blob",
               "kind": "type"
             },
             {
@@ -82,7 +82,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "bytes",
+              "text": "blob",
               "kind": "name"
             },
             {
