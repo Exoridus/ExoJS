@@ -77,6 +77,23 @@ export function ldtkToTileMap(data: LdtkData, options?: LdtkToTileMapOptions): L
 
 // ── Level conversion ──────────────────────────────────────────────────────────
 
+/**
+ * Convert one already-resolved LDtk level into its runtime {@link TileMap}.
+ *
+ * `level.layerInstances` must be present: an externalized level has to have its
+ * `.ldtkl` payload merged in first, or the result is an empty map.
+ * @internal
+ */
+export function ldtkLevelToTileMap(
+  level: LdtkLevel,
+  worldIid: string | undefined,
+  levelIndex: number,
+  data: LdtkData,
+  tilesets: ReadonlyMap<number, TileSet>,
+): TileMap {
+  return convertLevel(level, worldIid, levelIndex, data, tilesets);
+}
+
 function convertLevel(
   level: LdtkLevel,
   worldIid: string | undefined,
@@ -129,20 +146,27 @@ function convertLevel(
     tilesets: runtimeTilesets,
     layers: runtimeLayers,
     objectLayers: runtimeObjectLayers,
-    // Convert user-defined level fields first, then apply the reserved keys
-    // last so a same-named user field can never clobber them. ldtkWorldIid is
-    // only added for multi-world documents (worldIid !== undefined) - a
-    // single-world document's properties must stay exactly as they were
-    // before multi-world support existed.
-    properties: {
-      ...convertFieldInstances(level.fieldInstances ?? []),
-      ldtkUid: level.uid,
-      ldtkIid: level.iid,
-      worldX: level.worldX,
-      worldY: level.worldY,
-      ...(worldIid !== undefined && { ldtkWorldIid: worldIid }),
-    },
+    properties: buildLdtkLevelProperties(level, worldIid),
   });
+}
+
+/**
+ * The property bag a level contributes to its runtime representation - user
+ * fields first, then the reserved LDtk keys, so a same-named user field can
+ * never clobber them. `ldtkWorldIid` is added only for multi-world documents;
+ * a single-world document's properties stay exactly as they were before
+ * multi-world support existed.
+ * @internal
+ */
+export function buildLdtkLevelProperties(level: LdtkLevel, worldIid: string | undefined): TileProperties {
+  return {
+    ...convertFieldInstances(level.fieldInstances ?? []),
+    ldtkUid: level.uid,
+    ldtkIid: level.iid,
+    worldX: level.worldX,
+    worldY: level.worldY,
+    ...(worldIid !== undefined && { ldtkWorldIid: worldIid }),
+  };
 }
 
 // ── Helpers: per-layer-type level conversion ─────────────────────────────────
@@ -159,7 +183,7 @@ function convertTilesOrAutoLayer(
   const tiles =
     layerInst.__type === 'Tiles' ? (layerInst.gridTiles ?? []) : (layerInst.autoLayerTiles ?? []);
   const tsUid = layerInst.__tilesetDefUid;
-  if (tsUid !== undefined) {
+  if (tsUid !== undefined && tsUid !== null) {
     const rts = tilesets.get(tsUid);
     if (rts) populateTileLayer(rLayer, tiles, rts, layerInst.__gridSize);
   }
@@ -182,7 +206,7 @@ function convertIntGridLayer(
   // data-only layer properties (see buildIntGridProperties).
   const autoTiles = layerInst.autoLayerTiles ?? [];
   const tsUid = layerInst.__tilesetDefUid;
-  if (autoTiles.length > 0 && tsUid !== undefined) {
+  if (autoTiles.length > 0 && tsUid !== undefined && tsUid !== null) {
     const rts = tilesets.get(tsUid);
     if (rts) populateTileLayer(rLayer, autoTiles, rts, layerInst.__gridSize);
   }
@@ -460,6 +484,10 @@ function convertEntity(entity: LdtkEntityInstance, id: number): TileMapObject {
   return {
     kind: 'rectangle',
     id,
+    // The iid is the only identity LDtk guarantees stable across re-export and
+    // level re-ordering, which is what a spawn session and a savegame key on;
+    // the numeric id above is derived from document position and is not.
+    sourceId: entity.iid,
     name: entity.__identifier,
     type: entity.__identifier,
     x,
@@ -469,6 +497,7 @@ function convertEntity(entity: LdtkEntityInstance, id: number): TileMapObject {
     rotation: 0,
     visible: true,
     properties: convertFieldInstances(entity.fieldInstances),
+    source: entity,
   };
 }
 

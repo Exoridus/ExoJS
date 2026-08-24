@@ -6,11 +6,11 @@
   "subsystem": "ldtk",
   "importPath": "@codexo/exojs-ldtk",
   "tier": "stable",
-  "memberCount": 11,
+  "memberCount": 13,
   "counts": {
     "constructors": 0,
-    "methods": 3,
-    "properties": 8,
+    "methods": 4,
+    "properties": 9,
     "events": 0
   },
   "sections": [
@@ -179,6 +179,65 @@
           ],
           "returnType": "LdtkIntGridValueDef | undefined",
           "description": "Look up the named/coloured LdtkIntGridValueDef at a tile coordinate on a TileLayer converted from an LDtk IntGrid layer instance. Returns undefined when the coordinate is out of bounds, the cell's raw value is 0 (empty), the raw value has no matching definition, or layer was not converted from an IntGrid layer instance (no IntGrid data attached via ldtkIntGridCsvProperty / ldtkIntGridValuesProperty). The underlying JSON-encoded CSV/value-defs properties are parsed once per layer and cached (see getParsedIntGridData) - safe to call from a hot path (e.g. per-cell or per-frame collision/classification checks)."
+        },
+        {
+          "name": "ldtkToMapWorld",
+          "signature": "ldtkToMapWorld(data: LdtkData): readonly MapWorld[]",
+          "signatureTokens": [
+            {
+              "text": "ldtkToMapWorld",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "data",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkData",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapWorld",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "data",
+              "type": "LdtkData",
+              "optional": false
+            }
+          ],
+          "returnType": "readonly MapWorld[]",
+          "description": "Build the format-neutral world model for an LDtk document: one MapWorld per LDtk world, in document order. A single-world project - the overwhelmingly common shape - yields exactly one unnamed world. A multi-world project yields one per entry of worlds[], each named by its identifier, and they stay separate on purpose: LDtk worlds have independent coordinate spaces, so merging them would make MapWorld.bounds and MapWorld.getLevelsInBounds report overlaps that do not exist. MapLevel.index counts across the whole document, matching the flattened order import('./LdtkMap').LdtkMap.levels uses. Level metadata only: no layer payload is read, so this is safe to call on a document whose external levels have not been fetched."
         },
         {
           "name": "ldtkToTileMap",
@@ -364,7 +423,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Default immutable LDtk extension descriptor. Registers one asset binding: - ldtkMapBinding - loader.load(LdtkMap, 'world.ldtk') → fetches the .ldtk JSON, loads all referenced tileset images, and returns a fully assembled LdtkMap with one runtime import('@codexo/exojs-tilemap').TileMap per level. Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the LDtk adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
+          "description": "Default immutable LDtk extension descriptor. Registers two asset bindings: - ldtkMapBinding - loader.load(Asset.type('ldtkMap', 'world.ldtk')) → fetches the .ldtk JSON, loads all referenced tileset images, and returns a fully assembled LdtkMap with one runtime import('@codexo/exojs-tilemap').TileMap per level. - ldtkProjectBinding - loader.load(Asset.type('ldtkProject', 'world.ldtk')) → returns the world layout and tileset atlases only, for games that load levels on demand. Depends on tilemapExtension so that snapshot construction always materialises the generic tilemap runtime before the LDtk adapter. Pass it to the application that should have it via ApplicationOptions.extensions."
         },
         {
           "name": "ldtkIntGridCsvProperty",
@@ -448,6 +507,47 @@
           "params": [],
           "returnType": null,
           "description": "Declarative asset binding for LdtkMap. Claims the ldtk file extension so that: - loader.load(Asset.type('ldtkMap', 'world.ldtk')) - returns the parsed LdtkMap with all levels pre-converted to runtime import('@codexo/exojs-tilemap').TileMaps. - loader.load('world.ldtk') - auto-routed to LdtkMap via the ExtensionKindMap augmentation in public.ts (suffix → 'ldtkMap'). Each loaded level's TileMap is accessible via LdtkMap.levels or LdtkMap.getLevelByName."
+        },
+        {
+          "name": "ldtkProjectBinding",
+          "signature": "ldtkProjectBinding: AssetBinding<LdtkProject, undefined>",
+          "signatureTokens": [
+            {
+              "text": "ldtkProjectBinding",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetBinding",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkProject",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Declarative asset binding for LdtkProject - the streaming entry point. loader.load(Asset.type('ldtkProject', 'world.ldtk')) returns the project's world layout and tileset atlases with no level payload loaded; levels are loaded and unloaded individually through LdtkProject.createRuntime. No file extension is claimed, so loader.load('world.ldtk') keeps resolving to the eager LdtkMap it always did. Both bindings fetch the same .ldtk URL, and loading one does not make the other resident."
         }
       ],
       "paragraphs": [],

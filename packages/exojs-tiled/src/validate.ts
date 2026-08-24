@@ -295,7 +295,11 @@ export function validateTiledObjectData(raw: unknown, source: string, path: stri
   return {
     id: expectNonNegativeInteger(obj.id, source, joinPath(path, 'id')),
     name: expectString(obj.name, source, joinPath(path, 'name')),
-    type: expectString(obj.type, source, joinPath(path, 'type')),
+    // Tiled 1.9 renamed the object's `type` member to `class` and 1.10 renamed
+    // it back, so a file written by either version carries only one of the two.
+    // Requiring `type` would reject every 1.9-authored map outright.
+    type: optionalString(obj, 'type', source, path) ?? '',
+    class: optionalString(obj, 'class', source, path),
     x: expectNumber(obj.x, source, joinPath(path, 'x')),
     y: expectNumber(obj.y, source, joinPath(path, 'y')),
     width: expectNumber(obj.width, source, joinPath(path, 'width')),

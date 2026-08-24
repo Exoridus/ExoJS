@@ -1097,6 +1097,16 @@ export default defineConfig([
     },
   },
 
+  // MapWorld exposes `MapLevelSide`, a PascalCase `as const` enum-like value
+  // object, declared the same way as `ObjectKind` above and relaxed for the
+  // same reason.
+  {
+    files: ['packages/exojs-tilemap/src/MapWorld.ts'],
+    rules: {
+      '@typescript-eslint/naming-convention': 'off',
+    },
+  },
+
   // Extension bitmask / validation constants follow ALL_CAPS convention.
   {
     files: [

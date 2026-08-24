@@ -547,6 +547,7 @@ function convertObject(
     rotation: object.rotation,
     visible: object.visible,
     properties: convertProperties(object.properties),
+    source: object,
   };
 
   if (object.text) {

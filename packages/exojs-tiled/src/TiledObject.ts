@@ -12,6 +12,12 @@ import type { TiledObjectData, TiledPointData, TiledPropertyData, TiledTextData 
 export class TiledObject {
   public readonly id: number;
   public readonly name: string;
+  /**
+   * The object's class, normalised across Tiled versions: 1.9 wrote it as
+   * `class`, every other version as `type`. A file carries one of the two, so
+   * `class` wins when present and non-empty and `type` is used otherwise.
+   * Empty when the object has no class.
+   */
   public readonly type: string;
   public readonly x: number;
   public readonly y: number;
@@ -31,7 +37,7 @@ export class TiledObject {
   public constructor(data: TiledObjectData) {
     this.id = data.id;
     this.name = data.name;
-    this.type = data.type;
+    this.type = data.class !== undefined && data.class !== '' ? data.class : data.type;
     this.x = data.x;
     this.y = data.y;
     this.width = data.width;

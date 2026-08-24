@@ -1,0 +1,144 @@
+{
+  "title": "MapObjectSpawnerOptions",
+  "description": "Options for MapObjectSpawner.",
+  "symbol": "MapObjectSpawnerOptions",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options for MapObjectSpawner."
+      ],
+      "importLine": "import { MapObjectSpawnerOptions } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "identify",
+          "signature": "identify?: (object: MapObjectDescriptor, context: Context) => null | string",
+          "signatureTokens": [
+            {
+              "text": "identify",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "object",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapObjectDescriptor",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Context",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Picks the factory key for an object, or returns null to treat it as unknown. Defaults to MapObjectDescriptor.kind. This is where project-specific dispatch policy lives - keying on a property, a name prefix, or a compound key: ts identify: object => ${object.kind}:${object.properties.variant} "
+        },
+        {
+          "name": "unknown",
+          "signature": "unknown?: UnknownMapObjectPolicy",
+          "signatureTokens": [
+            {
+              "text": "unknown",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UnknownMapObjectPolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What to do with an object no factory matched. Defaults to 'ignore', because maps legitimately carry editor markers, decoration and metadata objects that no game entity corresponds to. Use 'error' for a map format the project fully controls and wants validated."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/MapObjectSpawner.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapObjectSpawner.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/MapObjectSpawner.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapObjectSpawner.ts"
+}

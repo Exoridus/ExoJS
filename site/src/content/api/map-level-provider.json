@@ -1,0 +1,105 @@
+{
+  "title": "MapLevelProvider",
+  "description": "Produces the runtime TileMap for one level - the single seam where a source format meets the format-neutral world runtime. Anything awaitable is accepted, so a provider can hand back a LoaderScope.load queue directly. The returned map becomes **owned by that level runtime**, which destroys it on unload. Return a map built for this load; handing back a shared map (an entry of an eagerly converted document, say) makes the runtime destroy an object other code still holds.",
+  "symbol": "MapLevelProvider",
+  "kind": "type",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Produces the runtime TileMap for one level - the single seam where a source format meets the format-neutral world runtime.",
+        "Anything awaitable is accepted, so a provider can hand back a LoaderScope.load queue directly.",
+        "The returned map becomes **owned by that level runtime**, which destroys it on unload. Return a map built for this load; handing back a shared map (an entry of an eagerly converted document, say) makes the runtime destroy an object other code still holds."
+      ],
+      "importLine": "import { MapLevelProvider } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "MapLevelProvider",
+          "signature": "(context: MapLevelLoadContext) => PromiseLike<TileMap> | TileMap",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapLevelLoadContext",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PromiseLike",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/MapWorldRuntime.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapWorldRuntime.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/MapWorldRuntime.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapWorldRuntime.ts"
+}

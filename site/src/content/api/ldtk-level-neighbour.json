@@ -1,0 +1,92 @@
+{
+  "title": "LdtkLevelNeighbour",
+  "description": "One entry of a level's `__neighbours` array: an adjacency to another level, plus the direction code LDtk assigned it.",
+  "symbol": "LdtkLevelNeighbour",
+  "kind": "interface",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One entry of a level's `__neighbours` array: an adjacency to another level, plus the direction code LDtk assigned it."
+      ],
+      "importLine": "import { LdtkLevelNeighbour } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "dir",
+          "signature": "dir: string",
+          "signatureTokens": [
+            {
+              "text": "dir",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Direction code: \"n\", \"s\", \"e\", \"w\" for the cardinal sides, and \"<\", \">\", \"o\" for the depth relations LDtk 1.x adds (lower depth, greater depth, overlapping at the same depth). Mapped onto import('@codexo/exojs-tilemap').MapLevelSide by import('./ldtkToMapWorld').ldtkToMapWorld."
+        },
+        {
+          "name": "levelIid",
+          "signature": "levelIid: string",
+          "signatureTokens": [
+            {
+              "text": "levelIid",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "iid of the neighbouring level."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/LdtkData.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/LdtkData.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkData.ts"
+}

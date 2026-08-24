@@ -27,6 +27,23 @@ directly.
 - `ResolvedTile` / `TileTransform` — value-typed tile references with `flipX` / `flipY` /
   `diagonal` orientation.
 
+**Worlds and level lifetime** — format-neutral, driven by whichever adapter loaded the data:
+
+- `MapWorld` / `MapLevel` — where levels sit: stable id, world bounds, neighbour graph,
+  externality. Metadata only; no tiles, no textures.
+- `MapWorldRuntime` — explicit `loadLevel` / `unloadLevel`, one child `LoaderScope` per level,
+  at most one live level per id. No camera policy: the game decides what to load.
+- `MapLevelRuntime` — one loaded level's map, scope and spawn session, with a single
+  `destroy()` that tears all three down in a safe order.
+
+**Map object spawning**:
+
+- `MapObjectSpawner` — a local (never global) dispatch table from object class to a factory.
+  Deterministic order, atomic rollback, `AbortSignal` cancellation.
+- `MapObjectDescriptor` — the format-neutral view of one authored object handed to a factory.
+- `MapSpawnSession` — owns what one spawn produced; constant-time lookup by stable source id,
+  reverse-order teardown.
+
 **Scene / rendering (`@advanced`)**:
 
 - `TileMapNode` — convenience root that renders a whole `TileMap`.
@@ -155,6 +172,9 @@ Actors are application-owned siblings. `TileMapView` never adopts or destroys ac
 ## Ownership & lifecycle
 
 - Tileset **textures are Loader-owned**. The runtime and renderer never destroy them.
+- A `MapWorldRuntime` owns the scope it creates under the one you give it, plus one child scope
+  per loaded level - never the scope you passed in. A `MapLevelRuntime` owns the `TileMap` its
+  provider returned, its spawn session, and its scope; `destroy()` releases them in that order.
 - `TileMapNode` / `TileMapView` / `TileMapBand` / `TileLayerNode` reference — but never own —
   the `TileMap`. Destroying a map node, view, or band frees only the tile nodes it generated
   (detaching them from their application parents) and their cached geometry; application actors,

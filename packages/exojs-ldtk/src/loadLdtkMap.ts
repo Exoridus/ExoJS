@@ -22,8 +22,9 @@ import { LdtkFormatError, validateLdtkData, validateLdtkLevelData } from './vali
  * @throws {LdtkFormatError} when the tileset names an atlas that cannot yield a
  * single tile (its declared size is smaller than one padded tile). Dropping it
  * would make every cell and entity referencing it vanish without a diagnostic.
+ * @internal
  */
-async function loadLdtkTileset(
+export async function loadLdtkTileset(
   def: LdtkTilesetDef,
   ldtkSource: string,
   context: AssetLoaderContext,
@@ -101,7 +102,7 @@ async function loadExternalLevel(
   context: AssetLoaderContext,
 ): Promise<LdtkLevel> {
   // Already-inlined level, or no external file to fetch: return as-is.
-  if (level.layerInstances !== null || level.externalRelPath === undefined || level.externalRelPath === '') {
+  if (level.layerInstances !== null || level.externalRelPath === undefined || level.externalRelPath === null || level.externalRelPath === '') {
     return level;
   }
 

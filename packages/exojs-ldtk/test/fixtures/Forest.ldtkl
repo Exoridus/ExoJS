@@ -1,0 +1,62 @@
+{
+  "identifier": "Forest",
+  "uid": 1,
+  "iid": "level-forest",
+  "worldX": 0,
+  "worldY": 0,
+  "pxWid": 64,
+  "pxHei": 64,
+  "externalRelPath": "levels/Forest.ldtkl",
+  "fieldInstances": [{ "__identifier": "music", "__type": "String", "__value": "forest.ogg" }],
+  "layerInstances": [
+    {
+      "__identifier": "Tiles",
+      "__type": "Tiles",
+      "__cWid": 4,
+      "__cHei": 4,
+      "__gridSize": 16,
+      "layerDefUid": 101,
+      "levelId": 1,
+      "visible": true,
+      "iid": "layer-forest-tiles",
+      "__tilesetDefUid": 1,
+      "gridTiles": [{ "px": [0, 0], "src": [0, 0], "f": 0, "t": 0 }]
+    },
+    {
+      "__identifier": "Entities",
+      "__type": "Entities",
+      "__cWid": 4,
+      "__cHei": 4,
+      "__gridSize": 16,
+      "layerDefUid": 102,
+      "levelId": 1,
+      "visible": true,
+      "iid": "layer-forest-entities",
+      "__tilesetDefUid": null,
+      "entityInstances": [
+        {
+          "__identifier": "Enemy",
+          "__type": "Enemy",
+          "px": [24, 40],
+          "width": 16,
+          "height": 32,
+          "__pivot": [0.5, 1],
+          "fieldInstances": [{ "__identifier": "hp", "__type": "Int", "__value": 12 }],
+          "iid": "entity-enemy-1",
+          "defUid": 202
+        },
+        {
+          "__identifier": "Chest",
+          "__type": "Chest",
+          "px": [48, 16],
+          "width": 16,
+          "height": 16,
+          "__pivot": [0, 0],
+          "fieldInstances": [],
+          "iid": "entity-chest-1",
+          "defUid": 203
+        }
+      ]
+    }
+  ]
+}

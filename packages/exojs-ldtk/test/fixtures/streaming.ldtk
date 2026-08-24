@@ -1,0 +1,91 @@
+{
+  "jsonVersion": "1.5.3",
+  "defaultGridSize": 16,
+  "defs": {
+    "tilesets": [
+      {
+        "uid": 1,
+        "identifier": "Atlas",
+        "relPath": "tiles.png",
+        "tileGridSize": 16,
+        "pxWid": 64,
+        "pxHei": 64,
+        "spacing": 0,
+        "padding": 0
+      }
+    ],
+    "layers": [
+      { "uid": 101, "identifier": "Tiles", "type": "Tiles", "gridSize": 16, "tilesetDefUid": 1 },
+      { "uid": 102, "identifier": "Entities", "type": "Entities", "gridSize": 16 }
+    ]
+  },
+  "levels": [
+    {
+      "identifier": "Forest",
+      "uid": 1,
+      "iid": "level-forest",
+      "worldX": 0,
+      "worldY": 0,
+      "pxWid": 64,
+      "pxHei": 64,
+      "externalRelPath": "levels/Forest.ldtkl",
+      "layerInstances": null,
+      "__neighbours": [
+        { "levelIid": "level-cave", "dir": "e" },
+        { "levelIid": "level-sky", "dir": ">" },
+        { "levelIid": "level-elsewhere", "dir": "n" },
+        { "levelIid": "level-cave", "dir": "?" }
+      ]
+    },
+    {
+      "identifier": "Cave",
+      "uid": 2,
+      "iid": "level-cave",
+      "worldX": 64,
+      "worldY": 0,
+      "pxWid": 64,
+      "pxHei": 64,
+      "externalRelPath": "levels/Cave.ldtkl",
+      "layerInstances": null,
+      "__neighbours": [{ "levelIid": "level-forest", "dir": "w" }]
+    },
+    {
+      "identifier": "Sky",
+      "uid": 3,
+      "iid": "level-sky",
+      "worldX": 0,
+      "worldY": -64,
+      "pxWid": 64,
+      "pxHei": 64,
+      "externalRelPath": null,
+      "__neighbours": [],
+      "layerInstances": [
+        {
+          "__identifier": "Entities",
+          "__type": "Entities",
+          "__cWid": 4,
+          "__cHei": 4,
+          "__gridSize": 16,
+          "layerDefUid": 102,
+          "levelId": 3,
+          "visible": true,
+          "iid": "layer-sky-entities",
+          "__tilesetDefUid": null,
+          "entityInstances": [
+            {
+              "__identifier": "Cloud",
+              "__type": "Cloud",
+              "px": [8, 8],
+              "width": 16,
+              "height": 16,
+              "__pivot": [0, 0],
+              "fieldInstances": [],
+              "iid": "entity-cloud",
+              "defUid": 201
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -279,6 +279,26 @@ const RAW_PARTS: ReadonlyArray<RawPart> = [
                 prerequisites: ['assets/loading-and-resources'],
                 apiLinks: ['ldtk-map', 'tile-map', 'tile-map-node', 'loader'],
             },
+            {
+                slug: 'worlds-and-spawning',
+                level: 'advanced',
+                learningGoals: [
+                    'read level identity, bounds and neighbours from a MapWorld',
+                    'load and unload levels explicitly, each with its own LoaderScope',
+                    'turn authored map objects into game objects with a local MapObjectSpawner',
+                    'rely on deterministic spawn order, atomic rollback and cancellation',
+                ],
+                prerequisites: ['assets/ldtk'],
+                apiLinks: [
+                    'map-world',
+                    'map-world-runtime',
+                    'map-level-runtime',
+                    'map-object-spawner',
+                    'map-spawn-session',
+                    'ldtk-project',
+                    'loader-scope',
+                ],
+            },
         ],
     },
     {

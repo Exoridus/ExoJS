@@ -2,11 +2,14 @@
 // No registration is performed on import.
 
 // ── Extension wiring ──────────────────────────────────────────────────────────
-export { ldtkMapBinding } from './ldtkBinding';
+export { ldtkMapBinding, ldtkProjectBinding } from './ldtkBinding';
 export { ldtkExtension } from './ldtkExtension';
 
 // ── Parsed source model ───────────────────────────────────────────────────────
 export { LdtkMap } from './LdtkMap';
+export type { LdtkRuntimeOptions } from './LdtkProject';
+export { LdtkProject } from './LdtkProject';
+export { ldtkToMapWorld } from './ldtkToMapWorld';
 export type { LdtkToTileMapOptions } from './ldtkToTileMap';
 export {
   createLdtkIntGridCellSource,
@@ -27,6 +30,7 @@ export type {
   LdtkLayerInstance,
   LdtkLayerType,
   LdtkLevel,
+  LdtkLevelNeighbour,
   LdtkTileData,
   LdtkTilesetDef,
   LdtkWorldData,
@@ -43,6 +47,20 @@ export { LdtkFormatError } from './validate';
 export type {
   ChunkCoord,
   EllipseObject,
+  MapBounds,
+  MapLevel,
+  MapLevelLoadContext,
+  MapLevelLoadOptions,
+  MapLevelNeighbour,
+  MapLevelProvider,
+  MapObjectDescriptor,
+  MapObjectFactories,
+  MapObjectFactory,
+  MapObjectSpawnerOptions,
+  MapSpawnErrorReason,
+  MapSpawnOptions,
+  MapWorldOptions,
+  MapWorldRuntimeOptions,
   ObjectLayerOptions,
   ObjectPoint,
   ObjectQuery,
@@ -68,8 +86,18 @@ export type {
   TilePropertyValue,
   TileSetOptions,
   TileTransform,
+  UnknownMapObjectPolicy,
 } from '@codexo/exojs-tilemap';
 export {
+  MapLevelRuntime,
+  MapLevelSide,
+  mapObjectDescriptor,
+  mapObjectDescriptors,
+  MapObjectSpawner,
+  MapSpawnError,
+  MapSpawnSession,
+  MapWorld,
+  MapWorldRuntime,
   ObjectKind,
   ObjectLayer,
   TILE_TRANSFORM_IDENTITY,
@@ -83,6 +111,7 @@ export {
 
 // ── Module augmentation - typed load calls ────────────────────────────────────
 import type { LdtkMap } from './LdtkMap';
+import type { LdtkProject } from './LdtkProject';
 
 declare module '@codexo/exojs' {
   interface ExtensionKindMap {
@@ -90,6 +119,12 @@ declare module '@codexo/exojs' {
     ldtk: 'ldtkMap';
   }
   interface AssetDefinitions {
+    ldtkProject: {
+      resource: LdtkProject;
+      config: { source: string };
+      /** See `ldtkMap` - `ldtkProjectBinding` ships no seamless adapter either. */
+      isValue: true;
+    };
     ldtkMap: {
       resource: LdtkMap;
       config: { source: string };

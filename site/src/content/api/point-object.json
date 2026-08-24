@@ -6,11 +6,11 @@
   "subsystem": "tilemap",
   "importPath": "@codexo/exojs-tilemap",
   "tier": "stable",
-  "memberCount": 11,
+  "memberCount": 13,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 11,
+    "properties": 13,
     "events": 0
   },
   "sections": [
@@ -153,6 +153,56 @@
           "params": [],
           "returnType": null,
           "description": "Rotation in degrees, clockwise, about (x, y) - except on a TileObject, whose pivot stays at the source format's own anchor and is generally not (x, y). See TileObject for why."
+        },
+        {
+          "name": "source",
+          "signature": "source?: unknown",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The raw source-format record this object was parsed from, for the rare case that needs a field this model does not carry. Adapters that keep their parsed document alive set it (LdtkEntityInstance for LDtk, TiledObject for Tiled); a procedurally built object has none. Reading it ties the code to one source format - prefer the typed fields."
+        },
+        {
+          "name": "sourceId",
+          "signature": "sourceId?: string",
+          "signatureTokens": [
+            {
+              "text": "sourceId",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable string identity assigned by the authoring format, when it has one. LDtk sets it to the entity iid, which is globally unique and survives re-ordering, re-export and level moves - the identity to persist in a savegame. Tiled has no such field and leaves this unset; there, id is the identity and it is unique only within its map."
         },
         {
           "name": "type",

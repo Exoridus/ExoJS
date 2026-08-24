@@ -77,6 +77,10 @@ The loader resolves each tileset image against the map's own URL with `new URL(.
 With "Save levels to separate files" enabled, each level lives in a sibling `<identifier>.ldtkl` file — the loader detects and fetches these during load, so there's nothing extra to do. This only matters if you call [`ldtkToTileMap`](#converting-manually-advanced) on a raw document yourself, where unresolved external levels convert with empty layers.
 </Callout>
 
+<Callout type="info" title="ldtkMap loads the whole project at once">
+Every level — and every external `.ldtkl` file — is fetched and converted up front. That is the right trade for a game whose levels all fit in memory. To load levels individually instead, each with its own asset scope, use the `ldtkProject` type: see [Worlds and level streaming](/ExoJS/en/guide/assets/worlds-and-spawning/).
+</Callout>
+
 ## The LdtkMap result
 
 A loaded `LdtkMap` exposes one runtime `TileMap` per LDtk level, plus the raw parsed document:
@@ -249,6 +253,9 @@ unload tileset textures (they may be shared) or remove any scene nodes — the a
 - **API reference:** [`LdtkMap`](/ExoJS/en/api/ldtk-map/) documents `levels`, `getLevelByName`, and
   `data`; [`TileMap`](/ExoJS/en/api/tile-map/) and [`TileMapNode`](/ExoJS/en/api/tile-map-node/)
   document the runtime tilemap and its renderer.
+- **Streaming and spawning:** [Worlds and level streaming](/ExoJS/en/guide/assets/worlds-and-spawning/)
+  covers per-level loading with `ldtkProject`, the world/neighbour model, and turning authored
+  objects into game objects.
 - **Sibling extension:** the [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) chapter covers the
   same activation model for the other map-editor adapter.
 - **Loading model:** [Loading & resources](/ExoJS/en/guide/assets/loading-and-resources/) covers the

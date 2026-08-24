@@ -6,11 +6,11 @@
   "subsystem": "ldtk",
   "importPath": "@codexo/exojs-ldtk",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 8,
   "counts": {
     "constructors": 1,
     "methods": 2,
-    "properties": 3,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -307,6 +307,60 @@
           "params": [],
           "returnType": null,
           "description": "Resolved URL this map was loaded from."
+        },
+        {
+          "name": "world",
+          "signature": "world: MapWorld",
+          "signatureTokens": [
+            {
+              "text": "world",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapWorld",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The document's only world. Convenience for the single-world case; for a multi-world project this is the first world in document order and worlds is what to read instead."
+        },
+        {
+          "name": "worlds",
+          "signature": "worlds: readonly MapWorld[]",
+          "signatureTokens": [
+            {
+              "text": "worlds",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapWorld",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The document's world layout: level placement, bounds and neighbour graph, one MapWorld per LDtk world (exactly one for a single-world project). Built on first access and cached. This is metadata about *where* levels are, independent of the runtime maps in levels. Use it to navigate; use import('./LdtkWorld').LdtkWorld instead when levels should be loaded on demand rather than all at once."
         }
       ],
       "paragraphs": [],

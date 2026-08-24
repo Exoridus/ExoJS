@@ -212,8 +212,16 @@ export interface TiledTextData {
 export interface TiledObjectData {
   readonly id: number;
   readonly name: string;
-  /** Object class (empty string if unset). */
+  /**
+   * Object class, under the name Tiled 1.10 and later write. Empty when unset.
+   *
+   * Tiled 1.9 wrote the same value as {@link TiledObjectData.class} instead;
+   * see {@link import('./TiledObject').TiledObject.type} for how the two are
+   * reconciled.
+   */
   readonly type: string;
+  /** Object class as Tiled 1.9 wrote it. Absent in every other version. */
+  readonly class?: string | undefined;
   readonly x: number;
   readonly y: number;
   readonly width: number;

@@ -1,0 +1,290 @@
+{
+  "title": "MapObjectDescriptor",
+  "description": "A format-neutral view of one map object, as handed to a import('./MapObjectSpawner').MapObjectFactory. The descriptor is what game code writes against: it resolves the two things that differ between authoring formats - stable identity and the dispatch key - and pairs the object with the layer it came from. The parsed object itself stays reachable through object, and the untouched source record through TileMapObject.source.",
+  "symbol": "MapObjectDescriptor",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 11,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 11,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A format-neutral view of one map object, as handed to a import('./MapObjectSpawner').MapObjectFactory.",
+        "The descriptor is what game code writes against: it resolves the two things that differ between authoring formats - stable identity and the dispatch key - and pairs the object with the layer it came from. The parsed object itself stays reachable through object, and the untouched source record through TileMapObject.source."
+      ],
+      "importLine": "import { MapObjectDescriptor } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "height",
+          "signature": "height: number",
+          "signatureTokens": [
+            {
+              "text": "height",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bounding height in px (0 for points)."
+        },
+        {
+          "name": "id",
+          "signature": "id: string",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable identity for this object. Uniqueness domain is **one TileMap**: Tiled object ids are unique within a map, and LDtk entity iids are unique globally, so an LDtk-sourced id keeps that stronger guarantee. Combine with the owning level's id if a world-wide key is needed. Derived from TileMapObject.sourceId when the format supplies one, otherwise from the numeric TileMapObject.id."
+        },
+        {
+          "name": "kind",
+          "signature": "kind: null | string",
+          "signatureTokens": [
+            {
+              "text": "kind",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Canonical dispatch key - the object's class/type string, or null when the source declares none. LDtk fills it with the entity definition identifier, Tiled with the object's class. A import('./MapObjectSpawner').MapObjectSpawner uses it to pick a factory unless an identify strategy overrides that."
+        },
+        {
+          "name": "layer",
+          "signature": "layer: ObjectLayer",
+          "signatureTokens": [
+            {
+              "text": "layer",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ObjectLayer",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The object layer this object was authored on, with its placement metadata."
+        },
+        {
+          "name": "name",
+          "signature": "name: string",
+          "signatureTokens": [
+            {
+              "text": "name",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Object name; may be empty and is not unique."
+        },
+        {
+          "name": "object",
+          "signature": "object: TileMapObject",
+          "signatureTokens": [
+            {
+              "text": "object",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMapObject",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The parsed object itself - narrow on object.kind to read geometry."
+        },
+        {
+          "name": "properties",
+          "signature": "properties: TileProperties",
+          "signatureTokens": [
+            {
+              "text": "properties",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileProperties",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The object's immutable custom properties."
+        },
+        {
+          "name": "rotation",
+          "signature": "rotation: number",
+          "signatureTokens": [
+            {
+              "text": "rotation",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rotation in degrees, clockwise. See TileMapObject for the pivot."
+        },
+        {
+          "name": "width",
+          "signature": "width: number",
+          "signatureTokens": [
+            {
+              "text": "width",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Bounding width in px (0 for points)."
+        },
+        {
+          "name": "x",
+          "signature": "x: number",
+          "signatureTokens": [
+            {
+              "text": "x",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "X of the object origin in object-layer pixel space."
+        },
+        {
+          "name": "y",
+          "signature": "y: number",
+          "signatureTokens": [
+            {
+              "text": "y",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Y of the object origin in object-layer pixel space."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/MapObject.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapObject.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/MapObject.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapObject.ts"
+}

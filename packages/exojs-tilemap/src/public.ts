@@ -27,6 +27,30 @@ export type {
   TypedObject,
 } from './ObjectLayer';
 export { ObjectKind, ObjectLayer } from './ObjectLayer';
+// World model: format-neutral level metadata (placement, neighbours, bounds).
+export type { MapBounds, MapLevel, MapLevelNeighbour, MapWorldOptions } from './MapWorld';
+export { MapLevelSide, MapWorld } from './MapWorld';
+// World runtime: explicit per-level load/unload with one LoaderScope per level.
+export type {
+  MapLevelLoadContext,
+  MapLevelLoadOptions,
+  MapLevelProvider,
+  MapWorldRuntimeOptions,
+} from './MapWorldRuntime';
+export { MapLevelRuntime, MapWorldRuntime } from './MapWorldRuntime';
+// Map object spawning: format-neutral descriptor, local dispatch table, session lifetime.
+export type { MapObjectDescriptor } from './MapObject';
+export { mapObjectDescriptor, mapObjectDescriptors } from './MapObject';
+export type {
+  MapObjectFactories,
+  MapObjectFactory,
+  MapObjectSpawnerOptions,
+  MapSpawnErrorReason,
+  MapSpawnOptions,
+  UnknownMapObjectPolicy,
+} from './MapObjectSpawner';
+export { MapObjectSpawner, MapSpawnError } from './MapObjectSpawner';
+export { MapSpawnSession } from './MapSpawnSession';
 // The mutable TileChunk implementation is package-internal -
 // only the ReadonlyTileChunk interface is exported publicly.
 export type { ReadonlyTileChunk } from './TileChunk';

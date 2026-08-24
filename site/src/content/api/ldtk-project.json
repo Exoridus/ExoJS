@@ -1,0 +1,304 @@
+{
+  "title": "LdtkProject",
+  "description": "A loaded LDtk project, prepared for streaming: world layout and tileset atlases are resident, level payloads are not. This is the entry point for a game that loads levels as it needs them. Read worlds to decide what to load, then drive a MapWorldRuntime from createRuntime to load and unload individual levels, each with its own asset scope. What is eager, and why: - the `.ldtk` document itself, because the world layout is what the game navigates by; - every tileset atlas, because they are shared between levels and a level load that had to wait for an image fetch would stutter at exactly the wrong moment. What is lazy: - external `.ldtkl` level payloads - fetched when the level loads, claimed by that level's scope, released when it unloads; - the conversion of a level into a runtime `TileMap`; - anything the level's import('@codexo/exojs-tilemap').MapObjectSpawner creates. Load the whole project at once with the `ldtkMap` asset type instead (import('./LdtkMap').LdtkMap) when a game is small enough not to need any of this.",
+  "symbol": "LdtkProject",
+  "kind": "class",
+  "subsystem": "ldtk",
+  "importPath": "@codexo/exojs-ldtk",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 5,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A loaded LDtk project, prepared for streaming: world layout and tileset atlases are resident, level payloads are not.",
+        "This is the entry point for a game that loads levels as it needs them. Read worlds to decide what to load, then drive a MapWorldRuntime from createRuntime to load and unload individual levels, each with its own asset scope.",
+        "What is eager, and why:",
+        "- the `.ldtk` document itself, because the world layout is what the game navigates by; - every tileset atlas, because they are shared between levels and a level load that had to wait for an image fetch would stutter at exactly the wrong moment.",
+        "What is lazy:",
+        "- external `.ldtkl` level payloads - fetched when the level loads, claimed by that level's scope, released when it unloads; - the conversion of a level into a runtime `TileMap`; - anything the level's import('@codexo/exojs-tilemap').MapObjectSpawner creates.",
+        "Load the whole project at once with the `ldtkMap` asset type instead (import('./LdtkMap').LdtkMap) when a game is small enough not to need any of this."
+      ],
+      "importLine": "import { LdtkProject } from '@codexo/exojs-ldtk'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "createRuntime",
+          "signature": "createRuntime(options: LdtkRuntimeOptions): MapWorldRuntime",
+          "signatureTokens": [
+            {
+              "text": "createRuntime",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkRuntimeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapWorldRuntime",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "LdtkRuntimeOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "MapWorldRuntime",
+          "description": "Create the live runtime that loads and unloads this project's levels. The runtime is a separate lifetime from the project: destroying it unloads every level it holds and leaves the project - document, world layout and tilesets - intact, ready for a new runtime."
+        },
+        {
+          "name": "getWorld",
+          "signature": "getWorld(name: string): MapWorld | undefined",
+          "signatureTokens": [
+            {
+              "text": "getWorld",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "name",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapWorld",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "name",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "MapWorld | undefined",
+          "description": "The world with this identifier, or undefined."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "data",
+          "signature": "data: LdtkData",
+          "signatureTokens": [
+            {
+              "text": "data",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LdtkData",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The raw parsed LDtk document. Externalized levels still carry layerInstances: null."
+        },
+        {
+          "name": "source",
+          "signature": "source: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Resolved URL this project was loaded from."
+        },
+        {
+          "name": "tilesets",
+          "signature": "tilesets: ReadonlyMap<number, TileSet>",
+          "signatureTokens": [
+            {
+              "text": "tilesets",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ReadonlyMap",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileSet",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Runtime tilesets keyed by LDtk tileset uid, shared by every level of the project."
+        },
+        {
+          "name": "worlds",
+          "signature": "worlds: readonly MapWorld[]",
+          "signatureTokens": [
+            {
+              "text": "worlds",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapWorld",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "World layout, one entry per LDtk world. See import('./ldtkToMapWorld').ldtkToMapWorld."
+        },
+        {
+          "name": "world",
+          "signature": "world: MapWorld",
+          "signatureTokens": [
+            {
+              "text": "world",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapWorld",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The project's only world. For a multi-world project this is the first in document order; read worlds to reach the others."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-ldtk/src/LdtkProject.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkProject.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-ldtk/src/LdtkProject.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-ldtk/src/LdtkProject.ts"
+}

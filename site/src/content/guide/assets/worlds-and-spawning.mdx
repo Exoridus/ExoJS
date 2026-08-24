@@ -1,0 +1,368 @@
+---
+title: 'Worlds and level streaming'
+description: 'Model a multi-level world, load and unload levels on demand with their own asset scopes, and turn the objects authored in a map into game objects with MapObjectSpawner.'
+---
+
+import Callout from '../../../components/Callout.astro';
+
+# Worlds and level streaming
+
+A game bigger than one screen is usually authored as many levels laid out in a world. Two things
+follow from that: something has to decide which levels are resident right now, and something has to
+turn the objects placed in a level — enemies, chests, doors, triggers — into real game objects.
+
+ExoJS provides the **mechanism** for both, and leaves the **policy** to your game:
+
+| ExoJS owns | Your game owns |
+| --- | --- |
+| Level identity, bounds, the neighbour graph | Which levels to load, and when |
+| Explicit `loadLevel` / `unloadLevel` with one asset scope per level | The camera radius, hysteresis and transition rules |
+| Deterministic spawn order, cancellation, rollback, teardown | Which map object becomes which entity class |
+| The lifetime object every load hands back | The dependencies those entities need |
+
+Nothing here watches a camera or guesses a streaming distance. That belongs to your game, and it is
+a handful of lines once the mechanism is in place.
+
+Everything below lives in `@codexo/exojs-tilemap` and is format-neutral. The LDtk and Tiled
+extensions re-export it, so importing from either package gives you the same classes.
+
+## The world model
+
+A [`MapWorld`](/ExoJS/en/api/map-world/) is metadata about *where* levels are — never their
+contents. Each `MapLevel` in it carries a stable id, world-space bounds, whether its payload is
+stored externally, and the levels the editor recorded as adjacent.
+
+```ts
+import { Asset, type LoaderScope } from '@codexo/exojs';
+import type { MapBounds, MapWorld } from '@codexo/exojs-tilemap';
+
+export async function readWorld(scope: LoaderScope, cameraBounds: MapBounds): Promise<MapWorld> {
+    const project = await scope.load(Asset.type('ldtkProject', 'https://example.com/world.ldtk'));
+    const world = project.world;
+
+    world.levels.length;                     // every level in the world, in document order
+    world.getLevelByName('Forest')?.id;      // stable id, safe to persist
+    world.getNeighbours('level-forest');     // the levels next to this one
+    world.bounds;                            // the union of every level's bounds
+    world.getLevelsInBounds(cameraBounds);   // levels overlapping a rectangle
+
+    return world;
+}
+```
+
+`MapLevel.id` comes from the source format. LDtk supplies its level `iid`, which survives
+re-ordering, re-export and renames — that is the id to write into a savegame.
+
+<Callout type="info" title="Multi-world LDtk projects stay separate">
+LDtk worlds have independent coordinate spaces, so a multi-world project yields one `MapWorld` per
+world (`project.worlds`), never one merged world. Merging them would make `bounds` and
+`getLevelsInBounds` report overlaps that do not exist.
+</Callout>
+
+## Loading levels on demand
+
+`ldtkProject` is the streaming entry point. It loads the document and every tileset atlas, and
+**no** level payload — external `.ldtkl` files are fetched only when the level they belong to is
+loaded.
+
+```ts
+import { Asset, type Container, type LoaderScope } from '@codexo/exojs';
+
+export async function enterForest(root: Container, scope: LoaderScope): Promise<void> {
+    const project = await scope.load(Asset.type('ldtkProject', 'https://example.com/world.ldtk'));
+    const runtime = project.createRuntime({ scope });
+
+    const forest = await runtime.loadLevel('level-forest');
+
+    for (const layer of forest.map.createView().layers) root.addChild(layer);
+
+    forest.map;       // the level's runtime TileMap
+    forest.scope;     // the level's own LoaderScope
+    forest.spawns;    // the spawn session, when the load ran with a spawner
+    forest.destroy(); // unloads all of it
+}
+```
+
+[`loadLevel`](/ExoJS/en/api/map-world-runtime/) returns a `MapLevelRuntime`: one object that owns
+everything the load produced. There is no second handle to remember. `destroy()` tears the level
+down in the order that is always safe — spawned objects first (in reverse spawn order), then the
+map, then the asset scope last, because everything before it may still be reading a texture the
+scope keeps resident.
+
+### Scopes
+
+Each level claims its assets through its own child scope, so unloading one level never releases an
+asset another level still holds:
+
+```text
+scene.loader          given to the runtime — never destroyed by it
+ └─ overworld         the runtime's own scope
+     ├─ level:forest
+     └─ level:cave
+```
+
+`runtime.destroy()` unloads every level and releases the runtime's own scope. The scope you passed
+in stays yours.
+
+### What is eager, what is lazy
+
+| Eager | Why |
+| --- | --- |
+| The `.ldtk` document | It *is* the world layout your game navigates by |
+| Every tileset atlas | Shared between levels; a level load that waited on an image fetch would stutter at exactly the wrong moment |
+
+| Lazy | Why |
+| --- | --- |
+| External `.ldtkl` payloads | The whole point — fetched on load, released on unload |
+| `TileMap` conversion | Costs memory per level, not per project |
+| Everything a spawner creates | Tied to the level's lifetime |
+
+<Callout type="info" title="The eager path is still there">
+Loading a whole project at once with the `ldtkMap` asset type is unchanged and remains the right
+choice for a game small enough not to need any of this. See [LDtk levels](/ExoJS/en/guide/assets/ldtk/).
+</Callout>
+
+## Deciding what to load
+
+This is your game's policy, and it is ordinary code:
+
+```ts
+import type { MapBounds, MapWorld, MapWorldRuntime } from '@codexo/exojs-tilemap';
+
+export function updateStreaming(runtime: MapWorldRuntime, world: MapWorld, cameraBounds: MapBounds): void {
+    const wanted = new Set(world.getLevelsInBounds(cameraBounds).map(level => level.id));
+
+    for (const id of wanted) {
+        if (!runtime.isLoaded(id) && !runtime.isLoading(id)) void runtime.loadLevel(id);
+    }
+
+    for (const level of runtime.levels) {
+        if (!wanted.has(level.id)) runtime.unloadLevel(level.id);
+    }
+}
+```
+
+Neighbour-based streaming is the same shape with `world.getNeighbours(currentLevelId)` instead of a
+bounds query. Add hysteresis, a preload margin or a fade transition where your game wants them —
+ExoJS deliberately has no opinion.
+
+`loadLevel` is safe to call repeatedly: a level that is already loaded resolves to the runtime it
+already has, and a concurrent call joins the load in flight rather than starting a second one.
+
+## Spawning map objects
+
+Level editors place objects; games need entities. A
+[`MapObjectSpawner`](/ExoJS/en/api/map-object-spawner/) is the bridge, and it is a plain object you
+construct — **not** a global registry:
+
+```ts
+import { Container } from '@codexo/exojs';
+import { MapObjectSpawner } from '@codexo/exojs-tilemap';
+
+class Enemy extends Container {}
+class Chest extends Container {}
+
+interface GameContext {
+    difficulty: number;
+    save: Map<string, unknown>;
+}
+
+export const spawner = new MapObjectSpawner<GameContext, Enemy | Chest>({
+    Enemy: (object, context) => {
+        const enemy = new Enemy();
+        enemy.position.set(object.x, object.y);
+        enemy.scale.set(context.difficulty);
+        return enemy;
+    },
+    Chest: (object, context) => {
+        const chest = new Chest();
+        chest.name = object.id;
+        chest.visible = !context.save.has(object.id);
+        return chest;
+    },
+});
+```
+
+Because the dispatch table belongs to the instance, several games, tests, editor previews and mods
+can run in one process without seeing each other's factories, and there is nothing to reset between
+tests.
+
+Pass it to a level load, or spawn from a `TileMap` directly:
+
+```ts
+import type { Container } from '@codexo/exojs';
+import type { MapObjectSpawner, MapWorldRuntime } from '@codexo/exojs-tilemap';
+
+interface GameContext {
+    difficulty: number;
+    save: Map<string, unknown>;
+}
+
+export async function loadForest(
+    runtime: MapWorldRuntime,
+    spawner: MapObjectSpawner<GameContext, Container>,
+    context: GameContext,
+): Promise<void> {
+    const forest = await runtime.loadLevel('level-forest', { spawner, context });
+
+    forest.spawns?.get('entity-chest-1'); // the runtime object for that source object
+    forest.destroy();                     // destroys the spawned objects too
+}
+```
+
+### The descriptor
+
+A factory receives a `MapObjectDescriptor` — the same shape for Tiled and for LDtk:
+
+```ts
+import type { MapObjectDescriptor } from '@codexo/exojs-tilemap';
+
+export function describe(object: MapObjectDescriptor): void {
+    object.id;          // stable id: LDtk entity iid, or the Tiled object id as a string
+    object.kind;        // dispatch key: LDtk entity identifier, Tiled object class, or null
+    object.name;        // editor name; may be empty and is not unique
+    object.x;           // bounding-box corner in layer pixel space, pivot already resolved
+    object.properties;  // the object's custom fields
+    object.layer;       // the ObjectLayer it was authored on
+    object.object;      // the parsed object — narrow on `object.object.kind` for geometry
+}
+```
+
+`object.id` is unique within one map. LDtk ids are unique globally, so they stay meaningful across
+levels; Tiled ids are only unique per map, so combine them with the level id if you need a
+world-wide key.
+
+### Dependencies
+
+There is no dependency injection in the engine. Whatever your entities need travels through
+`Context`, which you define and pass per spawn — a services bag, the savegame, the difficulty.
+
+### Choosing the factory yourself
+
+By default the factory key is `object.kind`. Override `identify` when your project keys on something
+else:
+
+```ts
+import { Container } from '@codexo/exojs';
+import { MapObjectSpawner } from '@codexo/exojs-tilemap';
+
+class Enemy extends Container {}
+
+export const eliteAware = new MapObjectSpawner<void, Enemy>(
+    { 'Enemy:elite': () => new Enemy() },
+    { identify: object => `${object.kind}:${String(object.properties.variant)}` },
+);
+```
+
+Return `null` from `identify` to treat an object as unknown, and `null` from a factory to
+deliberately create nothing for it.
+
+### Unknown objects
+
+Maps legitimately carry editor markers, decoration and metadata objects that no entity corresponds
+to, so an object no factory matches is **ignored** by default. Set `unknown: 'error'` for a map
+format your project fully controls and wants validated:
+
+```ts
+import { Container } from '@codexo/exojs';
+import { MapObjectSpawner } from '@codexo/exojs-tilemap';
+
+class Enemy extends Container {}
+
+export const strict = new MapObjectSpawner<void, Enemy>(
+    { Enemy: () => new Enemy() },
+    { unknown: 'error' },
+);
+```
+
+### Order, atomicity and cancellation
+
+- **Order** is object-layer order, then object order within the layer. Asynchronous factories are
+  awaited in that same order, so a fast one can never overtake a slow one before it.
+- **Atomicity**: if any factory fails, everything already created is destroyed in reverse order and
+  no session is produced. There is no half-spawned level. The failure arrives as a `MapSpawnError`
+  with the original error preserved as `cause`.
+- **Cancellation**: unloading a level mid-load aborts the spawn. A factory already in flight is
+  still awaited — abandoning it would leak whatever it produced — and its result is destroyed with
+  the rest of the rollback. Factories receive the `AbortSignal` as their third argument and should
+  pass it on to anything they await.
+
+### Savegames
+
+The session is keyed by the same stable ids the editor assigned, which makes restoration a lookup
+rather than a search:
+
+```ts
+import type { Container } from '@codexo/exojs';
+import type { MapSpawnSession } from '@codexo/exojs-tilemap';
+
+export function restore(session: MapSpawnSession<Container>, saved: Map<string, boolean>): void {
+    for (const [id, visible] of saved) {
+        const object = session.get(id);
+        if (object !== undefined) object.visible = visible;
+    }
+}
+```
+
+## Tiled
+
+Tiled has no world file concept in ExoJS, and this slice does not invent one. Everything else works
+the same way, because the spawner operates on a `TileMap`:
+
+```ts
+import { Asset, type Container, type LoaderScope } from '@codexo/exojs';
+import type { MapObjectSpawner } from '@codexo/exojs-tilemap';
+
+export async function spawnTiledLevel(
+    scope: LoaderScope,
+    spawner: MapObjectSpawner<void, Container>,
+): Promise<void> {
+    const map = await scope.load(Asset.type('tileMap', 'https://example.com/level.tmj'));
+    const session = await spawner.spawn(map, undefined);
+
+    session.destroy();
+}
+```
+
+To stream several Tiled maps as a world, describe their layout with a `MapWorld` you build yourself
+and give the runtime a loader for them:
+
+```ts
+import { Asset, type LoaderScope } from '@codexo/exojs';
+import { MapWorld, MapWorldRuntime } from '@codexo/exojs-tilemap';
+
+export function createTiledWorld(scope: LoaderScope): MapWorldRuntime {
+    const world = new MapWorld({
+        name: 'overworld',
+        levels: [
+            {
+                id: 'town',
+                name: 'Town',
+                index: 0,
+                external: true,
+                neighbours: [],
+                bounds: { x: 0, y: 0, width: 640, height: 480 },
+                properties: {},
+            },
+        ],
+    });
+
+    return new MapWorldRuntime({
+        world,
+        scope,
+        load: (context) => context.scope.load(Asset.type('tileMap', `${context.level.id}.tmj`)),
+    });
+}
+```
+
+<Callout type="pitfall" title="A level runtime owns the map its loader returned">
+`MapLevelRuntime.destroy()` destroys that `TileMap`. Return a map built for this load — never a
+shared one such as an entry of an eagerly converted `LdtkMap.levels`, or the runtime destroys an
+object other code still holds.
+</Callout>
+
+## Where to look next
+
+- [LDtk levels](/ExoJS/en/guide/assets/ldtk/) — the eager `ldtkMap` path, entity fields, IntGrid values.
+- [Tiled maps](/ExoJS/en/guide/assets/tiled-maps/) — the Tiled format scope and object layers.
+- [Loading and resources](/ExoJS/en/guide/assets/loading-and-resources/) — how scopes and claims work.
