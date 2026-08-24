@@ -1,11 +1,11 @@
 ﻿import type { MockInstance } from 'vitest';
 
 import { Asset } from '#assets/Asset';
+import { AssetCache } from '#assets/AssetCache';
 import { encodeContainer } from '#assets/AssetContainer';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
 import type { CacheRecordKey } from '#assets/CacheRecordKey';
-import type { CacheStore } from '#assets/CacheStore';
 import { coreAssetBindings } from '#assets/coreAssetBindings';
 import { defineAsset } from '#assets/defineAsset';
 import { Loader, LoadPriority } from '#assets/Loader';
@@ -917,33 +917,35 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     expect(saves()).toContainEqual(contextTextKey('__ctx_binary', '/data.bin'));
   });
 
-  test('context.fetchText serves from store cache on second call (no network)', async () => {
+  test('context.fetchText serves from the store on a second acquisition, with no network', async () => {
     mockFetch('cached-text');
-    const cachedText = 'cached-text';
-    let loadCallCount = 0;
-    const store: CacheStore = {
-      load: async (storageName, key) => {
-        if (storageName === '__ctx_text' && key === 'file.txt') {
-          loadCallCount++;
-          return cachedText;
-        }
-        return null;
-      },
-      save: async () => {},
-      delete: async () => true,
-      clear: async () => true,
-      destroy: () => {},
+
+    const { store } = makeMockStore();
+    const bindTextHandler = (loader: Loader): void => {
+      loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
     };
-    const loader = new Loader({ basePath: '/', cache: store });
 
-    loader.bindAsset<string>({ ctor: RichAsset, typeNames: ['richAsset'] }, { load: async (request, ctx) => ctx.fetchText(request.source) });
+    const first = new Loader({ basePath: '/', cache: store });
 
-    // First load - populates _resources; context.fetchText goes to network, store has no entry yet
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
-    // Second load - served from _resources, handler not called, store not consulted
+    bindTextHandler(first);
+
+    await first.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+    first.destroy();
+
+    // A second loader shares the store but holds no resident resources, so the
+    // next acquisition is a real cache read rather than a residency hit.
     (global.fetch as MockInstance).mockClear();
-    await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+
+    const second = new Loader({ basePath: '/', cache: store });
+
+    bindTextHandler(second);
+
+    const value = await second.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
+
+    expect(value).toBe('cached-text');
     expect(global.fetch).not.toHaveBeenCalled();
+
+    second.destroy();
   });
 });
 
@@ -1522,6 +1524,25 @@ describe('destroy()', () => {
     loader.bindAsset({ ctor: NoDestroyAsset }, { load: async () => 'x' });
 
     expect(() => loader.destroy()).not.toThrow();
+  });
+
+  test('leaves an AssetCache it was handed alone, because another loader may still be using it', () => {
+    const store = createCacheStoreDouble();
+    const shared = new AssetCache({ stores: store });
+    const first = new Loader({ basePath: '/', cache: shared });
+    const second = new Loader({ basePath: '/', cache: shared });
+
+    first.destroy();
+
+    // The cache is the application's, not the loader's: closing its stores here
+    // would tear the database out from under `second`.
+    expect(store.destroy).not.toHaveBeenCalled();
+
+    second.destroy();
+    expect(store.destroy).not.toHaveBeenCalled();
+
+    shared.destroy();
+    expect(store.destroy).toHaveBeenCalledTimes(1);
   });
 
   test('destroys CacheStores before bound bindAsset handlers', () => {

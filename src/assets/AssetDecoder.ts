@@ -20,6 +20,11 @@ export interface AssetDecoderOptions {
   fetchOptions: RequestInit;
   /** The application's caching configuration, or `null` when nothing is cached. */
   cache: AssetCache | null;
+  /**
+   * Whether tearing this decoder down also tears the cache down. True only for
+   * a cache the loader built for itself out of the stores it was given.
+   */
+  ownsCache: boolean;
 }
 
 /**
@@ -45,6 +50,7 @@ export class AssetDecoder {
   private readonly _loader: Loader;
   private readonly _typeRegistry: AssetTypeRegistry;
   private readonly _cache: AssetCache | null;
+  private readonly _ownsCache: boolean;
   private _basePath: string;
   private _fetchOptions: RequestInit;
 
@@ -71,6 +77,7 @@ export class AssetDecoder {
     this._loader = loader;
     this._typeRegistry = typeRegistry;
     this._cache = options.cache;
+    this._ownsCache = options.ownsCache;
     this._basePath = options.basePath;
     this._fetchOptions = options.fetchOptions;
   }
@@ -286,8 +293,16 @@ export class AssetDecoder {
     this._storeResource(asset, resource);
   }
 
-  /** Destroys every store the application's cache holds. */
+  /**
+   * Destroys the cache, but only one this decoder's loader built for itself.
+   *
+   * An {@link AssetCache} handed in is an application-level object, and
+   * sharing one between loaders is what routes and tiers are for - so tearing
+   * down one loader must not close stores another is still reading.
+   */
   public destroy(): void {
-    this._cache?.destroy();
+    if (this._ownsCache) {
+      this._cache?.destroy();
+    }
   }
 }

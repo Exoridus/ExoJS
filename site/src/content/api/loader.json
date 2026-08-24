@@ -206,7 +206,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tears down the loader and all resources it owns. Destroys every cache store, clears all in-memory assets and in-flight tracking, and disconnects all signals. Also calls destroy?.() on every handler registered via bindAsset."
+          "description": "Tears down the loader and all resources it owns. Clears all in-memory assets and in-flight tracking, and disconnects all signals. Also calls destroy?.() on every handler registered via bindAsset. Cache stores are destroyed only when this loader was given the stores themselves, and therefore owns the cache it wrapped them in. An AssetCache passed in belongs to its builder and may be serving other loaders, so it is left alone - destroy it yourself when the application is done with it."
         },
         {
           "name": "get",

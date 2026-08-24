@@ -88,6 +88,7 @@ export class IndexedDbStore implements CacheStore {
   private readonly _onCloseHandler: () => void = this._forgetConnection.bind(this);
   private _database: IDBDatabase | null = null;
   private _connecting: Promise<IDBDatabase> | null = null;
+  private _destroyed = false;
 
   public constructor(nameOrOptions: string | IndexedDbStoreOptions) {
     const options = typeof nameOrOptions === 'string' ? { name: nameOrOptions } : nameOrOptions;
@@ -164,6 +165,7 @@ export class IndexedDbStore implements CacheStore {
   }
 
   public destroy(): void {
+    this._destroyed = true;
     this._forgetConnection();
   }
 
@@ -195,11 +197,20 @@ export class IndexedDbStore implements CacheStore {
 
     this._connecting ??= openIndexedDb(this._name, schemaVersion, upgradeToGenericSchema)
       .then(database => {
+        this._connecting = null;
+
+        // Destroyed while this open was in flight: close the connection it
+        // produced rather than adopting a handle nothing will ever release.
+        if (this._destroyed) {
+          database.close();
+
+          throw new AssetCacheError({ operation: 'connect', message: 'The cache store was destroyed while it was connecting.' });
+        }
+
         database.addEventListener('close', this._onCloseHandler);
         database.addEventListener('versionchange', this._onCloseHandler);
 
         this._database = database;
-        this._connecting = null;
 
         return database;
       })

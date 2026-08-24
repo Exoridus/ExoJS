@@ -24,7 +24,7 @@ function createFakeCache(resolveTo: () => unknown = () => 'resolved'): { cache: 
   return { cache: new AssetCache({ policy }), contexts };
 }
 
-function createDecoder(overrides: { cache?: AssetCache | null; basePath?: string } = {}) {
+function createDecoder(overrides: { cache?: AssetCache | null; basePath?: string; ownsCache?: boolean } = {}) {
   const typeRegistry = new AssetTypeRegistry();
   const storeResource = vi.fn((_asset: CanonicalAsset, resource: unknown) => resource);
 
@@ -32,6 +32,7 @@ function createDecoder(overrides: { cache?: AssetCache | null; basePath?: string
     basePath: overrides.basePath ?? '',
     fetchOptions: {},
     cache: overrides.cache === undefined ? createFakeCache().cache : overrides.cache,
+    ownsCache: overrides.ownsCache ?? false,
   });
 
   decoder._bindResourceStore(storeResource);
@@ -163,15 +164,24 @@ describe('AssetDecoder', () => {
     expect(contexts[0]?.sourceKey).toBe(canonicalizeSource('', 'hero.txt'));
   });
 
-  test('destroy() destroys every configured cache store', () => {
+  test('destroy() destroys every store of a cache it owns', () => {
     const storeA = createCacheStoreDouble('a');
     const storeB = createCacheStoreDouble('b');
     const cache = new AssetCache({ routes: [new CacheRoute({ types: ['a'], stores: storeA })], stores: storeB });
-    const { decoder } = createDecoder({ cache });
+    const { decoder } = createDecoder({ cache, ownsCache: true });
 
     decoder.destroy();
 
     expect(storeA.destroy).toHaveBeenCalledTimes(1);
     expect(storeB.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('destroy() leaves a cache it does not own alone', () => {
+    const store = createCacheStoreDouble();
+    const { decoder } = createDecoder({ cache: new AssetCache({ stores: store }), ownsCache: false });
+
+    decoder.destroy();
+
+    expect(store.destroy).not.toHaveBeenCalled();
   });
 });

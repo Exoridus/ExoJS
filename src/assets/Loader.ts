@@ -412,10 +412,16 @@ export class Loader {
   public readonly onCacheError = new Signal<[error: AssetCacheError]>();
 
   public constructor(options: LoaderOptions = {}) {
+    const cache = options.cache;
+
     this._decoder = new AssetDecoder(this, this._typeRegistry, {
       basePath: options.basePath ?? '',
       fetchOptions: options.fetchOptions ?? {},
-      cache: options.cache === undefined ? null : AssetCache.from(options.cache),
+      cache: cache === undefined ? null : AssetCache.from(cache),
+      // Stores handed to one loader are wrapped in a cache that loader owns and
+      // tears down with itself; an `AssetCache` handed in belongs to whoever
+      // built it, and may well be serving other loaders.
+      ownsCache: cache !== undefined && !(cache instanceof AssetCache),
     });
 
     const signals: AssetResidencySignals = { onProgress: this.onProgress, onLoaded: this.onLoaded, onError: this.onError };
@@ -1288,9 +1294,15 @@ export class Loader {
   /**
    * Tears down the loader and all resources it owns.
    *
-   * Destroys every cache store, clears all in-memory assets and in-flight
-   * tracking, and disconnects all signals. Also calls `destroy?.()` on every
-   * handler registered via `bindAsset`.
+   * Clears all in-memory assets and in-flight tracking, and disconnects all
+   * signals. Also calls `destroy?.()` on every handler registered via
+   * `bindAsset`.
+   *
+   * Cache stores are destroyed only when this loader was given the stores
+   * themselves, and therefore owns the cache it wrapped them in. An
+   * {@link AssetCache} passed in belongs to its builder and may be serving
+   * other loaders, so it is left alone - destroy it yourself when the
+   * application is done with it.
    */
   public destroy(): void {
     // Order matters: bound-handler destroy must run after store destroy (via

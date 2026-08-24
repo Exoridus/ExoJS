@@ -47,6 +47,7 @@ export class IndexedDbDatabase implements Database {
   private readonly _onCloseHandler: () => void = this._forgetConnection.bind(this);
   private _database: IDBDatabase | null = null;
   private _connecting: Promise<IDBDatabase> | null = null;
+  private _destroyed = false;
 
   public get connected(): boolean {
     return this._database !== null;
@@ -152,6 +153,7 @@ export class IndexedDbDatabase implements Database {
   }
 
   public destroy(): void {
+    this._destroyed = true;
     this._forgetConnection();
   }
 
@@ -185,11 +187,20 @@ export class IndexedDbDatabase implements Database {
       this._upgrade(database, transaction, oldVersion, newVersion),
     )
       .then(database => {
+        this._connecting = null;
+
+        // Destroyed while this open was in flight: close the connection it
+        // produced rather than adopting a handle nothing will ever release.
+        if (this._destroyed) {
+          database.close();
+
+          throw new AssetCacheError({ operation: 'connect', message: `The database "${this.name}" was destroyed while it was connecting.` });
+        }
+
         database.addEventListener('close', this._onCloseHandler);
         database.addEventListener('versionchange', this._onCloseHandler);
 
         this._database = database;
-        this._connecting = null;
 
         return database;
       })
