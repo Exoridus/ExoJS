@@ -1,4 +1,4 @@
-import { type Application, Color } from '@codexo/exojs';
+import { type Application, Color, ManualCanvasSizing } from '@codexo/exojs';
 import { render } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -137,7 +137,7 @@ describe('useExoApplication — identity vs live options', () => {
   });
 
   it('captures canvas.sizing at creation and never assigns it live', () => {
-    const first = { id: 'first' };
+    const first = new ManualCanvasSizing();
     const harness = mount({ options: { canvas: { width: 800, height: 600, sizing: first } } });
     const app = onlyInstance();
 
@@ -146,7 +146,7 @@ describe('useExoApplication — identity vs live options', () => {
 
     // A new policy instance on every render is exactly what a live sync would
     // thrash on, so the hook deliberately leaves the property alone.
-    harness.rerender({ options: { canvas: { width: 800, height: 600, sizing: { id: 'second' } } } });
+    harness.rerender({ options: { canvas: { width: 800, height: 600, sizing: new ManualCanvasSizing() } } });
 
     expect(MockApplication.instances).toHaveLength(1);
     expect(app.sizingAssignments).toEqual([]);
