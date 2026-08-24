@@ -43,8 +43,18 @@ describe('local lane commands', () => {
 
   it('names no lane the selector does not know', () => {
     for (const lane of LOCAL_LANES) {
-      expect(allLaneKeys).toContain(lane.key);
+      expect([...allLaneKeys, 'always']).toContain(lane.key);
     }
+  });
+
+  it('runs the ungated gate groups that have no lane key of their own', () => {
+    // `gates sync` is ungated in CI - no path decides whether it runs - so the
+    // selector has no key for it and the local runner has to claim it
+    // explicitly, or `pnpm lanes --run` would silently skip the API-doc and
+    // example-sync checks.
+    const groups = LOCAL_LANES.filter(lane => lane.command[1] === 'gates').map(lane => lane.command[2]);
+
+    expect(groups).toContain('sync');
   });
 
   it('runs only package scripts that exist', () => {

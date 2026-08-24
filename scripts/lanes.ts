@@ -25,10 +25,17 @@ import { pathToFileURL } from 'node:url';
 
 import { effectiveLanes, selectAreas } from './ci/select-lanes.mjs';
 
+/**
+ * Which lane an entry belongs to. `'always'` covers the checks CI runs on every
+ * pull request without gating them on a path - they have no key in the
+ * selector's vocabulary precisely because there is nothing to decide.
+ */
+export type LaneKey = keyof ReturnType<typeof effectiveLanes> | 'always';
+
 /** One runnable step of a validation lane. */
 export interface Lane {
-  /** Key in the effective-lane record this entry runs for. */
-  readonly key: keyof ReturnType<typeof effectiveLanes>;
+  /** Lane this entry runs for. */
+  readonly key: LaneKey;
   /** Label used in the plan output. */
   readonly name: string;
   /** Command to run, argv-style. */
@@ -56,6 +63,7 @@ export interface Lane {
 export const LOCAL_LANES: readonly Lane[] = [
   { key: 'typecheck', name: 'typecheck gates', command: ['pnpm', 'gates', 'typecheck'], gate: true },
   { key: 'lint', name: 'lint gates', command: ['pnpm', 'gates', 'lint'], gate: true },
+  { key: 'always', name: 'sync gates', command: ['pnpm', 'gates', 'sync'], gate: true },
   { key: 'unit', name: 'unit tests', command: ['pnpm', 'test'] },
   { key: 'unit', name: 'allocation gate', command: ['pnpm', 'test:alloc'] },
   { key: 'browserWebgl2', name: 'browser: Chromium WebGL2', command: ['pnpm', 'test:browser:webgl'], browser: true },
@@ -117,7 +125,7 @@ function main(): void {
   const areas = all ? { engine: true, site: true, audioFx: true, tilemapWorker: true } : selectAreas(files);
   const effective = effectiveLanes(areas);
 
-  const selected = LOCAL_LANES.filter(lane => effective[lane.key])
+  const selected = LOCAL_LANES.filter(lane => lane.key === 'always' || effective[lane.key])
     .filter(lane => !(quick && lane.browser))
     .filter(lane => !(testsOnly && lane.gate));
 
