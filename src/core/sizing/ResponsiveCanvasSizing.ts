@@ -21,6 +21,27 @@ export interface ResponsiveCanvasSizingOptions {
 }
 
 /**
+ * The logical view for a host of the given CSS size.
+ *
+ * Down to `minAspect` the base height is what is held: the view keeps its
+ * vertical extent and widens or narrows with the host. Below it the width stops
+ * at `baseHeight x minAspect` and the height grows instead. The two branches
+ * agree exactly at `hostAspect === minAspect`, so the view never jumps as a host
+ * crosses the boundary.
+ */
+const computeResponsiveView = (hostWidth: number, hostHeight: number, baseHeight: number, minAspect: number): { width: number; height: number } => {
+  const hostAspect = hostWidth / hostHeight;
+
+  if (hostAspect >= minAspect) {
+    return { width: baseHeight * hostAspect, height: baseHeight };
+  }
+
+  const width = baseHeight * minAspect;
+
+  return { width, height: width / hostAspect };
+};
+
+/**
  * Gives the canvas the whole parent element and derives the logical view from
  * the shape it ends up with.
  *
@@ -83,25 +104,3 @@ export class ResponsiveCanvasSizing extends CanvasSizing {
     this._tracker.stop();
   }
 }
-
-/**
- * The logical view for a host of the given CSS size.
- *
- * Down to `minAspect` the base height is what is held: the view keeps its
- * vertical extent and widens or narrows with the host. Below it the width stops
- * at `baseHeight x minAspect` and the height grows instead. The two branches
- * agree exactly at `hostAspect === minAspect`, so the view never jumps as a host
- * crosses the boundary.
- * @internal
- */
-export const computeResponsiveView = (hostWidth: number, hostHeight: number, baseHeight: number, minAspect: number): { width: number; height: number } => {
-  const hostAspect = hostWidth / hostHeight;
-
-  if (hostAspect >= minAspect) {
-    return { width: baseHeight * hostAspect, height: baseHeight };
-  }
-
-  const width = baseHeight * minAspect;
-
-  return { width, height: width / hostAspect };
-};

@@ -527,6 +527,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * (via `registerSerializer`) serializers remain shared through the fallback.
    */
   public readonly serializers = new SerializationRegistry(defaultSerializationRegistry);
+  /**
+   * Fires whenever the canvas geometry changes, with the current logical width
+   * and height - the values {@link Application.width}/{@link Application.height}
+   * now report.
+   *
+   * Those two need not have moved: a policy that holds the logical view while
+   * the display size or the render resolution follows the host still dispatches,
+   * so a listener that caches something at the backing resolution has a signal
+   * to rebuild on. Read `app.canvas.width`/`height` for that resolution.
+   */
   public readonly onResize = new Signal<[number, number, Application]>();
   public readonly onFrame = new Signal<[Time]>();
   /** Dispatched once per fixed-timestep step (zero or more times per frame), ahead of {@link onFrame}. */
@@ -645,7 +655,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private readonly _ownsCanvas: boolean;
   private _visibilitySubscription: PlatformSubscription | null = null;
   private _sizing: CanvasSizing | null = null;
-  private _sizingContext: CanvasSizingContext;
   private readonly _audio: AudioManager = new AudioManager();
 
   public constructor(appSettings: ApplicationOptions<Registry> = {}) {
@@ -677,7 +686,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._ownsCanvas = canvasOptions.element === undefined;
     this.canvas = canvas;
     this.element = isDomCanvas(canvas) ? canvas : null;
-    this._sizingContext = this._createSizingContext();
     // Ahead of the backend, which acquires its context from a surface that has
     // to carry its real backing-store size by then. The policy, if any, gets
     // its turn once there is a render target for its first commit to resize.
@@ -1688,8 +1696,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private _applySizing(): void {
     this._applyMetrics(this._baseMetrics(this._sizing === null));
-    this._sizingContext = this._createSizingContext();
-    this._sizing?.attach(this._sizingContext);
+    this._sizing?.attach(this._createSizingContext());
   }
 
   /** Install `sizing` as the active policy and give it the canvas. */

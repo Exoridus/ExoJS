@@ -1889,7 +1889,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Fires whenever the canvas geometry changes, with the current logical width and height - the values Application.width/Application.height now report. Those two need not have moved: a policy that holds the logical view while the display size or the render resolution follows the host still dispatches, so a listener that caches something at the backing resolution has a signal to rebuild on. Read app.canvas.width/height for that resolution."
         },
         {
           "name": "onVisibilityChange",
