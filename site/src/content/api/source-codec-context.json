@@ -1,11 +1,11 @@
 {
-  "title": "Asset",
-  "description": "A typed, loadable asset reference. Holds config only - no loaded resource.",
-  "symbol": "Asset",
+  "title": "SourceCodecContext",
+  "description": "What a codec is told about the acquisition it is decoding.",
+  "symbol": "SourceCodecContext",
   "kind": "interface",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
-  "tier": "stable",
+  "tier": "advanced",
   "memberCount": 2,
   "counts": {
     "constructors": 0,
@@ -19,9 +19,9 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A typed, loadable asset reference. Holds config only - no loaded resource."
+        "What a codec is told about the acquisition it is decoding."
       ],
-      "importLine": "import { Asset } from '@codexo/exojs'",
+      "importLine": "import { SourceCodecContext } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -29,11 +29,11 @@
       "title": "Properties",
       "members": [
         {
-          "name": "source",
-          "signature": "source: string",
+          "name": "locator",
+          "signature": "locator: string",
           "signatureTokens": [
             {
-              "text": "source",
+              "text": "locator",
               "kind": "name"
             },
             {
@@ -47,28 +47,32 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The canonical locator the representation was acquired from."
         },
         {
-          "name": "type",
-          "signature": "type: AssetTypeName",
+          "name": "signal",
+          "signature": "signal?: AbortSignal",
           "signatureTokens": [
             {
-              "text": "type",
+              "text": "signal",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "AssetTypeName",
+              "text": "AbortSignal",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Cancellation signal of the load this decode belongs to. Honour it in any long-running decode; undefined means the caller started the load without a cancellation channel."
         }
       ],
       "paragraphs": [],
@@ -82,11 +86,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/Asset.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+        "label": "src/assets/AssetSourceCodec.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetSourceCodec.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/Asset.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+  "sourcePath": "src/assets/AssetSourceCodec.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetSourceCodec.ts"
 }

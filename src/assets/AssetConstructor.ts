@@ -7,5 +7,5 @@
  * identity. A first-class {@link AssetType} carries its own stable string
  * identity instead and needs no constructor of its own.
  */
- 
+
 export type AssetConstructor<T = unknown> = abstract new (...args: any[]) => T;

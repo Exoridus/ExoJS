@@ -51,6 +51,8 @@ function mockContext(fixtures: Record<string, unknown>): AssetLoaderContext {
     loader: { load } as unknown as AssetLoaderContext['loader'],
     scope: { load } as unknown as AssetLoaderContext['scope'],
     resourceKey: 'test',
+    sourceKey: 'test',
+    locator: 'url:test',
     resolveUrl: (source: string) => source,
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),

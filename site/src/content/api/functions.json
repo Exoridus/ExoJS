@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 40,
+  "memberCount": 43,
   "counts": {
     "constructors": 0,
     "methods": 31,
-    "properties": 9,
+    "properties": 12,
     "events": 0
   },
   "sections": [
@@ -1740,6 +1740,39 @@
       "title": "Constants",
       "members": [
         {
+          "name": "binarySourceCodec",
+          "signature": "binarySourceCodec: AssetSourceCodec<ArrayBuffer>",
+          "signatureTokens": [
+            {
+              "text": "binarySourceCodec",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetSourceCodec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Raw bytes, kept and handed on unchanged."
+        },
+        {
           "name": "buildInfo",
           "signature": "buildInfo: BuildInfo",
           "signatureTokens": [
@@ -1801,6 +1834,47 @@
           "params": [],
           "returnType": null,
           "description": "WGSL form of the instanced-batch contract, for the WebGPU backend. Insert it at the top of a custom material's shader source. Declares the engine-owned @group(0) bindings and exposes the same two helpers as INSTANCE_TRANSFORM_GLSL. Because WGSL has no global vertex inputs, both take the node index explicitly - which is also why the GLSL helpers take it as a parameter, so a material's two shader bodies read alike: - exoInstanceClipPosition(localPosition: vec2<f32>, nodeIndex: u32) -> vec2<f32> - exoInstanceTint(nodeIndex: u32) -> vec4<f32> The vertex entry point must take @location(6) nodeIndex: u32 in its input struct; @location(0..2) carry position, texcoord and color as in the GLSL form."
+        },
+        {
+          "name": "jsonSourceCodec",
+          "signature": "jsonSourceCodec: AssetSourceCodec<unknown, string>",
+          "signatureTokens": [
+            {
+              "text": "jsonSourceCodec",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetSourceCodec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "JSON, stored as the text that arrived rather than as the parsed value. Keeping the text is what makes the stored form byte-exact: a parsed value round-trips through key order, number formatting and undefined handling that the response never had. Parsing is cheap enough to repeat on read."
         },
         {
           "name": "logger",
@@ -1927,6 +2001,39 @@
           "params": [],
           "returnType": null,
           "description": "τ = 2π, the full-circle radian constant."
+        },
+        {
+          "name": "textSourceCodec",
+          "signature": "textSourceCodec: AssetSourceCodec<string>",
+          "signatureTokens": [
+            {
+              "text": "textSourceCodec",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetSourceCodec",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "UTF-8 text, stored as text."
         }
       ],
       "paragraphs": [],

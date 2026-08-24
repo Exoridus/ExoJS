@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 8,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 4,
-    "properties": 4,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -263,27 +263,6 @@
       "title": "Properties",
       "members": [
         {
-          "name": "identityKey",
-          "signature": "identityKey: string",
-          "signatureTokens": [
-            {
-              "text": "identityKey",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "The canonical key for this load. Useful for diagnostics; also the key the loader dedupes in-flight requests and claims on."
-        },
-        {
           "name": "loader",
           "signature": "loader: Loader",
           "signatureTokens": [
@@ -303,6 +282,48 @@
           "params": [],
           "returnType": null,
           "description": "The owning Loader instance, for configuration and registry reads. Do NOT load sub-assets through it: anything acquired on the loader itself is held for the application's lifetime and outlives the asset being built. Use scope instead."
+        },
+        {
+          "name": "locator",
+          "signature": "locator: string",
+          "signatureTokens": [
+            {
+              "text": "locator",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The canonical locator this load resolved to - the identity's source half, without any source discriminator."
+        },
+        {
+          "name": "resourceKey",
+          "signature": "resourceKey: string",
+          "signatureTokens": [
+            {
+              "text": "resourceKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The identity of the resource being loaded: the key the loader dedupes in-flight requests and claims on."
         },
         {
           "name": "scope",
@@ -349,6 +370,27 @@
           "params": [],
           "returnType": null,
           "description": "Cancellation signal for the load this handler invocation belongs to. It aborts once no claim scope needs the result any more - a scene torn down mid-navigation, or a LoadingQueue.cancel call. The fetch* helpers below already forward it, so a handler built out of them needs no extra work. Forward it explicitly to any fetching or decoding the handler performs itself; undefined means the caller started this load without a cancellation channel."
+        },
+        {
+          "name": "sourceKey",
+          "signature": "sourceKey: string",
+          "signatureTokens": [
+            {
+              "text": "sourceKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The identity of the source data this load acquires. Two resources built from one download share it, so it is what a handler keys anything source-shaped by - never resourceKey."
         }
       ],
       "paragraphs": [],

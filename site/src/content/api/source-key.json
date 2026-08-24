@@ -1,0 +1,65 @@
+{
+  "title": "SourceKey",
+  "description": "The identity of the source data a request acquires. Composed of the canonical locator and - when the type declares one - a source discriminator covering only what changes the acquired bytes (a locale, a content variant). It deliberately carries no asset type and no resource discriminator: two ResourceKeys that differ only in how the same download is interpreted share one `SourceKey`. How an acquired representation is stored is a separate question again, and is not part of this key.",
+  "symbol": "SourceKey",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The identity of the source data a request acquires.",
+        "Composed of the canonical locator and - when the type declares one - a source discriminator covering only what changes the acquired bytes (a locale, a content variant). It deliberately carries no asset type and no resource discriminator: two ResourceKeys that differ only in how the same download is interpreted share one `SourceKey`.",
+        "How an acquired representation is stored is a separate question again, and is not part of this key."
+      ],
+      "importLine": "import { SourceKey } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "SourceKey",
+          "signature": "string",
+          "signatureTokens": [
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/canonicalKey.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/canonicalKey.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/canonicalKey.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/canonicalKey.ts"
+}

@@ -1,0 +1,101 @@
+{
+  "title": "AssetDependencyScope",
+  "description": "The seam through which a factory acquires the assets its resource depends on. Everything loaded through it is owned by the resource being built and is released with it, unless another owner holds it independently - so a font's page textures survive exactly as long as the font, however many consumers the deduplicated font itself has. It is deliberately narrower than the scope backing it: a factory may acquire dependencies, but not release them, tear the scope down, or unpack a container into it. Those decisions belong to whoever owns the resource.",
+  "symbol": "AssetDependencyScope",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The seam through which a factory acquires the assets its resource depends on.",
+        "Everything loaded through it is owned by the resource being built and is released with it, unless another owner holds it independently - so a font's page textures survive exactly as long as the font, however many consumers the deduplicated font itself has.",
+        "It is deliberately narrower than the scope backing it: a factory may acquire dependencies, but not release them, tear the scope down, or unpack a container into it. Those decisions belong to whoever owns the resource."
+      ],
+      "importLine": "import { AssetDependencyScope } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AssetDependencyScope",
+          "signature": "Pick<LoaderScope, \"createScope\" | \"get\" | \"load\">",
+          "signatureTokens": [
+            {
+              "text": "Pick",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScope",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"createScope\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"get\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"load\"",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetFactory.ts"
+}

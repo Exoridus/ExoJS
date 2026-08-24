@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, test, vi } from 'vitest';
 
 import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import { type AssetSourceCodec, jsonSourceCodec, textSourceCodec } from '#assets/AssetSourceCodec';
-import { type AssetRequest, AssetType } from '#assets/AssetType';
+import { type AnyAssetType, type AssetRequest, AssetType } from '#assets/AssetType';
 import { Loader } from '#assets/Loader';
 import type { Extension } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
@@ -29,8 +29,8 @@ const createdFactories: Array<{ id: number; destroyed: boolean }> = [];
 let nextFactoryId = 1;
 
 class WorldAssetType extends AssetType<WorldData, World, WorldOptions, string> {
-  public readonly id = 'com.example.world';
-  public override readonly extensions = ['world'];
+  public readonly id: string = 'com.example.world';
+  public override readonly extensions: readonly string[] = ['world'];
   public readonly codec = jsonSourceCodec as AssetSourceCodec<WorldData, string>;
 
   public override resourceIdentity({ options }: AssetRequest<WorldOptions>): string {
@@ -57,21 +57,21 @@ class WorldAssetType extends AssetType<WorldData, World, WorldOptions, string> {
 
 /** A type whose identity is the locator alone - neither hook is implemented. */
 class NoteAssetType extends AssetType<string, string[]> {
-  public readonly id = 'com.example.note';
-  public override readonly extensions = ['note'];
-  public readonly codec = textSourceCodec;
+  public readonly id: string = 'com.example.note';
+  public override readonly extensions: readonly string[] = ['note'];
+  public readonly codec: AssetSourceCodec<string> = textSourceCodec;
 
   public createFactory(): AssetFactory<string, string[]> {
     return { create: text => Promise.resolve(text.split('\n')) };
   }
 }
 
-function extensionFor(...assets: Extension['assets'] extends ReadonlyArray<infer E> ? E[] : never): Extension {
+function extensionFor(...assets: AnyAssetType[]): Extension {
   return { id: 'com.example.test', assets };
 }
 
 /** A loader with `types` installed, exactly as an Application would install them. */
-function createLoader(types: ReadonlyArray<WorldAssetType | NoteAssetType>): Loader {
+function createLoader(types: readonly AnyAssetType[]): Loader {
   const loader = new Loader({ basePath: 'https://assets.test/' });
 
   materializeAssetBindings(loader, types);

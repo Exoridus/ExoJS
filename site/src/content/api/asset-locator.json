@@ -1,0 +1,63 @@
+{
+  "title": "AssetLocator",
+  "description": "A canonicalized asset source: `url:` followed by the fully resolved URL, with the loader base path applied, `.` and `..` collapsed, and the fragment removed. `blob:` and `data:` sources carry their own absolute identity and pass through unchanged.",
+  "symbol": "AssetLocator",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A canonicalized asset source: `url:` followed by the fully resolved URL, with the loader base path applied, `.` and `..` collapsed, and the fragment removed. `blob:` and `data:` sources carry their own absolute identity and pass through unchanged."
+      ],
+      "importLine": "import { AssetLocator } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AssetLocator",
+          "signature": "string",
+          "signatureTokens": [
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/canonicalKey.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/canonicalKey.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/canonicalKey.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/canonicalKey.ts"
+}

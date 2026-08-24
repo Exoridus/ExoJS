@@ -55,7 +55,6 @@ export type ResourceKey = string;
  */
 export type SourceKey = string;
 
-
 /**
  * A request resolved to its one canonical identity. Produced once per entry
  * point, before any fetch starts, and passed down instead of a

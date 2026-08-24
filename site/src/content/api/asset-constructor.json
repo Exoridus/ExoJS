@@ -1,6 +1,6 @@
 {
   "title": "AssetConstructor",
-  "description": "Any abstract or concrete constructor whose instances are the asset type produced by a factory (e.g. `typeof Texture`, `typeof Sound`).",
+  "description": "Any abstract or concrete constructor whose instances are the resource an asset type produces (e.g. `typeof Texture`, `typeof Sound`). Constructors act as the dispatch token of a constructor-bound asset binding: they identify the type a request is routed to and take part in its resource identity. A first-class AssetType carries its own stable string identity instead and needs no constructor of its own.",
   "symbol": "AssetConstructor",
   "kind": "type",
   "subsystem": "assets",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Any abstract or concrete constructor whose instances are the asset type produced by a factory (e.g. `typeof Texture`, `typeof Sound`)."
+        "Any abstract or concrete constructor whose instances are the resource an asset type produces (e.g. `typeof Texture`, `typeof Sound`).",
+        "Constructors act as the dispatch token of a constructor-bound asset binding: they identify the type a request is routed to and take part in its resource identity. A first-class AssetType carries its own stable string identity instead and needs no constructor of its own."
       ],
       "importLine": "import { AssetConstructor } from '@codexo/exojs'",
       "sourceLink": null
@@ -77,11 +78,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/FactoryRegistry.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/FactoryRegistry.ts"
+        "label": "src/assets/AssetConstructor.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetConstructor.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/FactoryRegistry.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/FactoryRegistry.ts"
+  "sourcePath": "src/assets/AssetConstructor.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetConstructor.ts"
 }

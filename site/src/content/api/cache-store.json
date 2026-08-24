@@ -1,6 +1,6 @@
 {
   "title": "CacheStore",
-  "description": "Persistent storage backend used by the Loader to cache processed asset data between sessions. Each method accepts a `storageName` namespace (sourced from AssetFactory.storageName) and a per-asset `key`, allowing a single store to hold data for multiple asset types. IndexedDbStore is the built-in implementation backed by the browser's IndexedDB API.",
+  "description": "Persistent storage backend used by the Loader to cache processed asset data between sessions. Each method accepts a `storageName` namespace (sourced from the asset binding that issued the request) and a per-asset `key`, allowing a single store to hold data for multiple asset types. IndexedDbStore is the built-in implementation backed by the browser's IndexedDB API.",
   "symbol": "CacheStore",
   "kind": "interface",
   "subsystem": "assets",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Persistent storage backend used by the Loader to cache processed asset data between sessions.",
-        "Each method accepts a `storageName` namespace (sourced from AssetFactory.storageName) and a per-asset `key`, allowing a single store to hold data for multiple asset types. IndexedDbStore is the built-in implementation backed by the browser's IndexedDB API."
+        "Each method accepts a `storageName` namespace (sourced from the asset binding that issued the request) and a per-asset `key`, allowing a single store to hold data for multiple asset types. IndexedDbStore is the built-in implementation backed by the browser's IndexedDB API."
       ],
       "importLine": "import { CacheStore } from '@codexo/exojs'",
       "sourceLink": null

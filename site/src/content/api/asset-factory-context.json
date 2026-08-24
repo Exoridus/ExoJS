@@ -1,0 +1,185 @@
+{
+  "title": "AssetFactoryContext",
+  "description": "What a factory is told about the one resource it is building. There is deliberately no network, cache store or cache policy here. A factory receives source data that has already been acquired and decoded, and its only outward reach is dependencies - which acquires other ASSETS, never raw bytes. Where those bytes came from, and whether they were served from a cache, is not a factory's decision to make or to observe.",
+  "symbol": "AssetFactoryContext",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a factory is told about the one resource it is building.",
+        "There is deliberately no network, cache store or cache policy here. A factory receives source data that has already been acquired and decoded, and its only outward reach is dependencies - which acquires other ASSETS, never raw bytes. Where those bytes came from, and whether they were served from a cache, is not a factory's decision to make or to observe."
+      ],
+      "importLine": "import { AssetFactoryContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "dependencies",
+          "signature": "dependencies: AssetDependencyScope",
+          "signatureTokens": [
+            {
+              "text": "dependencies",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetDependencyScope",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Acquires assets this resource depends on, for as long as this resource lives."
+        },
+        {
+          "name": "locator",
+          "signature": "locator: string",
+          "signatureTokens": [
+            {
+              "text": "locator",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The canonical locator the source data was acquired from."
+        },
+        {
+          "name": "options",
+          "signature": "options?: Options",
+          "signatureTokens": [
+            {
+              "text": "options",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The options this request carried, as declared by the asset type."
+        },
+        {
+          "name": "resourceKey",
+          "signature": "resourceKey: string",
+          "signatureTokens": [
+            {
+              "text": "resourceKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The identity of the resource being built."
+        },
+        {
+          "name": "signal",
+          "signature": "signal?: AbortSignal",
+          "signatureTokens": [
+            {
+              "text": "signal",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cancellation signal of this load. It aborts once no claim scope needs the result any more; undefined means the caller started the load without a cancellation channel."
+        },
+        {
+          "name": "sourceKey",
+          "signature": "sourceKey: string",
+          "signatureTokens": [
+            {
+              "text": "sourceKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The identity of the source data it is built from."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetFactory.ts"
+}

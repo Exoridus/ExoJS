@@ -1,11 +1,11 @@
 {
-  "title": "Asset",
-  "description": "A typed, loadable asset reference. Holds config only - no loaded resource.",
-  "symbol": "Asset",
+  "title": "AssetRequest",
+  "description": "One request for an asset of a given type, as an identity hook sees it.",
+  "symbol": "AssetRequest",
   "kind": "interface",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
-  "tier": "stable",
+  "tier": "advanced",
   "memberCount": 2,
   "counts": {
     "constructors": 0,
@@ -19,15 +19,40 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "A typed, loadable asset reference. Holds config only - no loaded resource."
+        "One request for an asset of a given type, as an identity hook sees it."
       ],
-      "importLine": "import { Asset } from '@codexo/exojs'",
+      "importLine": "import { AssetRequest } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "options",
+          "signature": "options?: Options",
+          "signatureTokens": [
+            {
+              "text": "options",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
         {
           "name": "source",
           "signature": "source: string",
@@ -47,28 +72,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "type",
-          "signature": "type: AssetTypeName",
-          "signatureTokens": [
-            {
-              "text": "type",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetTypeName",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
+          "description": "The source string as the caller wrote it, before base-path resolution."
         }
       ],
       "paragraphs": [],
@@ -82,11 +86,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/Asset.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+        "label": "src/assets/AssetType.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetType.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/Asset.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Asset.ts"
+  "sourcePath": "src/assets/AssetType.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetType.ts"
 }

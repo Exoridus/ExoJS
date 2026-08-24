@@ -1,0 +1,113 @@
+{
+  "title": "AssetIdentity",
+  "description": "The two identities a request resolves to, as reported by Loader.identify.",
+  "symbol": "AssetIdentity",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The two identities a request resolves to, as reported by Loader.identify."
+      ],
+      "importLine": "import { AssetIdentity } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "locator",
+          "signature": "locator: string",
+          "signatureTokens": [
+            {
+              "text": "locator",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The canonical locator both are derived from."
+        },
+        {
+          "name": "resourceKey",
+          "signature": "resourceKey: string",
+          "signatureTokens": [
+            {
+              "text": "resourceKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Equal keys mean one resident resource, one in-flight fetch and one set of claims."
+        },
+        {
+          "name": "sourceKey",
+          "signature": "sourceKey: string",
+          "signatureTokens": [
+            {
+              "text": "sourceKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Equal keys mean one acquisition, however many resources are built from it."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/Loader.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/Loader.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/Loader.ts"
+}

@@ -1,6 +1,6 @@
 {
   "title": "AbstractAssetFactory",
-  "description": "Shared base class for all built-in AssetFactory implementations. Manages a pool of object URLs created during asset loading so that they can be revoked in bulk when the factory is destroyed, preventing memory leaks. Concrete subclasses must implement process and create; they may call createObjectUrl instead of `URL.createObjectURL` directly so that the URL is automatically tracked and cleaned up.",
+  "description": "Shared base class for the built-in resource builders. Manages a pool of object URLs created during asset loading so that they can be revoked in bulk when the factory is destroyed, preventing memory leaks. Concrete subclasses must implement process and create; they may call createObjectUrl instead of `URL.createObjectURL` directly so that the URL is automatically tracked and cleaned up.",
   "symbol": "AbstractAssetFactory",
   "kind": "class",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Shared base class for all built-in AssetFactory implementations.",
+        "Shared base class for the built-in resource builders.",
         "Manages a pool of object URLs created during asset loading so that they can be revoked in bulk when the factory is destroyed, preventing memory leaks. Concrete subclasses must implement process and create; they may call createObjectUrl instead of `URL.createObjectURL` directly so that the URL is automatically tracked and cleaned up."
       ],
       "importLine": "import { AbstractAssetFactory } from '@codexo/exojs'",
@@ -161,7 +161,7 @@
             }
           ],
           "returnType": "Promise<T>",
-          "description": "Constructs the final engine asset from the intermediate value produced by process (or retrieved from cache)."
+          "description": ""
         },
         {
           "name": "createObjectUrl",
@@ -296,7 +296,7 @@
             }
           ],
           "returnType": "Promise<unknown>",
-          "description": "Converts a raw HTTP response into a serialisable intermediate value suitable for cache storage and later passed to create."
+          "description": ""
         },
         {
           "name": "revokeObjectUrl",
@@ -373,7 +373,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore."
+          "description": ""
         }
       ],
       "paragraphs": [],

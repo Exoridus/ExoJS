@@ -1,0 +1,100 @@
+{
+  "title": "AnyAssetType",
+  "description": "Any AssetType, whatever its source, resource, option and stored types - the element type of an Extension's `assets` list. The source and stored types appear on both sides of the codec contract, so no narrower parameterisation accepts every concrete type.",
+  "symbol": "AnyAssetType",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Any AssetType, whatever its source, resource, option and stored types - the element type of an Extension's `assets` list.",
+        "The source and stored types appear on both sides of the codec contract, so no narrower parameterisation accepts every concrete type."
+      ],
+      "importLine": "import { AnyAssetType } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AnyAssetType",
+          "signature": "AssetType<any, any, any, any>",
+          "signatureTokens": [
+            {
+              "text": "AssetType",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "any",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetType.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetType.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetType.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetType.ts"
+}
