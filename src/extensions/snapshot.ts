@@ -1,10 +1,10 @@
-import type { AssetBinding, Extension, RendererBinding, SerializerBinding } from './Extension';
+import type { AssetEntry, Extension, RendererBinding, SerializerBinding } from './Extension';
 
 // @internal
 export interface ExtensionSnapshot {
   readonly extensions: ReadonlyArray<Readonly<Extension>>;
   readonly renderers: readonly RendererBinding[];
-  readonly assets: readonly AssetBinding[];
+  readonly assets: readonly AssetEntry[];
   readonly serializers: readonly SerializerBinding[];
 }
 
@@ -49,15 +49,17 @@ export function freezeExtension(ext: Extension): void {
   if (ext.assets) {
     Object.freeze(ext.assets);
 
-    for (const binding of ext.assets) {
-      Object.freeze(binding);
+    for (const entry of ext.assets) {
+      Object.freeze(entry);
 
-      if (binding.extensions) {
-        Object.freeze(binding.extensions);
+      const { extensions, typeNames } = entry as { extensions?: readonly string[]; typeNames?: readonly string[] };
+
+      if (extensions) {
+        Object.freeze(extensions);
       }
 
-      if (binding.typeNames) {
-        Object.freeze(binding.typeNames);
+      if (typeNames) {
+        Object.freeze(typeNames);
       }
     }
   }
@@ -136,7 +138,7 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
 
   // Flatten in topological (post-order) order - deps before dependents.
   const renderers: RendererBinding[] = [];
-  const assets: AssetBinding[] = [];
+  const assets: AssetEntry[] = [];
   const serializers: SerializerBinding[] = [];
 
   for (const ext of ordered) {

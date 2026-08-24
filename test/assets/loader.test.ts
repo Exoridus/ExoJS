@@ -707,7 +707,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
     );
   }
 
-  test('context exposes identityKey as a non-empty string', async () => {
+  test('context exposes resourceKey as a non-empty string', async () => {
     const loader = new Loader({ basePath: '/' });
     let capturedKey = '';
 
@@ -715,7 +715,7 @@ describe('bindAsset() handler — cache-aware AssetLoaderContext', () => {
       { ctor: RichAsset, typeNames: ['richAsset'] },
       {
         load: async (_request, ctx) => {
-          capturedKey = ctx.identityKey;
+          capturedKey = ctx.resourceKey;
           return 'ok';
         },
       },
@@ -1645,7 +1645,7 @@ describe('internal-reset-during-in-flight identity cleanup on rejection', () => 
     const asset = new Asset({ type: 'richAsset', source: 'x.dat', format: 'x' });
     const pending = loader.load(asset);
 
-    // Reset while still in flight: this clears `_identityKeyToAliases` for this
+    // Reset while still in flight: this clears `_aliases` for this
     // identity synchronously, before the underlying load settles.
     hardUnloadAsset(loader, asset);
 

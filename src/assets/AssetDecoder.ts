@@ -1,10 +1,9 @@
 import type { AssetHandler } from '#extensions/Extension';
 
 import type { AssetCacheError } from './AssetCacheError';
-import type { AssetFactory } from './AssetFactory';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { CacheStore } from './CacheStore';
-import type { CacheStrategy } from './CacheStrategy';
+import type { CacheRequestFactory, CacheStrategy } from './CacheStrategy';
 import { type CanonicalAsset, resolveAssetUrl } from './canonicalKey';
 import type { AssetLoaderContext, Loader } from './Loader';
 import type { LoaderScope } from './LoaderScope';
@@ -121,24 +120,31 @@ export class AssetDecoder {
    * `process` converts the raw `Response` to the storable intermediate form
    * (e.g. `r.text()`, `r.arrayBuffer()`, `r.json()`).  `create` is always the
    * identity function - the cached value is returned unchanged.
+   *
+   * `cacheKey` overrides the lookup key for a source whose URL alone does not
+   * identify what comes back - a locale or content variant negotiated on the
+   * request. Without it two variants of one URL would overwrite each other in
+   * the store. Defaults to the resolved URL.
    * @internal
    */
-  public _contextFetch<T>(source: string, storageName: string, process: (response: Response) => Promise<T>, signal?: AbortSignal): Promise<T> {
+  public _contextFetch<T>(
+    source: string,
+    storageName: string,
+    process: (response: Response) => Promise<T>,
+    signal?: AbortSignal,
+    cacheKey?: string,
+  ): Promise<T> {
     const url = this._resolveUrl(source);
-    const factory: AssetFactory<T> = {
-      storageName,
+    const factory: CacheRequestFactory = {
       process,
-      create: data => Promise.resolve(data as T),
-      destroy() {
-        // Nothing to release: this strategy hands back the decoded value as-is.
-      },
+      create: data => Promise.resolve(data),
     };
     // Spread only when a signal is actually threaded through, so a plain fetch
     // keeps handing the strategy the very `fetchOptions` object it always did.
     const requestOptions = signal === undefined ? this._fetchOptions : { ...this._fetchOptions, signal };
 
     return this._cacheStrategy.resolve(
-      { storageName, key: url, url, requestOptions, factory, options: undefined, reportCacheError: this._reportCacheError },
+      { storageName, key: cacheKey ?? url, url, requestOptions, factory, options: undefined, reportCacheError: this._reportCacheError },
       this._stores,
     ) as Promise<T>;
   }
@@ -150,7 +156,7 @@ export class AssetDecoder {
    * configured cache strategy and IDB stores, keyed by the resolved URL (so the
    * same resource is never fetched or cached twice, however it was spelled).
    *
-   * `storageName`, when given (from the handler's `bindAsset`/`defineAsset`
+   * `storageName`, when given (from the handler's binding
    * binding), replaces the shared `__ctx_binary`/`__ctx_text`/`__ctx_json`
    * namespace for every `fetch*` call made through this context, giving the
    * binding its own IDB namespace instead of sharing one with every other
@@ -165,11 +171,13 @@ export class AssetDecoder {
    * long as the asset being built.
    * @internal
    */
-  public _buildHandlerContext(identityKey: string, scope: LoaderScope, storageName?: string, signal?: AbortSignal): AssetLoaderContext {
+  public _buildHandlerContext(asset: CanonicalAsset, scope: LoaderScope, storageName?: string, signal?: AbortSignal): AssetLoaderContext {
     const ctx: AssetLoaderContext = {
       loader: this._loader,
       scope,
-      identityKey,
+      resourceKey: asset.key,
+      sourceKey: asset.sourceKey,
+      locator: asset.locator,
       signal,
       resolveUrl: (source: string) => this._resolveUrl(source),
       fetchText: (source: string) => this._contextFetch<string>(source, storageName ?? '__ctx_text', r => r.text(), signal),
@@ -235,7 +243,7 @@ export class AssetDecoder {
       Object.assign(config, options as Record<string, unknown>);
     }
 
-    const context = this._buildHandlerContext(asset.key, scope, handlerEntry.storageName, signal);
+    const context = this._buildHandlerContext(asset, scope, handlerEntry.storageName, signal);
 
     return this._fetchWithHandler(asset, config, handlerEntry.load, context);
   }
@@ -246,16 +254,21 @@ export class AssetDecoder {
    * {@link AssetHandler.createFromBytes} when present; throws if the bound
    * handler does not support byte-source construction. The backing path for
    * `Loader.loadContainer`.
+   *
+   * `scope` owns whatever sub-assets the construction loads, exactly as on the
+   * network path: an entry unpacked from a container must not own its
+   * dependencies differently from the same entry fetched over the network.
    * @internal
    */
-  public async _injectSource(asset: CanonicalAsset, bytes: ArrayBuffer, options?: unknown): Promise<void> {
+  public async _injectSource(asset: CanonicalAsset, bytes: ArrayBuffer, scope: LoaderScope, options?: unknown): Promise<void> {
     const handlerEntry = this._typeRegistry.getHandler(asset.type);
 
     if (!handlerEntry?.createFromBytes) {
       throw new Error(`Asset type "${asset.type.name}" cannot be built from container bytes (no createFromBytes handler).`);
     }
 
-    const resource = await handlerEntry.createFromBytes(bytes, options);
+    const context = this._buildHandlerContext(asset, scope, handlerEntry.storageName);
+    const resource = await handlerEntry.createFromBytes(bytes, options, context);
 
     this._storeResource(asset, resource);
   }

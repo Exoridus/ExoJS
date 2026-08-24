@@ -24,10 +24,9 @@ export interface RegistryOptions<Key, Value> {
 /**
  * Generic key→value store with inheritance-aware resolution.
  *
- * Backs the engine's constructor-keyed dispatch registries
- * ({@link FactoryRegistry}, {@link RendererRegistry}). Both previously
- * duplicated the same prototype-chain walk and destroy-time de-duplication;
- * this primitive owns that shared mechanism.
+ * Backs the engine's constructor-keyed dispatch registries, such as
+ * {@link RendererRegistry}, which would otherwise each duplicate the same
+ * prototype-chain walk and destroy-time de-duplication.
  *
  * Conflict policy and error messaging stay with the caller: {@link Registry.set}
  * always overwrites and {@link Registry.resolve} returns `undefined` on a miss,

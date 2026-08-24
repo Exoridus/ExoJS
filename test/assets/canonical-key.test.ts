@@ -1,4 +1,4 @@
-import { canonicalAssetKey, canonicalizeSource, resolveAssetUrl } from '#assets/canonicalKey';
+import { canonicalizeSource, resolveAssetUrl, resourceKey } from '#assets/canonicalKey';
 
 describe('canonicalizeSource', () => {
   test('joins a relative source onto the base path', () => {
@@ -49,17 +49,17 @@ describe('canonicalizeSource', () => {
   });
 });
 
-describe('canonicalAssetKey', () => {
+describe('resourceKey', () => {
   test('an absent or empty discriminator yields the bare type + locator key', () => {
-    expect(canonicalAssetKey(3, 'url:/a.png')).toBe('3|url:/a.png');
-    expect(canonicalAssetKey(3, 'url:/a.png', '')).toBe('3|url:/a.png');
+    expect(resourceKey('3', 'url:/a.png')).toBe('3|url:/a.png');
+    expect(resourceKey('3', 'url:/a.png', '')).toBe('3|url:/a.png');
   });
 
   test('a discriminator separates two otherwise identical sources', () => {
-    expect(canonicalAssetKey(3, 'url:/w.tmj', 'orthogonal')).not.toBe(canonicalAssetKey(3, 'url:/w.tmj', 'isometric'));
+    expect(resourceKey('3', 'url:/w.tmj', 'orthogonal')).not.toBe(resourceKey('3', 'url:/w.tmj', 'isometric'));
   });
 
   test('the same locator under two types never collides', () => {
-    expect(canonicalAssetKey(1, 'url:/a.json')).not.toBe(canonicalAssetKey(2, 'url:/a.json'));
+    expect(resourceKey('1', 'url:/a.json')).not.toBe(resourceKey('2', 'url:/a.json'));
   });
 });

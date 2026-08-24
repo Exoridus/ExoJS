@@ -1,7 +1,5 @@
-import type { AssetFactory } from './AssetFactory';
-
 /**
- * Shared base class for all built-in {@link AssetFactory} implementations.
+ * Shared base class for the built-in resource builders.
  *
  * Manages a pool of object URLs created during asset loading so that they can
  * be revoked in bulk when the factory is destroyed, preventing memory leaks.
@@ -9,7 +7,7 @@ import type { AssetFactory } from './AssetFactory';
  * may call {@link createObjectUrl} instead of `URL.createObjectURL` directly
  * so that the URL is automatically tracked and cleaned up.
  */
-export abstract class AbstractAssetFactory<T = unknown> implements AssetFactory<T> {
+export abstract class AbstractAssetFactory<T = unknown> {
   protected readonly _objectUrls: string[] = [];
   public abstract readonly storageName: string;
 

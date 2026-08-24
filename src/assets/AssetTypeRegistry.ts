@@ -1,8 +1,8 @@
 import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 
-import type { AssetDefinitions } from './AssetDefinitions';
+import type { AssetConstructor } from './AssetConstructor';
+import type { AssetTypeName } from './AssetDefinitions';
 import { getExtensionKind, normalizeExtension } from './extensionKindRegistry';
-import type { AssetConstructor } from './FactoryRegistry';
 import type { AssetLoaderContext } from './Loader';
 import type { SeamlessAdapter } from './seamless';
 
@@ -11,8 +11,10 @@ export interface HandlerEntry {
   load: (config: unknown, ctx: AssetLoaderContext) => Promise<unknown>;
   /** Optional identity-relevant discriminator appended to the canonical key; absent means type + locator alone. */
   getIdentityDiscriminator?: (source: string, options: unknown) => string;
+  /** Optional source discriminator appended to the canonical locator; absent means the locator alone identifies the source. */
+  getSourceIdentity?: (source: string, options: unknown) => string;
   /** Optional byte-source constructor used by container loading (bypasses fetch). */
-  createFromBytes?: (bytes: ArrayBuffer, options?: unknown) => Promise<unknown>;
+  createFromBytes?: (bytes: ArrayBuffer, options: unknown, context: AssetLoaderContext) => Promise<unknown>;
   /** Optional per-resource teardown, invoked by `AssetResidency` when a value asset of this type is evicted at refcount 0. */
   dispose?: (resource: unknown) => void;
   /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. */
@@ -35,14 +37,16 @@ export interface HandlerEntry {
 export class AssetTypeRegistry {
   private readonly _assetTypeMap = new Map<string, AssetConstructor>();
   private readonly _typeIds = new WeakMap<AssetConstructor, number>();
+  /** Stable, install-supplied identities. Present only for constructors minted for an {@link AssetType}. */
+  private readonly _stableTypeIds = new WeakMap<AssetConstructor, string>();
   private readonly _handlerFunctions = new Map<AssetConstructor, HandlerEntry>();
   private readonly _extensionMap = new Map<string, AssetConstructor>();
   private readonly _boundHandlers: AssetHandler[] = [];
   private readonly _seamlessAdapters = new Map<AssetConstructor, SeamlessAdapter<unknown>>();
   /** Tier 1 - explicit app-local overrides, written only by {@link registerType}. */
-  private readonly _extensionOverrides = new Map<string, keyof AssetDefinitions>();
+  private readonly _extensionOverrides = new Map<string, AssetTypeName>();
   /** Tier 2 - binding-declared defaults, written only by {@link bindAsset}'s `type`. */
-  private readonly _bindingExtensionTypes = new Map<string, keyof AssetDefinitions>();
+  private readonly _bindingExtensionTypes = new Map<string, AssetTypeName>();
   private _nextTypeId = 1;
 
   /** Registers the seamless-handle adapter for `type`. One adapter per type. */
@@ -72,11 +76,17 @@ export class AssetTypeRegistry {
   public bindAsset<Result = unknown, Options = undefined>(
     keys: {
       ctor: AssetConstructor<Result>;
-      type?: keyof AssetDefinitions;
+      type?: AssetTypeName;
       typeNames?: readonly string[];
       extensions?: readonly string[];
       seamless?: SeamlessAdapter<Result>;
       storageName?: string;
+      /**
+       * The stable identity resource keys name this type by. Supplied when the
+       * binding was minted for an {@link AssetType}; a constructor-bound
+       * binding has none and falls back to a per-loader ordinal.
+       */
+      typeIdentity?: string;
     },
     handler: AssetHandler<Result, Options>,
   ): void {
@@ -126,6 +136,10 @@ export class AssetTypeRegistry {
     // All validation passed - install atomically.
     this._handlerFunctions.set(keys.ctor, this._createHandlerEntry<Result, Options>(handler, keys.storageName));
 
+    if (keys.typeIdentity !== undefined) {
+      this._stableTypeIds.set(keys.ctor, keys.typeIdentity);
+    }
+
     for (const name of resolvedNames) {
       this._assetTypeMap.set(name, keys.ctor);
     }
@@ -172,6 +186,7 @@ export class AssetTypeRegistry {
     };
 
     const boundDiscriminator = handler.getIdentityDiscriminator?.bind(handler);
+    const boundSourceIdentity = handler.getSourceIdentity?.bind(handler);
     const boundCreateFromBytes = handler.createFromBytes?.bind(handler);
     const boundDispose = handler.dispose?.bind(handler);
 
@@ -180,7 +195,12 @@ export class AssetTypeRegistry {
       ...(boundDiscriminator && {
         getIdentityDiscriminator: (source: string, options: unknown) => boundDiscriminator({ source, options: options as Options }),
       }),
-      ...(boundCreateFromBytes && { createFromBytes: (bytes: ArrayBuffer, options?: unknown) => boundCreateFromBytes(bytes, options as Options) }),
+      ...(boundSourceIdentity && {
+        getSourceIdentity: (source: string, options: unknown) => boundSourceIdentity({ source, options: options as Options }),
+      }),
+      ...(boundCreateFromBytes && {
+        createFromBytes: (bytes: ArrayBuffer, options: unknown, ctx: AssetLoaderContext) => boundCreateFromBytes(bytes, options as Options, ctx),
+      }),
       ...(boundDispose && { dispose: (resource: unknown) => boundDispose(resource as Result) }),
       ...(storageName !== undefined && { storageName }),
     };
@@ -221,8 +241,22 @@ export class AssetTypeRegistry {
     return this._assetTypeMap.get(name);
   }
 
-  /** @internal */
-  public _getTypeId(type: AssetConstructor): number {
+  /**
+   * The identity a {@link ResourceKey} names `type` by.
+   *
+   * A type installed from an {@link AssetType} answers with that type's stable
+   * id, so its keys mean the same thing across reloads and are usable as
+   * persistent namespaces. A constructor-bound binding has no such identity and
+   * falls back to a per-loader ordinal, which is stable only within one session.
+   * @internal
+   */
+  public _typeIdentity(type: AssetConstructor): string {
+    const stable = this._stableTypeIds.get(type);
+
+    if (stable !== undefined) {
+      return stable;
+    }
+
     let typeId = this._typeIds.get(type);
 
     if (typeId === undefined) {
@@ -230,7 +264,7 @@ export class AssetTypeRegistry {
       this._typeIds.set(type, typeId);
     }
 
-    return typeId;
+    return String(typeId);
   }
 
   /**
@@ -248,6 +282,19 @@ export class AssetTypeRegistry {
   }
 
   /**
+   * The source discriminator the bound handler contributes for a request, or
+   * `undefined` when the locator alone identifies the acquired data.
+   *
+   * Separate from {@link _identityDiscriminator} on purpose: an option that
+   * changes only how already-acquired data is interpreted widens the resource
+   * key and must leave the source key alone.
+   * @internal
+   */
+  public _sourceDiscriminator(type: AssetConstructor, source: string, options?: unknown): string | undefined {
+    return this._handlerFunctions.get(type)?.getSourceIdentity?.(source, options);
+  }
+
+  /**
    * Resolve the effective {@link AssetDefinitions} type for a whole path by
    * matching the basename's dot-suffixes longest-first: `hero.aseprite.json`
    * tries `aseprite.json` before `json`. Query/hash suffixes are ignored. Each
@@ -261,7 +308,7 @@ export class AssetTypeRegistry {
    * against duplicate extension registrations.
    * @internal
    */
-  public _resolveTypeForPath(path: string): keyof AssetDefinitions | undefined {
+  public _resolveTypeForPath(path: string): AssetTypeName | undefined {
     const [withoutQueryHash = ''] = path.split(/[?#]/, 1);
     const basename = withoutQueryHash.split('/').pop() ?? '';
     const parts = basename.split('.');
@@ -278,7 +325,7 @@ export class AssetTypeRegistry {
   }
 
   /** `bindAsset` install step: records `extensions` as this binding's declared default type; no-ops when `type` is absent. */
-  private _applyBindingExtensionTypes(extensions: readonly string[], type: keyof AssetDefinitions | undefined): void {
+  private _applyBindingExtensionTypes(extensions: readonly string[], type: AssetTypeName | undefined): void {
     if (type === undefined) return;
 
     for (const ext of extensions) {
@@ -296,7 +343,7 @@ export class AssetTypeRegistry {
    * type was already registered here by an earlier `registerType` call - two
    * competing app-wide overrides for one suffix are ambiguous.
    */
-  public registerType(extension: string, type: keyof AssetDefinitions): void {
+  public registerType(extension: string, type: AssetTypeName): void {
     const key = normalizeExtension(extension);
     const existing = this._extensionOverrides.get(key);
 
@@ -317,7 +364,7 @@ export class AssetTypeRegistry {
    * `bindAsset` binding that claimed this suffix, then the global `defineAsset`
    * default. `undefined` when no tier has an entry.
    */
-  public resolveExtensionType(extension: string): keyof AssetDefinitions | undefined {
+  public resolveExtensionType(extension: string): AssetTypeName | undefined {
     const key = normalizeExtension(extension);
 
     return this._extensionOverrides.get(key) ?? this._bindingExtensionTypes.get(key) ?? getExtensionKind(key);

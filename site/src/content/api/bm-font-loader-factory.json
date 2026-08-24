@@ -141,7 +141,7 @@
             }
           ],
           "returnType": "Promise<BmFont>",
-          "description": "Constructs the final engine asset from the intermediate value produced by process (or retrieved from cache)."
+          "description": ""
         },
         {
           "name": "createObjectUrl",
@@ -308,7 +308,7 @@
             }
           ],
           "returnType": "Promise<{ text: string; url: string }>",
-          "description": "Converts a raw HTTP response into a serialisable intermediate value suitable for cache storage and later passed to create."
+          "description": ""
         },
         {
           "name": "revokeObjectUrl",
@@ -385,7 +385,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore."
+          "description": ""
         }
       ],
       "paragraphs": [],

@@ -1,8 +1,8 @@
 import type { AssetCacheError } from './AssetCacheError';
 import type { CacheStore } from './CacheStore';
 
-/** Minimal internal factory protocol consumed by cache policies. */
-interface CacheRequestFactory {
+/** Minimal internal factory protocol consumed by cache policies. @internal */
+export interface CacheRequestFactory {
   process(response: Response): Promise<unknown>;
   create(source: unknown, options?: unknown): Promise<unknown>;
 }

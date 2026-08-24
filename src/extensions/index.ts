@@ -1,1 +1,1 @@
-export type { AssetBinding, AssetHandler, AssetLoadRequest, Extension, ExtensionDisposer, RendererBinding, SerializerBinding } from './Extension';
+export type { AssetBinding, AssetEntry, AssetHandler, AssetLoadRequest, Extension, ExtensionDisposer, RendererBinding, SerializerBinding } from './Extension';

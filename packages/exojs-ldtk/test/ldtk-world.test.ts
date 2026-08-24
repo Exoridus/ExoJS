@@ -68,7 +68,9 @@ function makeContext(claims: string[], fixtures: Record<string, unknown>): Asset
   return {
     loader: {} as AssetLoaderContext['loader'],
     scope: fakeScope('asset', claims, fixtures),
-    identityKey: 'test',
+    resourceKey: 'test',
+    sourceKey: 'test',
+    locator: 'url:test',
     resolveUrl: (source: string) => source,
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),

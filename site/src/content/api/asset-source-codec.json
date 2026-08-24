@@ -1,0 +1,298 @@
+{
+  "title": "AssetSourceCodec",
+  "description": "Turns an acquired representation into the normalized source an AssetFactory builds a resource from. The contract is deliberately asymmetric. A codec describes how source data ARRIVES - over the network, or as a slice of a container - and how the representation that arrived is read back: ```text Response -> Stored -> Source container bytes -> Stored -> Source ``` `Stored` is the representation worth keeping: what came off the wire, before any interpretation that would have to be redone anyway. Splitting it from `Source` is what lets a later cache persist exactly the acquired form rather than a re-encoded approximation of it. When no such split is useful, leave `Stored` at its default and make `decode` the identity. A codec validates the REPRESENTATION - well-formed JSON, a recognised container header, a supported version. It must not build runtime objects: compiling a module, creating a GPU resource or attaching a media element is the factory's work, and failures there are construction failures, not source failures.",
+  "symbol": "AssetSourceCodec",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 3,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Turns an acquired representation into the normalized source an AssetFactory builds a resource from.",
+        "The contract is deliberately asymmetric. A codec describes how source data ARRIVES - over the network, or as a slice of a container - and how the representation that arrived is read back:",
+        "```text Response -> Stored -> Source container bytes -> Stored -> Source ```",
+        "`Stored` is the representation worth keeping: what came off the wire, before any interpretation that would have to be redone anyway. Splitting it from `Source` is what lets a later cache persist exactly the acquired form rather than a re-encoded approximation of it. When no such split is useful, leave `Stored` at its default and make `decode` the identity.",
+        "A codec validates the REPRESENTATION - well-formed JSON, a recognised container header, a supported version. It must not build runtime objects: compiling a module, creating a GPU resource or attaching a media element is the factory's work, and failures there are construction failures, not source failures."
+      ],
+      "importLine": "import { AssetSourceCodec } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "decode",
+          "signature": "decode(stored: Stored, context: SourceCodecContext): Promise<Source>",
+          "signatureTokens": [
+            {
+              "text": "decode",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stored",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SourceCodecContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Source",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "stored",
+              "type": "Stored",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "SourceCodecContext",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Source>",
+          "description": "Interpret a stored representation as the source a factory consumes."
+        },
+        {
+          "name": "fromBytes",
+          "signature": "fromBytes?(bytes: ArrayBuffer, context: SourceCodecContext): Promise<Stored>",
+          "signatureTokens": [
+            {
+              "text": "fromBytes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bytes",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SourceCodecContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "bytes",
+              "type": "ArrayBuffer",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "SourceCodecContext",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Stored>",
+          "description": "Read the representation out of bytes the application already holds - a slice of an asset container, or any other in-memory acquisition. Omit it when the type cannot be built from bytes alone (it needs response headers, or a URL a browser primitive must own). Such a type cannot be packed into a container, and attempting it reports that specifically rather than failing somewhere inside a decode."
+        },
+        {
+          "name": "fromResponse",
+          "signature": "fromResponse(response: Response, context: SourceCodecContext): Promise<Stored>",
+          "signatureTokens": [
+            {
+              "text": "fromResponse",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "response",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Response",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SourceCodecContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "response",
+              "type": "Response",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "SourceCodecContext",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Stored>",
+          "description": "Read the representation out of a network response."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetSourceCodec.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetSourceCodec.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetSourceCodec.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetSourceCodec.ts"
+}

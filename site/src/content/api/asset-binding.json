@@ -240,7 +240,7 @@
         },
         {
           "name": "type",
-          "signature": "type?: keyof AssetDefinitions",
+          "signature": "type?: AssetTypeName",
           "signatureTokens": [
             {
               "text": "type",
@@ -255,7 +255,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "keyof AssetDefinitions",
+              "text": "AssetTypeName",
               "kind": "type"
             }
           ],

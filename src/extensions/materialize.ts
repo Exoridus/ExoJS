@@ -1,11 +1,16 @@
+import type { AssetConstructor } from '#assets/AssetConstructor';
+import { AssetType } from '#assets/AssetType';
+import { assetTypeBinding } from '#assets/assetTypeBinding';
 import { normalizeExtension } from '#assets/extensionKindRegistry';
-import type { AssetConstructor } from '#assets/FactoryRegistry';
 import type { Loader } from '#assets/Loader';
 import type { SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor } from '#rendering/Renderer';
 
-import type { AssetBinding, AssetHandler, RendererBinding, SerializerBinding } from './Extension';
+import type { AssetBinding, AssetEntry, AssetHandler, RendererBinding, SerializerBinding } from './Extension';
+
+/** A binding that may carry the stable identity an {@link AssetType} install supplies. */
+type MaybeIdentifiedAssetBinding = AssetBinding & { readonly typeIdentity?: string };
 
 /**
  * Materialise all renderer bindings into the backend's renderer registry.
@@ -37,17 +42,67 @@ export function materializeRendererBindings(backend: RenderBackend, bindings: re
 }
 
 /**
- * Materialise all asset bindings into the loader.
- * Called once per Application construction.
+ * Materialise every asset entry into the loader.
+ *
+ * A first-class {@link AssetType} is adapted to a binding first, so both kinds
+ * of entry are installed through one path and are checked against each other by
+ * the same conflict rules - an `AssetType` claiming a suffix a binding already
+ * owns is as loud as two bindings claiming it.
+ *
+ * Called once per Application construction. Each entry's factory/handler is
+ * created here, which is what makes it loader-local: a descriptor shared between
+ * applications never shares the mutable instance it describes.
  * @internal
  */
-export function materializeAssetBindings(loader: Loader, bindings: readonly AssetBinding[]): void {
-  // --- Cross-binding pre-validation (no mutation yet) ---
+export function materializeAssetBindings(loader: Loader, entries: readonly AssetEntry[]): void {
+  const bindings: AssetBinding[] = entries.map(entry => (entry instanceof AssetType ? assetTypeBinding(entry) : entry));
+
+  assertNoBindingConflicts(loader, bindings);
+
+  for (const binding of bindings) {
+    const handler: AssetHandler = binding.create(loader);
+    const { typeIdentity } = binding as MaybeIdentifiedAssetBinding;
+
+    loader.bindAsset(
+      {
+        ctor: binding.ctor,
+        ...(binding.type !== undefined && { type: binding.type }),
+        ...(binding.typeNames !== undefined && { typeNames: binding.typeNames }),
+        ...(binding.extensions !== undefined && { extensions: binding.extensions }),
+        ...(binding.seamless !== undefined && { seamless: binding.seamless }),
+        ...(binding.storageName !== undefined && { storageName: binding.storageName }),
+        ...(typeIdentity !== undefined && { typeIdentity }),
+      },
+      handler,
+    );
+  }
+}
+
+/**
+ * Reject every conflicting key across the whole list before anything is
+ * installed, so a rejected list leaves the loader exactly as it was.
+ *
+ * The type-id check runs first: an id is the most specific thing a caller
+ * chose, and reporting the constructor or type-name collision it also causes
+ * would name a token the caller never wrote.
+ */
+function assertNoBindingConflicts(loader: Loader, bindings: readonly AssetBinding[]): void {
+  const seenIdentities = new Set<string>();
   const seenTypes = new Set<AssetConstructor>();
   const seenNames = new Set<string>();
   const seenExts = new Set<string>();
 
   for (const binding of bindings) {
+    const { typeIdentity } = binding as MaybeIdentifiedAssetBinding;
+
+    if (typeIdentity !== undefined) {
+      if (seenIdentities.has(typeIdentity) || loader.hasAssetType(typeIdentity)) {
+        throw new Error(`Asset type id "${typeIdentity}" is already installed on this application. An id identifies exactly one type.`);
+      }
+
+      seenIdentities.add(typeIdentity);
+    }
+
     if (seenTypes.has(binding.ctor) || loader.hasLoadable(binding.ctor)) {
       throw new Error(`An asset handler is already registered for ${binding.ctor.name}.`);
     }
@@ -75,23 +130,6 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
     }
 
     seenTypes.add(binding.ctor);
-  }
-
-  // --- Materialise: all pre-validation passed ---
-  for (const binding of bindings) {
-    const handler: AssetHandler = binding.create(loader);
-
-    loader.bindAsset(
-      {
-        ctor: binding.ctor,
-        ...(binding.type !== undefined && { type: binding.type }),
-        ...(binding.typeNames !== undefined && { typeNames: binding.typeNames }),
-        ...(binding.extensions !== undefined && { extensions: binding.extensions }),
-        ...(binding.seamless !== undefined && { seamless: binding.seamless }),
-        ...(binding.storageName !== undefined && { storageName: binding.storageName }),
-      },
-      handler,
-    );
   }
 }
 

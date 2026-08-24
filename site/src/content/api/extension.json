@@ -99,7 +99,7 @@
       "members": [
         {
           "name": "assets",
-          "signature": "assets?: readonly AssetBinding<unknown, undefined>[]",
+          "signature": "assets?: readonly AssetEntry[]",
           "signatureTokens": [
             {
               "text": "assets",
@@ -122,28 +122,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetBinding",
+              "text": "AssetEntry",
               "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "unknown",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "undefined",
-              "kind": "keyword"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
             },
             {
               "text": "[]",

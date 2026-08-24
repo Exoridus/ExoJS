@@ -2,12 +2,12 @@ import type { LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/logging';
 import type { Signal } from '#core/Signal';
 
+import type { AssetConstructor } from './AssetConstructor';
 import type { AssetDecoder } from './AssetDecoder';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
-import type { AssetLocator, CanonicalAsset, CanonicalAssetKey } from './canonicalKey';
-import type { AssetConstructor } from './FactoryRegistry';
+import type { AssetLocator, CanonicalAsset, ResourceKey } from './canonicalKey';
 import type { LoaderScope, LoaderScopeKind } from './LoaderScope';
 import type { SeamlessAdapter } from './seamless';
 import { isAbortError, SharedAbort } from './SharedAbort';
@@ -53,7 +53,7 @@ export interface AssetOwnerInspection {
 
 export interface AssetInspection {
   /** The canonical key this row describes - the same key the claim, in-flight and resource maps use. */
-  readonly canonicalKey: CanonicalAssetKey;
+  readonly canonicalKey: ResourceKey;
   /** The asset type constructor this key was resolved under. */
   readonly type: AssetConstructor;
   /** The canonicalized source this asset resolves to. */
@@ -110,7 +110,7 @@ interface ResidentEntry {
  * store, deferred-handle / value-ref healing, and the background-loading queue
  * for a `Loader` instance.
  *
- * Everything here is keyed by ONE identity: the {@link CanonicalAssetKey}
+ * Everything here is keyed by ONE identity: the {@link ResourceKey}
  * resolved before any fetch starts. Aliases and catalog keys are names that
  * resolve to such a key; they never create a second residency entry.
  */
@@ -120,26 +120,26 @@ export class AssetResidency {
   private readonly _signals: AssetResidencySignals;
   private readonly _hooks: AssetResidencyHooks;
 
-  private readonly _resources = new Map<CanonicalAssetKey, ResidentEntry>();
+  private readonly _resources = new Map<ResourceKey, ResidentEntry>();
   // Reverse lookup: loaded resource object → the (type, source) it was first
   // stored under. Backs Loader.keyFor for scene serialization. A WeakMap so
   // it never retains resources; only object resources participate.
   private readonly _resourceKeys = new WeakMap<object, { type: AssetConstructor; source: string }>();
-  private readonly _inFlight = new Map<CanonicalAssetKey, Promise<unknown>>();
-  private readonly _preventStoreKeys = new Set<CanonicalAssetKey>();
+  private readonly _inFlight = new Map<ResourceKey, Promise<unknown>>();
+  private readonly _preventStoreKeys = new Set<ResourceKey>();
 
   // One {@link SharedAbort} per in-flight fetch. Holders are the consumers
   // waiting on it, so aborting is never a property of one consumer's cancel but
   // of the LAST holder leaving.
-  private readonly _abort = new Map<CanonicalAssetKey, SharedAbort>();
+  private readonly _abort = new Map<ResourceKey, SharedAbort>();
 
   // Every source string that has resolved to a given canonical key. Purely
   // diagnostic - an alias never participates in identity or ownership.
-  private readonly _aliases = new Map<CanonicalAssetKey, Set<string>>();
+  private readonly _aliases = new Map<ResourceKey, Set<string>>();
 
   // ── Seamless deferred handles ──────────────────────────────────────────────
-  private readonly _deferred = new Map<CanonicalAssetKey, { readonly asset: CanonicalAsset; readonly handles: WeakHandleSet; readonly options: unknown }>();
-  private readonly _deferredFinalization = new FinalizationRegistry<CanonicalAssetKey>((key: CanonicalAssetKey): void => {
+  private readonly _deferred = new Map<ResourceKey, { readonly asset: CanonicalAsset; readonly handles: WeakHandleSet; readonly options: unknown }>();
+  private readonly _deferredFinalization = new FinalizationRegistry<ResourceKey>((key: ResourceKey): void => {
     const entry = this._deferred.get(key);
 
     if (entry !== undefined && !entry.handles.prune()) {
@@ -149,17 +149,17 @@ export class AssetResidency {
   });
 
   // Value-asset refs
-  private readonly _refs = new Map<CanonicalAssetKey, { readonly asset: CanonicalAsset; readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
+  private readonly _refs = new Map<ResourceKey, { readonly asset: CanonicalAsset; readonly refs: Set<AssetRef<unknown>>; readonly options: unknown }>();
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
-  private readonly _claims = new Map<CanonicalAssetKey, { scopes: Set<LoaderScope>; asset: CanonicalAsset }>();
+  private readonly _claims = new Map<ResourceKey, { scopes: Set<LoaderScope>; asset: CanonicalAsset }>();
   // The scope that owns whatever sub-assets a key's own load pulled in. Owned by
   // the PARENT KEY, never by whichever consumer happened to start the fetch: a
   // deduped load serves many consumers, and the first one to release must not
   // take a dependency the others still need with it.
-  private readonly _dependencyScopes = new Map<CanonicalAssetKey, LoaderScope>();
-  private readonly _evicted = new Set<CanonicalAssetKey>();
-  private readonly _handleKeys = new WeakMap<object, CanonicalAssetKey>();
+  private readonly _dependencyScopes = new Map<ResourceKey, LoaderScope>();
+  private readonly _evicted = new Set<ResourceKey>();
+  private readonly _handleKeys = new WeakMap<object, ResourceKey>();
   // Every handle/ref residency has EVER registered under a key - a WeakSet, so
   // it never needs pruning and never retains a dead handle. Unlike `_handleKeys`,
   // this is never deleted from (not even by `_forgetKey`/`unloadAll`'s hard
@@ -192,7 +192,7 @@ export class AssetResidency {
    */
   public _inspect(): readonly AssetInspection[] {
     const backgroundKeys = new Set(this._backgroundQueue.map(entry => entry.asset.key));
-    const assets = new Map<CanonicalAssetKey, CanonicalAsset>();
+    const assets = new Map<ResourceKey, CanonicalAsset>();
 
     for (const [key, entry] of this._resources) assets.set(key, entry.asset);
     for (const [key, entry] of this._claims) assets.set(key, entry.asset);
@@ -251,7 +251,7 @@ export class AssetResidency {
   }
 
   /** The load-lifecycle state of whatever handle/ref is registered for `key`, or `undefined` if none is. Backs {@link _inspect}. */
-  private _inspectHandleState(key: CanonicalAssetKey, type: AssetConstructor): LoadStateValue | undefined {
+  private _inspectHandleState(key: ResourceKey, type: AssetConstructor): LoadStateValue | undefined {
     const ref: AssetRef<unknown> | undefined = this._refs.get(key)?.refs.values().next().value;
 
     if (ref !== undefined) {
@@ -353,7 +353,7 @@ export class AssetResidency {
    * payload immediately (refcount 0).
    * @internal
    */
-  public _release(key: CanonicalAssetKey, claimer: LoaderScope): void {
+  public _release(key: ResourceKey, claimer: LoaderScope): void {
     const entry = this._claims.get(key);
 
     if (entry === undefined) {
@@ -375,7 +375,7 @@ export class AssetResidency {
    * @internal
    */
   public _releaseScope(claimer: LoaderScope): void {
-    const held: CanonicalAssetKey[] = [];
+    const held: ResourceKey[] = [];
 
     for (const [key, entry] of this._claims) {
       if (entry.scopes.has(claimer)) {
@@ -815,7 +815,7 @@ export class AssetResidency {
    * single choke point for every site that used to call `_handleKeys.set(...)`
    * directly.
    */
-  private _registerHandle(handle: object, key: CanonicalAssetKey): void {
+  private _registerHandle(handle: object, key: ResourceKey): void {
     this._handleKeys.set(handle, key);
     this._everRegisteredHandles.add(handle);
   }
@@ -844,7 +844,7 @@ export class AssetResidency {
    * an already-tracked handle), wire the reverse lookup, and arm GC pruning.
    * @internal
    */
-  public _addDeferredHandle(key: CanonicalAssetKey, entry: { readonly handles: WeakHandleSet }, handle: object): void {
+  public _addDeferredHandle(key: ResourceKey, entry: { readonly handles: WeakHandleSet }, handle: object): void {
     this._registerHandle(handle, key);
 
     if (entry.handles.has(handle)) {
@@ -975,7 +975,7 @@ export class AssetResidency {
   }
 
   /** Drop a key's dependency claims. Sub-assets other owners still hold stay resident. */
-  private _releaseDependencies(key: CanonicalAssetKey): void {
+  private _releaseDependencies(key: ResourceKey): void {
     const scope = this._dependencyScopes.get(key);
 
     if (scope === undefined) {
@@ -990,7 +990,7 @@ export class AssetResidency {
    * Drop `key`'s interest in whatever fetch is running for it. Returns whether
    * it was actually aborted - a fetch another holder still needs stays running.
    */
-  private _abortInFlight(key: CanonicalAssetKey): boolean {
+  private _abortInFlight(key: ResourceKey): boolean {
     if (this._abort.get(key)?.release(key) !== true) {
       return false;
     }
@@ -1293,7 +1293,7 @@ export class AssetResidency {
     }
   }
 
-  private _boostFromQueue(key: CanonicalAssetKey): void {
+  private _boostFromQueue(key: ResourceKey): void {
     const index = this._backgroundQueue.findIndex(entry => entry.asset.key === key);
 
     if (index === -1) return;
@@ -1304,7 +1304,7 @@ export class AssetResidency {
     this._startBackgroundEntry(entry);
   }
 
-  private _isQueuedInBackground(key: CanonicalAssetKey): boolean {
+  private _isQueuedInBackground(key: ResourceKey): boolean {
     return this._backgroundQueue.some(entry => entry.asset.key === key);
   }
 
@@ -1404,7 +1404,7 @@ export class AssetResidency {
       // that never reached the resource map (in-flight / deferred-only) -
       // through _unloadOne so the claim/handle maps are cleared, not just the
       // resource map.
-      const assets = new Map<CanonicalAssetKey, CanonicalAsset>();
+      const assets = new Map<ResourceKey, CanonicalAsset>();
 
       for (const [key, entry] of this._resources) {
         if (entry.asset.type === type) assets.set(key, entry.asset);
@@ -1426,7 +1426,7 @@ export class AssetResidency {
     // be dropped, while a not-yet-stored key with a live `_inFlight` entry is a
     // genuine fetch that must be preserved (its handle fills or fails in place) -
     // honoring "does not cancel in-flight fetches".
-    const settledKeys = new Set<CanonicalAssetKey>(this._resources.keys());
+    const settledKeys = new Set<ResourceKey>(this._resources.keys());
 
     this._resources.clear();
 
@@ -1472,7 +1472,7 @@ export class AssetResidency {
    * the prevented store can fail it (and a later `get()` heals the SAME
    * handle) - only a SETTLED key's handles are forgotten here.
    */
-  private _forgetKey(key: CanonicalAssetKey, liveFetch: boolean): void {
+  private _forgetKey(key: ResourceKey, liveFetch: boolean): void {
     this._claims.delete(key);
     this._evicted.delete(key);
     this._releaseDependencies(key);
@@ -1509,7 +1509,7 @@ export class AssetResidency {
    * {@link _hasStored} when the distinction matters.
    * @internal
    */
-  public _peekResource(key: CanonicalAssetKey): unknown {
+  public _peekResource(key: ResourceKey): unknown {
     return this._resources.get(key)?.value ?? null;
   }
 
@@ -1519,7 +1519,7 @@ export class AssetResidency {
    * custom type). Unlike {@link _peekResource}, this distinguishes "no entry"
    * from "entry present with a nullish value". @internal
    */
-  public _hasStored(key: CanonicalAssetKey): boolean {
+  public _hasStored(key: ResourceKey): boolean {
     return this._resources.has(key);
   }
 
@@ -1529,7 +1529,7 @@ export class AssetResidency {
    * was also loaded over the network) must not build a competing one.
    * @internal
    */
-  public _isMaterializing(key: CanonicalAssetKey): boolean {
+  public _isMaterializing(key: ResourceKey): boolean {
     return this._resources.has(key) || this._inFlight.has(key);
   }
 
@@ -1546,7 +1546,7 @@ export class AssetResidency {
    * The canonical key a deferred handle / value-ref is registered under, or
    * `undefined`. Backs releasing a handle. @internal
    */
-  public _getHandleKey(handle: object): CanonicalAssetKey | undefined {
+  public _getHandleKey(handle: object): ResourceKey | undefined {
     return this._handleKeys.get(handle);
   }
 

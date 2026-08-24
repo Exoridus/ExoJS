@@ -1,5 +1,6 @@
-import type { AssetDefinitions } from '#assets/AssetDefinitions';
-import type { AssetConstructor } from '#assets/FactoryRegistry';
+import type { AssetConstructor } from '#assets/AssetConstructor';
+import type { AssetTypeName } from '#assets/AssetDefinitions';
+import type { AnyAssetType } from '#assets/AssetType';
 import type { AssetLoaderContext, Loader } from '#assets/Loader';
 import type { SeamlessAdapter } from '#assets/seamless';
 import type { Application } from '#core/Application';
@@ -58,6 +59,25 @@ export interface AssetHandler<Result = unknown, Options = undefined> {
    * @advanced
    */
   getIdentityDiscriminator?(request: AssetLoadRequest<Options>): string;
+  /**
+   * Returns the part of a request that changes WHICH SOURCE DATA is acquired -
+   * a locale, a content variant, an explicit variant token.
+   *
+   * It is appended to the canonical locator to form this request's source
+   * identity, which answers a different question than
+   * {@link getIdentityDiscriminator}: two resources that differ only in how the
+   * same download is interpreted are two resources over ONE source. An option
+   * that changes only the interpretation therefore belongs in the resource
+   * discriminator and must not appear here, or the same bytes would be fetched
+   * once per interpretation.
+   *
+   * The value can outlive the session inside a persistent cache namespace, so
+   * it must carry no credentials, tokens or request headers.
+   *
+   * Omit this hook when the locator alone identifies the source.
+   * @advanced
+   */
+  getSourceIdentity?(request: AssetLoadRequest<Options>): string;
   load(request: AssetLoadRequest<Options>, context: AssetLoaderContext): Promise<Result>;
   /**
    * Optionally produce the asset directly from in-memory bytes, bypassing the
@@ -71,7 +91,7 @@ export interface AssetHandler<Result = unknown, Options = undefined> {
    * cannot be embedded in a container and raise a clear error if attempted.
    * @advanced
    */
-  createFromBytes?(bytes: ArrayBuffer, options?: Options): Promise<Result>;
+  createFromBytes?(bytes: ArrayBuffer, options: Options | undefined, context: AssetLoaderContext): Promise<Result>;
   /**
    * Releases the resources held by ONE loaded asset, called when the Loader
    * evicts it at refcount 0 (its last claim was released). The handler stays
@@ -138,13 +158,25 @@ export interface AssetBinding<Result = unknown, Options = undefined> {
    * declared extension - the middle tier of `AssetTypeRegistry.resolveExtensionType`,
    * below an explicit `Loader.registerType` override and above the global default.
    */
-  readonly type?: keyof AssetDefinitions;
+  readonly type?: AssetTypeName;
   /** Optional seamless-handle adapter (asset-system v2), registered alongside the handler. */
   readonly seamless?: SeamlessAdapter<Result>;
   /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. Defaults to the shared `__ctx_binary`/`__ctx_text`/`__ctx_json` namespace. */
   readonly storageName?: string;
   create(loader: Loader): AssetHandler<Result, Options>;
 }
+
+/**
+ * One entry of an {@link Extension}'s `assets` list: a first-class
+ * {@link AssetType}, or a constructor-bound {@link AssetBinding}.
+ *
+ * An `AssetType` carries its own stable identity, identity hooks, source codec
+ * and factory provider, and is the form new types should take. An
+ * `AssetBinding` binds a handler to a runtime constructor instead, and is what
+ * the built-in types still use.
+ * @advanced
+ */
+export type AssetEntry = AssetBinding | AnyAssetType;
 
 /**
  * Binds a {@link SceneNode} type to a {@link NodeSerializer} under a stable
@@ -194,7 +226,7 @@ export interface Extension {
   readonly id: string;
   readonly dependencies?: readonly Extension[];
   readonly renderers?: readonly RendererBinding[];
-  readonly assets?: readonly AssetBinding[];
+  readonly assets?: readonly AssetEntry[];
   readonly serializers?: readonly SerializerBinding[];
   /**
    * Set this application up for whatever the binding arrays cannot express - an

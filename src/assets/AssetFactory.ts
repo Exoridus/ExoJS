@@ -1,57 +1,84 @@
+import type { AssetLocator, ResourceKey, SourceKey } from './canonicalKey';
+import type { LoaderScope } from './LoaderScope';
+
 /**
- * Contract that every asset factory must satisfy.
+ * The seam through which a factory acquires the assets its resource depends on.
  *
- * A factory is responsible for two distinct steps: converting a raw HTTP
- * {@link https://developer.mozilla.org/en-US/docs/Web/API/Response | Response}
- * into a serialisable intermediate form (`process`), and then turning that
- * intermediate form into the final engine object (`create`). Separating the
- * two steps allows caching layers to persist the processed data and skip the
- * network on subsequent loads.
+ * Everything loaded through it is owned by the resource being built and is
+ * released with it, unless another owner holds it independently - so a font's
+ * page textures survive exactly as long as the font, however many consumers the
+ * deduplicated font itself has.
+ *
+ * It is deliberately narrower than the scope backing it: a factory may acquire
+ * dependencies, but not release them, tear the scope down, or unpack a
+ * container into it. Those decisions belong to whoever owns the resource.
+ * @advanced
  */
-export interface AssetFactory<T = unknown> {
-  /**
-   * Identifier used as the object-store / storage-namespace key when this
-   * factory's assets are persisted to a {@link CacheStore}.
-   */
-  readonly storageName: string;
+export type AssetDependencyScope = Pick<LoaderScope, 'get' | 'load' | 'createScope'>;
 
+/**
+ * What a factory is told about the one resource it is building.
+ *
+ * There is deliberately no network, cache store or cache policy here. A factory
+ * receives source data that has already been acquired and decoded, and its only
+ * outward reach is {@link dependencies} - which acquires other ASSETS, never raw
+ * bytes. Where those bytes came from, and whether they were served from a cache,
+ * is not a factory's decision to make or to observe.
+ * @advanced
+ */
+export interface AssetFactoryContext<Options = undefined> {
+  /** The options this request carried, as declared by the asset type. */
+  readonly options?: Options;
   /**
-   * Converts a raw HTTP response into a serialisable intermediate value
-   * suitable for cache storage and later passed to {@link create}.
+   * Cancellation signal of this load. It aborts once no claim scope needs the
+   * result any more; `undefined` means the caller started the load without a
+   * cancellation channel.
    */
-  process(response: Response): Promise<unknown>;
+  readonly signal?: AbortSignal | undefined;
+  /** The canonical locator the source data was acquired from. */
+  readonly locator: AssetLocator;
+  /** The identity of the resource being built. */
+  readonly resourceKey: ResourceKey;
+  /** The identity of the source data it is built from. */
+  readonly sourceKey: SourceKey;
+  /** Acquires assets this resource depends on, for as long as this resource lives. */
+  readonly dependencies: AssetDependencyScope;
+}
 
+/**
+ * Builds one kind of runtime resource from normalized source data.
+ *
+ * A factory owns construction and teardown, and nothing else: it does not fetch,
+ * does not decide what a stored representation looks like, and never sees a
+ * cache. Acquisition is the loader's, representation is the
+ * {@link AssetSourceCodec}'s, and caching is a policy neither of them knows
+ * about.
+ *
+ * One instance exists per {@link Loader}, created by
+ * {@link AssetType.createFactory}, so loader-local state - a worker, a compiled
+ * module, a parsed lookup shared by every resource of this type - belongs on the
+ * instance and is torn down with the loader that owns it.
+ * @advanced
+ */
+export interface AssetFactory<Source, Resource, Options = undefined> {
+  /** Builds the runtime resource. Failures here are construction failures, not source failures. */
+  create(source: Source, context: AssetFactoryContext<Options>): Promise<Resource>;
   /**
-   * Constructs the final engine asset from the intermediate value produced
-   * by {@link process} (or retrieved from cache).
-   */
-  create(source: unknown, options?: unknown): Promise<T>;
-
-  /**
-   * Releases the resources held by ONE asset this factory produced - the
-   * per-resource counterpart of {@link destroy}. Called when the loader evicts
-   * that asset at refcount 0; the factory stays alive and keeps serving every
-   * other asset it created.
+   * Releases ONE resource this factory produced, when the loader evicts it at
+   * refcount 0. The factory stays alive and keeps serving every other resource
+   * it created.
    *
-   * Optional, and safe to omit: implement it only when a produced asset owns
-   * something the garbage collector cannot reclaim on its own (a media element
-   * to detach, a `FontFace` registered on `document.fonts`, a GPU buffer, a
-   * worker). A decoded `AudioBuffer`, a parsed JSON object or a compiled
-   * `WebAssembly.Module` needs nothing, so most factories do not implement it.
+   * Implement it only when a resource owns something the garbage collector
+   * cannot reclaim on its own - a media element, a `FontFace` registered on
+   * `document.fonts`, a GPU buffer, a worker. A decoded `AudioBuffer`, a parsed
+   * object or a compiled `WebAssembly.Module` needs nothing.
    *
-   * Must be synchronous and must tolerate being called for a resource that was
-   * already released. `resource` is never handed back to a consumer afterwards:
-   * the loader drops it from the resident store and re-arms every live ref for
-   * the asset in the same step.
+   * Must be synchronous, and must tolerate a resource that was already released.
    */
-  dispose?(resource: T): void;
-
+  dispose?(resource: Resource): void;
   /**
-   * Releases everything this factory owns ACROSS ALL the assets it ever
-   * produced - every object URL it created, every media element it still
-   * tracks - and leaves the factory unusable. Called once, when the owning
-   * loader/handler is destroyed, not per asset; use {@link dispose} for the
-   * teardown of a single evicted resource.
+   * Releases what the factory itself owns, once, when its loader is destroyed.
+   * Use {@link dispose} for a single evicted resource.
    */
-  destroy(): void;
+  destroy?(): void;
 }

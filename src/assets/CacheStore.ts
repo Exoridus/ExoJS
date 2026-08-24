@@ -3,7 +3,7 @@
  * asset data between sessions.
  *
  * Each method accepts a `storageName` namespace (sourced from
- * {@link AssetFactory.storageName}) and a per-asset `key`, allowing a single
+ * the asset binding that issued the request) and a per-asset `key`, allowing a single
  * store to hold data for multiple asset types. {@link IndexedDbStore} is the
  * built-in implementation backed by the browser's IndexedDB API.
  */

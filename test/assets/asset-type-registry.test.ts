@@ -124,11 +124,21 @@ describe('AssetTypeRegistry', () => {
     expect(registry.hasExtension('ta')).toBe(false);
   });
 
-  test('_getTypeId is stable per type and distinct across types', () => {
+  test('_typeIdentity is stable per type and distinct across types', () => {
     const registry = new AssetTypeRegistry();
 
-    expect(registry._getTypeId(TypeA)).toBe(registry._getTypeId(TypeA));
-    expect(registry._getTypeId(TypeA)).not.toBe(registry._getTypeId(TypeB));
+    expect(registry._typeIdentity(TypeA)).toBe(registry._typeIdentity(TypeA));
+    expect(registry._typeIdentity(TypeA)).not.toBe(registry._typeIdentity(TypeB));
+  });
+
+  test('_typeIdentity answers with the stable id an install supplied, not an ordinal', () => {
+    const registry = new AssetTypeRegistry();
+
+    registry.bindAsset({ ctor: TypeA, typeIdentity: 'com.example.world' }, { load: async () => 'x' });
+    registry.bindAsset({ ctor: TypeB }, { load: async () => 'y' });
+
+    expect(registry._typeIdentity(TypeA)).toBe('com.example.world');
+    expect(registry._typeIdentity(TypeB)).toMatch(/^\d+$/);
   });
 
   test('_identityDiscriminator is undefined without a handler hook and forwards source + options with one', () => {

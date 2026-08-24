@@ -6,10 +6,10 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 35,
+  "memberCount": 37,
   "counts": {
     "constructors": 1,
-    "methods": 24,
+    "methods": 26,
     "properties": 2,
     "events": 8
   },
@@ -796,6 +796,65 @@
           ],
           "returnType": "boolean",
           "description": "Returns true if a handler is already registered for the given constructor."
+        },
+        {
+          "name": "identify",
+          "signature": "identify(asset: Asset<unknown>): AssetIdentity",
+          "signatureTokens": [
+            {
+              "text": "identify",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "asset",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Asset",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetIdentity",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "asset",
+              "type": "Asset<unknown>",
+              "optional": false
+            }
+          ],
+          "returnType": "AssetIdentity",
+          "description": "The two identities a descriptor resolves to on this loader. Both are derived exactly as a real load derives them, against the base path in force right now, so they can be compared to reason about what the loader will deduplicate: equal AssetIdentity.resourceKey means one resident resource, equal AssetIdentity.sourceKey means one acquisition."
         },
         {
           "name": "inspect",
@@ -1798,7 +1857,7 @@
         },
         {
           "name": "registerType",
-          "signature": "registerType(extension: string, type: keyof AssetDefinitions): this",
+          "signature": "registerType(extension: string, type: AssetTypeName): this",
           "signatureTokens": [
             {
               "text": "registerType",
@@ -1833,15 +1892,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "keyof",
-              "kind": "keyword"
-            },
-            {
-              "text": " ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetDefinitions",
+              "text": "AssetTypeName",
               "kind": "type"
             },
             {
@@ -1865,12 +1916,67 @@
             },
             {
               "name": "type",
-              "type": "keyof AssetDefinitions",
+              "type": "AssetTypeName",
               "optional": false
             }
           ],
           "returnType": "this",
           "description": "Registers an extension→type override for bare-path resolution, scoped to **this Loader instance only**: it applies to bare paths passed to this loader's get(...) / load(...), and takes precedence over both the type declared by the bindAsset binding that claimed the suffix and the global defineAsset default. It does NOT affect loader-free catalog construction - Assets.from('level.json') has no loader to consult and always resolves through the global table. Use Asset.type(type, source) there instead. type is the string AssetDefinitions discriminator, not a constructor. This call does not install a handler; a core/extension binding must still provide the named type. Repeating the same pair is idempotent, while changing an existing explicit override to another type throws. Use Asset.type(...) for a one-off exception."
+        },
+        {
+          "name": "resolveExtensionType",
+          "signature": "resolveExtensionType(extension: string): AssetTypeName | undefined",
+          "signatureTokens": [
+            {
+              "text": "resolveExtensionType",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "extension",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetTypeName",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "extension",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "AssetTypeName | undefined",
+          "description": "Returns true if a file extension is already mapped to an asset type. Extension is normalised (leading dot stripped, lower-cased)."
         },
         {
           "name": "setConcurrency",

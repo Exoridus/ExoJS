@@ -20,8 +20,8 @@ import { Texture } from '#rendering/texture/Texture';
 import { Video } from '#rendering/video/Video';
 
 import { Asset } from './Asset';
+import type { AssetConstructor } from './AssetConstructor';
 import { defineAsset } from './defineAsset';
-import type { AssetConstructor } from './FactoryRegistry';
 import type { AssetLoaderContext, Loader } from './Loader';
 import { soundSeamlessAdapter, textureSeamlessAdapter } from './seamless';
 import { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';

@@ -1,0 +1,72 @@
+{
+  "title": "AssetEntry",
+  "description": "One entry of an Extension's `assets` list: a first-class AssetType, or a constructor-bound AssetBinding. An `AssetType` carries its own stable identity, identity hooks, source codec and factory provider, and is the form new types should take. An `AssetBinding` binds a handler to a runtime constructor instead, and is what the built-in types still use.",
+  "symbol": "AssetEntry",
+  "kind": "type",
+  "subsystem": "extensions",
+  "importPath": "@codexo/exojs/extensions",
+  "tier": "advanced",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One entry of an Extension's `assets` list: a first-class AssetType, or a constructor-bound AssetBinding.",
+        "An `AssetType` carries its own stable identity, identity hooks, source codec and factory provider, and is the form new types should take. An `AssetBinding` binds a handler to a runtime constructor instead, and is what the built-in types still use."
+      ],
+      "importLine": "import { AssetEntry } from '@codexo/exojs/extensions'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "AssetEntry",
+          "signature": "AnyAssetType | AssetBinding",
+          "signatureTokens": [
+            {
+              "text": "AnyAssetType",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetBinding",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/extensions/Extension.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/extensions/Extension.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/extensions/Extension.ts"
+}

@@ -1,0 +1,228 @@
+{
+  "title": "AssetFactory",
+  "description": "Builds one kind of runtime resource from normalized source data. A factory owns construction and teardown, and nothing else: it does not fetch, does not decide what a stored representation looks like, and never sees a cache. Acquisition is the loader's, representation is the AssetSourceCodec's, and caching is a policy neither of them knows about. One instance exists per Loader, created by AssetType.createFactory, so loader-local state - a worker, a compiled module, a parsed lookup shared by every resource of this type - belongs on the instance and is torn down with the loader that owns it.",
+  "symbol": "AssetFactory",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 3,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Builds one kind of runtime resource from normalized source data.",
+        "A factory owns construction and teardown, and nothing else: it does not fetch, does not decide what a stored representation looks like, and never sees a cache. Acquisition is the loader's, representation is the AssetSourceCodec's, and caching is a policy neither of them knows about.",
+        "One instance exists per Loader, created by AssetType.createFactory, so loader-local state - a worker, a compiled module, a parsed lookup shared by every resource of this type - belongs on the instance and is torn down with the loader that owns it."
+      ],
+      "importLine": "import { AssetFactory } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "create",
+          "signature": "create(source: Source, context: AssetFactoryContext<Options>): Promise<Resource>",
+          "signatureTokens": [
+            {
+              "text": "create",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Source",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetFactoryContext",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "source",
+              "type": "Source",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "AssetFactoryContext<Options>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<Resource>",
+          "description": "Builds the runtime resource. Failures here are construction failures, not source failures."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy?(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Releases what the factory itself owns, once, when its loader is destroyed. Use dispose for a single evicted resource."
+        },
+        {
+          "name": "dispose",
+          "signature": "dispose?(resource: Resource): void",
+          "signatureTokens": [
+            {
+              "text": "dispose",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "resource",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "resource",
+              "type": "Resource",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Releases ONE resource this factory produced, when the loader evicts it at refcount 0. The factory stays alive and keeps serving every other resource it created. Implement it only when a resource owns something the garbage collector cannot reclaim on its own - a media element, a FontFace registered on document.fonts, a GPU buffer, a worker. A decoded AudioBuffer, a parsed object or a compiled WebAssembly.Module needs nothing. Must be synchronous, and must tolerate a resource that was already released."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetFactory.ts"
+}

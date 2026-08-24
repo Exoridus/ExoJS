@@ -1,0 +1,96 @@
+{
+  "title": "SourceCodecContext",
+  "description": "What a codec is told about the acquisition it is decoding.",
+  "symbol": "SourceCodecContext",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a codec is told about the acquisition it is decoding."
+      ],
+      "importLine": "import { SourceCodecContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "locator",
+          "signature": "locator: string",
+          "signatureTokens": [
+            {
+              "text": "locator",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The canonical locator the representation was acquired from."
+        },
+        {
+          "name": "signal",
+          "signature": "signal?: AbortSignal",
+          "signatureTokens": [
+            {
+              "text": "signal",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cancellation signal of the load this decode belongs to. Honour it in any long-running decode; undefined means the caller started the load without a cancellation channel."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetSourceCodec.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetSourceCodec.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetSourceCodec.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetSourceCodec.ts"
+}

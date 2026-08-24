@@ -361,7 +361,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Identifier used as the object-store / storage-namespace key when this factory's assets are persisted to a CacheStore."
+          "description": ""
         }
       ],
       "paragraphs": [],

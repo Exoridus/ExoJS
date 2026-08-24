@@ -15,6 +15,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "AssetCacheError",
   "AssetNetworkError",
   "AssetRef",
+  "AssetType",
   "Assets",
   "AudioBus",
   "AudioEffect",
@@ -237,6 +238,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "WrapModes",
   "XmlAsset",
   "XmlFactory",
+  "binarySourceCodec",
   "buildInfo",
   "clamp",
   "createArcadeStickGamepadMapping",
@@ -262,6 +264,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "isAudioContextReady",
   "isDomCanvas",
   "isPowerOfTwo",
+  "jsonSourceCodec",
   "keyboardChannelFromCode",
   "lerp",
   "logger",
@@ -272,6 +275,7 @@ exports[`root index export surface snapshot > sorted runtime export names match 
   "registerSerializer",
   "resetRenderStats",
   "sign",
+  "textSourceCodec",
   "triangulate",
 ]
 `;

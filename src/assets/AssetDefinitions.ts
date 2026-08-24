@@ -66,6 +66,16 @@ export interface AssetDefinitions {
   srt: { resource: VTTCue[]; config: { source: string } };
 }
 
+/**
+ * The name a request dispatches on: a built-in {@link AssetDefinitions} key, or
+ * the stable {@link AssetType.id} of a type installed on this application.
+ *
+ * The open half is what lets an application install a fully typed custom asset
+ * type without declaring it to the module system first; the literal half keeps
+ * the built-in keys autocompleting.
+ */
+export type AssetTypeName = keyof AssetDefinitions | (string & {});
+
 export type AnyAssetConfig = {
   [K in keyof AssetDefinitions]: { type: K } & AssetDefinitions[K]['config'] &
     // `parse` is a value-type-only, SYNCHRONOUS post-load transform:
