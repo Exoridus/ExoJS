@@ -1,5 +1,5 @@
 import { PhysicsBody, type PhysicsWorld } from '@codexo/exojs-physics';
-import type { ReadonlyTileChunk, TileLayer, TileMapObject } from '@codexo/exojs-tilemap';
+import type { ReadonlyTileChunk, TileCellSource, TileLayer, TileMapObject } from '@codexo/exojs-tilemap';
 import { buildTileCollisionGeometry } from '@codexo/exojs-tilemap';
 
 import { buildTileColliders } from './buildColliders';
@@ -17,24 +17,52 @@ export interface TileColliderOptions extends ColliderDefaults {
   merge?: boolean;
   /** Drop a source shape before any collider is built for it. */
   accept?: (object: TileMapObject, tx: number, ty: number) => boolean;
+  /**
+   * Per-cell collision classification, for layers whose collision is authored
+   * per cell rather than per tile. On a bounded layer this makes the bridge
+   * cover the whole layer, including partitions that hold no tiles at all.
+   *
+   * Sampled while a partition is built and expected to answer identically for
+   * the lifetime of this bridge: changing what it returns does not invalidate
+   * colliders that already exist. Rebuild by recreating the bridge.
+   */
+  cells?: TileCellSource | undefined;
 }
 
-interface ChunkEntry {
+/**
+ * One collision build block: the deterministic spatial partition this bridge
+ * may own a body for. A partition is not the same thing as tile residency - a
+ * cell source covers partitions that hold no {@link ReadonlyTileChunk} at all,
+ * and nothing here makes a non-resident chunk look resident.
+ *
+ * An entry with `body === null` is a cached empty result, not an absence: it
+ * is what keeps an unrelated layer revision from re-walking every cell of
+ * every empty partition.
+ */
+interface BlockEntry {
   readonly cx: number;
   readonly cy: number;
-  /** The chunk instance the body was built from; a re-adopted chunk is a new one. */
-  readonly chunk: ReadonlyTileChunk;
+  /** The chunk the body was built from; `null` for a cell-only partition. A re-adopted chunk is a new one. */
+  readonly chunk: ReadonlyTileChunk | null;
   readonly revision: number;
-  /** `null` when the chunk holds no collision geometry at all. */
+  /** `null` when the partition holds no collision geometry at all. */
   readonly body: PhysicsBody | null;
 }
 
 const chunkKey = (cx: number, cy: number): string => `${cx},${cy}`;
 
 /**
+ * Tile extent of a build block along one axis. Edge blocks of a bounded layer
+ * are clipped, matching the dimensions the layer gives an edge chunk, so a
+ * cell-only block never walks cells outside the layer.
+ */
+const blockExtent = (chunkExtent: number, layerExtent: number | undefined, start: number): number =>
+  layerExtent === undefined ? chunkExtent : Math.min(chunkExtent, layerExtent - start);
+
+/**
  * Keeps a physics world's static tile colliders in sync with a
- * {@link TileLayer}: one static body per resident chunk, rebuilt when that
- * chunk changes, destroyed when it is evicted.
+ * {@link TileLayer}: one static body per chunk-sized partition of the layer,
+ * rebuilt when that partition changes, destroyed when it is evicted.
  *
  * The bridge owns every body it creates and nothing else. It observes the layer
  * through its public revision counters, so it works with any chunk source -
@@ -50,11 +78,14 @@ const chunkKey = (cx: number, cy: number): string => `${cx},${cy}`;
  *
  * Two consequences worth knowing before shipping a level:
  *
- * - Whole-cell merging never crosses a chunk boundary, so a solid run spanning
- *   two chunks is at least two rectangles. This is what makes the result
- *   independent of the order chunks were loaded in.
+ * - Whole-cell merging never crosses a partition boundary, so a solid run
+ *   spanning two of them is at least two rectangles. This is what makes the
+ *   result independent of the order chunks were loaded in.
  * - A dynamic body resting on a chunk that gets evicted falls. Eviction is the
  *   chunk source's decision; widen its unload radius if that matters.
+ * - With {@link TileColliderOptions.cells}, a bounded layer's partitions are
+ *   all covered, resident or not - collision authored per cell does not depend
+ *   on tiles being placed.
  */
 export class TileColliderStreamer {
   private readonly _world: PhysicsWorld;
@@ -63,7 +94,7 @@ export class TileColliderStreamer {
   private readonly _defaults: ResolvedMaterial;
   private readonly _regionMode: TileRegionMode;
 
-  private readonly _built = new Map<string, ChunkEntry>();
+  private readonly _built = new Map<string, BlockEntry>();
   private readonly _seen = new Set<string>();
 
   private _layerRevision = -1;
@@ -93,8 +124,8 @@ export class TileColliderStreamer {
   }
 
   /**
-   * The bodies this bridge owns, in `(cy, cx)` chunk order - independent of the
-   * order the chunks became resident in.
+   * The bodies this bridge owns, in `(cy, cx)` partition order - independent of
+   * the order the chunks became resident in.
    */
   public *bodies(): IterableIterator<PhysicsBody> {
     const ordered = [...this._built.values()].sort((a, b) => a.cy - b.cy || a.cx - b.cx);
@@ -133,26 +164,23 @@ export class TileColliderStreamer {
     seen.clear();
 
     for (const chunk of layer.loadedChunks()) {
-      const key = chunkKey(chunk.cx, chunk.cy);
-      const entry = this._built.get(key);
+      this._syncBlock(chunk.cx, chunk.cy, chunk);
+    }
 
-      seen.add(key);
+    // A cell source covers the layer, not its residency: every partition of a
+    // bounded layer is a build block, whether or not tiles were ever placed in
+    // it. Without this the canonical case - collision authored per cell on a
+    // layer that renders nothing - would produce no bodies at all.
+    if (this._options.cells !== undefined) {
+      const range = layer.chunkRange();
 
-      if (entry?.chunk === chunk && entry.revision === chunk.revision) {
-        continue;
+      if (range !== null) {
+        for (let cy = range.minCy; cy <= range.maxCy; cy++) {
+          for (let cx = range.minCx; cx <= range.maxCx; cx++) {
+            this._syncBlock(cx, cy, layer.getChunk(cx, cy) ?? null);
+          }
+        }
       }
-
-      if (entry?.body != null) {
-        this._world.destroyBody(entry.body);
-      }
-
-      this._built.set(key, {
-        cx: chunk.cx,
-        cy: chunk.cy,
-        chunk,
-        revision: chunk.revision,
-        body: this._buildChunk(chunk),
-      });
     }
 
     for (const [key, entry] of this._built) {
@@ -184,15 +212,45 @@ export class TileColliderStreamer {
     this._layerRevision = -1;
   }
 
-  private _buildChunk(chunk: ReadonlyTileChunk): PhysicsBody | null {
+  /**
+   * Reconcile one build block against what was built for it before. Skips
+   * without sampling anything when neither the backing chunk nor its revision
+   * moved - which is what keeps an empty cell-only block from re-walking its
+   * cells on every unrelated layer change.
+   */
+  private _syncBlock(cx: number, cy: number, chunk: ReadonlyTileChunk | null): void {
+    const key = chunkKey(cx, cy);
+
+    if (this._seen.has(key)) return;
+
+    this._seen.add(key);
+
+    const entry = this._built.get(key);
+    const revision = chunk?.revision ?? -1;
+
+    if (entry?.chunk === chunk && entry.revision === revision) {
+      return;
+    }
+
+    if (entry?.body != null) {
+      this._world.destroyBody(entry.body);
+    }
+
+    this._built.set(key, { cx, cy, chunk, revision, body: this._buildBlock(cx, cy, chunk) });
+  }
+
+  private _buildBlock(cx: number, cy: number, chunk: ReadonlyTileChunk | null): PhysicsBody | null {
     const layer = this._layer;
     const options = this._options;
-    const startTx = chunk.cx * layer.chunkWidth;
-    const startTy = chunk.cy * layer.chunkHeight;
+    const startTx = cx * layer.chunkWidth;
+    const startTy = cy * layer.chunkHeight;
+    const width = chunk?.width ?? blockExtent(layer.chunkWidth, layer.width, startTx);
+    const height = chunk?.height ?? blockExtent(layer.chunkHeight, layer.height, startTy);
     const geometry = buildTileCollisionGeometry(layer, {
-      region: { x: startTx, y: startTy, width: chunk.width, height: chunk.height },
+      region: { x: startTx, y: startTy, width, height },
       ...(options.merge !== undefined && { merge: options.merge }),
       ...(options.accept !== undefined && { accept: options.accept }),
+      ...(options.cells !== undefined && { cells: options.cells }),
     });
 
     if (geometry.rects.length === 0 && geometry.shapes.length === 0) {

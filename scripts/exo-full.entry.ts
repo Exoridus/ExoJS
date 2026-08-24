@@ -60,10 +60,14 @@ export * from '@codexo/exojs-aseprite';
 // runtime TileMap / TileLayer / ObjectLayer from tilemap).
 export {
   createTiledLayer,
+  resolveTiledObjectAlignment,
+  TILED_OBJECT_ALIGNMENTS,
   tiledBuildInfo,
   tiledExtension,
+  tiledObjectAnchorOffset,
   tiledRuntimeMapBinding,
   tiledSourceBinding,
+  tiledWangSetToWangSet,
   TiledFormatError,
   TiledGroupLayer,
   TiledImageLayer,
@@ -78,12 +82,16 @@ export {
 // ── LDtk ──────────────────────────────────────────────────────────────────────
 // Unique value exports only - tilemap runtime classes already exported above.
 export {
+  createLdtkIntGridCellSource,
+  getLdtkIntGridValueAt,
   LDTK_FLIP_NONE,
   LDTK_FLIP_X,
   LDTK_FLIP_XY,
   LDTK_FLIP_Y,
   ldtkExtension,
   LdtkFormatError,
+  ldtkIntGridCsvProperty,
+  ldtkIntGridValuesProperty,
   ldtkMapBinding,
   LdtkMap,
   ldtkToTileMap,

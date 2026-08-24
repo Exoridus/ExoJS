@@ -1,0 +1,109 @@
+{
+  "title": "TileCellSource",
+  "description": "Per-cell collision classification for a tile layer, independent of the tiles the layer renders. Returns the class/type string for the cell, or `null` when the cell carries no collision. The string is opaque: it is the merge key for adjacent cells and reaches the consumer unchanged, exactly like the `type` of a tile collision object. A source is sampled while geometry is being built and is expected to answer identically for as long as the geometry is used. Changing what it returns does not invalidate geometry that was already built; rebuild instead.",
+  "symbol": "TileCellSource",
+  "kind": "type",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "advanced",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Per-cell collision classification for a tile layer, independent of the tiles the layer renders.",
+        "Returns the class/type string for the cell, or `null` when the cell carries no collision. The string is opaque: it is the merge key for adjacent cells and reaches the consumer unchanged, exactly like the `type` of a tile collision object.",
+        "A source is sampled while geometry is being built and is expected to answer identically for as long as the geometry is used. Changing what it returns does not invalidate geometry that was already built; rebuild instead."
+      ],
+      "importLine": "import { TileCellSource } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "TileCellSource",
+          "signature": "(tx: number, ty: number) => null | string",
+          "signatureTokens": [
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "tx",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ty",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/tileCollision.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/tileCollision.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/tileCollision.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/tileCollision.ts"
+}

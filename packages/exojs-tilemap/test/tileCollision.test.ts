@@ -461,3 +461,109 @@ describe('buildTileCollisionGeometry — scoping and empty inputs', () => {
     expect(typeof barrel.buildTileCollisionGeometry).toBe('function');
   });
 });
+
+describe('buildTileCollisionGeometry — cell source', () => {
+  it('claims cells on a layer that has no placed tiles and therefore no chunks', () => {
+    const tileset = makeTileset({});
+    const layer = makeLayer(tileset);
+
+    expect([...layer.loadedChunks()]).toHaveLength(0);
+
+    const geometry = buildTileCollisionGeometry(layer, {
+      cells: (tx, ty) => (ty === 0 && tx < 3 ? 'Solid' : null),
+    });
+
+    expect(geometry.shapes).toEqual([]);
+    expect(geometry.rects).toEqual([{ x: 0, y: 0, width: 48, height: 16, type: 'Solid' }]);
+  });
+
+  it('walks the full bounded extent, not just the loaded chunks', () => {
+    const tileset = makeTileset({ 0: [shape()] });
+    const layer = makeLayer(tileset);
+    place(layer, tileset, 0, 0);
+
+    const visited: string[] = [];
+    const geometry = buildTileCollisionGeometry(layer, {
+      cells: (tx, ty) => {
+        visited.push(`${tx},${ty}`);
+
+        return tx === 7 && ty === 7 ? 'Solid' : null;
+      },
+    });
+
+    expect(visited).toHaveLength(64);
+    expect(geometry.rects).toContainEqual({ x: 112, y: 112, width: 16, height: 16, type: 'Solid' });
+  });
+
+  it('keeps distinct classifications unmerged and distinguishable', () => {
+    const tileset = makeTileset({});
+    const layer = makeLayer(tileset);
+
+    const geometry = buildTileCollisionGeometry(layer, {
+      region: { x: 0, y: 0, width: 4, height: 1 },
+      cells: tx => (tx < 2 ? 'Solid' : tx < 4 ? 'Water' : null),
+    });
+
+    expect(geometry.rects).toEqual([
+      { x: 0, y: 0, width: 32, height: 16, type: 'Solid' },
+      { x: 32, y: 0, width: 32, height: 16, type: 'Water' },
+    ]);
+  });
+
+  it('lets the cell source claim a cell first, passing the tile box through as a shape', () => {
+    const tileset = makeTileset({ 0: [shape({ type: 'solid' })] });
+    const layer = makeLayer(tileset);
+    place(layer, tileset, 1, 1);
+
+    const geometry = buildTileCollisionGeometry(layer, {
+      cells: (tx, ty) => (tx === 1 && ty === 1 ? 'Water' : null),
+    });
+
+    expect(geometry.rects).toEqual([{ x: 16, y: 16, width: 16, height: 16, type: 'Water' }]);
+    expect(geometry.shapes).toHaveLength(1);
+    expect(geometry.shapes[0]).toMatchObject({ x: 16, y: 16, width: 16, height: 16, tx: 1, ty: 1 });
+  });
+
+  it('merges cell-sourced and tile-sourced cells that share a classification', () => {
+    const tileset = makeTileset({ 0: [shape({ type: 'Solid' })] });
+    const layer = makeLayer(tileset);
+    place(layer, tileset, 2, 0);
+
+    const geometry = buildTileCollisionGeometry(layer, {
+      region: { x: 0, y: 0, width: 4, height: 1 },
+      cells: tx => (tx < 2 ? 'Solid' : null),
+    });
+
+    expect(geometry.rects).toEqual([{ x: 0, y: 0, width: 48, height: 16, type: 'Solid' }]);
+  });
+
+  it('falls back to the loaded-chunk region on an unbounded layer', () => {
+    const tileset = makeTileset({});
+    const unbounded = new TileLayer({
+      id: 2,
+      name: 'streamed',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+    });
+
+    expect(buildTileCollisionGeometry(unbounded, { cells: () => 'Solid' }).rects).toEqual([]);
+
+    const scoped = buildTileCollisionGeometry(unbounded, {
+      region: { x: -2, y: 0, width: 2, height: 1 },
+      cells: () => 'Solid',
+    });
+
+    expect(scoped.rects).toEqual([{ x: -32, y: 0, width: 32, height: 16, type: 'Solid' }]);
+  });
+
+  it('is not consulted at all when no cell source is passed', () => {
+    const tileset = makeTileset({ 0: [shape()] });
+    const layer = makeLayer(tileset);
+    place(layer, tileset, 0, 0);
+
+    const geometry = buildTileCollisionGeometry(layer);
+
+    expect(geometry.rects).toEqual([{ x: 0, y: 0, width: 16, height: 16, type: 'solid' }]);
+  });
+});

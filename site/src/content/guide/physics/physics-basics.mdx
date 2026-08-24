@@ -411,8 +411,8 @@ deliberately do not depend on each other:
 npm install @codexo/exojs-tilemap @codexo/exojs-physics @codexo/exojs-tilemap-physics
 ```
 
-For a tile layer, `TileColliderStreamer` owns one static body per resident
-chunk and keeps them in sync with the layer - building bodies for chunks that
+For a tile layer, `TileColliderStreamer` owns one static body per chunk-sized
+partition of the layer and keeps them in sync - building bodies for chunks that
 load, rebuilding edited ones, destroying evicted ones:
 
 ```ts
@@ -431,6 +431,30 @@ colliders.sync();
 
 `sync()` is cheap every frame: with no change since the last call it returns
 immediately. Call `destroy()` to remove every body it created.
+
+Tiled authors collision per tile, and that is what the example above reads.
+LDtk authors it per grid cell with `IntGrid`, which is not tied to the tiles a
+layer draws - a collision layer there often renders nothing at all. Pass its
+cells in and the same bridge covers it:
+
+```ts
+import { createLdtkIntGridCellSource } from '@codexo/exojs-ldtk';
+import { PhysicsWorld } from '@codexo/exojs-physics';
+import type { TileLayer } from '@codexo/exojs-tilemap';
+import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics';
+
+declare const intGridLayer: TileLayer;
+
+const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 } });
+const colliders = new TileColliderStreamer(world, intGridLayer, {
+  cells: createLdtkIntGridCellSource(intGridLayer),
+  material: ({ type }) => (type === 'Water' ? { isSensor: true } : null),
+});
+```
+
+The string a cell source returns is the value's authored name, nothing more.
+Deciding that `Water` means "sensor" is your call, made in `material` - the
+engine never assigns meaning to a classification.
 
 For an object layer - spawn regions, triggers, hand-drawn collision - there is
 nothing to stream, so it is a one-shot build:

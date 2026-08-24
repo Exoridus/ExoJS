@@ -6,10 +6,10 @@
   "subsystem": "ldtk",
   "importPath": "@codexo/exojs-ldtk",
   "tier": "stable",
-  "memberCount": 10,
+  "memberCount": 11,
   "counts": {
     "constructors": 0,
-    "methods": 2,
+    "methods": 3,
     "properties": 8,
     "events": 0
   },
@@ -19,7 +19,7 @@
       "title": "Overview",
       "members": [],
       "paragraphs": [
-        "Free functions and constants exported from @codexo/exojs-ldtk. Import any of them directly, for example `import { getLdtkIntGridValueAt } from '@codexo/exojs-ldtk'`."
+        "Free functions and constants exported from @codexo/exojs-ldtk. Import any of them directly, for example `import { createLdtkIntGridCellSource } from '@codexo/exojs-ldtk'`."
       ],
       "importLine": null,
       "sourceLink": null
@@ -28,6 +28,61 @@
       "id": "functions",
       "title": "Functions",
       "members": [
+        {
+          "name": "createLdtkIntGridCellSource",
+          "signature": "createLdtkIntGridCellSource(layer: TileLayer): TileCellSource | undefined",
+          "signatureTokens": [
+            {
+              "text": "createLdtkIntGridCellSource",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "layer",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileLayer",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileCellSource",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "layer",
+              "type": "TileLayer",
+              "optional": false
+            }
+          ],
+          "returnType": "TileCellSource | undefined",
+          "description": "Per-cell collision classification for a TileLayer converted from an LDtk IntGrid layer instance, or undefined when the layer carries no IntGrid data (not converted from an IntGrid layer instance, or unbounded). The classification is the value's LDtk-authored identifier, falling back to the raw integer as a string when the value definition declares none. Cells whose raw value is 0 (empty) classify as null. Distinct IntGrid values stay distinct strings: what they mean - solid, water, hazard - is the caller's to decide, and an unrecognised value is data, not an error. The result reads the layer's frozen IntGrid data, so it is stable for the lifetime of the layer and safe to hand to a consumer that samples it while building geometry. ts const geometry = buildTileCollisionGeometry(layer, { cells: createLdtkIntGridCellSource(layer) }); "
+        },
         {
           "name": "getLdtkIntGridValueAt",
           "signature": "getLdtkIntGridValueAt(layer: TileLayer, x: number, y: number): LdtkIntGridValueDef | undefined",

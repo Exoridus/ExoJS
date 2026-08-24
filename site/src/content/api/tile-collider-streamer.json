@@ -1,6 +1,6 @@
 {
   "title": "TileColliderStreamer",
-  "description": "Keeps a physics world's static tile colliders in sync with a TileLayer: one static body per resident chunk, rebuilt when that chunk changes, destroyed when it is evicted. The bridge owns every body it creates and nothing else. It observes the layer through its public revision counters, so it works with any chunk source - import('@codexo/exojs-tilemap').ChunkStreamer, a hand-rolled loader, or a fully resident bounded layer. Tick it from your update loop: ```ts const colliders = new TileColliderStreamer(world, layer); scene.systems.add({ update: () => colliders.sync() }); ``` Two consequences worth knowing before shipping a level: - Whole-cell merging never crosses a chunk boundary, so a solid run spanning two chunks is at least two rectangles. This is what makes the result independent of the order chunks were loaded in. - A dynamic body resting on a chunk that gets evicted falls. Eviction is the chunk source's decision; widen its unload radius if that matters.",
+  "description": "Keeps a physics world's static tile colliders in sync with a TileLayer: one static body per chunk-sized partition of the layer, rebuilt when that partition changes, destroyed when it is evicted. The bridge owns every body it creates and nothing else. It observes the layer through its public revision counters, so it works with any chunk source - import('@codexo/exojs-tilemap').ChunkStreamer, a hand-rolled loader, or a fully resident bounded layer. Tick it from your update loop: ```ts const colliders = new TileColliderStreamer(world, layer); scene.systems.add({ update: () => colliders.sync() }); ``` Two consequences worth knowing before shipping a level: - Whole-cell merging never crosses a partition boundary, so a solid run spanning two of them is at least two rectangles. This is what makes the result independent of the order chunks were loaded in. - A dynamic body resting on a chunk that gets evicted falls. Eviction is the chunk source's decision; widen its unload radius if that matters. - With TileColliderOptions.cells, a bounded layer's partitions are all covered, resident or not - collision authored per cell does not depend on tiles being placed.",
   "symbol": "TileColliderStreamer",
   "kind": "class",
   "subsystem": "tilemap-physics",
@@ -19,12 +19,12 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Keeps a physics world's static tile colliders in sync with a TileLayer: one static body per resident chunk, rebuilt when that chunk changes, destroyed when it is evicted.",
+        "Keeps a physics world's static tile colliders in sync with a TileLayer: one static body per chunk-sized partition of the layer, rebuilt when that partition changes, destroyed when it is evicted.",
         "The bridge owns every body it creates and nothing else. It observes the layer through its public revision counters, so it works with any chunk source - import('@codexo/exojs-tilemap').ChunkStreamer, a hand-rolled loader, or a fully resident bounded layer.",
         "Tick it from your update loop:",
         "```ts const colliders = new TileColliderStreamer(world, layer); scene.systems.add({ update: () => colliders.sync() }); ```",
         "Two consequences worth knowing before shipping a level:",
-        "- Whole-cell merging never crosses a chunk boundary, so a solid run spanning two chunks is at least two rectangles. This is what makes the result independent of the order chunks were loaded in. - A dynamic body resting on a chunk that gets evicted falls. Eviction is the chunk source's decision; widen its unload radius if that matters."
+        "- Whole-cell merging never crosses a partition boundary, so a solid run spanning two of them is at least two rectangles. This is what makes the result independent of the order chunks were loaded in. - A dynamic body resting on a chunk that gets evicted falls. Eviction is the chunk source's decision; widen its unload radius if that matters. - With TileColliderOptions.cells, a bounded layer's partitions are all covered, resident or not - collision authored per cell does not depend on tiles being placed."
       ],
       "importLine": "import { TileColliderStreamer } from '@codexo/exojs-tilemap-physics'",
       "sourceLink": null
@@ -170,7 +170,7 @@
           ],
           "params": [],
           "returnType": "IterableIterator<PhysicsBody>",
-          "description": "The bodies this bridge owns, in (cy, cx) chunk order - independent of the order the chunks became resident in."
+          "description": "The bodies this bridge owns, in (cy, cx) partition order - independent of the order the chunks became resident in."
         },
         {
           "name": "destroy",

@@ -40,7 +40,9 @@
   "devDependencies": {
     "@codexo/exojs": "workspace:*",
     "@codexo/exojs-config": "workspace:*",
+    "@codexo/exojs-ldtk": "workspace:*",
     "@codexo/exojs-physics": "workspace:*",
+    "@codexo/exojs-tiled": "workspace:*",
     "@codexo/exojs-tilemap": "workspace:*"
   },
   "license": "MIT",

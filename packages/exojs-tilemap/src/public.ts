@@ -79,6 +79,7 @@ export { TileAnimator } from './TileAnimator';
 // Per-tile collision: layer-space geometry from TileDefinition.collision,
 // with whole-cell boxes greedily merged. Physics-agnostic - plain geometry.
 export type {
+  TileCellSource,
   TileCollisionGeometry,
   TileCollisionOptions,
   TileCollisionRect,

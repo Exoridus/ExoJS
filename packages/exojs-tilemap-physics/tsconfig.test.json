@@ -1,10 +1,22 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "_comment": "Type-checks this package's own test/** - the package's main program only includes src/**. Run by the package's 'typecheck' script. The loosened flags live in the shared package-test profile.",
+  "_comment": "Type-checks this package's own test/** - the package's main program only includes src/**. Run by the package's 'typecheck' script. The loosened flags live in the shared package-test profile. The 'paths' below are test-only: the end-to-end tests feed the bridge real Tiled and LDtk adapter output, and those two packages publish 'exports' pointing at dist/**, which a fresh checkout has not built. They are therefore mapped to source like the other workspace packages. TypeScript replaces an inherited 'paths' object wholesale rather than merging it, so the entries from tsconfig.json are repeated here; test/formatAgnostic.test.ts asserts that the production config never gains an adapter mapping.",
   "extends": [
     "./tsconfig.json",
     "@codexo/exojs-config/typescript/package-test.json"
   ],
+  "compilerOptions": {
+    "paths": {
+      "@codexo/exojs": ["../../src/index.ts"],
+      "@codexo/exojs/extensions": ["../../src/extensions/index.ts"],
+      "@codexo/exojs/renderer-sdk": ["../../src/renderer-sdk.ts"],
+      "@codexo/exojs/debug": ["../../src/debug/index.ts"],
+      "@codexo/exojs-tilemap": ["../exojs-tilemap/src/index.ts"],
+      "@codexo/exojs-physics": ["../exojs-physics/src/index.ts"],
+      "@codexo/exojs-tiled": ["../exojs-tiled/src/index.ts"],
+      "@codexo/exojs-ldtk": ["../exojs-ldtk/src/index.ts"]
+    }
+  },
   "include": [
     "test/**/*",
     "../../src/typings.d.ts"

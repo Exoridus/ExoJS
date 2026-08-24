@@ -21,7 +21,9 @@ export const GATE_GROUPS = {
   ],
   lint: ['lint:all', 'lint:source-hygiene', 'lint:inline-source', 'lint:shaders', 'format:check'],
   sync: ['docs:api:check', 'examples:sync:check'],
-  site: ['typecheck:site'],
+  // `full-bundle:exports:check` reads every bundled package's built ESM barrel,
+  // so it needs the same built dist this group's job already provides.
+  site: ['typecheck:site', 'full-bundle:exports:check'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type GateGroup = keyof typeof GATE_GROUPS;

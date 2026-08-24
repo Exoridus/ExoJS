@@ -6,11 +6,11 @@
   "subsystem": "tilemap-physics",
   "importPath": "@codexo/exojs-tilemap-physics",
   "tier": "stable",
-  "memberCount": 9,
+  "memberCount": 10,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 9,
+    "properties": 10,
     "events": 0
   },
   "sections": [
@@ -104,6 +104,31 @@
           "params": [],
           "returnType": null,
           "description": "Drop a source shape before any collider is built for it."
+        },
+        {
+          "name": "cells",
+          "signature": "cells?: TileCellSource",
+          "signatureTokens": [
+            {
+              "text": "cells",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileCellSource",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Per-cell collision classification, for layers whose collision is authored per cell rather than per tile. On a bounded layer this makes the bridge cover the whole layer, including partitions that hold no tiles at all. Sampled while a partition is built and expected to answer identically for the lifetime of this bridge: changing what it returns does not invalidate colliders that already exist. Rebuild by recreating the bridge."
         },
         {
           "name": "density",
