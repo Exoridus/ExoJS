@@ -1,0 +1,73 @@
+{
+  "title": "ResponsiveCanvasSizingOptions",
+  "description": "",
+  "symbol": "ResponsiveCanvasSizingOptions",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [],
+      "importLine": "import { ResponsiveCanvasSizingOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "minAspect",
+          "signature": "minAspect?: number",
+          "signatureTokens": [
+            {
+              "text": "minAspect",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How far the logical view may be narrowed relative to the base view before the extra world is opened up vertically instead, as a width/height ratio. Defaults to the base aspect ratio, which crops nothing: every host narrower than the base ratio shows the full base width and gains vertical world. A smaller value lets the view narrow to that ratio first - 1 allows a square view before vertical growth starts - and so trades horizontal base view for a less extreme layout on tall screens. Must be greater than zero and no larger than the base aspect ratio. Wider hosts always gain horizontal world; there is no upper bound to configure."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sizing/ResponsiveCanvasSizing.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sizing/ResponsiveCanvasSizing.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sizing/ResponsiveCanvasSizing.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sizing/ResponsiveCanvasSizing.ts"
+}

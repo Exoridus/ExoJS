@@ -1,5 +1,5 @@
 // Auto-generated from tween-from-array.ts - edit the .ts source, not this file.
-import { Application, Color, Ease, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, Ease, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
 // A closed loop of waypoints expressed as fractions of the canvas so the path
 // spreads across the wider 16:9 frame instead of staying in an 800×600 box.
 const waypointFractions = [
@@ -50,7 +50,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

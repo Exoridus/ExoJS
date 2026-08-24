@@ -1,5 +1,5 @@
 // Auto-generated from sound-pool.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const POOL_SIZE = 12;
 const FIRE_INTERVAL = 0.04;
@@ -124,7 +124,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

@@ -1,5 +1,5 @@
 // Auto-generated from water-mirror.ts - edit the .ts source, not this file.
-import { Application, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, FixedResolutionCanvasSizing, RenderNodePass, RenderPipeline, RenderTexture, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 uv=vUv; uv.y += sin(uv.x*18.0+uTime*2.8)*0.025; vec4 c=texture(uTexture,uv); fragColor=vec4(c.rgb*vec3(0.72,0.85,1.0),c.a*0.85); }`;
@@ -64,7 +64,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

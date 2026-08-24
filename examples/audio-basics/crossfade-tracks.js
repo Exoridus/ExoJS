@@ -1,5 +1,5 @@
 // Auto-generated from crossfade-tracks.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, crossFade, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, crossFade, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const PEAK = 0.7;
 const COLOR_A = new Color(120, 200, 255);
@@ -129,7 +129,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

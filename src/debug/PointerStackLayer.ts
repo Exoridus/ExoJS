@@ -57,8 +57,7 @@ export class PointerStackLayer extends DebugLayer {
       this._build();
     }
 
-    const canvas = this._app.canvas;
-    const panelX = canvas.width - panelW - panelPad;
+    const panelX = this._app.width - panelW - panelPad;
     const panelY = panelPad;
 
     // Position the panel.

@@ -3,9 +3,9 @@ import type { MockInstance } from 'vitest';
 /**
  * Coverage-focused tests for the parts of Application.ts not exercised by the
  * other test/core/application*.test.ts files: the simple getter cluster,
- * capabilities gating, setCursor()/cursor, sizingMode (get/set + the
- * per-mode `_applySizingMode` CSS/ResizeObserver wiring), resize(),
- * `_mountCanvas`, `_backingStoreToDesign`, the constructor's
+ * capabilities gating, setCursor()/cursor, `sizing` (get/set + the geometry
+ * and ResizeObserver ownership of each built-in policy), resize(),
+ * `_mountCanvas`, `_backingStoreToLogical`, the constructor's
  * materialize-bindings failure paths, createBackend()'s
  * materializeRendererBindings failure paths, the onContextLost/Restored and
  * onDeviceLost/Restored → onBackendLost/onBackendRestored relay, and
@@ -82,6 +82,10 @@ const setNavigatorGpu = (gpu: unknown): (() => void) => {
 interface LifecycleHarness {
   readonly Application: typeof import('#core/Application').Application;
   readonly ApplicationState: typeof import('#core/Application').ApplicationState;
+  readonly CappedResolutionCanvasSizing: typeof import('#core/sizing/CappedResolutionCanvasSizing').CappedResolutionCanvasSizing;
+  readonly FixedResolutionCanvasSizing: typeof import('#core/sizing/FixedResolutionCanvasSizing').FixedResolutionCanvasSizing;
+  readonly ManualCanvasSizing: typeof import('#core/sizing/ManualCanvasSizing').ManualCanvasSizing;
+  readonly ResponsiveCanvasSizing: typeof import('#core/sizing/ResponsiveCanvasSizing').ResponsiveCanvasSizing;
   readonly Texture: typeof import('#rendering/texture/Texture').Texture;
   readonly loader: { destroy: MockInstance };
   readonly webglManager: {
@@ -250,11 +254,19 @@ const loadHarness = async (options: LifecycleHarnessOptions = {}): Promise<Lifec
   }));
 
   const { Application, ApplicationState } = await import('#core/Application');
+  const { CappedResolutionCanvasSizing } = await import('#core/sizing/CappedResolutionCanvasSizing');
+  const { FixedResolutionCanvasSizing } = await import('#core/sizing/FixedResolutionCanvasSizing');
+  const { ManualCanvasSizing } = await import('#core/sizing/ManualCanvasSizing');
+  const { ResponsiveCanvasSizing } = await import('#core/sizing/ResponsiveCanvasSizing');
   const { Texture } = await import('#rendering/texture/Texture');
 
   return {
     Application,
     ApplicationState,
+    CappedResolutionCanvasSizing,
+    FixedResolutionCanvasSizing,
+    ManualCanvasSizing,
+    ResponsiveCanvasSizing,
     Texture,
     loader,
     webglManager,
@@ -295,7 +307,7 @@ describe('Application lifecycle / getters / sizing', () => {
       expect(app.canvasFocused).toBe(false);
       expect(app.documentVisible).toBe(true);
       expect(app.cursor).toBe('default');
-      expect(app.sizingMode).toBe('fixed');
+      expect(app.sizing).toBeNull();
       expect(app.clearColor).toBeInstanceOf(Color);
       expect(app.audio).toBeDefined();
       expect(app.width).toBe(800);
@@ -428,40 +440,61 @@ describe('Application lifecycle / getters / sizing', () => {
   });
 
   // -------------------------------------------------------------------------
-  // sizingMode getter/setter
+  // sizing getter/setter
   // -------------------------------------------------------------------------
 
-  describe('sizingMode setter', () => {
-    test('is a no-op when assigned the current mode (no observer churn)', async () => {
+  describe('sizing setter', () => {
+    test('detaches the outgoing policy and returns the canvas to the base geometry', async () => {
       vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application } = await loadHarness();
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
       const parent = document.createElement('div');
       const canvas = document.createElement('canvas');
+
       parent.appendChild(canvas);
+      Object.defineProperty(parent, 'clientWidth', { value: 400, configurable: true });
+      Object.defineProperty(parent, 'clientHeight', { value: 600, configurable: true });
 
-      const app = new Application({ canvas: { element: canvas, sizingMode: 'fill' }, backend: { type: 'webgl2' } });
-      const observer = MockResizeObserver.instances[0];
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+      const observer = MockResizeObserver.instances[0]!;
 
-      app.sizingMode = 'fill';
+      expect(canvas.style.width).toBe('400px');
 
-      expect(observer.disconnect).not.toHaveBeenCalled();
-      expect(app.sizingMode).toBe('fill');
-    });
-
-    test('disconnects the old observer and applies the new mode when assigned a different value', async () => {
-      vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application } = await loadHarness();
-      const parent = document.createElement('div');
-      const canvas = document.createElement('canvas');
-      parent.appendChild(canvas);
-
-      const app = new Application({ canvas: { element: canvas, sizingMode: 'fill' }, backend: { type: 'webgl2' } });
-      const observer = MockResizeObserver.instances[0];
-
-      app.sizingMode = 'fixed';
+      app.sizing = null;
 
       expect(observer.disconnect).toHaveBeenCalledTimes(1);
-      expect(app.sizingMode).toBe('fixed');
+      expect(app.sizing).toBeNull();
+      expect(canvas.style.width).toBe('800px');
+      expect(canvas.style.height).toBe('600px');
+    });
+
+    test('re-attaching the same policy makes it re-read the host', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
+      const parent = document.createElement('div');
+      const canvas = document.createElement('canvas');
+
+      parent.appendChild(canvas);
+      Object.defineProperty(parent, 'clientWidth', { value: 400, configurable: true });
+      Object.defineProperty(parent, 'clientHeight', { value: 600, configurable: true });
+
+      const sizing = new FixedResolutionCanvasSizing();
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing },
+        backend: { type: 'webgl2' },
+      });
+
+      Object.defineProperty(parent, 'clientWidth', { value: 200, configurable: true });
+      Object.defineProperty(parent, 'clientHeight', { value: 600, configurable: true });
+
+      app.sizing = sizing;
+
+      expect(app.sizing).toBe(sizing);
+      expect(canvas.style.width).toBe('200px');
+      expect(canvas.style.height).toBe('150px');
+      expect(MockResizeObserver.instances).toHaveLength(2);
     });
   });
 
@@ -527,240 +560,363 @@ describe('Application lifecycle / getters / sizing', () => {
   });
 
   // -------------------------------------------------------------------------
-  // _applySizingMode - 'fit' / 'shrink' / 'fixed' (pure CSS, no observer)
+  // Sizing policies - the geometry each built-in commits, and who observes what
   // -------------------------------------------------------------------------
 
-  describe('_applySizingMode: CSS-only modes', () => {
-    test('"fit" sets width/height 100% and objectFit contain', async () => {
+  const mountedCanvas = (hostWidth: number, hostHeight: number): { parent: HTMLDivElement; canvas: HTMLCanvasElement } => {
+    const parent = document.createElement('div');
+    const canvas = document.createElement('canvas');
+
+    parent.appendChild(canvas);
+    Object.defineProperty(parent, 'clientWidth', { value: hostWidth, configurable: true });
+    Object.defineProperty(parent, 'clientHeight', { value: hostHeight, configurable: true });
+
+    return { parent, canvas };
+  };
+
+  describe('sizing: omitted', () => {
+    test('keeps the base resolution in all three axes and observes nothing', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
       const { Application } = await loadHarness();
-      const app = new Application({ canvas: { sizingMode: 'fit' }, backend: { type: 'webgl2' } });
+      const { canvas } = mountedCanvas(400, 600);
+      const app = new Application({ canvas: { element: canvas, width: 800, height: 600, pixelRatio: 2 }, backend: { type: 'webgl2' } });
 
-      expect(app.element!.style.width).toBe('100%');
-      expect(app.element!.style.height).toBe('100%');
-      expect(app.element!.style.objectFit).toBe('contain');
-    });
-
-    test('"shrink" sets maxWidth/maxHeight 100% and objectFit contain', async () => {
-      const { Application } = await loadHarness();
-      const app = new Application({ canvas: { sizingMode: 'shrink' }, backend: { type: 'webgl2' } });
-
-      expect(app.element!.style.maxWidth).toBe('100%');
-      expect(app.element!.style.maxHeight).toBe('100%');
-      expect(app.element!.style.objectFit).toBe('contain');
-    });
-
-    test('"fixed" (default) leaves sizing CSS untouched', async () => {
-      const { Application } = await loadHarness();
-      const app = new Application({ canvas: { sizingMode: 'fixed' }, backend: { type: 'webgl2' } });
-
-      expect(app.element!.style.objectFit).toBe('');
-      expect(app.element!.style.maxWidth).toBe('');
-      expect(app.sizingMode).toBe('fixed');
+      expect(app.sizing).toBeNull();
+      expect(canvas.style.width).toBe('800px');
+      expect(canvas.style.height).toBe('600px');
+      expect(app.canvas.width).toBe(1600);
+      expect(app.canvas.height).toBe(1200);
+      expect(app.width).toBe(800);
+      expect(app.height).toBe(600);
+      expect(MockResizeObserver.instances).toHaveLength(0);
     });
   });
 
-  // -------------------------------------------------------------------------
-  // _applySizingMode: 'fill'
-  // -------------------------------------------------------------------------
+  describe('ManualCanvasSizing', () => {
+    test('sizes the backing store once and never touches the CSS box or the host', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, ManualCanvasSizing } = await loadHarness();
+      const { canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 2, sizing: new ManualCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
 
-  describe('_applySizingMode: "fill"', () => {
-    test('breaks early when ResizeObserver is undefined, even with a parent present', async () => {
-      // No vi.stubGlobal here - ResizeObserver is undefined by default in jsdom.
-      expect(typeof ResizeObserver).toBe('undefined');
-
-      const { Application } = await loadHarness();
-      const parent = document.createElement('div');
-      const canvas = document.createElement('canvas');
-      parent.appendChild(canvas);
-
-      expect(() => new Application({ canvas: { element: canvas, sizingMode: 'fill' }, backend: { type: 'webgl2' } })).not.toThrow();
+      expect(canvas.style.width).toBe('');
+      expect(canvas.style.height).toBe('');
+      expect(app.canvas.width).toBe(1600);
+      expect(app.canvas.height).toBe(1200);
+      expect(app.width).toBe(800);
       expect(MockResizeObserver.instances).toHaveLength(0);
     });
 
-    test('breaks early when the canvas has no parent element, even with ResizeObserver defined', async () => {
-      vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application } = await loadHarness();
-      const canvas = document.createElement('canvas'); // never mounted anywhere
+    test('follows Application.resize() without writing CSS', async () => {
+      const { Application, ManualCanvasSizing, webglManager } = await loadHarness();
+      const { canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new ManualCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
 
-      new Application({ canvas: { element: canvas, sizingMode: 'fill' }, backend: { type: 'webgl2' } });
+      app.resize(320, 240);
 
-      expect(MockResizeObserver.instances).toHaveLength(0);
+      expect(app.width).toBe(320);
+      expect(app.height).toBe(240);
+      expect(app.canvas.width).toBe(320);
+      expect(canvas.style.width).toBe('');
+      expect(webglManager.resize).toHaveBeenLastCalledWith(320, 240);
     });
+  });
 
-    test('installs a ResizeObserver on the parent and resizes on valid dimensions', async () => {
+  describe('FixedResolutionCanvasSizing', () => {
+    test('fits the CSS box to the host and holds the backing store at the base resolution', async () => {
       vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application, webglManager } = await loadHarness();
-      const parent = document.createElement('div');
-      const canvas = document.createElement('canvas');
-      parent.appendChild(canvas);
-
-      const app = new Application({ canvas: { element: canvas, sizingMode: 'fill' }, backend: { type: 'webgl2' } });
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
+      const { parent, canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 2, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
 
       expect(MockResizeObserver.instances).toHaveLength(1);
-      const observer = MockResizeObserver.instances[0];
-      expect(observer.observe).toHaveBeenCalledWith(parent);
-
-      Object.defineProperty(parent, 'clientWidth', { value: 640, configurable: true });
-      Object.defineProperty(parent, 'clientHeight', { value: 480, configurable: true });
-      observer.trigger();
-
-      expect(webglManager.resize).toHaveBeenCalledWith(640, 480);
-      expect(app.width).toBe(640);
-      expect(app.height).toBe(480);
+      expect(MockResizeObserver.instances[0]!.observe).toHaveBeenCalledWith(parent);
+      // 800x600 into 400x600: scale 0.5, so the host keeps 300px of unused height.
+      expect(canvas.style.width).toBe('400px');
+      expect(canvas.style.height).toBe('300px');
+      expect(app.canvas.width).toBe(1600);
+      expect(app.canvas.height).toBe(1200);
+      expect(app.width).toBe(800);
+      expect(app.height).toBe(600);
     });
 
-    test('ignores a resize-observer callback firing with a zero-sized parent', async () => {
+    test('grows the CSS box past the base resolution without growing the backing store', async () => {
       vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application, webglManager } = await loadHarness();
-      const parent = document.createElement('div');
-      const canvas = document.createElement('canvas');
-      parent.appendChild(canvas);
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
+      const { parent, canvas } = mountedCanvas(1600, 1600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
 
-      new Application({ canvas: { element: canvas, sizingMode: 'fill' }, backend: { type: 'webgl2' } });
+      expect(canvas.style.width).toBe('1600px');
+      expect(canvas.style.height).toBe('1200px');
+      expect(app.canvas.width).toBe(800);
 
-      const observer = MockResizeObserver.instances[0];
+      Object.defineProperty(parent, 'clientWidth', { value: 2400, configurable: true });
+      MockResizeObserver.instances[0]!.trigger();
+
+      // Height-limited now: 800x600 into 2400x1600 scales by 8/3.
+      expect(Number.parseFloat(canvas.style.width)).toBeCloseTo(2133.333, 3);
+      expect(canvas.style.height).toBe('1600px');
+      expect(app.canvas.width).toBe(800);
+    });
+
+    test('leaves the geometry alone while the host has no size', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
+      const { parent, canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+
       Object.defineProperty(parent, 'clientWidth', { value: 0, configurable: true });
       Object.defineProperty(parent, 'clientHeight', { value: 0, configurable: true });
+      MockResizeObserver.instances[0]!.trigger();
+
+      expect(canvas.style.width).toBe('400px');
+      expect(app.canvas.width).toBe(800);
+    });
+
+    test('sizes from the host once even where the realm has no ResizeObserver', async () => {
+      expect(typeof ResizeObserver).toBe('undefined');
+
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
+      const { canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+
+      expect(canvas.style.width).toBe('400px');
+      expect(app.canvas.width).toBe(800);
+    });
+
+    test('rejects a canvas with no parent to measure', async () => {
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
+      const canvas = document.createElement('canvas');
+
+      expect(() => new Application({ canvas: { element: canvas, sizing: new FixedResolutionCanvasSizing() }, backend: { type: 'webgl2' } })).toThrow(
+        /no parent element/,
+      );
+    });
+  });
+
+  describe('CappedResolutionCanvasSizing', () => {
+    test('lets the backing store follow a host smaller than the base resolution', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, CappedResolutionCanvasSizing } = await loadHarness();
+      const { canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 2, sizing: new CappedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+
+      expect(canvas.style.width).toBe('400px');
+      expect(canvas.style.height).toBe('300px');
+      expect(app.canvas.width).toBe(800);
+      expect(app.canvas.height).toBe(600);
+      expect(app.width).toBe(800);
+      expect(app.height).toBe(600);
+    });
+
+    test('caps the backing store at the base resolution on a larger host', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, CappedResolutionCanvasSizing } = await loadHarness();
+      const { canvas } = mountedCanvas(1600, 1600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 2, sizing: new CappedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+
+      expect(canvas.style.width).toBe('1600px');
+      expect(canvas.style.height).toBe('1200px');
+      expect(app.canvas.width).toBe(1600);
+      expect(app.canvas.height).toBe(1200);
+      expect(app.width).toBe(800);
+    });
+  });
+
+  describe('ResponsiveCanvasSizing', () => {
+    test('takes the whole host and widens the logical view with it', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, ResponsiveCanvasSizing, webglManager } = await loadHarness();
+      const { canvas } = mountedCanvas(1200, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 2, sizing: new ResponsiveCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+
+      expect(canvas.style.width).toBe('1200px');
+      expect(canvas.style.height).toBe('600px');
+      expect(app.canvas.width).toBe(2400);
+      expect(app.canvas.height).toBe(1200);
+      // Host aspect 2:1 against a 4:3 base: the base height is held and the
+      // view widens to match.
+      expect(app.width).toBe(1200);
+      expect(app.height).toBe(600);
+      expect(webglManager.resize).toHaveBeenLastCalledWith(1200, 600);
+    });
+
+    test('grows the logical view vertically on a host narrower than the base aspect', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, ResponsiveCanvasSizing } = await loadHarness();
+      const { canvas } = mountedCanvas(300, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new ResponsiveCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+
+      expect(app.width).toBe(800);
+      expect(app.height).toBe(1600);
+      expect(app.canvas.width).toBe(300);
+      expect(app.canvas.height).toBe(600);
+    });
+
+    test('narrows the logical view down to minAspect before growing it vertically', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, ResponsiveCanvasSizing } = await loadHarness();
+      const { parent, canvas } = mountedCanvas(600, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new ResponsiveCanvasSizing({ minAspect: 1 }) },
+        backend: { type: 'webgl2' },
+      });
+
+      // At exactly minAspect the base height still holds and the view is square.
+      expect(app.width).toBe(600);
+      expect(app.height).toBe(600);
+
+      Object.defineProperty(parent, 'clientWidth', { value: 300, configurable: true });
+      MockResizeObserver.instances[0]!.trigger();
+
+      expect(app.width).toBe(600);
+      expect(app.height).toBe(1200);
+    });
+
+    test('rejects a minAspect above the base aspect ratio', async () => {
+      const { Application, ResponsiveCanvasSizing } = await loadHarness();
+      const { canvas } = mountedCanvas(600, 600);
+
+      expect(
+        () =>
+          new Application({
+            canvas: { element: canvas, width: 800, height: 600, sizing: new ResponsiveCanvasSizing({ minAspect: 2 }) },
+            backend: { type: 'webgl2' },
+          }),
+      ).toThrow(/minAspect/);
+    });
+  });
+
+  describe('sizing teardown', () => {
+    test('destroy() disconnects the observer and a later callback commits nothing', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, FixedResolutionCanvasSizing, webglManager } = await loadHarness();
+      const { parent, canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+      const observer = MockResizeObserver.instances[0]!;
+
+      void app.destroy();
+
+      expect(observer.disconnect).toHaveBeenCalledTimes(1);
+      expect(app.sizing).toBeNull();
+
+      webglManager.resize.mockClear();
+      Object.defineProperty(parent, 'clientWidth', { value: 1200, configurable: true });
       observer.trigger();
 
       expect(webglManager.resize).not.toHaveBeenCalled();
     });
-  });
 
-  // -------------------------------------------------------------------------
-  // _applySizingMode: 'letterbox'
-  // -------------------------------------------------------------------------
-
-  describe('_applySizingMode: "letterbox"', () => {
-    test('breaks early when ResizeObserver is undefined, even with a parent present', async () => {
-      const { Application } = await loadHarness();
-      const parent = document.createElement('div');
-      const canvas = document.createElement('canvas');
-      parent.appendChild(canvas);
-
-      expect(() => new Application({ canvas: { element: canvas, sizingMode: 'letterbox' }, backend: { type: 'webgl2' } })).not.toThrow();
-      expect(MockResizeObserver.instances).toHaveLength(0);
-    });
-
-    test('breaks early when the canvas has no parent element, even with ResizeObserver defined', async () => {
+    test('an observer callback that changes nothing commits nothing', async () => {
       vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application } = await loadHarness();
-      const canvas = document.createElement('canvas');
-
-      new Application({ canvas: { element: canvas, sizingMode: 'letterbox' }, backend: { type: 'webgl2' } });
-
-      expect(MockResizeObserver.instances).toHaveLength(0);
-    });
-
-    test('installs a ResizeObserver, styles the parent as letterbox bars, and lays out on valid dimensions', async () => {
-      vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application } = await loadHarness();
-      const parent = document.createElement('div');
-      const canvas = document.createElement('canvas');
-      parent.appendChild(canvas);
-
+      const { Application, FixedResolutionCanvasSizing, webglManager } = await loadHarness();
+      const { canvas } = mountedCanvas(400, 600);
       const app = new Application({
-        canvas: { element: canvas, sizingMode: 'letterbox', width: 800, height: 600 },
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+      const observer = MockResizeObserver.instances[0]!;
+
+      webglManager.resize.mockClear();
+
+      // A ResizeObserver fires for changes that leave the observed box the size
+      // it was, and assigning `canvas.width` discards the drawing buffer even
+      // when the value does not move.
+      observer.trigger();
+      observer.trigger();
+      observer.trigger();
+
+      expect(webglManager.resize).not.toHaveBeenCalled();
+      expect(app.canvas.width).toBe(800);
+      expect(canvas.style.width).toBe('400px');
+    });
+
+    test('a host taken out of the document freezes the geometry rather than collapsing it', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
+      const { parent, canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
         backend: { type: 'webgl2' },
       });
 
-      expect(parent.style.display).toBe('flex');
-      expect(parent.style.alignItems).toBe('center');
-      expect(parent.style.justifyContent).toBe('center');
-      expect(parent.style.overflow).toBe('hidden');
-      // jsdom normalizes the CSS color keyword/hex to its rgb() serialization on read-back.
-      expect(parent.style.background).toBe('rgb(0, 0, 0)');
-
-      expect(MockResizeObserver.instances).toHaveLength(1);
-      const observer = MockResizeObserver.instances[0];
-      expect(observer.observe).toHaveBeenCalledWith(parent);
-
-      Object.defineProperty(parent, 'clientWidth', { value: 640, configurable: true });
-      Object.defineProperty(parent, 'clientHeight', { value: 480, configurable: true });
-      observer.trigger();
-
-      // 800x600 design fit into 640x480 parent -> scale 0.8 both axes (exact fit).
-      expect(app.canvas.width).toBe(640);
-      expect(app.canvas.height).toBe(480);
-      expect(app.element!.style.width).toBe('640px');
-      expect(app.element!.style.height).toBe('480px');
-    });
-
-    test('ignores a layout callback firing with a zero-sized parent', async () => {
-      vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application } = await loadHarness();
-      const parent = document.createElement('div');
-      const canvas = document.createElement('canvas');
-      parent.appendChild(canvas);
-
-      const app = new Application({ canvas: { element: canvas, sizingMode: 'letterbox' }, backend: { type: 'webgl2' } });
-      const widthBefore = app.canvas.width;
-      const heightBefore = app.canvas.height;
-
-      const observer = MockResizeObserver.instances[0];
+      parent.remove();
       Object.defineProperty(parent, 'clientWidth', { value: 0, configurable: true });
       Object.defineProperty(parent, 'clientHeight', { value: 0, configurable: true });
-      observer.trigger();
+      MockResizeObserver.instances[0]!.trigger();
 
-      expect(app.canvas.width).toBe(widthBefore);
-      expect(app.canvas.height).toBe(heightBefore);
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // Sizing-mode CSS teardown - switching modes must not leave the outgoing
-  // mode's rules behind for the incoming one to fight with.
-  // -------------------------------------------------------------------------
-
-  describe('sizingMode switching: CSS cleanup', () => {
-    test('leaving "fit" drops its 100% box and objectFit', async () => {
-      const { Application } = await loadHarness();
-      const app = new Application({ canvas: { sizingMode: 'fit', width: 320, height: 240, pixelRatio: 1 }, backend: { type: 'webgl2' } });
-
-      app.sizingMode = 'fixed';
-
-      expect(app.element!.style.objectFit).toBe('');
-      // Back to the explicit design box, not the parent-relative one.
-      expect(app.element!.style.width).toBe('320px');
-      expect(app.element!.style.height).toBe('240px');
+      expect(canvas.style.width).toBe('400px');
+      expect(app.canvas.width).toBe(800);
+      expect(app.width).toBe(800);
     });
 
-    test('leaving "shrink" drops its max-size clamp and objectFit', async () => {
-      const { Application } = await loadHarness();
-      const app = new Application({ canvas: { sizingMode: 'shrink' }, backend: { type: 'webgl2' } });
-
-      app.sizingMode = 'fit';
-
-      expect(app.element!.style.maxWidth).toBe('');
-      expect(app.element!.style.maxHeight).toBe('');
-      // The incoming mode's own rules are still applied afterwards.
-      expect(app.element!.style.objectFit).toBe('contain');
-      expect(app.element!.style.width).toBe('100%');
-    });
-
-    test('leaving "letterbox" hands the parent element its own styles back', async () => {
+    test('a replacement policy committing the same geometry still writes the CSS box', async () => {
       vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application } = await loadHarness();
-      const parent = document.createElement('div');
-      const canvas = document.createElement('canvas');
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
+      const { canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
 
-      parent.style.display = 'grid';
-      parent.style.background = 'rgb(255, 0, 0)';
-      parent.appendChild(canvas);
+      expect(canvas.style.width).toBe('400px');
 
-      const app = new Application({ canvas: { element: canvas, sizingMode: 'letterbox' }, backend: { type: 'webgl2' } });
+      // Detaching clears the box, so the incoming policy's identical commit is
+      // a change even though the number did not move.
+      app.sizing = new FixedResolutionCanvasSizing();
 
-      expect(parent.style.display).toBe('flex');
+      expect(canvas.style.width).toBe('400px');
+      expect(canvas.style.height).toBe('300px');
+    });
 
-      app.sizingMode = 'fixed';
+    test('a detached policy takes its CSS box with it', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, ManualCanvasSizing, ResponsiveCanvasSizing } = await loadHarness();
+      const { canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new ResponsiveCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
 
-      // Properties that had an inline value keep it; ones that did not are gone
-      // again rather than left at the engine's value.
-      expect(parent.style.display).toBe('grid');
-      expect(parent.style.background).toBe('rgb(255, 0, 0)');
-      expect(parent.style.alignItems).toBe('');
-      expect(parent.style.justifyContent).toBe('');
-      expect(parent.style.overflow).toBe('');
+      expect(canvas.style.width).toBe('400px');
+
+      app.sizing = new ManualCanvasSizing();
+
+      expect(canvas.style.width).toBe('');
+      expect(canvas.style.height).toBe('');
     });
   });
 
@@ -808,45 +964,34 @@ describe('Application lifecycle / getters / sizing', () => {
       }
     });
 
-    test('restores the parent styles "letterbox" overwrote, and only those', async () => {
+    test('leaves the parent element untouched throughout', async () => {
       vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application } = await loadHarness();
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
       const parent = document.createElement('div');
       const canvas = document.createElement('canvas');
 
       parent.style.overflow = 'scroll';
-      // A property the engine never writes - it must survive teardown untouched,
-      // which a blanket `parent.style.cssText = ''` reset would not manage.
       parent.style.border = '2px solid rgb(0, 0, 0)';
       parent.appendChild(canvas);
+      Object.defineProperty(parent, 'clientWidth', { value: 400, configurable: true });
+      Object.defineProperty(parent, 'clientHeight', { value: 400, configurable: true });
 
-      const app = new Application({ canvas: { element: canvas, sizingMode: 'letterbox' }, backend: { type: 'webgl2' } });
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
 
-      expect(parent.style.overflow).toBe('hidden');
+      // Fitting a 4:3 canvas into a square host leaves the parent with unused
+      // space, and how that space looks is the page's business, not ours.
+      expect(parent.style.display).toBe('');
+      expect(parent.style.background).toBe('');
+      expect(parent.style.overflow).toBe('scroll');
 
       void app.destroy();
 
       expect(parent.style.overflow).toBe('scroll');
-      expect(parent.style.display).toBe('');
-      expect(parent.style.background).toBe('');
       expect(parent.style.border).toBe('2px solid rgb(0, 0, 0)');
-    });
-
-    test('is idempotent — a second destroy() does not re-touch the parent', async () => {
-      vi.stubGlobal('ResizeObserver', MockResizeObserver);
-      const { Application } = await loadHarness();
-      const parent = document.createElement('div');
-      const canvas = document.createElement('canvas');
-
-      parent.appendChild(canvas);
-
-      const app = new Application({ canvas: { element: canvas, sizingMode: 'letterbox' }, backend: { type: 'webgl2' } });
-
-      void app.destroy();
-      parent.style.display = 'grid';
-      void app.destroy();
-
-      expect(parent.style.display).toBe('grid');
+      expect(parent.style.display).toBe('');
     });
   });
 
@@ -883,10 +1028,10 @@ describe('Application lifecycle / getters / sizing', () => {
   });
 
   // -------------------------------------------------------------------------
-  // _backingStoreToDesign
+  // _backingStoreToLogical
   // -------------------------------------------------------------------------
 
-  describe('_backingStoreToDesign', () => {
+  describe('_backingStoreToLogical', () => {
     test('falls back to a 1px backing size when canvas.width/height are 0', async () => {
       const { Application } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' }, canvas: { width: 800, height: 600 } });
@@ -894,7 +1039,7 @@ describe('Application lifecycle / getters / sizing', () => {
       app.canvas.width = 0;
       app.canvas.height = 0;
 
-      const point = app._backingStoreToDesign(10, 20);
+      const point = app._backingStoreToLogical(10, 20);
 
       // backingWidth/backingHeight fall back to 1 -> straight multiply by design size.
       expect(point.x).toBe(10 * 800);
@@ -906,7 +1051,7 @@ describe('Application lifecycle / getters / sizing', () => {
       const app = new Application({ backend: { type: 'webgl2' }, canvas: { width: 800, height: 600, pixelRatio: 2 } });
 
       // backing store is 1600x1200 at pixelRatio 2; the center maps to the design center.
-      const point = app._backingStoreToDesign(800, 600);
+      const point = app._backingStoreToLogical(800, 600);
 
       expect(point.x).toBeCloseTo(400, 5);
       expect(point.y).toBeCloseTo(300, 5);

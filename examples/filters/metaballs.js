@@ -1,5 +1,5 @@
 // Auto-generated from metaballs.ts - edit the .ts source, not this file.
-import { Application, BlurFilter, Color, Graphics, Scene, ShaderFilter } from '@codexo/exojs';
+import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Graphics, Scene, ShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Threshold pass: render solid cyan where the (blurred) red field is dense
 // enough, with a smooth edge. The blur in front of this builds the scalar field
@@ -59,7 +59,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

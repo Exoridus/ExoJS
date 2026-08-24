@@ -1,5 +1,5 @@
 // Auto-generated from custom-fragment-shader.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const HUE_RAMP = assets.technical.color.hueRamp;
 const glsl = `#version 300 es
@@ -50,7 +50,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

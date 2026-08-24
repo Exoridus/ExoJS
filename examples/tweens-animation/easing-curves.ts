@@ -1,4 +1,4 @@
-import { Application, Color, Ease, Graphics, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
+import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 
@@ -157,7 +157,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(18, 21, 30),
 });

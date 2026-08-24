@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, type AudioStream, Color, Graphics, Keyboard, type RenderingContext, Scene, Sprite, Text, type Texture } from '@codexo/exojs';
+import { Application, Asset, Assets, type AudioStream, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Sprite, Text, type Texture } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // #region guide:catalog-declare
@@ -189,7 +189,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

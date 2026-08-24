@@ -1,5 +1,5 @@
 // Auto-generated from render-pipeline.ts - edit the .ts source, not this file.
-import { Application, BlurFilter, CallbackRenderPass, Color, Container, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, CallbackRenderPass, Color, Container, FixedResolutionCanvasSizing, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 // A composable frame, configured once: the world renders off-screen, a blur step turns it into its
 // blurred version, a composite step draws that to the screen, and a nested UI pipeline overlays a HUD.
 // The blur step toggles on and off via `pass.enabled`; the off-screen targets track the canvas size.
@@ -85,7 +85,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

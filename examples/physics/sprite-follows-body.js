@@ -1,5 +1,5 @@
 // Auto-generated from sprite-follows-body.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Scene, Sprite, Spritesheet, SystemOrder, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Sprite, Spritesheet, SystemOrder, Vector } from '@codexo/exojs';
 import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';
 // The minimal physics binding: `world.attach(node, { ... })` builds a body +
@@ -97,7 +97,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(18, 22, 33),
 });

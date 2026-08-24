@@ -1,4 +1,4 @@
-import { Application, Color, Geometry, Matrix, RenderBatch, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Geometry, Matrix, RenderBatch, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 
@@ -240,7 +240,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(6, 9, 18, 1),
 });

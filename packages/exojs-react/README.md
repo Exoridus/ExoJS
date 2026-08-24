@@ -89,11 +89,14 @@ render `backend` (WebGL2 ↔ WebGPU cannot be hot-swapped). Other supported opti
 are applied **live**:
 
 - `canvas.width` / `canvas.height` → `app.resize(...)`
-- `canvas.sizingMode` → `app.sizingMode`
 - `clearColor` → `app.clearColor`
 
 Options without a live setter (`canvas.pixelRatio`, `seed`, `extensions`, …) are
 captured at creation; change the `backend` or remount to apply them.
+
+`canvas.sizing` is captured at creation as well: a sizing policy is an object, so
+a fresh instance on every render would detach and re-attach the previous one each
+time. Assign `app.sizing` yourself to switch strategies at runtime.
 
 ## License
 

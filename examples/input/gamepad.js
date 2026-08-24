@@ -1,5 +1,5 @@
 // Auto-generated from gamepad.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Container, GamepadAxis, GamepadButton, lerp, Scene, Spritesheet, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, GamepadAxis, GamepadButton, lerp, Scene, Spritesheet, Vector } from '@codexo/exojs';
 class GamepadScene extends Scene {
     activePad = null;
     buttons;
@@ -219,7 +219,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

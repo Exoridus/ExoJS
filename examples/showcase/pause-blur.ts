@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, Keyboard, Label, Panel, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Keyboard, Label, Panel, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 
@@ -88,7 +88,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(20, 24, 34),
     loader: {

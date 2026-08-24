@@ -67,40 +67,132 @@ init() {
 
 Either approach works — poll in `update` for small scenes, react to `onResize` when re-layout is expensive.
 
-## Sizing modes
+## Sizing policies
 
-The manual `app.resize` + `onResize` pattern above works well when you compute the size yourself. For the common cases — filling a container, scaling a fixed-resolution canvas to fit, or letterboxing — pass `canvas.sizingMode` instead and let the application manage the CSS and `ResizeObserver` for you:
+The manual `app.resize` + `onResize` pattern above works well when you compute the size yourself. For the common cases — scaling a fixed-resolution canvas to its container, letting the render resolution follow the display, or taking over the container entirely — pass a `canvas.sizing` policy instead and let it manage the CSS and its own `ResizeObserver` for you:
 
 ```ts
-import { Application } from '@codexo/exojs';
+import { Application, CappedResolutionCanvasSizing } from '@codexo/exojs';
 
 const app = new Application({
-    canvas: { width: 320, height: 240, sizingMode: 'letterbox' },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizing: new CappedResolutionCanvasSizing(),
+    },
 });
 ```
 
-<Callout type="hint" title="sizingMode is live, not just a constructor option">
-Assign `app.sizingMode` at any time to switch strategies on the fly — swap to `'fill'` when the player enters fullscreen and back to `'fixed'` on exit, with no other code changes.
+`canvas.width` and `canvas.height` are the **base resolution**: the resolution you author against, the aspect ratio the policies preserve, and the cap they measure their render resolution against. Three things are derived from it, and they are deliberately separate:
+
+- the **CSS size** — how large the canvas appears on the page;
+- the **logical size** — `app.width` / `app.height`, the coordinates you position nodes in;
+- the **backing store** — `app.canvas.width` / `app.canvas.height`, the pixels the GPU actually draws.
+
+| Sizing | CSS size | Logical view | Backing store | Typical use |
+| --- | --- | --- | --- | --- |
+| *(omitted)* | base, fixed | base, fixed | base × DPR | A canvas of an exact size, on a page that lays out around it. |
+| `FixedResolutionCanvasSizing` | scales to fit the parent | base, fixed | base × DPR | Retro / pixel-art rendering, or any constant per-frame GPU cost. |
+| `CappedResolutionCanvasSizing` | scales to fit the parent | base, fixed | follows the display down to smaller, never above base × DPR | The balanced responsive default. |
+| `ResponsiveCanvasSizing` | the whole parent | adapts to the parent's aspect | display size × DPR | Full-bleed layouts that should show more world, not bars. |
+| `ManualCanvasSizing` | left to the page | set through `app.resize` | set through `app.resize` | A framework-managed layout or a worker-hosted surface. |
+
+Omitting `sizing` is the fixed case, so there is no class to pass for it and no observer is created. The three document-based policies each own exactly one `ResizeObserver` on the canvas's parent element, so they need the canvas to be mounted — pass `canvas.mount`, or append your own element before constructing the `Application`.
+
+<Callout type="hint" title="ExoJS never restyles your container">
+A policy measures the parent element and sizes the canvas inside it. It never writes to the parent's own styles, so centring, background and page layout stay yours — including the area left over when a fixed-aspect canvas does not fill a differently proportioned container.
 </Callout>
 
-- `'fixed'` (default) — exact pixel size, no responsive behavior.
-- `'fill'` — observes the parent element and calls `app.resize(...)` to match its size exactly.
-- `'fit'` / `'shrink'` — CSS-scales the fixed-resolution canvas to fit its container via `object-fit: contain`; `'fit'` always fills the available space, `'shrink'` never scales up past 100%.
-- `'letterbox'` — keeps the design-space render target fixed and centers it in the parent at native resolution, with the parent background showing through as bars around it.
+### Responsive views and `minAspect`
 
-`sizingMode` is also a live, runtime-settable property — not just a constructor option. Assigning `app.sizingMode` re-applies the strategy immediately: it disconnects any previous `ResizeObserver` and installs the new mode's CSS/observer. That makes it easy to switch strategies in response to user actions, for example filling the screen on fullscreen entry and returning to a fixed size on exit:
+`ResponsiveCanvasSizing` is the only built-in whose logical view changes shape. Rather than letterboxing a fixed view inside the parent, it keeps the base view visible and opens up the axis the host has spare. With a base of `1280×720`:
+
+- a 16:9 host renders `1280×720`;
+- a 21:9 host renders `1680×720` — the same height, more world left and right;
+- a 4:3 host renders `1280×960` — the same width, more world above and below.
+
+Nothing is stretched and nothing is cropped, but on a tall phone screen "more world above and below" can become a very tall view. `minAspect` sets how far the view may narrow horizontally before the extra space goes vertical instead:
 
 ```ts
-import { Application } from '@codexo/exojs';
+import { Application, ResponsiveCanvasSizing } from '@codexo/exojs';
 
 const app = new Application({
-    canvas: { width: 800, height: 600 },
+    canvas: {
+        width: 1280,
+        height: 720,
+        mount: document.body,
+        sizing: new ResponsiveCanvasSizing({ minAspect: 1 }),
+    },
+});
+```
+
+With `minAspect: 1` the view narrows down to a square (`720×720`) as the host gets narrower, and only below that does it start growing vertically. The default is the base aspect ratio, which never crops anything.
+
+### Switching at runtime
+
+`app.sizing` is a live property, not just a constructor option. Assigning detaches the previous policy — releasing its observer and clearing the CSS box it wrote — and attaches the new one:
+
+```ts
+import { Application, ResponsiveCanvasSizing } from '@codexo/exojs';
+
+const app = new Application({
+    canvas: { width: 1280, height: 720, mount: document.body },
 });
 
 document.addEventListener('fullscreenchange', () => {
-    app.sizingMode = document.fullscreenElement ? 'fill' : 'fixed';
+    app.sizing = document.fullscreenElement ? new ResponsiveCanvasSizing() : null;
 });
 ```
+
+### Writing your own
+
+`CanvasSizing` is a public base class, so a layout that none of the built-ins describe — an editor panel, a safe-area inset, a web component, a breakpoint-driven view — is a policy of your own:
+
+```ts
+import { CanvasSizing, type CanvasSizingContext } from '@codexo/exojs';
+
+class HalfHeightCanvasSizing extends CanvasSizing {
+    private observer: ResizeObserver | null = null;
+
+    override attach(context: CanvasSizingContext): void {
+        const host = context.host;
+
+        if (host === null) return;
+
+        const commit = (): void => {
+            const width = host.clientWidth;
+            const height = host.clientHeight / 2;
+
+            context.apply({
+                cssWidth: width,
+                cssHeight: height,
+                logicalWidth: context.baseWidth,
+                logicalHeight: context.baseHeight,
+                renderWidth: width,
+                renderHeight: height,
+            });
+        };
+
+        commit();
+        this.observer = new ResizeObserver(commit);
+        this.observer.observe(host);
+    }
+
+    override detach(): void {
+        this.observer?.disconnect();
+        this.observer = null;
+    }
+}
+```
+
+`context.apply()` is the only channel into the application: it resizes the backing store (`renderWidth × pixelRatio`), writes the CSS box, moves the logical coordinate system and dispatches `onResize`. `detach()` has to release everything `attach()` created — the application calls it when the policy is replaced and when it is destroyed.
+
+Offscreen capture is unaffected by any of this: `context.capture(node, { width, height })` renders into a `RenderTexture` of exactly the size you ask for, whatever the canvas is currently doing.
+
+<Callout type="pitfall" title="OffscreenCanvas has no parent to measure">
+The three document-based policies need a canvas element in a document and reject an `OffscreenCanvas` outright. A worker-hosted surface is sized by its host: pass no policy for a fixed surface, or `ManualCanvasSizing` and drive `app.resize()` from whatever the host sends over.
+</Callout>
 
 ## Example
 

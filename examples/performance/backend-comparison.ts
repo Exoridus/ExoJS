@@ -1,4 +1,4 @@
-import { Application, Color, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const options = {
@@ -6,7 +6,7 @@ const options = {
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit' as const,
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

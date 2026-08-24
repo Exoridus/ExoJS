@@ -49,7 +49,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Existing surface to render into. If omitted, Application creates a canvas element - and a canvas it created is also one it removes from the document again in Application.destroy. A surface passed in here stays yours: it is left untouched when the application goes down. An OffscreenCanvas is accepted and makes the application surface-only: it has no layout box, no styling and no events, so mount, sizingMode, tabIndex and imageRendering do not apply, and the host has to supply its own ApplicationOptions.platform affordances for input. See OffscreenPlatform."
+          "description": "Existing surface to render into. If omitted, Application creates a canvas element - and a canvas it created is also one it removes from the document again in Application.destroy. A surface passed in here stays yours: it is left untouched when the application goes down. An OffscreenCanvas is accepted and makes the application surface-only: it has no layout box, no styling and no events, so mount, tabIndex and imageRendering do not apply, the document-based sizing policies reject it, and the host has to supply its own ApplicationOptions.platform affordances for input. See OffscreenPlatform."
         },
         {
           "name": "height",
@@ -74,7 +74,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Logical canvas height. Default: 600."
+          "description": "Base (design) resolution in logical pixels. See CanvasApplicationOptions.width. Default: 600."
         },
         {
           "name": "imageRendering",
@@ -176,11 +176,11 @@
           "description": "Device/render pixel ratio applied to the backing buffer. Default: the host devicePixelRatio clamped to 2 (crisp on Retina/HiDPI out of the box, capped so DPR-3 phones don't pay a 9× fill-rate cost). Pass an explicit value to override - e.g. window.devicePixelRatio for full native density, or 1 to force logical-pixel rendering."
         },
         {
-          "name": "sizingMode",
-          "signature": "sizingMode?: CanvasSizingMode",
+          "name": "sizing",
+          "signature": "sizing?: CanvasSizing",
           "signatureTokens": [
             {
-              "text": "sizingMode",
+              "text": "sizing",
               "kind": "name"
             },
             {
@@ -192,13 +192,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "CanvasSizingMode",
+              "text": "CanvasSizing",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "How the canvas is sized within its parent (needs a parent via mount, or an element already in the DOM): - 'fixed' (default): exactly width×height. - 'fill': track the parent's size via ResizeObserver and re-render to fill it; width/height are the initial size. - 'fit': render at width×height and CSS-scale to fit the parent, preserving aspect ratio (letterboxed). - 'shrink': like 'fit' but never upscale beyond width×height - shrinks on smaller screens, stays native on larger ones. - 'letterbox': track the parent's size, render the backing store at the parent size × pixelRatio (always crisp, no CSS upscale-blur), and keep the camera locked to the fixed width×height design space, centered and letterboxed with bars (no crop, no stretch). The \"author once at a reference resolution\" model."
+          "description": "Strategy that keeps the canvas in step with its surroundings. Omit it for a canvas that stays at width × height for good, in CSS pixels and in backing-store pixels alike, and observes nothing. The built-in policies - FixedResolutionCanvasSizing, CappedResolutionCanvasSizing, ResponsiveCanvasSizing and ManualCanvasSizing - cover the usual cases; CanvasSizing is the public base class for anything else. Each instance owns its own observers, so nothing is attached for a policy that tracks nothing. An instance belongs to one application: it is attached here and detached again when Application.sizing is reassigned or the application is destroyed. The document-based policies need a canvas element with a parent, which for a canvas created by the engine means mount has to be given too."
         },
         {
           "name": "tabIndex",
@@ -248,7 +248,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Logical canvas width. Default: 800."
+          "description": "Base (design) resolution in logical pixels, and with it the base aspect ratio. Default: 800. This is the resolution the application is authored against: the logical coordinate system starts here, CanvasApplicationOptions.sizing measures its resolution caps against it, and it is the size a canvas with no sizing policy keeps for good."
         }
       ],
       "paragraphs": [],

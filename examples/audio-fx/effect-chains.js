@@ -1,5 +1,5 @@
 // Auto-generated from effect-chains.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Graphics, HighpassFilter, Keyboard, LowpassFilter, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, HighpassFilter, Keyboard, LowpassFilter, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser, AutoWahEffect, BitCrusherEffect, ChorusEffect, CompressorEffect, ConvolutionEffect, DistortionEffect, EqualizerEffect, FlangerEffect, GranularEffect, LimiterEffect, PhaserEffect, PingPongDelayEffect, PitchShiftEffect, ReverbEffect, RingModulatorEffect, TremoloEffect, } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 // Ten fixed chains. Order matters inside each one: the chain is wired
@@ -308,7 +308,7 @@ const application = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

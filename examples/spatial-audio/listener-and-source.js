@@ -1,5 +1,5 @@
 // Auto-generated from listener-and-source.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Spatial parameters tuned to the canvas so attenuation is visible across the
 // wide 1280px canvas. These mirror the Web Audio `linear` model (see
@@ -125,7 +125,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

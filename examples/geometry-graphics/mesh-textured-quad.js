@@ -1,5 +1,5 @@
 // Auto-generated from mesh-textured-quad.ts - edit the .ts source, not this file.
-import { Application, Color, Mesh, Scene } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Mesh, Scene } from '@codexo/exojs';
 const UV_GRID = assets.technical.filtering.uvGrid256;
 const HALF = 300;
 class MeshTexturedQuadScene extends Scene {
@@ -37,7 +37,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

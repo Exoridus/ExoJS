@@ -1,5 +1,5 @@
 // Auto-generated from gamepad-spaceship.ts - edit the .ts source, not this file.
-import { Application, AudioGenerator, Color, GamepadAxis, GamepadButton, Graphics, Scene, Sprite, Text, Vector } from '@codexo/exojs';
+import { Application, AudioGenerator, Color, FixedResolutionCanvasSizing, GamepadAxis, GamepadButton, Graphics, Scene, Sprite, Text, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, BurstSpawn, ConeDirection, Constant, particlesExtension, ParticleSystem, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 class GamepadSpaceshipScene extends Scene {
@@ -169,7 +169,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(8, 10, 18),
     extensions: [particlesExtension],

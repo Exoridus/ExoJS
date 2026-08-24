@@ -1,5 +1,5 @@
 // Auto-generated from render-to-texture.ts - edit the .ts source, not this file.
-import { Application, Color, Container, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 class RenderToTextureScene extends Scene {
     container;
     renderTexture;
@@ -43,7 +43,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

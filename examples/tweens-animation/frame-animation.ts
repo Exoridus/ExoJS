@@ -1,4 +1,4 @@
-import { AnimatedSprite, Application, Asset, Color, type RenderingContext, Scene, Spritesheet, type SpritesheetData } from '@codexo/exojs';
+import { AnimatedSprite, Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Spritesheet, type SpritesheetData } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 
@@ -50,7 +50,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

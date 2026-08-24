@@ -1,4 +1,4 @@
-import { Application, Color, type RenderingContext, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Sprite } from '@codexo/exojs';
 
 // A scene-less Application: no Scene is ever registered or started. All
 // frame work happens through a single app-level system - useful for utility
@@ -11,7 +11,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(18, 22, 33),
 });

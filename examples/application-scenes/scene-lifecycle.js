@@ -1,5 +1,5 @@
 // Auto-generated from scene-lifecycle.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, Text, Time, Timer } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Text, Time, Timer } from '@codexo/exojs';
 // The scene lifecycle hooks, in the order the engine calls them:
 //   - `async load()`   - one-shot async setup, called once before `init()`.
 //                        Fetch/await assets here (`await this.loader.load(...)`),
@@ -66,7 +66,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

@@ -1,4 +1,4 @@
-import { Application, Asset, AudioStream, Color, type RenderingContext, Scene, Sprite, Text, type Time, View, type Voice } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Text, type Time, View, type Voice } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -77,7 +77,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(22, 24, 34),
 });

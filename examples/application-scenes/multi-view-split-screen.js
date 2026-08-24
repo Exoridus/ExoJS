@@ -1,5 +1,5 @@
 // Auto-generated from multi-view-split-screen.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Keyboard, Scene, Sprite, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite, View } from '@codexo/exojs';
 class SplitScreenScene extends Scene {
     texture;
     leftView;
@@ -104,7 +104,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

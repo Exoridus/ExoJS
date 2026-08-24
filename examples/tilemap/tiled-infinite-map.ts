@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Keyboard, type RenderingContext, Scene, type Time, View } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Time, View } from '@codexo/exojs';
 import { tiledExtension } from '@codexo/exojs-tiled';
 import { ChunkStreamer, TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
@@ -125,7 +125,7 @@ class TiledInfiniteMapScene extends Scene {
 
 const app = new Application({
     scenes: { TiledInfiniteMapScene },
-    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
+    canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
     clearColor: new Color(38, 82, 128), // deep-water blue behind unauthored/unloaded chunks
     // tiledExtension depends on tilemapExtension, so registering it alone is
     // enough for both loading (.tmj) and rendering (TileMapNode).

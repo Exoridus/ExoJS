@@ -1,6 +1,6 @@
 {
   "title": "PlatformSurfaceMetrics",
-  "description": "Geometry of the drawing surface, in one snapshot. `left`/`top`/`width`/ `height` describe where the surface is displayed and how large it appears; `backingWidth`/`backingHeight` are the resolution it is actually rendered at. The two differ whenever the surface is scaled for display (a CSS-scaled canvas, a device-pixel-ratio above 1, a letterboxed layout), which is exactly what pointer coordinates have to be mapped through.",
+  "description": "Geometry of the drawing surface, in one snapshot. `left`/`top`/`width`/ `height` describe where the surface is displayed and how large it appears; `backingWidth`/`backingHeight` are the resolution it is actually rendered at. The two differ whenever the surface is scaled for display (a CSS-scaled canvas, a device-pixel-ratio above 1, a canvas held at a fixed resolution inside a larger host), which is exactly what pointer coordinates have to be mapped through.",
   "symbol": "PlatformSurfaceMetrics",
   "kind": "interface",
   "subsystem": "core",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Geometry of the drawing surface, in one snapshot. `left`/`top`/`width`/ `height` describe where the surface is displayed and how large it appears; `backingWidth`/`backingHeight` are the resolution it is actually rendered at.",
-        "The two differ whenever the surface is scaled for display (a CSS-scaled canvas, a device-pixel-ratio above 1, a letterboxed layout), which is exactly what pointer coordinates have to be mapped through."
+        "The two differ whenever the surface is scaled for display (a CSS-scaled canvas, a device-pixel-ratio above 1, a canvas held at a fixed resolution inside a larger host), which is exactly what pointer coordinates have to be mapped through."
       ],
       "importLine": "import { PlatformSurfaceMetrics } from '@codexo/exojs'",
       "sourceLink": null

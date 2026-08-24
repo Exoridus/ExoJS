@@ -685,7 +685,7 @@ describe('ActionMap × InputManager lifecycle', () => {
       height: 600,
       pixelRatio: 1,
       options: { input: {} },
-      _backingStoreToDesign: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+      _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
     } as unknown as Application;
 
     return new InputManager(app);

@@ -1,5 +1,5 @@
 // Auto-generated from stroke-and-shadow.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
 class StrokeAndShadowScene extends Scene {
     title;
     init() {
@@ -29,7 +29,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(24, 28, 42),
     loader: {

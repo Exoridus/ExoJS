@@ -1,5 +1,5 @@
 // Auto-generated from action-mapping.ts - edit the .ts source, not this file.
-import { Application, Color, GamepadAxis, GamepadButton, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, GamepadAxis, GamepadButton, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // The lesson: bind several *physical* inputs to a few *named actions*, then read
 // only the actions in the update loop. Keyboard and gamepad feed the same
@@ -77,7 +77,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(10, 12, 20),
     loader: {

@@ -218,7 +218,7 @@
           ],
           "params": [],
           "returnType": "Promise<void>",
-          "description": "Tear down every owned subsystem (loader, the core managers - input, interaction, audio, tweens, animations, rendering - the app system registry, backend, scene director, all clocks, all signals) and release event listeners. The application instance is unusable after this call. The page is left as it was found: any inline styles 'letterbox' sizing wrote onto the canvas's parent element are restored to their previous values (and only those - nothing else on the element is touched), and a canvas the engine created itself is removed from the document. A canvas supplied through canvas.element belongs to the caller and stays in place. Fires the RAF halt synchronously (so no further frame runs after this call returns) and returns a Promise that fulfils once the rest of teardown has run: scenes - including every retained and preloaded scope, and any scene's own async unload() - is fully disposed FIRST, before the Loader, rendering context, audio manager, or backend are destroyed, so a scene's teardown code never touches an already-destroyed dependency. This intentionally does not route through the public Application.stop, which fire-and-forgets its own scene-clear - that would race against scenes._dispose()'s own active-scope teardown for ownership of the same scope. destroy() instead halts the frame loop directly and lets scenes._dispose() own scene teardown entirely. destroy() called right after a stop() is covered by the same guarantee, not an exception to it: the scene teardown stop() fired and did not await is published on the director, and scenes._dispose() waits for it - including a still-pending Scene.unload() - before any dependency is destroyed. Every extension goes down with the application: the disposers Extension.install returned run in reverse installation order, after scene teardown and before any subsystem they might still reach for is released. An extension's lifetime is exactly this application's - there is no uninstall short of it. The returned Promise **never rejects**: teardown failures go to Application.onError and the log, exactly as they did when this was a fire-and-forget chain, and the remaining stages still run. Awaiting it therefore means \"teardown is over\", not \"teardown succeeded\" - which is what a caller reusing the canvas or asserting on released resources needs. Scene teardown is bounded: if scenes._dispose() has not settled within the grace period the engine reports a timeout and releases everything else anyway, rather than leaving the whole application pinned by one scene whose unload() never resolves. A scene that wants to cooperate with this should watch Scene.lifecycleSignal, which is aborted when its teardown begins. Idempotent: every call after the first returns the same Promise as the first and starts no second teardown. Application.state is Destroying while the returned Promise is pending and Destroyed afterwards."
+          "description": "Tear down every owned subsystem (loader, the core managers - input, interaction, audio, tweens, animations, rendering - the app system registry, backend, scene director, all clocks, all signals) and release event listeners. The application instance is unusable after this call. The page is left as it was found: the active sizing policy is detached, so its observers go and the CSS box it wrote is cleared, and a canvas the engine created itself is removed from the document. A canvas supplied through canvas.element belongs to the caller and stays in place, as does every element around it - no sizing policy ever styles the page itself. Fires the RAF halt synchronously (so no further frame runs after this call returns) and returns a Promise that fulfils once the rest of teardown has run: scenes - including every retained and preloaded scope, and any scene's own async unload() - is fully disposed FIRST, before the Loader, rendering context, audio manager, or backend are destroyed, so a scene's teardown code never touches an already-destroyed dependency. This intentionally does not route through the public Application.stop, which fire-and-forgets its own scene-clear - that would race against scenes._dispose()'s own active-scope teardown for ownership of the same scope. destroy() instead halts the frame loop directly and lets scenes._dispose() own scene teardown entirely. destroy() called right after a stop() is covered by the same guarantee, not an exception to it: the scene teardown stop() fired and did not await is published on the director, and scenes._dispose() waits for it - including a still-pending Scene.unload() - before any dependency is destroyed. Every extension goes down with the application: the disposers Extension.install returned run in reverse installation order, after scene teardown and before any subsystem they might still reach for is released. An extension's lifetime is exactly this application's - there is no uninstall short of it. The returned Promise **never rejects**: teardown failures go to Application.onError and the log, exactly as they did when this was a fire-and-forget chain, and the remaining stages still run. Awaiting it therefore means \"teardown is over\", not \"teardown succeeded\" - which is what a caller reusing the canvas or asserting on released resources needs. Scene teardown is bounded: if scenes._dispose() has not settled within the grace period the engine reports a timeout and releases everything else anyway, rather than leaving the whole application pinned by one scene whose unload() never resolves. A scene that wants to cooperate with this should watch Scene.lifecycleSignal, which is aborted when its teardown begins. Idempotent: every call after the first returns the same Promise as the first and starts no second teardown. Application.state is Destroying while the returned Promise is pending and Destroyed afterwards."
         },
         {
           "name": "resize",
@@ -286,7 +286,7 @@
             }
           ],
           "returnType": "this",
-          "description": "Resize the canvas and the active backend's root render target. Dispatches Application.onResize after the backend has been notified."
+          "description": "Set a new base resolution and re-derive the canvas geometry from it. With no sizing policy this is the whole story: the logical view, the CSS box and the backing store all move to width x height (the last one times pixelRatio), and Application.onResize reports the new logical size. It is also the seam an externally sized host drives through under ManualCanvasSizing, where the CSS box stays the page's. Under a policy that tracks its surroundings the base resolution is a reference rather than a result: the policy is re-attached and immediately commits the geometry the host actually calls for, so the logical size that ends up dispatched need not be the one passed here."
         },
         {
           "name": "screenToWorld",
@@ -1406,7 +1406,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Logical (design-space) canvas height. See Application.width."
+          "description": "Height of the logical coordinate system. See Application.width."
         },
         {
           "name": "pixelRatio",
@@ -1427,7 +1427,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Device/render pixel ratio applied to the backing buffer. Defaults to the host devicePixelRatio clamped to 2 (crisp on HiDPI out of the box, but capped to avoid a runaway fill-rate cost on DPR-3 phones) unless an explicit canvas.pixelRatio option was given. Holds the invariant app.canvas.width === Math.round(app.width × app.pixelRatio) in every sizing mode except 'letterbox', where the backing store instead tracks the parent's fitted CSS content rect (contentWidthCss × pixelRatio, see computeLetterboxLayout) while Application.width stays fixed at the design size - the GL viewport is recomputed separately to map the design space onto that backing store."
+          "description": "Device pixels per CSS pixel the backing store is scaled by. Defaults to the host devicePixelRatio clamped to 2 - crisp on HiDPI out of the box, without the fill-rate cost a DPR-3 phone would otherwise pay - unless an explicit canvas.pixelRatio option was given. It converts a requested render resolution into backing-store pixels and nothing else. Which render resolution is requested is the sizing policy's decision, so app.canvas.width is pixelRatio times that resolution, not times Application.width: the two coincide only while the logical view and the render resolution are the same size."
         },
         {
           "name": "recentErrors",
@@ -1484,11 +1484,11 @@
           "description": "High-level rendering context. Routes scene drawing through the RenderPlan pipeline (build → optimize → play) and provides off-screen capture via RenderingContext.renderTo. Exposes the raw RenderBackend for advanced / custom-renderer use."
         },
         {
-          "name": "sizingMode",
-          "signature": "sizingMode: CanvasSizingMode",
+          "name": "sizing",
+          "signature": "sizing: CanvasSizing | null",
           "signatureTokens": [
             {
-              "text": "sizingMode",
+              "text": "sizing",
               "kind": "name"
             },
             {
@@ -1496,13 +1496,21 @@
               "kind": "punctuation"
             },
             {
-              "text": "CanvasSizingMode",
+              "text": "CanvasSizing",
               "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The active CanvasSizingMode. Assigning a new mode re-applies the sizing strategy live: the previous mode's ResizeObserver (if any) is disconnected, the CSS that mode owned is undone - including the parent element styling 'letterbox' applies, which is restored to whatever it was before - and only then is the new mode's CSS / observer installed, so no remnant of the outgoing mode survives the switch. Assigning the current value is a no-op."
+          "description": "The active sizing policy, or null when the canvas simply stays at the base resolution. Assigning swaps the strategy live: the outgoing policy is detached - its observers released and the CSS box it wrote cleared - the canvas returns to the base geometry, and only then is the new policy attached, so no remnant of the previous one survives the switch. Assigning the policy that is already active still detaches and re-attaches it, which is the supported way to make one re-read a host it cannot observe by itself. The application does not take ownership: a detached policy is left intact and can be attached again later."
         },
         {
           "name": "startupTime",
@@ -1565,7 +1573,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Logical (design-space) canvas width - the value passed as canvas.width at construction / resize, independent of pixelRatio. Use this for layout math (e.g. app.width / 2 to center) instead of app.canvas.width, which is the physical backing-store size (app.width × app.pixelRatio) and therefore larger on HiDPI displays."
+          "description": "Width of the logical coordinate system the application draws in - the space of node positions and pointer coordinates. Use it for layout math (app.width / 2 to centre) rather than app.canvas.width, which is the backing store in device pixels. Equal to the base resolution canvas.width unless a sizing policy derives a different view from the host, which is what ResponsiveCanvasSizing does. It is not the CSS size of the canvas, and it is not the backing store divided by pixelRatio: all three are separate axes. Application.onResize reports every change."
         }
       ],
       "paragraphs": [],
@@ -1881,7 +1889,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Fires whenever the canvas geometry changes, with the current logical width and height - the values Application.width/Application.height now report. Those two need not have moved: a policy that holds the logical view while the display size or the render resolution follows the host still dispatches, so a listener that caches something at the backing resolution has a signal to rebuild on. Read app.canvas.width/height for that resolution."
         },
         {
           "name": "onVisibilityChange",
