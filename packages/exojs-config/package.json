@@ -20,7 +20,7 @@
   "dependencies": {
     "@codecov/rollup-plugin": "^2.0.1",
     "@codexo/exojs-build": "workspace:*",
-    "rolldown": "1.2.4"
+    "rolldown": "1.2.5"
   },
   "license": "MIT"
 }
