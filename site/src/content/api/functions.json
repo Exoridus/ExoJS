@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 39,
+  "memberCount": 40,
   "counts": {
     "constructors": 0,
-    "methods": 30,
+    "methods": 31,
     "properties": 9,
     "events": 0
   },
@@ -1103,6 +1103,53 @@
           "params": [],
           "returnType": "boolean",
           "description": "Return true if the global AudioContext has been created and is currently in the running state. Safe to call before getAudioContext; returns false if no context exists yet."
+        },
+        {
+          "name": "isDomCanvas",
+          "signature": "isDomCanvas(surface: RenderSurface): surface",
+          "signatureTokens": [
+            {
+              "text": "isDomCanvas",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "surface",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderSurface",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "surface",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "surface",
+              "type": "RenderSurface",
+              "optional": false
+            }
+          ],
+          "returnType": "surface",
+          "description": "Whether surface is a canvas element in a document, and so carries the DOM affordances (style, layout box, event target, parent element) that an OffscreenCanvas does not. Realm-safe: HTMLCanvasElement is not defined in a worker, where the answer is always false."
         },
         {
           "name": "isPowerOfTwo",

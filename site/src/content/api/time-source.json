@@ -1,0 +1,80 @@
+{
+  "title": "TimeSource",
+  "description": "A monotonic millisecond clock. Values are only meaningful relative to each other: the origin is the host's, never the wall clock, and the source never jumps backwards when the system clock is adjusted. This is the seam every runtime clock reads instead of a global `performance.now()`, which is what makes a deterministic time source possible in tests. PlatformAdapter is one, so an adapter can be handed straight to Clock.",
+  "symbol": "TimeSource",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A monotonic millisecond clock. Values are only meaningful relative to each other: the origin is the host's, never the wall clock, and the source never jumps backwards when the system clock is adjusted.",
+        "This is the seam every runtime clock reads instead of a global `performance.now()`, which is what makes a deterministic time source possible in tests. PlatformAdapter is one, so an adapter can be handed straight to Clock."
+      ],
+      "importLine": "import { TimeSource } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "now",
+          "signature": "now(): number",
+          "signatureTokens": [
+            {
+              "text": "now",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "number",
+          "description": "Milliseconds elapsed since this source's own origin."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformAdapter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformAdapter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+}

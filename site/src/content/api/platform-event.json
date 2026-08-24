@@ -1,0 +1,109 @@
+{
+  "title": "PlatformEvent",
+  "description": "The part of a host event the input pipeline can act on: suppressing the host's own default handling of it. Both calls are the DOM's, and a real `Event` satisfies this interface as it is - the browser's events cross the seam untouched, with no wrapper and no copy. What the interface adds is that an adapter with no DOM behind it can satisfy the same contract with a plain object, which a DOM event class could never be reconstructed as on the far side of a `postMessage`.",
+  "symbol": "PlatformEvent",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The part of a host event the input pipeline can act on: suppressing the host's own default handling of it.",
+        "Both calls are the DOM's, and a real `Event` satisfies this interface as it is - the browser's events cross the seam untouched, with no wrapper and no copy. What the interface adds is that an adapter with no DOM behind it can satisfy the same contract with a plain object, which a DOM event class could never be reconstructed as on the far side of a `postMessage`."
+      ],
+      "importLine": "import { PlatformEvent } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "preventDefault",
+          "signature": "preventDefault(): void",
+          "signatureTokens": [
+            {
+              "text": "preventDefault",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        },
+        {
+          "name": "stopImmediatePropagation",
+          "signature": "stopImmediatePropagation(): void",
+          "signatureTokens": [
+            {
+              "text": "stopImmediatePropagation",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformAdapter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformAdapter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+}

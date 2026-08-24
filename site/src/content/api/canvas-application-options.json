@@ -28,7 +28,7 @@
       "members": [
         {
           "name": "element",
-          "signature": "element?: HTMLCanvasElement",
+          "signature": "element?: RenderSurface",
           "signatureTokens": [
             {
               "text": "element",
@@ -43,13 +43,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "HTMLCanvasElement",
+              "text": "RenderSurface",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Existing canvas element to use. If omitted, Application creates one - and a canvas it created is also one it removes from the document again in Application.destroy. A canvas passed in here stays yours: it is left in the DOM untouched when the application goes down."
+          "description": "Existing surface to render into. If omitted, Application creates a canvas element - and a canvas it created is also one it removes from the document again in Application.destroy. A surface passed in here stays yours: it is left untouched when the application goes down. An OffscreenCanvas is accepted and makes the application surface-only: it has no layout box, no styling and no events, so mount, sizingMode, tabIndex and imageRendering do not apply, and the host has to supply its own ApplicationOptions.platform affordances for input. See OffscreenPlatform."
         },
         {
           "name": "height",

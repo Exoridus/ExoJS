@@ -21,3 +21,22 @@ export type RenderSurface = HTMLCanvasElement | OffscreenCanvas;
  */
 export const isDomCanvas = (surface: RenderSurface): surface is HTMLCanvasElement =>
   typeof HTMLCanvasElement !== 'undefined' && surface instanceof HTMLCanvasElement;
+
+/**
+ * The 2D context of either canvas kind, or `null` when the surface is already
+ * bound to a different context type.
+ *
+ * The branch is not redundant: `getContext` is overloaded per canvas kind, and
+ * calling it on the union collapses the result to the widest context type the
+ * host's DOM typings know.
+ */
+export const get2dContext = (surface: RenderSurface): CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null =>
+  isDomCanvas(surface) ? surface.getContext('2d') : surface.getContext('2d');
+
+/** The WebGL2 context of either canvas kind. See {@link get2dContext}. */
+export const getWebGl2Context = (surface: RenderSurface, attributes?: WebGLContextAttributes): WebGL2RenderingContext | null =>
+  isDomCanvas(surface) ? surface.getContext('webgl2', attributes) : surface.getContext('webgl2', attributes);
+
+/** The WebGPU context of either canvas kind. See {@link get2dContext}. */
+export const getWebGpuContext = (surface: RenderSurface): GPUCanvasContext | null =>
+  isDomCanvas(surface) ? surface.getContext('webgpu') : surface.getContext('webgpu');

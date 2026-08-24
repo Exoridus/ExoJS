@@ -1,3 +1,5 @@
+import { get2dContext } from '#platform/RenderSurface';
+
 /**
  * Generate a `Uint16Array` of indices for `size` axis-aligned quads.
  * Each quad is split into two triangles using vertex order `0-1-2, 0-2-3`,
@@ -58,7 +60,7 @@ export const createCanvas = (options: CreateCanvasOptions = {}): HTMLCanvasEleme
   const { canvas, fillStyle, width, height } = options;
 
   const newCanvas = canvas ?? createBlankCanvas(width ?? 10, height ?? 10);
-  const context = newCanvas.getContext('2d')!;
+  const context = get2dContext(newCanvas)!;
 
   newCanvas.width = width ?? 10;
   newCanvas.height = height ?? 10;
@@ -87,7 +89,7 @@ export interface CreateCheckerCanvasOptions {
 export const createCheckerCanvas = (options: CreateCheckerCanvasOptions = {}): HTMLCanvasElement | OffscreenCanvas => {
   const { size = 8, colorA = '#ff00ff', colorB = '#000' } = options;
   const canvas = createCanvas({ fillStyle: colorA, width: size, height: size });
-  const context = canvas.getContext('2d')!;
+  const context = get2dContext(canvas)!;
   const half = size / 2;
 
   context.fillStyle = colorB;

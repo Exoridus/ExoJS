@@ -214,7 +214,13 @@ self.onmessage = async (event: MessageEvent<HostMessage>): Promise<void> => {
 
     self.postMessage({ kind: 'closed' });
   } catch (error) {
-    self.postMessage({ kind: 'error', message: error instanceof Error ? `${error.name}: ${error.message}
-${error.stack ?? ''}` : String(error) });
+    self.postMessage({
+      kind: 'error',
+      message:
+        error instanceof Error
+          ? `${error.name}: ${error.message}
+${error.stack ?? ''}`
+          : String(error),
+    });
   }
 };

@@ -85,11 +85,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/Application.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+        "label": "src/core/CanvasSizing.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CanvasSizing.ts"
       }
     }
   ],
-  "sourcePath": "src/core/Application.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Application.ts"
+  "sourcePath": "src/core/CanvasSizing.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/CanvasSizing.ts"
 }

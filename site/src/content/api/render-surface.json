@@ -1,0 +1,72 @@
+{
+  "title": "RenderSurface",
+  "description": "Anything a render backend can acquire a drawing context from and size in device pixels. Deliberately narrow: a surface has a backing-store size and hands out a WebGL2 or WebGPU context, and that is the whole contract the backends need. Focus, cursor, pointer capture, CSS, layout and the surrounding document are interaction concerns and live on PlatformAdapter instead, because an `OffscreenCanvas` has none of them and faking them would only move the failure later.",
+  "symbol": "RenderSurface",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Anything a render backend can acquire a drawing context from and size in device pixels.",
+        "Deliberately narrow: a surface has a backing-store size and hands out a WebGL2 or WebGPU context, and that is the whole contract the backends need. Focus, cursor, pointer capture, CSS, layout and the surrounding document are interaction concerns and live on PlatformAdapter instead, because an `OffscreenCanvas` has none of them and faking them would only move the failure later."
+      ],
+      "importLine": "import { RenderSurface } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "RenderSurface",
+          "signature": "HTMLCanvasElement | OffscreenCanvas",
+          "signatureTokens": [
+            {
+              "text": "HTMLCanvasElement",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OffscreenCanvas",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/RenderSurface.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/RenderSurface.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/RenderSurface.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/RenderSurface.ts"
+}

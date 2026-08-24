@@ -1,16 +1,16 @@
 {
-  "title": "BrowserPlatform",
-  "description": "The PlatformAdapter backed by the browser: a canvas element for the drawing surface, `window` for keyboard and blur, `document` for visibility, and `navigator` for gamepads. Used automatically by Application when no adapter was injected. Every capability degrades rather than throws when the host does not provide it - pointer capture is rejected by jsdom and by browsers asked to release a pointer they never captured, `navigator.getGamepads` is missing on locked-down hosts, and `document` is absent under SSR. None of those are worth failing an application over, so each is caught and reported as \"unavailable\".",
-  "symbol": "BrowserPlatform",
+  "title": "OffscreenPlatform",
+  "description": "The PlatformAdapter for a render surface with no document around it: an `OffscreenCanvas`, whether it stayed on the main thread or was transferred into a worker. What it provides on its own is everything that needs no DOM - the host's monotonic clock, frame scheduling, and the surface's backing-store size. Everything else is fed in by whoever owns the document: pointer and key events through OffscreenPlatform.emitSurfaceEvent and OffscreenPlatform.emitWindowEvent, the surface's on-screen rect through OffscreenPlatform.setSurfaceRect, and visibility, focus and gamepads through their setters. Nothing is invented: with no host feeding it, the adapter reports a visible, unfocused surface receiving no input. The affordances that act on a document - focus, cursor, touch-action, pointer capture - do nothing here, and deliberately do not throw. They are mechanisms whose absence degrades the experience rather than breaking the application, exactly as they already do on a browser host that refuses pointer capture, and an application should not have to know which kind of surface it draws into before it can ask for a cursor. Frame scheduling uses the realm's own `requestAnimationFrame` where there is one. A dedicated worker generally has none, so the adapter falls back to a timer at approximately 60 Hz. That fallback is not display-synchronised; a worker-hosted renderer that must not tear should be driven by frames the document's host forwards instead.",
+  "symbol": "OffscreenPlatform",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 18,
+  "memberCount": 24,
   "counts": {
     "constructors": 1,
-    "methods": 14,
-    "properties": 3,
+    "methods": 15,
+    "properties": 8,
     "events": 0
   },
   "sections": [
@@ -19,10 +19,12 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The PlatformAdapter backed by the browser: a canvas element for the drawing surface, `window` for keyboard and blur, `document` for visibility, and `navigator` for gamepads. Used automatically by Application when no adapter was injected.",
-        "Every capability degrades rather than throws when the host does not provide it - pointer capture is rejected by jsdom and by browsers asked to release a pointer they never captured, `navigator.getGamepads` is missing on locked-down hosts, and `document` is absent under SSR. None of those are worth failing an application over, so each is caught and reported as \"unavailable\"."
+        "The PlatformAdapter for a render surface with no document around it: an `OffscreenCanvas`, whether it stayed on the main thread or was transferred into a worker.",
+        "What it provides on its own is everything that needs no DOM - the host's monotonic clock, frame scheduling, and the surface's backing-store size. Everything else is fed in by whoever owns the document: pointer and key events through OffscreenPlatform.emitSurfaceEvent and OffscreenPlatform.emitWindowEvent, the surface's on-screen rect through OffscreenPlatform.setSurfaceRect, and visibility, focus and gamepads through their setters. Nothing is invented: with no host feeding it, the adapter reports a visible, unfocused surface receiving no input.",
+        "The affordances that act on a document - focus, cursor, touch-action, pointer capture - do nothing here, and deliberately do not throw. They are mechanisms whose absence degrades the experience rather than breaking the application, exactly as they already do on a browser host that refuses pointer capture, and an application should not have to know which kind of surface it draws into before it can ask for a cursor.",
+        "Frame scheduling uses the realm's own `requestAnimationFrame` where there is one. A dedicated worker generally has none, so the adapter falls back to a timer at approximately 60 Hz. That fallback is not display-synchronised; a worker-hosted renderer that must not tear should be driven by frames the document's host forwards instead."
       ],
-      "importLine": "import { BrowserPlatform } from '@codexo/exojs'",
+      "importLine": "import { OffscreenPlatform } from '@codexo/exojs'",
       "sourceLink": null
     },
     {
@@ -31,7 +33,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(canvas: HTMLCanvasElement): BrowserPlatform",
+          "signature": "new(surface: RenderSurface): OffscreenPlatform",
           "signatureTokens": [
             {
               "text": "new",
@@ -42,7 +44,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "canvas",
+              "text": "surface",
               "kind": "param"
             },
             {
@@ -50,7 +52,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "HTMLCanvasElement",
+              "text": "RenderSurface",
               "kind": "type"
             },
             {
@@ -62,18 +64,18 @@
               "kind": "punctuation"
             },
             {
-              "text": "BrowserPlatform",
+              "text": "OffscreenPlatform",
               "kind": "type"
             }
           ],
           "params": [
             {
-              "name": "canvas",
-              "type": "HTMLCanvasElement",
+              "name": "surface",
+              "type": "RenderSurface",
               "optional": false
             }
           ],
-          "returnType": "BrowserPlatform",
+          "returnType": "OffscreenPlatform",
           "description": ""
         }
       ],
@@ -133,53 +135,6 @@
           "description": "Cancel a frame scheduled by FrameScheduler.requestFrame."
         },
         {
-          "name": "capturePointer",
-          "signature": "capturePointer(pointerId: number): void",
-          "signatureTokens": [
-            {
-              "text": "capturePointer",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "pointerId",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "pointerId",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Route all further events for pointerId to the surface. Best-effort."
-        },
-        {
           "name": "destroy",
           "signature": "destroy(): void",
           "signatureTokens": [
@@ -209,15 +164,67 @@
           "description": "Release everything the adapter itself holds. Called by Application.destroy only for an adapter the application created; an injected adapter stays the caller's to dispose."
         },
         {
-          "name": "focusSurface",
-          "signature": "focusSurface(): void",
+          "name": "emitSurfaceEvent",
+          "signature": "emitSurfaceEvent(type: K, event: PlatformEventData<PlatformSurfaceEventMap[K]>): boolean",
           "signatureTokens": [
             {
-              "text": "focusSurface",
+              "text": "emitSurfaceEvent",
               "kind": "name"
             },
             {
               "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "event",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformEventData",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformSurfaceEventMap",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
               "kind": "punctuation"
             },
             {
@@ -229,13 +236,116 @@
               "kind": "punctuation"
             },
             {
-              "text": "void",
+              "text": "boolean",
               "kind": "keyword"
             }
           ],
-          "params": [],
-          "returnType": "void",
-          "description": "Give the drawing surface host focus, so it starts receiving keyboard input."
+          "params": [
+            {
+              "name": "type",
+              "type": "K",
+              "optional": false
+            },
+            {
+              "name": "event",
+              "type": "PlatformEventData<PlatformSurfaceEventMap[K]>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Deliver a surface event to whatever the input pipeline subscribed. Takes the event's data alone, which is what survives a postMessage; the suppression calls are supplied here. Returns whether the engine asked for the host's default handling of this event to be suppressed. Across a worker boundary that answer necessarily arrives after the host's own event has finished dispatching, so it informs the host's policy for later events rather than cancelling this one."
+        },
+        {
+          "name": "emitWindowEvent",
+          "signature": "emitWindowEvent(type: K, event: PlatformEventData<PlatformWindowEventMap[K]>): boolean",
+          "signatureTokens": [
+            {
+              "text": "emitWindowEvent",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "type",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "event",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformEventData",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "PlatformWindowEventMap",
+              "kind": "type"
+            },
+            {
+              "text": "[",
+              "kind": "punctuation"
+            },
+            {
+              "text": "K",
+              "kind": "type"
+            },
+            {
+              "text": "]",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "type",
+              "type": "K",
+              "optional": false
+            },
+            {
+              "name": "event",
+              "type": "PlatformEventData<PlatformWindowEventMap[K]>",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Deliver a window-level event. See OffscreenPlatform.emitSurfaceEvent."
         },
         {
           "name": "getSurfaceMetrics",
@@ -297,7 +407,7 @@
         },
         {
           "name": "onSurfaceEvent",
-          "signature": "onSurfaceEvent(type: K, listener: (event: PlatformSurfaceEventMap[K]) => void, options?: PlatformListenerOptions): PlatformSubscription",
+          "signature": "onSurfaceEvent(type: K, listener: (event: PlatformSurfaceEventMap[K]) => void): PlatformSubscription",
           "signatureTokens": [
             {
               "text": "onSurfaceEvent",
@@ -368,26 +478,6 @@
               "kind": "keyword"
             },
             {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PlatformListenerOptions",
-              "kind": "type"
-            },
-            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -410,11 +500,6 @@
               "name": "listener",
               "type": "(event: PlatformSurfaceEventMap[K]) => void",
               "optional": false
-            },
-            {
-              "name": "options",
-              "type": "PlatformListenerOptions",
-              "optional": true
             }
           ],
           "returnType": "PlatformSubscription",
@@ -489,7 +574,7 @@
         },
         {
           "name": "onWindowEvent",
-          "signature": "onWindowEvent(type: K, listener: (event: PlatformWindowEventMap[K]) => void, options?: PlatformListenerOptions): PlatformSubscription",
+          "signature": "onWindowEvent(type: K, listener: (event: PlatformWindowEventMap[K]) => void): PlatformSubscription",
           "signatureTokens": [
             {
               "text": "onWindowEvent",
@@ -560,26 +645,6 @@
               "kind": "keyword"
             },
             {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "options",
-              "kind": "param"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "PlatformListenerOptions",
-              "kind": "type"
-            },
-            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -602,11 +667,6 @@
               "name": "listener",
               "type": "(event: PlatformWindowEventMap[K]) => void",
               "optional": false
-            },
-            {
-              "name": "options",
-              "type": "PlatformListenerOptions",
-              "optional": true
             }
           ],
           "returnType": "PlatformSubscription",
@@ -660,53 +720,6 @@
           "params": [],
           "returnType": "readonly Gamepad | null[]",
           "description": "Sample every connected gamepad. Entries may be null for vacated slots."
-        },
-        {
-          "name": "releasePointer",
-          "signature": "releasePointer(pointerId: number): void",
-          "signatureTokens": [
-            {
-              "text": "releasePointer",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "pointerId",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "pointerId",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "void",
-          "description": "Undo PlatformAdapter.capturePointer. Best-effort."
         },
         {
           "name": "requestFrame",
@@ -776,11 +789,11 @@
           "description": "Schedule callback for the next display frame and return a handle for FrameScheduler.cancelFrame. One-shot - a frame loop reschedules itself every frame. timestamp is the host's frame time. It is the time the frame was *scheduled for*, not the time the callback happened to run, so deltas derived from it are free of the jitter that reading a clock at the top of the callback introduces."
         },
         {
-          "name": "setCursor",
-          "signature": "setCursor(value: string): void",
+          "name": "setGamepads",
+          "signature": "setGamepads(gamepads: readonly Gamepad | null[]): void",
           "signatureTokens": [
             {
-              "text": "setCursor",
+              "text": "setGamepads",
               "kind": "name"
             },
             {
@@ -788,7 +801,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "value",
+              "text": "gamepads",
               "kind": "param"
             },
             {
@@ -796,8 +809,28 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "readonly",
               "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Gamepad",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
             },
             {
               "text": ")",
@@ -814,20 +847,20 @@
           ],
           "params": [
             {
-              "name": "value",
-              "type": "string",
+              "name": "gamepads",
+              "type": "readonly Gamepad | null[]",
               "optional": false
             }
           ],
           "returnType": "void",
-          "description": "Set the cursor shown over the surface. Empty string restores the default."
+          "description": "Record the host's most recent gamepad sample. The array is read as-is on every poll and never copied, so hand over a snapshot rather than a buffer that keeps changing."
         },
         {
-          "name": "setTouchAction",
-          "signature": "setTouchAction(value: string): void",
+          "name": "setSurfaceFocused",
+          "signature": "setSurfaceFocused(focused: boolean): void",
           "signatureTokens": [
             {
-              "text": "setTouchAction",
+              "text": "setSurfaceFocused",
               "kind": "name"
             },
             {
@@ -835,7 +868,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "value",
+              "text": "focused",
               "kind": "param"
             },
             {
@@ -843,7 +876,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
+              "text": "boolean",
               "kind": "keyword"
             },
             {
@@ -861,13 +894,107 @@
           ],
           "params": [
             {
-              "name": "value",
-              "type": "string",
+              "name": "focused",
+              "type": "boolean",
               "optional": false
             }
           ],
           "returnType": "void",
-          "description": "Set the surface's touch-action policy - 'none' keeps native pan/zoom out of the way."
+          "description": "Record whether the host considers the surface focused. Keyboard input is gated on this, so a host forwarding key events must forward focus too."
+        },
+        {
+          "name": "setSurfaceRect",
+          "signature": "setSurfaceRect(rect: OffscreenSurfaceRect): void",
+          "signatureTokens": [
+            {
+              "text": "setSurfaceRect",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "rect",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "OffscreenSurfaceRect",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "rect",
+              "type": "OffscreenSurfaceRect",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Record where the surface is displayed, in the same coordinate space as the clientX/clientY of the pointer events being forwarded. Pointer positions are mapped through this rect, so a host forwarding pointer events has to keep it current across layout and scroll changes."
+        },
+        {
+          "name": "setVisible",
+          "signature": "setVisible(visible: boolean): void",
+          "signatureTokens": [
+            {
+              "text": "setVisible",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "visible",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "visible",
+              "type": "boolean",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Record whether the host's document is visible. Drives PlatformAdapter.documentVisible, its subscribers, and so pauseOnHidden."
         }
       ],
       "paragraphs": [],
@@ -878,6 +1005,151 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "capturePointer",
+          "signature": "capturePointer: () => void",
+          "signatureTokens": [
+            {
+              "text": "capturePointer",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "No document to route pointer events in - a forwarded event already carries its identity."
+        },
+        {
+          "name": "focusSurface",
+          "signature": "focusSurface: () => void",
+          "signatureTokens": [
+            {
+              "text": "focusSurface",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "No document to move focus in."
+        },
+        {
+          "name": "releasePointer",
+          "signature": "releasePointer: () => void",
+          "signatureTokens": [
+            {
+              "text": "releasePointer",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Counterpart to OffscreenPlatform.capturePointer, equally inert."
+        },
+        {
+          "name": "setCursor",
+          "signature": "setCursor: () => void",
+          "signatureTokens": [
+            {
+              "text": "setCursor",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "No document to style."
+        },
+        {
+          "name": "setTouchAction",
+          "signature": "setTouchAction: () => void",
+          "signatureTokens": [
+            {
+              "text": "setTouchAction",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "No document to set a touch-action policy on."
+        },
         {
           "name": "documentVisible",
           "signature": "documentVisible: boolean",
@@ -901,7 +1173,7 @@
         },
         {
           "name": "surface",
-          "signature": "surface: HTMLCanvasElement",
+          "signature": "surface: RenderSurface",
           "signatureTokens": [
             {
               "text": "surface",
@@ -912,13 +1184,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "HTMLCanvasElement",
+              "text": "RenderSurface",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "The canvas this adapter drives."
+          "description": "The surface this adapter reports on."
         },
         {
           "name": "surfaceFocused",
@@ -953,11 +1225,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/platform/BrowserPlatform.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/BrowserPlatform.ts"
+        "label": "src/platform/OffscreenPlatform.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/OffscreenPlatform.ts"
       }
     }
   ],
-  "sourcePath": "src/platform/BrowserPlatform.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/BrowserPlatform.ts"
+  "sourcePath": "src/platform/OffscreenPlatform.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/OffscreenPlatform.ts"
 }

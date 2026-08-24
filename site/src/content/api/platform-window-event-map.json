@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "blur",
-          "signature": "blur: FocusEvent",
+          "signature": "blur: PlatformEvent",
           "signatureTokens": [
             {
               "text": "blur",
@@ -41,7 +41,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "FocusEvent",
+              "text": "PlatformEvent",
               "kind": "type"
             }
           ],
@@ -51,7 +51,7 @@
         },
         {
           "name": "keydown",
-          "signature": "keydown: KeyboardEvent",
+          "signature": "keydown: PlatformKeyboardEvent",
           "signatureTokens": [
             {
               "text": "keydown",
@@ -62,7 +62,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "KeyboardEvent",
+              "text": "PlatformKeyboardEvent",
               "kind": "type"
             }
           ],
@@ -72,7 +72,7 @@
         },
         {
           "name": "keyup",
-          "signature": "keyup: KeyboardEvent",
+          "signature": "keyup: PlatformKeyboardEvent",
           "signatureTokens": [
             {
               "text": "keyup",
@@ -83,7 +83,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "KeyboardEvent",
+              "text": "PlatformKeyboardEvent",
               "kind": "type"
             }
           ],

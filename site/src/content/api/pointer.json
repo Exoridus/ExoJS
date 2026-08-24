@@ -32,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(event: PointerEvent, app: Application, platform: PlatformAdapter, channels: Float32Array, slotIndex: number): Pointer",
+          "signature": "new(event: PlatformPointerEvent, app: Application, platform: PlatformAdapter, channels: Float32Array, slotIndex: number): Pointer",
           "signatureTokens": [
             {
               "text": "new",
@@ -51,7 +51,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             },
             {
@@ -134,7 +134,7 @@
           "params": [
             {
               "name": "event",
-              "type": "PointerEvent",
+              "type": "PlatformPointerEvent",
               "optional": false
             },
             {
@@ -201,7 +201,7 @@
         },
         {
           "name": "handleCancel",
-          "signature": "handleCancel(event: PointerEvent): void",
+          "signature": "handleCancel(event: PlatformPointerEvent): void",
           "signatureTokens": [
             {
               "text": "handleCancel",
@@ -220,7 +220,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             },
             {
@@ -239,7 +239,7 @@
           "params": [
             {
               "name": "event",
-              "type": "PointerEvent",
+              "type": "PlatformPointerEvent",
               "optional": false
             }
           ],
@@ -248,7 +248,7 @@
         },
         {
           "name": "handleEnter",
-          "signature": "handleEnter(event: PointerEvent): void",
+          "signature": "handleEnter(event: PlatformPointerEvent): void",
           "signatureTokens": [
             {
               "text": "handleEnter",
@@ -267,7 +267,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             },
             {
@@ -286,7 +286,7 @@
           "params": [
             {
               "name": "event",
-              "type": "PointerEvent",
+              "type": "PlatformPointerEvent",
               "optional": false
             }
           ],
@@ -295,7 +295,7 @@
         },
         {
           "name": "handleLeave",
-          "signature": "handleLeave(event: PointerEvent): void",
+          "signature": "handleLeave(event: PlatformPointerEvent): void",
           "signatureTokens": [
             {
               "text": "handleLeave",
@@ -314,7 +314,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             },
             {
@@ -333,7 +333,7 @@
           "params": [
             {
               "name": "event",
-              "type": "PointerEvent",
+              "type": "PlatformPointerEvent",
               "optional": false
             }
           ],
@@ -342,7 +342,7 @@
         },
         {
           "name": "handleMove",
-          "signature": "handleMove(event: PointerEvent): void",
+          "signature": "handleMove(event: PlatformPointerEvent): void",
           "signatureTokens": [
             {
               "text": "handleMove",
@@ -361,7 +361,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             },
             {
@@ -380,7 +380,7 @@
           "params": [
             {
               "name": "event",
-              "type": "PointerEvent",
+              "type": "PlatformPointerEvent",
               "optional": false
             }
           ],
@@ -389,7 +389,7 @@
         },
         {
           "name": "handlePress",
-          "signature": "handlePress(event: PointerEvent): void",
+          "signature": "handlePress(event: PlatformPointerEvent): void",
           "signatureTokens": [
             {
               "text": "handlePress",
@@ -408,7 +408,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             },
             {
@@ -427,7 +427,7 @@
           "params": [
             {
               "name": "event",
-              "type": "PointerEvent",
+              "type": "PlatformPointerEvent",
               "optional": false
             }
           ],
@@ -436,7 +436,7 @@
         },
         {
           "name": "handleRelease",
-          "signature": "handleRelease(event: PointerEvent): { closedPress: boolean; maxDistance: number }",
+          "signature": "handleRelease(event: PlatformPointerEvent): { closedPress: boolean; maxDistance: number }",
           "signatureTokens": [
             {
               "text": "handleRelease",
@@ -455,7 +455,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             },
             {
@@ -506,7 +506,7 @@
           "params": [
             {
               "name": "event",
-              "type": "PointerEvent",
+              "type": "PlatformPointerEvent",
               "optional": false
             }
           ],

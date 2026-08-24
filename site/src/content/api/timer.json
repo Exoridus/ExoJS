@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(limit: Time, autoStart: boolean): Timer",
+          "signature": "new(limit: Time, autoStart: boolean, timeSource?: TimeSource): Timer",
           "signatureTokens": [
             {
               "text": "new",
@@ -69,6 +69,26 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "timeSource",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TimeSource",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -91,6 +111,11 @@
               "name": "autoStart",
               "type": "boolean",
               "optional": false
+            },
+            {
+              "name": "timeSource",
+              "type": "TimeSource",
+              "optional": true
             }
           ],
           "returnType": "Timer",

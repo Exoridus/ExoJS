@@ -1,6 +1,6 @@
 {
   "title": "Clock",
-  "description": "High-precision wall-clock that accumulates elapsed time while running. Reads from performance.now via `getPreciseTime`. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared - copy it if you need to keep a snapshot). Use Timer for a clock with a fixed limit and `expired` flag.",
+  "description": "High-precision clock that accumulates elapsed time while running. Reads the host's monotonic clock unless a TimeSource is supplied - pass an PlatformAdapter to follow the application's time, or any object with a `now()` to drive the clock deterministically from a test. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared - copy it if you need to keep a snapshot). Use Timer for a clock with a fixed limit and `expired` flag.",
   "symbol": "Clock",
   "kind": "class",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "High-precision wall-clock that accumulates elapsed time while running. Reads from performance.now via `getPreciseTime`. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared - copy it if you need to keep a snapshot).",
+        "High-precision clock that accumulates elapsed time while running. Reads the host's monotonic clock unless a TimeSource is supplied - pass an PlatformAdapter to follow the application's time, or any object with a `now()` to drive the clock deterministically from a test. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared - copy it if you need to keep a snapshot).",
         "Use Timer for a clock with a fixed limit and `expired` flag."
       ],
       "importLine": "import { Clock } from '@codexo/exojs'",
@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(startTime: Time, autoStart: boolean): Clock",
+          "signature": "new(startTime: Time, autoStart: boolean, timeSource: TimeSource): Clock",
           "signatureTokens": [
             {
               "text": "new",
@@ -70,6 +70,22 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "timeSource",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TimeSource",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -91,6 +107,11 @@
             {
               "name": "autoStart",
               "type": "boolean",
+              "optional": false
+            },
+            {
+              "name": "timeSource",
+              "type": "TimeSource",
               "optional": false
             }
           ],

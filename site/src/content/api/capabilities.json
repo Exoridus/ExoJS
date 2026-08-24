@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 19,
+  "memberCount": 21,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 19,
+    "properties": 21,
     "events": 0
   },
   "sections": [
@@ -90,7 +90,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The host's CSS-to-device pixel ratio, or 1 where there is no document to ask - a worker has no ratio of its own and inherits whatever its host decided the surface's backing size should be."
         },
         {
           "name": "fullscreen",
@@ -219,6 +219,27 @@
           "description": ""
         },
         {
+          "name": "offscreenWebgl2",
+          "signature": "offscreenWebgl2: boolean",
+          "signatureTokens": [
+            {
+              "text": "offscreenWebgl2",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether a WebGL2 context can actually be created on an OffscreenCanvas in this realm - probed by creating one, not inferred from the constructor being defined. The two can differ: a host may expose OffscreenCanvas and still refuse it a GPU-backed context."
+        },
+        {
           "name": "pointer",
           "signature": "pointer: boolean",
           "signatureTokens": [
@@ -238,6 +259,27 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "realm",
+          "signature": "realm: HostRealm",
+          "signatureTokens": [
+            {
+              "text": "realm",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HostRealm",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The global scope the probes ran in. See HostRealm."
         },
         {
           "name": "touch",

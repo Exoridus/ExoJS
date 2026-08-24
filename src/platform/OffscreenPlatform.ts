@@ -230,17 +230,11 @@ export class OffscreenPlatform implements PlatformAdapter {
     this._cancelFrame?.(handle);
   }
 
-  public onSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(
-    type: K,
-    listener: (event: PlatformSurfaceEventMap[K]) => void,
-  ): PlatformSubscription {
+  public onSurfaceEvent<K extends keyof PlatformSurfaceEventMap>(type: K, listener: (event: PlatformSurfaceEventMap[K]) => void): PlatformSubscription {
     return subscribe(this._surfaceListeners, type, listener);
   }
 
-  public onWindowEvent<K extends keyof PlatformWindowEventMap>(
-    type: K,
-    listener: (event: PlatformWindowEventMap[K]) => void,
-  ): PlatformSubscription {
+  public onWindowEvent<K extends keyof PlatformWindowEventMap>(type: K, listener: (event: PlatformWindowEventMap[K]) => void): PlatformSubscription {
     return subscribe(this._windowListeners, type, listener);
   }
 

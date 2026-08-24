@@ -1,6 +1,6 @@
 {
   "title": "PlatformSurfaceEventMap",
-  "description": "Events the input pipeline sources from the drawing surface itself. The payload types are the browser's, because the engine's pointer model is `PointerEvent`-shaped end to end. That is a deliberate limit of this seam, not an oversight: replacing the event vocabulary would be a rewrite of the input pipeline rather than a platform port, and nothing in the engine needs it yet.",
+  "description": "Events the input pipeline sources from the drawing surface itself. The payload types are the browser's event shapes, narrowed to the fields the engine reads. Keeping the vocabulary this close to the DOM is deliberate: BrowserPlatform forwards the browser's own event objects verbatim, so the main-thread path pays nothing for the abstraction, while a host without a DOM can deliver the same information as an ordinary object.",
   "symbol": "PlatformSurfaceEventMap",
   "kind": "interface",
   "subsystem": "core",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "Events the input pipeline sources from the drawing surface itself.",
-        "The payload types are the browser's, because the engine's pointer model is `PointerEvent`-shaped end to end. That is a deliberate limit of this seam, not an oversight: replacing the event vocabulary would be a rewrite of the input pipeline rather than a platform port, and nothing in the engine needs it yet."
+        "The payload types are the browser's event shapes, narrowed to the fields the engine reads. Keeping the vocabulary this close to the DOM is deliberate: BrowserPlatform forwards the browser's own event objects verbatim, so the main-thread path pays nothing for the abstraction, while a host without a DOM can deliver the same information as an ordinary object."
       ],
       "importLine": "import { PlatformSurfaceEventMap } from '@codexo/exojs'",
       "sourceLink": null
@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "blur",
-          "signature": "blur: FocusEvent",
+          "signature": "blur: PlatformEvent",
           "signatureTokens": [
             {
               "text": "blur",
@@ -42,7 +42,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "FocusEvent",
+              "text": "PlatformEvent",
               "kind": "type"
             }
           ],
@@ -52,7 +52,7 @@
         },
         {
           "name": "contextmenu",
-          "signature": "contextmenu: MouseEvent",
+          "signature": "contextmenu: PlatformPositionalEvent",
           "signatureTokens": [
             {
               "text": "contextmenu",
@@ -63,7 +63,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "MouseEvent",
+              "text": "PlatformPositionalEvent",
               "kind": "type"
             }
           ],
@@ -73,7 +73,7 @@
         },
         {
           "name": "focus",
-          "signature": "focus: FocusEvent",
+          "signature": "focus: PlatformEvent",
           "signatureTokens": [
             {
               "text": "focus",
@@ -84,7 +84,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "FocusEvent",
+              "text": "PlatformEvent",
               "kind": "type"
             }
           ],
@@ -94,7 +94,7 @@
         },
         {
           "name": "pointercancel",
-          "signature": "pointercancel: PointerEvent",
+          "signature": "pointercancel: PlatformPointerEvent",
           "signatureTokens": [
             {
               "text": "pointercancel",
@@ -105,7 +105,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             }
           ],
@@ -115,7 +115,7 @@
         },
         {
           "name": "pointerdown",
-          "signature": "pointerdown: PointerEvent",
+          "signature": "pointerdown: PlatformPointerEvent",
           "signatureTokens": [
             {
               "text": "pointerdown",
@@ -126,7 +126,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             }
           ],
@@ -136,7 +136,7 @@
         },
         {
           "name": "pointerleave",
-          "signature": "pointerleave: PointerEvent",
+          "signature": "pointerleave: PlatformPointerEvent",
           "signatureTokens": [
             {
               "text": "pointerleave",
@@ -147,7 +147,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             }
           ],
@@ -157,7 +157,7 @@
         },
         {
           "name": "pointermove",
-          "signature": "pointermove: PointerEvent",
+          "signature": "pointermove: PlatformPointerEvent",
           "signatureTokens": [
             {
               "text": "pointermove",
@@ -168,7 +168,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             }
           ],
@@ -178,7 +178,7 @@
         },
         {
           "name": "pointerover",
-          "signature": "pointerover: PointerEvent",
+          "signature": "pointerover: PlatformPointerEvent",
           "signatureTokens": [
             {
               "text": "pointerover",
@@ -189,7 +189,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             }
           ],
@@ -199,7 +199,7 @@
         },
         {
           "name": "pointerup",
-          "signature": "pointerup: PointerEvent",
+          "signature": "pointerup: PlatformPointerEvent",
           "signatureTokens": [
             {
               "text": "pointerup",
@@ -210,7 +210,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "PointerEvent",
+              "text": "PlatformPointerEvent",
               "kind": "type"
             }
           ],
@@ -220,7 +220,7 @@
         },
         {
           "name": "selectstart",
-          "signature": "selectstart: Event",
+          "signature": "selectstart: PlatformEvent",
           "signatureTokens": [
             {
               "text": "selectstart",
@@ -231,7 +231,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Event",
+              "text": "PlatformEvent",
               "kind": "type"
             }
           ],
@@ -241,7 +241,7 @@
         },
         {
           "name": "wheel",
-          "signature": "wheel: WheelEvent",
+          "signature": "wheel: PlatformWheelEvent",
           "signatureTokens": [
             {
               "text": "wheel",
@@ -252,7 +252,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "WheelEvent",
+              "text": "PlatformWheelEvent",
               "kind": "type"
             }
           ],

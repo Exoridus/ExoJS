@@ -31,6 +31,13 @@
     "isolatedModules": true,
     "skipLibCheck": true
   },
+  // Excluded: a worker that hosts the engine itself rather than a self-contained
+  // computation. It is a module worker served by the bundler, so it imports the
+  // engine's own modules - which are typed against the DOM and guard their
+  // document access at runtime. Those types cannot resolve in a program whose
+  // `lib` deliberately excludes `dom`. It is typechecked with the rest of the
+  // test sources instead, and executed for real in the browser worker suite.
+  "exclude": ["test/rendering/browser/fixtures/application-host.worker.ts"],
   "include": [
     "examples/**/*.worker.ts",
     "packages/exojs-*/src/**/*.worker.ts",

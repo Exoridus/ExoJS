@@ -1,0 +1,80 @@
+{
+  "title": "HostRealm",
+  "description": "Which kind of global scope the probes ran in. Capabilities are realm-local: the same browser reports different answers on its main thread and inside a worker, and neither answer is wrong. - `'window'`: a document's main thread. Input, audio and layout exist. - `'worker'`: a dedicated worker. No document, so no DOM input, no CSS pixel ratio and no `AudioContext`, but `OffscreenCanvas` rendering and nested workers are available. - `'unknown'`: neither - a server-side render, or an embedding host.",
+  "symbol": "HostRealm",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Which kind of global scope the probes ran in. Capabilities are realm-local: the same browser reports different answers on its main thread and inside a worker, and neither answer is wrong.",
+        "- `'window'`: a document's main thread. Input, audio and layout exist. - `'worker'`: a dedicated worker. No document, so no DOM input, no CSS pixel ratio and no `AudioContext`, but `OffscreenCanvas` rendering and nested workers are available. - `'unknown'`: neither - a server-side render, or an embedding host."
+      ],
+      "importLine": "import { HostRealm } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "HostRealm",
+          "signature": "\"unknown\" | \"window\" | \"worker\"",
+          "signatureTokens": [
+            {
+              "text": "\"unknown\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"window\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"worker\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/capabilities.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/capabilities.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/capabilities.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/capabilities.ts"
+}

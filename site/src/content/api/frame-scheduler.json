@@ -1,0 +1,164 @@
+{
+  "title": "FrameScheduler",
+  "description": "Display-synchronised frame scheduling. The timestamp handed to the callback shares its origin with TimeSource.now, so the two can be compared and subtracted without conversion.",
+  "symbol": "FrameScheduler",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Display-synchronised frame scheduling. The timestamp handed to the callback shares its origin with TimeSource.now, so the two can be compared and subtracted without conversion."
+      ],
+      "importLine": "import { FrameScheduler } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "cancelFrame",
+          "signature": "cancelFrame(handle: number): void",
+          "signatureTokens": [
+            {
+              "text": "cancelFrame",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "handle",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "handle",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Cancel a frame scheduled by FrameScheduler.requestFrame."
+        },
+        {
+          "name": "requestFrame",
+          "signature": "requestFrame(callback: (timestamp: number) => void): number",
+          "signatureTokens": [
+            {
+              "text": "requestFrame",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "callback",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "timestamp",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "callback",
+              "type": "(timestamp: number) => void",
+              "optional": false
+            }
+          ],
+          "returnType": "number",
+          "description": "Schedule callback for the next display frame and return a handle for FrameScheduler.cancelFrame. One-shot - a frame loop reschedules itself every frame. timestamp is the host's frame time. It is the time the frame was *scheduled for*, not the time the callback happened to run, so deltas derived from it are free of the jitter that reading a clock at the top of the callback introduces."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/platform/PlatformAdapter.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/platform/PlatformAdapter.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/platform/PlatformAdapter.ts"
+}
