@@ -840,6 +840,49 @@ describe('Application lifecycle / getters / sizing', () => {
       expect(webglManager.resize).not.toHaveBeenCalled();
     });
 
+    test('an observer callback that changes nothing commits nothing', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, FixedResolutionCanvasSizing, webglManager } = await loadHarness();
+      const { canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+      const observer = MockResizeObserver.instances[0]!;
+
+      webglManager.resize.mockClear();
+
+      // A ResizeObserver fires for changes that leave the observed box the size
+      // it was, and assigning `canvas.width` discards the drawing buffer even
+      // when the value does not move.
+      observer.trigger();
+      observer.trigger();
+      observer.trigger();
+
+      expect(webglManager.resize).not.toHaveBeenCalled();
+      expect(app.canvas.width).toBe(800);
+      expect(canvas.style.width).toBe('400px');
+    });
+
+    test('a host taken out of the document freezes the geometry rather than collapsing it', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
+      const { parent, canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+
+      parent.remove();
+      Object.defineProperty(parent, 'clientWidth', { value: 0, configurable: true });
+      Object.defineProperty(parent, 'clientHeight', { value: 0, configurable: true });
+      MockResizeObserver.instances[0]!.trigger();
+
+      expect(canvas.style.width).toBe('400px');
+      expect(app.canvas.width).toBe(800);
+      expect(app.width).toBe(800);
+    });
+
     test('a replacement policy committing the same geometry still writes the CSS box', async () => {
       vi.stubGlobal('ResizeObserver', MockResizeObserver);
       const { Application, FixedResolutionCanvasSizing } = await loadHarness();
