@@ -174,7 +174,7 @@ function iife(minify: boolean): RolldownOptions {
   return {
     ...shared,
     input: 'src/index.ts',
-    plugins: shaderAndWorkletPlugins(minify),
+    plugins: [...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin(minify ? 'exo-iife-min' : 'exo-iife')],
     output: { file: minify ? 'dist/exo.iife.min.js' : 'dist/exo.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
   };
 }
@@ -185,7 +185,7 @@ function fullBundle(minify: boolean): RolldownOptions {
     input: 'scripts/exo-full.entry.ts',
     transform: { define: defines },
     resolve: { conditionNames: fullSourceConditions, mainFields: ['browser', 'module', 'main'] },
-    plugins: [extensionSourcePlugin, ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin('exo-full-iife')],
+    plugins: [extensionSourcePlugin, ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin(minify ? 'exo-full-iife-min' : 'exo-full-iife')],
     output: { file: minify ? 'dist/exo.full.iife.min.js' : 'dist/exo.full.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
   };
 }
