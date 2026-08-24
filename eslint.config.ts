@@ -1371,14 +1371,19 @@ export default defineConfig([
     },
   },
 
-  // Tests (Jest)
+  // Root test tree. `test/tsconfig.json` is the nearest project for these files,
+  // so the project service resolves them to the very program `pnpm
+  // typecheck:test` gates them with. That identity is the point: while ESLint
+  // typed this tree through a separate wide-include config, the two programs
+  // enabled different options, and a type-aware autofix could silently turn the
+  // gate red.
   {
     files: ['test/**/*.ts'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
       parserOptions: {
-        project: ['./tsconfig.eslint.json'],
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
       globals: {
@@ -1431,11 +1436,13 @@ export default defineConfig([
       '@typescript-eslint/no-redundant-type-constituents': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/require-await': 'off',
-      // 235 reports, and autofixing them would be actively unsafe: ESLint types
-      // `test/**` through tsconfig.eslint.json while the gate gates it through
-      // tsconfig.test.json, and the two enable different options. A cast this
-      // rule calls unnecessary under one program can be load-bearing under the
-      // other, so `--fix` here can turn `pnpm typecheck:test` red.
+      // 1114 reports across 234 files, all autofixable, none of them a defect.
+      // The test program turns `noUncheckedIndexedAccess` off, which is what
+      // makes the `arr[0]!` on a fixture or a captured mock-call tuple
+      // "unnecessary" - and what would make every one of them load-bearing
+      // again the day that option is reconsidered for this tree. Enabling the
+      // rule buys a repo-wide mechanical churn through test code and no
+      // correctness.
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',
       // Tests deliberately use bracket notation (`obj['_member']`) as a
       // project-wide friend-class convention to spy on protected/private

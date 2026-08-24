@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "_comment": "Profile for sources that run in a worker realm rather than on the document thread. `lib` takes `webworker` instead of `dom`/`dom.iterable` - the two cannot be combined, since they declare the same globals with different types - so a `document` or `window` reference is a compile error here rather than a `ReferenceError` on a background thread. Everything else stays at the engine baseline: worker sources are engine sources. `types` is emptied so no ambient DOM-flavoured type package leaks the globals back in. Consumers add their own include/exclude and any hand-rolled ambient globals.",
+  "extends": "./base.json",
+  "compilerOptions": {
+    "lib": ["es2022", "webworker"],
+    "types": [],
+    "noEmit": true
+  }
+}

@@ -3,10 +3,9 @@
 // (`element`/`mount`/`ref`/`width`/`height` are hook-managed, not
 // caller-supplied), the zero-arg `Scene`-subclass constructor
 // `SceneProps.component`/`useScene` require, and the `Signal`-or-nullish
-// shape `useSignal` accepts. Compiled by the dedicated
-// `tsconfig.type-tests-react.json` (react/jsx-runtime resolved through the
-// exojs-react package's own node_modules - the root package has no react
-// dependency of its own) via `pnpm typecheck:type-tests`.
+// shape `useSignal` accepts. Compiled by this package's own `tsconfig.test.json`
+// via `pnpm --filter @codexo/exojs-react typecheck`, against the package
+// sources rather than its built declarations.
 
 import { Scene, type Signal } from '@codexo/exojs';
 import {

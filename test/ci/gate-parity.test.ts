@@ -129,16 +129,23 @@ describe('the local pre-push hook runs the same gate set as CI', () => {
 
 describe('the Typecheck job covers the type-level gates verify:quick knows about', () => {
   // These gates protect distinct source surfaces; typecheck:packages and
-  // typecheck:test joined the original set when the lists were unified, while
-  // typecheck:full-bundle covers the opt-in entry the normal build omits.
+  // typecheck:test joined the original set when the lists were unified.
   // Naming them keeps a silent deletion visible as a failing test rather than
   // as a gate that quietly stops running on both sides at once.
-  it.each(['typecheck', 'typecheck:full-bundle', 'typecheck:guides', 'typecheck:examples', 'typecheck:type-tests'])(
-    '`%s` is in the typecheck group',
-    script => {
-      expect(GATE_GROUPS.typecheck).toContain(script);
-    },
-  );
+  it.each(['typecheck', 'typecheck:guides', 'typecheck:examples', 'typecheck:type-tests'])('`%s` is in the typecheck group', script => {
+    expect(GATE_GROUPS.typecheck).toContain(script);
+  });
+
+  // The opt-in all-in-one IIFE entry has no gate of its own: it is a
+  // consumer-shaped re-export surface, so it rides along in the example
+  // program. The production build only compiles it when EXOJS_FULL_BUNDLE=1,
+  // so dropping it from this include silently moves a stale named export back
+  // to being CI-build-only.
+  it('type-checks the full-bundle entry as part of the example program', () => {
+    const examplesConfig = readFileSync(resolve(repoRoot, 'tsconfig.examples.json'), 'utf8');
+
+    expect(examplesConfig).toContain('"scripts/exo-full.entry.ts"');
+  });
 
   it('keeps `typecheck:site` out of the ungated typecheck job — it needs the built dist', () => {
     expect(GATE_GROUPS.typecheck).not.toContain('typecheck:site');

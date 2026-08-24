@@ -1,54 +1,49 @@
 {
-  // Lightweight static type-check for the playground example sources.
+  // Static type-check for the consumer-facing code the repository ships as
+  // copy-paste material: the playground example catalog and the opt-in
+  // all-in-one IIFE entry.
   //
   // The runtime example smoke (site/scripts/smoke-examples.ts) only catches
-  // crashes and missing canvases — stale TextStyle keys like `fill`, `stroke`,
+  // crashes and missing canvases - stale TextStyle keys like `fill`, `stroke`,
   // or `wordWrap` are silently ignored at runtime, so they slip through. This
   // config type-checks the example `.js` sources against the engine's own source
   // types (no build required: `@codexo/exojs` maps to `src/index.ts`), so the
   // editor-visible "`fill` does not exist in TextStyleOptions" diagnostics also
   // fail `pnpm typecheck:examples`.
   //
-  // `strict` is ON. Example code is a copy-paste surface for `create-exo-app`
-  // scaffolds, which are strict by default — code that only compiles under
-  // `strict: false` here would fail to compile the moment a user pastes it in.
-  // All lifecycle overrides (`update(delta: Time)`, `draw(context:
+  // The compiler policy lives in the shared consumer profile: plain `strict`,
+  // no engine-only options. Example code is a copy-paste surface for
+  // `create-exo-app` scaffolds, and code that only compiles under a profile the
+  // reader does not have is a gate reporting drift that is not there. All
+  // lifecycle overrides (`update(delta: Time)`, `draw(context:
   // RenderingContext)`, etc.) are explicitly typed, and every `this.app` read
   // is narrowed via a local `const app = this.app; if (app === null) throw ...`
   // guard at the top of the owning method (mirrors the `Scene.inputs` /
   // `Scene.tweens` / `Scene.loader` getters, which throw the same way when
   // accessed before the scene is attached).
   //
-  // Scope: the full example catalog. Every `.js` under `examples/` is
-  // type-checked against the engine source types, so stale TextStyle keys are
-  // caught catalog-wide. `examples/shared/runtime.d.ts` supplies the
+  // Scope: the full example catalog plus `scripts/exo-full.entry.ts`. Every
+  // `.js` under `examples/` is type-checked against the engine source types, so
+  // stale TextStyle keys are caught catalog-wide. The full-bundle entry is the
+  // same kind of program - a named re-export surface resolved against every
+  // extension package's source - and the production build only compiles it when
+  // EXOJS_FULL_BUNDLE=1, so without it here a stale named export is visible only
+  // in the CI build lane. `examples/shared/runtime.d.ts` supplies the
   // playground-only globals (`window.assets`, `__EXAMPLE_META__`).
   //
   // `examples/shared/editor-support.d.ts` is deliberately NOT included: it is a
   // Monaco-only extra-lib that re-declares `Json`/`TextAsset`/etc. inside
   // `declare module '@codexo/exojs'`, which collides with the real source
   // exports here (duplicate-identifier). Its permissive Scene/Loader shims are
-  // unnecessary for `.js` sources — checked JS infers `this._x` fields directly.
+  // unnecessary for `.js` sources - checked JS infers `this._x` fields directly.
   //
   // The entire example catalog type-checks against the engine source types with
   // zero per-example excludes. The former stale-API clusters (two-argument
   // `Signal.add`, `PushSceneOptions.input`, `Sprite` dynamic instance fields,
   // `AudioAnalyser` getters, WGSL module return types) were migrated to the
   // current API in the example sources themselves.
+  "extends": "@codexo/exojs-config/typescript/consumer.json",
   "compilerOptions": {
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "target": "es2022",
-    "lib": ["es2022", "dom", "dom.iterable"],
-    "types": [],
-    "allowJs": true,
-    "checkJs": true,
-    "noEmit": true,
-    "strict": true,
-    "skipLibCheck": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "resolvePackageJsonImports": true,
     "customConditions": ["@codexo/exojs-source", "@codexo/exojs-particles-source"],
     "paths": {
       "@codexo/exojs": ["./src/index.ts"],
@@ -68,6 +63,6 @@
       "@examples/terrain-noise": ["./examples/shared/terrain-noise.ts"]
     }
   },
-  "include": ["examples/**/*.js", "examples/**/*.ts", "examples/shared/runtime.d.ts", "src/typings.d.ts"],
+  "include": ["examples/**/*.js", "examples/**/*.ts", "examples/shared/runtime.d.ts", "scripts/exo-full.entry.ts", "src/typings.d.ts"],
   "exclude": ["examples/shared/editor-support.d.ts", "examples/**/*.worker.ts"]
 }

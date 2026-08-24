@@ -12,10 +12,12 @@
     "./build-defines": "./build-defines/index.js",
     "./package-policy": "./package-policy/index.js",
     "./typescript/base.json": "./typescript/base.json",
+    "./typescript/consumer.json": "./typescript/consumer.json",
     "./typescript/library.json": "./typescript/library.json",
     "./typescript/extension.json": "./typescript/extension.json",
     "./typescript/test.json": "./typescript/test.json",
-    "./typescript/package-test.json": "./typescript/package-test.json"
+    "./typescript/package-test.json": "./typescript/package-test.json",
+    "./typescript/worker.json": "./typescript/worker.json"
   },
   "dependencies": {
     "@codecov/rollup-plugin": "^2.0.1",
