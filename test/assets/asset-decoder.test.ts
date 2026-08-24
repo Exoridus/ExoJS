@@ -4,8 +4,8 @@ import { AssetDecoder } from '#assets/AssetDecoder';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
 import type { CacheStore } from '#assets/CacheStore';
 import type { CacheRequest, CacheStrategy } from '#assets/CacheStrategy';
-import { type CanonicalAsset, canonicalAssetKey, canonicalizeSource } from '#assets/canonicalKey';
-import type { AssetConstructor } from '#assets/FactoryRegistry';
+import { type CanonicalAsset, canonicalizeSource, resourceKey, sourceKey } from '#assets/canonicalKey';
+import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { Loader } from '#assets/Loader';
 import type { LoaderScope } from '#assets/LoaderScope';
 
@@ -54,7 +54,8 @@ function createDecoder(overrides: { cacheStrategy?: CacheStrategy; stores?: Cach
   decoder._bindResourceStore(storeResource);
 
   const canonical = (type: AssetConstructor, source: string): CanonicalAsset => ({
-    key: canonicalAssetKey(typeRegistry._getTypeId(type), canonicalizeSource('', source)),
+    key: resourceKey(typeRegistry._typeIdentity(type), canonicalizeSource('', source)),
+    sourceKey: sourceKey(canonicalizeSource('', source)),
     locator: canonicalizeSource('', source),
     type,
     source,
@@ -77,7 +78,7 @@ describe('AssetDecoder', () => {
   test('_fetchWithHandler invokes the handler with the built context and stores the result', async () => {
     const { decoder, storeResource, canonical } = createDecoder();
     const handler = vi.fn(async () => 'handler-result');
-    const context = decoder._buildHandlerContext('1|url:hero.png', fakeScope);
+    const context = decoder._buildHandlerContext(canonical(TypeA, 'hero.png'), fakeScope);
 
     const result = await decoder._fetchWithHandler(canonical(TypeA, 'hero.png'), { source: 'hero.png' }, handler, context);
 
@@ -91,7 +92,7 @@ describe('AssetDecoder', () => {
     const handler = vi.fn(async () => {
       throw new Error('bad payload');
     });
-    const context = decoder._buildHandlerContext('1|url:hero.png', fakeScope);
+    const context = decoder._buildHandlerContext(canonical(TypeA, 'hero.png'), fakeScope);
 
     await expect(decoder._fetchWithHandler(canonical(TypeA, 'hero.png'), {}, handler, context)).rejects.toThrow(
       /Failed to load "hero.png" from "hero.png": bad payload/,
@@ -116,7 +117,7 @@ describe('AssetDecoder', () => {
 
     await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), { scale: 2 }, undefined, fakeScope);
 
-    expect(load).toHaveBeenCalledWith({ source: 'hero.png', options: { scale: 2 } }, expect.objectContaining({ identityKey: expect.any(String) }));
+    expect(load).toHaveBeenCalledWith({ source: 'hero.png', options: { scale: 2 } }, expect.objectContaining({ resourceKey: expect.any(String) }));
     expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), { config: { source: 'hero.png', options: { scale: 2 } } });
   });
 
@@ -138,7 +139,7 @@ describe('AssetDecoder', () => {
 
     typeRegistry.bindAsset({ ctor: TypeA }, { load: vi.fn(), createFromBytes });
 
-    await decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(4));
+    await decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(4), fakeScope);
 
     expect(createFromBytes).toHaveBeenCalled();
     expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), 'from-bytes:4');
@@ -149,14 +150,14 @@ describe('AssetDecoder', () => {
 
     typeRegistry.bindAsset({ ctor: TypeA }, { load: vi.fn() });
 
-    await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(8))).rejects.toThrow(/cannot be built from container bytes/);
+    await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(8), fakeScope)).rejects.toThrow(/cannot be built from container bytes/);
     expect(storeResource).not.toHaveBeenCalled();
   });
 
   test('_injectSource throws when the type has no bound handler at all, and never stores', async () => {
     const { decoder, storeResource, canonical } = createDecoder();
 
-    await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(4))).rejects.toThrow(/cannot be built from container bytes/);
+    await expect(decoder._injectSource(canonical(TypeA, 'hero.dat'), new ArrayBuffer(4), fakeScope)).rejects.toThrow(/cannot be built from container bytes/);
     expect(storeResource).not.toHaveBeenCalled();
   });
 
@@ -164,10 +165,13 @@ describe('AssetDecoder', () => {
     const { strategy, requests } = createFakeStrategy(() => 'ctx-text-value');
     const { decoder, canonical } = createDecoder({ cacheStrategy: strategy });
 
-    const context = decoder._buildHandlerContext('1|url:hero.txt', fakeScope);
+    const asset = canonical(TypeA, 'hero.txt');
+    const context = decoder._buildHandlerContext(asset, fakeScope);
 
     expect(context.loader).toBe(fakeLoader);
-    expect(context.identityKey).toBe('1|url:hero.txt');
+    expect(context.resourceKey).toBe(asset.key);
+    expect(context.sourceKey).toBe(asset.sourceKey);
+    expect(context.locator).toBe(asset.locator);
 
     const value = await context.fetchText('hero.txt');
 

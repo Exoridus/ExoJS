@@ -5,8 +5,8 @@ import type { AssetResidencySignals } from '#assets/AssetResidency';
 import { AssetResidency } from '#assets/AssetResidency';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
 import type { CacheRequest, CacheStrategy } from '#assets/CacheStrategy';
-import { type CanonicalAsset, canonicalAssetKey, canonicalizeSource } from '#assets/canonicalKey';
-import type { AssetConstructor } from '#assets/FactoryRegistry';
+import { type CanonicalAsset, canonicalizeSource, resourceKey, sourceKey } from '#assets/canonicalKey';
+import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { Loader } from '#assets/Loader';
 import { LoaderScope } from '#assets/LoaderScope';
 import type { SeamlessAdapter } from '#assets/seamless';
@@ -60,7 +60,8 @@ function createResidency(overrides: { cacheStrategy?: CacheStrategy; concurrency
   const onError = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[unknown, string, Error]>;
 
   const canonical = (type: AssetConstructor, source: string, options?: unknown): CanonicalAsset => ({
-    key: canonicalAssetKey(typeRegistry._getTypeId(type), canonicalizeSource('', source), typeRegistry._identityDiscriminator(type, source, options)),
+    key: resourceKey(typeRegistry._typeIdentity(type), canonicalizeSource('', source), typeRegistry._identityDiscriminator(type, source, options)),
+    sourceKey: sourceKey(canonicalizeSource('', source), typeRegistry._sourceDiscriminator(type, source, options)),
     locator: canonicalizeSource('', source),
     type,
     source,

@@ -1,18 +1,21 @@
 /**
- * Canonical asset identity: the single key every fetch, cache lookup, residency
- * entry and ownership claim is keyed by.
+ * Asset identity, in two separate dimensions.
  *
- * A canonical key is `typeId | locator` plus, when the asset type declares one,
- * `| discriminator`. The core always owns `type + locator`; a handler may only
- * contribute the additional identity-relevant part through
- * `AssetHandler.getIdentityDiscriminator`, so an extension cannot build a
- * parallel identity space.
+ * A {@link ResourceKey} answers "is this the same runtime resource?" and is what
+ * every residency entry, in-flight fetch and ownership claim is keyed by. A
+ * {@link SourceKey} answers "do these requests represent the same acquired
+ * source data?" - two distinct resources built from one download share it.
  *
- * Aliases, catalog keys and container entry names are NAMES for a canonical
- * resource. They never take part in its identity.
+ * Both are derived from the same canonical locator, so the URL a load fetches
+ * and the identities it is keyed by can never drift apart. The core always owns
+ * the locator; a type may only widen a key through its own identity hooks, so
+ * no extension can build a parallel identity space.
+ *
+ * Aliases, catalog keys and container entry names are NAMES for a resource.
+ * They never take part in its identity.
  */
 
-import type { AssetConstructor } from './FactoryRegistry';
+import type { AssetConstructor } from './AssetConstructor';
 
 /**
  * A canonicalized asset source: `url:` followed by the fully resolved URL, with
@@ -22,8 +25,32 @@ import type { AssetConstructor } from './FactoryRegistry';
  */
 export type AssetLocator = string;
 
-/** The identity every residency, claim and in-flight entry is keyed by. */
-export type CanonicalAssetKey = string;
+/**
+ * The identity of one runtime resource: every residency entry, in-flight fetch
+ * and ownership claim is keyed by it.
+ *
+ * Composed of the asset type's identity, the canonical locator, and - when the
+ * type declares one - a resource discriminator covering every option that
+ * changes the produced resource. Two requests that differ only in an option the
+ * type does not treat as resource-relevant resolve to one key and are served by
+ * one resource.
+ */
+export type ResourceKey = string;
+
+/**
+ * The identity of the source data a request acquires.
+ *
+ * Composed of the canonical locator and - when the type declares one - a source
+ * discriminator covering only what changes the acquired bytes (a locale, a
+ * content variant). It deliberately carries no asset type and no resource
+ * discriminator: two {@link ResourceKey}s that differ only in how the same
+ * download is interpreted share one `SourceKey`.
+ *
+ * How an acquired representation is stored is a separate question again, and is
+ * not part of this key.
+ */
+export type SourceKey = string;
+
 
 /**
  * A request resolved to its one canonical identity. Produced once per entry
@@ -32,7 +59,8 @@ export type CanonicalAssetKey = string;
  * @internal
  */
 export interface CanonicalAsset {
-  readonly key: CanonicalAssetKey;
+  readonly key: ResourceKey;
+  readonly sourceKey: SourceKey;
   readonly locator: AssetLocator;
   readonly type: AssetConstructor;
   /** The source string as the caller wrote it. Used for fetching and diagnostics, never for identity. */
@@ -167,7 +195,16 @@ export function canonicalizeSource(basePath: string, source: string): AssetLocat
   return `url:${resolveAssetUrl(basePath, source)}`;
 }
 
-/** Compose the canonical key for a type id, a locator, and an optional handler-supplied discriminator. */
-export function canonicalAssetKey(typeId: number, locator: AssetLocator, discriminator?: string): CanonicalAssetKey {
+/** Compose the {@link ResourceKey} for a type identity, a locator, and an optional resource discriminator. */
+export function resourceKey(typeId: string, locator: AssetLocator, discriminator?: string): ResourceKey {
   return discriminator === undefined || discriminator === '' ? `${typeId}|${locator}` : `${typeId}|${locator}|${discriminator}`;
+}
+
+/**
+ * Compose the {@link SourceKey} for a locator and an optional source
+ * discriminator. Type-free by construction: whichever asset type asked for it,
+ * one locator plus one source variant is one acquisition.
+ */
+export function sourceKey(locator: AssetLocator, discriminator?: string): SourceKey {
+  return discriminator === undefined || discriminator === '' ? locator : `${locator}|${discriminator}`;
 }

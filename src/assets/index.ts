@@ -1,4 +1,5 @@
 export { AbstractAssetFactory } from './AbstractAssetFactory';
+export type { AssetConstructor } from './AssetConstructor';
 export type { ValueAsset } from './Asset';
 export { Asset } from './Asset';
 export type { AssetCacheErrorOptions, AssetCacheOperation } from './AssetCacheError';
@@ -7,33 +8,39 @@ export type {
   AnyAssetConfig,
   AssetDefinitions,
   AssetInput,
+  AssetTypeName,
   CatalogEntry,
   ExtensionKindMap,
   InferAssetResource,
   InferLoadedEntry,
   KindByPath,
 } from './AssetDefinitions';
+export type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './AssetFactory';
 export type { AssetNetworkErrorOptions } from './AssetNetworkError';
 export { AssetNetworkError } from './AssetNetworkError';
 export { AssetRef } from './AssetRef';
 export type { AssetInspection, AssetOwnerInspection } from './AssetResidency';
+export type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
+export { binarySourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSourceCodec';
 export type { AnyAssets, InferAssetsEntries } from './Assets';
 export { Assets } from './Assets';
 export type { AssetStatus } from './AssetStatus';
+export type { AnyAssetType, AssetRequest } from './AssetType';
+export { AssetType } from './AssetType';
 export { CacheFirstStrategy } from './CacheFirstStrategy';
 export type { CacheStore } from './CacheStore';
 export type { CacheRequest, CacheStrategy } from './CacheStrategy';
 export type { Database } from './Database';
 export type { DefineAssetDescriptor } from './defineAsset';
 export { defineAsset } from './defineAsset';
-export type { AssetConstructor } from './FactoryRegistry';
 export { IndexedDbDatabase } from './IndexedDbDatabase';
 export type { IndexedDbKeyValueStoreOptions } from './IndexedDbKeyValueStore';
 export { IndexedDbKeyValueStore } from './IndexedDbKeyValueStore';
 export type { IndexedDbStoreOptions } from './IndexedDbStore';
 export { IndexedDbStore } from './IndexedDbStore';
 export type { KeyValueStore } from './KeyValueStore';
-export type { AssetLoaderContext, InferLoadedMap, Loadable, LoaderOptions, LoadOptions } from './Loader';
+export type { AssetLocator, ResourceKey, SourceKey } from './canonicalKey';
+export type { AssetIdentity, AssetLoaderContext, InferLoadedMap, Loadable, LoaderOptions, LoadOptions } from './Loader';
 export { LoadPriority } from './Loader';
 export { Loader } from './Loader';
 export type { LoaderScopeKind, LoaderScopeOptions } from './LoaderScope';

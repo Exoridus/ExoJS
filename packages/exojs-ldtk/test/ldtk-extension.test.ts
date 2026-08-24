@@ -80,7 +80,7 @@ describe('@codexo/exojs-ldtk asset binding — ldtkMapBinding', () => {
     const context: AssetLoaderContext = {
       loader: { load: vi.fn() } as unknown as AssetLoaderContext['loader'],
       scope: { load: vi.fn() } as unknown as AssetLoaderContext['scope'],
-      identityKey: 'test',
+      resourceKey: 'test',
       resolveUrl: (source: string) => source,
       fetchText: vi.fn(),
       fetchArrayBuffer: vi.fn(),

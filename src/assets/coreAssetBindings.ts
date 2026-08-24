@@ -21,7 +21,7 @@ import { Video } from '#rendering/video/Video';
 
 import { Asset } from './Asset';
 import { defineAsset } from './defineAsset';
-import type { AssetConstructor } from './FactoryRegistry';
+import type { AssetConstructor } from './AssetConstructor';
 import type { AssetLoaderContext, Loader } from './Loader';
 import { soundSeamlessAdapter, textureSeamlessAdapter } from './seamless';
 import { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';

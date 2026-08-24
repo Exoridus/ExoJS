@@ -56,7 +56,7 @@ function makeContext(overrides: Partial<AssetLoaderContext> = {}): AssetLoaderCo
   return {
     loader: {} as Loader,
     scope: { load: vi.fn(async () => ({})) } as unknown as LoaderScope,
-    identityKey: 'test:key',
+    resourceKey: 'test:key',
     fetchText: vi.fn(async () => ''),
     fetchArrayBuffer: vi.fn(async () => new ArrayBuffer(0)),
     fetchJson: vi.fn(async () => ({})),

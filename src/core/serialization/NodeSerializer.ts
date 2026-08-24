@@ -1,4 +1,4 @@
-import type { AssetConstructor } from '#assets/FactoryRegistry';
+import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { Loader } from '#assets/Loader';
 import type { SceneNode } from '#core/SceneNode';
 

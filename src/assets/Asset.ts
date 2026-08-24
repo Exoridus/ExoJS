@@ -1,4 +1,4 @@
-import type { AnyAssetConfig, AssetDefinitions, OptionsForKind, ValueAssetKind } from './AssetDefinitions';
+import type { AnyAssetConfig, AssetDefinitions, AssetTypeName, OptionsForKind, ValueAssetKind } from './AssetDefinitions';
 
 // ---------------------------------------------------------------------------
 // Internal implementation
@@ -13,7 +13,7 @@ export class AssetImpl {
     this._config = config;
   }
 
-  public get type(): keyof AssetDefinitions {
+  public get type(): AssetTypeName {
     return this._config.type;
   }
 
@@ -30,7 +30,7 @@ export class AssetImpl {
 export interface Asset<T> {
   /** @internal */
   readonly _config: AnyAssetConfig;
-  readonly type: keyof AssetDefinitions;
+  readonly type: AssetTypeName;
   readonly source: string;
   /** Phantom type marker - never actually present at runtime. */
   readonly _resource?: T;

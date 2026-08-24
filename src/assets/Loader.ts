@@ -3,11 +3,13 @@ import type { AssetHandler } from '#extensions/Extension';
 
 import { type Asset, AssetImpl, type ValueAsset } from './Asset';
 import type { AssetCacheError } from './AssetCacheError';
+import type { AssetConstructor } from './AssetConstructor';
 import { parseContainer } from './AssetContainer';
 import { AssetDecoder } from './AssetDecoder';
 import type {
   AssetDefinitions,
   AssetInput,
+  AssetTypeName,
   CatalogEntry,
   CoreValueAssetKind,
   InferLoadedEntry,
@@ -24,14 +26,26 @@ import { AssetTypeRegistry, type HandlerEntry } from './AssetTypeRegistry';
 import { CacheFirstStrategy } from './CacheFirstStrategy';
 import type { CacheStore } from './CacheStore';
 import type { CacheStrategy } from './CacheStrategy';
-import { type CanonicalAsset, type CanonicalAssetKey, canonicalAssetKey, canonicalizeSource } from './canonicalKey';
-import type { AssetConstructor } from './FactoryRegistry';
+import { type AssetLocator, type CanonicalAsset, canonicalizeSource, type ResourceKey, resourceKey, type SourceKey, sourceKey } from './canonicalKey';
 import { LoadBatch } from './LoadBatch';
 import { LoaderScope, type LoaderScopeOptions } from './LoaderScope';
 import { LoadingQueue } from './LoadingQueue';
 import type { SeamlessAdapter } from './seamless';
 import { isAbortError } from './SharedAbort';
 import { BinaryAsset, CsvAsset, Json, SubtitleAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
+
+/**
+ * The two identities a request resolves to, as reported by
+ * {@link Loader.identify}.
+ */
+export interface AssetIdentity {
+  /** Equal keys mean one resident resource, one in-flight fetch and one set of claims. */
+  readonly resourceKey: ResourceKey;
+  /** Equal keys mean one acquisition, however many resources are built from it. */
+  readonly sourceKey: SourceKey;
+  /** The canonical locator both are derived from. */
+  readonly locator: AssetLocator;
+}
 
 /** Normalize the single-or-many `cache` option into the list the decoder takes. */
 function toStoreList(cache: CacheStore | readonly CacheStore[]): readonly CacheStore[] {
@@ -90,10 +104,18 @@ export interface AssetLoaderContext {
    */
   readonly scope: LoaderScope;
   /**
-   * The canonical key for this load. Useful for diagnostics; also the key the
-   * loader dedupes in-flight requests and claims on.
+   * The identity of the resource being loaded: the key the loader dedupes
+   * in-flight requests and claims on.
    */
-  readonly identityKey: string;
+  readonly resourceKey: ResourceKey;
+  /**
+   * The identity of the source data this load acquires. Two resources built
+   * from one download share it, so it is what a handler keys anything
+   * source-shaped by - never {@link resourceKey}.
+   */
+  readonly sourceKey: SourceKey;
+  /** The canonical locator this load resolved to - the identity's source half, without any source discriminator. */
+  readonly locator: AssetLocator;
   /**
    * Cancellation signal for the load this handler invocation belongs to. It
    * aborts once no claim scope needs the result any more - a scene torn down
@@ -229,7 +251,7 @@ export class Loader {
   };
 
   /** The value-asset token for a value type name, or `undefined` for non-value / extension types. @internal */
-  private _valueTokenForKind(kind: keyof AssetDefinitions): AssetConstructor | undefined {
+  private _valueTokenForKind(kind: AssetTypeName): AssetConstructor | undefined {
     return (this._valueTokenByKind as Partial<Record<string, AssetConstructor>>)[kind];
   }
 
@@ -243,7 +265,7 @@ export class Loader {
    * returned handle plus {@link onError}; `load()` rejects and also dispatches
    * {@link onError}.
    */
-  private _resolveBarePath(input: string): { type: keyof AssetDefinitions; source: string; ctor: AssetConstructor } {
+  private _resolveBarePath(input: string): { type: AssetTypeName; source: string; ctor: AssetConstructor } {
     const type = this._typeRegistry._resolveTypeForPath(input);
 
     if (type === undefined) {
@@ -276,9 +298,55 @@ export class Loader {
    */
   public _canonicalize(type: AssetConstructor, source: string, options?: unknown): CanonicalAsset {
     const locator = canonicalizeSource(this._decoder.basePath, source);
-    const discriminator = this._typeRegistry._identityDiscriminator(type, source, options);
+    const resourceDiscriminator = this._typeRegistry._identityDiscriminator(type, source, options);
+    const sourceDiscriminator = this._typeRegistry._sourceDiscriminator(type, source, options);
 
-    return { key: canonicalAssetKey(this._typeRegistry._getTypeId(type), locator, discriminator), locator, type, source };
+    return {
+      key: resourceKey(this._typeRegistry._typeIdentity(type), locator, resourceDiscriminator),
+      // The resource discriminator is deliberately absent here: two resources
+      // that differ only in how one download is interpreted must resolve to one
+      // acquisition, or the same bytes would be fetched once per interpretation.
+      sourceKey: sourceKey(locator, sourceDiscriminator),
+      locator,
+      type,
+      source,
+    };
+  }
+
+  /**
+   * The two identities a descriptor resolves to on this loader.
+   *
+   * Both are derived exactly as a real load derives them, against the base path
+   * in force right now, so they can be compared to reason about what the loader
+   * will deduplicate: equal {@link AssetIdentity.resourceKey} means one resident
+   * resource, equal {@link AssetIdentity.sourceKey} means one acquisition.
+   */
+  public identify(asset: Asset<unknown>): AssetIdentity {
+    const ctor = this._typeRegistry.resolveTypeName(asset.type);
+
+    if (ctor === undefined) {
+      throw new Error(`Loader: no asset type "${asset.type}" is installed on this application.`);
+    }
+
+    const { type: _type, source, ...rest } = asset._config;
+    const options = Object.keys(rest).length > 0 ? rest : undefined;
+    const { key, sourceKey: source_, locator } = this._canonicalize(ctor, source, options);
+
+    return { resourceKey: key, sourceKey: source_, locator };
+  }
+
+  /**
+   * Acquire a representation of `source` through this loader's cache policy and
+   * stores, keyed by the resolved URL.
+   *
+   * `read` turns the raw response into the representation worth keeping. It is
+   * the only route by which an asset type reaches the network, and it hands back
+   * the representation rather than a resource: what to build from it stays with
+   * the factory, and where it was served from stays with the loader.
+   * @internal
+   */
+  public _fetchRepresentation<T>(source: string, read: (response: Response) => Promise<T>, storageName: string, signal?: AbortSignal): Promise<T> {
+    return this._decoder._contextFetch<T>(source, storageName, read, signal);
   }
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
@@ -431,7 +499,7 @@ export class Loader {
    * app.loader.registerType('json', 'ldtkMap');
    * ```
    */
-  public registerType(extension: string, type: keyof AssetDefinitions): this {
+  public registerType(extension: string, type: AssetTypeName): this {
     this._typeRegistry.registerType(extension, type);
 
     return this;
@@ -503,7 +571,7 @@ export class Loader {
         const start = dataStart + entry.offset;
         const slice = buffer.slice(start, start + entry.length);
 
-        return this._decoder._injectSource(asset, slice, entry.options);
+        return this._decoder._injectSource(asset, slice, this._residency._dependencyScopeFor(asset), entry.options);
       });
 
     await Promise.all(pending);
@@ -1163,12 +1231,14 @@ export class Loader {
   public bindAsset<Result = unknown, Options = undefined>(
     keys: {
       ctor: AssetConstructor<Result>;
-      type?: keyof AssetDefinitions;
+      type?: AssetTypeName;
       typeNames?: readonly string[];
       extensions?: readonly string[];
       seamless?: SeamlessAdapter<Result>;
       /** Optional per-type IDB namespace for `context.fetchX()` calls made by this binding's handler. Defaults to the shared `__ctx_binary`/`__ctx_text`/`__ctx_json` namespace. */
       storageName?: string;
+      /** The stable identity resource keys name this type by. Present only for a binding minted from an {@link AssetType}. */
+      typeIdentity?: string;
     },
     handler: AssetHandler<Result, Options>,
   ): void {
@@ -1267,7 +1337,7 @@ export class Loader {
    * payload immediately (refcount 0).
    * @internal
    */
-  public _release(key: CanonicalAssetKey, claimer: LoaderScope): void {
+  public _release(key: ResourceKey, claimer: LoaderScope): void {
     this._residency._release(key, claimer);
   }
 
@@ -1393,7 +1463,7 @@ export class Loader {
    * level down - the residency aborts the in-flight fetch only once the key has
    * no claim scope left, so a sibling scene loading the same asset keeps it.
    */
-  private _cancelClaims(claimer: LoaderScope, keys: readonly CanonicalAssetKey[]): void {
+  private _cancelClaims(claimer: LoaderScope, keys: readonly ResourceKey[]): void {
     for (const key of keys) {
       this._release(key, claimer);
     }

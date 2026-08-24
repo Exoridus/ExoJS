@@ -32,7 +32,7 @@ function makeContext(fixtures: Record<string, unknown>) {
   const context: AssetLoaderContext = {
     loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
     scope: { load: loaderLoad } as unknown as AssetLoaderContext['scope'],
-    identityKey: 'test',
+    resourceKey: 'test',
     resolveUrl: (source: string) => source,
     fetchText: vi.fn(),
     fetchArrayBuffer: vi.fn(),

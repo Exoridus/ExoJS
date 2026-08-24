@@ -1,11 +1,13 @@
+import type { AssetConstructor } from '#assets/AssetConstructor';
+import { AssetType } from '#assets/AssetType';
+import { assetTypeBinding, type IdentifiedAssetBinding } from '#assets/assetTypeBinding';
 import { normalizeExtension } from '#assets/extensionKindRegistry';
-import type { AssetConstructor } from '#assets/FactoryRegistry';
 import type { Loader } from '#assets/Loader';
 import type { SerializationRegistry } from '#core/serialization/SerializationRegistry';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { DrawableConstructor } from '#rendering/Renderer';
 
-import type { AssetBinding, AssetHandler, RendererBinding, SerializerBinding } from './Extension';
+import type { AssetBinding, AssetEntry, AssetHandler, RendererBinding, SerializerBinding } from './Extension';
 
 /**
  * Materialise all renderer bindings into the backend's renderer registry.
@@ -37,11 +39,22 @@ export function materializeRendererBindings(backend: RenderBackend, bindings: re
 }
 
 /**
- * Materialise all asset bindings into the loader.
- * Called once per Application construction.
+ * Materialise every asset entry into the loader.
+ *
+ * A first-class {@link AssetType} is adapted to a binding first, so both kinds
+ * of entry are installed through one path and are checked against each other by
+ * the same conflict rules - an `AssetType` claiming a suffix a binding already
+ * owns is as loud as two bindings claiming it.
+ *
+ * Called once per Application construction. Each entry's factory/handler is
+ * created here, which is what makes it loader-local: a descriptor shared between
+ * applications never shares the mutable instance it describes.
  * @internal
  */
-export function materializeAssetBindings(loader: Loader, bindings: readonly AssetBinding[]): void {
+export function materializeAssetBindings(loader: Loader, entries: readonly AssetEntry[]): void {
+  const bindings: AssetBinding[] = entries.map(entry => (entry instanceof AssetType ? assetTypeBinding(entry) : entry));
+  const seenIdentities = new Map<string, string>();
+
   // --- Cross-binding pre-validation (no mutation yet) ---
   const seenTypes = new Set<AssetConstructor>();
   const seenNames = new Set<string>();
@@ -74,6 +87,18 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
       seenExts.add(key);
     }
 
+    const { typeIdentity } = binding as IdentifiedAssetBinding;
+
+    if (typeIdentity !== undefined) {
+      const claimant = seenIdentities.get(typeIdentity);
+
+      if (claimant !== undefined) {
+        throw new Error(`Asset type id "${typeIdentity}" is claimed by two asset types. An id identifies one type per application.`);
+      }
+
+      seenIdentities.set(typeIdentity, binding.ctor.name);
+    }
+
     seenTypes.add(binding.ctor);
   }
 
@@ -89,6 +114,7 @@ export function materializeAssetBindings(loader: Loader, bindings: readonly Asse
         ...(binding.extensions !== undefined && { extensions: binding.extensions }),
         ...(binding.seamless !== undefined && { seamless: binding.seamless }),
         ...(binding.storageName !== undefined && { storageName: binding.storageName }),
+        ...((binding as IdentifiedAssetBinding).typeIdentity !== undefined && { typeIdentity: (binding as IdentifiedAssetBinding).typeIdentity }),
       },
       handler,
     );
