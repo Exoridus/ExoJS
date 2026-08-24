@@ -7,7 +7,7 @@ import { tilemapExtension } from '@codexo/exojs-tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';
-import { ldtkMapBinding } from '../src/ldtkBinding';
+import { ldtkMapBinding, ldtkProjectBinding } from '../src/ldtkBinding';
 import type { LdtkData } from '../src/LdtkData';
 import { ldtkExtension } from '../src/ldtkExtension';
 import { LdtkMap } from '../src/LdtkMap';
@@ -22,10 +22,9 @@ describe('@codexo/exojs-ldtk extension descriptor', () => {
     expect(ldtkExtension.dependencies).toContain(tilemapExtension);
   });
 
-  it('carries exactly one asset binding (the LdtkMap binding)', () => {
+  it('carries both asset bindings (eager LdtkMap and streaming LdtkProject)', () => {
     expect(ldtkExtension.assets).toBeDefined();
-    expect(ldtkExtension.assets!.length).toBe(1);
-    expect(ldtkExtension.assets![0]).toBe(ldtkMapBinding);
+    expect(ldtkExtension.assets).toEqual([ldtkMapBinding, ldtkProjectBinding]);
   });
 
   it('is a frozen descriptor', () => {
@@ -106,10 +105,11 @@ describe('buildSnapshot([ldtkExtension])', () => {
     ]);
   });
 
-  it('collects the single LDtk asset binding', () => {
+  it('collects both LDtk asset bindings', () => {
     const snapshot = buildSnapshot([ldtkExtension]);
-    expect(snapshot.assets).toHaveLength(1);
+    expect(snapshot.assets).toHaveLength(2);
     expect(snapshot.assets).toContain(ldtkMapBinding);
+    expect(snapshot.assets).toContain(ldtkProjectBinding);
   });
 
   it('pulls in the tilemap renderer binding (one-extension rendering)', () => {

@@ -1,0 +1,380 @@
+{
+  "title": "MapObjectSpawner",
+  "description": "Turns the objects authored in a map into game objects. A spawner owns its own dispatch table, so several games, tests, editor previews or mods can run in one process without seeing each other's factories. There is no global registry to register into and nothing to reset between tests. ExoJS owns the mechanism: identity, ordering, cancellation, rollback and lifetime. The game owns the policy: which object becomes what, and what those objects need - dependencies travel through `Context`, not through any service locator in the engine. A spawn is **atomic**: if any factory fails, everything already created is destroyed in reverse order and no session is produced.",
+  "symbol": "MapObjectSpawner",
+  "kind": "class",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Turns the objects authored in a map into game objects.",
+        "A spawner owns its own dispatch table, so several games, tests, editor previews or mods can run in one process without seeing each other's factories. There is no global registry to register into and nothing to reset between tests.",
+        "ExoJS owns the mechanism: identity, ordering, cancellation, rollback and lifetime. The game owns the policy: which object becomes what, and what those objects need - dependencies travel through `Context`, not through any service locator in the engine.",
+        "A spawn is **atomic**: if any factory fails, everything already created is destroyed in reverse order and no session is produced."
+      ],
+      "importLine": "import { MapObjectSpawner } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(factories: MapObjectFactories<Context, Result>, options?: MapObjectSpawnerOptions<Context>): MapObjectSpawner<Context, Result>",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "factories",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapObjectFactories",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Context",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapObjectSpawnerOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Context",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapObjectSpawner",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Context",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "factories",
+              "type": "MapObjectFactories<Context, Result>",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "MapObjectSpawnerOptions<Context>",
+              "optional": true
+            }
+          ],
+          "returnType": "MapObjectSpawner<Context, Result>",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "handles",
+          "signature": "handles(key: string): boolean",
+          "signatureTokens": [
+            {
+              "text": "handles",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "key",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "key",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether a factory is registered under key."
+        },
+        {
+          "name": "spawn",
+          "signature": "spawn(map: TileMap, context: Context, options?: MapSpawnOptions): Promise<MapSpawnSession<Result>>",
+          "signatureTokens": [
+            {
+              "text": "spawn",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "map",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TileMap",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Context",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapSpawnOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapSpawnSession",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "map",
+              "type": "TileMap",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "Context",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "MapSpawnOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<MapSpawnSession<Result>>",
+          "description": "Create a game object for every object of map a factory matches, and return the MapSpawnSession that owns them. Objects are visited in object-layer order, then object order within each layer, and asynchronous factories are awaited in that same order - a factory that resolves early can never overtake one before it."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "unknown",
+          "signature": "unknown: UnknownMapObjectPolicy",
+          "signatureTokens": [
+            {
+              "text": "unknown",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "UnknownMapObjectPolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What to do with an object no factory matched."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/MapObjectSpawner.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapObjectSpawner.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/MapObjectSpawner.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapObjectSpawner.ts"
+}

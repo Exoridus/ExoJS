@@ -126,8 +126,18 @@ function optionalNonNegativeInteger(obj: Record<string, unknown>, key: string, s
   if (obj[key] !== undefined) expectNonNegativeInteger(obj[key], source, joinPath(path, key));
 }
 
-function optionalString(obj: Record<string, unknown>, key: string, source: string, path: string): void {
-  if (obj[key] !== undefined) expectString(obj[key], source, joinPath(path, key));
+/**
+ * LDtk writes an unset optional as an explicit `null` rather than omitting the
+ * key, so a validator that only tolerates `undefined` rejects the files the
+ * editor actually produces.
+ */
+function nullableString(obj: Record<string, unknown>, key: string, source: string, path: string): void {
+  if (obj[key] !== undefined && obj[key] !== null) expectString(obj[key], source, joinPath(path, key));
+}
+
+/** See {@link nullableString}. */
+function nullableInteger(obj: Record<string, unknown>, key: string, source: string, path: string): void {
+  if (obj[key] !== undefined && obj[key] !== null) expectInteger(obj[key], source, joinPath(path, key));
 }
 
 function optionalBoolean(obj: Record<string, unknown>, key: string, source: string, path: string): void {
@@ -355,9 +365,7 @@ function validateLayerInstance(raw: unknown, source: string, path: string): void
   expectBoolean(layer.visible, source, joinPath(path, 'visible'));
   expectString(layer.iid, source, joinPath(path, 'iid'));
 
-  if (layer.__tilesetDefUid !== undefined) {
-    expectInteger(layer.__tilesetDefUid, source, joinPath(path, '__tilesetDefUid'));
-  }
+  nullableInteger(layer, '__tilesetDefUid', source, path);
   if (layer.gridTiles !== undefined) {
     validateTiles(layer.gridTiles, source, joinPath(path, 'gridTiles'));
   }
@@ -389,7 +397,17 @@ function validateLevel(raw: unknown, source: string, path: string): void {
   expectNumber(level.worldY, source, joinPath(path, 'worldY'));
   expectNumber(level.pxWid, source, joinPath(path, 'pxWid'));
   expectNumber(level.pxHei, source, joinPath(path, 'pxHei'));
-  optionalString(level, 'externalRelPath', source, path);
+  nullableString(level, 'externalRelPath', source, path);
+
+  // Same explicit-null rule as the fields above: an isolated level can arrive
+  // with a null here rather than an empty array.
+  if (level.__neighbours !== undefined && level.__neighbours !== null) {
+    eachEntry(level.__neighbours, source, joinPath(path, '__neighbours'), (item, itemPath) => {
+      const neighbour = expectObject(item, source, itemPath);
+      expectString(neighbour.levelIid, source, joinPath(itemPath, 'levelIid'));
+      expectString(neighbour.dir, source, joinPath(itemPath, 'dir'));
+    });
+  }
 
   if (level.fieldInstances !== undefined) {
     validateFieldInstances(level.fieldInstances, source, joinPath(path, 'fieldInstances'));

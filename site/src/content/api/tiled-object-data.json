@@ -6,11 +6,11 @@
   "subsystem": "tiled",
   "importPath": "@codexo/exojs-tiled",
   "tier": "stable",
-  "memberCount": 17,
+  "memberCount": 18,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 17,
+    "properties": 18,
     "events": 0
   },
   "sections": [
@@ -28,6 +28,31 @@
       "id": "properties",
       "title": "Properties",
       "members": [
+        {
+          "name": "class",
+          "signature": "class?: string",
+          "signatureTokens": [
+            {
+              "text": "class",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Object class as Tiled 1.9 wrote it. Absent in every other version."
+        },
         {
           "name": "ellipse",
           "signature": "ellipse?: boolean",
@@ -367,7 +392,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Object class (empty string if unset)."
+          "description": "Object class, under the name Tiled 1.10 and later write. Empty when unset. Tiled 1.9 wrote the same value as TiledObjectData.class instead; see import('./TiledObject').TiledObject.type for how the two are reconciled."
         },
         {
           "name": "visible",

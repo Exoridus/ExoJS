@@ -1,0 +1,79 @@
+{
+  "title": "MapSpawnErrorReason",
+  "description": "Why a MapSpawnError was raised.",
+  "symbol": "MapSpawnErrorReason",
+  "kind": "type",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Why a MapSpawnError was raised."
+      ],
+      "importLine": "import { MapSpawnErrorReason } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "MapSpawnErrorReason",
+          "signature": "\"duplicate-id\" | \"factory-failed\" | \"unknown-kind\"",
+          "signatureTokens": [
+            {
+              "text": "\"duplicate-id\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"factory-failed\"",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "\"unknown-kind\"",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/MapObjectSpawner.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapObjectSpawner.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/MapObjectSpawner.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapObjectSpawner.ts"
+}

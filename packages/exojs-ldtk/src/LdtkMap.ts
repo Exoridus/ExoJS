@@ -1,7 +1,8 @@
-import type { TileMap } from '@codexo/exojs-tilemap';
+import type { MapWorld, TileMap } from '@codexo/exojs-tilemap';
 
 import type { LdtkData } from './LdtkData';
 import { getLdtkLevelEntries } from './ldtkLevelEntries';
+import { ldtkToMapWorld } from './ldtkToMapWorld';
 
 /**
  * A parsed LDtk world document: holds the raw JSON data and the converted
@@ -33,10 +34,42 @@ export class LdtkMap {
    */
   public readonly levels: readonly TileMap[];
 
+  private _worlds?: readonly MapWorld[];
+
   public constructor(source: string, data: LdtkData, levels: readonly TileMap[]) {
     this.source = source;
     this.data = data;
     this.levels = levels;
+  }
+
+  /**
+   * The document's world layout: level placement, bounds and neighbour graph,
+   * one {@link MapWorld} per LDtk world (exactly one for a single-world
+   * project). Built on first access and cached.
+   *
+   * This is metadata about *where* levels are, independent of the runtime maps
+   * in {@link levels}. Use it to navigate; use
+   * {@link import('./LdtkWorld').LdtkWorld} instead when levels should be
+   * loaded on demand rather than all at once.
+   */
+  public get worlds(): readonly MapWorld[] {
+    this._worlds ??= ldtkToMapWorld(this.data);
+    return this._worlds;
+  }
+
+  /**
+   * The document's only world. Convenience for the single-world case; for a
+   * multi-world project this is the first world in document order and
+   * {@link worlds} is what to read instead.
+   */
+  public get world(): MapWorld {
+    const [first] = this.worlds;
+
+    if (first === undefined) {
+      throw new Error(`LdtkMap: "${this.source}" declares no world.`);
+    }
+
+    return first;
   }
 
   /**

@@ -1,0 +1,113 @@
+{
+  "title": "MapLevelLoadContext",
+  "description": "What a MapLevelProvider is given for one level load.",
+  "symbol": "MapLevelLoadContext",
+  "kind": "interface",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a MapLevelProvider is given for one level load."
+      ],
+      "importLine": "import { MapLevelLoadContext } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "level",
+          "signature": "level: MapLevel",
+          "signatureTokens": [
+            {
+              "text": "level",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapLevel",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Metadata of the level being loaded."
+        },
+        {
+          "name": "scope",
+          "signature": "scope: LoaderScope",
+          "signatureTokens": [
+            {
+              "text": "scope",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScope",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The level's own LoaderScope. Assets claimed through it are released when the level unloads, and claiming an asset another level also holds never takes it away from that level. Its lifetime ends when signal aborts: an unload releases the scope without waiting for a provider still in flight, so a provider that resumes after that point must not claim through it any more. Check signal.aborted after every await before touching the scope again."
+        },
+        {
+          "name": "signal",
+          "signature": "signal: AbortSignal",
+          "signatureTokens": [
+            {
+              "text": "signal",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Aborts when the level is unloaded or the load is cancelled."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/MapWorldRuntime.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapWorldRuntime.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/MapWorldRuntime.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapWorldRuntime.ts"
+}

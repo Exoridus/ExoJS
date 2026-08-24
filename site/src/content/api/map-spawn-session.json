@@ -1,0 +1,246 @@
+{
+  "title": "MapSpawnSession",
+  "description": "The objects one spawn produced, and their shared lifetime. A session is handed out by import('./MapObjectSpawner').MapObjectSpawner.spawn and owns every result in it. Destroying the session destroys them all; nothing else has to be tracked, and nothing scans the scene to find them again. A session is not reusable - destroy it and spawn again.",
+  "symbol": "MapSpawnSession",
+  "kind": "class",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 5,
+  "counts": {
+    "constructors": 0,
+    "methods": 3,
+    "properties": 2,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The objects one spawn produced, and their shared lifetime.",
+        "A session is handed out by import('./MapObjectSpawner').MapObjectSpawner.spawn and owns every result in it. Destroying the session destroys them all; nothing else has to be tracked, and nothing scans the scene to find them again.",
+        "A session is not reusable - destroy it and spawn again."
+      ],
+      "importLine": "import { MapSpawnSession } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Destroy every spawned object, in reverse spawn order. Idempotent; objects still lists what the session held. Reverse order is the contract, not an implementation detail: an object spawned later may have attached itself to an earlier one (a turret to its platform, a light to its lamp), and tearing down the dependent first is the order that never observes a half-destroyed owner."
+        },
+        {
+          "name": "get",
+          "signature": "get(sourceId: string): Result | undefined",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "sourceId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "sourceId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Result | undefined",
+          "description": "The object spawned from the source object with this import('./MapObject').MapObjectDescriptor.id, or undefined when no object with that id spawned anything. Constant time. The ids are the source-stable ones, which is what makes this the hook for savegame restoration: persist the id, look the runtime object back up."
+        },
+        {
+          "name": "has",
+          "signature": "has(sourceId: string): boolean",
+          "signatureTokens": [
+            {
+              "text": "has",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "sourceId",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "sourceId",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether get would find an object for sourceId."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "objects",
+          "signature": "objects: readonly Result[]",
+          "signatureTokens": [
+            {
+              "text": "objects",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The spawned objects in spawn order: object-layer order, then object order within each layer. Objects whose factory returned null are not in here."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether destroy has run."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/MapSpawnSession.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapSpawnSession.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/MapSpawnSession.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapSpawnSession.ts"
+}

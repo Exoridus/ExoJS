@@ -476,7 +476,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "The object's class, normalised across Tiled versions: 1.9 wrote it as class, every other version as type. A file carries one of the two, so class wins when present and non-empty and type is used otherwise. Empty when the object has no class."
         },
         {
           "name": "visible",

@@ -1,0 +1,671 @@
+{
+  "title": "MapWorldRuntime",
+  "description": "The live side of a MapWorld: loads and unloads levels on demand, each with its own asset scope and its own lifetime. ExoJS provides the mechanism, not the streaming policy. Nothing here watches a camera or guesses a radius: game code reads MapWorld.getNeighbours / MapWorld.getLevelsInBounds and calls loadLevel and unloadLevel when it decides to. Scope layout - the runtime owns everything below its own scope and nothing above it: ```text scene.loader (given to the runtime, never destroyed by it) └─ world (the runtime's own scope) ├─ level:forest └─ level:cave ```",
+  "symbol": "MapWorldRuntime",
+  "kind": "class",
+  "subsystem": "tilemap",
+  "importPath": "@codexo/exojs-tilemap",
+  "tier": "stable",
+  "memberCount": 12,
+  "counts": {
+    "constructors": 1,
+    "methods": 7,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The live side of a MapWorld: loads and unloads levels on demand, each with its own asset scope and its own lifetime.",
+        "ExoJS provides the mechanism, not the streaming policy. Nothing here watches a camera or guesses a radius: game code reads MapWorld.getNeighbours / MapWorld.getLevelsInBounds and calls loadLevel and unloadLevel when it decides to.",
+        "Scope layout - the runtime owns everything below its own scope and nothing above it:",
+        "```text scene.loader (given to the runtime, never destroyed by it) └─ world (the runtime's own scope) ├─ level:forest └─ level:cave ```"
+      ],
+      "importLine": "import { MapWorldRuntime } from '@codexo/exojs-tilemap'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: MapWorldRuntimeOptions): MapWorldRuntime",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapWorldRuntimeOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapWorldRuntime",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "MapWorldRuntimeOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "MapWorldRuntime",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Cancel every load in flight, unload every loaded level in reverse load order, and release the runtime's own scope. Idempotent. The scope the runtime was constructed with is left alone - it belongs to whoever passed it in."
+        },
+        {
+          "name": "getLevel",
+          "signature": "getLevel(id: string): MapLevelRuntime<Destroyable> | undefined",
+          "signatureTokens": [
+            {
+              "text": "getLevel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapLevelRuntime",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Destroyable",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "MapLevelRuntime<Destroyable> | undefined",
+          "description": "The loaded level with this id, or undefined when it is not loaded."
+        },
+        {
+          "name": "isLoaded",
+          "signature": "isLoaded(id: string): boolean",
+          "signatureTokens": [
+            {
+              "text": "isLoaded",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether the level is loaded. A load still in flight does not count as loaded."
+        },
+        {
+          "name": "isLoading",
+          "signature": "isLoading(id: string): boolean",
+          "signatureTokens": [
+            {
+              "text": "isLoading",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Whether a load for this level is currently running."
+        },
+        {
+          "name": "loadLevel",
+          "signature": "loadLevel(id: string, options?: MapLevelCancelOptions): Promise<MapLevelRuntime<Destroyable>>",
+          "signatureTokens": [
+            {
+              "text": "loadLevel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapLevelCancelOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapLevelRuntime",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Destroyable",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "MapLevelCancelOptions",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<MapLevelRuntime<Destroyable>>",
+          "description": "Load a level, or return the one already loaded. At most one runtime exists per level id. Calling this while the level is loaded resolves to that runtime, and calling it while a load is in flight joins that load rather than starting a second one. **Options belong to the call that actually starts the load** - a joining call's spawner, context and signal are not applied, because the level being produced is the one the first call asked for. Pass { spawner, context } to spawn the level's objects as part of the load, or just { signal } to load a level without spawning anything. A failed or aborted load leaves nothing behind: the map, anything the spawner created, and the level's asset claims are all released before the rejection surfaces, and the level can be loaded again."
+        },
+        {
+          "name": "loadLevel",
+          "signature": "loadLevel(id: string, options: MapLevelLoadOptions<Context, Result>): Promise<MapLevelRuntime<Result>>",
+          "signatureTokens": [
+            {
+              "text": "loadLevel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapLevelLoadOptions",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Context",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapLevelRuntime",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Result",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "options",
+              "type": "MapLevelLoadOptions<Context, Result>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<MapLevelRuntime<Result>>",
+          "description": "Load a level, or return the one already loaded. At most one runtime exists per level id. Calling this while the level is loaded resolves to that runtime, and calling it while a load is in flight joins that load rather than starting a second one. **Options belong to the call that actually starts the load** - a joining call's spawner, context and signal are not applied, because the level being produced is the one the first call asked for. Pass { spawner, context } to spawn the level's objects as part of the load, or just { signal } to load a level without spawning anything. A failed or aborted load leaves nothing behind: the map, anything the spawner created, and the level's asset claims are all released before the rejection surfaces, and the level can be loaded again."
+        },
+        {
+          "name": "unloadLevel",
+          "signature": "unloadLevel(id: string): boolean",
+          "signatureTokens": [
+            {
+              "text": "unloadLevel",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "boolean",
+          "description": "Unload a level, or cancel its load when one is in flight. Returns whether there was anything to unload. A cancelled load rejects with an AbortError for whoever started it, and the level is immediately loadable again - a loadLevel issued in the same turn starts a fresh load rather than joining the one just cancelled."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "scope",
+          "signature": "scope: LoaderScope",
+          "signatureTokens": [
+            {
+              "text": "scope",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "LoaderScope",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The runtime's own scope: parent of every level scope, child of the injected one."
+        },
+        {
+          "name": "world",
+          "signature": "world: MapWorld",
+          "signatureTokens": [
+            {
+              "text": "world",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapWorld",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The world this runtime streams levels out of."
+        },
+        {
+          "name": "destroyed",
+          "signature": "destroyed: boolean",
+          "signatureTokens": [
+            {
+              "text": "destroyed",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether destroy has run."
+        },
+        {
+          "name": "levels",
+          "signature": "levels: readonly MapLevelRuntime<Destroyable>[]",
+          "signatureTokens": [
+            {
+              "text": "levels",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MapLevelRuntime",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Destroyable",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Every currently **loaded** level, in load order - not the world's level set, which stays on MapWorld.levels (reachable as runtime.world.levels). Returns a fresh array."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "packages/exojs-tilemap/src/MapWorldRuntime.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapWorldRuntime.ts"
+      }
+    }
+  ],
+  "sourcePath": "packages/exojs-tilemap/src/MapWorldRuntime.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/packages/exojs-tilemap/src/MapWorldRuntime.ts"
+}

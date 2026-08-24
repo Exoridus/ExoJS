@@ -55,7 +55,7 @@
         },
         {
           "name": "externalRelPath",
-          "signature": "externalRelPath?: string",
+          "signature": "externalRelPath?: null | string",
           "signatureTokens": [
             {
               "text": "externalRelPath",
@@ -70,13 +70,21 @@
               "kind": "punctuation"
             },
             {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
               "text": "string",
               "kind": "keyword"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Relative path to an external .ldtkl file for multi-world setups."
+          "description": "Relative path to this level's external .ldtkl file, or null when the project does not save levels separately - LDtk writes the key either way."
         },
         {
           "name": "fieldInstances",

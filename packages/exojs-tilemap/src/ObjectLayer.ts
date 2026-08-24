@@ -41,6 +41,15 @@ export interface ObjectPoint {
 interface TileMapObjectBase<P extends TileProperties = TileProperties> {
   /** Source-unique object id. */
   readonly id: number;
+  /**
+   * Stable string identity assigned by the authoring format, when it has one.
+   *
+   * LDtk sets it to the entity `iid`, which is globally unique and survives
+   * re-ordering, re-export and level moves - the identity to persist in a
+   * savegame. Tiled has no such field and leaves this unset; there, {@link id}
+   * is the identity and it is unique only within its map.
+   */
+  readonly sourceId?: string;
   /** Object name (may be empty; not unique). */
   readonly name: string;
   /** Object class/type string (Tiled `type`/`class`; may be empty). */
@@ -63,6 +72,15 @@ interface TileMapObjectBase<P extends TileProperties = TileProperties> {
   readonly visible: boolean;
   /** Immutable custom properties. */
   readonly properties: P;
+  /**
+   * The raw source-format record this object was parsed from, for the rare
+   * case that needs a field this model does not carry. Adapters that keep
+   * their parsed document alive set it (`LdtkEntityInstance` for LDtk,
+   * `TiledObject` for Tiled); a procedurally built object has none.
+   *
+   * Reading it ties the code to one source format - prefer the typed fields.
+   */
+  readonly source?: unknown;
 }
 
 /** An axis-aligned rectangle object spanning `[x, y, width, height]`. */

@@ -17,6 +17,68 @@ release and includes intentional breaking changes; see **Changed** and
 
 ### Added
 
+- **A world runtime and a map object spawner — levels stream, authored objects become
+  entities.** Both map adapters stopped at data. LDtk modelled a world as an array of converted
+  levels: `__neighbours` was not parsed at all, world placement survived only as two numbers in
+  `TileMap.properties`, and loading a `.ldtk` file fetched **every** external `.ldtkl` payload and
+  converted **every** level, whether the game wanted them or not. Objects were worse off: both
+  adapters ended at `TileMapObject`, with no contract at all for turning one into a game object,
+  and LDtk threw away the entity `iid` — the only identity it guarantees stable — leaving a
+  numeric id derived from document position that no savegame can rely on.
+
+  `@codexo/exojs-tilemap` now carries the format-neutral runtime both adapters feed:
+
+  | Symbol                  | What it owns                                                                                            |
+  | ----------------------- | ------------------------------------------------------------------------------------------------------- |
+  | `MapWorld` / `MapLevel` | Where levels are: stable id, world bounds, neighbour graph, externality. Metadata only.                 |
+  | `MapWorldRuntime`       | Explicit `loadLevel` / `unloadLevel`; one child `LoaderScope` per level; at most one live level per id. |
+  | `MapLevelRuntime`       | One loaded level's map, scope and spawn session, behind one `destroy()`.                                |
+  | `MapObjectSpawner`      | A local dispatch table from object class to factory.                                                    |
+  | `MapObjectDescriptor`   | The format-neutral view of one authored object.                                                         |
+  | `MapSpawnSession`       | What one spawn produced, keyed by stable source id.                                                     |
+
+  The split is deliberate: ExoJS owns the **mechanism** — identity, ordering, cancellation,
+  rollback, lifetime — and the game owns the **policy**. Nothing watches a camera, guesses a
+  streaming radius, or keeps a global entity registry. A spawner is an instance, so several
+  games, tests, editor previews and mods coexist in one process with nothing to reset between
+  them, and dependencies travel through a caller-defined `TContext` rather than any service
+  locator in the engine.
+
+  Four contract points are pinned and tested rather than left to emerge:
+
+  - **Order** is object-layer order, then object order within the layer, and asynchronous
+    factories are awaited in that order — a fast promise cannot overtake a slow one before it.
+  - **Atomicity**: a factory that throws destroys everything already created, in reverse order,
+    and no session is produced. The failure arrives as `MapSpawnError` with the original error as
+    `cause`.
+  - **Cancellation**: unloading a level mid-load aborts its spawn. A factory already in flight is
+    still awaited — abandoning it would leak whatever it produced — and its result is destroyed
+    with the rest of the rollback, so no result outlives the level it belonged to. Cancelling this
+    way also frees the level id immediately: a `loadLevel` issued in the same turn starts a
+    fresh load instead of joining the one on its way out.
+  - **Teardown order** is spawned objects (reverse spawn order), then the map, then the level's
+    `LoaderScope` last, because everything before it may still be reading a texture the scope
+    keeps resident. Sibling levels are untouched: each holds its own claims.
+
+  On the LDtk side, `__neighbours` is parsed and mapped onto `MapLevelSide` (an unrecognised
+  direction code stays an adjacency rather than being dropped), multi-world projects yield one
+  `MapWorld` per world instead of one merged one — LDtk worlds have independent coordinate
+  spaces, so merging them would invent overlaps — and the entity `iid` now reaches
+  `TileMapObject.sourceId`, which is what `MapSpawnSession.get(id)` and savegame restoration key
+  on. Tiled objects keep their numeric id as a string; both adapters also pass the raw source
+  record through as `TileMapObject.source` for the rare format-specific case.
+
+  Streaming arrives as a **second asset type, not a changed one**: `ldtkMap` is untouched and
+  still loads a whole project eagerly. The new `ldtkProject` type loads the document and every
+  tileset atlas — shared between levels, and a level load that waited on an image fetch would
+  stutter at exactly the wrong moment — and no level payload at all. An external `.ldtkl` file is
+  fetched when its level loads, claimed by that level's scope, and released when it unloads. The
+  same pair already exists on the Tiled side (`tileMap` / `tiledSource`), so the shape is not new.
+
+  Tiled has no world file here and this does not invent one; a Tiled game describes its layout
+  with a `MapWorld` it builds and gives `MapWorldRuntime` a provider. See the new
+  **Worlds and level streaming** guide.
+
 - **`@codexo/exojs-tilemap-physics` — tilemap collision geometry as physics bodies.**
   Tile collision data was fully parsed and fully placeable, but turning it into a world a
   player can stand on was still copy-paste: an example recipe mapped a few object kinds and
@@ -661,6 +723,21 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
   `unregister`, and no scene-level scope.
 
 ### Fixed
+
+- **Every real LDtk file failed validation.** LDtk writes an unset optional as an explicit
+  `null` rather than omitting the key, and the validator only tolerated `undefined`. A project
+  that does not save levels separately emits `"externalRelPath": null` on every level, and any
+  layer that draws no tiles (an Entities layer, an IntGrid layer without auto-rules) emits
+  `"__tilesetDefUid": null` — so both threw `LdtkFormatError` before a single tile was read. The
+  bundled fixtures omitted those keys entirely, which is why the suite never saw it. Both fields
+  now accept `null` as "absent", and their declared types say so.
+
+- **Maps authored in Tiled 1.9 were rejected outright.** Tiled 1.9 renamed an object's `type`
+  member to `class` in the JSON format and 1.10 renamed it back, so a file written by either
+  version carries exactly one of the two. `TiledObjectData.type` was required, so every
+  1.9-authored map threw at validation. Both spellings are now accepted, with `class` winning
+  when present and non-empty; `TiledObject.type` reports the class either way, and remains the
+  dispatch key a `MapObjectSpawner` sees.
 
 - **Eight public exports were missing from the full IIFE bundle.** `window.Exo` is assembled
   from a hand-written entry file: most packages come in through `export *`, but tilemap,

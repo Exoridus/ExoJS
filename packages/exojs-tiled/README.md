@@ -159,6 +159,11 @@ All layers extend `TiledLayer` (base: `id`, `name`, `class`, `visible`, `opacity
 Shape discriminants: `point` (boolean), `ellipse` (boolean), `polygon`, `polyline`, `text`,
 `gid` (tile object). If none are set, the object is a plain rectangle.
 
+`TiledObject.type` is the object's **class**, normalised across Tiled versions: 1.9 wrote it as
+`class` in the JSON, every other version as `type`. A file carries one of the two, so `class` wins
+when present and non-empty. That string is also the dispatch key a
+[`MapObjectSpawner`](https://www.npmjs.com/package/@codexo/exojs-tilemap) sees.
+
 ## Texture ownership
 
 Textures for tileset images are loaded via the Loader and remain in the Loader cache.

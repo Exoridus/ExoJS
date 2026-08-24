@@ -166,10 +166,10 @@ export interface LdtkLayerInstance {
   /** Globally unique instance id (UUID string). */
   readonly iid: string;
   /**
-   * UID of the tileset used by this layer.
-   * Present for `Tiles`, `AutoLayer`, and `IntGrid` layers that use a tileset.
+   * UID of the tileset used by this layer, or `null` on a layer that draws no
+   * tiles - LDtk writes the key either way.
    */
-  readonly __tilesetDefUid?: number;
+  readonly __tilesetDefUid?: number | null;
   /** Placed tiles for `Tiles` layer type. */
   readonly gridTiles?: readonly LdtkTileData[];
   /** Auto-computed tiles for `AutoLayer` (and `IntGrid` + auto-rules) layer types. */
@@ -190,6 +190,23 @@ export interface LdtkLayerInstance {
 }
 
 // ── Levels ────────────────────────────────────────────────────────────────────
+
+/**
+ * One entry of a level's `__neighbours` array: an adjacency to another level,
+ * plus the direction code LDtk assigned it.
+ */
+export interface LdtkLevelNeighbour {
+  /** `iid` of the neighbouring level. */
+  readonly levelIid: string;
+  /**
+   * Direction code: `"n"`, `"s"`, `"e"`, `"w"` for the cardinal sides, and
+   * `"<"`, `">"`, `"o"` for the depth relations LDtk 1.x adds (lower depth,
+   * greater depth, overlapping at the same depth). Mapped onto
+   * {@link import('@codexo/exojs-tilemap').MapLevelSide} by
+   * {@link import('./ldtkToMapWorld').ldtkToMapWorld}.
+   */
+  readonly dir: string;
+}
 
 /** A level in the LDtk world. */
 export interface LdtkLevel {
@@ -214,8 +231,16 @@ export interface LdtkLevel {
    */
   readonly layerInstances: readonly LdtkLayerInstance[] | null;
   readonly fieldInstances?: readonly LdtkFieldInstance[];
-  /** Relative path to an external `.ldtkl` file for multi-world setups. */
-  readonly externalRelPath?: string;
+  /**
+   * Relative path to this level's external `.ldtkl` file, or `null` when the
+   * project does not save levels separately - LDtk writes the key either way.
+   */
+  readonly externalRelPath?: string | null;
+  /**
+   * Levels LDtk computed as adjacent to this one. Absent in documents written
+   * before LDtk emitted the field, and empty for an isolated level.
+   */
+  readonly __neighbours?: readonly LdtkLevelNeighbour[] | null;
 }
 
 // ── Worlds ────────────────────────────────────────────────────────────────────
