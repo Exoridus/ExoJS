@@ -864,6 +864,74 @@ state, claims, inFlight, background }` — for diagnostics and support bundles.
 
 ### Changed
 
+- **BREAKING — canvas sizing is a policy object, not a mode string.**
+  `CanvasSizingMode` named five modes along three different technical axes at
+  once, so `'fit'` and `'letterbox'` differed in ways the names never said, and
+  `'letterbox'` was not self-explanatory at all. The responsive machinery also
+  lived in `Application`, which held a `ResizeObserver` whenever a mode could
+  conceivably need one.
+
+  `canvas.sizingMode` is replaced by `canvas.sizing`, an optional
+  `CanvasSizing` instance, and `app.sizingMode` by `app.sizing`. Passing nothing
+  is the fixed case - the canvas stays at `canvas.width` x `canvas.height` and
+  observes nothing - so there is no class to construct for the common case.
+
+  `canvas.width`/`height` now mean exactly one thing: the **base resolution**.
+  From it three axes are derived and kept apart rather than folded together:
+
+  | Axis          | Where to read it               | What it is                                       |
+  | ------------- | ------------------------------ | ------------------------------------------------ |
+  | CSS size      | `app.element` layout box       | How large the canvas appears on the page.        |
+  | Logical view  | `app.width` / `app.height`     | The coordinates nodes and pointers live in.      |
+  | Backing store | `app.canvas.width` / `.height` | The pixels the GPU draws, `render x pixelRatio`. |
+
+  Four built-ins cover the usual cases, and each owns exactly one
+  `ResizeObserver` on the canvas's parent, released on detach:
+
+  | Policy                         | CSS size                     | Logical view                  | Backing store                                  |
+  | ------------------------------ | ---------------------------- | ----------------------------- | ---------------------------------------------- |
+  | _(omitted)_                    | base, fixed                  | base, fixed                   | base x DPR                                     |
+  | `FixedResolutionCanvasSizing`  | fits the parent, up and down | base, fixed                   | base x DPR                                     |
+  | `CappedResolutionCanvasSizing` | fits the parent, up and down | base, fixed                   | follows the display down, capped at base x DPR |
+  | `ResponsiveCanvasSizing`       | the whole parent             | adapts to the parent's aspect | display size x DPR                             |
+  | `ManualCanvasSizing`           | left to the page             | `app.resize`                  | `app.resize`                                   |
+
+  `ResponsiveCanvasSizing` is the only one whose logical view changes shape. It
+  never letterboxes and never crops: a host wider than the base aspect shows
+  more world left and right, a narrower one more above and below. Its optional
+  `minAspect` sets how far the view may narrow horizontally first - `1` allows a
+  square view before vertical growth starts - and defaults to the base aspect,
+  which crops nothing.
+
+  `CanvasSizing` is a public abstract class, so an editor panel, a safe-area
+  inset or a framework-owned layout is a policy of its own: implement
+  `attach(context)`, commit geometry through `context.apply(metrics)`, and
+  release everything in `detach()`. Nothing is created on a policy's behalf, and
+  a policy that observes nothing costs nothing.
+
+  Two behaviours change beyond the naming. ExoJS no longer writes to the canvas's
+  parent element at all - `'letterbox'` used to take over its `display`,
+  `alignItems`, `justifyContent`, `overflow` and `background` - so the area
+  around a fixed-aspect canvas is the page's to style. And the CSS box a policy
+  writes is the canvas's real display rect, where `'fit'`/`'shrink'` used
+  `object-fit` inside a full-size box, which left pointer mapping reading a rect
+  that included the empty bars.
+
+  Migration: `'fit'` and `'shrink'` become `new FixedResolutionCanvasSizing()`,
+  `'fill'` becomes `new ResponsiveCanvasSizing()`, `'letterbox'` becomes
+  `new FixedResolutionCanvasSizing()` with the bars supplied by the container's
+  own CSS, and `'fixed'` becomes no `sizing` at all. `computeLetterboxLayout`
+  and `CanvasSizingMode` are gone with the modes they described.
+
+  The document-based policies reject an `OffscreenCanvas` rather than silently
+  observing nothing: a worker-hosted surface takes no policy, or
+  `ManualCanvasSizing` driven from `app.resize()`.
+
+  In `@codexo/exojs-react`, `canvas.sizing` is captured at creation rather than
+  synced live - a policy is an object, so a fresh instance per render would
+  detach and re-attach the previous one every time. Assign `app.sizing` directly
+  to switch at runtime.
+
 - **BREAKING — a physics `Shape` no longer promises mass.** The abstract base
   declared `area`, `centroidX`, `centroidY` and `unitInertia`, which is only
   true of solid geometry. A segment or a chain of edges has no interior, and

@@ -188,6 +188,8 @@ class HalfHeightCanvasSizing extends CanvasSizing {
 
 `context.apply()` is the only channel into the application: it resizes the backing store (`renderWidth × pixelRatio`), writes the CSS box, moves the logical coordinate system and dispatches `onResize`. `detach()` has to release everything `attach()` created — the application calls it when the policy is replaced and when it is destroyed.
 
+Offscreen capture is unaffected by any of this: `context.capture(node, { width, height })` renders into a `RenderTexture` of exactly the size you ask for, whatever the canvas is currently doing.
+
 <Callout type="pitfall" title="OffscreenCanvas has no parent to measure">
 The three document-based policies need a canvas element in a document and reject an `OffscreenCanvas` outright. A worker-hosted surface is sized by its host: pass no policy for a fixed surface, or `ManualCanvasSizing` and drive `app.resize()` from whatever the host sends over.
 </Callout>

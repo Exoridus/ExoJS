@@ -2153,6 +2153,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
       this._coreSystems = this._coreSystems.map(system => (system === previousRendering ? this._rendering : system));
 
+      // A backend sizes its root target from the base resolution, which is not
+      // where a sizing policy may have taken the logical view by now - and the
+      // surface it is about to configure already carries that policy's backing
+      // store.
+      this._backend.resize(this._logicalWidth, this._logicalHeight);
+      this._rendering.resize(this._logicalWidth, this._logicalHeight);
+
       await this._backend.initialize();
     }
   }
