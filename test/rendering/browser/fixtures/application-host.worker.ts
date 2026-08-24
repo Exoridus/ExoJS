@@ -8,6 +8,13 @@
  * feed it the input the worker cannot observe for itself.
  */
 
+// Must precede every engine import: ESM evaluates modules in import order, and
+// the engine reads these build flags while its own modules initialise. The
+// browser projects install them for the page through a setup file, which a
+// worker realm never runs - and where the pre-bundler resolved an engine module
+// through `package.json#imports`, Vite's `define` did not reach it either.
+import './worker-dev-global';
+
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Scene } from '#core/Scene';
