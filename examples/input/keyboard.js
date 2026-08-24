@@ -1,5 +1,5 @@
 // Auto-generated from keyboard.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Keyboard, Scene } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Two ways to read the keyboard, shown side by side:
 //
@@ -71,7 +71,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(10, 12, 20),
     loader: {

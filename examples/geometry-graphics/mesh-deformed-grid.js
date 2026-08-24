@@ -1,5 +1,5 @@
 // Auto-generated from mesh-deformed-grid.ts - edit the .ts source, not this file.
-import { Application, Color, Mesh, Scene } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Mesh, Scene } from '@codexo/exojs';
 const COLS = 16;
 const ROWS = 16;
 const SIZE = 460;
@@ -78,7 +78,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

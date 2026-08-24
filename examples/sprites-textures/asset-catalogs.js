@@ -1,5 +1,5 @@
 // Auto-generated from asset-catalogs.ts - edit the .ts source, not this file.
-import { Application, Asset, Assets, Color, Graphics, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // #region guide:catalog-declare
 // A catalog is a named, typed group of assets. A bare path infers its type from
@@ -159,7 +159,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

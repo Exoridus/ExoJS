@@ -133,7 +133,7 @@ const app = new Application({
 });
 ```
 
-An `OffscreenCanvas` has no layout box, no styling and no events, so `mount`, `sizingMode`, `tabIndex` and `imageRendering` do not apply and `app.element` is `null`. The document keeps ownership of everything the surface lacks: forward pointer and key events into `platform.emitSurfaceEvent()` / `platform.emitWindowEvent()` as plain data, keep `platform.setSurfaceRect()` in step with the on-screen rect so pointer positions map correctly, and report focus and visibility through their setters.
+An `OffscreenCanvas` has no layout box, no styling and no events, so `mount`, `tabIndex` and `imageRendering` do not apply, the document-based `canvas.sizing` policies reject it outright, and `app.element` is `null`. The document keeps ownership of everything the surface lacks: forward pointer and key events into `platform.emitSurfaceEvent()` / `platform.emitWindowEvent()` as plain data, keep `platform.setSurfaceRect()` in step with the on-screen rect so pointer positions map correctly, and report focus and visibility through their setters.
 
 Inside a worker, `Capabilities` answers for the worker's realm, not the document's: `capabilities.realm` is `'worker'`, `pointer` and `audio` are `false`, and `devicePixelRatio` is `1` because there is no document to ask. The host decides the surface's backing size before transferring it.
 

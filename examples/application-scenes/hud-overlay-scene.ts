@@ -1,4 +1,4 @@
-import { Application, Color, Graphics, Label, ProgressBar, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Label, ProgressBar, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
 
 
@@ -53,7 +53,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(20, 32, 58),
 });

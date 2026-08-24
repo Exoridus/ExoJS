@@ -1,5 +1,5 @@
 // Auto-generated from convolution-rooms.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 // Every impulse response in the AK-SROOMS set, shortest tail first. The
@@ -137,7 +137,7 @@ const application = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

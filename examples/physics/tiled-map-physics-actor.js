@@ -1,5 +1,5 @@
 // Auto-generated from tiled-map-physics-actor.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Scene, Spritesheet, SystemOrder, TextureRegion, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Spritesheet, SystemOrder, TextureRegion, Vector } from '@codexo/exojs';
 import { BoxShape, PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { ObjectKind, ObjectLayer, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
@@ -165,7 +165,7 @@ const app = new Application({
         width: COLUMNS * TILE,
         height: ROWS * TILE,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(38, 46, 66),
     // The tilemap extension wires the per-backend tile chunk renderers so

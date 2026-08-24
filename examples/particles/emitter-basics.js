@@ -1,5 +1,5 @@
 // Auto-generated from emitter-basics.ts - edit the .ts source, not this file.
-import { Application, Color, Scene } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene } from '@codexo/exojs';
 import { ApplyForce, ColorGradient, ColorOverLifetime, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, RateSpawn, ScaleOverLifetime, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 class EmitterBasicsScene extends Scene {
@@ -53,7 +53,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     extensions: [particlesExtension],

@@ -1,5 +1,5 @@
 // Auto-generated from blur-filter.ts - edit the .ts source, not this file.
-import { Application, BlurFilter, Color, Scene, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // High-detail, high-contrast content so the blur visibly softens hard edges.
 const PIXEL_GRID = assets.technical.filtering.pixelGrid128;
@@ -67,7 +67,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

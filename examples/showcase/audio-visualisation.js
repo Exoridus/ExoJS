@@ -1,5 +1,5 @@
 // Auto-generated from audio-visualisation.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Scene, Sprite, Text, Texture } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text, Texture } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 class AudioVisualisationScene extends Scene {
@@ -128,7 +128,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

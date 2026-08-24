@@ -1,4 +1,4 @@
-import { Application, Color, Container, Rectangle, type RenderingContext, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Rectangle, type RenderingContext, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
 
 const GRID_COLUMNS = 56;
 const GRID_ROWS = 30;
@@ -86,7 +86,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(5, 8, 15, 1),
     backend: { type: 'webgpu' },

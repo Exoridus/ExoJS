@@ -1,5 +1,5 @@
 // Auto-generated from pivot-and-anchor.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
 const modes = [
     { name: 'corner', anchor: [0, 0], origin: [0, 0] },
     { name: 'center', anchor: [0.5, 0.5], origin: null },
@@ -52,7 +52,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

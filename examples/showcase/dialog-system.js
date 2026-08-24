@@ -1,5 +1,5 @@
 // Auto-generated from dialog-system.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const lines = [
     { speaker: 'Commander Vale', text: 'Commander, the anomaly has entered low orbit.' },
@@ -118,7 +118,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(20, 24, 34),
 });

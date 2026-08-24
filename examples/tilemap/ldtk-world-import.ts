@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Container, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { getLdtkIntGridValueAt, LdtkMap, ldtkExtension } from '@codexo/exojs-ldtk';
 import { TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -158,7 +158,7 @@ const app = new Application({
         width: 640,
         height: 448,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(18, 22, 30),
     // ldtkExtension depends on tilemapExtension, so registering it alone is

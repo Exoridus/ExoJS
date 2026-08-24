@@ -1,5 +1,5 @@
 // Auto-generated from bitmap-text-basic.ts - edit the .ts source, not this file.
-import { Application, Asset, BitmapText, Color, Scene } from '@codexo/exojs';
+import { Application, Asset, BitmapText, Color, FixedResolutionCanvasSizing, Scene } from '@codexo/exojs';
 class BitmapTextBasicScene extends Scene {
     font;
     title;
@@ -40,7 +40,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(20, 24, 36),
 });

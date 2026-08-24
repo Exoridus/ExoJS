@@ -1,5 +1,5 @@
 // Auto-generated from worker-streamed-terrain.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Container, Keyboard, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
+import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Keyboard, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
 import { ChunkStreamer, createSampledChunkSource, createWorkerSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 import { fbm } from '@examples/terrain-noise';
@@ -214,7 +214,7 @@ class WorkerStreamedTerrainScene extends Scene {
 }
 const app = new Application({
     scenes: { WorkerStreamedTerrainScene },
-    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
+    canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
     clearColor: new Color(38, 82, 128), // deep-water blue behind unloaded chunks
     extensions: [tilemapExtension],
 });

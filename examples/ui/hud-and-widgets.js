@@ -1,5 +1,5 @@
 // Auto-generated from hud-and-widgets.ts - edit the .ts source, not this file.
-import { Application, Button, Color, Label, Panel, ProgressBar, Scene, Stack } from '@codexo/exojs';
+import { Application, Button, Color, FixedResolutionCanvasSizing, Label, Panel, ProgressBar, Scene, Stack } from '@codexo/exojs';
 /**
  * UI-Core showcase: a screen-fixed HUD and interactive widgets live on
  * `scene.ui`, which is auto-rendered above the world. Widgets anchor to the
@@ -73,7 +73,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(18, 22, 32),
 });

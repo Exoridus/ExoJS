@@ -1,0 +1,286 @@
+{
+  "title": "CanvasSizingContext",
+  "description": "What a CanvasSizing is given to work with, and the one channel through which it changes the canvas. A context describes the application as it stood when the policy was attached. The application hands out a fresh one on every attach, so a change it cannot express - a new base resolution, a canvas moved to another parent - reaches a policy by re-attaching it rather than by mutating what it already holds.",
+  "symbol": "CanvasSizingContext",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 8,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a CanvasSizing is given to work with, and the one channel through which it changes the canvas.",
+        "A context describes the application as it stood when the policy was attached. The application hands out a fresh one on every attach, so a change it cannot express - a new base resolution, a canvas moved to another parent - reaches a policy by re-attaching it rather than by mutating what it already holds."
+      ],
+      "importLine": "import { CanvasSizingContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "apply",
+          "signature": "apply(metrics: CanvasSizingMetrics): void",
+          "signatureTokens": [
+            {
+              "text": "apply",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "metrics",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasSizingMetrics",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "metrics",
+              "type": "CanvasSizingMetrics",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Commit a new geometry. Resizes the backing store, writes the CSS box where one is requested, moves the application's logical coordinate system and dispatches Application.onResize. A commit whose logical or render size is not positive is ignored, so a policy may forward a zero-sized host measurement unconditionally."
+        },
+        {
+          "name": "measureHost",
+          "signature": "measureHost(): CanvasSizingHostMetrics | null",
+          "signatureTokens": [
+            {
+              "text": "measureHost",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasSizingHostMetrics",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "CanvasSizingHostMetrics | null",
+          "description": "Current size of CanvasSizingContext.host, or null when there is no host to measure. Reads layout, so call it once per change and pass the result on rather than measuring again downstream."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "baseHeight",
+          "signature": "baseHeight: number",
+          "signatureTokens": [
+            {
+              "text": "baseHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Base (design) resolution the application was configured with."
+        },
+        {
+          "name": "baseWidth",
+          "signature": "baseWidth: number",
+          "signatureTokens": [
+            {
+              "text": "baseWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Base (design) resolution the application was configured with."
+        },
+        {
+          "name": "element",
+          "signature": "element: HTMLCanvasElement | null",
+          "signatureTokens": [
+            {
+              "text": "element",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLCanvasElement",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The surface as a document canvas, or null for an OffscreenCanvas."
+        },
+        {
+          "name": "host",
+          "signature": "host: HTMLElement | null",
+          "signatureTokens": [
+            {
+              "text": "host",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "HTMLElement",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The canvas's parent element, or null when there is no document around it."
+        },
+        {
+          "name": "pixelRatio",
+          "signature": "pixelRatio: number",
+          "signatureTokens": [
+            {
+              "text": "pixelRatio",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Device pixels per CSS pixel the backing store is scaled by."
+        },
+        {
+          "name": "surface",
+          "signature": "surface: RenderSurface",
+          "signatureTokens": [
+            {
+              "text": "surface",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "RenderSurface",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Surface being sized."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sizing/CanvasSizing.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sizing/CanvasSizing.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sizing/CanvasSizing.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sizing/CanvasSizing.ts"
+}

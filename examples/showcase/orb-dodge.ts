@@ -1,4 +1,4 @@
-import { Application, Color, Container, Graphics, Keyboard, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
 
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;
@@ -246,7 +246,7 @@ const app = new Application({
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(10, 14, 26),
 });

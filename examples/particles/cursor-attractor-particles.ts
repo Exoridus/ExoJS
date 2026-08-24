@@ -1,4 +1,4 @@
-import { Application, Color, type RenderingContext, Scene, Vector } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Vector } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     AttractToPoint,
@@ -116,7 +116,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     extensions: [particlesExtension],

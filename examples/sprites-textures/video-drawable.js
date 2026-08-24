@@ -1,5 +1,5 @@
 // Auto-generated from video-drawable.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Every video in the asset catalog, switchable at runtime with the number
 // keys. Only the first entry is fetched up front - the others lazy-load on
@@ -106,7 +106,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

@@ -1,5 +1,5 @@
 // Auto-generated from multi-texture-stress.ts - edit the .ts source, not this file.
-import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 const GRID_COLUMNS = 50;
 const GRID_ROWS = 22;
 class MultiTextureStressScene extends Scene {
@@ -70,7 +70,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(5, 5, 10, 1),
     backend: { type: 'webgpu' },

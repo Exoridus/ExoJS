@@ -1,5 +1,5 @@
 // Auto-generated from cursor-attractor-particles.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, Vector } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, AttractToPoint, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn, RepelFromPoint, } from '@codexo/exojs-particles';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Acceleration magnitude shared by both force modules (units / s²). Only the
@@ -87,7 +87,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     extensions: [particlesExtension],

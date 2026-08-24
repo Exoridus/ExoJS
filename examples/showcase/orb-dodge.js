@@ -1,5 +1,5 @@
 // Auto-generated from orb-dodge.ts - edit the .ts source, not this file.
-import { Application, Color, Container, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;
 const PLAYER_RADIUS = 18;
@@ -219,7 +219,7 @@ const app = new Application({
         width: CANVAS_WIDTH,
         height: CANVAS_HEIGHT,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(10, 14, 26),
 });

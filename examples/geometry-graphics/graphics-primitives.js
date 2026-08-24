@@ -1,5 +1,5 @@
 // Auto-generated from graphics-primitives.ts - edit the .ts source, not this file.
-import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene } from '@codexo/exojs';
 class GraphicsPrimitivesScene extends Scene {
     sceneRoot;
     panel;
@@ -44,7 +44,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.midnightBlue,
     backend: { type: 'webgpu' },

@@ -1,5 +1,5 @@
 // Auto-generated from tween-basics.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text } from '@codexo/exojs';
 class TweenBasicsScene extends Scene {
     sprite;
     text;
@@ -37,7 +37,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

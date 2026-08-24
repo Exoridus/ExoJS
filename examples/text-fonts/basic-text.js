@@ -1,5 +1,5 @@
 // Auto-generated from basic-text.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Scene, Text, Time } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text, Time } from '@codexo/exojs';
 class BasicTextScene extends Scene {
     time;
     text;
@@ -33,7 +33,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

@@ -1,5 +1,5 @@
 // Auto-generated from loading-screen.ts - edit the .ts source, not this file.
-import { Application, Asset, Assets, Color, Graphics, Keyboard, Scene, SceneState, Sprite, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, SceneState, Sprite, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const GameAssets = Assets.from({
     ship: 'image/ship-a.png',
@@ -135,7 +135,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

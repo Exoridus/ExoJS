@@ -1,0 +1,167 @@
+{
+  "title": "CanvasSizing",
+  "description": "Strategy that decides how a canvas is sized and, where it lives in a document, how it follows its surroundings. An instance owns its own lifecycle: it is handed a CanvasSizingContext in CanvasSizing.attach and keeps whatever it needs - a `ResizeObserver`, window listeners, a host message channel - until CanvasSizing.detach releases them again. Nothing is created on its behalf, so a policy that observes nothing costs nothing. Passing no policy at all is the fixed case: the canvas is sized once to the base resolution and never tracks anything, which is why there is no built-in class for it. An instance belongs to one application at a time. `attach` is called when the application takes it, `detach` when it is replaced or the application is destroyed, and a policy must not commit through a context after its `detach`.",
+  "symbol": "CanvasSizing",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Strategy that decides how a canvas is sized and, where it lives in a document, how it follows its surroundings.",
+        "An instance owns its own lifecycle: it is handed a CanvasSizingContext in CanvasSizing.attach and keeps whatever it needs - a `ResizeObserver`, window listeners, a host message channel - until CanvasSizing.detach releases them again. Nothing is created on its behalf, so a policy that observes nothing costs nothing.",
+        "Passing no policy at all is the fixed case: the canvas is sized once to the base resolution and never tracks anything, which is why there is no built-in class for it.",
+        "An instance belongs to one application at a time. `attach` is called when the application takes it, `detach` when it is replaced or the application is destroyed, and a policy must not commit through a context after its `detach`."
+      ],
+      "importLine": "import { CanvasSizing } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): CanvasSizing",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasSizing",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "CanvasSizing",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "attach",
+          "signature": "attach(context: CanvasSizingContext): void",
+          "signatureTokens": [
+            {
+              "text": "attach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasSizingContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "CanvasSizingContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Take ownership of context. Called once the surface exists and, for a canvas mounted through canvas.mount, once it is in the document."
+        },
+        {
+          "name": "detach",
+          "signature": "detach(): void",
+          "signatureTokens": [
+            {
+              "text": "detach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release everything CanvasSizing.attach created, and undo the canvas styling this policy applied. The default implementation does nothing, which is correct for a policy that observes nothing and writes no CSS."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sizing/CanvasSizing.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sizing/CanvasSizing.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sizing/CanvasSizing.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sizing/CanvasSizing.ts"
+}

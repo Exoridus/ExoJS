@@ -1,5 +1,5 @@
 // Auto-generated from trail-feedback.ts - edit the .ts source, not this file.
-import { Application, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, FixedResolutionCanvasSizing, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 class TrailFeedbackScene extends Scene {
     // Two render targets, ping-ponged each frame. Reading from and writing to
     // the SAME render target forms a GL feedback loop (INVALID_OPERATION), so we
@@ -64,7 +64,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

@@ -1,4 +1,4 @@
-import { Application, Asset, type AudioEffect, type AudioStream, Color, Graphics, HighpassFilter, Keyboard, LowpassFilter, type RenderingContext, Scene, type Sound, Text, type Time } from '@codexo/exojs';
+import { Application, Asset, type AudioEffect, type AudioStream, Color, FixedResolutionCanvasSizing, Graphics, HighpassFilter, Keyboard, LowpassFilter, type RenderingContext, Scene, type Sound, Text, type Time } from '@codexo/exojs';
 import {
     AudioAnalyser,
     AutoWahEffect,
@@ -387,7 +387,7 @@ const application = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

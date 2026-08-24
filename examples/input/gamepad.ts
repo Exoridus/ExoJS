@@ -1,4 +1,4 @@
-import { Application, Asset, Color, Container, type Gamepad, GamepadAxis, GamepadButton, type InputChannel, lerp, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, type Gamepad, GamepadAxis, GamepadButton, type InputChannel, lerp, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, Vector } from '@codexo/exojs';
 
 
 
@@ -289,7 +289,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

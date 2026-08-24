@@ -1,5 +1,5 @@
 // Auto-generated from texture-loader.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
 class TextureLoaderScene extends Scene {
     sprites;
     textures;
@@ -55,7 +55,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

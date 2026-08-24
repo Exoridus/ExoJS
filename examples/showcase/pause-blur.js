@@ -1,5 +1,5 @@
 // Auto-generated from pause-blur.ts - edit the .ts source, not this file.
-import { Application, BlurFilter, Color, Keyboard, Label, Panel, Scene, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Keyboard, Label, Panel, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const PAUSE_BLUR_RADIUS = 6;
 const PAUSE_FADE_SECONDS = 0.35;
@@ -74,7 +74,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(20, 24, 34),
     loader: {

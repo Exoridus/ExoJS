@@ -1,4 +1,4 @@
-import { Application, Color, type RenderingContext, Scene, Text, Time, Timer } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Text, Time, Timer } from '@codexo/exojs';
 
 // The scene lifecycle hooks, in the order the engine calls them:
 //   - `async load()`   - one-shot async setup, called once before `init()`.
@@ -77,7 +77,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

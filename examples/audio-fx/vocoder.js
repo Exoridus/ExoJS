@@ -1,5 +1,5 @@
 // Auto-generated from vocoder.ts - edit the .ts source, not this file.
-import { Application, Asset, AudioBus, AudioGenerator, Color, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, AudioBus, AudioGenerator, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
 import { VocoderEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Spoken phrases (Kenney Voiceover Pack, CC0) - a voice modulator is what makes
@@ -92,7 +92,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

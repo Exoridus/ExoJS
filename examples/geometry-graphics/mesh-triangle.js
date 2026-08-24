@@ -1,5 +1,5 @@
 // Auto-generated from mesh-triangle.ts - edit the .ts source, not this file.
-import { Application, Color, Mesh, Scene } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Mesh, Scene } from '@codexo/exojs';
 class MeshTriangleScene extends Scene {
     triangle;
     init() {
@@ -28,7 +28,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

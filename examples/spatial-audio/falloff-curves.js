@@ -1,5 +1,5 @@
 // Auto-generated from falloff-curves.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Graphics, Scene, Sound, Text } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Horizontal placement (0..1 of canvas width) for each source; absolute pixel
 // positions are resolved against the canvas in init().
@@ -132,7 +132,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

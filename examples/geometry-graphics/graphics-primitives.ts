@@ -1,4 +1,4 @@
-import { Application, Color, Container, Graphics, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
 
 
@@ -57,7 +57,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.midnightBlue,
     backend: { type: 'webgpu' },

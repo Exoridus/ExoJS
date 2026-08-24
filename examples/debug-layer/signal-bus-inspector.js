@@ -1,5 +1,5 @@
 // Auto-generated from signal-bus-inspector.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, Signal, Text, Time, Timer } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Signal, Text, Time, Timer } from '@codexo/exojs';
 class SignalBusInspectorScene extends Scene {
     signals;
     text;
@@ -49,7 +49,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

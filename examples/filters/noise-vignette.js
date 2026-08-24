@@ -1,5 +1,5 @@
 // Auto-generated from noise-vignette.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A detailed full-frame texture so grain + vignette read as a screen-wide post
 // effect rather than decorating one small sprite.
@@ -74,7 +74,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

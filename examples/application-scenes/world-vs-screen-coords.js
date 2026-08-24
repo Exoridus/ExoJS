@@ -1,5 +1,5 @@
 // Auto-generated from world-vs-screen-coords.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Text, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text, View } from '@codexo/exojs';
 class WorldScreenScene extends Scene {
     view;
     grid;
@@ -53,7 +53,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

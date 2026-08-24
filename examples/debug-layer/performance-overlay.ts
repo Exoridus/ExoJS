@@ -1,4 +1,4 @@
-import { Application, Color, Container, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 
@@ -53,7 +53,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

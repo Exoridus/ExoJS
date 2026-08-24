@@ -1,5 +1,5 @@
 // Auto-generated from frame-animation.ts - edit the .ts source, not this file.
-import { AnimatedSprite, Application, Asset, Color, Scene, Spritesheet } from '@codexo/exojs';
+import { AnimatedSprite, Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Spritesheet } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const walkFps = 8;
 class FrameAnimationScene extends Scene {
@@ -39,7 +39,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

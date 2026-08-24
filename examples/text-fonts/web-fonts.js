@@ -1,5 +1,5 @@
 // Auto-generated from web-fonts.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
 class WebFontsScene extends Scene {
     default;
     loaded;
@@ -25,7 +25,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

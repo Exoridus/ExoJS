@@ -1,5 +1,5 @@
 // Auto-generated from color-grading.ts - edit the .ts source, not this file.
-import { Application, Color, Keyboard, LutFilter, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, LutFilter, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const LUT_SIZE = 17;
 function buildLut3D(transform) {
@@ -111,7 +111,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

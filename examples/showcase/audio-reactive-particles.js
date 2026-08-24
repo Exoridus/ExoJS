@@ -1,5 +1,5 @@
 // Auto-generated from audio-reactive-particles.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Scene, Text, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text, Vector } from '@codexo/exojs';
 import { AudioAnalyser, BeatDetector } from '@codexo/exojs-audio-fx';
 import { AlphaFadeOverLifetime, ConeDirection, Constant, particlesExtension, ParticleSystem, RateSpawn, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
@@ -93,7 +93,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     extensions: [particlesExtension],

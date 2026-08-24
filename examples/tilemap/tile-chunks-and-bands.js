@@ -1,5 +1,5 @@
 // Auto-generated from tile-chunks-and-bands.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Container, Keyboard, PixelSnapMode, Rectangle, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
+import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Keyboard, PixelSnapMode, Rectangle, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
 import { TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // Core @codexo/exojs-tilemap API, with no on-disk map format involved: a
@@ -153,7 +153,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(20, 28, 22),
     // The tilemap extension wires the per-backend chunk renderer so

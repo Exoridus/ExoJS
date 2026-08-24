@@ -1,5 +1,5 @@
 // Auto-generated from mouse-and-pointer.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Everything the pointer pipeline reports, surfaced at once:
 //   - live position (onPointerMove)
@@ -78,7 +78,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(10, 12, 20),
     loader: {

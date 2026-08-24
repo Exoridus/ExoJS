@@ -800,7 +800,7 @@
             }
           ],
           "returnType": "PointLike",
-          "description": "Convert a logical/design-space pixel coordinate to a world-space position. The 2-argument form treats (x, y) as coordinates in the view's own design space (0..view.width × 0..view.height) - the same space as Pointer.x/Pointer.y and node positions - and applies only the inverse camera transform. The viewport rectangle is intentionally ignored, because design-space input already lives inside the camera's projection (any letterbox offset was removed upstream when the pointer was mapped). At the default centered camera this is the identity."
+          "description": "Convert a logical/design-space pixel coordinate to a world-space position. The 2-argument form treats (x, y) as coordinates in the view's own design space (0..view.width × 0..view.height) - the same space as Pointer.x/Pointer.y and node positions - and applies only the inverse camera transform. The viewport rectangle is intentionally ignored, because design-space input already lives inside the camera's projection - the mapping from the surface to logical pixels happened upstream. At the default centered camera this is the identity."
         },
         {
           "name": "screenToWorld",

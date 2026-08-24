@@ -1,5 +1,5 @@
 // Auto-generated from gradient.ts - edit the .ts source, not this file.
-import { Application, Color, LinearGradient, RadialGradient, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, LinearGradient, RadialGradient, Scene, Sprite } from '@codexo/exojs';
 class GradientScene extends Scene {
     backgroundGradient;
     background;
@@ -49,7 +49,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     backend: { type: 'webgl2' },

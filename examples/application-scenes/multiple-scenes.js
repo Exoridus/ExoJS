@@ -1,5 +1,5 @@
 // Auto-generated from multiple-scenes.ts - edit the .ts source, not this file.
-import { Application, Color, Keyboard, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Text } from '@codexo/exojs';
 class MenuScene extends Scene {
     label;
     onTap;
@@ -52,7 +52,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

@@ -1,5 +1,5 @@
 // Auto-generated from easing-curves.ts - edit the .ts source, not this file.
-import { Application, Color, Ease, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Every built-in Ease function, in source order.
 const EASINGS = [
@@ -128,7 +128,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(18, 21, 30),
 });

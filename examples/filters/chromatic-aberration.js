@@ -1,5 +1,5 @@
 // Auto-generated from chromatic-aberration.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A dense checkerboard makes the per-channel RGB split read clearly along edges.
 const CHECKER = assets.technical.filtering.checker256;
@@ -74,7 +74,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

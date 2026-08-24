@@ -1,4 +1,4 @@
-import { Application, Asset, AudioStream, Color, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text } from '@codexo/exojs';
 import { CompressorEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -143,7 +143,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

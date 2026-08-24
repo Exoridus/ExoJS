@@ -1,5 +1,5 @@
 // Auto-generated from custom-wgsl-module.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, Vector } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Vector } from '@codexo/exojs';
 import { Constant, particlesExtension, ParticleSystem, RateSpawn, UpdateModule, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 /**
@@ -84,7 +84,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     extensions: [particlesExtension],

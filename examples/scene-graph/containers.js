@@ -1,5 +1,5 @@
 // Auto-generated from containers.ts - edit the .ts source, not this file.
-import { Application, Asset, Assets, Color, Container, Scene, Sprite } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Container, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
 class ContainersScene extends Scene {
     rainbow;
     bunnies;
@@ -35,7 +35,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

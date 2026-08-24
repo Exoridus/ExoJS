@@ -1,4 +1,4 @@
-import { Application, Asset, AudioStream, Color, type RenderingContext, Scene, Sprite, Text, type Time, Vector } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Text, type Time, Vector } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import {
     AlphaFadeOverLifetime,
@@ -104,7 +104,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

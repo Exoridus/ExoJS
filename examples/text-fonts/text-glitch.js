@@ -1,5 +1,5 @@
 // Auto-generated from text-glitch.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, ShaderFilter, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, ShaderFilter, Text } from '@codexo/exojs';
 const glsl = `#version 300 es
 precision mediump float;
 uniform sampler2D uTexture;
@@ -51,7 +51,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

@@ -1,5 +1,5 @@
 // Auto-generated from hello-world.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
 // #region guide:first-scene
 class HelloWorldScene extends Scene {
     sprite;
@@ -21,7 +21,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

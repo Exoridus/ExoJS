@@ -1,5 +1,5 @@
 // Auto-generated from palette-cycling.ts - edit the .ts source, not this file.
-import { Application, Color, LutFilter, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, LutFilter, Scene, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 const RAMP_SIZE = 256;
@@ -60,7 +60,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

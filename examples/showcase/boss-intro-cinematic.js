@@ -1,5 +1,5 @@
 // Auto-generated from boss-intro-cinematic.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Graphics, Keyboard, Scene, Sprite, Text, View } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Sprite, Text, View } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const titleText = 'VOID EMPEROR';
 class BossIntroCinematicScene extends Scene {
@@ -136,7 +136,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(16, 16, 24),
 });
