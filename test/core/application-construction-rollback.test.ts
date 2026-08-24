@@ -12,6 +12,7 @@ import { Loader } from '#assets/Loader';
 import { AudioManager } from '#audio/AudioManager';
 import { Application } from '#core/Application';
 import { SceneDirector } from '#core/SceneDirector';
+import { ResponsiveCanvasSizing } from '#core/sizing/ResponsiveCanvasSizing';
 import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
 import type { AssetBinding, Extension } from '#extensions/Extension';
@@ -200,7 +201,7 @@ describe('Application construction rollback', () => {
     expect(destroyOrder).toEqual(['scenes', 'interaction', 'input', 'rendering', 'backend', 'loader', 'platform']);
   });
 
-  test('a ResizeObserver installed by the sizing mode is disconnected', () => {
+  test('a ResizeObserver installed by the sizing policy is disconnected', () => {
     const observed: Element[] = [];
     const disconnected: number[] = [];
 
@@ -229,15 +230,15 @@ describe('Application construction rollback', () => {
         () =>
           new Application({
             backend: { type: 'webgl2' },
-            canvas: { mount: host, sizingMode: 'fill' },
+            canvas: { mount: host, sizing: new ResponsiveCanvasSizing() },
             extensions: [throwingInstallExtension(new Error('boom'))],
           }),
       ).toThrow('boom');
 
-      // `_applySizingMode` runs before any subsystem exists, so the observer is
-      // the earliest thing construction owns. Left connected, the parent node
-      // keeps a callback closing over a dead Application - and the next layout
-      // change drives resize() into a destroyed backend.
+      // A policy attaches before the remaining subsystems exist, so its observer
+      // is among the earliest things construction owns. Left connected, the
+      // parent node keeps a callback closing over a dead Application - and the
+      // next layout change drives a commit into a destroyed backend.
       expect(observed).toEqual([host]);
       expect(disconnected).toEqual([1]);
     } finally {

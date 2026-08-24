@@ -43,7 +43,7 @@ const createMockApp = (canvas: HTMLCanvasElement): Application =>
     // `InputManager` reads `scenes.paused` to decide whether a long-press hold
     // advances this frame.
     scenes: { paused: false },
-    _backingStoreToDesign: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+    _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
   }) as unknown as Application;
 
 const fire = (canvas: HTMLCanvasElement, type: string, init: PointerEventInit): void => {
@@ -464,7 +464,7 @@ describe('context menu policy', () => {
       pixelRatio: 1,
       options: { input: { gamepadDefinitions: [], pointerDistanceThreshold: 10, ...input } },
       scenes: { paused: false },
-      _backingStoreToDesign: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+      _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
     } as unknown as Application;
 
     return { im: new InputManager(app), canvas: c };

@@ -38,21 +38,21 @@ const createCanvas = (width = 800, height = 600): HTMLCanvasElement => {
 
 /**
  * Minimal Application stand-in exposing the surface the input system reads:
- * the canvas, input options, the design size, and the backing-store → design
- * mapping. With `pixelRatio = 1` (the default) the design size equals the
+ * the canvas, input options, the logical size, and the backing-store → logical
+ * mapping. With `pixelRatio = 1` (the default) the logical size equals the
  * backing store, so coordinates pass through 1:1; a higher ratio shrinks the
- * design space accordingly (the content viewport covers the full backing store
- * outside `'letterbox'` mode).
+ * logical space accordingly, the logical view always covering the whole backing
+ * store.
  */
 const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application => {
-  const designWidth = canvas.width / pixelRatio;
-  const designHeight = canvas.height / pixelRatio;
+  const logicalWidth = canvas.width / pixelRatio;
+  const logicalHeight = canvas.height / pixelRatio;
 
   return {
     canvas,
     platform: new BrowserPlatform(canvas),
-    width: designWidth,
-    height: designHeight,
+    width: logicalWidth,
+    height: logicalHeight,
     pixelRatio,
     options: {
       input: {
@@ -63,9 +63,9 @@ const createMockApp = (canvas: HTMLCanvasElement, pixelRatio = 1): Application =
     // `InputManager` reads `scenes.paused` to decide whether a long-press hold
     // advances this frame.
     scenes: { paused: false },
-    _backingStoreToDesign: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({
-      x: (backingStoreX / canvas.width) * designWidth,
-      y: (backingStoreY / canvas.height) * designHeight,
+    _backingStoreToLogical: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({
+      x: (backingStoreX / canvas.width) * logicalWidth,
+      y: (backingStoreY / canvas.height) * logicalHeight,
     }),
   } as unknown as Application;
 };
@@ -443,15 +443,16 @@ describe('Gesture — long press', () => {
 
 // ---------------------------------------------------------------------------
 // 10. Coordinate mapping when the canvas is displayed at a different size
-//     (sizingMode 'fit'/'shrink' or a CSS transform: scale)
+//     (a fixed-resolution sizing policy, or a CSS transform: scale)
 // ---------------------------------------------------------------------------
 
 describe('Pointer coordinate mapping — scaled canvas', () => {
-  // Backing store 800x600, but displayed (CSS) at 400x300 - e.g. object-fit
-  // contain or transform: scale(0.5). getBoundingClientRect reflects the
-  // displayed (CSS) size; raw pointer coordinates must map into design space
-  // (here pixelRatio=1 so design == backing store) so picking matches node
-  // positions / screenToWorld.
+  // Backing store 800x600, but displayed (CSS) at 400x300 - what a
+  // FixedResolutionCanvasSizing does in a smaller host, or a transform:
+  // scale(0.5). getBoundingClientRect reflects the displayed (CSS) size; raw
+  // pointer coordinates must map into the logical space (here pixelRatio=1, so
+  // logical == backing store) so picking matches node positions /
+  // screenToWorld.
   const createScaledCanvas = (): HTMLCanvasElement => {
     const canvas = document.createElement('canvas');
 

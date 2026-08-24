@@ -12,6 +12,8 @@
 
 import { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import { ManualCanvasSizing } from '#core/sizing/ManualCanvasSizing';
+import { ResponsiveCanvasSizing } from '#core/sizing/ResponsiveCanvasSizing';
 import { Container } from '#rendering/Container';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
@@ -102,10 +104,9 @@ describe('an application given an OffscreenCanvas on the main thread', () => {
         width: SIZE,
         height: SIZE,
         pixelRatio: 1,
-        // Both are document affordances the surface does not have. They must be
-        // ignored rather than throw, and must not conjure a DOM canvas.
+        // A document affordance the surface does not have. It must be ignored
+        // rather than throw, and must not conjure a DOM canvas.
         mount: document.body,
-        sizingMode: 'fill',
       },
     });
 
@@ -125,6 +126,42 @@ describe('an application given an OffscreenCanvas on the main thread', () => {
 
       expect(metrics.backingWidth).toBe(SIZE);
       expect(metrics.backingHeight).toBe(SIZE);
+    } finally {
+      await app.destroy();
+    }
+  });
+
+  test('refuses a sizing policy that would have to measure a parent element', () => {
+    const surface = new OffscreenCanvas(SIZE, SIZE);
+
+    // The alternative would be a policy that silently observes nothing, which
+    // looks like a rendering bug much later with nothing pointing back here.
+    expect(
+      () =>
+        new Application({
+          hello: false,
+          backend: { type: 'webgl2' },
+          canvas: { element: surface, width: SIZE, height: SIZE, sizing: new ResponsiveCanvasSizing() },
+        }),
+    ).toThrow(/OffscreenCanvas/);
+  });
+
+  test('sizes a manually driven surface from Application.resize', async () => {
+    const surface = new OffscreenCanvas(SIZE, SIZE);
+    const app = new Application({
+      hello: false,
+      backend: { type: 'webgl2' },
+      canvas: { element: surface, width: SIZE, height: SIZE, pixelRatio: 2, sizing: new ManualCanvasSizing() },
+    });
+
+    try {
+      expect(surface.width).toBe(SIZE * 2);
+
+      app.resize(SIZE * 2, SIZE);
+
+      expect(app.width).toBe(SIZE * 2);
+      expect(surface.width).toBe(SIZE * 4);
+      expect(surface.height).toBe(SIZE * 2);
     } finally {
       await app.destroy();
     }
