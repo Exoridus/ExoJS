@@ -230,9 +230,10 @@ describe('the offline round trip', () => {
     const connectivity = new Connectivity(host.source);
     const loader = createLoader(createStore(name), connectivity);
 
-    // Streaming media is not acquired while the network is available, so a
-    // prewarm has to ask for it.
-    await loader.cacheSource(Asset.type('music', 'audio/theme.wav', { download: true }));
+    // An ordinary load streams this while the network is available and
+    // acquires nothing, so a prewarm is a separate operation - not a separate
+    // descriptor.
+    await loader.cacheSource(Asset.type('music', 'audio/theme.wav'));
 
     connectivity.mode = 'offline';
     fetchSpy.mockClear();
@@ -241,7 +242,7 @@ describe('the offline round trip', () => {
     const revokeObjectUrl = vi.spyOn(URL, 'revokeObjectURL');
     const scope = loader.createScope({ name: 'level' });
 
-    const stream = await scope.load(Asset.type('music', 'audio/theme.wav', { download: true }));
+    const stream = await scope.load(Asset.type('music', 'audio/theme.wav'));
 
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(createObjectUrl).toHaveBeenCalledTimes(1);
@@ -271,9 +272,9 @@ describe('the offline round trip', () => {
     const connectivity = new Connectivity(host.source);
     const loader = createLoader(createStore(name), connectivity);
 
-    // 1. Warm the source while the network is available. `download: true` is
-    //    what makes a normally-streamed asset acquirable at all.
-    await loader.cacheSource(Asset.type('music', 'audio/theme.wav', { download: true }));
+    // 1. Warm the source while the network is available, from the same
+    //    descriptor a scene loads.
+    await loader.cacheSource(Asset.type('music', 'audio/theme.wav'));
 
     // 2. Offline.
     connectivity.mode = 'offline';
@@ -282,10 +283,9 @@ describe('the offline round trip', () => {
     const createObjectUrl = vi.spyOn(URL, 'createObjectURL');
     const scope = loader.createScope({ name: 'level' });
 
-    // 3. Request it the ORDINARY way - no `download`, the shape a scene writes.
-    //    Online this streams from the URL and never touches the cache; offline
-    //    it must not, or the element would open a network-backed source behind
-    //    the policy's back.
+    // 3. Request it exactly as a scene would. Online this streams from the URL
+    //    and never touches the cache; offline it must not, or the element would
+    //    open a network-backed source behind the policy's back.
     const stream = await scope.load(Asset.type('music', 'audio/theme.wav'));
 
     // 4. The warmed blob answered.

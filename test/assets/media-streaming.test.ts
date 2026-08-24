@@ -1,8 +1,10 @@
 import { Asset } from '#assets/Asset';
 import { encodeContainer } from '#assets/AssetContainer';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
+import type { MediaAssetOptions } from '#assets/factories/mediaSource';
 import { Loader } from '#assets/Loader';
 import type { AudioStream } from '#audio/AudioStream';
+import type { MediaCrossOrigin, StreamingLoadEvent } from '#core/types';
 import { materializeAssetTypes } from '#extensions/materialize';
 import type { Video } from '#rendering/video/Video';
 
@@ -146,20 +148,42 @@ describe('URL-backed media', () => {
   });
 });
 
-describe('download: true', () => {
-  test('acquires the whole resource and builds the element from a blob', async () => {
+describe('the online default', () => {
+  test('an ordinary load streams: the loader fetches no media body, and caches nothing', async () => {
     const fetchSpy = mockFetch();
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const queued = scope.load(Asset.type('video', 'intro.mp4', { download: true }));
+    const queued = scope.load(Asset.type('video', 'intro.mp4'));
     const element = await reachReadiness();
 
     await queued;
 
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(element.getAttribute('src')).toBe('/assets/intro.mp4');
+  });
+
+  test('cacheSource acquires the whole source, and builds nothing', async () => {
+    const fetchSpy = mockFetch();
+    const loader = createCoreLoader();
+
+    await loader.cacheSource(Asset.type('video', 'intro.mp4'));
+
     expect(fetchSpy).toHaveBeenCalledOnce();
-    expect(element.getAttribute('src')).toMatch(/^blob:/);
-    expect(element.hasAttribute('crossorigin')).toBe(false);
+    // No factory ran, so no element exists and nothing is resident: the point
+    // of the operation is the record, not a resource.
+    expect(capturedMedia).toHaveLength(0);
+    expect(loader.inspect()).toHaveLength(0);
+  });
+
+  test('cacheSource and load derive one source identity from one descriptor', async () => {
+    const loader = createCoreLoader();
+    const asset = Asset.type('video', 'intro.mp4');
+
+    expect(loader.identify(asset).sourceKey).toBe(loader.identify(Asset.type('video', 'intro.mp4')).sourceKey);
+    // The prewarm needs no descriptor of its own - which is the whole reason a
+    // transport flag has no place on one.
+    expect(loader.identify(asset).sourceKey).toBe('url:/assets/intro.mp4');
   });
 });
 
@@ -274,51 +298,24 @@ describe('transport and CORS identity', () => {
     expect(loader.inspect()).toHaveLength(2);
   });
 
-  test('the transport is not identity: a later download joins the resident streamed asset', async () => {
+  test('a warmed source does not turn a later online load into a blob-backed one', async () => {
     const fetchSpy = mockFetch();
     const loader = createCoreLoader();
     const scope = loader.createScope({ name: 'level' });
 
-    const streamed = scope.load(Asset.type('video', 'intro.mp4'));
-    const element = await reachReadiness();
-    const resource = await streamed;
+    await loader.cacheSource(Asset.type('video', 'intro.mp4'));
+    fetchSpy.mockClear();
 
-    // Same canonical asset as a container entry would resolve to, so the second
-    // request joins what is resident instead of building a byte-backed twin.
-    expect(await scope.load(Asset.type('video', 'intro.mp4', { download: true }))).toBe(resource);
+    const queued = scope.load(Asset.type('video', 'intro.mp4'));
+    const element = await reachReadiness();
+
+    await queued;
+
+    // Persisting a source is for the acquisition path - going offline, a later
+    // session. It must not quietly stop the browser from streaming, which is
+    // still the better transport while the network is there.
+    expect(element.getAttribute('src')).toBe('/assets/intro.mp4');
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(capturedMedia.at(-1)).toBe(element);
-    expect(loader.inspect()).toHaveLength(1);
-  });
-
-  test('the transport is not identity: a later stream joins the resident downloaded asset', async () => {
-    const fetchSpy = mockFetch();
-    const loader = createCoreLoader();
-    const scope = loader.createScope({ name: 'level' });
-
-    const downloaded = scope.load(Asset.type('video', 'intro.mp4', { download: true }));
-    const element = await reachReadiness();
-    const resource = await downloaded;
-
-    expect(await scope.load(Asset.type('video', 'intro.mp4'))).toBe(resource);
-    expect(fetchSpy).toHaveBeenCalledOnce();
-    expect(element.getAttribute('src')).toMatch(/^blob:/);
-    expect(loader.inspect()).toHaveLength(1);
-  });
-
-  test('crossOrigin does not split a downloaded asset, whose bytes carry no CORS mode', async () => {
-    mockFetch();
-    const loader = createCoreLoader();
-    const scope = loader.createScope({ name: 'level' });
-
-    const downloaded = scope.load(Asset.type('video', 'intro.mp4', { download: true }));
-
-    await reachReadiness();
-
-    const resource = await downloaded;
-
-    expect(await scope.load(Asset.type('video', 'intro.mp4', { download: true, crossOrigin: null }))).toBe(resource);
-    expect(loader.inspect()).toHaveLength(1);
   });
 });
 
@@ -419,5 +416,22 @@ describe('release', () => {
 
     expect(element.getAttribute('src')).toBe('/assets/intro.mp4');
     expect(loader.peek(Asset.type('video', 'intro.mp4'))).toBe(video);
+  });
+});
+
+describe('the media option surface', () => {
+  test('transport is not an option a descriptor can carry', () => {
+    // Streaming versus acquiring is decided by the network and by which
+    // operation was called, so there is nothing here to ask for it.
+    expectTypeOf<MediaAssetOptions>().toEqualTypeOf<{
+      crossOrigin?: MediaCrossOrigin;
+      loadEvent?: StreamingLoadEvent;
+      stallTimeout?: number;
+    }>();
+
+    // @ts-expect-error - `download` was removed with the transport flag
+    const rejected = Asset.type('music', 'theme.mp3', { download: true });
+
+    expect(rejected).toBeDefined();
   });
 });

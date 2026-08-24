@@ -253,14 +253,16 @@ export class Loader {
    * route's policy, exactly as it does for a load. A cached source is not
    * re-fetched.
    *
-   * A type that supplies its own source acquires nothing, so there is nothing
-   * to cache and this rejects saying so - streaming media needs
-   * `download: true` to be cacheable.
+   * This is the explicit acquisition, so it applies to streamed media too: an
+   * ordinary `music` or `video` descriptor is fetched in full and persisted as a
+   * blob here, while a plain `load()` of that same descriptor keeps streaming
+   * for as long as the network is available. A type built entirely from other
+   * assets has no source of its own to acquire, and rejects saying so.
    *
    * @example
    * ```ts
    * await app.loader.cacheSource(assets.world);
-   * await app.loader.cacheSource(Asset.type('music', 'theme.mp3', { download: true }));
+   * await app.loader.cacheSource(Asset.type('music', 'theme.mp3'));
    * ```
    */
   public cacheSource(asset: Asset<unknown>, options?: { readonly signal?: AbortSignal }): Promise<void> {

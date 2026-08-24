@@ -1,6 +1,8 @@
 import { Asset } from '#assets/Asset';
 import { AssetCache } from '#assets/AssetCache';
 import { AssetCacheMissError } from '#assets/AssetCacheMissError';
+import type { AssetFactory } from '#assets/AssetFactory';
+import { AssetType } from '#assets/AssetType';
 import { CacheOnlyPolicy } from '#assets/cachePolicies';
 import type { CacheRecordKey } from '#assets/CacheRecordKey';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
@@ -178,23 +180,44 @@ describe('Loader.cacheSource', () => {
     loader.destroy();
   });
 
-  test('rejects for a type that supplies its own source, naming what would make it cacheable', async () => {
+  test('rejects for a type built entirely from other assets, which has no source to acquire', async () => {
     const store = createCacheStoreDouble();
     const loader = createLoader(store);
 
-    await expect(loader.cacheSource(Asset.type('music', 'theme.mp3'))).rejects.toThrow(/supplies its own source .* nothing to cache/s);
-    await expect(loader.cacheSource(Asset.type('music', 'theme.mp3'))).rejects.toThrow(/"download: true"/);
+    // No codec, and a source it supplies itself: the shape of a composite type
+    // whose factory loads the assets it is made of.
+    class CompositeAssetType extends AssetType<void, string> {
+      public readonly id = 'composite';
+
+      public override unacquiredSource(): { source: void } {
+        return { source: undefined };
+      }
+
+      public createFactory(): AssetFactory<void, string> {
+        return { create: () => Promise.resolve('built') };
+      }
+    }
+
+    const compositeType = new CompositeAssetType();
+
+    loader._installAssetTypes([compositeType]);
+
+    await expect(loader.cacheSource(compositeType.asset('world.map'))).rejects.toThrow(/declares no source codec/);
+    expect(store.set).not.toHaveBeenCalled();
 
     loader.destroy();
   });
 
-  test('caches streaming media once the request opts into acquiring it', async () => {
+  test('caches streaming media from the ordinary descriptor, without asking it to stop streaming', async () => {
     const store = createCacheStoreDouble();
     const loader = createLoader(store);
 
     mockFetch('audio bytes');
 
-    await loader.cacheSource(Asset.type('music', 'theme.mp3', { download: true }));
+    // An ordinary load of this same descriptor streams from the URL and
+    // acquires nothing. Asking for the acquisition by name is what this
+    // operation is, so it does not consult that shortcut.
+    await loader.cacheSource(Asset.type('music', 'theme.mp3'));
 
     const stored = store.records.get([...store.records.keys()][0]!);
 

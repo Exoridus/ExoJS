@@ -32,7 +32,6 @@ export interface AssetDefinitions {
     config: {
       source: string;
       mimeType?: string;
-      download?: boolean;
       crossOrigin?: MediaCrossOrigin;
       loadEvent?: StreamingLoadEvent;
       playbackOptions?: Partial<PlaybackOptions>;
@@ -46,7 +45,6 @@ export interface AssetDefinitions {
     config: {
       source: string;
       mimeType?: string;
-      download?: boolean;
       crossOrigin?: MediaCrossOrigin;
       loadEvent?: StreamingLoadEvent;
       playbackOptions?: Partial<PlaybackOptions>;

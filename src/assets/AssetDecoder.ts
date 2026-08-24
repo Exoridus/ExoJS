@@ -318,11 +318,14 @@ export class AssetDecoder {
    * representation is discarded once the route's policy has had its chance to
    * write it.
    *
-   * A type that supplies its own source acquires nothing at all, so there is
-   * nothing here to persist - and saying so beats appearing to succeed.
+   * Deliberately does not ask {@link AssetType.unacquiredSource} first. That
+   * hook answers whether an ordinary load may skip the acquisition - streaming
+   * media says yes while the network is available - and this operation is the
+   * caller asking for the acquisition by name. A type with no source of its own
+   * to acquire has no codec either, and says so.
    * @internal
    */
-  public async _acquireOnly(asset: CanonicalAsset, options: unknown, signal?: AbortSignal): Promise<void> {
+  public async _acquireOnly(asset: CanonicalAsset, _options: unknown, signal?: AbortSignal): Promise<void> {
     const installed = this._typeRegistry.getInstalled(asset.type);
 
     if (installed === undefined) {
@@ -330,13 +333,6 @@ export class AssetDecoder {
     }
 
     const { type } = installed;
-
-    if (type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) !== undefined) {
-      throw new Error(
-        `Asset type "${type.id}" supplies its own source for "${asset.source}", so the loader acquires nothing and there ` +
-          `is nothing to cache. A streaming media asset needs "download: true" to be cacheable.`,
-      );
-    }
 
     // Deliberately unwrapped. The "Failed to load X from Y" envelope belongs to
     // construction, and nothing is being built here: an acquisition failure is

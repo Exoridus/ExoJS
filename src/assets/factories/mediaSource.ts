@@ -5,26 +5,6 @@ const onceListenerOption = { once: true };
 /** Options shared by the streaming media factories. */
 export interface MediaAssetOptions {
   /**
-   * Fetch the complete resource through the loader's acquisition pipeline before
-   * the media element is built, instead of letting the browser stream it from
-   * its URL.
-   *
-   * Downloading is what makes the data cacheable and therefore available
-   * offline, and it is what {@link Loader.cacheSource} needs in order to have
-   * anything to persist. It also means nothing plays until the whole file has
-   * arrived, which is what streaming exists to avoid - so it is opt-in, per
-   * request.
-   *
-   * The transport is not part of asset identity: one URL is one asset however
-   * its data arrived, which is what lets a container entry, a cache hit and a
-   * network load share a single resident resource. This option therefore decides how the
-   * asset is built by the load that MATERIALIZES it - a load that joins an
-   * already-resident asset gets what is resident, whichever way that arrived.
-   * Acquire the asset through the downloading load first when the data backing
-   * matters to a consumer.
-   */
-  download?: boolean;
-  /**
    * Defaults to `'anonymous'`. Ignored for media built from data the application
    * already owns, whose object URL is same-origin by construction.
    *
@@ -55,7 +35,7 @@ export interface MediaAssetOptions {
  *
  * A URL is streamed by the browser, which owns the transfer for the whole life
  * of the element and never holds more than it is playing. A blob is data the
- * application already owns - a download, a container entry, a cached
+ * application already owns - an acquired source, a container entry, a cached
  * representation - and the element reads it through an object URL the resource
  * keeps alive for as long as it exists.
  */

@@ -13,19 +13,19 @@ import { Video } from '#rendering/video/Video';
 /**
  * Whether this request streams from its URL, or takes the acquisition path.
  *
- * Streaming is the default and the point: the element owns the transfer and
- * never holds more than it is playing. Two things override it, and both mean
- * "the application owns this data instead".
- *
- * `download: true` is the explicit one - a prewarm, or a caller that wants the
- * bytes cached. The other is not optional: streaming reaches the network
+ * Streaming is what an ordinary load does, and it is the point: the element
+ * owns the transfer and never holds more than it is playing. Nothing about the
+ * request changes that - only the network does. Streaming reaches the network
  * directly, past the cache and therefore past every policy, so a request that
  * kept streaming while the application forbade the network would quietly
- * violate that. Declining to stream puts it back on the cache path, where a
- * warmed blob answers and an unwarmed one misses.
+ * violate that. Declining to stream puts it back on the acquisition path, where
+ * a cached blob answers and an uncached one misses.
+ *
+ * Persisting a source for that path is a separate operation - `cacheSource` -
+ * rather than a flag on the load.
  */
-function streamsFromUrl(options: MediaAssetOptions | undefined, network: NetworkSnapshot): boolean {
-  return options?.download !== true && network.allowsNetwork;
+function streamsFromUrl(network: NetworkSnapshot): boolean {
+  return network.allowsNetwork;
 }
 
 /**
@@ -37,8 +37,8 @@ function streamsFromUrl(options: MediaAssetOptions | undefined, network: Network
  * heap - which is the difference between caching a 200 MB video and running out
  * of memory trying.
  *
- * Only a request that did not stream ever reaches this: the data came from a
- * download, a container slice or a cache.
+ * Only a request that did not stream ever reaches this: the data came from an
+ * acquisition, a container slice or a cache.
  */
 const mediaSourceCodec: AssetSourceCodec<MediaAssetSource, Blob> = {
   fromResponse: response => response.blob(),
@@ -50,15 +50,17 @@ const mediaSourceCodec: AssetSourceCodec<MediaAssetSource, Blob> = {
  * The identity a media request contributes beyond its locator.
  *
  * The transport is deliberately absent: one URL is one asset whether the
- * browser streamed it, the loader downloaded it, or a container carried it, so
+ * browser streamed it, the loader acquired it, or a container carried it, so
  * whichever load materializes it first decides how it was built and every later
  * consumer joins it.
  *
  * A non-default CORS mode IS identity, because it is baked into the element: a
  * `null` element plays but can never be uploaded as a texture, and
  * `'use-credentials'` can resolve to a different response altogether. Neither
- * can be handed to a consumer that asked for the other. It is irrelevant to
- * data the application already owns, so a downloaded asset ignores it.
+ * can be handed to a consumer that asked for the other. It is asked for per
+ * request rather than per transport, so it counts whichever way the data
+ * arrives - a blob-backed element is same-origin anyway, and separating the two
+ * would put the transport back into identity to save one resident element.
  */
 function mediaIdentity({ options }: AssetRequest<MediaAssetOptions & { mimeType?: string }>): string {
   const parts: string[] = [];
@@ -67,7 +69,7 @@ function mediaIdentity({ options }: AssetRequest<MediaAssetOptions & { mimeType?
     parts.push(`mimeType=${options.mimeType}`);
   }
 
-  if (options?.download !== true && options?.crossOrigin !== undefined && options.crossOrigin !== 'anonymous') {
+  if (options?.crossOrigin !== undefined && options.crossOrigin !== 'anonymous') {
     parts.push(`crossOrigin=${String(options.crossOrigin)}`);
   }
 
@@ -81,12 +83,8 @@ export class MusicAssetType extends AssetType<MediaAssetSource, AudioStream, Mus
   public override readonly _token: AssetConstructor = AudioStream;
   public override readonly codec = mediaSourceCodec;
 
-  public override unacquiredSource(
-    { options }: AssetRequest<MusicAssetOptions>,
-    url: string,
-    network: NetworkSnapshot,
-  ): { source: MediaAssetSource } | undefined {
-    return streamsFromUrl(options, network) ? { source: { url } } : undefined;
+  public override unacquiredSource(_request: AssetRequest<MusicAssetOptions>, url: string, network: NetworkSnapshot): { source: MediaAssetSource } | undefined {
+    return streamsFromUrl(network) ? { source: { url } } : undefined;
   }
 
   public override resourceIdentity(request: AssetRequest<MusicAssetOptions>): string {
@@ -105,12 +103,8 @@ export class VideoAssetType extends AssetType<MediaAssetSource, Video, VideoAsse
   public override readonly _token: AssetConstructor = Video;
   public override readonly codec = mediaSourceCodec;
 
-  public override unacquiredSource(
-    { options }: AssetRequest<VideoAssetOptions>,
-    url: string,
-    network: NetworkSnapshot,
-  ): { source: MediaAssetSource } | undefined {
-    return streamsFromUrl(options, network) ? { source: { url } } : undefined;
+  public override unacquiredSource(_request: AssetRequest<VideoAssetOptions>, url: string, network: NetworkSnapshot): { source: MediaAssetSource } | undefined {
+    return streamsFromUrl(network) ? { source: { url } } : undefined;
   }
 
   public override resourceIdentity(request: AssetRequest<VideoAssetOptions>): string {
