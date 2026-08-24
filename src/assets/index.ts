@@ -1,7 +1,7 @@
 export { AbstractAssetFactory } from './AbstractAssetFactory';
 export type { ValueAsset } from './Asset';
 export { Asset } from './Asset';
-export type { AssetCacheOptions, CacheAcquisition } from './AssetCache';
+export type { AssetCacheOptions } from './AssetCache';
 export { AssetCache } from './AssetCache';
 export type { AssetCacheErrorOptions, AssetCacheOperation } from './AssetCacheError';
 export { AssetCacheError } from './AssetCacheError';

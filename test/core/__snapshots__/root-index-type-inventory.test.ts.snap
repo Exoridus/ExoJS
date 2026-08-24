@@ -105,7 +105,6 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "ButtonBinding: type alias",
   "ButtonLikeAction: class",
   "ButtonOptions: interface",
-  "CacheAcquisition: interface",
   "CacheContext: interface",
   "CacheFirstPolicy: class",
   "CacheLayout: interface",

@@ -629,7 +629,12 @@ A cache **miss** and a cache **failure** are different events, and stay differen
 Every store failure is reported on [`Loader.onCacheError`](/ExoJS/en/api/loader/) before any policy degrades it, so a store that is quietly refusing every write stays diagnosable:
 
 ```ts
-app.loader.onCacheError.add(error => {
+import { Application } from '@codexo/exojs';
+
+const app = new Application();
+const { loader } = app;
+
+loader.onCacheError.add(error => {
   console.warn(`cache ${error.operation} failed for ${error.store}`, error.cause);
 });
 ```
@@ -639,20 +644,20 @@ app.loader.onCacheError.add(error => {
 For more than one tier, configure an [`AssetCache`](/ExoJS/en/api/asset-cache/):
 
 ```ts
-import { AssetCache, CacheRoute, IndexedDbStore, MemoryCacheStore, NetworkFirstPolicy } from '@codexo/exojs';
+import { Application, AssetCache, CacheRoute, IndexedDbStore, MemoryCacheStore, NetworkFirstPolicy, type LoaderOptions } from '@codexo/exojs';
 
 const persistent = new IndexedDbStore('my-game');
 
-const app = new Application({
-  loader: {
-    cache: new AssetCache({
-      read: [new MemoryCacheStore(), persistent],
-      write: [persistent],
-      promote: true,
-      routes: [new CacheRoute({ types: ['com.example.config'], policy: new NetworkFirstPolicy(), stores: persistent })],
-    }),
-  },
-});
+const loader: LoaderOptions = {
+  cache: new AssetCache({
+    read: [new MemoryCacheStore(), persistent],
+    write: [persistent],
+    promote: true,
+    routes: [new CacheRoute({ types: ['com.example.config'], policy: new NetworkFirstPolicy(), stores: persistent })],
+  }),
+};
+
+const app = new Application({ loader });
 ```
 
 Read stores are consulted in the order they were given and the first hit wins — never raced, so which store answered, which failure surfaced and what was promoted are the same on every run. Read and write lists are separate, so a route can read a cache shipped with the application without writing to it, and `promote: true` copies a hit from a later store into the earlier writable ones.
