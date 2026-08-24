@@ -840,6 +840,25 @@ describe('Application lifecycle / getters / sizing', () => {
       expect(webglManager.resize).not.toHaveBeenCalled();
     });
 
+    test('a replacement policy committing the same geometry still writes the CSS box', async () => {
+      vi.stubGlobal('ResizeObserver', MockResizeObserver);
+      const { Application, FixedResolutionCanvasSizing } = await loadHarness();
+      const { canvas } = mountedCanvas(400, 600);
+      const app = new Application({
+        canvas: { element: canvas, width: 800, height: 600, pixelRatio: 1, sizing: new FixedResolutionCanvasSizing() },
+        backend: { type: 'webgl2' },
+      });
+
+      expect(canvas.style.width).toBe('400px');
+
+      // Detaching clears the box, so the incoming policy's identical commit is
+      // a change even though the number did not move.
+      app.sizing = new FixedResolutionCanvasSizing();
+
+      expect(canvas.style.width).toBe('400px');
+      expect(canvas.style.height).toBe('300px');
+    });
+
     test('a detached policy takes its CSS box with it', async () => {
       vi.stubGlobal('ResizeObserver', MockResizeObserver);
       const { Application, ManualCanvasSizing, ResponsiveCanvasSizing } = await loadHarness();

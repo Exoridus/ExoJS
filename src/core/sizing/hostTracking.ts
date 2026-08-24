@@ -96,17 +96,3 @@ export class HostTracker {
     this._observer = null;
   }
 }
-
-/**
- * Undo the explicit CSS box a sizing policy wrote, so the element is handed on
- * without a size this application chose still stuck to it.
- * @internal
- */
-export const clearCssBox = (element: HTMLCanvasElement | null): void => {
-  if (element === null) {
-    return;
-  }
-
-  element.style.width = '';
-  element.style.height = '';
-};

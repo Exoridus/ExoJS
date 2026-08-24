@@ -197,6 +197,7 @@ describe('sizing policies and the host element', () => {
     await settle();
 
     const backingBefore = app.canvas.width;
+    const cssBefore = canvas.style.width;
 
     await app.destroy();
 
@@ -204,8 +205,11 @@ describe('sizing policies and the host element', () => {
     await settle();
 
     try {
+      // The observation stops, and the canvas keeps the geometry it was last
+      // given - it is showing a frozen last frame, and collapsing its box out
+      // from under that would be a visible artefact.
       expect(app.canvas.width).toBe(backingBefore);
-      expect(canvas.style.width).toBe('');
+      expect(canvas.style.width).toBe(cssBefore);
     } finally {
       host.remove();
     }

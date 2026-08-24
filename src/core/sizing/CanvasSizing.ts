@@ -99,9 +99,12 @@ export abstract class CanvasSizing {
   public abstract attach(context: CanvasSizingContext): void;
 
   /**
-   * Release everything {@link CanvasSizing.attach} created, and undo the canvas
-   * styling this policy applied. The default implementation does nothing, which
-   * is correct for a policy that observes nothing and writes no CSS.
+   * Release everything {@link CanvasSizing.attach} created - observers,
+   * listeners, message channels - and undo any styling the policy applied
+   * itself. The CSS box committed through {@link CanvasSizingContext.apply} is
+   * not one of those: the application clears that on detach. The default
+   * implementation does nothing, which is correct for a policy that observes
+   * nothing.
    */
   public detach(): void {}
 }

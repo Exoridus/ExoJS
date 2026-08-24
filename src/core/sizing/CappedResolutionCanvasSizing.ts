@@ -1,5 +1,5 @@
 import { CanvasSizing, type CanvasSizingContext } from './CanvasSizing';
-import { clearCssBox, fitToHost, HostTracker, resolveHost } from './hostTracking';
+import { fitToHost, HostTracker, resolveHost } from './hostTracking';
 
 /**
  * Scales the canvas to its parent and lets the render resolution follow it
@@ -19,7 +19,6 @@ import { clearCssBox, fitToHost, HostTracker, resolveHost } from './hostTracking
  */
 export class CappedResolutionCanvasSizing extends CanvasSizing {
   private readonly _tracker = new HostTracker();
-  private _element: HTMLCanvasElement | null = null;
 
   public attach(context: CanvasSizingContext): void {
     const host = resolveHost(context, 'CappedResolutionCanvasSizing');
@@ -28,7 +27,6 @@ export class CappedResolutionCanvasSizing extends CanvasSizing {
       return;
     }
 
-    this._element = context.element;
     this._tracker.start(host, (width, height) => {
       const box = fitToHost(width, height, context.baseWidth, context.baseHeight);
       // Taken from the fitted box rather than per axis: the box already carries
@@ -48,7 +46,5 @@ export class CappedResolutionCanvasSizing extends CanvasSizing {
 
   public override detach(): void {
     this._tracker.stop();
-    clearCssBox(this._element);
-    this._element = null;
   }
 }

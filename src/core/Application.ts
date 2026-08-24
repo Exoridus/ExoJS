@@ -1096,7 +1096,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   public set sizing(sizing: CanvasSizing | null) {
-    this._sizing?.detach();
+    this._detachSizing();
     this._sizing = sizing;
     this._applySizing();
   }
@@ -1656,7 +1656,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       pixelRatio: this._pixelRatio,
     };
 
-    this._sizing?.detach();
+    this._detachSizing();
     this._applySizing();
 
     return this;
@@ -1696,6 +1696,34 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   private _attachSizing(sizing: CanvasSizing | null): void {
     this._sizing = sizing;
     this._applySizing();
+  }
+
+  /**
+   * Release the active policy and take back the CSS box committed under it.
+   *
+   * Only a box this application wrote is cleared, which is what leaves a page
+   * that sizes the canvas itself - {@link ManualCanvasSizing} - holding the
+   * geometry it set. And it is cleared here rather than inside the policy
+   * because this is where the last committed value is remembered: a policy
+   * clearing the element directly would leave that record claiming a size the
+   * element no longer has, and the next policy to commit the very same size
+   * would then write nothing at all. A policy stays responsible for any other
+   * styling it applies itself.
+   */
+  private _detachSizing(): void {
+    this._sizing?.detach();
+
+    if (this._cssWidth === null) {
+      return;
+    }
+
+    this._cssWidth = null;
+    this._cssHeight = null;
+
+    if (this.element !== null) {
+      this.element.style.width = '';
+      this.element.style.height = '';
+    }
   }
 
   /**
@@ -1908,6 +1936,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._visibilitySubscription?.();
     this._visibilitySubscription = null;
+    // Detached rather than released through `_detachSizing`: the canvas shows a
+    // frozen last frame from here on, and collapsing its display box out from
+    // under that is a visible artefact. What has to go is the observation.
     this._sizing?.detach();
     this._sizing = null;
     this._releaseDom();

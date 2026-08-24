@@ -1,7 +1,7 @@
 import { assert } from '#core/dev';
 
 import { CanvasSizing, type CanvasSizingContext } from './CanvasSizing';
-import { clearCssBox, HostTracker, resolveHost } from './hostTracking';
+import { HostTracker, resolveHost } from './hostTracking';
 
 export interface ResponsiveCanvasSizingOptions {
   /**
@@ -42,7 +42,6 @@ export interface ResponsiveCanvasSizingOptions {
 export class ResponsiveCanvasSizing extends CanvasSizing {
   private readonly _tracker = new HostTracker();
   private readonly _minAspect: number | undefined;
-  private _element: HTMLCanvasElement | null = null;
 
   public constructor(options: ResponsiveCanvasSizingOptions = {}) {
     super();
@@ -66,7 +65,6 @@ export class ResponsiveCanvasSizing extends CanvasSizing {
       );
     }
 
-    this._element = context.element;
     this._tracker.start(host, (width, height) => {
       const view = computeResponsiveView(width, height, context.baseHeight, minAspect);
 
@@ -83,8 +81,6 @@ export class ResponsiveCanvasSizing extends CanvasSizing {
 
   public override detach(): void {
     this._tracker.stop();
-    clearCssBox(this._element);
-    this._element = null;
   }
 }
 
