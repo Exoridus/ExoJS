@@ -1,16 +1,16 @@
 {
   "title": "IndexedDbStore",
-  "description": "CacheStore implementation that persists processed asset data in an IndexedDB database via IndexedDbDatabase. Pass an instance to LoaderOptions.cache to enable cross-session asset caching with no additional configuration beyond a database name.",
+  "description": "CacheStore that persists acquired asset representations in IndexedDB. ```ts const app = new Application({ loader: { cache: new IndexedDbStore('my-game') } }); ``` ## One generic store Every record of every asset type lives in a single `records` object store, keyed by the serialized CacheRecordKey. The logical namespace is part of that key, which is data - so an asset type installed at runtime by an extension, or written by an application this engine has never seen, caches immediately. Nothing about a new type requires a schema version bump, an object store, or any engine-side registration. ## Values Anything the structured-clone algorithm accepts round-trips: strings, `ArrayBuffer`s, typed arrays, `Blob`s, plain objects. Values are stored directly, never JSON-serialized. ## Schema changes discard the cache A database written by an earlier physical schema is emptied on first open. Cached representations are reconstructible by definition, so preserving them across a schema change would cost more than re-fetching them. ## Failures Every failure rejects with an AssetCacheError naming the operation and carrying the originating `DOMException` as `cause`, so a `QuotaExceededError` is distinguishable from a transaction or schema failure without parsing message text. A write resolves only once its transaction has committed. Nothing is swallowed: whether a failure degrades a load is the CachePolicy's decision.",
   "symbol": "IndexedDbStore",
   "kind": "class",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 6,
+  "memberCount": 7,
   "counts": {
     "constructors": 1,
     "methods": 5,
-    "properties": 0,
+    "properties": 1,
     "events": 0
   },
   "sections": [
@@ -19,8 +19,16 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "CacheStore implementation that persists processed asset data in an IndexedDB database via IndexedDbDatabase.",
-        "Pass an instance to LoaderOptions.cache to enable cross-session asset caching with no additional configuration beyond a database name."
+        "CacheStore that persists acquired asset representations in IndexedDB.",
+        "```ts const app = new Application({ loader: { cache: new IndexedDbStore('my-game') } }); ```",
+        "## One generic store",
+        "Every record of every asset type lives in a single `records` object store, keyed by the serialized CacheRecordKey. The logical namespace is part of that key, which is data - so an asset type installed at runtime by an extension, or written by an application this engine has never seen, caches immediately. Nothing about a new type requires a schema version bump, an object store, or any engine-side registration.",
+        "## Values",
+        "Anything the structured-clone algorithm accepts round-trips: strings, `ArrayBuffer`s, typed arrays, `Blob`s, plain objects. Values are stored directly, never JSON-serialized.",
+        "## Schema changes discard the cache",
+        "A database written by an earlier physical schema is emptied on first open. Cached representations are reconstructible by definition, so preserving them across a schema change would cost more than re-fetching them.",
+        "## Failures",
+        "Every failure rejects with an AssetCacheError naming the operation and carrying the originating `DOMException` as `cause`, so a `QuotaExceededError` is distinguishable from a transaction or schema failure without parsing message text. A write resolves only once its transaction has committed. Nothing is swallowed: whether a failure degrades a load is the CachePolicy's decision."
       ],
       "importLine": "import { IndexedDbStore } from '@codexo/exojs'",
       "sourceLink": null
@@ -95,7 +103,7 @@
       "members": [
         {
           "name": "clear",
-          "signature": "clear(storageName: string): Promise<boolean>",
+          "signature": "clear(namespace?: string): Promise<void>",
           "signatureTokens": [
             {
               "text": "clear",
@@ -106,8 +114,12 @@
               "kind": "punctuation"
             },
             {
-              "text": "storageName",
+              "text": "namespace",
               "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -134,7 +146,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "boolean",
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -144,17 +156,17 @@
           ],
           "params": [
             {
-              "name": "storageName",
+              "name": "namespace",
               "type": "string",
-              "optional": false
+              "optional": true
             }
           ],
-          "returnType": "Promise<boolean>",
-          "description": "Removes all entries within storageName. Returns true on success."
+          "returnType": "Promise<void>",
+          "description": "Removes every record of namespace, or the whole store when it is omitted."
         },
         {
           "name": "delete",
-          "signature": "delete(storageName: string, key: string): Promise<boolean>",
+          "signature": "delete(key: CacheRecordKey): Promise<void>",
           "signatureTokens": [
             {
               "text": "delete",
@@ -162,22 +174,6 @@
             },
             {
               "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "storageName",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
               "kind": "punctuation"
             },
             {
@@ -189,8 +185,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "CacheRecordKey",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -209,7 +205,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "boolean",
+              "text": "void",
               "kind": "keyword"
             },
             {
@@ -219,18 +215,13 @@
           ],
           "params": [
             {
-              "name": "storageName",
-              "type": "string",
-              "optional": false
-            },
-            {
               "name": "key",
-              "type": "string",
+              "type": "CacheRecordKey",
               "optional": false
             }
           ],
-          "returnType": "Promise<boolean>",
-          "description": "Removes a single entry. Returns true if the entry existed and was removed."
+          "returnType": "Promise<void>",
+          "description": "Removes one record. Removing an absent record is not a failure."
         },
         {
           "name": "destroy",
@@ -262,31 +253,15 @@
           "description": "Synchronously releases any open handles held by the store."
         },
         {
-          "name": "load",
-          "signature": "load(storageName: string, key: string): Promise<unknown>",
+          "name": "get",
+          "signature": "get(key: CacheRecordKey): Promise<CacheReadResult>",
           "signatureTokens": [
             {
-              "text": "load",
+              "text": "get",
               "kind": "name"
             },
             {
               "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "storageName",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
               "kind": "punctuation"
             },
             {
@@ -298,8 +273,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "CacheRecordKey",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -318,8 +293,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "unknown",
-              "kind": "keyword"
+              "text": "CacheReadResult",
+              "kind": "type"
             },
             {
               "text": ">",
@@ -328,45 +303,24 @@
           ],
           "params": [
             {
-              "name": "storageName",
-              "type": "string",
-              "optional": false
-            },
-            {
               "name": "key",
-              "type": "string",
+              "type": "CacheRecordKey",
               "optional": false
             }
           ],
-          "returnType": "Promise<unknown>",
-          "description": "Loads a previously saved value, or null if the entry does not exist."
+          "returnType": "Promise<CacheReadResult>",
+          "description": "Reads one record. Resolves to a miss when it is absent; rejects when the store could not answer."
         },
         {
-          "name": "save",
-          "signature": "save(storageName: string, key: string, data: unknown): Promise<void>",
+          "name": "set",
+          "signature": "set(key: CacheRecordKey, value: unknown): Promise<void>",
           "signatureTokens": [
             {
-              "text": "save",
+              "text": "set",
               "kind": "name"
             },
             {
               "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "storageName",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
               "kind": "punctuation"
             },
             {
@@ -378,15 +332,15 @@
               "kind": "punctuation"
             },
             {
-              "text": "string",
-              "kind": "keyword"
+              "text": "CacheRecordKey",
+              "kind": "type"
             },
             {
               "text": ", ",
               "kind": "punctuation"
             },
             {
-              "text": "data",
+              "text": "value",
               "kind": "param"
             },
             {
@@ -424,23 +378,48 @@
           ],
           "params": [
             {
-              "name": "storageName",
-              "type": "string",
-              "optional": false
-            },
-            {
               "name": "key",
-              "type": "string",
+              "type": "CacheRecordKey",
               "optional": false
             },
             {
-              "name": "data",
+              "name": "value",
               "type": "unknown",
               "optional": false
             }
           ],
           "returnType": "Promise<void>",
-          "description": "Persists data under the given namespace and key. Implementations must tolerate failures silently when storage is full."
+          "description": "Writes one record, replacing any existing one. Must not resolve before the write is durable in whatever sense the backend offers. A backend with transactions resolves on commit, not on the write request being accepted - otherwise a caller that awaits a write and then reads it back can miss."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "id",
+          "signature": "id: string",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable identifier for this store, used in diagnostics to name which store of a multi-store route failed."
         }
       ],
       "paragraphs": [],

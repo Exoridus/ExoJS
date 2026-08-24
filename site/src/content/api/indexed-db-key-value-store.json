@@ -1,6 +1,6 @@
 {
   "title": "IndexedDbKeyValueStore",
-  "description": "KeyValueStore over IndexedDB (via IndexedDbStore), using the **structured-clone** algorithm. Unlike WebStorageStore, values are stored *directly* - no `JSON.stringify`. So `Blob`s, `ArrayBuffer`s, typed arrays and nested objects round-trip natively, and there is no string-size ceiling beyond the (large) IndexedDB quota. Use this for binary or large saves; use `WebStorageStore` for small synchronous JSON.",
+  "description": "KeyValueStore over IndexedDB, using the **structured-clone** algorithm. Unlike WebStorageStore, values are stored *directly* - no `JSON.stringify`. So `Blob`s, `ArrayBuffer`s, typed arrays and nested objects round-trip natively, and there is no string-size ceiling beyond the (large) IndexedDB quota. Use this for binary or large saves; use `WebStorageStore` for small synchronous JSON.",
   "symbol": "IndexedDbKeyValueStore",
   "kind": "class",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "KeyValueStore over IndexedDB (via IndexedDbStore), using the **structured-clone** algorithm.",
+        "KeyValueStore over IndexedDB, using the **structured-clone** algorithm.",
         "Unlike WebStorageStore, values are stored *directly* - no `JSON.stringify`. So `Blob`s, `ArrayBuffer`s, typed arrays and nested objects round-trip natively, and there is no string-size ceiling beyond the (large) IndexedDB quota. Use this for binary or large saves; use `WebStorageStore` for small synchronous JSON."
       ],
       "importLine": "import { IndexedDbKeyValueStore } from '@codexo/exojs'",

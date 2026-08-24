@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 43,
+  "memberCount": 47,
   "counts": {
     "constructors": 0,
-    "methods": 31,
-    "properties": 12,
+    "methods": 34,
+    "properties": 13,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Overview",
       "members": [],
       "paragraphs": [
-        "Free functions and constants exported from @codexo/exojs. Import any of them directly, for example `import { clamp } from '@codexo/exojs'`."
+        "Free functions and constants exported from @codexo/exojs. Import any of them directly, for example `import { cacheHit } from '@codexo/exojs'`."
       ],
       "importLine": null,
       "sourceLink": null
@@ -28,6 +28,112 @@
       "id": "functions",
       "title": "Functions",
       "members": [
+        {
+          "name": "cacheHit",
+          "signature": "cacheHit(value: T): CacheReadResult<T>",
+          "signatureTokens": [
+            {
+              "text": "cacheHit",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheReadResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "CacheReadResult<T>",
+          "description": "A hit carrying value."
+        },
+        {
+          "name": "cacheNamespacePrefix",
+          "signature": "cacheNamespacePrefix(namespace: string): string",
+          "signatureTokens": [
+            {
+              "text": "cacheNamespacePrefix",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "namespace",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "namespace",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "The key prefix every record of namespace shares."
+        },
         {
           "name": "clamp",
           "signature": "clamp(value: number, min: number, max: number): number",
@@ -1625,6 +1731,53 @@
           "description": "Advance the frame counter and zero all per-frame accumulators in place. Call once at the start of each render tick before recording new data. Note: RenderStats.gpuMemoryBytes is intentionally **not** reset here. It is a running total of live GPU resources owned by the backend's resource accountant, which persists across frames; zeroing it each tick would make it read 0 after the first frame."
         },
         {
+          "name": "serializeCacheRecordKey",
+          "signature": "serializeCacheRecordKey(key: CacheRecordKey): string",
+          "signatureTokens": [
+            {
+              "text": "serializeCacheRecordKey",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "key",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheRecordKey",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "key",
+              "type": "CacheRecordKey",
+              "optional": false
+            }
+          ],
+          "returnType": "string",
+          "description": "The string a CacheStore persists a record under. Composed of stable values only - never object identity, a constructor name a minifier may rewrite, or an install ordinal - so a record written in one session is found again in the next. The source key comes last and is left unescaped: it is the only field that may contain a separator, and nothing follows it to be confused with. That also puts every record of one namespace in one contiguous key range, which is what lets a store clear a namespace without an index."
+        },
+        {
           "name": "sign",
           "signature": "sign(value: number): number",
           "signatureTokens": [
@@ -1792,6 +1945,39 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "cacheMiss",
+          "signature": "cacheMiss: CacheReadResult<never>",
+          "signatureTokens": [
+            {
+              "text": "cacheMiss",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheReadResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "never",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The shared miss result. Frozen and reusable, so a store that misses allocates nothing."
         },
         {
           "name": "INSTANCE_TRANSFORM_GLSL",

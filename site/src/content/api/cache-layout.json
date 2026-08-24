@@ -1,0 +1,235 @@
+{
+  "title": "CacheLayout",
+  "description": "How one acquired representation is laid out in persistent storage. This is the boundary between what an asset's source data IS - the asset type's and its codec's business - and how a store physically holds it. A layout decides how many records a representation occupies, what they are called, and how a complete representation is reassembled from them. It knows nothing about IndexedDB, network ordering or resource construction. ## Versioning version is part of every record's persistent identity, so raising it makes previously written records unreachable rather than decoding them under rules they were not written for. There is no migration path by design: a cache is reconstructible, and a version bump simply misses and re-acquires. Most types need exactly one record and should use SingleEntryLayout.",
+  "symbol": "CacheLayout",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "How one acquired representation is laid out in persistent storage.",
+        "This is the boundary between what an asset's source data IS - the asset type's and its codec's business - and how a store physically holds it. A layout decides how many records a representation occupies, what they are called, and how a complete representation is reassembled from them. It knows nothing about IndexedDB, network ordering or resource construction.",
+        "## Versioning",
+        "version is part of every record's persistent identity, so raising it makes previously written records unreachable rather than decoding them under rules they were not written for. There is no migration path by design: a cache is reconstructible, and a version bump simply misses and re-acquires.",
+        "Most types need exactly one record and should use SingleEntryLayout."
+      ],
+      "importLine": "import { CacheLayout } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "read",
+          "signature": "read(context: CacheLayoutContext): Promise<CacheReadResult<Stored>>",
+          "signatureTokens": [
+            {
+              "text": "read",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheLayoutContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheReadResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "CacheLayoutContext",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<CacheReadResult<Stored>>",
+          "description": "Reassemble the complete stored representation. Must resolve to a miss unless every record the representation needs was present: a partially written representation is not a hit."
+        },
+        {
+          "name": "write",
+          "signature": "write(stored: Stored, context: CacheLayoutContext): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "write",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stored",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheLayoutContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "stored",
+              "type": "Stored",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "CacheLayoutContext",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Persist stored across this layout's records."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "version",
+          "signature": "version: number",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The layout version, part of every record key this layout reads or writes."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/CacheLayout.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheLayout.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/CacheLayout.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheLayout.ts"
+}

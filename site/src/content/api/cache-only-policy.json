@@ -1,0 +1,160 @@
+{
+  "title": "CacheOnlyPolicy",
+  "description": "Reads the cache and never touches the network. For a shipped or pre-warmed cache, and for offline modes that must fail loudly rather than reach for the network. A missing record rejects with an AssetCacheMissError; a store that could not answer rejects with the store's own `AssetCacheError`. Those are different failures and stay different, which is the whole point of using this policy over a fetch that happens to be offline.",
+  "symbol": "CacheOnlyPolicy",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Reads the cache and never touches the network.",
+        "For a shipped or pre-warmed cache, and for offline modes that must fail loudly rather than reach for the network. A missing record rejects with an AssetCacheMissError; a store that could not answer rejects with the store's own `AssetCacheError`. Those are different failures and stay different, which is the whole point of using this policy over a fetch that happens to be offline."
+      ],
+      "importLine": "import { CacheOnlyPolicy } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): CacheOnlyPolicy",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheOnlyPolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "CacheOnlyPolicy",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "resolve",
+          "signature": "resolve(context: CacheContext<T>): Promise<T>",
+          "signatureTokens": [
+            {
+              "text": "resolve",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheContext",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "CacheContext<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<T>",
+          "description": "Resolve one acquisition to its stored representation."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/cachePolicies.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cachePolicies.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/cachePolicies.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cachePolicies.ts"
+}

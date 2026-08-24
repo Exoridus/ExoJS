@@ -1,14 +1,14 @@
 {
-  "title": "CacheStore",
-  "description": "Physical storage for cache records. A store is asset-agnostic by contract: it never sees an asset type, a factory, a codec or a runtime resource, and it does not decide policy. It is handed a CacheRecordKey and a structured-clone-compatible value, and its only job is to keep them and hand them back. ## Failures are reported, never swallowed A store must reject when it could not do what it was asked. A missing entry is not a failure - it resolves to a miss. Whether a failure degrades the load or fails it is a CachePolicy decision, and a store that returns an absent value for a broken database takes that decision away from it. ## Values Values are whatever an AssetSourceCodec produced as its stored representation. Implementations should accept anything the structured-clone algorithm accepts - strings, `ArrayBuffer`s, typed arrays, `Blob`s, plain objects - rather than constraining callers to one shape.",
-  "symbol": "CacheStore",
-  "kind": "interface",
+  "title": "MemoryCacheStore",
+  "description": "CacheStore that keeps records in a `Map` for the lifetime of the process. Holds values BY REFERENCE - no cloning, no serialization - so it accepts anything at all and is as fast as a lookup, but does not isolate a caller from later mutation of a stored object and does not survive a reload. Its usual place is in front of a persistent store, where a hit avoids the asynchronous round trip: ```ts new AssetCache({ read: [new MemoryCacheStore(), idb], write: [idb], promote: true }) ```",
+  "symbol": "MemoryCacheStore",
+  "kind": "class",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
-  "tier": "advanced",
-  "memberCount": 6,
+  "tier": "stable",
+  "memberCount": 7,
   "counts": {
-    "constructors": 0,
+    "constructors": 1,
     "methods": 5,
     "properties": 1,
     "events": 0
@@ -19,14 +19,68 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Physical storage for cache records.",
-        "A store is asset-agnostic by contract: it never sees an asset type, a factory, a codec or a runtime resource, and it does not decide policy. It is handed a CacheRecordKey and a structured-clone-compatible value, and its only job is to keep them and hand them back.",
-        "## Failures are reported, never swallowed",
-        "A store must reject when it could not do what it was asked. A missing entry is not a failure - it resolves to a miss. Whether a failure degrades the load or fails it is a CachePolicy decision, and a store that returns an absent value for a broken database takes that decision away from it.",
-        "## Values",
-        "Values are whatever an AssetSourceCodec produced as its stored representation. Implementations should accept anything the structured-clone algorithm accepts - strings, `ArrayBuffer`s, typed arrays, `Blob`s, plain objects - rather than constraining callers to one shape."
+        "CacheStore that keeps records in a `Map` for the lifetime of the process.",
+        "Holds values BY REFERENCE - no cloning, no serialization - so it accepts anything at all and is as fast as a lookup, but does not isolate a caller from later mutation of a stored object and does not survive a reload.",
+        "Its usual place is in front of a persistent store, where a hit avoids the asynchronous round trip:",
+        "```ts new AssetCache({ read: [new MemoryCacheStore(), idb], write: [idb], promote: true }) ```"
       ],
-      "importLine": "import { CacheStore } from '@codexo/exojs'",
+      "importLine": "import { MemoryCacheStore } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(id: string): MemoryCacheStore",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MemoryCacheStore",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "MemoryCacheStore",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
       "sourceLink": null
     },
     {
@@ -365,11 +419,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/assets/CacheStore.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheStore.ts"
+        "label": "src/assets/MemoryCacheStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/MemoryCacheStore.ts"
       }
     }
   ],
-  "sourcePath": "src/assets/CacheStore.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheStore.ts"
+  "sourcePath": "src/assets/MemoryCacheStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/MemoryCacheStore.ts"
 }

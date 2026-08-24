@@ -1,0 +1,123 @@
+{
+  "title": "CachePolicy",
+  "description": "Decides in which order a cache and the network are consulted for one acquisition. This is the extension point for custom caching behaviour. Implementations are stateless policy objects, free to be shared between routes and loaders: everything one call needs arrives in its CacheContext, and diagnostics travel with that context rather than with the policy. ExoJS ships CacheFirstPolicy (the default), NetworkFirstPolicy, NetworkOnlyPolicy and CacheOnlyPolicy.",
+  "symbol": "CachePolicy",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 1,
+  "counts": {
+    "constructors": 0,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Decides in which order a cache and the network are consulted for one acquisition.",
+        "This is the extension point for custom caching behaviour. Implementations are stateless policy objects, free to be shared between routes and loaders: everything one call needs arrives in its CacheContext, and diagnostics travel with that context rather than with the policy.",
+        "ExoJS ships CacheFirstPolicy (the default), NetworkFirstPolicy, NetworkOnlyPolicy and CacheOnlyPolicy."
+      ],
+      "importLine": "import { CachePolicy } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "resolve",
+          "signature": "resolve(context: CacheContext<T>): Promise<T>",
+          "signatureTokens": [
+            {
+              "text": "resolve",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheContext",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "CacheContext<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<T>",
+          "description": "Resolve one acquisition to its stored representation."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/CachePolicy.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicy.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/CachePolicy.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicy.ts"
+}

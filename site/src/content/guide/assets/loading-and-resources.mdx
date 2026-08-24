@@ -511,9 +511,9 @@ this.app.loader.load(Level2Assets, { priority: LoadPriority.Background });
 
 A backgrounded leaf is boosted to fetch immediately if something `get()`s or foreground-`load()`s it before the queue reaches it — so there's nothing to guard against. Request it in the background early, then `await this.app.loader.load(Level2Assets)` when you actually need it and it resolves as soon as the in-flight fetch finishes. `this.app.loader.awaitBackground()` resolves once the background queue has fully drained.
 
-## Caching and IndexedDB
+## Caching
 
-By default the loader fetches from the network every session. To persist processed assets across sessions, pass an `IndexedDbStore`:
+By default the loader fetches from the network every session and keeps nothing between them — no cache is configured, and none of the caching machinery runs. To persist what was acquired across sessions, pass a store:
 
 ```ts
 import { Loader, IndexedDbStore } from '@codexo/exojs';
@@ -537,9 +537,139 @@ const loader: LoaderOptions = {
 const app = new Application({ loader });
 ```
 
-On first load, assets are fetched from the network and written to IndexedDB. On subsequent sessions they load from the database instead. The default store configuration covers all built-in asset types and the `fetch*` context helpers used by custom handlers.
+That is the whole configuration for the usual case: one store, read and written cache-first. On first load an asset is fetched from the network and written to the store; on later sessions it is read back from the store instead. Every asset type is covered, including one an extension installs at runtime — there is nothing to register and no schema to declare.
 
-If you supply a custom `storeNames` array, include `'__ctx_text'`, `'__ctx_json'`, and `'__ctx_binary'` if your custom asset handlers call `context.fetchText`, `context.fetchJson`, or `context.fetchArrayBuffer`.
+### What is cached, and under what identity
+
+The cache holds the **acquired representation**, not the runtime resource. That is the value the type's [`AssetSourceCodec`](/ExoJS/en/api/asset-source-codec/) read off the response, before any interpretation that would have to be redone anyway — the JSON text rather than the parsed object, the bytes rather than the decoded image. A cache hit still runs `codec.decode` and still builds the resource through the factory, so a factory never sees the persisted form and never learns where the source came from.
+
+Each record is identified by four stable values:
+
+| Part           | Comes from                                    |
+| -------------- | --------------------------------------------- |
+| namespace      | the asset type's `id`                         |
+| source         | the request's `SourceKey`                     |
+| layout version | the type's `layout.version`                   |
+| record         | the layout's own name for it (`'value'`)      |
+
+The source key alone is deliberately not enough: it carries no asset type, so two types acquiring one URL would otherwise overwrite each other's representations. Conversely two resources that differ only in how one download is interpreted share a source key — and therefore one cache record and one download.
+
+Raise `layout.version` when the stored representation changes shape. Records written under the old version stop being found and are re-acquired; there is no migration path, because a cache is reconstructible by definition:
+
+```ts
+import { AssetType, jsonSourceCodec, SingleEntryLayout, type AssetFactory, type AssetSourceCodec } from '@codexo/exojs';
+
+interface WorldData {
+  readonly name: string;
+}
+
+class World {
+  public constructor(public readonly data: WorldData) {}
+}
+
+class WorldAssetType extends AssetType<WorldData, World, undefined, string> {
+  public readonly id = 'com.example.world';
+  public readonly codec = jsonSourceCodec as AssetSourceCodec<WorldData, string>;
+
+  // Raised because the codec now keeps the response text, where version 1
+  // kept the parsed object. Records written under version 1 are re-acquired.
+  public override readonly layout = SingleEntryLayout.version<string>(2);
+
+  public createFactory(): AssetFactory<WorldData, World> {
+    return { create: data => Promise.resolve(new World(data)) };
+  }
+}
+```
+
+### Policies
+
+A [`CachePolicy`](/ExoJS/en/api/cache-policy/) decides only the ORDER in which the cache and the network are consulted. Four are built in:
+
+| Policy                | Reads cache | Fetches           | Writes           | On failure                                                                 |
+| --------------------- | ----------- | ----------------- | ---------------- | -------------------------------------------------------------------------- |
+| `CacheFirstPolicy`    | first       | only on a miss    | what it fetched  | a read or write failure degrades; the load still succeeds from the network  |
+| `NetworkFirstPolicy`  | on fallback | always, first     | what it fetched  | falls back to the cache only for a transport or HTTP failure                |
+| `NetworkOnlyPolicy`   | never       | always            | never            | the network failure surfaces                                                |
+| `CacheOnlyPolicy`     | only        | never             | never            | a miss rejects with `AssetCacheMissError`, a broken store with `AssetCacheError` |
+
+`CacheFirstPolicy` is the default. `NetworkFirstPolicy` falls back deliberately narrowly: a cancelled load stays cancelled, and a response the codec could not read is a broken source rather than an absent network — serving a stale representation for either would replace a visible failure with a silently wrong asset.
+
+Writing a policy needs nothing but the [`CacheContext`](/ExoJS/en/api/cache-context/) it is handed:
+
+```ts
+import type { CacheContext, CachePolicy } from '@codexo/exojs';
+
+class MyCacheFirstPolicy implements CachePolicy {
+  public async resolve<T>(context: CacheContext<T>): Promise<T> {
+    const cached = await context.read();
+
+    if (cached.hit) {
+      return cached.value;
+    }
+
+    const value = await context.fetch();
+
+    await context.write(value);
+
+    return value;
+  }
+}
+```
+
+A policy is never handed a factory, a codec, an asset type or a store handle. It is a stateless object and may be shared between routes and applications: everything one call needs arrives in its context.
+
+### Failure semantics
+
+A cache **miss** and a cache **failure** are different events, and stay different:
+
+- `context.read()` resolves to `{ hit: false }` when no store held the record, and rejects when a store could not answer.
+- `context.write()` rejects when a store refused the write, after attempting every one of them.
+- A store never swallows a failure to look like an empty cache. Whether to degrade is the policy's decision — which is why `CacheOnlyPolicy` can tell "this was never written" from "the database is broken", and `CacheFirstPolicy` can treat both as a reason to fetch.
+
+Every store failure is reported on [`Loader.onCacheError`](/ExoJS/en/api/loader/) before any policy degrades it, so a store that is quietly refusing every write stays diagnosable:
+
+```ts
+app.loader.onCacheError.add(error => {
+  console.warn(`cache ${error.operation} failed for ${error.store}`, error.cause);
+});
+```
+
+### Several stores, and per-type routes
+
+For more than one tier, configure an [`AssetCache`](/ExoJS/en/api/asset-cache/):
+
+```ts
+import { AssetCache, CacheRoute, IndexedDbStore, MemoryCacheStore, NetworkFirstPolicy } from '@codexo/exojs';
+
+const persistent = new IndexedDbStore('my-game');
+
+const app = new Application({
+  loader: {
+    cache: new AssetCache({
+      read: [new MemoryCacheStore(), persistent],
+      write: [persistent],
+      promote: true,
+      routes: [new CacheRoute({ types: ['com.example.config'], policy: new NetworkFirstPolicy(), stores: persistent })],
+    }),
+  },
+});
+```
+
+Read stores are consulted in the order they were given and the first hit wins — never raced, so which store answered, which failure surfaced and what was promoted are the same on every run. Read and write lists are separate, so a route can read a cache shipped with the application without writing to it, and `promote: true` copies a hit from a later store into the earlier writable ones.
+
+Routes are matched by asset type id, in declaration order; the first route that claims a type wins, and anything no route claims falls to the options given at the top level. A route without `types` claims everything from its position onwards.
+
+To drop cached records — after a content update, or when a player asks for it — call `cache.clear()`, or `cache.clear(typeId)` for one type.
+
+### The persistent store
+
+[`IndexedDbStore`](/ExoJS/en/api/indexed-db-store/) keeps every record of every type in a single generic object store, with the namespace as part of the record key rather than as physical schema. That is what lets a type installed at runtime cache immediately: no schema version bump, no object store, no engine-side registration.
+
+Values are stored through the structured-clone algorithm, so strings, `ArrayBuffer`s, typed arrays, `Blob`s and plain objects all round-trip without a JSON layer. A write resolves only once its transaction has committed.
+
+A database written under an earlier physical schema is **emptied on first open**. Cached representations are re-fetchable by definition, so they are discarded rather than migrated.
+
+[`MemoryCacheStore`](/ExoJS/en/api/memory-cache-store/) is the in-process counterpart: it holds values by reference for the lifetime of the page, which makes it a good front tier and the obvious choice in tests.
 
 ## Save data with a key-value store
 
@@ -608,7 +738,7 @@ function parseHeightField(text: string): number[][] {
 }
 ```
 
-The handler `context` routes fetches through the loader's cache strategy and IndexedDB stores:
+The handler `context` routes fetches through the application's cache configuration:
 
 | Member                             | Returns                                                                        |
 | ---------------------------------- | ------------------------------------------------------------------------------ |

@@ -1,6 +1,6 @@
 {
   "title": "AssetCacheError",
-  "description": "Structured asset-cache failure. Thrown by IndexedDbDatabase for every failed IndexedDB request, and handed to CacheRequest.reportCacheError - which `Loader` routes to Loader.onCacheError - for cache errors a CacheStrategy degrades instead of propagating. Extends Error, so callers can narrow with `error instanceof AssetCacheError` and read AssetCacheError.operation, AssetCacheError.store and AssetCacheError.key instead of matching on message text. The original `DOMException` stays reachable through Error.cause, which is what makes a quota failure (`QuotaExceededError`) distinguishable from a transaction or schema failure. The `DOMException`'s `name` and message are also appended to Error.message, so a log line that only prints the message still names the real cause.",
+  "description": "Structured asset-cache failure. Raised by a CacheStore for every operation it could not carry out, and dispatched on Loader.onCacheError whenever a CachePolicy degrades one instead of propagating it. A cache MISS is not one of these - it is reported as an AssetCacheMissError or as a miss result, because \"this was never written\" and \"the store is broken\" call for different reactions. Extends Error, so callers can narrow with `error instanceof AssetCacheError` and read AssetCacheError.operation, AssetCacheError.store and AssetCacheError.key instead of matching on message text. The original `DOMException` stays reachable through Error.cause, which is what makes a quota failure (`QuotaExceededError`) distinguishable from a transaction or schema failure. The `DOMException`'s `name` and message are also appended to Error.message, so a log line that only prints the message still names the real cause.",
   "symbol": "AssetCacheError",
   "kind": "class",
   "subsystem": "assets",
@@ -19,7 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Structured asset-cache failure. Thrown by IndexedDbDatabase for every failed IndexedDB request, and handed to CacheRequest.reportCacheError - which `Loader` routes to Loader.onCacheError - for cache errors a CacheStrategy degrades instead of propagating.",
+        "Structured asset-cache failure. Raised by a CacheStore for every operation it could not carry out, and dispatched on Loader.onCacheError whenever a CachePolicy degrades one instead of propagating it.",
+        "A cache MISS is not one of these - it is reported as an AssetCacheMissError or as a miss result, because \"this was never written\" and \"the store is broken\" call for different reactions.",
         "Extends Error, so callers can narrow with `error instanceof AssetCacheError` and read AssetCacheError.operation, AssetCacheError.store and AssetCacheError.key instead of matching on message text. The original `DOMException` stays reachable through Error.cause, which is what makes a quota failure (`QuotaExceededError`) distinguishable from a transaction or schema failure.",
         "The `DOMException`'s `name` and message are also appended to Error.message, so a log line that only prints the message still names the real cause."
       ],
@@ -255,7 +256,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Object store / storage namespace, or null when the operation is database-wide."
+          "description": "Storage namespace, or null when the operation is store-wide."
         }
       ],
       "paragraphs": [],

@@ -1,0 +1,292 @@
+{
+  "title": "SingleEntryLayout",
+  "description": "CacheLayout for a representation that occupies one record. This is what almost every asset type wants: the codec produced one value, and the cache keeps that one value. It is the default an AssetType carries, so a type that needs nothing else declares nothing at all. Raise the version when the codec's stored representation changes shape. Records written under the old version stop being found and are re-acquired.",
+  "symbol": "SingleEntryLayout",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 3,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "CacheLayout for a representation that occupies one record.",
+        "This is what almost every asset type wants: the codec produced one value, and the cache keeps that one value. It is the default an AssetType carries, so a type that needs nothing else declares nothing at all.",
+        "Raise the version when the codec's stored representation changes shape. Records written under the old version stop being found and are re-acquired."
+      ],
+      "importLine": "import { SingleEntryLayout } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "read",
+          "signature": "read(context: CacheLayoutContext): Promise<CacheReadResult<Stored>>",
+          "signatureTokens": [
+            {
+              "text": "read",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheLayoutContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheReadResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "CacheLayoutContext",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<CacheReadResult<Stored>>",
+          "description": "Reassemble the complete stored representation. Must resolve to a miss unless every record the representation needs was present: a partially written representation is not a hit."
+        },
+        {
+          "name": "write",
+          "signature": "write(stored: Stored, context: CacheLayoutContext): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "write",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "stored",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheLayoutContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "stored",
+              "type": "Stored",
+              "optional": false
+            },
+            {
+              "name": "context",
+              "type": "CacheLayoutContext",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Persist stored across this layout's records."
+        },
+        {
+          "name": "version",
+          "signature": "version(version: number): SingleEntryLayout<Stored>",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "version",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SingleEntryLayout",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Stored",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "version",
+              "type": "number",
+              "optional": false
+            }
+          ],
+          "returnType": "SingleEntryLayout<Stored>",
+          "description": "The single-entry layout at version. Instances are shared per version, so declaring a layout on an asset type costs nothing per type."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "version",
+          "signature": "version: number",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The layout version, part of every record key this layout reads or writes."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/SingleEntryLayout.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/SingleEntryLayout.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/SingleEntryLayout.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/SingleEntryLayout.ts"
+}

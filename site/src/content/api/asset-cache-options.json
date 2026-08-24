@@ -1,0 +1,272 @@
+{
+  "title": "AssetCacheOptions",
+  "description": "Construction options for an AssetCache.",
+  "symbol": "AssetCacheOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Construction options for an AssetCache."
+      ],
+      "importLine": "import { AssetCacheOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "policy",
+          "signature": "policy?: CachePolicy",
+          "signatureTokens": [
+            {
+              "text": "policy",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CachePolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "How the cache and the network are ordered. Defaults to CacheFirstPolicy."
+        },
+        {
+          "name": "promote",
+          "signature": "promote?: boolean",
+          "signatureTokens": [
+            {
+              "text": "promote",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether a hit in a later read store is copied into the earlier read stores that are also write stores. Off by default: it is a cheap win for a memory tier in front of a persistent one, and pointless everywhere else."
+        },
+        {
+          "name": "read",
+          "signature": "read?: CacheStore | readonly CacheStore[]",
+          "signatureTokens": [
+            {
+              "text": "read",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheStore",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheStore",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stores consulted on a read, in order. The first hit wins; later stores are not consulted."
+        },
+        {
+          "name": "routes",
+          "signature": "routes?: readonly CacheRoute[]",
+          "signatureTokens": [
+            {
+              "text": "routes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheRoute",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Rules applied before the default one, in order. The first route that claims an asset type wins; a route without types claims everything from its position onwards, so any route after it is unreachable."
+        },
+        {
+          "name": "stores",
+          "signature": "stores?: CacheStore | readonly CacheStore[]",
+          "signatureTokens": [
+            {
+              "text": "stores",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheStore",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheStore",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stores this route both reads and writes. Shorthand for passing the same list as read and write."
+        },
+        {
+          "name": "write",
+          "signature": "write?: CacheStore | readonly CacheStore[]",
+          "signatureTokens": [
+            {
+              "text": "write",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheStore",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheStore",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stores a write goes to. All of them are attempted."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetCache.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCache.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetCache.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCache.ts"
+}

@@ -1,0 +1,190 @@
+{
+  "title": "CacheLayoutContext",
+  "description": "The store operations a CacheLayout may use, scoped to one acquisition. A layout addresses its own records by name and never composes a CacheRecordKey itself: the namespace, the source identity and the layout version are the cache's to own, and a layout that could choose them could collide with another type's records.",
+  "symbol": "CacheLayoutContext",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 0,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The store operations a CacheLayout may use, scoped to one acquisition.",
+        "A layout addresses its own records by name and never composes a CacheRecordKey itself: the namespace, the source identity and the layout version are the cache's to own, and a layout that could choose them could collide with another type's records."
+      ],
+      "importLine": "import { CacheLayoutContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "read",
+          "signature": "read(record: string): Promise<CacheReadResult>",
+          "signatureTokens": [
+            {
+              "text": "read",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "record",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheReadResult",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "record",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<CacheReadResult>",
+          "description": "Read one of this layout's records. Rejects when the store could not answer."
+        },
+        {
+          "name": "write",
+          "signature": "write(record: string, value: unknown): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "write",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "record",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "record",
+              "type": "string",
+              "optional": false
+            },
+            {
+              "name": "value",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Write one of this layout's records."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/CacheLayout.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheLayout.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/CacheLayout.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheLayout.ts"
+}

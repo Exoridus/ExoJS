@@ -1,0 +1,161 @@
+{
+  "title": "CacheFirstPolicy",
+  "description": "Reads the cache first and only fetches when it misses. The default policy, and the right one for content that does not change behind a stable URL. A cache failure never fails a load that the network could still serve: a read failure is degraded into a miss, and a write failure is degraded into \"not cached this time\". Both are reported to Loader.onCacheError before they are degraded, so a store that is silently refusing every write stays diagnosable. A missing entry and a failing store therefore behave the same way HERE, and differently everywhere it matters - see CacheOnlyPolicy, which has no network leg to degrade onto.",
+  "symbol": "CacheFirstPolicy",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Reads the cache first and only fetches when it misses.",
+        "The default policy, and the right one for content that does not change behind a stable URL. A cache failure never fails a load that the network could still serve: a read failure is degraded into a miss, and a write failure is degraded into \"not cached this time\". Both are reported to Loader.onCacheError before they are degraded, so a store that is silently refusing every write stays diagnosable.",
+        "A missing entry and a failing store therefore behave the same way HERE, and differently everywhere it matters - see CacheOnlyPolicy, which has no network leg to degrade onto."
+      ],
+      "importLine": "import { CacheFirstPolicy } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): CacheFirstPolicy",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheFirstPolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "CacheFirstPolicy",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "resolve",
+          "signature": "resolve(context: CacheContext<T>): Promise<T>",
+          "signatureTokens": [
+            {
+              "text": "resolve",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheContext",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "CacheContext<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<T>",
+          "description": "Resolve one acquisition to its stored representation."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/cachePolicies.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cachePolicies.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/cachePolicies.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cachePolicies.ts"
+}

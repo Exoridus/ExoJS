@@ -1,0 +1,251 @@
+{
+  "title": "AssetCache",
+  "description": "The application's caching configuration: which stores exist, which asset types use which of them, and in what order the cache and the network are consulted. The common case needs none of this vocabulary - passing a store straight to the loader configures one cache-first route over it: ```ts new Application({ loader: { cache: new IndexedDbStore('my-game') } }); ``` The full form exists for applications that need more than one tier or more than one policy: ```ts new Application({ loader: { cache: new AssetCache({ read: [memory, persistent], write: [persistent], promote: true, routes: [new CacheRoute({ types: ['config'], policy: new NetworkFirstPolicy(), stores: persistent })], }), }, }); ``` ## What it does not do An `AssetCache` never builds a resource, never reads a `Response` and never decides how a representation is serialized. It selects a route, hands the route's policy a CacheContext, and turns that context's record reads and writes into store calls. Representation is the asset type's; construction is the factory's.",
+  "symbol": "AssetCache",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 1,
+    "methods": 3,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The application's caching configuration: which stores exist, which asset types use which of them, and in what order the cache and the network are consulted.",
+        "The common case needs none of this vocabulary - passing a store straight to the loader configures one cache-first route over it:",
+        "```ts new Application({ loader: { cache: new IndexedDbStore('my-game') } }); ```",
+        "The full form exists for applications that need more than one tier or more than one policy:",
+        "```ts new Application({ loader: { cache: new AssetCache({ read: [memory, persistent], write: [persistent], promote: true, routes: [new CacheRoute({ types: ['config'], policy: new NetworkFirstPolicy(), stores: persistent })], }), }, }); ```",
+        "## What it does not do",
+        "An `AssetCache` never builds a resource, never reads a `Response` and never decides how a representation is serialized. It selects a route, hands the route's policy a CacheContext, and turns that context's record reads and writes into store calls. Representation is the asset type's; construction is the factory's."
+      ],
+      "importLine": "import { AssetCache } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(options: AssetCacheOptions): AssetCache",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "options",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetCacheOptions",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetCache",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "options",
+              "type": "AssetCacheOptions",
+              "optional": false
+            }
+          ],
+          "returnType": "AssetCache",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(namespace?: string): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "namespace",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "namespace",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Drop cached records: those of one asset type, or every record in every store this cache knows. Rejects with the first failure a store reported, after attempting all of them. Assets are re-fetchable, so a partial clear is not a state that needs unwinding."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Destroys every store this cache holds, each exactly once."
+        },
+        {
+          "name": "routeFor",
+          "signature": "routeFor(namespace: string): CacheRoute",
+          "signatureTokens": [
+            {
+              "text": "routeFor",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "namespace",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheRoute",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "namespace",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "CacheRoute",
+          "description": "The route that governs namespace."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/AssetCache.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCache.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/AssetCache.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/AssetCache.ts"
+}
