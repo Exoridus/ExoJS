@@ -149,6 +149,19 @@ ExoJS deliberately has no opinion.
 `loadLevel` is safe to call repeatedly: a level that is already loaded resolves to the runtime it
 already has, and a concurrent call joins the load in flight rather than starting a second one.
 
+A load that spawns nothing can still be cancelled — pass the signal on its own:
+
+```ts
+import type { MapWorldRuntime } from '@codexo/exojs-tilemap';
+
+export function loadCancellable(runtime: MapWorldRuntime, signal: AbortSignal): Promise<unknown> {
+    return runtime.loadLevel('level-forest', { signal });
+}
+```
+
+Cancelling a load through `unloadLevel` leaves the level immediately loadable again: a `loadLevel`
+issued in the same turn starts a fresh load rather than joining the one on its way out.
+
 ## Spawning map objects
 
 Level editors place objects; games need entities. A

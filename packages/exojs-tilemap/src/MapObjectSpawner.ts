@@ -1,4 +1,5 @@
 import type { Destroyable, SceneNode } from '@codexo/exojs';
+import { logger } from '@codexo/exojs';
 
 import type { MapObjectDescriptor } from './MapObject';
 import { mapObjectDescriptors } from './MapObject';
@@ -160,7 +161,9 @@ export class MapObjectSpawner<Context = void, Result extends Destroyable = Scene
    *
    * @throws {MapSpawnError} when a factory fails, two objects share a stable id,
    * or an unmatched object is found while `unknown` is `'error'`. In every case
-   * the objects already created are destroyed first.
+   * the objects already created are destroyed first. A factory that fails while
+   * the spawn is also being aborted reports the factory failure, not the abort -
+   * the more specific of the two.
    * @throws {DOMException} named `AbortError` when `options.signal` aborts.
    */
   public async spawn(map: TileMap, context: Context, options?: MapSpawnOptions): Promise<MapSpawnSession<Result>> {
@@ -216,7 +219,18 @@ export class MapObjectSpawner<Context = void, Result extends Destroyable = Scene
     } catch (error) {
       for (let i = entries.length - 1; i >= 0; i--) {
         const entry = entries[i];
-        if (entry !== undefined) entry[1].destroy();
+        if (entry === undefined) continue;
+
+        // A failing rollback step must neither replace the error that caused
+        // the rollback nor strand the objects before it.
+        try {
+          entry[1].destroy();
+        } catch (rollbackError) {
+          logger.error(`MapObjectSpawner: rolling back object "${entry[0]}" failed; continuing rollback.`, {
+            source: 'tilemap',
+            ...(rollbackError instanceof Error && { error: rollbackError }),
+          });
+        }
       }
 
       throw error;

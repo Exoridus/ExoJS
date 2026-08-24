@@ -17,6 +17,7 @@ export type {
   EllipseObject,
   MapBounds,
   MapLevel,
+  MapLevelCancelOptions,
   MapLevelLoadContext,
   MapLevelLoadOptions,
   MapLevelNeighbour,

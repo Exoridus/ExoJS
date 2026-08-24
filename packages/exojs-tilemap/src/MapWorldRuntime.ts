@@ -1,4 +1,5 @@
 import type { Destroyable, LoaderScope } from '@codexo/exojs';
+import { logger } from '@codexo/exojs';
 
 import type { MapObjectSpawner } from './MapObjectSpawner';
 import type { MapSpawnSession } from './MapSpawnSession';
@@ -13,6 +14,11 @@ export interface MapLevelLoadContext {
    * The level's own {@link LoaderScope}. Assets claimed through it are released
    * when the level unloads, and claiming an asset another level also holds
    * never takes it away from that level.
+   *
+   * Its lifetime ends when {@link signal} aborts: an unload releases the scope
+   * without waiting for a provider still in flight, so a provider that resumes
+   * after that point must not claim through it any more. Check `signal.aborted`
+   * after every `await` before touching the scope again.
    */
   readonly scope: LoaderScope;
   /** Aborts when the level is unloaded or the load is cancelled. */
@@ -50,14 +56,22 @@ export interface MapWorldRuntimeOptions {
   readonly name?: string;
 }
 
-/** Options for {@link MapWorldRuntime.loadLevel}. */
-export interface MapLevelLoadOptions<Context, Result extends Destroyable> {
-  /** Spawns the level's map objects as part of the load. */
-  readonly spawner?: MapObjectSpawner<Context, Result>;
-  /** Value handed to every factory of `spawner`. */
-  readonly context: Context;
+/** Options for a {@link MapWorldRuntime.loadLevel} that spawns nothing. */
+export interface MapLevelCancelOptions {
   /** Cancels this load. Unloading the level cancels it too. */
   readonly signal?: AbortSignal;
+}
+
+/**
+ * Options for a {@link MapWorldRuntime.loadLevel} that also spawns the level's
+ * map objects. `spawner` and `context` travel together: the context exists to
+ * be handed to that spawner's factories.
+ */
+export interface MapLevelLoadOptions<Context, Result extends Destroyable> extends MapLevelCancelOptions {
+  /** Spawns the level's map objects as part of the load. */
+  readonly spawner: MapObjectSpawner<Context, Result>;
+  /** Value handed to every factory of `spawner`. */
+  readonly context: Context;
 }
 
 /**
@@ -118,8 +132,11 @@ export class MapLevelRuntime<Result extends Destroyable = Destroyable> implement
 
     this._destroyed = true;
     this._onDestroy(this);
-    this.spawns?.destroy();
-    this.map.destroy();
+
+    // A failure in one step must not strand the next: the scope is what holds
+    // the level's asset claims, and skipping it leaks them for good.
+    if (this.spawns !== null) guardedDestroy(this.spawns, `spawn session of level "${this.id}"`);
+    guardedDestroy(this.map, `map of level "${this.id}"`);
     this.scope.destroy();
   }
 }
@@ -185,7 +202,11 @@ export class MapWorldRuntime implements Destroyable {
     return this._destroyed;
   }
 
-  /** Every currently loaded level, in load order. */
+  /**
+   * Every currently **loaded** level, in load order - not the world's level
+   * set, which stays on {@link MapWorld.levels} (reachable as
+   * `runtime.world.levels`). Returns a fresh array.
+   */
   public get levels(): readonly MapLevelRuntime[] {
     return [...this._live.values()];
   }
@@ -205,6 +226,11 @@ export class MapWorldRuntime implements Destroyable {
     return this._inFlight.has(id);
   }
 
+  public loadLevel(id: string, options?: MapLevelCancelOptions): Promise<MapLevelRuntime>;
+  public loadLevel<Context, Result extends Destroyable>(
+    id: string,
+    options: MapLevelLoadOptions<Context, Result>,
+  ): Promise<MapLevelRuntime<Result>>;
   /**
    * Load a level, or return the one already loaded.
    *
@@ -215,6 +241,9 @@ export class MapWorldRuntime implements Destroyable {
    * `context` and `signal` are not applied, because the level being produced is
    * the one the first call asked for.
    *
+   * Pass `{ spawner, context }` to spawn the level's objects as part of the
+   * load, or just `{ signal }` to load a level without spawning anything.
+   *
    * A failed or aborted load leaves nothing behind: the map, anything the
    * spawner created, and the level's asset claims are all released before the
    * rejection surfaces, and the level can be loaded again.
@@ -224,7 +253,7 @@ export class MapWorldRuntime implements Destroyable {
    */
   public loadLevel<Context = void, Result extends Destroyable = Destroyable>(
     id: string,
-    options?: MapLevelLoadOptions<Context, Result>,
+    options?: MapLevelLoadOptions<Context, Result> | MapLevelCancelOptions,
   ): Promise<MapLevelRuntime<Result>> {
     // The live map erases Result - one runtime holds levels loaded with
     // different spawners - while every call site keeps its own through the
@@ -280,12 +309,18 @@ export class MapWorldRuntime implements Destroyable {
    * Unload a level, or cancel its load when one is in flight. Returns whether
    * there was anything to unload.
    *
-   * A cancelled load rejects with an `AbortError` for whoever started it.
+   * A cancelled load rejects with an `AbortError` for whoever started it, and
+   * the level is immediately loadable again - a `loadLevel` issued in the same
+   * turn starts a fresh load rather than joining the one just cancelled.
    */
   public unloadLevel(id: string): boolean {
     const pending = this._inFlight.get(id);
 
     if (pending !== undefined) {
+      // Drop the slot before aborting: the abort surfaces as a rejection one
+      // microtask later, so a same-turn reload would otherwise join the load
+      // that is on its way out and reject with it.
+      this._inFlight.delete(id);
       pending.controller.abort();
       return true;
     }
@@ -312,21 +347,27 @@ export class MapWorldRuntime implements Destroyable {
 
     this._destroyed = true;
 
-    for (const pending of [...this._inFlight.values()]) {
-      pending.controller.abort();
+    const pending = [...this._inFlight.values()];
+    this._inFlight.clear();
+
+    for (const load of pending) {
+      load.controller.abort();
     }
 
+    // One level's teardown must not strand the levels after it, nor the
+    // runtime's own scope - the assets those still hold would leak.
     for (const runtime of [...this._live.values()].reverse()) {
-      runtime.destroy();
+      guardedDestroy(runtime, `level "${runtime.id}"`);
     }
 
+    this._live.clear();
     this.scope.destroy();
   }
 
   private async _runLoad<Context, Result extends Destroyable>(
     level: MapLevel,
     signal: AbortSignal,
-    options: MapLevelLoadOptions<Context, Result> | undefined,
+    options: MapLevelLoadOptions<Context, Result> | MapLevelCancelOptions | undefined,
   ): Promise<MapLevelRuntime> {
     const scope = this.scope.createScope({ name: `level:${level.id}` });
     let map: TileMap | undefined;
@@ -339,13 +380,15 @@ export class MapWorldRuntime implements Destroyable {
 
       throwIfAborted(level.id, signal);
 
-      if (options?.spawner !== undefined) {
+      if (options !== undefined && 'spawner' in options) {
         spawns = await options.spawner.spawn(map, options.context, { signal });
         throwIfAborted(level.id, signal);
       }
     } catch (error) {
-      spawns?.destroy();
-      map?.destroy();
+      // The scope must be released even when tearing down what came before it
+      // fails, or the level's asset claims outlive the failed load forever.
+      if (spawns !== null) guardedDestroy(spawns, `spawn session of level "${level.id}"`);
+      if (map !== undefined) guardedDestroy(map, `map of level "${level.id}"`);
       scope.destroy();
       throw error;
     }
@@ -357,6 +400,22 @@ export class MapWorldRuntime implements Destroyable {
     this._live.set(level.id, runtime);
 
     return runtime;
+  }
+}
+
+/**
+ * Teardown step that reports a failure instead of propagating it, so the steps
+ * after it still run. Matches how the application reports a subsystem that
+ * fails to dispose.
+ */
+function guardedDestroy(target: Destroyable, what: string): void {
+  try {
+    target.destroy();
+  } catch (error) {
+    logger.error(`MapWorldRuntime: destroying the ${what} failed; continuing teardown.`, {
+      source: 'tilemap',
+      ...(error instanceof Error && { error }),
+    });
   }
 }
 

@@ -32,6 +32,7 @@ export type { MapBounds, MapLevel, MapLevelNeighbour, MapWorldOptions } from './
 export { MapLevelSide, MapWorld } from './MapWorld';
 // World runtime: explicit per-level load/unload with one LoaderScope per level.
 export type {
+  MapLevelCancelOptions,
   MapLevelLoadContext,
   MapLevelLoadOptions,
   MapLevelProvider,

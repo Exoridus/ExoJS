@@ -1,4 +1,5 @@
 import type { Destroyable } from '@codexo/exojs';
+import { logger } from '@codexo/exojs';
 
 /**
  * The objects one spawn produced, and their shared lifetime.
@@ -80,7 +81,18 @@ export class MapSpawnSession<Result extends Destroyable> implements Destroyable 
 
     for (let i = this.objects.length - 1; i >= 0; i--) {
       const object = this.objects[i];
-      if (object !== undefined) object.destroy();
+      if (object === undefined) continue;
+
+      // One object's failure must not strand the rest: the session is single
+      // use, so anything skipped here is never destroyed at all.
+      try {
+        object.destroy();
+      } catch (error) {
+        logger.error('MapSpawnSession: destroying a spawned object failed; continuing teardown.', {
+          source: 'tilemap',
+          ...(error instanceof Error && { error }),
+        });
+      }
     }
   }
 }

@@ -67,6 +67,14 @@ class Thing implements Destroyable {
   }
 }
 
+/** A spawn result whose teardown fails, for the guarded-teardown paths. */
+class BrittleThing extends Thing {
+
+  public override destroy(): never {
+    throw new Error('teardown exploded');
+  }
+}
+
 const tick = (): Promise<void> => new Promise<void>(resolve => setTimeout(resolve, 0));
 
 // ── Identification ───────────────────────────────────────────────────────────
@@ -98,6 +106,16 @@ describe('MapObjectSpawner identification', () => {
     const session = await spawner.spawn(map, undefined);
 
     expect(session.objects.map(thing => thing.label)).toEqual(['boss', 'grunt']);
+  });
+
+  it('treats a null from identify as unknown', async () => {
+    const map = mapWith({ id: 1, name: 'entities', objects: [{ id: 1, type: 'Enemy' }] });
+    const spawner = new MapObjectSpawner<void, Thing>(
+      { Enemy: () => new Thing('enemy') },
+      { identify: () => null, unknown: 'error' },
+    );
+
+    await expect(spawner.spawn(map, undefined)).rejects.toMatchObject({ reason: 'unknown-kind', kind: 'Enemy' });
   });
 
   it('passes the spawn context to identify', async () => {
@@ -268,6 +286,24 @@ describe('MapSpawnSession', () => {
     expect(session.destroyed).toBe(true);
   });
 
+  it('destroys the objects after one whose teardown fails', async () => {
+    const log: string[] = [];
+    const map = mapWith({
+      id: 1,
+      name: 'entities',
+      objects: [{ id: 1, type: 'Enemy' }, { id: 2, type: 'Brittle' }, { id: 3, type: 'Enemy' }],
+    });
+    const spawner = new MapObjectSpawner<void, Thing>({
+      Enemy: descriptor => new Thing(descriptor.id, log),
+      Brittle: () => new BrittleThing('brittle'),
+    });
+
+    const session = await spawner.spawn(map, undefined);
+
+    expect(() => session.destroy()).not.toThrow();
+    expect(log).toEqual(['3', '1']);
+  });
+
   it('produces an empty session for a map with no objects', async () => {
     const spawner = new MapObjectSpawner<void, Thing>({ Enemy: () => new Thing('enemy') });
 
@@ -315,6 +351,30 @@ describe('MapObjectSpawner atomicity', () => {
     expect((error as MapSpawnError).reason).toBe('factory-failed');
     expect((error as MapSpawnError).cause).toBe(boom);
     expect(log).toEqual(['2', '1']);
+  });
+
+  it('keeps the original failure when a rollback step throws, and still rolls the rest back', async () => {
+    const log: string[] = [];
+    const map = mapWith({
+      id: 1,
+      name: 'entities',
+      objects: [{ id: 1, type: 'Enemy' }, { id: 2, type: 'Brittle' }, { id: 3, type: 'Bomb' }],
+    });
+    const boom = new Error('factory exploded');
+    const spawner = new MapObjectSpawner<void, Thing>({
+      Enemy: descriptor => new Thing(descriptor.id, log),
+      Brittle: () => new BrittleThing('brittle'),
+      Bomb: () => {
+        throw boom;
+      },
+    });
+
+    const error = await spawner.spawn(map, undefined).catch((thrown: unknown) => thrown);
+
+    expect(error).toBeInstanceOf(MapSpawnError);
+    expect((error as MapSpawnError).cause).toBe(boom);
+    // Object 1 sits before the brittle one in reverse order and is still destroyed.
+    expect(log).toEqual(['1']);
   });
 
   it('preserves the cause of an asynchronous factory rejection', async () => {

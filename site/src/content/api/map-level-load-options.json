@@ -1,6 +1,6 @@
 {
   "title": "MapLevelLoadOptions",
-  "description": "Options for MapWorldRuntime.loadLevel.",
+  "description": "Options for a MapWorldRuntime.loadLevel that also spawns the level's map objects. `spawner` and `context` travel together: the context exists to be handed to that spawner's factories.",
   "symbol": "MapLevelLoadOptions",
   "kind": "interface",
   "subsystem": "tilemap",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Options for MapWorldRuntime.loadLevel."
+        "Options for a MapWorldRuntime.loadLevel that also spawns the level's map objects. `spawner` and `context` travel together: the context exists to be handed to that spawner's factories."
       ],
       "importLine": "import { MapLevelLoadOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
@@ -76,15 +76,11 @@
         },
         {
           "name": "spawner",
-          "signature": "spawner?: MapObjectSpawner<Context, Result>",
+          "signature": "spawner: MapObjectSpawner<Context, Result>",
           "signatureTokens": [
             {
               "text": "spawner",
               "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
             },
             {
               "text": ": ",

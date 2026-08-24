@@ -65,6 +65,53 @@ async function tiledMapFrom(document: unknown): Promise<TileMap> {
   return (await loadTiledMap('inline.tmj', mockContext({ 'inline.tmj': document }))).toTileMap();
 }
 
+function documentWith(object: Record<string, unknown>): Record<string, unknown> {
+  return {
+    type: 'map',
+    version: '1.10',
+    tiledversion: '1.10.2',
+    orientation: 'orthogonal',
+    renderorder: 'right-down',
+    infinite: false,
+    width: 2,
+    height: 2,
+    tilewidth: 16,
+    tileheight: 16,
+    nextlayerid: 2,
+    nextobjectid: 2,
+    tilesets: [],
+    layers: [
+      {
+        id: 1,
+        name: 'Entities',
+        type: 'objectgroup',
+        visible: true,
+        opacity: 1,
+        x: 0,
+        y: 0,
+        draworder: 'index',
+        objects: [object],
+      },
+    ],
+  };
+}
+
+async function singleObjectMap(objectClass: string, name: string): Promise<TileMap> {
+  return tiledMapFrom(
+    documentWith({
+      id: 1,
+      name,
+      type: objectClass,
+      x: 0,
+      y: 0,
+      width: 16,
+      height: 16,
+      rotation: 0,
+      visible: true,
+    }),
+  );
+}
+
 async function richMap(): Promise<TileMap> {
   return (await loadTiledMap('orthogonal-rich.tmj', mockContext(FIXTURES))).toTileMap();
 }
@@ -203,6 +250,45 @@ describe('Tiled objects as MapObjectDescriptors', () => {
     const descriptors = [...mapObjectDescriptors(await richMap())];
 
     expect(descriptors.every(descriptor => descriptor.object.sourceId === undefined)).toBe(true);
+  });
+
+  it('keeps two maps with the same local object id apart, one session each', async () => {
+    const spawner = new MapObjectSpawner<void, Thing>({ Chest: descriptor => new Thing(descriptor.id) });
+
+    const first = await spawner.spawn(await singleObjectMap('Chest', 'in-town'), undefined);
+    const second = await spawner.spawn(await singleObjectMap('Chest', 'in-cave'), undefined);
+
+    // Tiled object ids are unique per map only; both objects are id 1 here.
+    expect(first.get('1')?.id).toBe('1');
+    expect(second.get('1')?.id).toBe('1');
+    expect(first.get('1')).not.toBe(second.get('1'));
+
+    first.destroy();
+
+    expect(second.objects[0]?.destroyed).toBe(false);
+  });
+
+  it('keeps a field the runtime model drops reachable through `source`', async () => {
+    const map = await tiledMapFrom(
+      documentWith({
+        id: 1,
+        name: 'chest',
+        type: 'Chest',
+        x: 0,
+        y: 0,
+        width: 16,
+        height: 16,
+        rotation: 0,
+        visible: true,
+        template: 'templates/chest.tx',
+      }),
+    );
+
+    const [descriptor] = [...mapObjectDescriptors(map)];
+
+    // `template` has no place in the format-neutral model; the escape hatch is
+    // what keeps it reachable.
+    expect((descriptor?.object.source as TiledObject).template).toBe('templates/chest.tx');
   });
 
   it('dispatches several object kinds through one spawner', async () => {

@@ -39,7 +39,17 @@
           "f": 0,
           "t": 0
         }
-      ]
+      ],
+      "__tilesetRelPath": null,
+      "__pxTotalOffsetX": 0,
+      "__pxTotalOffsetY": 0,
+      "__opacity": 1,
+      "seed": 1234567,
+      "overrideTilesetUid": null,
+      "optionalRules": [],
+      "intGridCsv": [],
+      "entityInstances": [],
+      "autoLayerTiles": []
     },
     {
       "__identifier": "Entities",
@@ -93,7 +103,34 @@
           "iid": "entity-chest-2",
           "defUid": 203
         }
-      ]
+      ],
+      "__tilesetRelPath": null,
+      "__pxTotalOffsetX": 0,
+      "__pxTotalOffsetY": 0,
+      "__opacity": 1,
+      "seed": 1234567,
+      "overrideTilesetUid": null,
+      "optionalRules": [],
+      "intGridCsv": [],
+      "gridTiles": [],
+      "autoLayerTiles": []
     }
-  ]
+  ],
+  "bgColor": null,
+  "__bgColor": "#696A79",
+  "bgRelPath": null,
+  "bgPos": null,
+  "bgPivotX": 0.5,
+  "bgPivotY": 0.5,
+  "__bgPos": null,
+  "__smartColor": "#B0B1BA",
+  "useAutoIdentifier": false,
+  "worldDepth": 0,
+  "__neighbours": [],
+  "__header__": {
+    "fileType": "LDtk Project JSON",
+    "app": "LDtk",
+    "schemaVersion": "1.5.3",
+    "appVersion": "1.5.3"
+  }
 }

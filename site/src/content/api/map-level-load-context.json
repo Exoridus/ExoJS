@@ -68,7 +68,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The level's own LoaderScope. Assets claimed through it are released when the level unloads, and claiming an asset another level also holds never takes it away from that level."
+          "description": "The level's own LoaderScope. Assets claimed through it are released when the level unloads, and claiming an asset another level also holds never takes it away from that level. Its lifetime ends when signal aborts: an unload releases the scope without waiting for a provider still in flight, so a provider that resumes after that point must not claim through it any more. Check signal.aborted after every await before touching the scope again."
         },
         {
           "name": "signal",

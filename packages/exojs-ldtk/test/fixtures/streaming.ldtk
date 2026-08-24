@@ -11,12 +11,50 @@
         "pxWid": 64,
         "pxHei": 64,
         "spacing": 0,
-        "padding": 0
+        "padding": 0,
+        "embedAtlas": null,
+        "tags": [],
+        "tagsSourceEnumUid": null,
+        "customData": [],
+        "enumTags": [],
+        "savedSelections": [],
+        "cachedPixelData": {
+          "opaqueTiles": "11",
+          "averageColors": "ffff"
+        }
       }
     ],
     "layers": [
-      { "uid": 101, "identifier": "Tiles", "type": "Tiles", "gridSize": 16, "tilesetDefUid": 1 },
-      { "uid": 102, "identifier": "Entities", "type": "Entities", "gridSize": 16 }
+      {
+        "uid": 101,
+        "identifier": "Tiles",
+        "type": "Tiles",
+        "gridSize": 16,
+        "tilesetDefUid": 1,
+        "doc": null,
+        "uiColor": null,
+        "autoTilesetDefUid": null,
+        "autoSourceLayerDefUid": null,
+        "tilePivotX": 0,
+        "tilePivotY": 0,
+        "requiredTags": [],
+        "excludedTags": []
+      },
+      {
+        "uid": 102,
+        "identifier": "Entities",
+        "type": "Entities",
+        "gridSize": 16,
+        "tilesetDefUid": null,
+        "doc": null,
+        "uiColor": null,
+        "autoTilesetDefUid": null,
+        "autoSourceLayerDefUid": null,
+        "tilePivotX": 0,
+        "tilePivotY": 0,
+        "requiredTags": [],
+        "excludedTags": []
+      }
     ]
   },
   "levels": [
@@ -31,11 +69,33 @@
       "externalRelPath": "levels/Forest.ldtkl",
       "layerInstances": null,
       "__neighbours": [
-        { "levelIid": "level-cave", "dir": "e" },
-        { "levelIid": "level-sky", "dir": ">" },
-        { "levelIid": "level-elsewhere", "dir": "n" },
-        { "levelIid": "level-cave", "dir": "?" }
-      ]
+        {
+          "levelIid": "level-cave",
+          "dir": "e"
+        },
+        {
+          "levelIid": "level-sky",
+          "dir": ">"
+        },
+        {
+          "levelIid": "level-elsewhere",
+          "dir": "n"
+        },
+        {
+          "levelIid": "level-cave",
+          "dir": "?"
+        }
+      ],
+      "bgColor": null,
+      "__bgColor": "#696A79",
+      "bgRelPath": null,
+      "bgPos": null,
+      "bgPivotX": 0.5,
+      "bgPivotY": 0.5,
+      "__bgPos": null,
+      "__smartColor": "#B0B1BA",
+      "useAutoIdentifier": false,
+      "worldDepth": 0
     },
     {
       "identifier": "Cave",
@@ -47,7 +107,22 @@
       "pxHei": 64,
       "externalRelPath": "levels/Cave.ldtkl",
       "layerInstances": null,
-      "__neighbours": [{ "levelIid": "level-forest", "dir": "w" }]
+      "__neighbours": [
+        {
+          "levelIid": "level-forest",
+          "dir": "w"
+        }
+      ],
+      "bgColor": null,
+      "__bgColor": "#696A79",
+      "bgRelPath": null,
+      "bgPos": null,
+      "bgPivotX": 0.5,
+      "bgPivotY": 0.5,
+      "__bgPos": null,
+      "__smartColor": "#B0B1BA",
+      "useAutoIdentifier": false,
+      "worldDepth": 0
     },
     {
       "identifier": "Sky",
@@ -75,17 +150,65 @@
             {
               "__identifier": "Cloud",
               "__type": "Cloud",
-              "px": [8, 8],
+              "px": [
+                8,
+                8
+              ],
               "width": 16,
               "height": 16,
-              "__pivot": [0, 0],
+              "__pivot": [
+                0,
+                0
+              ],
               "fieldInstances": [],
               "iid": "entity-cloud",
               "defUid": 201
             }
-          ]
+          ],
+          "__tilesetRelPath": null,
+          "__pxTotalOffsetX": 0,
+          "__pxTotalOffsetY": 0,
+          "__opacity": 1,
+          "seed": 1234567,
+          "overrideTilesetUid": null,
+          "optionalRules": [],
+          "intGridCsv": [],
+          "gridTiles": [],
+          "autoLayerTiles": []
         }
-      ]
+      ],
+      "bgColor": null,
+      "__bgColor": "#696A79",
+      "bgRelPath": null,
+      "bgPos": null,
+      "bgPivotX": 0.5,
+      "bgPivotY": 0.5,
+      "__bgPos": null,
+      "__smartColor": "#B0B1BA",
+      "useAutoIdentifier": false,
+      "worldDepth": 0
     }
-  ]
+  ],
+  "iid": "project-streaming",
+  "appBuildId": 473300,
+  "nextUid": 42,
+  "externalLevels": true,
+  "backupOnSave": false,
+  "backupLimit": 10,
+  "identifierStyle": "Capitalize",
+  "imageExportMode": "None",
+  "exportTiled": false,
+  "bgColor": "#40465B",
+  "defaultLevelWidth": 64,
+  "defaultLevelHeight": 64,
+  "defaultPivotX": 0,
+  "defaultPivotY": 0,
+  "defaultLevelBgColor": "#696A79",
+  "customCommands": [],
+  "flags": [],
+  "toc": [],
+  "dummyWorldIid": "",
+  "worldGridWidth": null,
+  "worldGridHeight": null,
+  "worldLayout": null
 }

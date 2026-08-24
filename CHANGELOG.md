@@ -53,7 +53,9 @@ release and includes intentional breaking changes; see **Changed** and
     `cause`.
   - **Cancellation**: unloading a level mid-load aborts its spawn. A factory already in flight is
     still awaited — abandoning it would leak whatever it produced — and its result is destroyed
-    with the rest of the rollback, so no result outlives the level it belonged to.
+    with the rest of the rollback, so no result outlives the level it belonged to. Cancelling this
+    way also frees the level id immediately: a `loadLevel` issued in the same turn starts a
+    fresh load instead of joining the one on its way out.
   - **Teardown order** is spawned objects (reverse spawn order), then the map, then the level's
     `LoaderScope` last, because everything before it may still be reading a texture the scope
     keeps resident. Sibling levels are untouched: each holds its own claims.

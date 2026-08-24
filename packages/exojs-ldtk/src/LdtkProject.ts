@@ -39,9 +39,17 @@ export interface LdtkRuntimeOptions {
  *
  * - the `.ldtk` document itself, because the world layout is what the game
  *   navigates by;
- * - every tileset atlas, because they are shared between levels and a level
- *   load that had to wait for an image fetch would stutter at exactly the
- *   wrong moment.
+ * - every tileset atlas. This is a prefetch policy, not a technical
+ *   requirement, and it is bounded: LDtk declares tilesets once per project
+ *   (`defs.tilesets`), never per level, so the count does not grow with the
+ *   number of levels. Paying for them once keeps a level load off the network
+ *   entirely for a non-externalized project, and off the *image* network for an
+ *   externalized one.
+ *
+ * The atlases are claimed by this asset's own scope, so their residency is tied
+ * to how long the `ldtkProject` asset is held - not to a
+ * {@link MapWorldRuntime}. Releasing the asset releases them; destroying a
+ * runtime does not.
  *
  * What is lazy:
  *

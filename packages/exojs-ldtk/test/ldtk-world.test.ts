@@ -9,6 +9,7 @@ import type { LdtkData } from '../src/LdtkData';
 import { ldtkToMapWorld } from '../src/ldtkToMapWorld';
 import { ldtkToTileMap } from '../src/ldtkToTileMap';
 import { loadLdtkProject } from '../src/loadLdtkProject';
+import { LdtkFormatError } from '../src/validate';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -182,7 +183,13 @@ describe('LDtk object normalisation', () => {
 
     const enemy = [...mapObjectDescriptors(forest.map)].find(object => object.kind === 'Enemy');
 
-    expect((enemy?.object.source as { iid: string }).iid).toBe('entity-enemy-1');
+    const source = enemy?.object.source as { iid: string; defUid: number; __pivot: readonly number[] };
+
+    expect(source.iid).toBe('entity-enemy-1');
+    // Fields the format-neutral model resolves away or never carries stay
+    // reachable, which is what makes `source` a usable escape hatch.
+    expect(source.defUid).toBe(202);
+    expect(source.__pivot).toEqual([0.5, 1]);
   });
 });
 
@@ -248,6 +255,74 @@ describe('LdtkProject streaming', () => {
     forest.destroy();
 
     expect(enemy?.destroyed).toBe(true);
+  });
+
+  it('reloads an external level after it was unloaded', async () => {
+    const claims: string[] = [];
+    const project = await loadLdtkProject('streaming.ldtk', makeContext(claims, STREAMING_FIXTURES));
+    const runtime = project.createRuntime({ scope: fakeScope('root', claims, STREAMING_FIXTURES) });
+
+    const first = await runtime.loadLevel('level-forest');
+    runtime.unloadLevel('level-forest');
+
+    claims.length = 0;
+    const second = await runtime.loadLevel('level-forest');
+
+    expect(claims).toEqual(['levels/Forest.ldtkl']);
+    expect(second).not.toBe(first);
+    expect(second.map.destroyed).toBe(false);
+    // The identity the editor assigned survives the round trip.
+    expect(second.map.objectLayers[0]?.objects[0]?.sourceId).toBe('entity-enemy-1');
+  });
+
+  it('resolves an external level path against the document, not the working directory', async () => {
+    const nested = structuredClone(loadFixture('streaming.ldtk')) as {
+      levels: { externalRelPath?: string | null }[];
+    };
+    nested.levels[0]!.externalRelPath = '../levels/Forest.ldtkl';
+
+    const fixtures = { 'maps/world.ldtk': nested, 'levels/Forest.ldtkl': loadFixture('Forest.ldtkl') };
+    const claims: string[] = [];
+    const project = await loadLdtkProject('maps/world.ldtk', makeContext(claims, fixtures));
+    const runtime = project.createRuntime({ scope: fakeScope('root', claims, fixtures) });
+
+    claims.length = 0;
+    const forest = await runtime.loadLevel('level-forest');
+
+    expect(claims).toEqual(['levels/Forest.ldtkl']);
+    expect(forest.map.name).toBe('Forest');
+  });
+
+  it('fails the level load, not the project load, when an external level is missing', async () => {
+    const claims: string[] = [];
+    const fixtures = { 'streaming.ldtk': loadFixture('streaming.ldtk') };
+    const project = await loadLdtkProject('streaming.ldtk', makeContext(claims, fixtures));
+    const root = fakeScope('root', claims, fixtures);
+    const runtime = project.createRuntime({ scope: root });
+
+    await expect(runtime.loadLevel('level-forest')).rejects.toThrow(/levels\/Forest\.ldtkl/);
+
+    expect(runtime.isLoaded('level-forest')).toBe(false);
+    expect(runtime.isLoading('level-forest')).toBe(false);
+    // Another level of the same project still loads.
+    await expect(runtime.loadLevel('level-sky')).resolves.toMatchObject({ id: 'level-sky' });
+  });
+
+  it('rejects a malformed external level and leaves nothing behind', async () => {
+    const claims: string[] = [];
+    const fixtures = {
+      'streaming.ldtk': loadFixture('streaming.ldtk'),
+      'levels/Forest.ldtkl': { identifier: 'Forest', uid: 1, iid: 'level-forest', worldX: 0 },
+    };
+    const project = await loadLdtkProject('streaming.ldtk', makeContext(claims, fixtures));
+    const root = fakeScope('root', claims, fixtures);
+    const runtime = project.createRuntime({ scope: root });
+
+    await expect(runtime.loadLevel('level-forest')).rejects.toThrow(LdtkFormatError);
+
+    expect(runtime.isLoaded('level-forest')).toBe(false);
+    const worldScope = root.children[0]!;
+    expect(worldScope.children.every(child => child.released)).toBe(true);
   });
 
   it('rejects a world name the project does not have', async () => {
