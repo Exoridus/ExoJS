@@ -3,6 +3,8 @@ import type { MockInstance } from 'vitest';
 import { MusicFactory } from '#assets/factories/MusicFactory';
 import { AudioStream } from '#audio/AudioStream';
 
+import { factoryContext } from './factory-context';
+
 // MP3-ish magic bytes ("ID3") - enough for determineMimeType()'s pattern match.
 const AUDIO_HEADER = new Uint8Array([0x49, 0x44, 0x33, 0x00]).buffer;
 
@@ -44,24 +46,10 @@ describe('MusicFactory', () => {
     vi.useRealTimers();
   });
 
-  test('storageName is "music"', () => {
-    const factory = new MusicFactory();
-    expect(factory.storageName).toBe('music');
-  });
-
-  test('process() reads the response body as an ArrayBuffer', async () => {
-    const factory = new MusicFactory();
-    const response = { arrayBuffer: async () => AUDIO_HEADER } as unknown as Response;
-
-    const result = await factory.process(response);
-
-    expect(result).toBe(AUDIO_HEADER);
-  });
-
   test('create() resolves with an AudioStream once the default "canplay" event fires', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER);
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
     lastAudio().dispatchEvent(new Event('canplay'));
 
     const stream = await promise;
@@ -73,7 +61,7 @@ describe('MusicFactory', () => {
   test('create() honors a custom loadEvent option', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER, { loadEvent: 'loadedmetadata' });
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext({ loadEvent: 'loadedmetadata' }));
     lastAudio().dispatchEvent(new Event('loadedmetadata'));
 
     await expect(promise).resolves.toBeInstanceOf(AudioStream);
@@ -82,7 +70,7 @@ describe('MusicFactory', () => {
   test('create() forwards playbackOptions to the AudioStream', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER, { playbackOptions: { volume: 0.4, loop: true } });
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext({ playbackOptions: { volume: 0.4, loop: true } }));
     lastAudio().dispatchEvent(new Event('canplay'));
 
     const stream = await promise;
@@ -94,7 +82,7 @@ describe('MusicFactory', () => {
   test('create() rejects with a clear message on "error"', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER);
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
     lastAudio().dispatchEvent(new Event('error'));
 
     await expect(promise).rejects.toThrow('Error loading audio source.');
@@ -103,7 +91,7 @@ describe('MusicFactory', () => {
   test('create() rejects with a clear message on "abort"', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER);
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
     lastAudio().dispatchEvent(new Event('abort'));
 
     await expect(promise).rejects.toThrow('Audio loading was canceled.');
@@ -112,7 +100,7 @@ describe('MusicFactory', () => {
   test('create() rejects with a clear message on "emptied"', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER);
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
     lastAudio().dispatchEvent(new Event('emptied'));
 
     await expect(promise).rejects.toThrow('Audio loading was emptied.');
@@ -122,7 +110,7 @@ describe('MusicFactory', () => {
     vi.useFakeTimers();
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER, { stallTimeout: 50 });
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext({ stallTimeout: 50 }));
     lastAudio().dispatchEvent(new Event('stalled'));
     vi.advanceTimersByTime(50);
 
@@ -133,7 +121,7 @@ describe('MusicFactory', () => {
     vi.useFakeTimers();
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER, { stallTimeout: 50 });
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext({ stallTimeout: 50 }));
     const audio = lastAudio();
 
     audio.dispatchEvent(new Event('stalled'));
@@ -159,7 +147,7 @@ describe('MusicFactory', () => {
     vi.useFakeTimers();
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER, { stallTimeout: 50 });
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext({ stallTimeout: 50 }));
     const audio = lastAudio();
 
     audio.dispatchEvent(new Event('canplay'));
@@ -173,7 +161,7 @@ describe('MusicFactory', () => {
   test('a subsequent load event after settling on error is ignored (no double-settle)', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER);
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
     const audio = lastAudio();
 
     audio.dispatchEvent(new Event('error'));
@@ -185,7 +173,7 @@ describe('MusicFactory', () => {
   test('create() revokes the object URL once loading settles', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER);
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
     lastAudio().dispatchEvent(new Event('canplay'));
     await promise;
 
@@ -195,7 +183,7 @@ describe('MusicFactory', () => {
   test('destroy() pauses and detaches every created <audio> element', async () => {
     const factory = new MusicFactory();
 
-    const promise = factory.create(AUDIO_HEADER);
+    const promise = factory.create({ bytes: AUDIO_HEADER }, factoryContext());
     const audio = lastAudio();
     const pauseSpy = vi.spyOn(audio, 'pause');
     audio.dispatchEvent(new Event('canplay'));

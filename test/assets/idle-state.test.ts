@@ -1,16 +1,16 @@
-import '#assets/coreAssetBindings';
+import '#assets/coreAssetTypes';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { Assets } from '#assets/Assets';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
 

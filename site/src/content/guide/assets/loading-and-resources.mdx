@@ -703,15 +703,18 @@ All three share one async interface, so swapping `WebStorageStore` for `IndexedD
 
 ## Custom asset types (advanced)
 
-Teach the loader about a domain-specific resource with `defineAsset`. One descriptor feeds three consumers: the loader-local handler, the type's placeholder strategy, and — for leaf-capable types — bare-path inference.
+Teach the loader about a domain-specific resource by writing an `AssetType`. One
+value carries everything the loader needs: what the type is called, which
+suffixes name it, how its data is read, and how a resource is built from it.
 
-First extend `AssetDefinitions` via declaration merging so the type system knows the new type, then call `defineAsset`:
+First extend `AssetDefinitions` via declaration merging so the type system knows
+the new type, then write the type:
 
 ```ts
-import { defineAsset } from '@codexo/exojs';
-import type { AssetHandler } from '@codexo/exojs/extensions';
+import type { AssetFactory, AssetSourceCodec } from '@codexo/exojs';
+import { AssetType, textSourceCodec } from '@codexo/exojs';
 
-// 1. The resource your handler produces.
+// 1. The resource your factory produces.
 export class HeightField {
   public constructor(public readonly rows: readonly number[][]) {}
 }
@@ -719,73 +722,89 @@ export class HeightField {
 // 2. Register the type with the type system (declaration merging).
 declare module '@codexo/exojs' {
   interface AssetDefinitions {
-    heightField: { resource: HeightField; config: { source: string } };
+    heightField: { resource: HeightField; config: { source: string }; isValue: true };
   }
 }
 
-// 3. Bind the type to a loader-local handler. Returns an AssetBinding.
-export const heightFieldBinding = defineAsset({
-  ctor: HeightField,
-  type: 'heightField',
-  isValue: false, // a resource loaded by reference — see the note below
-  create() {
-    return {
-      async load(req, ctx) {
-        const text = await ctx.fetchText(req.source);
-        return new HeightField(parseHeightField(text));
-      },
-    } satisfies AssetHandler<HeightField>;
-  },
-});
+// 3. Describe the type. `codec` says how the data is read; `createFactory`
+//    turns it into the resource, once per application.
+export class HeightFieldAssetType extends AssetType<string, HeightField> {
+  public readonly id = 'com.example.height-field';
+  public override readonly codec: AssetSourceCodec<string> = textSourceCodec;
+
+  public createFactory(): AssetFactory<string, HeightField> {
+    return { create: source => Promise.resolve(new HeightField(parseHeightField(source))) };
+  }
+}
+
+export const heightFieldType = new HeightFieldAssetType();
 
 function parseHeightField(text: string): number[][] {
   return text.split('\n').map(row => row.split(',').map(Number));
 }
 ```
 
-The handler `context` routes fetches through the application's cache configuration:
+The `id` is the type's permanent name: it appears in resource identities and in
+the storage namespace a persistent cache writes under, so it must survive a
+reload. Reverse-DNS keeps independently authored types apart.
 
-| Member                             | Returns                                                                        |
-| ---------------------------------- | ------------------------------------------------------------------------------ |
-| `context.fetchText(source)`        | `Promise<string>`                                                              |
-| `context.fetchJson<T>(source)`     | `Promise<T>`                                                                   |
-| `context.fetchArrayBuffer(source)` | `Promise<ArrayBuffer>`                                                         |
-| `context.loader`                   | the `Loader` — load sub-assets (e.g. a texture the file references) through it |
+A factory never fetches. It receives source data the loader already acquired,
+and its only outward reach is `dependencies`, which acquires other *assets*:
 
-Supply an optional `getIdentityKey(req)` on the handler to control in-flight deduplication — omit it when `source` alone determines the result; supply it when extra config fields change the output.
+| Member                     | What it gives you                                                  |
+| -------------------------- | ------------------------------------------------------------------ |
+| `context.options`          | the options this request carried, typed by the asset type           |
+| `context.source`           | the source as the caller wrote it - resolve relative refs against it |
+| `context.dependencies`     | loads assets this resource needs, released together with it         |
+| `context.signal`           | the load's cancellation signal                                      |
 
-Install the binding by passing it on an [`Extension`](/ExoJS/en/api/extension/) to `ApplicationOptions.extensions`. Once installed, the type works everywhere the built-ins do:
+Override `resourceIdentity(request)` when an option changes the resource the
+factory builds, and `sourceIdentity(request)` when it changes which data is
+acquired - omit both when the source alone identifies the asset.
+
+Install the type by listing it on an [`Extension`](/ExoJS/en/api/extension/)
+passed to `ApplicationOptions.extensions`. Installing is the only thing that
+makes it loadable, and it makes it loadable on that application alone - two
+applications in one process can map the same suffix to different types without
+seeing each other. Once installed, the type works everywhere the built-ins do:
 
 ```ts no-check
-// Dynamic path or explicit reference
-const field = await this.loader.load(Asset.type('heightField', 'maps/level-1.hf'));
+// The type itself gives you a fully typed, loadable descriptor
+const field = await this.loader.load(heightFieldType.asset('maps/level-1.hf'));
 
 // Or grouped in a catalog
-const World = Assets.from({ level1: Asset.type('heightField', 'maps/level-1.hf') });
+const World = Assets.from({ level1: heightFieldType.asset('maps/level-1.hf') });
 ```
 
-<Callout type="hint" title="Bare-path inference is opt-in">
-`Asset.type('heightField', ...)` always works. To *also* allow a bare `this.loader.load('maps/level-1.hf')` (extension-inferred), the type must be **leaf-capable** — either a value type (`isValue: true`) or a resource with a `seamless` adapter that heals in place — and it must declare its file suffixes. Register them on the descriptor and mirror the suffix→type mapping in the type system:
+<Callout type="hint" title="Bare-path inference is built-in only">
+`heightFieldType.asset(...)` always works, and so does
+`Asset.type('com.example.height-field', ...)` on an application that installed
+the type. A bare `this.loader.load('maps/level-1.hf')` also works there once the
+type claims the suffix and the type system mirrors the mapping:
 
 ```ts no-check
-export const heightFieldBinding = defineAsset({
-  ctor: HeightField,
-  type: 'heightField',
-  seamless: heightFieldSeamlessAdapter, // heals in place, like Texture/Sound
-  extensions: ['hf'],
-  create() {
-    /* … */
-  },
-});
+export class HeightFieldAssetType extends AssetType<string, HeightField> {
+  public readonly id = 'com.example.height-field';
+  public override readonly extensions = ['hf'];
+  public override readonly leaf = heightFieldSeamlessAdapter; // heals in place, like Texture/Sound
+  /* … */
+}
 
 declare module '@codexo/exojs' {
   interface ExtensionKindMap {
-    hf: 'heightField';
+    hf: 'com.example.height-field';
   }
 }
 ```
 
-The built-in `texture` and `sound` bindings are the reference for a seamless resource; `json` / `text` for a value type.
+`Assets.from('maps/level-1.hf')` is the one place this does not reach: a catalog
+is built with no application, so only the built-in suffixes resolve there. Name
+the asset with `heightFieldType.asset(...)` in a catalog instead.
+
+`leaf` decides what a catalog hands out before the payload arrives: `'ref'` (the
+default) a deferred `AssetRef`, a `SeamlessAdapter` the resource itself healing
+in place, `'none'` nothing at all. The built-in `texture` and `sound` types are
+the reference for a seamless resource; `json` / `text` for a deferred value.
 
 </Callout>
 

@@ -2,18 +2,20 @@ import { expectTypeOf } from 'vitest';
 
 import { Asset } from '#assets/Asset';
 import { Assets } from '#assets/Assets';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
 import { textureSeamlessAdapter } from '#assets/seamless';
 import { logger, LogSeverity } from '#core/logging';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { ScaleModes } from '#rendering/types';
+
+import { testAssetType } from './test-asset-type';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader.test.ts). */
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
 
@@ -144,27 +146,29 @@ describe('Loader seamless get (Texture)', () => {
   test('a handler that legitimately resolves to null/undefined stores that value (presence, not truthiness)', async () => {
     const loader = createCoreLoader();
 
-    // A bindAsset-bound custom type (adapterless - no seamless adapter, no
-    // value channel) whose handler resolves `null`/`undefined` as the actual
-    // stored resource. The residency store must distinguish "never loaded" from
-    // "loaded, and the resource itself is nullish" - presence, not truthiness (a
-    // `Map.has()` check, not a `!== null` check on the read value). Observable
-    // through the load fast path: a re-load of a stored nullish resource must
-    // NOT re-invoke the handler.
+    // A custom type with no catalog leaf whose factory resolves `null`/`undefined`
+    // as the actual stored resource. The residency store must distinguish "never
+    // loaded" from "loaded, and the resource itself is nullish" - presence, not
+    // truthiness (a `Map.has()` check, not a `!== null` check on the read value).
+    // Observable through the load fast path: a re-load of a stored nullish
+    // resource must NOT re-invoke the factory.
     class Nullable {}
 
     let calls = 0;
 
-    loader.bindAsset<null | undefined>(
-      { ctor: Nullable, typeNames: ['nullable'] },
-      {
-        load: async request => {
+    loader._installAssetTypes([
+      testAssetType<string, null | undefined>({
+        id: 'nullable',
+        token: Nullable,
+        leaf: 'none',
+        acquires: false,
+        create: async (_source, context) => {
           calls++;
 
-          return request.source === 'undef' ? undefined : null;
+          return context.source === 'undef' ? undefined : null;
         },
-      },
-    );
+      }),
+    ]);
 
     await expect(loader.load(new Asset({ type: 'nullable', source: 'null' }))).resolves.toBeNull();
     await expect(loader.load(new Asset({ type: 'nullable', source: 'undef' }))).resolves.toBeUndefined();
@@ -470,14 +474,14 @@ describe('Loader seamless get (Texture)', () => {
   test('get(path) with an unregistered extension throws a clear error (dynamic strings)', () => {
     const loader = createCoreLoader();
 
-    expect(() => loader.get('theme.custom' as never)).toThrow('no type registered');
+    expect(() => loader.get('theme.custom' as never)).toThrow('no installed asset type claims any extension');
   });
 
   test('get(path) whose inferred type has no seamless adapter throws with guidance', () => {
     const loader = createCoreLoader();
 
     // .fnt → BmFont has no seamless adapter in this slice.
-    expect(() => loader.get('fonts/ui.fnt' as never)).toThrow('no seamless adapter');
+    expect(() => loader.get('fonts/ui.fnt' as never)).toThrow('hands out no catalog leaf');
   });
 
   test('get with pre-size options reserves layout and heals to real size', async () => {
@@ -502,9 +506,13 @@ describe('Loader seamless get (Texture)', () => {
     void (() => loader.get('theme.custom'));
   });
 
-  test('registering a second seamless adapter for the same type throws', () => {
+  test('a second type dispatching on an already-installed constructor is rejected', () => {
     const loader = createCoreLoader();
 
-    expect(() => loader.registerSeamlessAdapter(Texture, textureSeamlessAdapter)).toThrow('already registered');
+    expect(() =>
+      loader._installAssetTypes([
+        testAssetType<string, unknown>({ id: 'secondTexture', token: Texture, leaf: textureSeamlessAdapter, create: async source => source }),
+      ]),
+    ).toThrow('another installed type already uses');
   });
 });

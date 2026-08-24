@@ -2,14 +2,14 @@ import { expectTypeOf } from 'vitest';
 
 import { Asset } from '#assets/Asset';
 import { AssetRef } from '#assets/AssetRef';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
 
@@ -153,7 +153,7 @@ describe('bare-path get()/load() for value kinds', () => {
   test('get() for an unregistered suffix still throws with guidance', () => {
     const loader = createCoreLoader();
 
-    expect(() => loader.get('theme.custom' as never)).toThrow('no type registered');
+    expect(() => loader.get('theme.custom' as never)).toThrow('no installed asset type claims any extension');
   });
 
   test('type-level: bare value path → AssetRef, resource path → resource', () => {

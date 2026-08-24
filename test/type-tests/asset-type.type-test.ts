@@ -38,7 +38,7 @@ interface WorldOptions {
 class WorldAssetType extends AssetType<WorldData, World, WorldOptions, string> {
   public readonly id = 'com.example.world';
   public override readonly extensions = ['world'];
-  public readonly codec = jsonSourceCodec as AssetSourceCodec<WorldData, string>;
+  public override readonly codec = jsonSourceCodec as AssetSourceCodec<WorldData, string>;
 
   public override resourceIdentity({ options }: AssetRequest<WorldOptions>): string {
     return options?.palette ?? '';
@@ -100,7 +100,7 @@ worldType.asset('level.world', { mimeType: 'application/json' });
 // (7) A type that takes no options accepts none.
 class NoteAssetType extends AssetType<string, string[]> {
   public readonly id = 'com.example.note';
-  public readonly codec = textSourceCodec;
+  public override readonly codec = textSourceCodec;
 
   public createFactory(): AssetFactory<string, string[]> {
     return { create: text => Promise.resolve(text.split('\n')) };

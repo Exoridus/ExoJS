@@ -1,12 +1,12 @@
 import { Asset } from '#assets/Asset';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling loader tests). */
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
 
@@ -114,7 +114,7 @@ describe('Loader.peek — pure in-memory lookup', () => {
   test('throws for a path whose extension resolves to no registered type', () => {
     const loader = createCoreLoader();
 
-    expect(() => untyped(loader).peek('data/config.unknownext')).toThrow(/no type registered/i);
+    expect(() => untyped(loader).peek('data/config.unknownext')).toThrow(/no installed asset type claims any extension/i);
 
     loader.destroy();
   });

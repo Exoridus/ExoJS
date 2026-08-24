@@ -2,15 +2,15 @@
 // this package's asset type. Without it the augmentation is not in the program.
 import '../src/index';
 
-import type { AssetLoaderContext, Loader } from '@codexo/exojs';
+import type { AssetFactoryContext } from '@codexo/exojs';
 import { tilemapExtension } from '@codexo/exojs-tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
 import { buildSnapshot } from '../../../src/extensions/snapshot';
-import { ldtkMapBinding, ldtkProjectBinding } from '../src/ldtkBinding';
 import type { LdtkData } from '../src/LdtkData';
 import { ldtkExtension } from '../src/ldtkExtension';
 import { LdtkMap } from '../src/LdtkMap';
+import { ldtkMapType, ldtkProjectType } from '../src/ldtkTypes';
 
 describe('@codexo/exojs-ldtk extension descriptor', () => {
   it('has the correct id', () => {
@@ -22,9 +22,9 @@ describe('@codexo/exojs-ldtk extension descriptor', () => {
     expect(ldtkExtension.dependencies).toContain(tilemapExtension);
   });
 
-  it('carries both asset bindings (eager LdtkMap and streaming LdtkProject)', () => {
+  it('carries both asset types (eager LdtkMap and streaming LdtkProject)', () => {
     expect(ldtkExtension.assets).toBeDefined();
-    expect(ldtkExtension.assets).toEqual([ldtkMapBinding, ldtkProjectBinding]);
+    expect(ldtkExtension.assets).toEqual([ldtkMapType, ldtkProjectType]);
   });
 
   it('is a frozen descriptor', () => {
@@ -32,29 +32,24 @@ describe('@codexo/exojs-ldtk extension descriptor', () => {
   });
 });
 
-function fakeLoader(): Loader {
-  return { load: vi.fn() } as unknown as Loader;
-}
-
-describe('@codexo/exojs-ldtk asset binding — ldtkMapBinding', () => {
-  it('targets the LdtkMap constructor', () => {
-    expect(ldtkMapBinding.ctor).toBe(LdtkMap);
+describe('@codexo/exojs-ldtk asset type - ldtkMapType', () => {
+  it('dispatches on the LdtkMap constructor', () => {
+    expect(ldtkMapType._token).toBe(LdtkMap);
   });
 
-  it('has typeNames ["ldtkMap"]', () => {
-    expect(ldtkMapBinding.typeNames).toEqual(['ldtkMap']);
+  it('is named "ldtkMap"', () => {
+    expect(ldtkMapType.id).toBe('ldtkMap');
   });
 
   it('claims the .ldtk file extension', () => {
-    expect(ldtkMapBinding.extensions).toEqual(['ldtk']);
+    expect(ldtkMapType.extensions).toEqual(['ldtk']);
   });
 
-  it('create() returns a handler with a load function', () => {
-    const handler = ldtkMapBinding.create(fakeLoader());
-    expect(typeof handler.load).toBe('function');
+  it('acquires nothing itself: the document arrives as a json dependency', () => {
+    expect(ldtkMapType.unacquiredSource!()).toEqual({ source: undefined });
   });
 
-  it("load() delegates to loadLdtkMap, passing through the request's source and the context", async () => {
+  it('builds the map from the document its dependency scope answers with', async () => {
     const fixture: LdtkData = {
       jsonVersion: '1.5.3',
       defaultGridSize: 16,
@@ -73,28 +68,25 @@ describe('@codexo/exojs-ldtk asset binding — ldtkMapBinding', () => {
       ],
     };
     const source = 'https://example.com/world.ldtk';
-    const fetchJson = vi.fn(async (requested: string) => {
-      expect(requested).toBe(source);
+    const load = vi.fn(async (asset: unknown) => {
+      const config = (asset as { _config: { type: string; source: string } })._config;
+
+      expect(config).toEqual({ type: 'json', source });
+
       return fixture;
     });
-    const context: AssetLoaderContext = {
-      loader: { load: vi.fn() } as unknown as AssetLoaderContext['loader'],
-      scope: { load: vi.fn() } as unknown as AssetLoaderContext['scope'],
-      resourceKey: 'test',
-    sourceKey: 'test',
-    locator: 'url:test',
-      resolveUrl: (source: string) => source,
-      fetchText: vi.fn(),
-      fetchArrayBuffer: vi.fn(),
-      fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
-    };
 
-    const handler = ldtkMapBinding.create(context.loader);
-    const result = await handler.load({ source }, context);
+    const result = await ldtkMapType.createFactory().create(undefined, {
+      source,
+      resourceKey: `test|${source}`,
+      sourceKey: `url:${source}`,
+      locator: `url:${source}`,
+      dependencies: { load } as unknown as AssetFactoryContext['dependencies'],
+    } as never);
 
     expect(result).toBeInstanceOf(LdtkMap);
     expect(result.source).toBe(source);
-    expect(context.fetchJson).toHaveBeenCalledWith(source);
+    expect(load).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -107,11 +99,11 @@ describe('buildSnapshot([ldtkExtension])', () => {
     ]);
   });
 
-  it('collects both LDtk asset bindings', () => {
+  it('collects both LDtk asset types', () => {
     const snapshot = buildSnapshot([ldtkExtension]);
     expect(snapshot.assets).toHaveLength(2);
-    expect(snapshot.assets).toContain(ldtkMapBinding);
-    expect(snapshot.assets).toContain(ldtkProjectBinding);
+    expect(snapshot.assets).toContain(ldtkMapType);
+    expect(snapshot.assets).toContain(ldtkProjectType);
   });
 
   it('pulls in the tilemap renderer binding (one-extension rendering)', () => {

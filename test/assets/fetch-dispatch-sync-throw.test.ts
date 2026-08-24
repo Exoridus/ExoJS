@@ -1,12 +1,12 @@
 import { Assets } from '#assets/Assets';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 
-/** Loader with all core asset bindings (mirrors createCoreLoader in the sibling resource specs). */
+/** Loader with every built-in asset type installed. */
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
 
@@ -19,17 +19,23 @@ const mockFetchImage = (): void => {
 };
 
 /**
- * Options object whose getter throws while `_dispatchFetch` copies it into the
- * handler config. This is the one input that makes the dispatch fail
- * *synchronously*, before the returned promise exists - every real 404 or
- * decode error fails asynchronously instead.
+ * Makes the dispatch fail *synchronously*, before the promise the residency
+ * attaches its bookkeeping to exists.
+ *
+ * Every real failure - a 404, a decode error, a factory that throws - reaches
+ * the residency as a rejected promise instead, because the dispatch itself is
+ * async. The synchronous case is what the residency's own guarding is for, and
+ * it is only reachable by replacing the dispatch: without it a throw escapes
+ * before `.finally()` is attached, the seamless handle stays stuck in
+ * `'loading'`, and the background queue's active counter never decrements.
  */
-const hostileOptions = (): Record<string, unknown> =>
-  ({
-    get scaleMode(): never {
-      throw new Error('hostile option getter');
-    },
-  }) as Record<string, unknown>;
+function breakDispatch(loader: Loader): void {
+  const decoder = (loader as unknown as { _decoder: { _dispatchFetch: unknown } })._decoder;
+
+  decoder._dispatchFetch = (): never => {
+    throw new Error('synchronous dispatch failure');
+  };
+}
 
 describe('a synchronous throw out of the fetch dispatch', () => {
   beforeEach(() => {
@@ -48,7 +54,9 @@ describe('a synchronous throw out of the fetch dispatch', () => {
     mockFetchImage();
     const loader = createCoreLoader();
 
-    const handle = loader.get('ship.png', hostileOptions());
+    breakDispatch(loader);
+
+    const handle = loader.get('ship.png');
 
     await vi.waitFor(() => expect(handle.loadState).toBe('failed'));
   });
@@ -58,28 +66,18 @@ describe('a synchronous throw out of the fetch dispatch', () => {
     const loader = createCoreLoader();
     const onError = vi.fn();
 
+    breakDispatch(loader);
     loader.onError.add(onError);
-    loader.get('ship.png', hostileOptions());
+    loader.get('ship.png');
 
     await vi.waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
   });
 
-  /**
-   * The background queue cannot be reached with a hostile options object: the
-   * `Assets` constructor materializes every leaf config up front, so a throwing
-   * getter fires there rather than surviving into `QueueEntry.options`. The
-   * dispatch is stubbed directly to cover the call site itself, whose failure
-   * mode is worse than the seamless one - the throw escapes before `.finally()`
-   * is attached, so the active counter never decrements and the queue wedges.
-   */
   test('keeps the background queue draining instead of stalling awaitBackground()', async () => {
     mockFetchImage();
     const loader = createCoreLoader();
-    const decoder = (loader as unknown as { _decoder: { _dispatchFetch: unknown } })._decoder;
 
-    decoder._dispatchFetch = (): never => {
-      throw new Error('synchronous dispatch failure');
-    };
+    breakDispatch(loader);
 
     const catalog = new Assets({ ship: { type: 'texture', source: 'ship.png' } });
 

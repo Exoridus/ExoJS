@@ -1,14 +1,14 @@
 import { Asset } from '#assets/Asset';
 import { CONTAINER_HEADER_SIZE, CONTAINER_MAGIC, type ContainerInput, encodeContainer, parseContainer } from '#assets/AssetContainer';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 
 const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
 
 function createCoreLoader(): Loader {
   const loader = new Loader({ basePath: '/' });
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
 }

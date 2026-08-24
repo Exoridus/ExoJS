@@ -2,6 +2,8 @@ import type { MockInstance } from 'vitest';
 
 import { SvgFactory } from '#assets/factories/SvgFactory';
 
+import { factoryContext } from './factory-context';
+
 // ---------------------------------------------------------------------------
 // Image element capture helper
 // ---------------------------------------------------------------------------
@@ -46,24 +48,10 @@ const lastImage = (): HTMLImageElement => {
 };
 
 describe('SvgFactory', () => {
-  test('storageName is "svg"', () => {
-    const factory = new SvgFactory();
-    expect(factory.storageName).toBe('svg');
-  });
-
-  test('process() reads the response body as text', async () => {
-    const factory = new SvgFactory();
-    const response = { text: async () => '<svg></svg>' } as unknown as Response;
-
-    const result = await factory.process(response);
-
-    expect(result).toBe('<svg></svg>');
-  });
-
   test('create() resolves with an HTMLImageElement once "load" fires', async () => {
     const factory = new SvgFactory();
 
-    const promise = factory.create('<svg width="10" height="10"></svg>');
+    const promise = factory.create('<svg width="10" height="10"></svg>', factoryContext());
     lastImage().dispatchEvent(new Event('load'));
 
     const image = await promise;
@@ -75,18 +63,16 @@ describe('SvgFactory', () => {
   test('create() rejects with a clear message on "error"', async () => {
     const factory = new SvgFactory();
 
-    const promise = factory.create('<svg></svg>');
+    const promise = factory.create('<svg></svg>', factoryContext());
     lastImage().dispatchEvent(new Event('error'));
 
-    await expect(promise).rejects.toThrow(
-      'Failed to decode SVG source — the markup may be malformed, or (if loaded with the wrong Asset.type) not SVG at all.',
-    );
+    await expect(promise).rejects.toThrow('Failed to decode SVG source - the markup may be malformed, or (if loaded as the wrong asset type) not SVG at all.');
   });
 
   test('create() rejects with a clear message on "abort"', async () => {
     const factory = new SvgFactory();
 
-    const promise = factory.create('<svg></svg>');
+    const promise = factory.create('<svg></svg>', factoryContext());
     lastImage().dispatchEvent(new Event('abort'));
 
     await expect(promise).rejects.toThrow('Image loading was canceled.');
@@ -95,7 +81,7 @@ describe('SvgFactory', () => {
   test('create() injects width/height attributes when provided', async () => {
     const factory = new SvgFactory();
 
-    const promise = factory.create('<svg viewBox="0 0 10 10"></svg>', { width: 64, height: 32 });
+    const promise = factory.create('<svg viewBox="0 0 10 10"></svg>', factoryContext({ width: 64, height: 32 }));
     lastImage().dispatchEvent(new Event('load'));
     await promise;
 
@@ -110,7 +96,7 @@ describe('SvgFactory', () => {
   test('create() replaces pre-existing width/height attributes rather than duplicating them', async () => {
     const factory = new SvgFactory();
 
-    const promise = factory.create('<svg width="5" height="5" viewBox="0 0 10 10"></svg>', { width: 100, height: 200 });
+    const promise = factory.create('<svg width="5" height="5" viewBox="0 0 10 10"></svg>', factoryContext({ width: 100, height: 200 }));
     lastImage().dispatchEvent(new Event('load'));
     await promise;
 
@@ -127,7 +113,7 @@ describe('SvgFactory', () => {
     const factory = new SvgFactory();
     const source = '<svg viewBox="0 0 10 10"><rect width="1" height="1"/></svg>';
 
-    const promise = factory.create(source);
+    const promise = factory.create(source, factoryContext());
     lastImage().dispatchEvent(new Event('load'));
     await promise;
 
@@ -140,7 +126,7 @@ describe('SvgFactory', () => {
   test('create() applies only width when height is omitted', async () => {
     const factory = new SvgFactory();
 
-    const promise = factory.create('<svg viewBox="0 0 10 10"></svg>', { width: 42 });
+    const promise = factory.create('<svg viewBox="0 0 10 10"></svg>', factoryContext({ width: 42 }));
     lastImage().dispatchEvent(new Event('load'));
     await promise;
 
@@ -154,7 +140,7 @@ describe('SvgFactory', () => {
   test('create() applies only height when width is omitted', async () => {
     const factory = new SvgFactory();
 
-    const promise = factory.create('<svg viewBox="0 0 10 10"></svg>', { height: 24 });
+    const promise = factory.create('<svg viewBox="0 0 10 10"></svg>', factoryContext({ height: 24 }));
     lastImage().dispatchEvent(new Event('load'));
     await promise;
 
@@ -169,7 +155,7 @@ describe('SvgFactory', () => {
     const factory = new SvgFactory();
     const source = 'not an svg document';
 
-    const promise = factory.create(source, { width: 10, height: 10 });
+    const promise = factory.create(source, factoryContext({ width: 10, height: 10 }));
     lastImage().dispatchEvent(new Event('load'));
     await promise;
 
@@ -182,7 +168,7 @@ describe('SvgFactory', () => {
   test('create() revokes the object URL once loading settles', async () => {
     const factory = new SvgFactory();
 
-    const promise = factory.create('<svg></svg>');
+    const promise = factory.create('<svg></svg>', factoryContext());
     lastImage().dispatchEvent(new Event('load'));
     await promise;
 

@@ -143,7 +143,7 @@ const loadApplicationHarness = async (
     Loader: LoaderMock,
   }));
   vi.doMock('#extensions/materialize', () => ({
-    materializeAssetBindings: vi.fn(),
+    materializeAssetTypes: vi.fn(),
     materializeRendererBindings: vi.fn(),
     materializeSerializerBindings: vi.fn(),
   }));

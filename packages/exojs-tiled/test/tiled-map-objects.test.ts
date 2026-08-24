@@ -1,15 +1,14 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import type { AssetLoaderContext, Destroyable } from '@codexo/exojs';
-import { Texture } from '@codexo/exojs';
+import type { Destroyable } from '@codexo/exojs';
 import type { TileMap } from '@codexo/exojs-tilemap';
 import { mapObjectDescriptors,MapObjectSpawner } from '@codexo/exojs-tilemap';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
-import { loadTiledMap } from '../src/loadTiledMap';
 import { TiledObject } from '../src/TiledObject';
 import { validateTiledObjectData } from '../src/validate';
+import { makeTiledContext } from './type-context';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
@@ -34,37 +33,10 @@ const TEXTURE_SIZES: Record<string, { w: number; h: number }> = {
   'tiles-b.png': { w: 80, h: 20 },
 };
 
-function mockContext(fixtures: Record<string, unknown>): AssetLoaderContext {
-  const load = vi.fn(async (token: unknown): Promise<unknown> => {
-    const asset = token as { type?: unknown; source?: unknown };
-    if (asset.type === 'texture') {
-      const texture = new Texture();
-      const size = TEXTURE_SIZES[asset.source as string] ?? { w: 256, h: 256 };
-      texture.width = size.w;
-      texture.height = size.h;
-      return texture;
-    }
-    throw new Error(`tiled-map-objects.test: unexpected load token ${String(token)}`);
-  });
-
-  return {
-    loader: { load } as unknown as AssetLoaderContext['loader'],
-    scope: { load } as unknown as AssetLoaderContext['scope'],
-    resourceKey: 'test',
-    sourceKey: 'test',
-    locator: 'url:test',
-    resolveUrl: (source: string) => source,
-    fetchText: vi.fn(),
-    fetchArrayBuffer: vi.fn(),
-    fetchJson: vi.fn(async (source: string) => {
-      if (Object.hasOwn(fixtures, source)) return fixtures[source];
-      throw new Error(`tiled-map-objects.test: no fixture for "${source}"`);
-    }) as unknown as AssetLoaderContext['fetchJson'],
-  };
-}
-
 async function tiledMapFrom(document: unknown): Promise<TileMap> {
-  return (await loadTiledMap('inline.tmj', mockContext({ 'inline.tmj': document }))).toTileMap();
+  const { loadSource } = makeTiledContext({ ...FIXTURES, 'inline.tmj': document }, TEXTURE_SIZES);
+
+  return (await loadSource('inline.tmj')).toTileMap();
 }
 
 function documentWith(object: Record<string, unknown>): Record<string, unknown> {
@@ -115,7 +87,9 @@ async function singleObjectMap(objectClass: string, name: string): Promise<TileM
 }
 
 async function richMap(): Promise<TileMap> {
-  return (await loadTiledMap('orthogonal-rich.tmj', mockContext(FIXTURES))).toTileMap();
+  const { loadSource } = makeTiledContext(FIXTURES, TEXTURE_SIZES);
+
+  return (await loadSource('orthogonal-rich.tmj')).toTileMap();
 }
 
 class Thing implements Destroyable {

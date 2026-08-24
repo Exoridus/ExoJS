@@ -2,8 +2,8 @@
 // No registration is performed on import.
 
 // ── Extension wiring ──────────────────────────────────────────────────────────
-export { ldtkMapBinding, ldtkProjectBinding } from './ldtkBinding';
 export { ldtkExtension } from './ldtkExtension';
+export { LdtkMapAssetType, ldtkMapType, LdtkProjectAssetType, ldtkProjectType } from './ldtkTypes';
 
 // ── Parsed source model ───────────────────────────────────────────────────────
 export { LdtkMap } from './LdtkMap';
@@ -123,14 +123,14 @@ declare module '@codexo/exojs' {
     ldtkProject: {
       resource: LdtkProject;
       config: { source: string };
-      /** See `ldtkMap` - `ldtkProjectBinding` ships no seamless adapter either. */
+      /** See `ldtkMap` - `ldtkProjectType` keeps the default leaf too. */
       isValue: true;
     };
     ldtkMap: {
       resource: LdtkMap;
       config: { source: string };
-      // No `seamless` adapter on `ldtkMapBinding`, so `defineAsset` defaults
-      // this to a value type: its leaf is an `AssetRef<LdtkMap>`.
+      // `ldtkMapType` keeps the default leaf, so its catalog handle is an
+      // `AssetRef<LdtkMap>` rather than the map itself.
       isValue: true;
     };
   }

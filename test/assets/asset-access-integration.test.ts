@@ -3,15 +3,15 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { Asset } from '#assets/Asset';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling loader tests). */
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
 

@@ -1,47 +1,50 @@
 import { describe, expect, it, test, vi } from 'vitest';
 
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
-import { _resetExtensionKindsForTest, registerExtensionKind } from '#assets/extensionKindRegistry';
+
+import { testAssetType } from './test-asset-type';
 
 class TypeA {}
 class TypeB {}
 
+const adapter = (): never => ({ createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() }) as never;
+
+/** An installable type, with everything the individual test does not care about defaulted. */
+function type(spec: {
+  id: string;
+  token?: object;
+  extensions?: readonly string[];
+  leaf?: unknown;
+  destroy?: () => void;
+  resourceIdentity?: (request: { source: string; options?: unknown }) => string;
+}): ReturnType<typeof testAssetType> {
+  return testAssetType<string, unknown>({
+    id: spec.id,
+    ...(spec.token !== undefined && { token: spec.token as never }),
+    ...(spec.extensions !== undefined && { extensions: spec.extensions }),
+    ...(spec.leaf !== undefined && { leaf: spec.leaf as never }),
+    ...(spec.destroy !== undefined && { destroy: spec.destroy }),
+    ...(spec.resourceIdentity !== undefined && { resourceIdentity: spec.resourceIdentity as never }),
+    create: async source => source,
+  });
+}
+
 describe('AssetTypeRegistry', () => {
-  test('registerSeamlessAdapter throws on a duplicate registration for the same type', () => {
+  test('installs a type under its id, its token and every suffix it claims', () => {
     const registry = new AssetTypeRegistry();
-    const adapter = { createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() };
 
-    registry.registerSeamlessAdapter(TypeA, adapter as never);
-    expect(() => registry.registerSeamlessAdapter(TypeA, adapter as never)).toThrow(/already registered/);
-  });
-
-  test('hasSeamlessAdapter/getSeamlessAdapter reflect registration', () => {
-    const registry = new AssetTypeRegistry();
-    const adapter = { createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() };
-
-    expect(registry.hasSeamlessAdapter(TypeA)).toBe(false);
-    registry.registerSeamlessAdapter(TypeA, adapter as never);
-    expect(registry.hasSeamlessAdapter(TypeA)).toBe(true);
-    expect(registry.getSeamlessAdapter(TypeA)).toBe(adapter);
-  });
-
-  test('bindAsset registers type names and extensions atomically, and validates before mutating', () => {
-    const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
-
-    registry.bindAsset({ ctor: TypeA, typeNames: ['type-a'], extensions: ['ta'] }, handler);
+    registry.installAll([type({ id: 'type-a', token: TypeA, extensions: ['ta'] })]);
 
     expect(registry.hasAssetType('type-a')).toBe(true);
     expect(registry.hasExtension('.ta')).toBe(true);
     expect(registry.hasLoadable(TypeA)).toBe(true);
-    expect(registry.getHandler(TypeA)).toBeDefined();
+    expect(registry.getInstalled(TypeA)).toBeDefined();
   });
 
-  test('bindings, explicit overrides, and lookups share one extension normalization rule', () => {
+  test('claimed suffixes, explicit overrides and lookups share one normalization rule', () => {
     const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['..MiXeD'] }, handler);
+    registry.installAll([type({ id: 'json', token: TypeA, extensions: ['..MiXeD'] })]);
 
     expect(registry.hasExtension('.mixed')).toBe(true);
     expect(registry.resolveExtensionType('...MIXED')).toBe('json');
@@ -50,110 +53,84 @@ describe('AssetTypeRegistry', () => {
     expect(registry.resolveExtensionType('.mixed')).toBe('text');
   });
 
-  test('hasLoadable() reflects only bindAsset handler registration, not just any known constructor', () => {
+  test('a type that heals in place answers with its adapter; one that does not answers with nothing', () => {
     const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
+    const seamless = adapter();
 
-    expect(registry.hasLoadable(TypeA)).toBe(false);
-    registry.bindAsset({ ctor: TypeA }, handler);
-    expect(registry.hasLoadable(TypeA)).toBe(true);
+    registry.installAll([type({ id: 'seamless', token: TypeA, leaf: seamless }), type({ id: 'plain', token: TypeB })]);
+
+    expect(registry.hasSeamlessAdapter(TypeA)).toBe(true);
+    expect(registry.getSeamlessAdapter(TypeA)).toBe(seamless);
+    expect(registry.hasSeamlessAdapter(TypeB)).toBe(false);
+    expect(registry.getSeamlessAdapter(TypeB)).toBeUndefined();
   });
 
-  test('bindAsset threads an optional storageName onto the stored HandlerEntry', () => {
+  test('installing a second type under an id already taken leaves the registry untouched', () => {
     const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ ctor: TypeA, storageName: 'custom-ns' }, handler);
+    registry.installAll([type({ id: 'type-a', token: TypeA })]);
 
-    expect(registry.getHandler(TypeA)?.storageName).toBe('custom-ns');
+    expect(() => registry.installAll([type({ id: 'type-a', token: TypeB, extensions: ['later'] })])).toThrow(/already installed/);
+    expect(registry.hasLoadable(TypeB)).toBe(false);
+    expect(registry.hasExtension('later')).toBe(false);
   });
 
-  test('bindAsset without storageName leaves it undefined on the stored HandlerEntry', () => {
+  test('installing two types on one dispatch token is rejected before anything is written', () => {
     const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ ctor: TypeA }, handler);
-
-    expect(registry.getHandler(TypeA)?.storageName).toBeUndefined();
+    expect(() => registry.installAll([type({ id: 'first', token: TypeA }), type({ id: 'second', token: TypeA, extensions: ['later'] })])).toThrow(
+      /another installed type already uses/,
+    );
+    expect(registry.hasAssetType('first')).toBe(false);
+    expect(registry.hasExtension('later')).toBe(false);
   });
 
-  test('bindAsset throws on a duplicate handler for the same type, without touching unrelated state', () => {
+  test('a set that claims one suffix twice is rejected atomically', () => {
     const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ ctor: TypeA, typeNames: ['type-a'] }, handler);
-
-    expect(() => registry.bindAsset({ ctor: TypeA, typeNames: ['type-a-again'] }, handler)).toThrow(/already registered/);
-    // The failed second call must not have registered its type name.
-    expect(registry.hasAssetType('type-a-again')).toBe(false);
-  });
-
-  test('bindAsset throws on a duplicate type name across different types, validated before any mutation', () => {
-    const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
-
-    registry.bindAsset({ ctor: TypeA, typeNames: ['shared-name'] }, handler);
-
-    const otherHandler = { load: vi.fn(async () => ({})) };
-    expect(() => registry.bindAsset({ ctor: TypeB, typeNames: ['shared-name'] }, otherHandler)).toThrow(/already registered/);
+    expect(() =>
+      registry.installAll([type({ id: 'json', token: TypeA, extensions: ['shared'] }), type({ id: 'text', token: TypeB, extensions: ['shared'] })]),
+    ).toThrow(/already claimed by asset type/);
+    expect(registry.hasAssetType('json')).toBe(false);
     expect(registry.hasLoadable(TypeB)).toBe(false);
   });
 
-  test('bindAsset registers a seamless adapter when keys.seamless is provided', () => {
+  test('one type declaring a suffix twice is rejected', () => {
     const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
-    const adapter = { createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() };
 
-    registry.bindAsset({ ctor: TypeA, seamless: adapter as never }, handler);
-
-    expect(registry.hasSeamlessAdapter(TypeA)).toBe(true);
+    expect(() => registry.installAll([type({ id: 'json', token: TypeA, extensions: ['dup', 'DUP'] })])).toThrow(/declares the extension ".dup" twice/);
   });
 
-  test('bindAsset validates a seamless-adapter conflict before mutating any binding-owned map', () => {
+  test('an id must be a non-empty string', () => {
     const registry = new AssetTypeRegistry();
-    const adapter = { createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() };
-    const handler = { load: vi.fn(async () => ({})) };
 
-    registry.registerSeamlessAdapter(TypeA, adapter as never);
-
-    expect(() => registry.bindAsset({ ctor: TypeA, typeNames: ['type-a'], extensions: ['ta'], seamless: adapter as never }, handler)).toThrow(
-      /seamless adapter is already registered/,
-    );
-    expect(registry.hasLoadable(TypeA)).toBe(false);
-    expect(registry.hasAssetType('type-a')).toBe(false);
-    expect(registry.hasExtension('ta')).toBe(false);
+    expect(() => registry.installAll([type({ id: '' })])).toThrow(/non-empty string id/);
   });
 
-  test('_typeIdentity is stable per type and distinct across types', () => {
+  test('_typeIdentity answers with the type id, so a key means the same thing across reloads', () => {
     const registry = new AssetTypeRegistry();
 
-    expect(registry._typeIdentity(TypeA)).toBe(registry._typeIdentity(TypeA));
-    expect(registry._typeIdentity(TypeA)).not.toBe(registry._typeIdentity(TypeB));
-  });
-
-  test('_typeIdentity answers with the stable id an install supplied, not an ordinal', () => {
-    const registry = new AssetTypeRegistry();
-
-    registry.bindAsset({ ctor: TypeA, typeIdentity: 'com.example.world' }, { load: async () => 'x' });
-    registry.bindAsset({ ctor: TypeB }, { load: async () => 'y' });
+    registry.installAll([type({ id: 'com.example.world', token: TypeA }), type({ id: 'plain', token: TypeB })]);
 
     expect(registry._typeIdentity(TypeA)).toBe('com.example.world');
-    expect(registry._typeIdentity(TypeB)).toMatch(/^\d+$/);
+    expect(registry._typeIdentity(TypeB)).toBe('plain');
   });
 
-  test('_identityDiscriminator is undefined without a handler hook and forwards source + options with one', () => {
+  test('_typeIdentity fails loudly for a token no installed type dispatches on', () => {
     const registry = new AssetTypeRegistry();
 
-    expect(registry._identityDiscriminator(TypeA, 'a.png', { format: 'x' })).toBeUndefined();
+    expect(() => registry._typeIdentity(TypeA)).toThrow(/No asset type is installed/);
+  });
 
-    registry.bindAsset(
-      { ctor: TypeA },
-      {
-        getIdentityDiscriminator: request => String((request.options as { format?: string } | undefined)?.format),
-        load: vi.fn(async () => ({})),
-      },
-    );
+  test('_identityDiscriminator is undefined without a hook and forwards source + options with one', () => {
+    const registry = new AssetTypeRegistry();
 
+    registry.installAll([
+      type({ id: 'plain', token: TypeB }),
+      type({ id: 'discriminated', token: TypeA, resourceIdentity: request => String((request.options as { format?: string } | undefined)?.format) }),
+    ]);
+
+    expect(registry._identityDiscriminator(TypeB, 'a.png', { format: 'x' })).toBeUndefined();
     expect(registry._identityDiscriminator(TypeA, 'a.png', { format: 'x' })).toBe('x');
     expect(registry._identityDiscriminator(TypeA, 'a.png', { format: 'y' })).toBe('y');
   });
@@ -161,10 +138,9 @@ describe('AssetTypeRegistry', () => {
   test('_identityDiscriminator never walks options a type has not declared identity-relevant', () => {
     const registry = new AssetTypeRegistry();
 
-    registry.bindAsset(
-      { ctor: TypeA },
-      { getIdentityDiscriminator: request => String((request.options as { format?: string } | undefined)?.format), load: vi.fn(async () => ({})) },
-    );
+    registry.installAll([
+      type({ id: 'discriminated', token: TypeA, resourceIdentity: request => String((request.options as { format?: string } | undefined)?.format) }),
+    ]);
 
     const hostile = {
       format: 'x',
@@ -176,37 +152,23 @@ describe('AssetTypeRegistry', () => {
     expect(() => registry._identityDiscriminator(TypeA, 'a.png', hostile)).not.toThrow();
   });
 
-  test('_resolveTypeForPath matches the longest registered dot-suffix first', () => {
+  test('_resolveTypeForPath matches the longest claimed dot-suffix first', () => {
     const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['json'] }, handler);
-    registry.bindAsset({ ctor: TypeB, type: 'text', extensions: ['aseprite.json'] }, handler);
+    registry.installAll([type({ id: 'json', token: TypeA, extensions: ['json'] }), type({ id: 'text', token: TypeB, extensions: ['aseprite.json'] })]);
 
     expect(registry._resolveTypeForPath('hero.aseprite.json')).toBe('text');
     expect(registry._resolveTypeForPath('plain.json')).toBe('json');
     expect(registry._resolveTypeForPath('no-extension-match.xyz')).toBeUndefined();
   });
 
-  test('_resolveTypeForPath ignores an extension bound without a `type` (bare path needs Asset.type)', () => {
+  test('a suffix nothing installed claims stays unresolved', () => {
     const registry = new AssetTypeRegistry();
 
-    registry.bindAsset({ ctor: TypeA, extensions: ['bnd'] }, { load: vi.fn(async () => ({})) });
+    registry.installAll([type({ id: 'bound', token: TypeA })]);
 
-    expect(registry.hasExtension('bnd')).toBe(true);
+    expect(registry.hasExtension('bnd')).toBe(false);
     expect(registry._resolveTypeForPath('thing.bnd')).toBeUndefined();
-  });
-
-  test('_resolveTypeForPath prefers the app-local override over the global default', () => {
-    const registry = new AssetTypeRegistry();
-
-    registerExtensionKind('globaldefault', 'json'); // the global (defineAsset) layer
-
-    expect(registry._resolveTypeForPath('config.globaldefault')).toBe('json');
-
-    registry.registerType('globaldefault', 'text'); // the app-local layer wins
-
-    expect(registry._resolveTypeForPath('config.globaldefault')).toBe('text');
   });
 
   test('_describeType falls back to a placeholder name for an anonymous constructor', () => {
@@ -217,104 +179,59 @@ describe('AssetTypeRegistry', () => {
     expect(registry._describeType(TypeA)).toBe('TypeA');
   });
 
-  test('destroy() destroys every bound handler exactly once, even if bound under multiple names', () => {
+  test('destroy() destroys every installed factory and forgets every type', () => {
     const registry = new AssetTypeRegistry();
     const destroy = vi.fn();
-    const handler = { load: vi.fn(async () => ({})), destroy };
 
-    registry.bindAsset({ ctor: TypeA }, handler);
+    registry.installAll([type({ id: 'destroyable', token: TypeA, destroy })]);
     registry.destroy();
 
     expect(destroy).toHaveBeenCalledTimes(1);
     expect(registry.hasLoadable(TypeA)).toBe(false);
   });
 
-  test('bindAsset with a `type` records its extensions as the binding-declared default type', () => {
-    _resetExtensionKindsForTest();
-
+  test('a type that brought no constructor is still reachable through its minted token', () => {
     const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
 
-    registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['ldtk'] }, handler);
+    registry.installAll([type({ id: 'anonymousType' })]);
 
-    expect(registry.resolveExtensionType('ldtk')).toBe('json');
-  });
+    const token = registry.resolveTypeName('anonymousType')!;
 
-  test('bindAsset does NOT conflict with an existing registerType override — the override keeps winning', () => {
-    _resetExtensionKindsForTest();
-
-    const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
-
-    registry.registerType('ldtk', 'text');
-
-    expect(() => registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['ldtk'] }, handler)).not.toThrow();
-    expect(registry.hasLoadable(TypeA)).toBe(true);
-    expect(registry.hasExtension('ldtk')).toBe(true);
-    expect(registry.resolveExtensionType('ldtk')).toBe('text');
-  });
-
-  test('a registerType override applied AFTER a binding still wins over the binding-declared type', () => {
-    _resetExtensionKindsForTest();
-
-    const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
-
-    registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['ldtk'] }, handler);
-
-    expect(registry.resolveExtensionType('ldtk')).toBe('json');
-    expect(() => registry.registerType('ldtk', 'text')).not.toThrow();
-    expect(registry.resolveExtensionType('ldtk')).toBe('text');
-    expect(registry._resolveTypeForPath('world.ldtk')).toBe('text');
-  });
-
-  test('the binding-declared type outranks the global default for the same suffix', () => {
-    _resetExtensionKindsForTest();
-    registerExtensionKind('ldtk', 'json'); // global default
-
-    const registry = new AssetTypeRegistry();
-    const handler = { load: vi.fn(async () => ({})) };
-
-    registry.bindAsset({ ctor: TypeA, type: 'text', extensions: ['ldtk'] }, handler);
-
-    expect(registry.resolveExtensionType('ldtk')).toBe('text');
-  });
-
-  test('the first binding owns a suffix and a second binding-declared default is rejected atomically', () => {
-    _resetExtensionKindsForTest();
-
-    const registry = new AssetTypeRegistry();
-    const handlerA = { load: vi.fn(async () => ({})) };
-    const handlerB = { load: vi.fn(async () => ({})) };
-
-    registry.bindAsset({ ctor: TypeA, type: 'json', extensions: ['shared'] }, handlerA);
-
-    expect(() => registry.bindAsset({ ctor: TypeB, type: 'text', extensions: ['shared'] }, handlerB)).toThrow(
-      'File extension ".shared" is already mapped to an asset type.',
-    );
-    expect(registry.resolveExtensionType('shared')).toBe('json');
-    expect(registry.hasLoadable(TypeB)).toBe(false);
+    expect(registry.hasLoadable(token)).toBe(true);
+    expect(registry._typeIdentity(token)).toBe('anonymousType');
+    // The minted token carries the id as its name, so diagnostics can report it.
+    expect(registry._describeType(token)).toBe('anonymousType');
   });
 });
 
 describe('AssetTypeRegistry.registerType', () => {
-  it('an app-local override wins over the global default for that extension', () => {
-    _resetExtensionKindsForTest();
-    registerExtensionKind('json', 'json'); // global default
-
+  it('an app-local override wins over the type that claimed the suffix', () => {
     const registry = new AssetTypeRegistry();
+
+    registry.installAll([type({ id: 'json', token: TypeA, extensions: ['json'] })]);
     registry.registerType('json', 'text');
 
     expect(registry.resolveExtensionType('json')).toBe('text');
+    expect(registry._resolveTypeForPath('data/level.json')).toBe('text');
   });
 
-  it('falls back to the global default when no app override exists', () => {
-    _resetExtensionKindsForTest();
-    registerExtensionKind('json', 'json');
-
+  it('falls back to the claiming type when no app override exists', () => {
     const registry = new AssetTypeRegistry();
 
+    registry.installAll([type({ id: 'json', token: TypeA, extensions: ['json'] })]);
+
     expect(registry.resolveExtensionType('json')).toBe('json');
+  });
+
+  it('an override registered BEFORE the type installs still wins', () => {
+    const registry = new AssetTypeRegistry();
+
+    registry.registerType('ldtk', 'text');
+
+    expect(() => registry.installAll([type({ id: 'json', token: TypeA, extensions: ['ldtk'] })])).not.toThrow();
+    expect(registry.hasLoadable(TypeA)).toBe(true);
+    expect(registry.hasExtension('ldtk')).toBe(true);
+    expect(registry.resolveExtensionType('ldtk')).toBe('text');
   });
 
   it('is idempotent for registering the same (extension, type) pair twice', () => {

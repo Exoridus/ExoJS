@@ -19,13 +19,13 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
 import { Asset } from '#assets/Asset';
 import type { KindByPath, LeafForPath } from '#assets/AssetDefinitions';
 import type { AssetRef } from '#assets/AssetRef';
-import { coreAssetBindings } from '#assets/coreAssetBindings';
-import { registerExtensionKind } from '#assets/extensionKindRegistry';
+import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { Application } from '#core/Application';
-import type { AssetBinding } from '#extensions/Extension';
-import { materializeAssetBindings } from '#extensions/materialize';
+import { materializeAssetTypes } from '#extensions/materialize';
 import type { Texture } from '#rendering/texture/Texture';
+
+import { testAssetType } from './test-asset-type';
 
 // Test-only compound registration (type level).
 declare module '#assets/AssetDefinitions' {
@@ -40,20 +40,20 @@ declare module '#assets/AssetDefinitions' {
 
 class ApplicationText {}
 
-const applicationTextBinding: AssetBinding<string> = {
-  ctor: ApplicationText,
-  type: 'applicationText',
-  typeNames: ['applicationText'],
-  create: () => ({
-    load: async request => `extension:${request.source}`,
-  }),
-};
+const applicationTextType = testAssetType<string, string>({
+  id: 'applicationText',
+  token: ApplicationText,
+  acquires: false,
+  create: async (_source, context) => `extension:${context.source}`,
+});
 
 function createCoreLoader(): Loader {
   const loader = new Loader();
-  materializeAssetBindings(loader, coreAssetBindings);
+  materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 }
+
+const JSON_BODY = '{"marker":true}';
 
 function mockTextAndJsonResponse(): void {
   global.fetch = vi.fn(
@@ -62,8 +62,10 @@ function mockTextAndJsonResponse(): void {
         ok: true,
         status: 200,
         statusText: 'OK',
+        // One body, read two ways: the json type parses the text it acquired,
+        // the text type hands the same string back unparsed.
         json: async () => ({ marker: true }),
-        text: async () => 'raw level text',
+        text: async () => JSON_BODY,
         arrayBuffer: async () => new ArrayBuffer(0),
       }) as unknown as Response,
   ) as typeof fetch;
@@ -92,7 +94,8 @@ describe('compound extension matching', () => {
     const loader = createCoreLoader();
     const seen: string[] = [];
 
-    registerExtensionKind('mock.json', 'json'); // compound suffix → the json value kind (bound via coreAssetBindings)
+    // Compound suffix, app-locally re-pointed at the built-in json type.
+    loader.registerType('mock.json', 'json');
     global.fetch = vi.fn(async (url: string | URL | Request): Promise<Response> => {
       seen.push(url instanceof Request ? url.url : String(url));
       return {
@@ -100,7 +103,7 @@ describe('compound extension matching', () => {
         status: 200,
         statusText: 'OK',
         json: async () => ({ marker: true }),
-        text: async () => '{}',
+        text: async () => JSON_BODY,
         arrayBuffer: async () => new ArrayBuffer(0),
       } as unknown as Response;
     }) as typeof fetch;
@@ -112,7 +115,7 @@ describe('compound extension matching', () => {
 
   test('runtime: unregistered extension still throws with a clear message', () => {
     const loader = createCoreLoader();
-    expect(() => loader.load('theme.custom' as never)).toThrow('no type registered');
+    expect(() => loader.load('theme.custom' as never)).toThrow('no installed asset type claims any extension');
   });
 });
 
@@ -120,7 +123,7 @@ describe('registerType() on a loader that already has bindings', () => {
   test('works on a real Application whose constructor already materialized core and extension bindings', async () => {
     const app = new Application({
       backend: { type: 'webgl2' },
-      extensions: [{ id: 'test.application-text', assets: [applicationTextBinding] }],
+      extensions: [{ id: 'test.application-text', assets: [applicationTextType] }],
       hello: false,
     });
 
@@ -154,9 +157,9 @@ describe('registerType() on a loader that already has bindings', () => {
 
     loader.registerType('json', 'text');
 
-    // With the override in place the `.json` suffix must reach the TEXT handler,
+    // With the override in place the `.json` suffix must reach the TEXT type,
     // so the raw body comes back unparsed.
-    await expect(loader.load('data/level.json' as never)).resolves.toBe('raw level text');
+    await expect(loader.load('data/level.json' as never)).resolves.toBe(JSON_BODY);
   });
 
   test('a second registerType with a different type still conflicts', () => {
@@ -173,12 +176,12 @@ describe('registerType() on a loader that already has bindings', () => {
     mockTextAndJsonResponse();
 
     loader.registerType('json', 'text');
-    materializeAssetBindings(loader, coreAssetBindings);
+    materializeAssetTypes(loader, coreAssetTypes);
 
     expect(loader.hasAssetType('json')).toBe(true);
     expect(loader.hasExtension('json')).toBe(true);
     expect(loader['_typeRegistry'].resolveExtensionType('json')).toBe('text');
-    await expect(loader.load('before-bindings.json' as never)).resolves.toBe('raw level text');
+    await expect(loader.load('before-bindings.json' as never)).resolves.toBe(JSON_BODY);
   });
 
   test('two loaders keep their app-local overrides fully isolated', async () => {
@@ -190,7 +193,7 @@ describe('registerType() on a loader that already has bindings', () => {
 
     expect(overridden['_typeRegistry'].resolveExtensionType('json')).toBe('text');
     expect(defaults['_typeRegistry'].resolveExtensionType('json')).toBe('json');
-    await expect(overridden.load('same.json' as never)).resolves.toBe('raw level text');
+    await expect(overridden.load('same.json' as never)).resolves.toBe(JSON_BODY);
     await expect(defaults.load('same.json')).resolves.toEqual({ marker: true });
   });
 
@@ -202,7 +205,7 @@ describe('registerType() on a loader that already has bindings', () => {
 
     await expect(loader.load(Asset.type<{ marker: boolean }>('json', 'one-off.json'))).resolves.toEqual({ marker: true });
     expect(loader['_typeRegistry'].resolveExtensionType('json')).toBe('text');
-    await expect(loader.load('after-one-off.json' as never)).resolves.toBe('raw level text');
+    await expect(loader.load('after-one-off.json' as never)).resolves.toBe(JSON_BODY);
 
     const otherLoader = createCoreLoader();
     expect(otherLoader['_typeRegistry'].resolveExtensionType('json')).toBe('json');

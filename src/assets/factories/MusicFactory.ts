@@ -1,9 +1,10 @@
-import { AbstractAssetFactory } from '#assets/AbstractAssetFactory';
+import type { AssetFactory, AssetFactoryContext } from '#assets/AssetFactory';
 import { determineMimeType } from '#assets/utils';
 import { AudioStream } from '#audio/AudioStream';
 import type { PlaybackOptions } from '#core/types';
 
-import { attachMediaSource, detachMediaElement, type MediaLoadMessages, type MediaLoadOptions } from './mediaSource';
+import { attachMediaSource, detachMediaElement, type MediaAssetOptions, type MediaAssetSource, type MediaLoadMessages } from './mediaSource';
+import { ObjectUrlPool } from './ObjectUrlPool';
 
 const MESSAGES: MediaLoadMessages = {
   error: 'Error loading audio source.',
@@ -12,89 +13,58 @@ const MESSAGES: MediaLoadMessages = {
   stalled: 'Audio loading stalled.',
 };
 
-/** Construction options for {@link MusicFactory.create} and {@link MusicFactory.createFromUrl}. */
-export interface MusicFactoryOptions extends MediaLoadOptions {
-  /**
-   * MIME type for the audio blob. Inferred from magic bytes when omitted, and
-   * unused by streamed media, whose type comes from the response.
-   */
+/** Options accepted by an asset of the built-in `music` type. */
+export interface MusicAssetOptions extends MediaAssetOptions {
+  /** MIME type for the audio blob. Inferred from the magic bytes when omitted, and unused by streamed media. */
   mimeType?: string;
   /** Initial playback settings forwarded to the {@link AudioStream} instance. */
   playbackOptions?: Partial<PlaybackOptions>;
 }
 
 /**
- * {@link AssetFactory} implementation that loads streaming audio assets
- * (MP3, OGG, WAV, AAC, and other browser-supported formats) and produces an
- * {@link AudioStream} instance backed by an `<audio>` element.
+ * Builds an {@link AudioStream} over an `<audio>` element, streaming from a URL
+ * or from bytes the application already owns.
  *
- * A URL-backed asset hands the resolved URL to the element and lets the browser
- * stream it, so memory and network scale with playback rather than with total
- * duration. {@link create} takes the complete bytes instead - the path used by
- * `download: true` and by container entries - and wraps them in a blob.
- *
- * The `<audio>` elements this factory created are paused and detached when the
- * asset is released, and again when {@link MusicFactory.destroy} runs.
+ * Every element it created is paused and detached when its asset is released,
+ * and again on teardown.
+ * @internal
  */
-export class MusicFactory extends AbstractAssetFactory<AudioStream> {
-  public readonly storageName = 'music';
+export class MusicFactory implements AssetFactory<MediaAssetSource, AudioStream, MusicAssetOptions> {
+  private readonly _audioElements = new Set<HTMLAudioElement>();
+  private readonly _objectUrls = new ObjectUrlPool();
 
-  private readonly _audioElements: HTMLAudioElement[] = [];
+  public async create(source: MediaAssetSource, context: AssetFactoryContext<MusicAssetOptions>): Promise<AudioStream> {
+    const options = context.options ?? {};
+    const audio = document.createElement('audio');
 
-  /**
-   * Reads the full response body as an {@link ArrayBuffer} for blob
-   * construction.
-   */
-  public async process(response: Response): Promise<ArrayBuffer> {
-    return response.arrayBuffer();
-  }
+    this._audioElements.add(audio);
 
-  /**
-   * Wraps audio bytes in an `<audio>` element and resolves with an
-   * {@link AudioStream} instance once the configured `loadEvent` fires.
-   *
-   * Rejects if the element emits an `error`, `abort` or `emptied` event before
-   * the load event is received.
-   */
-  public async create(source: ArrayBuffer, options: MusicFactoryOptions = {}): Promise<AudioStream> {
-    const { mimeType, playbackOptions } = options;
-    const blob = new Blob([source], { type: mimeType ?? determineMimeType(source) });
-    const objectUrl = this.createObjectUrl(blob);
-    const audio = this._createElement();
+    if (source.bytes !== undefined) {
+      const objectUrl = this._objectUrls.create(new Blob([source.bytes], { type: options.mimeType ?? determineMimeType(source.bytes) }));
 
-    await attachMediaSource({
-      element: audio,
-      src: objectUrl,
-      messages: MESSAGES,
-      loadEvent: options.loadEvent,
-      stallTimeout: options.stallTimeout,
-      signal: undefined,
-      onSettled: () => this.revokeObjectUrl(objectUrl),
-    });
-
-    return new AudioStream(audio, playbackOptions);
-  }
-
-  /**
-   * Streams the media at `url` through an `<audio>` element and resolves with an
-   * {@link AudioStream} once the configured `loadEvent` fires.
-   *
-   * The resource is ready to play, not fully downloaded: the browser continues
-   * transferring during playback, and a failure after this point is reported by
-   * {@link AudioStream.onError} rather than by this promise.
-   */
-  public async createFromUrl(url: string, options: MusicFactoryOptions = {}, signal?: AbortSignal): Promise<AudioStream> {
-    const audio = this._createElement();
-
-    await attachMediaSource({
-      element: audio,
-      src: url,
-      messages: MESSAGES,
-      loadEvent: options.loadEvent,
-      stallTimeout: options.stallTimeout,
-      crossOrigin: options.crossOrigin === undefined ? 'anonymous' : options.crossOrigin,
-      signal,
-    });
+      await attachMediaSource({
+        element: audio,
+        src: objectUrl,
+        messages: MESSAGES,
+        loadEvent: options.loadEvent,
+        stallTimeout: options.stallTimeout,
+        signal: context.signal,
+        // The element has taken its own reference by the time it settles, so the
+        // URL has done its job; leaving it alive would pin the blob for the
+        // lifetime of the document.
+        onSettled: () => this._objectUrls.revoke(objectUrl),
+      });
+    } else {
+      await attachMediaSource({
+        element: audio,
+        src: source.url,
+        messages: MESSAGES,
+        loadEvent: options.loadEvent,
+        stallTimeout: options.stallTimeout,
+        crossOrigin: options.crossOrigin === undefined ? 'anonymous' : options.crossOrigin,
+        signal: context.signal,
+      });
+    }
 
     return new AudioStream(audio, options.playbackOptions);
   }
@@ -105,32 +75,15 @@ export class MusicFactory extends AbstractAssetFactory<AudioStream> {
 
     resource.destroy();
     detachMediaElement(audio);
-
-    const index = this._audioElements.indexOf(audio);
-
-    if (index !== -1) {
-      this._audioElements.splice(index, 1);
-    }
+    this._audioElements.delete(audio);
   }
 
-  /**
-   * Pauses and resets all `<audio>` elements created by this factory to
-   * release media resources, then delegates to the base
-   * {@link AbstractAssetFactory.destroy} to revoke any object URLs.
-   */
-  public override destroy(): void {
+  public destroy(): void {
     for (const audio of this._audioElements) {
       detachMediaElement(audio);
     }
-    this._audioElements.length = 0;
-    super.destroy();
-  }
 
-  private _createElement(): HTMLAudioElement {
-    const audio = document.createElement('audio');
-
-    this._audioElements.push(audio);
-
-    return audio;
+    this._audioElements.clear();
+    this._objectUrls.revokeAll();
   }
 }

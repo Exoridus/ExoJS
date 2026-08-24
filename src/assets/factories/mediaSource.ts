@@ -3,7 +3,7 @@ import type { MediaCrossOrigin, StreamingLoadEvent } from '#core/types';
 const onceListenerOption = { once: true };
 
 /** Options shared by the streaming media factories. */
-export interface MediaLoadOptions {
+export interface MediaAssetOptions {
   /**
    * Fetch the complete resource through the loader's byte/cache pipeline before
    * the media element is built, instead of letting the browser stream it from
@@ -47,6 +47,16 @@ export interface MediaLoadOptions {
    */
   stallTimeout?: number;
 }
+
+/**
+ * What a media resource is built from.
+ *
+ * A URL is streamed by the browser, which owns the transfer for the whole life
+ * of the element. Bytes are already owned by the application - a download, a
+ * container entry, a cached representation - and are wrapped in a blob the
+ * resource holds until it is released.
+ */
+export type MediaAssetSource = { readonly url: string; readonly bytes?: undefined } | { readonly url?: undefined; readonly bytes: ArrayBuffer };
 
 /** Diagnostic messages a media factory reports for each failure mode. */
 export interface MediaLoadMessages {

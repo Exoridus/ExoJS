@@ -1,13 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { Loader } from '#assets/Loader';
-import type { AssetBinding, RendererBinding } from '#extensions/Extension';
-import { materializeAssetBindings, materializeRendererBindings } from '#extensions/materialize';
+import type { RendererBinding } from '#extensions/Extension';
+import { materializeAssetTypes, materializeRendererBindings } from '#extensions/materialize';
 import { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import type { DrawableConstructor, Renderer } from '#rendering/Renderer';
 import { RendererRegistry } from '#rendering/RendererRegistry';
+
+import { testAssetType } from '../assets/test-asset-type';
 
 class FakeDrawable extends Drawable {}
 
@@ -55,30 +57,34 @@ describe('rollback behaviour', () => {
 
   it('asset setup error: original error propagates', () => {
     const loader = new Loader();
-    const binding: AssetBinding = {
-      ctor: class FakeAsset {} as never,
-      create: () => {
-        throw new Error('asset factory failed');
-      },
+    const failingType = testAssetType({
+      id: 'failingType',
+      create: async source => source,
+    });
+
+    failingType.createFactory = (): never => {
+      throw new Error('asset factory failed');
     };
 
-    expect(() => materializeAssetBindings(loader, [binding])).toThrow('asset factory failed');
+    expect(() => materializeAssetTypes(loader, [failingType])).toThrow('asset factory failed');
     loader.destroy();
   });
 
   it('asset setup error: loader is destroyed (unpublished)', () => {
     const loader = new Loader();
     const destroySpy = vi.spyOn(loader, 'destroy');
-    const binding: AssetBinding = {
-      ctor: class FakeAsset {} as never,
-      create: () => {
-        throw new Error('factory failed');
-      },
+    const failingType = testAssetType({
+      id: 'failingType',
+      create: async source => source,
+    });
+
+    failingType.createFactory = (): never => {
+      throw new Error('factory failed');
     };
 
     // Simulate Application constructor wrapping
     try {
-      materializeAssetBindings(loader, [binding]);
+      materializeAssetTypes(loader, [failingType]);
     } catch {
       try {
         loader.destroy();

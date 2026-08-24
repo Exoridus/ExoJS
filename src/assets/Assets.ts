@@ -2,8 +2,8 @@ import { logger } from '#core/logging';
 
 import { AssetImpl } from './Asset';
 import type { AnyAssetConfig, AssetDefinitions, CatalogEntry, InferCatalogLeaf, OptionsForKind } from './AssetDefinitions';
-import { createLeaf } from './assetKindRegistry';
-import { resolveKindByPath } from './extensionKindRegistry';
+import { createLeaf } from './catalogLeaf';
+import { builtinLeaf, builtinTypeForPath } from './coreAssetTypes';
 
 // ---------------------------------------------------------------------------
 // Helper types
@@ -157,33 +157,44 @@ export function _readProvenance(catalog: AnyAssets): AssetsProvenance | undefine
 
 /**
  * Normalize a single catalog entry to a plain `{ type, source, ...opts }`
- * config. A bare path string is resolved to its asset type by file suffix;
- * an unregistered/ambiguous suffix throws a guiding
- * error pointing at `Asset.type(...)`, compound suffixes, or extension registration. An
- * already-constructed `Asset` contributes its `_config`; a plain config passes
- * through unchanged.
+ * config. A bare path string is resolved to its asset type by file suffix,
+ * against the built-in table alone - a catalog is built with no application, so
+ * a type an application installs of its own is unknown here, and a suffix no
+ * built-in claims throws a guiding error. An already-constructed `Asset`
+ * contributes its `_config`; a plain config passes through unchanged.
  */
 export function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
   if (typeof value === 'string') {
-    const type = resolveKindByPath(value);
+    const type = builtinTypeForPath(value);
+
     if (type === undefined) {
       throw new Error(
-        `Assets: no asset type is registered for the extension of "${value}". ` +
-          `Annotate it with Asset.type(...), use a compound suffix, or register the type's extension (registerExtensionKind / an AssetBinding).`,
+        `Assets: no built-in asset type claims the extension of "${value}". ` +
+          `Name it with Asset.type(...) or with the type's own asset(...), or use a compound suffix.`,
       );
     }
+
     const config = { type, source: value };
+
     return config as AnyAssetConfig;
   }
+
   return value instanceof AssetImpl ? value._config : (value as AnyAssetConfig);
 }
 
-/** Materialize one catalog entry into its meta-stamped handle-hybrid leaf. */
+/**
+ * Materialize one catalog entry into its meta-stamped handle-hybrid leaf.
+ *
+ * A catalog is built without an application, so only the built-in types are
+ * resolvable by name here. A type an application installs of its own is reached
+ * through the descriptor its own `asset(...)` minted, which carries it.
+ */
 function createEntryLeaf(value: CatalogEntry): object {
   const { type, source, ...rest } = _normalizeEntry(value);
   const opts = Object.keys(rest).length > 0 ? rest : undefined;
+  const leaf = value instanceof AssetImpl ? (value._assetType?.leaf ?? builtinLeaf(type)) : builtinLeaf(type);
 
-  return createLeaf(type, source, opts);
+  return createLeaf(leaf, type, source, opts);
 }
 
 /**

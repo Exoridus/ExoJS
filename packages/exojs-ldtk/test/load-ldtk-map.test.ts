@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
 
-import { Asset, type AssetLoaderContext, logger, type Texture } from '@codexo/exojs';
+import { Asset, type AssetFactoryContext, logger, type Texture } from '@codexo/exojs';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { LdtkData } from '../src/LdtkData';
@@ -38,29 +38,34 @@ function fakeTexture(): Texture {
   } as unknown as Texture;
 }
 
+/**
+ * A dependency scope that answers a `texture` request with a blank atlas and a
+ * `json` request from the registered fixtures - the two kinds of asset an LDtk
+ * load acquires through its own scope.
+ */
 function makeContext(fixtures: Record<string, unknown>) {
-  const loaderLoad = vi.fn(
-    async (_token: unknown, _url: string): Promise<Texture> => fakeTexture(),
-  );
-
-  const fetchJson = vi.fn(async (source: string): Promise<unknown> => {
+  const textureLoad = vi.fn((_asset: unknown): Texture => fakeTexture());
+  const jsonLoad = vi.fn(async (source: string): Promise<unknown> => {
     if (Object.hasOwn(fixtures, source)) return fixtures[source];
     throw new Error(`load-ldtk-map.test: no fixture registered for source "${source}"`);
   });
 
-  const context: AssetLoaderContext = {
-    loader: { load: loaderLoad } as unknown as AssetLoaderContext['loader'],
-    scope: { load: loaderLoad } as unknown as AssetLoaderContext['scope'],
-    resourceKey: 'test',
-    sourceKey: 'test',
-    locator: 'url:test',
-    resolveUrl: (source: string) => source,
-    fetchText: vi.fn(),
-    fetchArrayBuffer: vi.fn(),
-    fetchJson: fetchJson as AssetLoaderContext['fetchJson'],
-  };
+  const load = vi.fn(async (asset: unknown): Promise<unknown> => {
+    const { type, source } = (asset as { _config: { type: string; source: string } })._config;
 
-  return { context, loaderLoad };
+    return type === 'json' ? jsonLoad(source) : textureLoad(asset);
+  });
+
+  const contextFor = (source: string): AssetFactoryContext =>
+    ({
+      source,
+      resourceKey: `test|${source}`,
+      sourceKey: `url:${source}`,
+      locator: `url:${source}`,
+      dependencies: { load } as unknown as AssetFactoryContext['dependencies'],
+    }) as AssetFactoryContext;
+
+  return { contextFor, loaderLoad: textureLoad, jsonLoad };
 }
 
 const ABS_SOURCE = 'https://example.com/maps/world.ldtk';
@@ -73,45 +78,45 @@ describe('loadLdtkMap — happy path (absolute source)', () => {
   }
 
   it('returns an LdtkMap with one TileMap per level', async () => {
-    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(ABS_SOURCE));
     expect(map).toBeInstanceOf(LdtkMap);
     expect(map.levels).toHaveLength(1);
   });
 
   it('stores the source URL on the returned map', async () => {
-    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(ABS_SOURCE));
     expect(map.source).toBe(ABS_SOURCE);
   });
 
   it('fetches the .ldtk JSON from the source', async () => {
-    const { context: ctx } = context();
-    await loadLdtkMap(ABS_SOURCE, ctx);
-    expect(ctx.fetchJson).toHaveBeenCalledWith(ABS_SOURCE);
+    const { contextFor, jsonLoad } = context();
+    await loadLdtkMap(contextFor(ABS_SOURCE));
+    expect(jsonLoad).toHaveBeenCalledWith(ABS_SOURCE);
   });
 
   it('loads the tileset atlas image resolved against the source URL', async () => {
-    const { context: ctx, loaderLoad } = context();
-    await loadLdtkMap(ABS_SOURCE, ctx);
+    const { contextFor, loaderLoad } = context();
+    await loadLdtkMap(contextFor(ABS_SOURCE));
     // resolveLdtkUrl('tiles.png', 'https://example.com/maps/world.ldtk')
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://example.com/maps/tiles.png'));
   });
 
   it('populates the Tiles layer with the gridTiles once the tileset is available', async () => {
-    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(ABS_SOURCE));
     const tilesLayer = map.levels[0]!.layers.find(l => l.name === 'Tiles')!;
     // fixture places 2 gridTiles
     expect(tilesLayer.countNonEmptyTiles()).toBe(2);
   });
 
   it('exposes entity layers as ObjectLayers', async () => {
-    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(ABS_SOURCE));
     const objectLayers = map.levels[0]!.objectLayers;
     expect(objectLayers).toHaveLength(1);
     expect(objectLayers[0]!.objects[0]!.type).toBe('Player');
   });
 
   it('never adds an ldtkWorldIid property key for a single-world document (backward-compat guard)', async () => {
-    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(ABS_SOURCE));
     expect(Object.hasOwn(map.levels[0]!.properties, 'ldtkWorldIid')).toBe(false);
   });
 });
@@ -124,27 +129,27 @@ describe('loadLdtkMap — multi-world (worlds[] present)', () => {
   }
 
   it('flattens every world into map.levels, in world order', async () => {
-    const map = await loadLdtkMap(MULTI_WORLD_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(MULTI_WORLD_SOURCE));
     expect(map.levels).toHaveLength(3);
     expect(map.levels.map(l => l.name)).toEqual(['A_Level1', 'A_Level2', 'B_Level1']);
   });
 
   it("tags each level's properties with its owning world's iid", async () => {
-    const map = await loadLdtkMap(MULTI_WORLD_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(MULTI_WORLD_SOURCE));
     expect(map.levels[0]!.properties['ldtkWorldIid']).toBe('world-a-iid');
     expect(map.levels[1]!.properties['ldtkWorldIid']).toBe('world-a-iid');
     expect(map.levels[2]!.properties['ldtkWorldIid']).toBe('world-b-iid');
   });
 
   it('finds levels across worlds via getLevelByName', async () => {
-    const map = await loadLdtkMap(MULTI_WORLD_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(MULTI_WORLD_SOURCE));
     expect(map.getLevelByName('A_Level1')).toBe(map.levels[0]);
     expect(map.getLevelByName('B_Level1')).toBe(map.levels[2]);
     expect(map.getLevelByName('Missing')).toBeUndefined();
   });
 
   it('populates tile/entity data for a level nested inside a world (defs shared at root)', async () => {
-    const map = await loadLdtkMap(MULTI_WORLD_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(MULTI_WORLD_SOURCE));
     const tilesLayer = map.levels[0]!.layers.find(l => l.name === 'Tiles')!;
     expect(tilesLayer.countNonEmptyTiles()).toBe(2);
     expect(map.levels[0]!.objectLayers[0]!.objects[0]!.type).toBe('Player');
@@ -255,13 +260,13 @@ describe('loadLdtkMap — multi-world with an external (.ldtkl) level', () => {
   }
 
   it('fetches the external .ldtkl file for the level nested inside a world', async () => {
-    const { context: ctx } = context();
-    await loadLdtkMap(MULTI_SOURCE, ctx);
-    expect(ctx.fetchJson).toHaveBeenCalledWith(EXTERNAL_URL);
+    const { contextFor, jsonLoad } = context();
+    await loadLdtkMap(contextFor(MULTI_SOURCE));
+    expect(jsonLoad).toHaveBeenCalledWith(EXTERNAL_URL);
   });
 
   it('merges the resolved external level into map.levels alongside the inline one', async () => {
-    const map = await loadLdtkMap(MULTI_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(MULTI_SOURCE));
     expect(map.levels).toHaveLength(2);
     expect(map.levels.map(l => l.name)).toEqual(['A_External', 'B_Inline']);
 
@@ -271,7 +276,7 @@ describe('loadLdtkMap — multi-world with an external (.ldtkl) level', () => {
   });
 
   it("still tags the externally-resolved level with its owning world's iid", async () => {
-    const map = await loadLdtkMap(MULTI_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(MULTI_SOURCE));
     expect(map.levels[0]!.properties['ldtkWorldIid']).toBe('world-a-iid');
     expect(map.levels[1]!.properties['ldtkWorldIid']).toBe('world-b-iid');
   });
@@ -353,13 +358,13 @@ describe('loadLdtkMap — external levels (.ldtkl)', () => {
   }
 
   it('fetches the external .ldtkl file for a level with null layerInstances', async () => {
-    const { context: ctx } = context();
-    await loadLdtkMap(ABS_SOURCE, ctx);
-    expect(ctx.fetchJson).toHaveBeenCalledWith(EXTERNAL_URL);
+    const { contextFor, jsonLoad } = context();
+    await loadLdtkMap(contextFor(ABS_SOURCE));
+    expect(jsonLoad).toHaveBeenCalledWith(EXTERNAL_URL);
   });
 
   it('merges the external layerInstances into the level before conversion (no longer empty)', async () => {
-    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(ABS_SOURCE));
     const level = map.levels[0]!;
     expect(level.objectLayers).toHaveLength(1);
     expect(level.objectLayers[0]!.objects).toHaveLength(1);
@@ -367,7 +372,7 @@ describe('loadLdtkMap — external levels (.ldtkl)', () => {
   });
 
   it('prefers the external fieldInstances over the stale root copy', async () => {
-    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(ABS_SOURCE));
     const level = map.levels[0]!;
     expect(level.properties['difficulty']).toBe('hard');
     expect(level.properties['stale']).toBeUndefined();
@@ -424,7 +429,7 @@ describe('loadLdtkMap — external level omits fieldInstances entirely', () => {
   }
 
   it("falls back to the root level's fieldInstances when the external payload has none", async () => {
-    const map = await loadLdtkMap(ABS_SOURCE, context().context);
+    const map = await loadLdtkMap(context().contextFor(ABS_SOURCE));
     expect(map.levels[0]!.properties['kept']).toBe('root-value');
   });
 });
@@ -477,9 +482,9 @@ describe('loadLdtkMap — tilesets without an atlas image', () => {
   };
 
   it('does not call the loader and leaves tile layers empty', async () => {
-    const { context, loaderLoad } = makeContext({ [ABS_SOURCE]: fixture });
+    const { contextFor, loaderLoad } = makeContext({ [ABS_SOURCE]: fixture });
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
-    const map = await loadLdtkMap(ABS_SOURCE, context);
+    const map = await loadLdtkMap(contextFor(ABS_SOURCE));
 
     expect(loaderLoad).not.toHaveBeenCalled();
     const tilesLayer = map.levels[0]!.layers[0]!;
@@ -489,10 +494,10 @@ describe('loadLdtkMap — tilesets without an atlas image', () => {
   });
 
   it('warns instead of dropping the tileset silently', async () => {
-    const { context } = makeContext({ [ABS_SOURCE]: fixture });
+    const { contextFor } = makeContext({ [ABS_SOURCE]: fixture });
     const warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => {});
 
-    await loadLdtkMap(ABS_SOURCE, context);
+    await loadLdtkMap(contextFor(ABS_SOURCE));
 
     const messages = warnSpy.mock.calls.map(call => String(call[0]));
 
@@ -550,18 +555,18 @@ describe('loadLdtkMap — atlas too small for any tile', () => {
   };
 
   it('throws LdtkFormatError naming the tileset instead of dropping it', async () => {
-    const { context, loaderLoad } = makeContext({ [ABS_SOURCE]: fixture });
+    const { contextFor, loaderLoad } = makeContext({ [ABS_SOURCE]: fixture });
 
-    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(LdtkFormatError);
+    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(LdtkFormatError);
 
     // The texture load happens before the geometry check, so it IS requested.
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://example.com/maps/tiny.png'));
   });
 
   it('names the offending tileset and its geometry in the message', async () => {
-    const { context } = makeContext({ [ABS_SOURCE]: fixture });
+    const { contextFor } = makeContext({ [ABS_SOURCE]: fixture });
 
-    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(/Tiny.*8×8.*tileGridSize 16/s);
+    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(/Tiny.*8×8.*tileGridSize 16/s);
   });
 });
 
@@ -589,26 +594,26 @@ describe('loadLdtkMap — relative-source URL resolution', () => {
   });
 
   it('resolves a tileset relPath against a relative .ldtk source instead of throwing', async () => {
-    const { context, loaderLoad } = makeContext({ 'maps/world.ldtk': makeFixture('tiles.png') });
+    const { contextFor, loaderLoad } = makeContext({ 'maps/world.ldtk': makeFixture('tiles.png') });
 
-    await expect(loadLdtkMap('maps/world.ldtk', context)).resolves.toBeDefined();
+    await expect(loadLdtkMap(contextFor('maps/world.ldtk'))).resolves.toBeDefined();
 
     // The texture is requested at the source-relative path, still relative.
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'maps/tiles.png'));
   });
 
   it('collapses ../ segments in a relPath against a relative source', async () => {
-    const { context, loaderLoad } = makeContext({ 'maps/world.ldtk': makeFixture('../art/tiles.png') });
+    const { contextFor, loaderLoad } = makeContext({ 'maps/world.ldtk': makeFixture('../art/tiles.png') });
 
-    await loadLdtkMap('maps/world.ldtk', context);
+    await loadLdtkMap(contextFor('maps/world.ldtk'));
 
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'art/tiles.png'));
   });
 
   it('still resolves against an absolute source (unchanged behaviour)', async () => {
-    const { context, loaderLoad } = makeContext({ 'https://example.com/maps/world.ldtk': makeFixture('tiles.png') });
+    const { contextFor, loaderLoad } = makeContext({ 'https://example.com/maps/world.ldtk': makeFixture('tiles.png') });
 
-    await loadLdtkMap('https://example.com/maps/world.ldtk', context);
+    await loadLdtkMap(contextFor('https://example.com/maps/world.ldtk'));
 
     expect(loaderLoad).toHaveBeenCalledWith(Asset.type('texture', 'https://example.com/maps/tiles.png'));
   });
@@ -620,22 +625,22 @@ describe('loadLdtkMap — structural validation', () => {
   });
 
   it('throws a typed LdtkFormatError for an empty document', async () => {
-    const { context } = makeContext({ [ABS_SOURCE]: {} });
-    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(LdtkFormatError);
+    const { contextFor } = makeContext({ [ABS_SOURCE]: {} });
+    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(LdtkFormatError);
   });
 
   it('names the source and the offending property path', async () => {
     const broken = JSON.parse(JSON.stringify(loadFixture('world.ldtk'))) as any;
     broken.levels[0].layerInstances[0].gridTiles[0].t = 'first';
-    const { context } = makeContext({ [ABS_SOURCE]: broken });
-    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(
+    const { contextFor } = makeContext({ [ABS_SOURCE]: broken });
+    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(
       /world\.ldtk" at levels\[0\]\.layerInstances\[0\]\.gridTiles\[0\]\.t/,
     );
   });
 
   it('does not fetch tileset images for a document that fails validation', async () => {
-    const { context, loaderLoad } = makeContext({ [ABS_SOURCE]: { jsonVersion: '1.5.3', defs: {}, levels: [] } });
-    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(LdtkFormatError);
+    const { contextFor, loaderLoad } = makeContext({ [ABS_SOURCE]: { jsonVersion: '1.5.3', defs: {}, levels: [] } });
+    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(LdtkFormatError);
     expect(loaderLoad).not.toHaveBeenCalled();
   });
 
@@ -650,12 +655,12 @@ describe('loadLdtkMap — structural validation', () => {
       }],
     };
     const external = { identifier: 'Level_0', uid: 1, iid: 'iid-1', worldX: 0, worldY: 0, pxWid: 16, pxHei: 'tall', layerInstances: [] };
-    const { context } = makeContext({
+    const { contextFor } = makeContext({
       [ABS_SOURCE]: root,
       'https://example.com/maps/levels/Level_0.ldtkl': external,
     });
 
-    await expect(loadLdtkMap(ABS_SOURCE, context)).rejects.toThrow(
+    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(
       /levels\/Level_0\.ldtkl" at pxHei/,
     );
   });

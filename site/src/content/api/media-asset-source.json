@@ -1,0 +1,144 @@
+{
+  "title": "MediaAssetSource",
+  "description": "What a media resource is built from. A URL is streamed by the browser, which owns the transfer for the whole life of the element. Bytes are already owned by the application - a download, a container entry, a cached representation - and are wrapped in a blob the resource holds until it is released.",
+  "symbol": "MediaAssetSource",
+  "kind": "type",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "What a media resource is built from.",
+        "A URL is streamed by the browser, which owns the transfer for the whole life of the element. Bytes are already owned by the application - a download, a container entry, a cached representation - and are wrapped in a blob the resource holds until it is released."
+      ],
+      "importLine": "import { MediaAssetSource } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "MediaAssetSource",
+          "signature": "{ bytes: ArrayBuffer; url?: undefined } | { bytes?: undefined; url: string }",
+          "signatureTokens": [
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bytes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ArrayBuffer",
+              "kind": "type"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "url",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "bytes",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": "; ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "url",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/factories/mediaSource.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/mediaSource.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/factories/mediaSource.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/mediaSource.ts"
+}

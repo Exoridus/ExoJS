@@ -1,7 +1,6 @@
 // Side-effect-free public API for @codexo/exojs-aseprite.
 // No registration is performed on import.
 
-export { asepriteBinding,AsepriteFormatError } from './asepriteBinding';
 export type {
   AsepriteArrayData,
   AsepriteData,
@@ -19,6 +18,7 @@ export type {
 export { isAsepriteArrayData } from './AsepriteData';
 export { asepriteExtension } from './asepriteExtension';
 export { AsepriteSheet } from './AsepriteSheet';
+export { AsepriteAssetType, AsepriteFormatError, asepriteType } from './asepriteType';
 
 // ── Module augmentation - typed load calls ────────────────────────────────────
 import type { AsepriteSheet } from './AsepriteSheet';
@@ -28,8 +28,8 @@ declare module '@codexo/exojs' {
     asepriteSheet: {
       resource: AsepriteSheet;
       config: { source: string };
-      // No `seamless` adapter on `asepriteBinding`, so `defineAsset` defaults
-      // this to a value type: its leaf is an `AssetRef<AsepriteSheet>`.
+      // `asepriteType` keeps the default leaf, so its catalog handle is an
+      // `AssetRef<AsepriteSheet>` rather than the sheet itself.
       isValue: true;
     };
   }

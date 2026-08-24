@@ -1,9 +1,10 @@
-import type { AssetDefinitions } from './AssetDefinitions';
+import type { AssetTypeName } from './AssetDefinitions';
 import type { AssetRef } from './AssetRef';
 
 /** Descriptor metadata stamped onto a handle-hybrid catalog leaf. */
 export interface AssetMeta {
-  readonly kind: keyof AssetDefinitions;
+  /** The id of the type that minted the leaf: a built-in key, or a type an application installed of its own. */
+  readonly kind: AssetTypeName;
   readonly src: string;
   readonly opts?: unknown;
 }

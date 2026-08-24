@@ -6,11 +6,11 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 47,
+  "memberCount": 62,
   "counts": {
     "constructors": 0,
-    "methods": 34,
-    "properties": 13,
+    "methods": 33,
+    "properties": 29,
     "events": 0
   },
   "sections": [
@@ -729,93 +729,6 @@
           ],
           "returnType": "Promise<AudioBuffer>",
           "description": "Decode raw audio bytes into an AudioBuffer using the shared OfflineAudioContext. The context's sample rate matches the live AudioContext when one exists, else defaults to 44.1 kHz - decoding never forces a live context into existence. Note: on some older mobile WebKit versions decodeAudioData requires a running (live) context - decoding may fail with a browser-level error rather than an ExoJS-shaped error in those environments."
-        },
-        {
-          "name": "defineAsset",
-          "signature": "defineAsset(descriptor: DefineAssetDescriptor<Result, Options>): AssetBinding<Result, Options>",
-          "signatureTokens": [
-            {
-              "text": "defineAsset",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "descriptor",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "DefineAssetDescriptor",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Result",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Options",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "AssetBinding",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Result",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Options",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "descriptor",
-              "type": "DefineAssetDescriptor<Result, Options>",
-              "optional": false
-            }
-          ],
-          "returnType": "AssetBinding<Result, Options>",
-          "description": "Declare a built-in asset type in one place. For a **leaf-capable** type - one with a SeamlessAdapter (resource) or isValue: true (value) - this registers its placeholder strategy and suffix→type inference GLOBALLY at import time, so a loader-free Assets.from resolves it before any Application exists. A **non-leaf** resource type (isValue: false and no adapter - e.g. bmFont, font) has no placeholder strategy, so it is deliberately NOT registered globally: its bare path cannot be inferred and must be declared via Asset.type(...) or an explicit config. Its extensions still travel on the returned binding for the per-Loader map. The returned AssetBinding flows through the unchanged materializeAssetBindings path exactly like any extension package's binding - defineAsset adds no second per-loader registration channel."
         },
         {
           "name": "formatShaderError",
@@ -1926,6 +1839,48 @@
           "description": "Raw bytes, kept and handed on unchanged."
         },
         {
+          "name": "binaryType",
+          "signature": "binaryType: BinaryAssetType",
+          "signatureTokens": [
+            {
+              "text": "binaryType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BinaryAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in binary asset type."
+        },
+        {
+          "name": "bmFontType",
+          "signature": "bmFontType: BmFontAssetType",
+          "signatureTokens": [
+            {
+              "text": "bmFontType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "BmFontAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in bmFont asset type."
+        },
+        {
           "name": "buildInfo",
           "signature": "buildInfo: BuildInfo",
           "signatureTokens": [
@@ -1978,6 +1933,102 @@
           "params": [],
           "returnType": null,
           "description": "The shared miss result. Frozen and reusable, so a store that misses allocates nothing."
+        },
+        {
+          "name": "coreAssetTypes",
+          "signature": "coreAssetTypes: readonly AnyAssetType[]",
+          "signatureTokens": [
+            {
+              "text": "coreAssetTypes",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "readonly",
+              "kind": "keyword"
+            },
+            {
+              "text": " ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AnyAssetType",
+              "kind": "type"
+            },
+            {
+              "text": "[]",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The asset types every Application installs. The set is fixed at build time and cannot be added to or replaced at runtime: a type an application brings of its own is installed alongside these, on that application only. Their ids are short rather than reverse-DNS because the engine owns them, and because they double as the cache namespaces a persistent store writes under. A type is listed unconditionally even where the browser API behind it may be absent. Constructing the type touches nothing; only loading an asset of it does, and a missing API should fail that load rather than silently make the type unknown - which is what a conditional list did, leaving the type-level suffix table claiming a type the runtime had never installed."
+        },
+        {
+          "name": "csvType",
+          "signature": "csvType: CsvAssetType",
+          "signatureTokens": [
+            {
+              "text": "csvType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CsvAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in csv asset type."
+        },
+        {
+          "name": "fontType",
+          "signature": "fontType: FontAssetType",
+          "signatureTokens": [
+            {
+              "text": "fontType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in font asset type."
+        },
+        {
+          "name": "imageType",
+          "signature": "imageType: ImageAssetType",
+          "signatureTokens": [
+            {
+              "text": "imageType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "ImageAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in image asset type."
         },
         {
           "name": "INSTANCE_TRANSFORM_GLSL",
@@ -2063,6 +2114,27 @@
           "description": "JSON, stored as the text that arrived rather than as the parsed value. Keeping the text is what makes the stored form byte-exact: a parsed value round-trips through key order, number formatting and undefined handling that the response never had. Parsing is cheap enough to repeat on read."
         },
         {
+          "name": "jsonType",
+          "signature": "jsonType: JsonAssetType",
+          "signatureTokens": [
+            {
+              "text": "jsonType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "JsonAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in json asset type."
+        },
+        {
           "name": "logger",
           "signature": "logger: Logger",
           "signatureTokens": [
@@ -2103,6 +2175,27 @@
           "params": [],
           "returnType": null,
           "description": "Maximum number of simultaneous tracked pointers (mouse / touch / pen)."
+        },
+        {
+          "name": "musicType",
+          "signature": "musicType: MusicAssetType",
+          "signatureTokens": [
+            {
+              "text": "musicType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MusicAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in music asset type."
         },
         {
           "name": "onAudioContextReady",
@@ -2168,6 +2261,69 @@
           "description": "Current scene-serialization format version. Written into every SerializedScene and checked on deserialize so saved data can outlive the code that produced it (see the migration chain in migrate)."
         },
         {
+          "name": "soundType",
+          "signature": "soundType: SoundAssetType",
+          "signatureTokens": [
+            {
+              "text": "soundType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SoundAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in sound asset type."
+        },
+        {
+          "name": "subtitleType",
+          "signature": "subtitleType: SubtitleAssetType",
+          "signatureTokens": [
+            {
+              "text": "subtitleType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SubtitleAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in subtitle asset type, covering both .vtt and .srt."
+        },
+        {
+          "name": "svgType",
+          "signature": "svgType: SvgAssetType",
+          "signatureTokens": [
+            {
+              "text": "svgType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "SvgAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in svg asset type."
+        },
+        {
           "name": "TAU",
           "signature": "TAU: number",
           "signatureTokens": [
@@ -2220,6 +2376,111 @@
           "params": [],
           "returnType": null,
           "description": "UTF-8 text, stored as text."
+        },
+        {
+          "name": "textType",
+          "signature": "textType: TextAssetType",
+          "signatureTokens": [
+            {
+              "text": "textType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in text asset type."
+        },
+        {
+          "name": "textureType",
+          "signature": "textureType: TextureAssetType",
+          "signatureTokens": [
+            {
+              "text": "textureType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "TextureAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in texture asset type."
+        },
+        {
+          "name": "videoType",
+          "signature": "videoType: VideoAssetType",
+          "signatureTokens": [
+            {
+              "text": "videoType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "VideoAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in video asset type."
+        },
+        {
+          "name": "wasmType",
+          "signature": "wasmType: WasmAssetType",
+          "signatureTokens": [
+            {
+              "text": "wasmType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "WasmAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in wasm asset type."
+        },
+        {
+          "name": "xmlType",
+          "signature": "xmlType: XmlAssetType",
+          "signatureTokens": [
+            {
+              "text": "xmlType",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "XmlAssetType",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The built-in xml asset type."
         }
       ],
       "paragraphs": [],

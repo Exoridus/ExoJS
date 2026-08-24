@@ -1,6 +1,6 @@
 {
   "title": "DecodedImage",
-  "description": "Decoded image result from ImageFactory.create.",
+  "description": "A decoded raster image: an ImageBitmap where the environment supports one.",
   "symbol": "DecodedImage",
   "kind": "type",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Decoded image result from ImageFactory.create."
+        "A decoded raster image: an ImageBitmap where the environment supports one."
       ],
       "importLine": "import { DecodedImage } from '@codexo/exojs'",
       "sourceLink": null

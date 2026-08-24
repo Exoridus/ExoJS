@@ -1,6 +1,8 @@
 import { SoundFactory } from '#assets/factories/SoundFactory';
 import { Sound } from '#audio/Sound';
 
+import { factoryContext } from './factory-context';
+
 // SoundFactory.create() decodes bytes via the shared OfflineAudioContext
 // (`decodeAudioData` from '#audio/audio-context'). jsdom has no real audio
 // decoder, so the module is mocked wholesale - mirroring the `{ duration }`
@@ -21,26 +23,11 @@ describe('SoundFactory', () => {
     decodeAudioDataMock.mockClear();
   });
 
-  test('storageName is "sound"', () => {
-    const factory = new SoundFactory();
-    expect(factory.storageName).toBe('sound');
-  });
-
-  test('process() reads the response body as an ArrayBuffer', async () => {
-    const factory = new SoundFactory();
-    const buffer = new ArrayBuffer(8);
-    const response = { arrayBuffer: async () => buffer } as unknown as Response;
-
-    const result = await factory.process(response);
-
-    expect(result).toBe(buffer);
-  });
-
   test('create() decodes the buffer and resolves with a Sound', async () => {
     const factory = new SoundFactory();
     const buffer = new ArrayBuffer(8);
 
-    const sound = await factory.create(buffer);
+    const sound = await factory.create(buffer, factoryContext());
 
     expect(sound).toBeInstanceOf(Sound);
     expect(decodeAudioDataMock).toHaveBeenCalledWith(buffer);
@@ -50,9 +37,12 @@ describe('SoundFactory', () => {
   test('create() forwards playbackOptions to the Sound', async () => {
     const factory = new SoundFactory();
 
-    const sound = await factory.create(new ArrayBuffer(8), {
-      playbackOptions: { volume: 0.6, loop: true },
-    });
+    const sound = await factory.create(
+      new ArrayBuffer(8),
+      factoryContext({
+        playbackOptions: { volume: 0.6, loop: true },
+      }),
+    );
 
     expect(sound.volume).toBe(0.6);
     expect(sound.loop).toBe(true);
@@ -61,7 +51,7 @@ describe('SoundFactory', () => {
   test('create() forwards a custom poolSize', async () => {
     const factory = new SoundFactory();
 
-    const sound = await factory.create(new ArrayBuffer(8), { poolSize: 3 });
+    const sound = await factory.create(new ArrayBuffer(8), factoryContext({ poolSize: 3 }));
 
     expect(sound.poolSize).toBe(3);
   });
@@ -69,9 +59,12 @@ describe('SoundFactory', () => {
   test('create() forwards sprite definitions', async () => {
     const factory = new SoundFactory();
 
-    const sound = await factory.create(new ArrayBuffer(8), {
-      sprites: { hit: { start: 0, end: 1 } },
-    });
+    const sound = await factory.create(
+      new ArrayBuffer(8),
+      factoryContext({
+        sprites: { hit: { start: 0, end: 1 } },
+      }),
+    );
 
     // Sprites don't expose a public getter - exercised indirectly by asserting
     // construction with a valid sprite definition does not throw, and that an
@@ -83,9 +76,12 @@ describe('SoundFactory', () => {
     const factory = new SoundFactory();
 
     await expect(
-      factory.create(new ArrayBuffer(8), {
-        sprites: { tooLong: { start: 0, end: 999 } },
-      }),
+      factory.create(
+        new ArrayBuffer(8),
+        factoryContext({
+          sprites: { tooLong: { start: 0, end: 999 } },
+        }),
+      ),
     ).rejects.toThrow();
   });
 
@@ -94,10 +90,10 @@ describe('SoundFactory', () => {
     decodeAudioDataMock.mockRejectedValueOnce(decodeError);
     const factory = new SoundFactory();
 
-    const promise = factory.create(new ArrayBuffer(8));
+    const promise = factory.create(new ArrayBuffer(8), factoryContext());
 
     await expect(promise).rejects.toThrow(
-      'Failed to decode audio data: corrupt audio data (if loaded with the wrong Asset.type, this file may not be an audio format at all).',
+      'Failed to decode audio data: corrupt audio data (if loaded as the wrong asset type, this file may not be an audio format at all).',
     );
     await expect(promise).rejects.toMatchObject({ cause: decodeError });
   });

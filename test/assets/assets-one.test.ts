@@ -1,4 +1,4 @@
-import '#assets/coreAssetBindings';
+import '#assets/coreAssetTypes';
 
 import { describe, expect, it } from 'vitest';
 

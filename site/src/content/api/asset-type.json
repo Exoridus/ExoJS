@@ -1,16 +1,16 @@
 {
   "title": "AssetType",
-  "description": "A first-class asset type: everything the loader needs to know about one kind of asset, in one value. An instance is an immutable descriptor. Installing it on an Application - by listing it in an Extension's `assets` - is what makes it loadable there, and only there: two applications in one process may have entirely different type sets. Installation calls createFactory once, so the mutable half of a type lives per application and is destroyed with it. The type owns four separable decisions, and no more: - what it is called (id) and which file suffixes name it (extensions); - when two requests are the same runtime resource (resourceIdentity); - when two requests acquire the same source data (sourceIdentity); - how a representation is read (codec), laid out in a cache (layout) and turned into a resource (createFactory). Acquisition, caching and residency are the loader's, and the type is deliberately given no way to reach them.",
+  "description": "A first-class asset type: everything the loader needs to know about one kind of asset, in one value. An instance is an immutable descriptor. Installing it on an Application - by listing it in an Extension's `assets` - is what makes it loadable there, and only there: two applications in one process may have entirely different type sets. Installation calls createFactory once, so the mutable half of a type lives per application and is destroyed with it. The type owns four separable decisions, and no more: - what it is called (id) and which file suffixes name it (extensions); - when two requests are the same runtime resource (resourceIdentity); - when two requests acquire the same source data (sourceIdentity); - how a representation is read (codec), laid out in a cache (layout) and turned into a resource (createFactory); - what a catalog hands out before the payload arrives (leaf). Acquisition, caching and residency are the loader's, and the type is deliberately given no way to reach them.",
   "symbol": "AssetType",
   "kind": "class",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "advanced",
-  "memberCount": 9,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
-    "methods": 4,
-    "properties": 4,
+    "methods": 5,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -22,7 +22,7 @@
         "A first-class asset type: everything the loader needs to know about one kind of asset, in one value.",
         "An instance is an immutable descriptor. Installing it on an Application - by listing it in an Extension's `assets` - is what makes it loadable there, and only there: two applications in one process may have entirely different type sets. Installation calls createFactory once, so the mutable half of a type lives per application and is destroyed with it.",
         "The type owns four separable decisions, and no more:",
-        "- what it is called (id) and which file suffixes name it (extensions); - when two requests are the same runtime resource (resourceIdentity); - when two requests acquire the same source data (sourceIdentity); - how a representation is read (codec), laid out in a cache (layout) and turned into a resource (createFactory).",
+        "- what it is called (id) and which file suffixes name it (extensions); - when two requests are the same runtime resource (resourceIdentity); - when two requests acquire the same source data (sourceIdentity); - how a representation is read (codec), laid out in a cache (layout) and turned into a resource (createFactory); - what a catalog hands out before the payload arrives (leaf).",
         "Acquisition, caching and residency are the loader's, and the type is deliberately given no way to reach them."
       ],
       "importLine": "import { AssetType } from '@codexo/exojs'",
@@ -372,6 +372,114 @@
           ],
           "returnType": "string",
           "description": "The part of a request that changes WHICH SOURCE DATA is acquired - a locale, a content variant, an explicit variant token, a known content identity. This is not resourceIdentity. An option that changes only how already-acquired data is interpreted belongs there and must not appear here, or one download would be fetched once per interpretation. The value can outlive the session inside a persistent cache namespace, so it must carry no credentials, no tokens and no request headers. Omit the hook entirely when the locator alone identifies the source."
+        },
+        {
+          "name": "unacquiredSource",
+          "signature": "unacquiredSource?(request: AssetRequest<Options>, url: string): undefined | { source: Source }",
+          "signatureTokens": [
+            {
+              "text": "unacquiredSource",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "request",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetRequest",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Options",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "url",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "undefined",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Source",
+              "kind": "type"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "request",
+              "type": "AssetRequest<Options>",
+              "optional": false
+            },
+            {
+              "name": "url",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "undefined | { source: Source }",
+          "description": "The source for a request the loader must NOT acquire data for. Returning a source skips acquisition completely: nothing is fetched, decoded or cached for that request, codec is never consulted, and the factory receives what this returns, built from the resolved url alone. Returning undefined acquires normally. Two kinds of asset need this. One transports its own data - a media element streaming from a URL, where downloading the whole file up front is exactly what streaming avoids. The other has no source data of its own at all, because it is derived from assets its factory loads as dependencies. The result is wrapped so that a type whose source is legitimately undefined can still say \"do not acquire\"."
         }
       ],
       "paragraphs": [],
@@ -384,11 +492,15 @@
       "members": [
         {
           "name": "codec",
-          "signature": "codec: AssetSourceCodec<Source, Stored>",
+          "signature": "codec?: AssetSourceCodec<Source, Stored>",
           "signatureTokens": [
             {
               "text": "codec",
               "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
             },
             {
               "text": ": ",
@@ -421,7 +533,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "How an acquired representation is read back into the source a factory consumes."
+          "description": "How an acquired representation is read back into the source a factory consumes. Required for every type the loader acquires data for, which is nearly all of them. A type whose unacquiredSource always answers has no representation to read and needs none; a type that reaches acquisition without one fails that load with a message saying so."
         },
         {
           "name": "extensions",
@@ -509,6 +621,39 @@
           "params": [],
           "returnType": null,
           "description": "How an acquired representation is laid out when an application caches it. The default keeps the representation in one record, which is what a codec producing a single value needs. Override it to raise the version when the stored representation changes shape - records written under the old version are then no longer found, and the source is acquired again - or to supply a layout that spreads one representation across several records. Whether anything is cached at all, and where, is the application's decision. A type describes only how its representation would be laid out."
+        },
+        {
+          "name": "leaf",
+          "signature": "leaf: AssetLeaf<Resource>",
+          "signatureTokens": [
+            {
+              "text": "leaf",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetLeaf",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Resource",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "What this type hands out for one of its assets in a catalog, before the payload arrives. The default is a deferred AssetRef. A type whose resource can be handed out empty and healed in place supplies a SeamlessAdapter instead; a type with no meaningful placeholder declares 'none', which also takes its suffixes out of bare-path catalog resolution."
         }
       ],
       "paragraphs": [],

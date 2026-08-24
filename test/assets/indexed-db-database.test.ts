@@ -393,10 +393,10 @@ describe('IndexedDbDatabase', () => {
 
     test('opening an unknown object store rejects with a typed error for the attempted operation', async () => {
       const { IndexedDbDatabase, AssetCacheError } = await loadWithFakeIndexedDb();
-      // A `bindAsset` handler with its own `storageName` that the database was
-      // never configured for lands exactly here: `transaction()`/`objectStore()`
-      // throws synchronously (a `NotFoundError` DOMException in a real browser)
-      // rather than failing an IDBRequest.
+      // A caller naming a store this database was never configured for lands
+      // exactly here: `transaction()`/`objectStore()` throws synchronously (a
+      // `NotFoundError` DOMException in a real browser) rather than failing an
+      // IDBRequest.
       const db = new IndexedDbDatabase('unknown-store-db', 1, ['image']);
 
       const error = await rejection(db.load('does-not-exist', 'hero'));

@@ -99,7 +99,7 @@
       "members": [
         {
           "name": "assets",
-          "signature": "assets?: readonly AssetEntry[]",
+          "signature": "assets?: readonly AnyAssetType[]",
           "signatureTokens": [
             {
               "text": "assets",
@@ -122,7 +122,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AssetEntry",
+              "text": "AnyAssetType",
               "kind": "type"
             },
             {

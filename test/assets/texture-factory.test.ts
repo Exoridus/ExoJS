@@ -3,6 +3,8 @@ import type { MockInstance } from 'vitest';
 import { TextureFactory } from '#assets/factories/TextureFactory';
 import { Texture } from '#rendering/texture/Texture';
 
+import { factoryContext } from './factory-context';
+
 // PNG magic bytes - enough for determineMimeType()'s pattern match without a
 // real, fully-formed PNG payload.
 const PNG_HEADER = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]).buffer;
@@ -43,20 +45,6 @@ describe('TextureFactory', () => {
     vi.restoreAllMocks();
   });
 
-  test('storageName is "texture"', () => {
-    const factory = new TextureFactory();
-    expect(factory.storageName).toBe('texture');
-  });
-
-  test('process() reads the response body as an ArrayBuffer', async () => {
-    const factory = new TextureFactory();
-    const response = { arrayBuffer: async () => PNG_HEADER } as unknown as Response;
-
-    const result = await factory.process(response);
-
-    expect(result).toBe(PNG_HEADER);
-  });
-
   describe('createImageBitmap path', () => {
     test('create() resolves with a Texture wrapping the decoded bitmap', async () => {
       const fakeBitmap = { width: 8, height: 8 };
@@ -66,7 +54,7 @@ describe('TextureFactory', () => {
       );
 
       const factory = new TextureFactory();
-      const texture = await factory.create(PNG_HEADER);
+      const texture = await factory.create(PNG_HEADER, factoryContext());
 
       expect(texture).toBeInstanceOf(Texture);
       expect(texture.width).toBe(8);
@@ -80,7 +68,7 @@ describe('TextureFactory', () => {
       );
 
       const factory = new TextureFactory();
-      const texture = await factory.create(PNG_HEADER, { textureOptions: { flipY: true } });
+      const texture = await factory.create(PNG_HEADER, factoryContext({ textureOptions: { flipY: true } }));
 
       expect(texture.flipY).toBe(true);
     });
@@ -95,7 +83,7 @@ describe('TextureFactory', () => {
     test('create() resolves with a Texture wrapping the HTMLImageElement once "load" fires', async () => {
       const factory = new TextureFactory();
 
-      const promise = factory.create(PNG_HEADER);
+      const promise = factory.create(PNG_HEADER, factoryContext());
       lastImage().dispatchEvent(new Event('load'));
 
       const texture = await promise;
@@ -107,18 +95,18 @@ describe('TextureFactory', () => {
     test('create() rejects with a clear message on "error"', async () => {
       const factory = new TextureFactory();
 
-      const promise = factory.create(PNG_HEADER);
+      const promise = factory.create(PNG_HEADER, factoryContext());
       lastImage().dispatchEvent(new Event('error'));
 
       await expect(promise).rejects.toThrow(
-        'Failed to decode image source — the bytes may be corrupted, an unsupported format, or (if loaded with the wrong Asset.type) not an image at all.',
+        'Failed to decode image source - the bytes may be corrupted, an unsupported format, or (if loaded as the wrong asset type) not an image at all.',
       );
     });
 
     test('create() rejects with a clear message on "abort"', async () => {
       const factory = new TextureFactory();
 
-      const promise = factory.create(PNG_HEADER);
+      const promise = factory.create(PNG_HEADER, factoryContext());
       lastImage().dispatchEvent(new Event('abort'));
 
       await expect(promise).rejects.toThrow('Image loading was canceled.');
@@ -127,7 +115,7 @@ describe('TextureFactory', () => {
     test('create() revokes the object URL once loading settles', async () => {
       const factory = new TextureFactory();
 
-      const promise = factory.create(PNG_HEADER);
+      const promise = factory.create(PNG_HEADER, factoryContext());
       lastImage().dispatchEvent(new Event('load'));
       await promise;
 

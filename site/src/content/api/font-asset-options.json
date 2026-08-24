@@ -1,0 +1,121 @@
+{
+  "title": "FontAssetOptions",
+  "description": "Options accepted by an asset of the built-in `font` type.",
+  "symbol": "FontAssetOptions",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Options accepted by an asset of the built-in `font` type."
+      ],
+      "importLine": "import { FontAssetOptions } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "addToDocument",
+          "signature": "addToDocument?: boolean",
+          "signatureTokens": [
+            {
+              "text": "addToDocument",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "boolean",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether the loaded face is added to document.fonts, making it available to CSS and Canvas immediately. Defaults to true; a face added this way is removed again when the loader is destroyed."
+        },
+        {
+          "name": "descriptors",
+          "signature": "descriptors?: FontFaceDescriptors",
+          "signatureTokens": [
+            {
+              "text": "descriptors",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "FontFaceDescriptors",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "CSS font descriptors (style, weight, stretch, ...)."
+        },
+        {
+          "name": "family",
+          "signature": "family: string",
+          "signatureTokens": [
+            {
+              "text": "family",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "CSS font-family name the FontFace is registered under. Required."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/factories/FontFactory.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/FontFactory.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/factories/FontFactory.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/factories/FontFactory.ts"
+}
