@@ -9,7 +9,7 @@ const hostTimeSource: TimeSource = { now: getPreciseTime };
 /**
  * High-precision clock that accumulates elapsed time while running.
  * Reads the host's monotonic clock unless a {@link TimeSource} is supplied -
- * pass an {@link PlatformAdapter} to follow the application's time, or any
+ * pass an application's platform adapter to follow its time, or any
  * object with a `now()` to drive the clock deterministically from a test. Use
  * {@link Clock.start}, {@link Clock.stop}, {@link Clock.reset}, and
  * {@link Clock.restart} to control the running state; read elapsed time via

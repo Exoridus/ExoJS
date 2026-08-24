@@ -10,6 +10,8 @@
 // `app.capabilities` after `await app.start(...)`); there is no global
 // sync mirror, by design.
 
+import { getWebGl2Context, type RenderSurface } from '#platform/RenderSurface';
+
 /**
  * Which kind of global scope the probes ran in. Capabilities are realm-local:
  * the same browser reports different answers on its main thread and inside a
@@ -196,7 +198,7 @@ export class Capabilities {
  * there is a document, an `OffscreenCanvas` otherwise. `null` when the realm
  * offers neither.
  */
-function createProbeSurface(offscreenOnly = false): HTMLCanvasElement | OffscreenCanvas | null {
+function createProbeSurface(offscreenOnly = false): RenderSurface | null {
   if (!offscreenOnly && hasDocument) {
     return document.createElement('canvas');
   }
@@ -208,11 +210,31 @@ function createProbeSurface(offscreenOnly = false): HTMLCanvasElement | Offscree
   return new OffscreenCanvas(1, 1);
 }
 
+/**
+ * Whether `surface` hands out a WebGL2 context, releasing it again.
+ *
+ * The release matters: browsers cap how many live WebGL contexts a page may
+ * hold and evict the oldest once the cap is reached, so a probe that keeps its
+ * context is one slot the application can no longer use. Two probes run here,
+ * which without this would cost two of them.
+ */
+function acquiresWebGl2(surface: RenderSurface): boolean {
+  const gl = getWebGl2Context(surface);
+
+  if (gl === null) {
+    return false;
+  }
+
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
+
+  return true;
+}
+
 function probeWebGl2(): boolean {
   try {
     const surface = createProbeSurface();
 
-    return surface !== null && surface.getContext('webgl2') !== null;
+    return surface !== null && acquiresWebGl2(surface);
   } catch {
     return false;
   }
@@ -222,7 +244,7 @@ function probeOffscreenWebGl2(): boolean {
   try {
     const surface = createProbeSurface(true);
 
-    return surface !== null && surface.getContext('webgl2') !== null;
+    return surface !== null && acquiresWebGl2(surface);
   } catch {
     return false;
   }

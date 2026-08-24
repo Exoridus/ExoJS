@@ -3164,7 +3164,6 @@ interface WebGpuDataTextureFormatInfo {
   readonly channels: number;
 }
 
-/** Map a {@link RenderTexture} color format to its WebGPU render-target format. */
 /**
  * Whether the source is a canvas whose pixels can be read back from the CPU
  * side, which is what the Safari external-image workaround needs. Both canvas
@@ -3177,6 +3176,7 @@ function isCanvasTextureSource(source: TextureSource): source is HTMLCanvasEleme
   );
 }
 
+/** Map a {@link RenderTexture} color format to its WebGPU render-target format. */
 function webgpuColorTextureFormat(format: ColorTextureFormat): GPUTextureFormat {
   switch (format) {
     case TextureFormat.Rgba8:

@@ -36,8 +36,9 @@ interface ParentStyleSnapshot {
  * than `'fixed'` is inert because there is no parent to track.
  *
  * The owner supplies `onResize`, called when a tracked parent changes size, and
- * is responsible for its own teardown ordering: {@link CanvasSizing.destroy}
- * releases the observer and hands the parent element back the styles it had.
+ * drives teardown in its own order: the observer is released as soon as the
+ * application starts going down, while the parent's styles are handed back
+ * later, once the surface itself is released.
  */
 export class CanvasSizing {
   private readonly _surface: RenderSurface;
@@ -112,15 +113,15 @@ export class CanvasSizing {
 
     switch (mode) {
       case 'fill': {
-        this._observeParent(target => {
-          this._onResize(target.clientWidth, target.clientHeight);
+        this._observeParent((width, height) => {
+          this._onResize(width, height);
         });
         break;
       }
       case 'letterbox': {
         this._observeParent(
-          target => {
-            this._applyLetterboxLayout(target.clientWidth, target.clientHeight);
+          (width, height) => {
+            this._applyLetterboxLayout(width, height);
           },
           target => {
             // Center the canvas in the parent and let the parent background
@@ -181,17 +182,12 @@ export class CanvasSizing {
     }
   }
 
-  public destroy(): void {
-    this.releaseObserver();
-    this.restoreParentStyles();
-  }
-
   /**
    * Track the canvas's parent element, running `onChange` for every non-empty
    * size it reports. `onAttach` runs once, before observation starts, for a
    * mode that has to restyle the parent as well.
    */
-  private _observeParent(onChange: (target: HTMLElement) => void, onAttach?: (target: HTMLElement) => void): void {
+  private _observeParent(onChange: (width: number, height: number) => void, onAttach?: (target: HTMLElement) => void): void {
     const target = this._element?.parentElement;
 
     if (typeof ResizeObserver === 'undefined' || !target) {
@@ -201,8 +197,14 @@ export class CanvasSizing {
     onAttach?.(target);
 
     this._observer = new ResizeObserver(() => {
-      if (target.clientWidth > 0 && target.clientHeight > 0) {
-        onChange(target);
+      // Measured once and passed on: reading the layout box again inside the
+      // handler is a second forced reflow, and a value that could already have
+      // moved on from the one the guard accepted.
+      const width = target.clientWidth;
+      const height = target.clientHeight;
+
+      if (width > 0 && height > 0) {
+        onChange(width, height);
       }
     });
     this._observer.observe(target);
