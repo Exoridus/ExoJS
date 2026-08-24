@@ -449,12 +449,12 @@ export class WebGl2Backend implements RenderBackend {
   /**
    * The application's configured `canvas.pixelRatio`.
    *
-   * Deliberately NOT {@link rootResolution}, even though the two agree in every
-   * ordinary sizing mode. This is the number a rasterizer keys a cache on, and
-   * it has to be stable and quantized to be safe there: under `'letterbox'`
-   * sizing the root target stays at the design size while the backing store
-   * tracks the parent's fitted rectangle, so `rootResolution` is an arbitrary
-   * float that moves on every window resize - keying a glyph atlas on it would
+   * Deliberately NOT {@link rootResolution}, even though the two agree while
+   * the logical view and the render resolution are the same size. This is the
+   * number a rasterizer keys a cache on, and it has to be stable and quantized
+   * to be safe there: a sizing policy that holds the logical view while the
+   * backing store follows the host makes `rootResolution` an arbitrary float
+   * that moves on every window resize, and keying a glyph atlas on it would
    * mint a fresh set of pages per resize step.
    */
   public get surfacePixelRatio(): number {

@@ -57,8 +57,9 @@ export interface PlatformListenerOptions {
  * `backingWidth`/`backingHeight` are the resolution it is actually rendered at.
  *
  * The two differ whenever the surface is scaled for display (a CSS-scaled
- * canvas, a device-pixel-ratio above 1, a letterboxed layout), which is exactly
- * what pointer coordinates have to be mapped through.
+ * canvas, a device-pixel-ratio above 1, a canvas held at a fixed resolution
+ * inside a larger host), which is exactly what pointer coordinates have to be
+ * mapped through.
  */
 export interface PlatformSurfaceMetrics {
   readonly left: number;

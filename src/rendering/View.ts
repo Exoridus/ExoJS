@@ -494,8 +494,8 @@ export class View implements ObservableVectorOwner {
    * {@link Pointer.x}/{@link Pointer.y} and node positions - and applies only
    * the inverse camera transform. The viewport rectangle is intentionally
    * ignored, because design-space input already lives inside the camera's
-   * projection (any letterbox offset was removed upstream when the pointer was
-   * mapped). At the default centered camera this is the identity.
+   * projection - the mapping from the surface to logical pixels happened
+   * upstream. At the default centered camera this is the identity.
    *
    * @param x - X coordinate in design/logical pixels (`0..view.width`).
    * @param y - Y coordinate in design/logical pixels (`0..view.height`).

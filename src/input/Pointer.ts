@@ -66,11 +66,12 @@ export interface PointerPhaseEntry {
 }
 
 /**
- * Map a host-pixel client point into design space - the position-only half of
- * {@link Pointer._computeDesignGeometry}'s conversion, usable without a live
- * {@link Pointer} instance. Used for a context-menu request, which may need
- * to report a design-space position (the keyboard context-menu key, Shift+F10)
- * with no pointer ever having touched the surface to compute it from.
+ * Map a host-pixel client point into the logical coordinate system - the
+ * position-only half of {@link Pointer._computeDesignGeometry}'s conversion,
+ * usable without a live {@link Pointer} instance. Used for a context-menu
+ * request, which may need to report a logical position (the keyboard
+ * context-menu key, Shift+F10) with no pointer ever having touched the surface
+ * to compute it from.
  *
  * @internal
  */
@@ -81,7 +82,7 @@ export function computeDesignPoint(app: Application, platform: PlatformAdapter, 
   const backingStoreX = u * rect.backingWidth;
   const backingStoreY = v * rect.backingHeight;
 
-  return app._backingStoreToDesign(backingStoreX, backingStoreY);
+  return app._backingStoreToLogical(backingStoreX, backingStoreY);
 }
 
 /**
@@ -109,14 +110,14 @@ export enum PointerState {
  * be polled by {@link Input} bindings or read directly by interaction-aware
  * scene nodes.
  *
- * Coordinates are stored in logical/design pixel space - i.e. `app.width`/
+ * Coordinates are stored in the application's logical space - `app.width` /
  * `app.height` units (`0..app.width` × `0..app.height`), matching node
  * positions, the 2-argument {@link View.screenToWorld}, and the active camera.
- * The CSS-pixel event coordinates are mapped through the application's content
- * viewport, so the value is independent of {@link Application.pixelRatio} and of
- * however the canvas is displayed (sizingMode `'fit'`/`'shrink'`/`'letterbox'`,
- * or a CSS transform): a click at the right edge always reads `app.width`. In
- * `'letterbox'` mode the letterbox bars map outside `0..app.width`. The channel
+ * The CSS-pixel event coordinates are mapped through the canvas's display rect,
+ * so the value is independent of {@link Application.pixelRatio}, of the render
+ * resolution, and of however the canvas is scaled for display: a click at its
+ * right edge always reads `app.width`, whichever sizing policy is in play. A
+ * point outside the canvas maps outside `0..app.width` accordingly. The channel
  * writes are normalized to 0..1 (position, size, twist, tilt) for
  * backend-agnostic sampling.
  *
@@ -498,12 +499,11 @@ export class Pointer {
   }
 
   /**
-   * Map a host-pixel pointer event into design space. The event point is first
-   * expressed as a fraction of the surface's display rect, scaled to
-   * backing-store pixels, then routed through
-   * {@link Application._backingStoreToDesign} (which folds in `pixelRatio` and
-   * any letterbox content viewport). The contact size is mapped as a delta
-   * through the same transform.
+   * Map a host-pixel pointer event into the logical coordinate system. The
+   * event point is first expressed as a fraction of the surface's display rect,
+   * scaled to backing-store pixels, then routed through
+   * {@link Application._backingStoreToLogical}. The contact size is mapped as a
+   * delta through the same transform.
    */
   private _computeDesignGeometry(clientX: number, clientY: number, width: number, height: number): { x: number; y: number; width: number; height: number } {
     const app = this._app;
