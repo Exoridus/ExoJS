@@ -1,5 +1,5 @@
 /**
- * Network failures of the built-in cache strategies must be diagnosable.
+ * Network failures of the built-in cache policies must be diagnosable.
  *
  * A flat `Error` collapses three very different situations into one string:
  * the server answered 404, the request never left the machine (offline, DNS,
@@ -10,38 +10,39 @@
  * on that name.
  */
 
+import { AssetCache, type CacheAcquisition } from '#assets/AssetCache';
 import { AssetNetworkError } from '#assets/AssetNetworkError';
-import { CacheFirstStrategy } from '#assets/CacheFirstStrategy';
-import type { CacheStore } from '#assets/CacheStore';
-import type { CacheRequest, CacheStrategy } from '#assets/CacheStrategy';
-import { NetworkOnlyStrategy } from '#assets/NetworkOnlyStrategy';
+import { CacheFirstPolicy, NetworkFirstPolicy, NetworkOnlyPolicy } from '#assets/cachePolicies';
+import type { CachePolicy } from '#assets/CachePolicy';
+import { fetchAsset } from '#assets/fetchAsset';
+import { SingleEntryLayout } from '#assets/SingleEntryLayout';
 
-const makeRequest = (url: string): CacheRequest => ({
-  storageName: 'test',
-  key: 'alias',
-  url,
-  requestOptions: {},
-  factory: {
-    process: vi.fn(async () => 'processed'),
-    create: vi.fn(async () => 'created'),
-  },
-});
+import { createCacheStoreDouble } from './cache-test-doubles';
 
-/** No store ever holds the asset, so `CacheFirstStrategy` always reaches the network. */
-const missingStore = (): CacheStore => ({
-  load: vi.fn(async (): Promise<unknown | null> => null),
-  save: vi.fn(async (): Promise<void> => undefined),
-  delete: vi.fn(async (): Promise<boolean> => true),
-  clear: vi.fn(async (): Promise<boolean> => true),
-  destroy: vi.fn(),
-});
+/**
+ * Resolve one acquisition of `url` through `policy`, against a store that never
+ * holds the asset - so every policy with a network leg reaches it.
+ */
+function acquire(policy: CachePolicy, url: string): Promise<string> {
+  const cache = new AssetCache({ policy, stores: createCacheStoreDouble() });
+  const acquisition: CacheAcquisition<string> = {
+    namespace: 'test',
+    sourceKey: `url:${url}`,
+    layout: SingleEntryLayout.version<string>(1),
+    fetch: async () => (await fetchAsset(url, {})).text(),
+    report: () => undefined,
+  };
 
-const strategies: ReadonlyArray<readonly [string, () => CacheStrategy, () => readonly CacheStore[]]> = [
-  ['CacheFirstStrategy', () => new CacheFirstStrategy(), () => [missingStore()]],
-  ['NetworkOnlyStrategy', () => new NetworkOnlyStrategy(), () => []],
+  return cache.resolve(acquisition);
+}
+
+const policies: ReadonlyArray<readonly [string, () => CachePolicy]> = [
+  ['CacheFirstPolicy', () => new CacheFirstPolicy()],
+  ['NetworkFirstPolicy', () => new NetworkFirstPolicy()],
+  ['NetworkOnlyPolicy', () => new NetworkOnlyPolicy()],
 ];
 
-describe.each(strategies)('%s network failures', (_name, makeStrategy, makeStores) => {
+describe.each(policies)('%s network failures', (_name, makePolicy) => {
   const originalFetch = global.fetch;
 
   afterEach(() => {
@@ -52,9 +53,7 @@ describe.each(strategies)('%s network failures', (_name, makeStrategy, makeStore
   test('an error status rejects with an AssetNetworkError carrying url and status', async () => {
     global.fetch = vi.fn(async () => ({ ok: false, status: 404, statusText: 'Not Found' }) as unknown as Response) as unknown as typeof fetch;
 
-    const error = await makeStrategy()
-      .resolve(makeRequest('https://example.com/missing.json'), makeStores())
-      .catch((reason: unknown) => reason);
+    const error = await acquire(makePolicy(), 'https://example.com/missing.json').catch((reason: unknown) => reason);
 
     expect(error).toBeInstanceOf(AssetNetworkError);
 
@@ -72,9 +71,7 @@ describe.each(strategies)('%s network failures', (_name, makeStrategy, makeStore
 
     global.fetch = vi.fn(async () => Promise.reject(transportFailure)) as unknown as typeof fetch;
 
-    const error = await makeStrategy()
-      .resolve(makeRequest('https://example.com/offline.json'), makeStores())
-      .catch((reason: unknown) => reason);
+    const error = await acquire(makePolicy(), 'https://example.com/offline.json').catch((reason: unknown) => reason);
 
     expect(error).toBeInstanceOf(AssetNetworkError);
 
@@ -94,9 +91,7 @@ describe.each(strategies)('%s network failures', (_name, makeStrategy, makeStore
 
     global.fetch = vi.fn(async () => Promise.reject(abortError)) as unknown as typeof fetch;
 
-    const error = await makeStrategy()
-      .resolve(makeRequest('https://example.com/cancelled.json'), makeStores())
-      .catch((reason: unknown) => reason);
+    const error = await acquire(makePolicy(), 'https://example.com/cancelled.json').catch((reason: unknown) => reason);
 
     expect(error).toBe(abortError);
     expect(error).not.toBeInstanceOf(AssetNetworkError);

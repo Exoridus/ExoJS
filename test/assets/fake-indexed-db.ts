@@ -7,8 +7,9 @@
  * subset of `IDBFactory` / `IDBDatabase` / `IDBTransaction` / `IDBObjectStore`
  * behaviour those two modules touch, including the `abort`/`error` event
  * bubbling from a versionchange transaction up to its `IDBDatabase` (which is
- * exactly what `IndexedDbDatabase.connect()` relies on to catch a migration
- * that returns `false`).
+ * exactly what a failed migration relies on), and the `complete` event a
+ * committed transaction fires - which is what both modules await before they
+ * report a write as durable.
  *
  * Every database persists for the lifetime of the fake `IDBFactory` instance
  * returned by {@link createFakeIndexedDb}, so reconnecting with a higher
@@ -63,83 +64,84 @@ class FakeIdbRequest extends EventTarget {
 
 class FakeIdbOpenDbRequest extends FakeIdbRequest {}
 
+/** A half-open string key range, the only `IDBKeyRange` shape the cache store uses. */
+export class FakeIdbKeyRange {
+  private constructor(
+    public readonly lower: string,
+    public readonly upper: string,
+  ) {}
+
+  public static bound(lower: string, upper: string): FakeIdbKeyRange {
+    return new FakeIdbKeyRange(lower, upper);
+  }
+
+  public includes(key: string): boolean {
+    return key >= this.lower && key <= this.upper;
+  }
+}
+
 class FakeIdbObjectStore {
   public constructor(
     private readonly _store: StoreRecord,
     private readonly _faults: RequestFaultQueue,
+    public readonly transaction: FakeIdbTransaction,
   ) {}
 
   public get(key: string): FakeIdbRequest {
-    const request = new FakeIdbRequest();
-
-    queueMicrotask(() => {
-      const error = this._faults.consume();
-
-      if (error) {
-        request._fail(error);
-
-        return;
-      }
-
-      request._succeed(this._store.data.get(key));
-    });
-
-    return request;
+    return this._request(() => this._store.data.get(key));
   }
 
   public put(value: Record<string, unknown>): FakeIdbRequest {
-    const request = new FakeIdbRequest();
     const key = value[this._store.keyPath] as string;
 
-    queueMicrotask(() => {
-      const error = this._faults.consume();
-
-      if (error) {
-        request._fail(error);
-
-        return;
-      }
-
+    return this._request(() => {
       this._store.data.set(key, value);
-      request._succeed(undefined);
     });
-
-    return request;
   }
 
-  public delete(key: string): FakeIdbRequest {
-    const request = new FakeIdbRequest();
-
-    queueMicrotask(() => {
-      const error = this._faults.consume();
-
-      if (error) {
-        request._fail(error);
+  public delete(key: string | FakeIdbKeyRange): FakeIdbRequest {
+    return this._request(() => {
+      if (typeof key === 'string') {
+        this._store.data.delete(key);
 
         return;
       }
 
-      this._store.data.delete(key);
-      request._succeed(undefined);
+      for (const candidate of [...this._store.data.keys()]) {
+        if (key.includes(candidate)) {
+          this._store.data.delete(candidate);
+        }
+      }
     });
-
-    return request;
   }
 
   public clear(): FakeIdbRequest {
+    return this._request(() => {
+      this._store.data.clear();
+    });
+  }
+
+  /**
+   * Run one store operation asynchronously, settling its request and telling
+   * the owning transaction whether it may still commit.
+   */
+  private _request(operation: () => unknown): FakeIdbRequest {
     const request = new FakeIdbRequest();
+
+    this.transaction._requestStarted();
 
     queueMicrotask(() => {
       const error = this._faults.consume();
 
       if (error) {
         request._fail(error);
+        this.transaction._requestSettled(error);
 
         return;
       }
 
-      this._store.data.clear();
-      request._succeed(undefined);
+      request._succeed(operation());
+      this.transaction._requestSettled(null);
     });
 
     return request;
@@ -150,6 +152,9 @@ class FakeIdbTransaction extends EventTarget {
   public aborted = false;
   public error: Error | null = null;
 
+  private _pending = 0;
+  private _settled = false;
+
   public constructor(
     private readonly _db: FakeIdbDatabase,
     public readonly objectStoreNames: readonly string[],
@@ -159,16 +164,62 @@ class FakeIdbTransaction extends EventTarget {
   }
 
   public objectStore(name: string): FakeIdbObjectStore {
-    return new FakeIdbObjectStore(this._db._getStoreRecord(name), this._faults);
+    return new FakeIdbObjectStore(this._db._getStoreRecord(name), this._faults, this);
   }
 
   public abort(): void {
+    if (this._settled) {
+      return;
+    }
+
+    this._settled = true;
     this.aborted = true;
     // Real IndexedDB bubbles an aborted versionchange transaction's `abort`
-    // event to its connection (`IDBDatabase`) - `IndexedDbDatabase.connect()`
-    // listens for exactly that to reject the open() promise.
+    // event to its connection (`IDBDatabase`) - a failed migration relies on
+    // exactly that to reject the open() promise.
     this.dispatchEvent(new Event('abort'));
     this._db.dispatchEvent(new Event('abort'));
+  }
+
+  /** @internal */
+  public _requestStarted(): void {
+    this._pending++;
+  }
+
+  /**
+   * Settle one request. A transaction commits only once every request it
+   * carried has succeeded, and aborts as soon as one fails - which is what
+   * makes awaiting `complete` a stronger promise than awaiting `success`.
+   * @internal
+   */
+  public _requestSettled(error: Error | null): void {
+    this._pending--;
+
+    if (this._settled) {
+      return;
+    }
+
+    if (error !== null) {
+      this._settled = true;
+      this.error = error;
+      this.dispatchEvent(new Event('error'));
+      this.dispatchEvent(new Event('abort'));
+
+      return;
+    }
+
+    if (this._pending === 0) {
+      // Commit on the next turn, so a caller that issues several requests
+      // against one transaction is not committed after the first.
+      queueMicrotask(() => {
+        if (this._settled || this._pending > 0) {
+          return;
+        }
+
+        this._settled = true;
+        this.dispatchEvent(new Event('complete'));
+      });
+    }
   }
 }
 
@@ -196,6 +247,13 @@ class FakeIdbDatabase extends EventTarget {
 
   public deleteObjectStore(name: string): void {
     this._record.stores.delete(name);
+  }
+
+  /** The `DOMStringList` shape production code reads: iterable, with `contains`. */
+  public get objectStoreNames(): readonly string[] & { contains(name: string): boolean } {
+    const names = [...this._record.stores.keys()];
+
+    return Object.assign(names, { contains: (name: string) => names.includes(name) });
   }
 
   public transaction(storeNames: readonly string[]): FakeIdbTransaction {
@@ -353,6 +411,10 @@ export interface FakeIndexedDb {
   hasDatabase(name: string): boolean;
   /** Current object-store names persisted for `name`, or `undefined` if never opened. */
   storeNamesOf(name: string): readonly string[] | undefined;
+  /** Schema version persisted for `name`, or `undefined` if never opened. */
+  versionOf(name: string): number | undefined;
+  /** Raw records held by one object store of `name`, keyed as written. */
+  recordsOf(name: string, storeName: string): Map<string, unknown> | undefined;
 }
 
 /** Creates a fresh, isolated fake `IDBFactory` - one per test to avoid cross-test bleed. */
@@ -382,5 +444,7 @@ export const createFakeIndexedDb = (): FakeIndexedDb => {
 
       return record ? [...record.stores.keys()] : undefined;
     },
+    versionOf: (name: string) => factory.databases.get(name)?.version,
+    recordsOf: (name: string, storeName: string) => factory.databases.get(name)?.stores.get(storeName)?.data,
   };
 };

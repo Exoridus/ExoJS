@@ -6,8 +6,8 @@ import { isAbortError } from './SharedAbort';
  * {@link AssetNetworkError} carrying the URL, the HTTP status (when one
  * arrived) and the original rejection as `cause`.
  *
- * Shared by every built-in {@link CacheStrategy} so the network leg of a load
- * reports identically no matter which policy issued it.
+ * The single network leg of every acquisition, so a load reports the same way
+ * whichever {@link CachePolicy} issued it.
  *
  * A cancellation is rethrown unwrapped: the residency dispatches on the
  * `AbortError` name to tell a deliberate cancel apart from a genuine failure,

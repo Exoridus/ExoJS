@@ -1,11 +1,12 @@
 import { describe, expect, test, vi } from 'vitest';
 
+import { AssetCache } from '#assets/AssetCache';
 import type { AssetConstructor } from '#assets/AssetConstructor';
 import { AssetDecoder } from '#assets/AssetDecoder';
 import type { AssetResidencySignals } from '#assets/AssetResidency';
 import { AssetResidency } from '#assets/AssetResidency';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
-import type { CacheRequest, CacheStrategy } from '#assets/CacheStrategy';
+import type { CacheContext, CachePolicy } from '#assets/CachePolicy';
 import { type CanonicalAsset, canonicalizeSource, resourceKey, sourceKey } from '#assets/canonicalKey';
 import type { Loader } from '#assets/Loader';
 import { LoaderScope } from '#assets/LoaderScope';
@@ -22,9 +23,14 @@ function bindTypeA(typeRegistry: AssetTypeRegistry): void {
   typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 }
 
-/** Fake strategy that resolves to a canned value (or rejects, via mockRejectedValueOnce on .resolve). */
-function createFakeStrategy(resolveTo: (request: CacheRequest) => unknown = () => 'resolved'): CacheStrategy {
-  return { resolve: vi.fn(async (request: CacheRequest) => resolveTo(request)) };
+/** Fake cache whose policy resolves to a canned value (or rejects, via mockRejectedValueOnce on .resolve). */
+function createFakeCache(resolveTo: (context: CacheContext<unknown>) => unknown = () => 'resolved'): {
+  cache: AssetCache;
+  resolve: ReturnType<typeof vi.fn>;
+} {
+  const resolve = vi.fn(async (context: CacheContext<unknown>) => resolveTo(context));
+
+  return { cache: new AssetCache({ policy: { resolve } as unknown as CachePolicy }), resolve };
 }
 
 /** A minimal seamless-handle: a plain object whose identity IS the handle, tracked via a WeakMap-backed state. */
@@ -46,14 +52,12 @@ function createFakeSeamlessAdapter(): SeamlessAdapter<unknown> & { states: WeakM
   };
 }
 
-function createResidency(overrides: { cacheStrategy?: CacheStrategy; concurrency?: number } = {}) {
+function createResidency(overrides: { cache?: AssetCache; concurrency?: number } = {}) {
   const typeRegistry = new AssetTypeRegistry();
-  const strategy = overrides.cacheStrategy ?? createFakeStrategy();
   const decoder = new AssetDecoder(fakeLoader, typeRegistry, {
     basePath: '',
     fetchOptions: {},
-    stores: [],
-    cacheStrategy: strategy,
+    cache: overrides.cache ?? createFakeCache().cache,
   });
   const onProgress = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[number, number]>;
   const onLoaded = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[unknown, string, unknown]>;
@@ -80,7 +84,7 @@ function createResidency(overrides: { cacheStrategy?: CacheStrategy; concurrency
 
   decoder._bindResourceStore((asset, resource) => residency._storeResource(asset, resource));
 
-  return { residency, typeRegistry, decoder, strategy, onProgress, onLoaded, onError, canonical };
+  return { residency, typeRegistry, decoder, onProgress, onLoaded, onError, canonical };
 }
 
 describe('AssetResidency', () => {
@@ -104,11 +108,8 @@ describe('AssetResidency', () => {
     });
 
     test('claim on an evicted key re-drives the fetch and heals the same handle', async () => {
-      const { strategy, requests } = (() => {
-        const seen: CacheRequest[] = [];
-        return { strategy: createFakeStrategy(r => (seen.push(r), 'decoded')), requests: seen };
-      })();
-      const { residency, typeRegistry, canonical } = createResidency({ cacheStrategy: strategy });
+      const { cache, resolve } = createFakeCache(() => 'decoded');
+      const { residency, typeRegistry, canonical } = createResidency({ cache });
       const adapter = createFakeSeamlessAdapter();
       typeRegistry.registerSeamlessAdapter(TypeA, adapter);
       bindTypeA(typeRegistry);
@@ -122,16 +123,16 @@ describe('AssetResidency', () => {
 
       expect(residency._peekResource(canonical(TypeA, 'a.png').key)).toBeNull();
 
-      // The first `_getSeamless(...)` call above already started (and completed) a
-      // fetch, so `requests` is already non-empty by this point - snapshot the count
-      // right before the re-claim so the assertion below can only pass if the
-      // re-claim itself drove a NEW fetch, not just the original one.
-      const requestsBeforeReclaim = requests.length;
+      // The first `_getSeamless(...)` call above already started (and completed) an
+      // acquisition, so the policy has already run by this point - snapshot the
+      // count right before the re-claim so the assertion below can only pass if
+      // the re-claim itself drove a NEW acquisition, not just the original one.
+      const acquisitionsBeforeReclaim = resolve.mock.calls.length;
 
       residency._claim(canonical(TypeA, 'a.png'), scope);
       await new Promise(r => setTimeout(r, 0));
 
-      expect(requests.length).toBeGreaterThan(requestsBeforeReclaim);
+      expect(resolve.mock.calls.length).toBeGreaterThan(acquisitionsBeforeReclaim);
       // The SAME handle heals in place: eviction re-armed it to 'loading' (not
       // 'failed'), so the re-fetch's arrival goes straight to fill(), and the
       // healed handle becomes the resident resource again.
@@ -181,7 +182,7 @@ describe('AssetResidency', () => {
     });
 
     test('claim on an evicted value key re-drives the fetch and heals the same ref', async () => {
-      const { residency, typeRegistry, canonical } = createResidency({ cacheStrategy: createFakeStrategy(() => 'decoded') });
+      const { residency, typeRegistry, canonical } = createResidency({ cache: createFakeCache(() => 'decoded').cache });
       typeRegistry.bindAsset({ ctor: TypeA }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
       const scope = new LoaderScope(fakeLoader, 'scope', 'scope');
@@ -280,9 +281,9 @@ describe('AssetResidency', () => {
     });
 
     test('a rejected fetch dispatches onError with the failing type/alias/error (signals boundary)', async () => {
-      const strategy = createFakeStrategy();
-      (strategy.resolve as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('network down'));
-      const { residency, typeRegistry, onError, canonical } = createResidency({ cacheStrategy: strategy });
+      const { cache, resolve } = createFakeCache();
+      resolve.mockRejectedValueOnce(new Error('network down'));
+      const { residency, typeRegistry, onError, canonical } = createResidency({ cache });
       const adapter = createFakeSeamlessAdapter();
       typeRegistry.registerSeamlessAdapter(TypeA, adapter);
       bindTypeA(typeRegistry);
@@ -296,15 +297,15 @@ describe('AssetResidency', () => {
 
   describe('background queue', () => {
     test('enqueueBackgroundFetch defers the fetch until drained by awaitBackground', async () => {
-      const requests: CacheRequest[] = [];
-      const strategy = createFakeStrategy(r => (requests.push(r), 'bg-value'));
-      const { residency, typeRegistry, onProgress, canonical } = createResidency({ cacheStrategy: strategy });
+      const contexts: Array<CacheContext<unknown>> = [];
+      const { cache } = createFakeCache(context => (contexts.push(context), 'bg-value'));
+      const { residency, typeRegistry, onProgress, canonical } = createResidency({ cache });
       bindTypeA(typeRegistry);
 
       residency._enqueueBackgroundFetch(canonical(TypeA, 'bg.png'), undefined);
       await residency.awaitBackground();
 
-      expect(requests).toHaveLength(1);
+      expect(contexts).toHaveLength(1);
       expect(residency._peekResource(canonical(TypeA, 'bg.png').key)).toBe('bg-value');
       // The signals boundary - onProgress dispatches the (loaded, total) counts as
       // the single queued entry completes.
@@ -312,33 +313,33 @@ describe('AssetResidency', () => {
     });
 
     test('a direct claim on a queued key boosts it out of the background queue immediately', async () => {
-      const requests: CacheRequest[] = [];
-      const strategy = createFakeStrategy(r => (requests.push(r), 'boosted-value'));
-      const { residency, typeRegistry, canonical } = createResidency({ cacheStrategy: strategy, concurrency: 0 });
+      const contexts: Array<CacheContext<unknown>> = [];
+      const { cache } = createFakeCache(context => (contexts.push(context), 'boosted-value'));
+      const { residency, typeRegistry, canonical } = createResidency({ cache, concurrency: 0 });
       bindTypeA(typeRegistry);
 
       residency._enqueueBackgroundFetch(canonical(TypeA, 'boost.png'), undefined);
-      expect(requests).toHaveLength(0); // concurrency 0: nothing started yet
+      expect(contexts).toHaveLength(0); // concurrency 0: nothing started yet
 
       await residency._loadSingle(canonical(TypeA, 'boost.png'));
 
-      expect(requests).toHaveLength(1);
+      expect(contexts).toHaveLength(1);
     });
 
     test('setConcurrency changes how many entries drain concurrently', async () => {
-      const requests: CacheRequest[] = [];
-      const strategy = createFakeStrategy(r => (requests.push(r), 'value'));
-      const { residency, typeRegistry, canonical } = createResidency({ cacheStrategy: strategy, concurrency: 0 });
+      const contexts: Array<CacheContext<unknown>> = [];
+      const { cache } = createFakeCache(context => (contexts.push(context), 'value'));
+      const { residency, typeRegistry, canonical } = createResidency({ cache, concurrency: 0 });
       bindTypeA(typeRegistry);
 
       residency._enqueueBackgroundFetch(canonical(TypeA, 'a.png'), undefined);
       residency._enqueueBackgroundFetch(canonical(TypeA, 'b.png'), undefined);
-      expect(requests).toHaveLength(0); // concurrency 0: nothing can drain yet
+      expect(contexts).toHaveLength(0); // concurrency 0: nothing can drain yet
 
       residency.setConcurrency(2);
       await residency.awaitBackground();
 
-      expect(requests).toHaveLength(2);
+      expect(contexts).toHaveLength(2);
     });
   });
 
@@ -386,8 +387,8 @@ describe('AssetResidency', () => {
     });
 
     test('two spellings of one source share a single canonical key, fetch and resident entry', async () => {
-      const strategy = createFakeStrategy(() => 'v');
-      const { residency, typeRegistry, canonical } = createResidency({ cacheStrategy: strategy });
+      const { cache, resolve } = createFakeCache(() => 'v');
+      const { residency, typeRegistry, canonical } = createResidency({ cache });
       bindTypeA(typeRegistry);
 
       const [direct, viaDotSegments] = await Promise.all([
@@ -397,7 +398,7 @@ describe('AssetResidency', () => {
 
       expect(direct).toBe('v');
       expect(viaDotSegments).toBe('v');
-      expect(strategy.resolve).toHaveBeenCalledTimes(1);
+      expect(resolve).toHaveBeenCalledTimes(1);
       expect(canonical(TypeA, './sub/../a.png').key).toBe(canonical(TypeA, 'a.png').key);
     });
 
@@ -408,15 +409,15 @@ describe('AssetResidency', () => {
     });
 
     test('_loadSingle routes context.fetchText through the bindAsset binding storageName instead of the shared namespace', async () => {
-      const requests: CacheRequest[] = [];
-      const strategy = createFakeStrategy(r => (requests.push(r), 'ns-value'));
-      const { residency, typeRegistry, canonical } = createResidency({ cacheStrategy: strategy });
+      const contexts: Array<CacheContext<unknown>> = [];
+      const { cache } = createFakeCache(context => (contexts.push(context), 'ns-value'));
+      const { residency, typeRegistry, canonical } = createResidency({ cache });
 
       typeRegistry.bindAsset({ ctor: TypeA, storageName: 'my-type-ns' }, { load: async (request, ctx) => ctx.fetchText(request.source) });
 
       const result = await residency._loadSingle(canonical(TypeA, 'a.png'));
 
-      expect(requests[0]?.storageName).toBe('my-type-ns');
+      expect(contexts[0]?.namespace).toBe('my-type-ns');
       expect(result).toBe('ns-value');
     });
 

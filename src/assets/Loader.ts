@@ -2,6 +2,7 @@ import { Signal } from '#core/Signal';
 import type { AssetHandler } from '#extensions/Extension';
 
 import { type Asset, AssetImpl, type ValueAsset } from './Asset';
+import { AssetCache } from './AssetCache';
 import type { AssetCacheError } from './AssetCacheError';
 import type { AssetConstructor } from './AssetConstructor';
 import { parseContainer } from './AssetContainer';
@@ -23,9 +24,8 @@ import type { AssetRef } from './AssetRef';
 import { type AssetInspection, AssetResidency, type AssetResidencySignals } from './AssetResidency';
 import { _normalizeEntry, type Assets, AssetsImpl, type InferAssetsProperties } from './Assets';
 import { AssetTypeRegistry, type HandlerEntry } from './AssetTypeRegistry';
-import { CacheFirstStrategy } from './CacheFirstStrategy';
+import type { CacheLayout } from './CacheLayout';
 import type { CacheStore } from './CacheStore';
-import type { CacheStrategy } from './CacheStrategy';
 import { type AssetLocator, type CanonicalAsset, canonicalizeSource, type ResourceKey, resourceKey, type SourceKey, sourceKey } from './canonicalKey';
 import { LoadBatch } from './LoadBatch';
 import { LoaderScope, type LoaderScopeOptions } from './LoaderScope';
@@ -45,15 +45,6 @@ export interface AssetIdentity {
   readonly sourceKey: SourceKey;
   /** The canonical locator both are derived from. */
   readonly locator: AssetLocator;
-}
-
-/** Normalize the single-or-many `cache` option into the list the decoder takes. */
-function toStoreList(cache: CacheStore | readonly CacheStore[]): readonly CacheStore[] {
-  // `Array.isArray` widens a `readonly T[]` to `any[]`, so narrow explicitly.
-  if (Array.isArray(cache)) {
-    return cache as readonly CacheStore[];
-  }
-  return [cache as CacheStore];
 }
 
 // ---------------------------------------------------------------------------
@@ -149,17 +140,19 @@ export interface AssetLoaderContext {
  * Construction options for {@link Loader}.
  *
  * `basePath` is prepended to relative asset paths at fetch time.
- * `cache` accepts one or more {@link CacheStore} instances. `cacheStrategy`
- * picks the policy used to consult them - defaults to
- * {@link CacheFirstStrategy} (check stores → network → write back).
  * `concurrency` caps the number of simultaneous background-queue fetches
  * (default `6`).
+ *
+ * `cache` configures caching, and is optional: with nothing passed, every
+ * acquisition goes straight to the network and no cache machinery runs at all.
+ * One or more {@link CacheStore} instances configure a single cache-first
+ * route over them; an {@link AssetCache} configures routes and policies
+ * explicitly.
  */
 export interface LoaderOptions {
   basePath?: string;
   fetchOptions?: RequestInit;
-  cache?: CacheStore | readonly CacheStore[];
-  cacheStrategy?: CacheStrategy;
+  cache?: AssetCache | CacheStore | readonly CacheStore[];
   concurrency?: number;
 }
 
@@ -338,26 +331,29 @@ export class Loader {
   }
 
   /**
-   * Acquire a representation of `source` through this loader's cache policy and
-   * stores, keyed by the resolved URL.
+   * Acquire a representation of `source` through the application's cache
+   * configuration.
    *
    * `read` turns the raw response into the representation worth keeping. It is
    * the only route by which an asset type reaches the network, and it hands back
    * the representation rather than a resource: what to build from it stays with
    * the factory, and where it was served from stays with the loader.
    *
-   * The store is keyed by the request's source identity rather than by its URL,
-   * so two source variants negotiated on one URL do not overwrite each other.
+   * A cache record is identified by the type's `namespace`, the request's
+   * source identity and the `layout` version - never by the source identity
+   * alone, which carries no asset type and would let two types collide on one
+   * URL.
    * @internal
    */
   public _fetchRepresentation<T>(
     source: string,
     read: (response: Response) => Promise<T>,
-    storageName: string,
-    cacheKey: SourceKey,
+    namespace: string,
+    layout: CacheLayout<T>,
+    sourceIdentity: SourceKey,
     signal?: AbortSignal,
   ): Promise<T> {
-    return this._decoder._contextFetch<T>(source, storageName, read, signal, cacheKey);
+    return this._decoder._acquire<T>(source, namespace, layout, sourceIdentity, read, signal);
   }
 
   // ── Refcount / claims ───────────────────────────────────────────────────────
@@ -400,7 +396,7 @@ export class Loader {
   public readonly onLoadError = new Signal<[key: string, error: Error]>();
 
   /**
-   * Fires for cache failures the configured {@link CacheStrategy} degraded
+   * Fires for cache failures the configured {@link CachePolicy} degraded
    * instead of propagating - most commonly a persistent store hitting its
    * quota. Purely diagnostic: the affected load still succeeds from the
    * network, so without a listener the only symptom is that caching quietly
@@ -410,21 +406,16 @@ export class Loader {
    * for the originating `DOMException` (`QuotaExceededError` and friends).
    *
    * Reports only failures caused by *this* loader's own requests, even when
-   * its {@link CacheStrategy} instance is shared with other loaders - the
-   * strategy is handed a per-request sink rather than subscribing to one.
+   * its {@link AssetCache} or {@link CachePolicy} is shared with other loaders
+   * - the cache is handed a per-acquisition sink rather than subscribing to one.
    */
   public readonly onCacheError = new Signal<[error: AssetCacheError]>();
 
   public constructor(options: LoaderOptions = {}) {
-    const cache = options.cache;
-    const stores = cache === undefined ? [] : toStoreList(cache);
-    const cacheStrategy = options.cacheStrategy ?? new CacheFirstStrategy();
-
     this._decoder = new AssetDecoder(this, this._typeRegistry, {
       basePath: options.basePath ?? '',
       fetchOptions: options.fetchOptions ?? {},
-      stores,
-      cacheStrategy,
+      cache: options.cache === undefined ? null : AssetCache.from(options.cache),
     });
 
     const signals: AssetResidencySignals = { onProgress: this.onProgress, onLoaded: this.onLoaded, onError: this.onError };
@@ -551,7 +542,7 @@ export class Loader {
 
   /** Backs {@link loadContainer} and {@link LoaderScope.loadContainer}: unpack `url` and claim every entry under `claimer`. @internal */
   public async _loadContainerInto(claimer: LoaderScope, url: string): Promise<void> {
-    const buffer = await this._decoder._contextFetch<ArrayBuffer>(url, '__ctx_binary', response => response.arrayBuffer());
+    const buffer = await this._decoder._acquireForContext<ArrayBuffer>(url, '__ctx_binary', response => response.arrayBuffer());
     const { entries, dataStart } = parseContainer(buffer);
 
     // Resolve every type up front so an unknown type fails before any asset is stored.

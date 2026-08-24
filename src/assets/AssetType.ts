@@ -3,6 +3,8 @@ import { AssetImpl } from './Asset';
 import type { AnyAssetConfig } from './AssetDefinitions';
 import type { AssetFactory } from './AssetFactory';
 import type { AssetSourceCodec } from './AssetSourceCodec';
+import type { CacheLayout } from './CacheLayout';
+import { SingleEntryLayout } from './SingleEntryLayout';
 
 /**
  * One request for an asset of a given type, as an identity hook sees it.
@@ -30,8 +32,8 @@ export interface AssetRequest<Options = undefined> {
  * - what it is called ({@link id}) and which file suffixes name it ({@link extensions});
  * - when two requests are the same runtime resource ({@link resourceIdentity});
  * - when two requests acquire the same source data ({@link sourceIdentity});
- * - how a representation is read ({@link codec}) and turned into a resource
- *   ({@link createFactory}).
+ * - how a representation is read ({@link codec}), laid out in a cache
+ *   ({@link layout}) and turned into a resource ({@link createFactory}).
  *
  * Acquisition, caching and residency are the loader's, and the type is
  * deliberately given no way to reach them.
@@ -91,6 +93,20 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
 
   /** How an acquired representation is read back into the source a factory consumes. */
   public abstract readonly codec: AssetSourceCodec<Source, Stored>;
+
+  /**
+   * How an acquired representation is laid out when an application caches it.
+   *
+   * The default keeps the representation in one record, which is what a codec
+   * producing a single value needs. Override it to raise the version when the
+   * stored representation changes shape - records written under the old version
+   * are then no longer found, and the source is acquired again - or to supply a
+   * layout that spreads one representation across several records.
+   *
+   * Whether anything is cached at all, and where, is the application's
+   * decision. A type describes only how its representation would be laid out.
+   */
+  public readonly layout: CacheLayout<Stored> = SingleEntryLayout.version<Stored>(1);
 
   /**
    * Creates the factory for one application, at install time.

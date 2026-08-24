@@ -1,30 +1,30 @@
 const idbStorage = new Map<string, unknown>();
 
-// IndexedDbStore mock: a single namespaced Map standing in for the database.
+// IndexedDbDatabase mock: a single namespaced Map standing in for the database.
 // It holds values *by reference* (no structured clone) - enough to prove the
 // KV store passes values through without a JSON layer; the real backend deep-
 // clones via structured clone.
-vi.mock('#assets/IndexedDbStore', () => {
-  class IndexedDbStoreMock {
-    public load(storageName: string, key: string): Promise<unknown | null> {
-      const recordKey = `${storageName}:${key}`;
+vi.mock('#assets/IndexedDbDatabase', () => {
+  class IndexedDbDatabaseMock {
+    public load(storeName: string, key: string): Promise<unknown | null> {
+      const recordKey = `${storeName}:${key}`;
 
       return Promise.resolve(idbStorage.has(recordKey) ? idbStorage.get(recordKey)! : null);
     }
 
-    public save(storageName: string, key: string, data: unknown): Promise<void> {
-      idbStorage.set(`${storageName}:${key}`, data);
+    public save(storeName: string, key: string, data: unknown): Promise<void> {
+      idbStorage.set(`${storeName}:${key}`, data);
 
       return Promise.resolve();
     }
 
-    public delete(storageName: string, key: string): Promise<boolean> {
-      return Promise.resolve(idbStorage.delete(`${storageName}:${key}`));
+    public delete(storeName: string, key: string): Promise<boolean> {
+      return Promise.resolve(idbStorage.delete(`${storeName}:${key}`));
     }
 
-    public clear(storageName: string): Promise<boolean> {
+    public clearStorage(storeName: string): Promise<boolean> {
       for (const recordKey of [...idbStorage.keys()]) {
-        if (recordKey.startsWith(`${storageName}:`)) {
+        if (recordKey.startsWith(`${storeName}:`)) {
           idbStorage.delete(recordKey);
         }
       }
@@ -35,7 +35,7 @@ vi.mock('#assets/IndexedDbStore', () => {
     public destroy(): void {}
   }
 
-  return { IndexedDbStore: IndexedDbStoreMock };
+  return { IndexedDbDatabase: IndexedDbDatabaseMock };
 });
 
 import { IndexedDbKeyValueStore } from '#assets/IndexedDbKeyValueStore';

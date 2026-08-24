@@ -1,14 +1,14 @@
 /**
  * The cache operation that failed. Carried by {@link AssetCacheError.operation}
- * so callers can branch on the failure class - a failed `save` is a degraded
+ * so callers can branch on the failure class - a failed `write` is a degraded
  * cache write, a failed `connect` means the whole store is unavailable.
  */
 export type AssetCacheOperation =
-  | 'connect' // Opening or upgrading the backing database
-  | 'load' // Reading one record
-  | 'save' // Writing one record (the usual home of quota failures)
+  | 'connect' // Opening or upgrading the backing store
+  | 'read' // Reading one record
+  | 'write' // Writing one record (the usual home of quota failures)
   | 'delete' // Removing one record
-  | 'clear' // Emptying one store
+  | 'clear' // Emptying a namespace or a whole store
   | 'delete-storage'; // Dropping the whole database
 
 /** Construction options for an {@link AssetCacheError}. */
@@ -18,8 +18,8 @@ export interface AssetCacheErrorOptions {
   /** One-line, actionable summary (becomes the {@link Error.message} prefix). */
   readonly message: string;
   /**
-   * Object store / storage namespace, when the operation targets one.
-   * Explicitly `undefined` is accepted - a database-wide operation has none.
+   * Storage namespace, when the operation targets one. Explicitly `undefined`
+   * is accepted - a store-wide operation has none.
    */
   readonly store?: string | undefined;
   /**
@@ -36,10 +36,13 @@ export interface AssetCacheErrorOptions {
 }
 
 /**
- * Structured asset-cache failure. Thrown by {@link IndexedDbDatabase} for every
- * failed IndexedDB request, and handed to {@link CacheRequest.reportCacheError}
- * - which `Loader` routes to {@link Loader.onCacheError} - for cache errors a
- * {@link CacheStrategy} degrades instead of propagating.
+ * Structured asset-cache failure. Raised by a {@link CacheStore} for every
+ * operation it could not carry out, and dispatched on {@link Loader.onCacheError}
+ * whenever a {@link CachePolicy} degrades one instead of propagating it.
+ *
+ * A cache MISS is not one of these - it is reported as an
+ * {@link AssetCacheMissError} or as a miss result, because "this was never
+ * written" and "the store is broken" call for different reactions.
  *
  * Extends {@link Error}, so callers can narrow with `error instanceof AssetCacheError`
  * and read {@link AssetCacheError.operation}, {@link AssetCacheError.store} and
@@ -55,7 +58,7 @@ export interface AssetCacheErrorOptions {
 export class AssetCacheError extends Error {
   /** Which cache operation failed. */
   public readonly operation: AssetCacheOperation;
-  /** Object store / storage namespace, or `null` when the operation is database-wide. */
+  /** Storage namespace, or `null` when the operation is store-wide. */
   public readonly store: string | null;
   /** Record key, or `null` when the operation does not target a single record. */
   public readonly key: string | null;

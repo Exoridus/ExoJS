@@ -4,6 +4,7 @@ import { Asset } from '#assets/Asset';
 import { encodeContainer } from '#assets/AssetContainer';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
+import type { CacheRecordKey } from '#assets/CacheRecordKey';
 import type { CacheStore } from '#assets/CacheStore';
 import { coreAssetBindings } from '#assets/coreAssetBindings';
 import { defineAsset } from '#assets/defineAsset';
@@ -13,6 +14,8 @@ import type { AssetHandler } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
 import { BmFont } from '#rendering/text/BmFont';
 import { Texture } from '#rendering/texture/Texture';
+
+import { type CacheStoreDouble, createCacheStoreDouble } from './cache-test-doubles';
 
 /** Create a Loader with all core asset bindings pre-installed. */
 function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Loader {
@@ -112,13 +115,12 @@ const createDeferred = <T>(): Deferred<T> => {
   return { promise, resolve, reject };
 };
 
-const createCacheStoreMock = (overrides: Partial<CacheStore> = {}): CacheStore => ({
-  load: vi.fn(async (): Promise<unknown | null> => null),
-  save: vi.fn(async (): Promise<void> => undefined),
-  delete: vi.fn(async (): Promise<boolean> => true),
-  clear: vi.fn(async (): Promise<boolean> => true),
-  destroy: vi.fn(),
-  ...overrides,
+/** The record key a handler-context text fetch of `source` writes under. */
+const contextTextKey = (namespace: string, source: string): CacheRecordKey => ({
+  namespace,
+  source: `url:${source}`,
+  version: 1,
+  record: 'value',
 });
 
 describe('Loader', () => {
@@ -292,9 +294,10 @@ describe('Loader', () => {
   });
 
   test('reads from cache hit and skips network fetch', async () => {
-    const cacheStore = createCacheStoreMock({
-      load: vi.fn(async (): Promise<string> => 'cached-source'),
-    });
+    const cacheStore = createCacheStoreDouble();
+
+    await cacheStore.set(contextTextKey('text', '/cached.txt'), 'cached-source');
+
     const loader = new Loader({ basePath: '/', cache: cacheStore });
 
     bindTextAsset(loader);
@@ -305,14 +308,13 @@ describe('Loader', () => {
     const result = await loader.load('cached.txt');
 
     expect(result).toBe('resource:cached-source');
-    expect(cacheStore.load).toHaveBeenCalledWith('text', '/cached.txt');
-    expect(cacheStore.save).not.toHaveBeenCalled();
+    expect(cacheStore.get).toHaveBeenCalledWith(contextTextKey('text', '/cached.txt'));
     expect(cacheStore.delete).not.toHaveBeenCalled();
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
   test('falls back to network and persists source when cache misses', async () => {
-    const cacheStore = createCacheStoreMock();
+    const cacheStore = createCacheStoreDouble();
     const loader = new Loader({ basePath: '/', cache: cacheStore });
 
     bindTextAsset(loader);
@@ -321,16 +323,10 @@ describe('Loader', () => {
     const result = await loader.load('miss.txt');
 
     expect(result).toBe('resource:fresh-source');
-    expect(cacheStore.load).toHaveBeenCalledWith('text', '/miss.txt');
+    expect(cacheStore.get).toHaveBeenCalledWith(contextTextKey('text', '/miss.txt'));
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(cacheStore.save).toHaveBeenCalledWith('text', '/miss.txt', 'fresh-source');
+    expect(cacheStore.set).toHaveBeenCalledWith(contextTextKey('text', '/miss.txt'), 'fresh-source');
   });
-
-  // The corrupt-cache-entry delete+retry mechanism itself (a cached value that
-  // makes factory.create() throw) now lives entirely inside CacheFirstStrategy -
-  // context.fetchText()'s internal cache factory is a pass-through that never
-  // throws, so it's no longer reachable through a Loader-level bindAsset
-  // handler. See test/assets/cache-first-strategy.test.ts for direct coverage.
 
   test('load(Json, path) returns unknown by default', async () => {
     const loader = createCoreLoader({ basePath: '/' });
@@ -849,18 +845,10 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
     vi.restoreAllMocks();
   });
 
-  function makeMockStore(): { store: CacheStore; saves: Array<{ storageName: string; key: string }> } {
-    const saves: Array<{ storageName: string; key: string }> = [];
-    const store: CacheStore = {
-      load: async () => null,
-      save: async (storageName, key) => {
-        saves.push({ storageName, key });
-      },
-      delete: async () => true,
-      clear: async () => true,
-      destroy: () => {},
-    };
-    return { store, saves };
+  function makeMockStore(): { store: CacheStoreDouble; saves: () => CacheRecordKey[] } {
+    const store = createCacheStoreDouble();
+
+    return { store, saves: () => store.set.mock.calls.map(call => call[0]) };
   }
 
   function mockFetch(body: string): void {
@@ -886,7 +874,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
 
-    expect(saves).toContainEqual({ storageName: '__ctx_text', key: '/file.txt' });
+    expect(saves()).toContainEqual(contextTextKey('__ctx_text', '/file.txt'));
   });
 
   test('context.fetchJson saves to __ctx_json store under the resolved URL', async () => {
@@ -906,7 +894,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 
     await loader.load(new Asset({ type: 'richAsset', source: 'data.json', format: 'json' }));
 
-    expect(saves).toContainEqual({ storageName: '__ctx_json', key: '/data.json' });
+    expect(saves()).toContainEqual(contextTextKey('__ctx_json', '/data.json'));
   });
 
   test('context.fetchArrayBuffer saves to __ctx_binary store under the resolved URL', async () => {
@@ -926,7 +914,7 @@ describe('handler context.fetch* — IDB store names (Fix 1 regression)', () => 
 
     await loader.load(new Asset({ type: 'richAsset', source: 'data.bin', format: 'bin' }));
 
-    expect(saves).toContainEqual({ storageName: '__ctx_binary', key: '/data.bin' });
+    expect(saves()).toContainEqual(contextTextKey('__ctx_binary', '/data.bin'));
   });
 
   test('context.fetchText serves from store cache on second call (no network)', async () => {
@@ -1498,7 +1486,7 @@ describe('loadContainer()', () => {
 describe('destroy()', () => {
   test('destroys cache stores, calls destroy() on bound handlers, and clears signals', () => {
     class DestroyAsset {}
-    const store = createCacheStoreMock();
+    const store = createCacheStoreDouble();
     const handlerDestroy = vi.fn();
     const loader = new Loader({ basePath: '/', cache: store });
 
@@ -1539,7 +1527,9 @@ describe('destroy()', () => {
   test('destroys CacheStores before bound bindAsset handlers', () => {
     class OrderAsset {}
     const order: string[] = [];
-    const store = createCacheStoreMock({ destroy: vi.fn(() => order.push('store')) });
+    const store = createCacheStoreDouble();
+
+    store.destroy.mockImplementation(() => order.push('store'));
     const handlerDestroy = vi.fn(() => order.push('handler'));
     const loader = new Loader({ basePath: '/', cache: store });
 
@@ -1619,8 +1609,8 @@ describe('Asset-based load() — extra config fields as handler options', () => 
 
 describe('Loader constructor — cache option as an array of stores', () => {
   test('accepts an array of CacheStore instances', async () => {
-    const storeA = createCacheStoreMock();
-    const storeB = createCacheStoreMock();
+    const storeA = createCacheStoreDouble('a');
+    const storeB = createCacheStoreDouble('b');
     const loader = new Loader({ basePath: '/', cache: [storeA, storeB] });
 
     bindTextAsset(loader);
@@ -1628,8 +1618,8 @@ describe('Loader constructor — cache option as an array of stores', () => {
 
     await loader.load('demo.txt');
 
-    expect(storeA.load).toHaveBeenCalledWith('text', '/demo.txt');
-    expect(storeB.load).toHaveBeenCalledWith('text', '/demo.txt');
+    expect(storeA.get).toHaveBeenCalledWith(contextTextKey('text', '/demo.txt'));
+    expect(storeB.get).toHaveBeenCalledWith(contextTextKey('text', '/demo.txt'));
   });
 });
 

@@ -7,6 +7,8 @@ import { Loader } from '#assets/Loader';
 import type { Extension } from '#extensions/Extension';
 import { materializeAssetBindings } from '#extensions/materialize';
 
+import { createCacheStoreDouble } from './cache-test-doubles';
+
 interface WorldData {
   readonly name: string;
 }
@@ -431,17 +433,7 @@ describe('AssetSourceCodec', () => {
 
 describe('AssetType source-variant storage', () => {
   test('two source variants of one URL are cached apart, not on top of each other', async () => {
-    const saved: Array<{ storageName: string; key: string }> = [];
-    const store = {
-      load: () => Promise.resolve(null),
-      save: (storageName: string, key: string) => {
-        saved.push({ storageName, key });
-        return Promise.resolve();
-      },
-      delete: () => Promise.resolve(true),
-      clear: () => Promise.resolve(true),
-      destroy: () => undefined,
-    };
+    const store = createCacheStoreDouble();
 
     mockJsonFetch();
 
@@ -453,10 +445,11 @@ describe('AssetType source-variant storage', () => {
     await loader.load(worldType.asset('level.world', { locale: 'de' }));
     await loader.load(worldType.asset('level.world', { locale: 'en' }));
 
-    expect(saved).toEqual([
-      { storageName: 'com.example.world', key: 'url:https://assets.test/level.world|de' },
-      { storageName: 'com.example.world', key: 'url:https://assets.test/level.world|en' },
+    expect(store.set.mock.calls.map(call => call[0])).toEqual([
+      { namespace: 'com.example.world', source: 'url:https://assets.test/level.world|de', version: 1, record: 'value' },
+      { namespace: 'com.example.world', source: 'url:https://assets.test/level.world|en', version: 1, record: 'value' },
     ]);
+    expect(store.records.size).toBe(2);
   });
 
   test('the codec sees the canonical locator on both the network and the bytes path', async () => {

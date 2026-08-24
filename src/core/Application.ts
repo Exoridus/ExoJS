@@ -758,7 +758,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           basePath: loaderOptions.basePath ?? '',
           fetchOptions: loaderOptions.fetchOptions ?? { ...defaultLoaderFetchOptions },
           ...(loaderOptions.cache !== undefined && { cache: loaderOptions.cache }),
-          ...(loaderOptions.cacheStrategy !== undefined && { cacheStrategy: loaderOptions.cacheStrategy }),
           ...(loaderOptions.concurrency !== undefined && { concurrency: loaderOptions.concurrency }),
         },
         rendering: resolveRenderingOptions(renderingOptions),

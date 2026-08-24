@@ -457,14 +457,12 @@ describe('Application', () => {
     const { Application, LoaderMock } = await loadApplicationHarness();
     const fetchOptions: RequestInit = { credentials: 'include' };
     const cache = {} as import('#assets/CacheStore').CacheStore;
-    const cacheStrategy = { resolve: vi.fn() } as unknown as import('#assets/CacheStrategy').CacheStrategy;
 
     new Application({
       loader: {
         basePath: '/assets/',
         fetchOptions,
         cache,
-        cacheStrategy,
         concurrency: 3,
       },
     });
@@ -473,7 +471,6 @@ describe('Application', () => {
       basePath: '/assets/',
       fetchOptions,
       cache,
-      cacheStrategy,
       concurrency: 3,
     });
   });

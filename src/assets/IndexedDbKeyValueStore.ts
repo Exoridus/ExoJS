@@ -1,18 +1,24 @@
-import { IndexedDbStore, type IndexedDbStoreOptions } from './IndexedDbStore';
+import { IndexedDbDatabase } from './IndexedDbDatabase';
 import type { KeyValueStore } from './KeyValueStore';
 
 /** Construction options for {@link IndexedDbKeyValueStore}. */
-export interface IndexedDbKeyValueStoreOptions extends Omit<IndexedDbStoreOptions, 'storeNames'> {
+export interface IndexedDbKeyValueStoreOptions {
+  /** IndexedDB database name. */
+  name: string;
+  /** Schema version. Default `1`. */
+  version?: number;
   /** Object-store name within the database. Default `"__kv_store"`. */
   storeName?: string;
+  /** Explicit per-version schema callbacks. See {@link IndexedDbDatabase} for migration semantics. */
+  migrations?: Record<number, (db: IDBDatabase, transaction: IDBTransaction) => boolean>;
 }
 
 const defaultDatabaseName = 'exojs-kv-store';
 const defaultStoreName = '__kv_store';
 
 /**
- * {@link KeyValueStore} over IndexedDB (via {@link IndexedDbStore}), using the
- * **structured-clone** algorithm.
+ * {@link KeyValueStore} over IndexedDB, using the **structured-clone**
+ * algorithm.
  *
  * Unlike {@link WebStorageStore}, values are stored *directly* - no
  * `JSON.stringify`. So `Blob`s, `ArrayBuffer`s, typed arrays and nested objects
@@ -29,43 +35,38 @@ const defaultStoreName = '__kv_store';
  */
 export class IndexedDbKeyValueStore implements KeyValueStore {
   private readonly _storeName: string;
-  private readonly _store: IndexedDbStore;
+  private readonly _database: IndexedDbDatabase;
 
   public constructor(nameOrOptions: string | IndexedDbKeyValueStoreOptions = defaultDatabaseName) {
     const options = typeof nameOrOptions === 'string' ? { name: nameOrOptions } : nameOrOptions;
     const storeName = options.storeName ?? defaultStoreName;
 
     this._storeName = storeName;
-    this._store = new IndexedDbStore({
-      name: options.name,
-      ...(options.version !== undefined && { version: options.version }),
-      ...(options.migrations !== undefined && { migrations: options.migrations }),
-      storeNames: [storeName],
-    });
+    this._database = new IndexedDbDatabase(options.name, options.version ?? 1, [storeName], options.migrations);
   }
 
   public async get<T>(key: string): Promise<T | null> {
-    return (await this._store.load(this._storeName, key)) as T | null;
+    return this._database.load<T>(this._storeName, key);
   }
 
   public async set(key: string, value: unknown): Promise<void> {
-    await this._store.save(this._storeName, key, value);
+    await this._database.save(this._storeName, key, value);
   }
 
   public async has(key: string): Promise<boolean> {
-    return (await this._store.load(this._storeName, key)) !== null;
+    return (await this._database.load(this._storeName, key)) !== null;
   }
 
   public async delete(key: string): Promise<boolean> {
-    return this._store.delete(this._storeName, key);
+    return this._database.delete(this._storeName, key);
   }
 
   public async clear(): Promise<boolean> {
-    return this._store.clear(this._storeName);
+    return this._database.clearStorage(this._storeName);
   }
 
   /** Synchronously release the underlying database handle. */
   public destroy(): void {
-    this._store.destroy();
+    this._database.destroy();
   }
 }
