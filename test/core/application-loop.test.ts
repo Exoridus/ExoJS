@@ -388,6 +388,67 @@ describe('Application.update() — loop timing', () => {
       expect(observedDeltas[1]).toBe(framePeriodMs);
     });
 
+    test('the frame delta is the distance between two frame timestamps', () => {
+      const observedDeltas: number[] = [];
+
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
+        observedDeltas.push(delta.milliseconds);
+      });
+
+      (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] = 0;
+
+      app.update(16);
+      app.update(48);
+
+      expect(observedDeltas).toEqual([16, 32]);
+    });
+
+    test('a frame with no timestamp reads the host clock through the platform adapter', () => {
+      const observedDeltas: number[] = [];
+      const globalNow = vi.spyOn(performance, 'now');
+
+      vi.spyOn(app.platform, 'now').mockReturnValue(25);
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
+        observedDeltas.push(delta.milliseconds);
+      });
+
+      (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] = 0;
+
+      app.update();
+
+      expect(observedDeltas).toEqual([25]);
+      expect(globalNow).not.toHaveBeenCalled();
+    });
+
+    test('the loop runs on the timestamp the adapter hands its frame callback', () => {
+      const observedDeltas: number[] = [];
+      let scheduled: ((timestamp: number) => void) | null = null;
+
+      vi.spyOn(app.platform, 'now').mockReturnValue(0);
+      vi.spyOn(app.platform, 'requestFrame').mockImplementation((callback: (timestamp: number) => void) => {
+        scheduled = callback;
+
+        return 1;
+      });
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
+        observedDeltas.push(delta.milliseconds);
+      });
+
+      (app as unknown as { _startFrameLoop: () => void })._startFrameLoop();
+
+      const runFrame = (timestamp: number): void => {
+        const callback = scheduled;
+
+        scheduled = null;
+        callback?.(timestamp);
+      };
+
+      runFrame(16);
+      runFrame(33);
+
+      expect(observedDeltas).toEqual([16, 17]);
+    });
+
     test('rawFrameDeltaMs reports elapsed wall time, not wall time minus the previous frame cost', () => {
       const timeline = installVirtualHostClock(app);
 
