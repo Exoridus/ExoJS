@@ -386,7 +386,7 @@ describe('Application lifecycle / getters / sizing', () => {
       app.cursor = 'pointer';
 
       expect(app.cursor).toBe('pointer');
-      expect(app.canvas.style.cursor).toBe('pointer');
+      expect(app.element!.style.cursor).toBe('pointer');
     });
 
     test('setCursor with a Texture that has a source rasterizes it to a data: URL', async () => {
@@ -398,7 +398,7 @@ describe('Application lifecycle / getters / sizing', () => {
       app.setCursor(texture);
 
       expect(app.cursor).toMatch(/^url\(data:image\/png;base64,.*\), auto$/);
-      expect(app.canvas.style.cursor).toBe(app.cursor);
+      expect(app.element!.style.cursor).toBe(app.cursor);
     });
 
     test('setCursor with a Texture that has no source throws', async () => {
@@ -479,7 +479,7 @@ describe('Application lifecycle / getters / sizing', () => {
       try {
         const app = new Application({ canvas: { mount: '#lifecycle-test-root' }, backend: { type: 'webgl2' } });
 
-        expect(container.contains(app.canvas)).toBe(true);
+        expect(container.contains(app.element)).toBe(true);
       } finally {
         document.body.removeChild(container);
       }
@@ -491,14 +491,14 @@ describe('Application lifecycle / getters / sizing', () => {
 
       const app = new Application({ canvas: { mount: container }, backend: { type: 'webgl2' } });
 
-      expect(container.contains(app.canvas)).toBe(true);
+      expect(container.contains(app.element)).toBe(true);
     });
 
     test('is a no-op when mount is omitted (canvas stays unattached)', async () => {
       const { Application } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
 
-      expect(app.canvas.parentElement).toBeNull();
+      expect(app.element!.parentElement).toBeNull();
     });
 
     test('warns once and leaves the canvas unattached when the mount selector matches no element', async () => {
@@ -515,9 +515,9 @@ describe('Application lifecycle / getters / sizing', () => {
       try {
         const app = new Application({ canvas: { mount: '#does-not-exist-anywhere' }, backend: { type: 'webgl2' } });
 
-        expect(app.canvas.parentElement).toBeNull();
+        expect(app.element!.parentElement).toBeNull();
         expect(messages).toEqual([
-          'Application canvas.mount selector "#does-not-exist-anywhere" did not match any element — the canvas was created but never attached to the page. Check the selector for typos, or append `app.canvas` to the DOM yourself.',
+          'Application canvas.mount selector "#does-not-exist-anywhere" did not match any element — the canvas was created but never attached to the page. Check the selector for typos, or append `app.element` to the DOM yourself.',
         ]);
       } finally {
         removeSink();
@@ -535,26 +535,26 @@ describe('Application lifecycle / getters / sizing', () => {
       const { Application } = await loadHarness();
       const app = new Application({ canvas: { sizingMode: 'fit' }, backend: { type: 'webgl2' } });
 
-      expect(app.canvas.style.width).toBe('100%');
-      expect(app.canvas.style.height).toBe('100%');
-      expect(app.canvas.style.objectFit).toBe('contain');
+      expect(app.element!.style.width).toBe('100%');
+      expect(app.element!.style.height).toBe('100%');
+      expect(app.element!.style.objectFit).toBe('contain');
     });
 
     test('"shrink" sets maxWidth/maxHeight 100% and objectFit contain', async () => {
       const { Application } = await loadHarness();
       const app = new Application({ canvas: { sizingMode: 'shrink' }, backend: { type: 'webgl2' } });
 
-      expect(app.canvas.style.maxWidth).toBe('100%');
-      expect(app.canvas.style.maxHeight).toBe('100%');
-      expect(app.canvas.style.objectFit).toBe('contain');
+      expect(app.element!.style.maxWidth).toBe('100%');
+      expect(app.element!.style.maxHeight).toBe('100%');
+      expect(app.element!.style.objectFit).toBe('contain');
     });
 
     test('"fixed" (default) leaves sizing CSS untouched', async () => {
       const { Application } = await loadHarness();
       const app = new Application({ canvas: { sizingMode: 'fixed' }, backend: { type: 'webgl2' } });
 
-      expect(app.canvas.style.objectFit).toBe('');
-      expect(app.canvas.style.maxWidth).toBe('');
+      expect(app.element!.style.objectFit).toBe('');
+      expect(app.element!.style.maxWidth).toBe('');
       expect(app.sizingMode).toBe('fixed');
     });
   });
@@ -682,8 +682,8 @@ describe('Application lifecycle / getters / sizing', () => {
       // 800x600 design fit into 640x480 parent -> scale 0.8 both axes (exact fit).
       expect(app.canvas.width).toBe(640);
       expect(app.canvas.height).toBe(480);
-      expect(app.canvas.style.width).toBe('640px');
-      expect(app.canvas.style.height).toBe('480px');
+      expect(app.element!.style.width).toBe('640px');
+      expect(app.element!.style.height).toBe('480px');
     });
 
     test('ignores a layout callback firing with a zero-sized parent', async () => {
@@ -719,10 +719,10 @@ describe('Application lifecycle / getters / sizing', () => {
 
       app.sizingMode = 'fixed';
 
-      expect(app.canvas.style.objectFit).toBe('');
+      expect(app.element!.style.objectFit).toBe('');
       // Back to the explicit design box, not the parent-relative one.
-      expect(app.canvas.style.width).toBe('320px');
-      expect(app.canvas.style.height).toBe('240px');
+      expect(app.element!.style.width).toBe('320px');
+      expect(app.element!.style.height).toBe('240px');
     });
 
     test('leaving "shrink" drops its max-size clamp and objectFit', async () => {
@@ -731,11 +731,11 @@ describe('Application lifecycle / getters / sizing', () => {
 
       app.sizingMode = 'fit';
 
-      expect(app.canvas.style.maxWidth).toBe('');
-      expect(app.canvas.style.maxHeight).toBe('');
+      expect(app.element!.style.maxWidth).toBe('');
+      expect(app.element!.style.maxHeight).toBe('');
       // The incoming mode's own rules are still applied afterwards.
-      expect(app.canvas.style.objectFit).toBe('contain');
-      expect(app.canvas.style.width).toBe('100%');
+      expect(app.element!.style.objectFit).toBe('contain');
+      expect(app.element!.style.width).toBe('100%');
     });
 
     test('leaving "letterbox" hands the parent element its own styles back', async () => {
@@ -778,12 +778,12 @@ describe('Application lifecycle / getters / sizing', () => {
       try {
         const app = new Application({ canvas: { mount: container }, backend: { type: 'webgl2' } });
 
-        expect(container.contains(app.canvas)).toBe(true);
+        expect(container.contains(app.element)).toBe(true);
 
         void app.destroy();
 
-        expect(container.contains(app.canvas)).toBe(false);
-        expect(app.canvas.parentElement).toBeNull();
+        expect(container.contains(app.element)).toBe(false);
+        expect(app.element!.parentElement).toBeNull();
       } finally {
         container.remove();
       }
@@ -1124,7 +1124,7 @@ describe('Application lifecycle / getters / sizing', () => {
 
       const app = new Application({ canvas: { element: canvas }, backend: { type: 'webgl2' } });
 
-      expect(app.canvas.tabIndex).toBe(7);
+      expect(app.element!.tabIndex).toBe(7);
     });
 
     test('an explicit (empty) extensions list takes the buildSnapshot() path', async () => {

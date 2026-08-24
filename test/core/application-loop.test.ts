@@ -6,7 +6,7 @@
  *   - internal MAX_DELTA_MS clamp applied to simulation delta
  */
 import { Application, ApplicationState } from '#core/Application';
-import { Time } from '#core/Time';
+import { type Time } from '#core/Time';
 
 // ---------------------------------------------------------------------------
 // Backend stubs - keep WebGL2 / WebGPU out of jsdom.

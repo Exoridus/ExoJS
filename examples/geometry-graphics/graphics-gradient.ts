@@ -90,6 +90,6 @@ const app = new Application({
 });
 
 app.start(GraphicsGradientScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });

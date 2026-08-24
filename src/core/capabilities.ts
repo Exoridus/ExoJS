@@ -26,14 +26,20 @@ export type HostRealm = 'window' | 'worker' | 'unknown';
 const hasWindow = typeof window !== 'undefined';
 const hasDocument = typeof document !== 'undefined';
 const hasNavigator = typeof navigator !== 'undefined';
-// `WorkerGlobalScope` rather than `DedicatedWorkerGlobalScope`, and read off
-// `globalThis` rather than referenced directly: the worker lib is not in scope
-// for a DOM build, and module workers - unlike classic ones - have no
+// `WorkerGlobalScope` rather than `DedicatedWorkerGlobalScope`, and reached
+// through `Reflect.get` rather than referenced directly: the worker lib is not
+// in scope for a DOM build, and module workers - unlike classic ones - have no
 // `importScripts` to detect instead.
-const workerGlobalScope = (globalThis as { WorkerGlobalScope?: abstract new () => object }).WorkerGlobalScope;
+const workerGlobalScope = Reflect.get(globalThis, 'WorkerGlobalScope') as (abstract new () => object) | undefined;
 const hasWorkerScope = workerGlobalScope !== undefined && globalThis instanceof workerGlobalScope;
 
-const realm: HostRealm = hasWindow && hasDocument ? 'window' : hasWorkerScope ? 'worker' : 'unknown';
+function detectRealm(): HostRealm {
+  if (hasWindow && hasDocument) return 'window';
+  if (hasWorkerScope) return 'worker';
+  return 'unknown';
+}
+
+const realm: HostRealm = detectRealm();
 
 interface CapabilityValues {
   readonly realm: HostRealm;

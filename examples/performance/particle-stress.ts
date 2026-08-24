@@ -196,7 +196,7 @@ const app = new Application({
 });
 
 app.start(ParticleStressScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });
 

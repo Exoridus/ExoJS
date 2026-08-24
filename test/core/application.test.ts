@@ -554,15 +554,15 @@ describe('Application', () => {
 
     expect(app.canvas.width).toBe(400);
     expect(app.canvas.height).toBe(200);
-    expect(app.canvas.style.width).toBe('200px');
-    expect(app.canvas.style.height).toBe('100px');
+    expect(app.element!.style.width).toBe('200px');
+    expect(app.element!.style.height).toBe('100px');
 
     app.resize(300, 150);
 
     expect(app.canvas.width).toBe(600);
     expect(app.canvas.height).toBe(300);
-    expect(app.canvas.style.width).toBe('300px');
-    expect(app.canvas.style.height).toBe('150px');
+    expect(app.element!.style.width).toBe('300px');
+    expect(app.element!.style.height).toBe('150px');
     expect(webglManager.resize).toHaveBeenCalledWith(300, 150);
   });
 
@@ -577,8 +577,8 @@ describe('Application', () => {
       },
     });
 
-    expect(app.canvas.tabIndex).toBe(0);
-    expect(app.canvas.style.imageRendering).toBe('pixelated');
+    expect(app.element!.tabIndex).toBe(0);
+    expect(app.element!.style.imageRendering).toBe('pixelated');
   });
 
   test('ignores removed flat options at runtime (no compatibility shim)', async () => {

@@ -317,6 +317,7 @@ exports[`root index type-level export inventory > all exported symbols with kind
   "PixelSnapMode: enum",
   "PlatformAdapter: interface",
   "PlatformEvent: interface",
+  "PlatformEventData: type alias",
   "PlatformKeyboardEvent: interface",
   "PlatformListenerOptions: interface",
   "PlatformPointerEvent: interface",

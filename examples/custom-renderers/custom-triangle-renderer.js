@@ -144,6 +144,6 @@ const app = new Application({
     backend: { type: 'webgpu' },
 });
 app.start(CustomTriangleRendererScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });

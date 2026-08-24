@@ -54,21 +54,21 @@ const red = (edge: number): OffscreenCanvas => {
 };
 
 class WorkerScene extends Scene {
-  private readonly _root = new Container();
+  private readonly _content = new Container();
 
   public override load(): void {
     const sprite = new Sprite(new Texture(red(16)));
 
     sprite.setPosition(8, 8);
-    this._root.addChild(sprite);
+    this._content.addChild(sprite);
   }
 
   public override draw(context: RenderingContext): void {
-    this._root.render(context.backend);
+    this._content.render(context.backend);
   }
 
   public override unload(): void {
-    this._root.destroy();
+    this._content.destroy();
   }
 }
 
@@ -114,12 +114,12 @@ self.onmessage = async (event: MessageEvent<HostMessage>): Promise<void> => {
         backend: { type: 'webgl2' },
         scenes: { main: WorkerScene },
         canvas: { element: message.surface, width: message.size, height: message.size, pixelRatio: 1 },
-        rendering: { webglAttributes: { antialias: false, preserveDrawingBuffer: true, stencil: false, depth: false } },
+        rendering: { webglAttributes: { antialias: false, preserveDrawingBuffer: true, depth: false } },
       });
 
       app.input.onPointerDown.add((_pointer, x, y) => void pointerPositions.push({ x, y }));
 
-      await app.start('main');
+      await app.start(WorkerScene);
 
       // One frame, driven by hand: whether this realm schedules display frames
       // at all is exactly what the host is asking about, so the reply must not

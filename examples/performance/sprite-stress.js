@@ -75,7 +75,7 @@ const app = new Application({
     backend: { type: 'webgpu' },
 });
 app.start(SpriteStressScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });
 function createAtlasTexture() {

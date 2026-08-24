@@ -3,8 +3,8 @@
  * own, what the host has to feed it, and that nothing survives its teardown.
  */
 
-import { OffscreenPlatform } from '#platform/OffscreenPlatform';
 import type { PlatformEventData, PlatformPointerEvent, RenderSurface } from '#platform/index';
+import { OffscreenPlatform } from '#platform/OffscreenPlatform';
 
 /** A stand-in for a sized render surface - jsdom has no `OffscreenCanvas`. */
 const createSurface = (width = 800, height = 600): RenderSurface => ({ width, height }) as RenderSurface;

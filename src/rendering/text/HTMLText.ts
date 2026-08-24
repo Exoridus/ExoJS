@@ -86,7 +86,7 @@ export class HTMLText extends Container {
     const [canvas, ctx] = HTMLText._makeCanvas(Math.ceil(this._width * this._resolution), Math.ceil(this._height * this._resolution));
     this._canvas = canvas;
     this._ctx = ctx;
-    this._texture = new Texture(canvas as HTMLCanvasElement);
+    this._texture = new Texture(canvas);
     this._texture.setSize(this._width, this._height);
 
     this._mesh = this._buildMesh();

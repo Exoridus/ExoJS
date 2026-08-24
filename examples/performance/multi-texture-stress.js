@@ -76,7 +76,7 @@ const app = new Application({
     backend: { type: 'webgpu' },
 });
 app.start(MultiTextureStressScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });
 function createTextureInfos() {

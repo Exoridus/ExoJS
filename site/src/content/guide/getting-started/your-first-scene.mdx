@@ -82,7 +82,7 @@ This rotates the sprite at 120 degrees per second regardless of whether the brow
 
 ## Where the canvas lives
 
-The `app.canvas` property is a regular `HTMLCanvasElement`. In a real page, you place it wherever your layout needs it:
+The `canvas.mount` option puts the canvas wherever your layout needs it:
 
 ```ts
 import { Application } from '@codexo/exojs';
@@ -90,14 +90,13 @@ import { Application } from '@codexo/exojs';
 const mount = document.getElementById('scene');
 if (mount === null) throw new Error('Missing #scene mount element.');
 
-const app = new Application();
-mount.append(app.canvas);
+const app = new Application({ canvas: { mount } });
 ```
 
 For the smallest possible test page, appending to `document.body` is fine. Either way, the canvas needs to be mounted somewhere in the DOM before frames become visible.
 
 <Callout type="broken" title="A canvas outside the DOM shows nothing">
-If `app.canvas` is never appended to the page, the scene still loads, updates, and draws — you just see a blank page with no error to explain why. Append it before you expect a frame.
+If the canvas is never appended to the page, the scene still loads, updates, and draws — you just see a blank page with no error to explain why. Mount it before you expect a frame.
 </Callout>
 
 ## The full thing running

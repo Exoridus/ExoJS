@@ -143,7 +143,7 @@ export class AtlasPage {
     } else {
       const { canvas, ctx } = makeCtx(width, height);
       this._ctx = ctx;
-      this.texture = new Texture(canvas as HTMLCanvasElement);
+      this.texture = new Texture(canvas);
       // Already the `Texture` default; stated so the two page kinds visibly
       // agree on how a glyph is filtered.
       this.texture.setScaleMode(ScaleModes.Linear);

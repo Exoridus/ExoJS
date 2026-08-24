@@ -55,6 +55,6 @@ const app = new Application({
     backend: { type: 'webgl2' },
 });
 app.start(GradientScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });

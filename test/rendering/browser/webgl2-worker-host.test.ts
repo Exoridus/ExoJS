@@ -80,6 +80,20 @@ const exchange = <T extends WorkerMessage>(worker: Worker, message: unknown, tra
     worker.postMessage(message, transfer);
   });
 
+/**
+ * Whether this browser can hand a canvas over to a worker at all. A browser
+ * that cannot is a measurement result, not a broken test.
+ */
+const canTransferSurface = (ctx: { skip: (reason: string) => void }): boolean => {
+  if (typeof HTMLCanvasElement.prototype.transferControlToOffscreen === 'function') {
+    return true;
+  }
+
+  ctx.skip('This browser cannot transfer canvas control to a worker.');
+
+  return false;
+};
+
 const createHostCanvas = (): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
 
@@ -102,11 +116,7 @@ describe('an application hosted in a worker', () => {
   });
 
   test('starts, renders and reports a realm of its own', async ctx => {
-    if (typeof HTMLCanvasElement.prototype.transferControlToOffscreen !== 'function') {
-      ctx.skip('This browser cannot transfer canvas control to a worker.');
-
-      return;
-    }
+    if (!canTransferSurface(ctx)) return;
 
     canvas = createHostCanvas();
     worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });
@@ -134,11 +144,7 @@ describe('an application hosted in a worker', () => {
   });
 
   test('routes host-normalised pointer input into the worker input pipeline', async ctx => {
-    if (typeof HTMLCanvasElement.prototype.transferControlToOffscreen !== 'function') {
-      ctx.skip('This browser cannot transfer canvas control to a worker.');
-
-      return;
-    }
+    if (!canTransferSurface(ctx)) return;
 
     canvas = createHostCanvas();
     worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });
@@ -159,11 +165,7 @@ describe('an application hosted in a worker', () => {
   });
 
   test('runs its own frame loop, on a timer where the realm schedules no frames', async ctx => {
-    if (typeof HTMLCanvasElement.prototype.transferControlToOffscreen !== 'function') {
-      ctx.skip('This browser cannot transfer canvas control to a worker.');
-
-      return;
-    }
+    if (!canTransferSurface(ctx)) return;
 
     canvas = createHostCanvas();
     worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });
@@ -183,11 +185,7 @@ describe('an application hosted in a worker', () => {
   });
 
   test('shuts down cleanly on request', async ctx => {
-    if (typeof HTMLCanvasElement.prototype.transferControlToOffscreen !== 'function') {
-      ctx.skip('This browser cannot transfer canvas control to a worker.');
-
-      return;
-    }
+    if (!canTransferSurface(ctx)) return;
 
     canvas = createHostCanvas();
     worker = new Worker(new URL('./fixtures/application-host.worker.ts', import.meta.url), { type: 'module' });

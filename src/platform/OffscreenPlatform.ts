@@ -17,6 +17,9 @@ const fallbackFramePeriodMs = 1000 / 60;
 
 type Listener = (event: never) => void;
 
+/** The shared implementation of every affordance that needs a document to mean anything. */
+const inert = (): void => undefined;
+
 /**
  * Where the surface is displayed, in the coordinate space the forwarded
  * pointer events use.
@@ -157,19 +160,19 @@ export class OffscreenPlatform implements PlatformAdapter {
   }
 
   /** No document to move focus in. */
-  public focusSurface(): void {}
+  public readonly focusSurface = inert;
 
   /** No document to style. */
-  public setCursor(): void {}
+  public readonly setCursor = inert;
 
   /** No document to set a touch-action policy on. */
-  public setTouchAction(): void {}
+  public readonly setTouchAction = inert;
 
   /** No document to route pointer events in - a forwarded event already carries its identity. */
-  public capturePointer(): void {}
+  public readonly capturePointer = inert;
 
   /** Counterpart to {@link OffscreenPlatform.capturePointer}, equally inert. */
-  public releasePointer(): void {}
+  public readonly releasePointer = inert;
 
   public getSurfaceMetrics(): PlatformSurfaceMetrics {
     return {
@@ -231,14 +234,14 @@ export class OffscreenPlatform implements PlatformAdapter {
     type: K,
     listener: (event: PlatformSurfaceEventMap[K]) => void,
   ): PlatformSubscription {
-    return subscribe(this._surfaceListeners, type, listener as Listener);
+    return subscribe(this._surfaceListeners, type, listener);
   }
 
   public onWindowEvent<K extends keyof PlatformWindowEventMap>(
     type: K,
     listener: (event: PlatformWindowEventMap[K]) => void,
   ): PlatformSubscription {
-    return subscribe(this._windowListeners, type, listener as Listener);
+    return subscribe(this._windowListeners, type, listener);
   }
 
   public destroy(): void {

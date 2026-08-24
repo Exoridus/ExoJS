@@ -20,7 +20,7 @@ In a typical 2D project, world space has the X axis pointing right and the Y axi
 
 ## Canvas space
 
-Canvas space runs from `(0, 0)` at the top-left to `(app.width, app.height)` at the bottom-right. Pointer events arrive in these logical design pixels, independent of CSS size and device pixel ratio. The DOM element's `app.canvas.width` and `app.canvas.height` are physical backing-store dimensions and are normally only relevant to low-level rendering code.
+Canvas space runs from `(0, 0)` at the top-left to `(app.width, app.height)` at the bottom-right. Pointer events arrive in these logical design pixels, independent of CSS size and device pixel ratio. The surface's `app.canvas.width` and `app.canvas.height` are physical backing-store dimensions and are normally only relevant to low-level rendering code.
 
 If you placed every sprite at its world position and the camera never moved, world space and canvas space would line up exactly. The moment you move the camera, scale the canvas, or render to a sub-region, the two diverge.
 

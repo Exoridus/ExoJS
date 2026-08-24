@@ -142,7 +142,7 @@ const app = new Application({
     extensions: [particlesExtension],
 });
 app.start(ParticleStressScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });
 function createParticleTexture() {

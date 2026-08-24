@@ -1,5 +1,4 @@
 import { Size } from '#math/Size';
-
 import type { PlatformEvent } from '#platform/PlatformAdapter';
 
 import type { TextureSource } from './types';

@@ -93,7 +93,7 @@ const app = new Application({
 });
 
 app.start(SpriteStressScene).catch(() => {
-    app.canvas.remove();
+    app.element?.remove();
     app.destroy();
 });
 

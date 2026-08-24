@@ -32,6 +32,17 @@ const filledOffscreenCanvas = (edge = 16): OffscreenCanvas => {
   return canvas;
 };
 
+/** Whether this browser ships WebCodecs at all. Recorded rather than failed. */
+const hasVideoFrame = (ctx: { skip: (reason: string) => void }): boolean => {
+  if (typeof VideoFrame === 'function') {
+    return true;
+  }
+
+  ctx.skip('This browser has no WebCodecs VideoFrame.');
+
+  return false;
+};
+
 const filledCanvas = (edge = 16): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
 
@@ -98,11 +109,7 @@ describe('WebGPU uploads the surface-only texture sources', () => {
   });
 
   test('a VideoFrame uploads, and the engine leaves it open for its owner to close', async ctx => {
-    if (typeof VideoFrame === 'undefined') {
-      ctx.skip('This browser has no WebCodecs VideoFrame.');
-
-      return;
-    }
+    if (!hasVideoFrame(ctx)) return;
 
     const backend = await createWebGpuTestBackend(SIZE);
     const root = new Container();

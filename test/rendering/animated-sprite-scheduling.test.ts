@@ -5,7 +5,6 @@
  * phase - and deregisters again on stop, detach, completion and destroy.
  */
 import { Application, ApplicationState } from '#core/Application';
-import { Time } from '#core/Time';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';

@@ -1,10 +1,10 @@
 /// <reference types="@webgpu/types" />
 
 import type { Application, CanvasAlphaMode } from '#core/Application';
-import type { TextureSource } from '#core/types';
 import { Color } from '#core/Color';
 import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
+import type { TextureSource } from '#core/types';
 import { type Matrix } from '#math/Matrix';
 import type { Rectangle } from '#math/Rectangle';
 import { Vector } from '#math/Vector';
