@@ -10,6 +10,7 @@
  * Run via:  pnpm test:browser:webgl
  */
 
+import { Application } from '#core/Application';
 import { Color } from '#core/Color';
 import { Container } from '#rendering/Container';
 import { Sprite } from '#rendering/sprite/Sprite';
@@ -87,6 +88,57 @@ describe('WebGL2 renders into an OffscreenCanvas', () => {
     } finally {
       backend.destroy();
     }
+  });
+});
+
+describe('an application given an OffscreenCanvas on the main thread', () => {
+  test('renders into it, reports no element, and leaves the DOM options inert', async () => {
+    const surface = new OffscreenCanvas(SIZE, SIZE);
+    const app = new Application({
+      hello: false,
+      backend: { type: 'webgl2' },
+      canvas: {
+        element: surface,
+        width: SIZE,
+        height: SIZE,
+        pixelRatio: 1,
+        // Both are document affordances the surface does not have. They must be
+        // ignored rather than throw, and must not conjure a DOM canvas.
+        mount: document.body,
+        sizingMode: 'fill',
+      },
+    });
+
+    try {
+      expect(app.canvas).toBe(surface);
+      expect(app.element).toBeNull();
+      expect(app.platform.constructor.name).toBe('OffscreenPlatform');
+
+      // The backing store is sized even though there is no CSS box to size.
+      expect(surface.width).toBe(SIZE);
+      expect(surface.height).toBe(SIZE);
+
+      // Nothing was appended to the document in the surface's name.
+      expect(document.body.querySelector('canvas')).toBeNull();
+
+      const metrics = app.platform.getSurfaceMetrics();
+
+      expect(metrics.backingWidth).toBe(SIZE);
+      expect(metrics.backingHeight).toBe(SIZE);
+    } finally {
+      await app.destroy();
+    }
+  });
+
+  test('leaves a caller-provided surface alone when it goes down', async () => {
+    const surface = new OffscreenCanvas(SIZE, SIZE);
+    const app = new Application({ hello: false, backend: { type: 'webgl2' }, canvas: { element: surface, width: SIZE, height: SIZE, pixelRatio: 1 } });
+
+    await app.destroy();
+
+    // A surface the caller owns survives the application that drew into it.
+    expect(surface.width).toBe(SIZE);
+    expect(surface.height).toBe(SIZE);
   });
 });
 
