@@ -15,6 +15,7 @@ import { serializeCacheRecordKey } from '#assets/CacheRecordKey';
 import { CacheRoute } from '#assets/CacheRoute';
 import { MemoryCacheStore } from '#assets/MemoryCacheStore';
 import { SingleEntryLayout } from '#assets/SingleEntryLayout';
+import { unrestrictedNetwork } from '#core/Connectivity';
 
 import { type CacheStoreDouble, createCacheStoreDouble, createRecordingPolicy } from './cache-test-doubles';
 
@@ -25,6 +26,7 @@ function acquisition(overrides: Partial<CacheAcquisition<string>> = {}): CacheAc
     namespace: 'com.example.world',
     sourceKey,
     layout: SingleEntryLayout.version<string>(1),
+    network: unrestrictedNetwork,
     fetch: () => Promise.resolve('from-network'),
     report: () => undefined,
     ...overrides,

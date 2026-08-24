@@ -1,8 +1,6 @@
-import type { Connectivity } from '#core/Connectivity';
-
 import { CacheFirstPolicy, CacheOnlyPolicy } from './cachePolicies';
 import type { CachePolicy } from './CachePolicy';
-import type { CachePolicyResolver } from './CachePolicyResolver';
+import type { CachePolicyResolutionContext, CachePolicyResolver } from './CachePolicyResolver';
 
 /** Construction options for a {@link ConnectivityPolicyResolver}. */
 export interface ConnectivityPolicyResolverOptions {
@@ -25,32 +23,42 @@ export interface ConnectivityPolicyResolverOptions {
  * allowed to reach the network, and through the configured online policy
  * whenever it is.
  *
- * The decision reads {@link Connectivity.allowsNetwork}, so it honours both
- * halves of that question - the environment's hint and the application's own
- * mode - without having to know which one said no. `'unknown'` counts as
- * allowed: the host is not claiming the network is gone, and refusing on no
- * evidence would break every environment that reports nothing.
+ * It holds no connectivity of its own. The decision is made from the
+ * {@link CachePolicyResolutionContext.network} snapshot the loader hands it per
+ * acquisition, which is what lets one resolver - and one `AssetCache` - be
+ * shared between applications that disagree about whether they may use the
+ * network.
+ *
+ * `allowsNetwork` already folds both halves of the question together - the
+ * environment's hint and the application's own mode - so this never has to know
+ * which one said no. `'unknown'` counts as allowed: the host is not claiming the
+ * network is gone, and refusing on no evidence would break every environment
+ * that reports nothing.
  *
  * @example
  * ```ts
- * const cache = new AssetCache({
- *   stores: new IndexedDbStore('my-game'),
- *   policy: new ConnectivityPolicyResolver(app.connectivity),
+ * const app = new Application({
+ *   loader: {
+ *     cache: new AssetCache({
+ *       stores: new IndexedDbStore('my-game'),
+ *       policy: new ConnectivityPolicyResolver(),
+ *     }),
+ *   },
  * });
+ *
+ * app.connectivity.mode = 'offline';
  * ```
  */
 export class ConnectivityPolicyResolver implements CachePolicyResolver {
-  private readonly _connectivity: Connectivity;
   private readonly _online: CachePolicy;
   private readonly _offline: CachePolicy;
 
-  public constructor(connectivity: Connectivity, options: ConnectivityPolicyResolverOptions = {}) {
-    this._connectivity = connectivity;
+  public constructor(options: ConnectivityPolicyResolverOptions = {}) {
     this._online = options.online ?? new CacheFirstPolicy();
     this._offline = options.offline ?? new CacheOnlyPolicy();
   }
 
-  public policyFor(): CachePolicy {
-    return this._connectivity.allowsNetwork ? this._online : this._offline;
+  public policyFor(context: CachePolicyResolutionContext): CachePolicy {
+    return context.network.allowsNetwork ? this._online : this._offline;
   }
 }

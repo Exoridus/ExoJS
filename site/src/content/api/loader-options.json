@@ -1,16 +1,16 @@
 {
   "title": "LoaderOptions",
-  "description": "Construction options for Loader. `basePath` is prepended to relative asset paths at fetch time. `concurrency` caps the number of simultaneous background-queue fetches (default `6`). `cache` configures caching, and is optional: with nothing passed, every acquisition goes straight to the network and no cache machinery runs at all. One or more CacheStore instances configure a single cache-first route over them; an AssetCache configures routes and policies explicitly.",
+  "description": "Construction options for Loader. `basePath` is prepended to relative asset paths at fetch time. `concurrency` caps the number of simultaneous background-queue fetches (default `6`). `cache` configures caching, and is optional: with nothing passed, every acquisition goes straight to the network and no cache machinery runs at all. One or more CacheStore instances configure a single cache-first route over them; an AssetCache configures routes and policies explicitly. `connectivity` is what makes an acquisition's network permission known to the cache and to a streaming asset type. Application supplies its own, so this is only for a loader built by hand.",
   "symbol": "LoaderOptions",
   "kind": "interface",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 4,
+  "memberCount": 5,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 4,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -21,7 +21,8 @@
       "paragraphs": [
         "Construction options for Loader.",
         "`basePath` is prepended to relative asset paths at fetch time. `concurrency` caps the number of simultaneous background-queue fetches (default `6`).",
-        "`cache` configures caching, and is optional: with nothing passed, every acquisition goes straight to the network and no cache machinery runs at all. One or more CacheStore instances configure a single cache-first route over them; an AssetCache configures routes and policies explicitly."
+        "`cache` configures caching, and is optional: with nothing passed, every acquisition goes straight to the network and no cache machinery runs at all. One or more CacheStore instances configure a single cache-first route over them; an AssetCache configures routes and policies explicitly.",
+        "`connectivity` is what makes an acquisition's network permission known to the cache and to a streaming asset type. Application supplies its own, so this is only for a loader built by hand."
       ],
       "importLine": "import { LoaderOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -132,6 +133,31 @@
           "params": [],
           "returnType": null,
           "description": ""
+        },
+        {
+          "name": "connectivity",
+          "signature": "connectivity?: Connectivity",
+          "signatureTokens": [
+            {
+              "text": "connectivity",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Connectivity",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Whether acquisitions may reach the network, and what the host reports. The loader never subscribes to it and never changes it: it reads a snapshot when an acquisition starts, and passes that value on. Omitted, every acquisition runs unrestricted."
         },
         {
           "name": "fetchOptions",

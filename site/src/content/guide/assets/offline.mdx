@@ -14,23 +14,22 @@ Both are explicit. Nothing here happens by itself.
 ## The shape of it
 
 ```ts
-import { Application, AssetCache, Connectivity, ConnectivityPolicyResolver, IndexedDbStore, type LoaderOptions } from '@codexo/exojs';
-
-// Built first, so the same instance reaches both the cache and the application.
-const connectivity = new Connectivity();
+import { Application, AssetCache, ConnectivityPolicyResolver, IndexedDbStore, type LoaderOptions } from '@codexo/exojs';
 
 const loader: LoaderOptions = {
   basePath: '/assets/',
   cache: new AssetCache({
     stores: new IndexedDbStore('my-game'),
-    policy: new ConnectivityPolicyResolver(connectivity),
+    policy: new ConnectivityPolicyResolver(),
   }),
 };
 
-const app = new Application({ connectivity, loader });
+const app = new Application({ loader });
 ```
 
-`app.connectivity` is that same object. The resolver is what ties it to the cache: it is asked, once per acquisition, which policy that acquisition runs under.
+`app.connectivity` is the application's own, created for you. The resolver holds no connectivity of its own: it is asked, once per acquisition, which policy that acquisition runs under, and reads the answer from a snapshot the loader hands it.
+
+That is what makes one `AssetCache` safe to share between two applications - each acquisition carries its own application's answer, so they can disagree about whether they may use the network.
 
 ## Warm the cache while you can
 
@@ -45,14 +44,16 @@ Nothing is constructed, nothing is claimed, and nothing stays in memory. What re
 
 Run it where a delay is acceptable and a connection is likely: a title screen, a settings toggle, the pause before a chapter.
 
-<Callout type="hint" title="Streaming media has to be asked">
-Music and video are streamed by the browser by default: the element owns the transfer and never holds more than it is playing, so the loader acquires nothing and there is nothing to cache. Pass `download: true` to acquire it instead:
+<Callout type="hint" title="Warming media has to be asked">
+Music and video are streamed by the browser while the network is available: the element owns the transfer and never holds more than it is playing, so the loader acquires nothing and there is nothing to cache. Pass `download: true` to acquire it instead:
 
 ```ts no-check -- continues the configuration above; on its own it has no app to call
 await app.loader.cacheSource(Asset.type('music', 'theme.mp3', { download: true }));
 ```
 
 Without it, `cacheSource` rejects and says so rather than appearing to succeed.
+
+You only need the flag for the **warm**. Loading it later needs nothing special - see below.
 
 </Callout>
 
@@ -66,6 +67,16 @@ From the next acquisition on, the resolver picks a cache-only policy. That has t
 
 - an asset whose source was warmed **loads normally** - the cache answers, and no request is made;
 - an asset that was never warmed **fails immediately** with an `AssetCacheMissError`, instead of waiting out a fetch that cannot succeed.
+
+Streamed media follows the same rule, without the caller doing anything:
+
+```ts no-check -- continues the configuration above; on its own it has no app to call
+// Online: the browser streams it from the URL.
+// Offline: the same call reads the warmed blob, or misses.
+const theme = await this.loader.load(Asset.type('music', 'theme.mp3'));
+```
+
+Streaming reaches the network directly, past the cache and therefore past every policy. So when the network is forbidden, a normally-streamed request stops streaming and takes the acquisition path instead - which is the only way `mode = 'offline'` can mean what it says. No network-backed source is ever installed on the element.
 
 ```ts no-check -- the recovery branch calls into an application's own UI, which the guide cannot define
 import { AssetCacheMissError } from '@codexo/exojs';
@@ -96,6 +107,11 @@ Set `mode` back to `'auto'` to follow the environment again, or to `'online'` to
 
 `mode` is your decision, and it wins. `'auto'` follows `state`, which is what makes a dropped connection switch the application over without any code running.
 
+<Callout type="hint" title="Bringing your own">
+`ApplicationOptions.connectivity` accepts an instance you built - for a test, a custom host, or a service shared between applications. It is dependency injection, not something ordinary offline caching needs: an injected `Connectivity` is yours to dispose, and `Application.destroy()` leaves it alone.
+
+</Callout>
+
 ## Show it in the UI
 
 The same object drives an offline banner. It is an ordinary runtime service - nothing about it is cache-specific:
@@ -112,7 +128,7 @@ app.connectivity.onModeChange.add(mode => {
 
 ## Where media data lives
 
-A downloaded or cached media asset is persisted as a `Blob`, not as bytes on the JavaScript heap - which is the difference between caching a large video and running out of memory trying. On a cache hit the element is pointed at an object URL over that blob, and the URL lives exactly as long as the resource does:
+Media the application owns - warmed, unpacked from a container, or read back from the cache - is persisted as a `Blob`, not as bytes on the JavaScript heap, which is the difference between caching a large video and running out of memory trying. The element is then pointed at an object URL over that blob, and the URL lives exactly as long as the resource does:
 
 ```
 Blob -> URL.createObjectURL -> <audio> / <video>

@@ -33,6 +33,7 @@ function createDecoder(overrides: { cache?: AssetCache | null; basePath?: string
     basePath: overrides.basePath ?? '',
     fetchOptions: {},
     cache: overrides.cache === undefined ? createFakeCache().cache : overrides.cache,
+    connectivity: null,
     ownsCache: overrides.ownsCache ?? false,
   });
 

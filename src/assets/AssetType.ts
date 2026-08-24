@@ -1,3 +1,5 @@
+import type { NetworkSnapshot } from '#core/Connectivity';
+
 import type { Asset } from './Asset';
 import { AssetImpl } from './Asset';
 import type { AssetConstructor } from './AssetConstructor';
@@ -182,10 +184,18 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
    * what streaming avoids. The other has no source data of its own at all,
    * because it is derived from assets its factory loads as dependencies.
    *
+   * A type that transports its own data over the NETWORK must consult
+   * `network`: declining to acquire also declines the cache, so a type that
+   * streamed regardless would keep reaching for the network after the
+   * application forbade it. Returning `undefined` when
+   * `network.allowsNetwork` is false is what puts such a request back on the
+   * cache path, where it either hits or misses honestly. A type whose source is
+   * derived rather than transported ignores it.
+   *
    * The result is wrapped so that a type whose source is legitimately
    * `undefined` can still say "do not acquire".
    */
-  public unacquiredSource?(request: AssetRequest<Options>, url: string): { readonly source: Source } | undefined;
+  public unacquiredSource?(request: AssetRequest<Options>, url: string, network: NetworkSnapshot): { readonly source: Source } | undefined;
 
   /**
    * The part of a request's identity the source alone does not capture: what

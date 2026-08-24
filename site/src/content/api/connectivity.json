@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 7,
+  "memberCount": 8,
   "counts": {
     "constructors": 1,
-    "methods": 1,
+    "methods": 2,
     "properties": 3,
     "events": 2
   },
@@ -120,6 +120,35 @@
           "params": [],
           "returnType": "void",
           "description": "Stops listening to the host and clears the signals. A hint source handed in belongs to whoever built it - normally the application's platform adapter, which outlives this - and is left alone; one this instance built for itself is torn down here."
+        },
+        {
+          "name": "snapshot",
+          "signature": "snapshot(): NetworkSnapshot",
+          "signatureTokens": [
+            {
+              "text": "snapshot",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkSnapshot",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "NetworkSnapshot",
+          "description": "The facts an acquisition starting now would run under, as one immutable value. This is what reaches a CachePolicyResolver and an asset type's transport decision - never this object, so neither can subscribe to it, hold it past the acquisition, or change it."
         }
       ],
       "paragraphs": [],

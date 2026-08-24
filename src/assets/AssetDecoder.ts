@@ -1,3 +1,6 @@
+import type { Connectivity, NetworkSnapshot } from '#core/Connectivity';
+import { unrestrictedNetwork } from '#core/Connectivity';
+
 import type { AssetCache } from './AssetCache';
 import { AssetCacheError } from './AssetCacheError';
 import { AssetCacheMissError } from './AssetCacheMissError';
@@ -27,6 +30,11 @@ export interface AssetDecoderOptions {
    * a cache the loader built for itself out of the stores it was given.
    */
   ownsCache: boolean;
+  /**
+   * The application's connectivity, or `null` when nothing configured one - in
+   * which case every acquisition runs unrestricted.
+   */
+  connectivity: Connectivity | null;
 }
 
 /** The cache namespace asset containers are acquired under. */
@@ -55,6 +63,7 @@ export class AssetDecoder {
   private readonly _typeRegistry: AssetTypeRegistry;
   private readonly _cache: AssetCache | null;
   private readonly _ownsCache: boolean;
+  private readonly _connectivity: Connectivity | null;
   private _basePath: string;
   private _fetchOptions: RequestInit;
 
@@ -82,6 +91,7 @@ export class AssetDecoder {
     this._typeRegistry = typeRegistry;
     this._cache = options.cache;
     this._ownsCache = options.ownsCache;
+    this._connectivity = options.connectivity;
     this._basePath = options.basePath;
     this._fetchOptions = options.fetchOptions;
   }
@@ -161,7 +171,26 @@ export class AssetDecoder {
       return fetchRepresentation();
     }
 
-    return this._cache.resolve<T>({ namespace, sourceKey, layout, signal, fetch: fetchRepresentation, report: this._reportCacheError });
+    return this._cache.resolve<T>({
+      namespace,
+      sourceKey,
+      layout,
+      network: this._network(),
+      signal,
+      fetch: fetchRepresentation,
+      report: this._reportCacheError,
+    });
+  }
+
+  /**
+   * The connectivity facts this moment would run under.
+   *
+   * Read once per acquisition and passed on as a value, so nothing downstream
+   * can observe a change that happened after the decision it was asked to make.
+   * @internal
+   */
+  public _network(): NetworkSnapshot {
+    return this._connectivity?.snapshot() ?? unrestrictedNetwork;
   }
 
   /**
@@ -270,7 +299,9 @@ export class AssetDecoder {
     const { type, factory } = installed;
 
     try {
-      const unacquired = type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source)) as { source: unknown } | undefined;
+      const unacquired = type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) as
+        | { source: unknown }
+        | undefined;
       const source = unacquired === undefined ? await this._acquireSource(asset, type, signal) : unacquired.source;
 
       return this._storeResource(asset, await factory.create(source, this._factoryContext(asset, scope, options, signal)));
@@ -300,7 +331,7 @@ export class AssetDecoder {
 
     const { type } = installed;
 
-    if (type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source)) !== undefined) {
+    if (type.unacquiredSource?.(toRequest(asset.source, options), this._resolveUrl(asset.source), this._network()) !== undefined) {
       throw new Error(
         `Asset type "${type.id}" supplies its own source for "${asset.source}", so the loader acquires nothing and there ` +
           `is nothing to cache. A streaming media asset needs "download: true" to be cacheable.`,

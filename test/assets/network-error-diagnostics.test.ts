@@ -16,6 +16,7 @@ import { CacheFirstPolicy, NetworkFirstPolicy, NetworkOnlyPolicy } from '#assets
 import type { CachePolicy } from '#assets/CachePolicy';
 import { fetchAsset } from '#assets/fetchAsset';
 import { SingleEntryLayout } from '#assets/SingleEntryLayout';
+import { unrestrictedNetwork } from '#core/Connectivity';
 
 import { createCacheStoreDouble } from './cache-test-doubles';
 
@@ -29,6 +30,7 @@ function acquire(policy: CachePolicy, url: string): Promise<string> {
     namespace: 'test',
     sourceKey: `url:${url}`,
     layout: SingleEntryLayout.version<string>(1),
+    network: unrestrictedNetwork,
     fetch: async () => (await fetchAsset(url, {})).text(),
     report: () => undefined,
   };

@@ -331,7 +331,7 @@
         },
         {
           "name": "unacquiredSource",
-          "signature": "unacquiredSource?(request: AssetRequest<TextureAssetOptions>, url: string): undefined | { source: ArrayBuffer }",
+          "signature": "unacquiredSource?(request: AssetRequest<TextureAssetOptions>, url: string, network: NetworkSnapshot): undefined | { source: ArrayBuffer }",
           "signatureTokens": [
             {
               "text": "unacquiredSource",
@@ -386,6 +386,22 @@
               "kind": "keyword"
             },
             {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "network",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkSnapshot",
+              "kind": "type"
+            },
+            {
               "text": ")",
               "kind": "punctuation"
             },
@@ -432,10 +448,15 @@
               "name": "url",
               "type": "string",
               "optional": false
+            },
+            {
+              "name": "network",
+              "type": "NetworkSnapshot",
+              "optional": false
             }
           ],
           "returnType": "undefined | { source: ArrayBuffer }",
-          "description": "The source for a request the loader must NOT acquire data for. Returning a source skips acquisition completely: nothing is fetched, decoded or cached for that request, codec is never consulted, and the factory receives what this returns, built from the resolved url alone. Returning undefined acquires normally. Two kinds of asset need this. One transports its own data - a media element streaming from a URL, where downloading the whole file up front is exactly what streaming avoids. The other has no source data of its own at all, because it is derived from assets its factory loads as dependencies. The result is wrapped so that a type whose source is legitimately undefined can still say \"do not acquire\"."
+          "description": "The source for a request the loader must NOT acquire data for. Returning a source skips acquisition completely: nothing is fetched, decoded or cached for that request, codec is never consulted, and the factory receives what this returns, built from the resolved url alone. Returning undefined acquires normally. Two kinds of asset need this. One transports its own data - a media element streaming from a URL, where downloading the whole file up front is exactly what streaming avoids. The other has no source data of its own at all, because it is derived from assets its factory loads as dependencies. A type that transports its own data over the NETWORK must consult network: declining to acquire also declines the cache, so a type that streamed regardless would keep reaching for the network after the application forbade it. Returning undefined when network.allowsNetwork is false is what puts such a request back on the cache path, where it either hits or misses honestly. A type whose source is derived rather than transported ignores it. The result is wrapped so that a type whose source is legitimately undefined can still say \"do not acquire\"."
         }
       ],
       "paragraphs": [],

@@ -1,3 +1,5 @@
+import type { NetworkSnapshot } from '#core/Connectivity';
+
 import { AssetCacheError, type AssetCacheOperation } from './AssetCacheError';
 import type { CacheLayout, CacheLayoutContext } from './CacheLayout';
 import type { CacheContext } from './CachePolicy';
@@ -27,6 +29,12 @@ export interface CacheAcquisition<T> {
   readonly sourceKey: SourceKey;
   /** How the acquired representation is laid out in storage. */
   readonly layout: CacheLayout<T>;
+  /**
+   * The connectivity facts this acquisition starts under, taken once by the
+   * loader. A cache never reads connectivity itself; it only forwards what the
+   * acquisition arrived with.
+   */
+  readonly network: NetworkSnapshot;
   readonly signal?: AbortSignal | undefined;
   /** Acquire the representation from the network. */
   fetch(): Promise<T>;
@@ -69,6 +77,10 @@ export interface CacheAcquisition<T> {
  * route's policy a {@link CacheContext}, and turns that context's record reads
  * and writes into store calls. Representation is the asset type's; construction
  * is the factory's.
+ *
+ * It also holds no connectivity and knows no application. Whether an
+ * acquisition may reach the network arrives WITH the acquisition, so one cache
+ * can serve two applications that disagree about it.
  */
 export class AssetCache {
   private readonly _routes: readonly CacheRoute[];
@@ -115,8 +127,8 @@ export class AssetCache {
   public resolve<T>(acquisition: CacheAcquisition<T>): Promise<T> {
     const route = this.routeFor(acquisition.namespace);
     // Resolved here and nowhere else: one acquisition, one policy, decided
-    // before any of it runs.
-    const policy = route.policyFor({ namespace: acquisition.namespace, sourceKey: acquisition.sourceKey });
+    // before any of it runs, from facts the acquisition brought with it.
+    const policy = route.policyFor({ namespace: acquisition.namespace, sourceKey: acquisition.sourceKey, network: acquisition.network });
 
     return policy.resolve(new RoutedCacheContext(route, acquisition));
   }
