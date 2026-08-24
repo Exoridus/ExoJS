@@ -1,4 +1,4 @@
-import { Application, Asset, BitmapText, BmFont, Color, type RenderingContext, Scene } from '@codexo/exojs';
+import { Application, Asset, BitmapText, BmFont, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene } from '@codexo/exojs';
 
 
 
@@ -55,7 +55,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(20, 24, 36),
 });

@@ -1,4 +1,4 @@
-import { Application, Asset, Color, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, SystemOrder, type Time, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, SystemOrder, type Time, Vector } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { mountControls } from '@examples/runtime';
 
@@ -115,7 +115,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(18, 22, 33),
 });

@@ -1,5 +1,5 @@
 // Auto-generated from sprite-stress.ts - edit the .ts source, not this file.
-import { Application, Color, Container, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Rectangle, Scene, Sprite, Texture } from '@codexo/exojs';
 const GRID_COLUMNS = 56;
 const GRID_ROWS = 30;
 class SpriteStressScene extends Scene {
@@ -69,7 +69,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(5, 8, 15, 1),
     backend: { type: 'webgpu' },

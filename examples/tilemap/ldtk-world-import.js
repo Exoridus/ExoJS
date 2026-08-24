@@ -1,5 +1,5 @@
 // Auto-generated from ldtk-world-import.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Container, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { getLdtkIntGridValueAt, ldtkExtension } from '@codexo/exojs-ldtk';
 import { TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -125,7 +125,7 @@ const app = new Application({
         width: 640,
         height: 448,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(18, 22, 30),
     // ldtkExtension depends on tilemapExtension, so registering it alone is

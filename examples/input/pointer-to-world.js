@@ -1,5 +1,5 @@
 // Auto-generated from pointer-to-world.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, View } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // The camera continuously pans (a slow figure-eight) and breathes its zoom, so
 // the same design-space pixel maps to a moving world point every frame.
@@ -96,7 +96,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(10, 12, 20),
     loader: {

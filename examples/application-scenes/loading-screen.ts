@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, Color, Graphics, Keyboard, type RenderingContext, Scene, SceneState, Sprite, Text } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, SceneState, Sprite, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const GameAssets = Assets.from({
@@ -162,7 +162,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

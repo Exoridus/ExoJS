@@ -1,4 +1,4 @@
-import { Application, Color, RenderBackendType, type RenderingContext, Scene, type Time, Vector } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, RenderBackendType, type RenderingContext, Scene, type Time, Vector } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
@@ -58,7 +58,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

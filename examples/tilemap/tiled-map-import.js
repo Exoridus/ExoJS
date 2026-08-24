@@ -1,5 +1,5 @@
 // Auto-generated from tiled-map-import.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Graphics, Scene } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene } from '@codexo/exojs';
 import { tiledExtension, TileMapNode } from '@codexo/exojs-tiled';
 import { ObjectKind } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
@@ -103,7 +103,7 @@ const app = new Application({
         width: COLUMNS * TILE,
         height: ROWS * TILE,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(28, 36, 46),
     // tiledExtension depends on tilemapExtension, so registering it alone is

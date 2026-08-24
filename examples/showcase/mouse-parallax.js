@@ -1,5 +1,5 @@
 // Auto-generated from mouse-parallax.ts - edit the .ts source, not this file.
-import { Application, Color, Container, Graphics, Scene } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, Scene } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const scales = [0.03, 0.06, 0.1];
 const colors = [new Color(70, 90, 140), new Color(100, 140, 220), new Color(180, 220, 255)];
@@ -52,7 +52,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(18, 22, 34),
     loader: {

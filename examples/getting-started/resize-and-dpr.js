@@ -1,5 +1,5 @@
 // Auto-generated from resize-and-dpr.ts - edit the .ts source, not this file.
-import { Application, Color, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text } from '@codexo/exojs';
 class ResizeScene extends Scene {
     sprite;
     info;
@@ -34,7 +34,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
         pixelRatio: window.devicePixelRatio || 1,
     },
     clearColor: Color.black,
@@ -46,8 +46,9 @@ const app = new Application({
 document.body.style.margin = '0';
 // #region guide:resize
 // This example demonstrates manual resize handling: the canvas is resized to
-// fill the window on every `resize` event. (For a hands-off alternative, set the
-// `sizingMode` canvas option to `'fill'` and let the engine track the parent.)
+// fill the window on every `resize` event. (For a hands-off alternative, pass a
+// `ResponsiveCanvasSizing` as the `canvas.sizing` option and let it track the
+// parent element instead.)
 window.addEventListener('resize', () => {
     app.resize(window.innerWidth, window.innerHeight);
 });

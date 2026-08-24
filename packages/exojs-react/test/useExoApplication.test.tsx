@@ -1,4 +1,4 @@
-import { type Application, Color } from '@codexo/exojs';
+import { type Application, Color, ManualCanvasSizing } from '@codexo/exojs';
 import { render } from '@testing-library/react';
 import { type ReactElement } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -136,17 +136,21 @@ describe('useExoApplication — identity vs live options', () => {
     expect(app.resize).toHaveBeenLastCalledWith(1024, 768);
   });
 
-  it('live-syncs sizingMode via the setter without recreating the Application', () => {
-    const harness = mount({ options: { canvas: { width: 800, height: 600 } } });
+  it('captures canvas.sizing at creation and never assigns it live', () => {
+    const first = new ManualCanvasSizing();
+    const harness = mount({ options: { canvas: { width: 800, height: 600, sizing: first } } });
     const app = onlyInstance();
-    // No sizingMode given at mount → no assignment yet.
-    expect(app.sizingModeAssignments).toEqual([]);
 
-    harness.rerender({ options: { canvas: { width: 800, height: 600, sizingMode: 'letterbox' } } });
+    expect(app.sizing).toBe(first);
+    expect(app.sizingAssignments).toEqual([]);
+
+    // A new policy instance on every render is exactly what a live sync would
+    // thrash on, so the hook deliberately leaves the property alone.
+    harness.rerender({ options: { canvas: { width: 800, height: 600, sizing: new ManualCanvasSizing() } } });
 
     expect(MockApplication.instances).toHaveLength(1);
-    expect(app.sizingModeAssignments).toEqual(['letterbox']);
-    expect(app.sizingMode).toBe('letterbox');
+    expect(app.sizingAssignments).toEqual([]);
+    expect(app.sizing).toBe(first);
   });
 
   it('live-syncs clearColor via the setter without recreating the Application', () => {

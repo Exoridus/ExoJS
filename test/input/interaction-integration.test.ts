@@ -105,7 +105,7 @@ const createHarness = (dragThreshold?: number): Harness => {
       state: SceneState.Active as SceneState | null,
       _transitionGateOpen: false,
     },
-    _backingStoreToDesign: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+    _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
   } as unknown as Application;
 
   const input = new InputManager(app);

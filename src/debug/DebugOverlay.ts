@@ -72,7 +72,10 @@ export class DebugOverlay {
 
   public constructor(app: Application) {
     this._app = app;
-    this._view = new View(app.canvas.width / 2, app.canvas.height / 2, app.canvas.width, app.canvas.height);
+    // Logical units, matching what `onResize` reports and what the layers draw
+    // in - the backing store is a different size wherever the pixel ratio or a
+    // sizing policy says so.
+    this._view = new View(app.width / 2, app.height / 2, app.width, app.height);
 
     this.layers = {
       performance: new PerformanceLayer(app),

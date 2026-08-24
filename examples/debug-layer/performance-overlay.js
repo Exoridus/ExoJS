@@ -1,5 +1,5 @@
 // Auto-generated from performance-overlay.ts - edit the .ts source, not this file.
-import { Application, Color, Container, Keyboard, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 class PerformanceOverlayScene extends Scene {
     sprites;
@@ -47,7 +47,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

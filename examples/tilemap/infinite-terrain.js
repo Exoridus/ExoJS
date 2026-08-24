@@ -1,5 +1,5 @@
 // Auto-generated from infinite-terrain.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Container, Keyboard, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
+import { Application, Asset, Color, Container, FixedResolutionCanvasSizing, Keyboard, Scene, Spritesheet, TextureRegion, View } from '@codexo/exojs';
 import { ChunkStreamer, createSampledChunkSource, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileSet } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // An infinite, procedurally generated world: the TileLayer has NO width/height
@@ -185,7 +185,7 @@ class InfiniteTerrainScene extends Scene {
 }
 const app = new Application({
     scenes: { InfiniteTerrainScene },
-    canvas: { width: 1280, height: 720, mount: document.body, sizingMode: 'fit' },
+    canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
     clearColor: new Color(38, 82, 128), // deep-water blue behind unloaded chunks
     extensions: [tilemapExtension],
 });

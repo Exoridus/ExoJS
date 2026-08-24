@@ -117,7 +117,7 @@ const createHarness = (): Harness => {
         pointerDistanceThreshold: 10,
       },
     },
-    _backingStoreToDesign: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({ x: backingStoreX, y: backingStoreY }),
+    _backingStoreToLogical: (backingStoreX: number, backingStoreY: number): { x: number; y: number } => ({ x: backingStoreX, y: backingStoreY }),
     rendering: { view: identity, screenView: identity },
     scenes: {
       get currentScene(): Scene | null {

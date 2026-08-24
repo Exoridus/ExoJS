@@ -1,4 +1,4 @@
-import { Application, AudioGenerator, Color, type Gamepad, GamepadAxis, GamepadButton, Graphics, type RenderingContext, Scene, Sprite, Text, type Time, Vector, type Voice } from '@codexo/exojs';
+import { Application, AudioGenerator, Color, FixedResolutionCanvasSizing, type Gamepad, GamepadAxis, GamepadButton, Graphics, type RenderingContext, Scene, Sprite, Text, type Time, Vector, type Voice } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     BurstSpawn,
@@ -222,7 +222,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(8, 10, 18),
     extensions: [particlesExtension],

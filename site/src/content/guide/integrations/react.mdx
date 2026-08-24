@@ -62,7 +62,7 @@ app should bind to. The optional `onReady` callback fires once each time an app 
 
 `options` is an `ExoApplicationOptions` — the same shape as `ApplicationOptions`, but the
 `canvas.element` / `canvas.mount` fields are managed for you (the hook binds the app to the
-canvas it references). You still pass `canvas.width`, `canvas.height`, `canvas.sizingMode`,
+canvas it references). You still pass `canvas.width`, `canvas.height`, `canvas.sizing`,
 `clearColor`, `backend`, and so on.
 
 The hook treats most options as captured-at-creation, but live-syncs a few without tearing the
@@ -71,17 +71,19 @@ app down:
 - The app is **recreated** only when the render `backend` changes — WebGL2 ↔ WebGPU cannot be
   hot-swapped, so this is the one identity option.
 - `canvas.width` / `canvas.height` are applied **live** via `app.resize(...)`.
-- `canvas.sizingMode` is applied **live** via the `app.sizingMode` setter.
 - `clearColor` is applied **live** via the `app.clearColor` setter (keyed on its channel values,
   so a fresh `Color` with identical channels does not re-assign).
 - Options without a live setter (`canvas.pixelRatio`, `seed`, `extensions`, …) are captured at
   creation. Change the `backend` or remount to apply them.
+- `canvas.sizing` is captured at creation as well. A sizing policy is an object, so a fresh
+  instance on every render would detach and re-attach the previous one each time; assign
+  `app.sizing` yourself to switch strategies at runtime.
 
 On unmount the hook calls `app.destroy()`. The engine never removes a canvas it did not create,
 so React stays the sole owner of the `<canvas>` element.
 
-<Callout type="pitfall" title="Don't fight the sizing modes with inline style">
-With the default `'fixed'` sizing mode the engine never touches the canvas CSS, so you may style it freely. The `'fill'`, `'fit'`, `'shrink'`, and `'letterbox'` modes manage `canvas.style` themselves — size the container and let them observe it, rather than setting your own inline `style`.
+<Callout type="pitfall" title="Don't fight a sizing policy with inline style">
+With no `canvas.sizing` the engine only ever writes the base resolution onto the canvas, so you may style it freely. A sizing policy owns the canvas's `width`/`height` styles — size the wrapper and let the policy observe it, rather than setting your own inline `style` on the canvas.
 </Callout>
 
 ## The batteries-included canvas
@@ -109,8 +111,8 @@ Props:
 
 - `options` — the `ExoApplicationOptions` forwarded to the app (same reactivity as above).
 - `onReady` — called once each time the app is (re)created.
-- Layout props (`style`, `className`, and any other `<div>` attributes) apply to the **wrapper**.
-  Size the wrapper to drive the `'fill'` / `'letterbox'` sizing modes.
+- Layout props (`style`, `className`, and any other `<div>` attributes) apply to the **wrapper**,
+  which is the element a `canvas.sizing` policy measures. Size the wrapper to size the canvas.
 - `canvasProps` — forwarded to the inner `<canvas>` (its own `style`/`className`); `ref`,
   `width`, and `height` are managed by the engine and cannot be set here.
 - `children` — rendered as an overlay once the app exists, with the app available via context.

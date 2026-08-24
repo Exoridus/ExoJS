@@ -1,5 +1,5 @@
 // Auto-generated from filter-stack.ts - edit the .ts source, not this file.
-import { Application, BlurFilter, Color, ColorMatrixFilter, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, Color, ColorMatrixFilter, FixedResolutionCanvasSizing, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 const glsl = `#version 300 es
@@ -80,7 +80,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

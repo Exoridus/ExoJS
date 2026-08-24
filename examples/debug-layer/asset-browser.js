@@ -1,5 +1,5 @@
 // Auto-generated from asset-browser.ts - edit the .ts source, not this file.
-import { Asset } from '@codexo/exojs';
+import { Asset, FixedResolutionCanvasSizing } from '@codexo/exojs';
 import { Application, Color, Graphics, Scene, Sprite, Spritesheet, Text, Texture, } from '@codexo/exojs';
 // Dynamic category accessor: maps a category key to the correct sub-object
 // in the hierarchical assets catalog. Technical assets live under
@@ -1008,7 +1008,7 @@ class AssetBrowserScene extends Scene {
 }
 const app = new Application({
     scenes: { AssetBrowserScene },
-    canvas: { width: W, height: H, mount: document.body, sizingMode: 'fit' },
+    canvas: { width: W, height: H, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
     clearColor: C.bg,
 });
 app.start(AssetBrowserScene);

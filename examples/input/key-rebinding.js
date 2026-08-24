@@ -1,5 +1,5 @@
 // Auto-generated from key-rebinding.ts - edit the .ts source, not this file.
-import { ActionMap, Application, BindingProfile, ButtonAction, Color, Graphics, inputToken, Keyboard, Scene, } from '@codexo/exojs';
+import { ActionMap, Application, BindingProfile, ButtonAction, Color, FixedResolutionCanvasSizing, Graphics, inputToken, Keyboard, Scene } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // A binding is persisted as a stable lowercase token ("keyboard.space"), never
 // as an enum number: tokens survive an engine upgrade, a different browser, and
@@ -124,7 +124,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(10, 12, 20),
     loader: {

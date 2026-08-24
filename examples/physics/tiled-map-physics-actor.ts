@@ -1,4 +1,4 @@
-import { Application, Asset, Color, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, SystemOrder, Texture, TextureRegion, type Time, Vector } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Spritesheet, type SpritesheetData, SystemOrder, Texture, TextureRegion, type Time, Vector } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 import { PhysicsDebugDraw } from '@codexo/exojs-physics/debug';
 import { ObjectKind, ObjectLayer, type RectangleObject, TILE_TRANSFORM_IDENTITY, TileLayer, TileMap, tilemapExtension, TileMapNode, TileSet } from '@codexo/exojs-tilemap';
@@ -189,7 +189,7 @@ const app = new Application({
         width: COLUMNS * TILE,
         height: ROWS * TILE,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(38, 46, 66),
     // The tilemap extension wires the per-backend tile chunk renderers so

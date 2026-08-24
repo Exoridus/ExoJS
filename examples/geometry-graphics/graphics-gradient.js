@@ -1,5 +1,5 @@
 // Auto-generated from graphics-gradient.ts - edit the .ts source, not this file.
-import { Application, Color, Container, Graphics, LinearGradient, RadialGradient, Scene } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, LinearGradient, RadialGradient, Scene } from '@codexo/exojs';
 class GraphicsGradientScene extends Scene {
     sceneRoot;
     panel;
@@ -59,7 +59,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.midnightBlue,
 });

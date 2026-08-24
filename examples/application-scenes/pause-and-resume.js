@@ -1,5 +1,5 @@
 // Auto-generated from pause-and-resume.ts - edit the .ts source, not this file.
-import { Application, Color, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, Scene, Sprite, Text } from '@codexo/exojs';
 class PauseResumeScene extends Scene {
     sprite;
     label;
@@ -43,7 +43,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

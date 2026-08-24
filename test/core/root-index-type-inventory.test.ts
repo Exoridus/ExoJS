@@ -7,8 +7,8 @@
  * (test/core/root-index-snapshot.test.ts).
  *
  * Together the two tests cover the full export surface:
- *   - root-index-snapshot        → 229 runtime-visible exports
- *   - root-index-type-inventory  → 332 TypeScript-level exports (superset)
+ *   - root-index-snapshot        → the runtime-visible exports
+ *   - root-index-type-inventory  → every TypeScript-level export (a superset)
  *
  * To update after an intentional export change:
  *   pnpm test -- --updateSnapshot

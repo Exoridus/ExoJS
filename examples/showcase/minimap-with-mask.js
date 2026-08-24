@@ -1,5 +1,5 @@
 // Auto-generated from minimap-with-mask.ts - edit the .ts source, not this file.
-import { Application, CallbackRenderPass, Color, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, CallbackRenderPass, Color, FixedResolutionCanvasSizing, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 class MinimapWithMaskScene extends Scene {
     world;
     player;
@@ -83,7 +83,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

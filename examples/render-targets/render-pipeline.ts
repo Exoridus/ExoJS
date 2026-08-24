@@ -1,4 +1,4 @@
-import { Application, BlurFilter, CallbackRenderPass, Color, Container, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, BlurFilter, CallbackRenderPass, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite, type Time } from '@codexo/exojs';
 
 
 
@@ -102,7 +102,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

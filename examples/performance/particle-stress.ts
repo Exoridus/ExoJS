@@ -1,4 +1,4 @@
-import { Application, Color, type RenderingContext, Scene, Texture, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Texture, type Time } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
@@ -188,7 +188,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(0.02 * 255, 0.02 * 255, 0.045 * 255, 1),
     backend: { type: 'webgpu' },

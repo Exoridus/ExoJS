@@ -1,5 +1,5 @@
 // Auto-generated from multi-gamepad.ts - edit the .ts source, not this file.
-import { Application, Color, GamepadAxis, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, GamepadAxis, Scene, Sprite, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150, 180, 255), new Color(255, 230, 140)];
 // Each of the four stable gamepad slots gets its own ship and its own left-stick
@@ -77,7 +77,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(10, 12, 20),
     loader: {

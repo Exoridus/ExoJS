@@ -1,5 +1,5 @@
 // Auto-generated from masks.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Rectangle, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, Scene, Sprite } from '@codexo/exojs';
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 class MasksScene extends Scene {
     rectSprite;
@@ -44,7 +44,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

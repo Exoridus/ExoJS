@@ -1,5 +1,5 @@
 // Auto-generated from audio-buses.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 // Each row drives one of the three engine-built-in busses. `master` is the
 // root; `music` and `sound` are its children, so the music/SFX bars scale
@@ -126,7 +126,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

@@ -1,4 +1,4 @@
-import { Application, BlendModes, Color, Random, type RenderingContext, Scene, Size, Sprite, Texture, Time, Timer, Vector } from '@codexo/exojs';
+import { Application, BlendModes, Color, FixedResolutionCanvasSizing, Random, type RenderingContext, Scene, Size, Sprite, Texture, Time, Timer, Vector } from '@codexo/exojs';
 import {
     AlphaFadeOverLifetime,
     ApplyForce,
@@ -175,7 +175,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     extensions: [particlesExtension],

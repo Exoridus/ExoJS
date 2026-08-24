@@ -1,5 +1,5 @@
 // Auto-generated from bloom-lite.ts - edit the .ts source, not this file.
-import { Application, BlendModes, BlurFilter, CallbackRenderPass, Color, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, BlendModes, BlurFilter, CallbackRenderPass, Color, FixedResolutionCanvasSizing, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 class BloomLiteScene extends Scene {
     baseRt;
     glowRt;
@@ -60,7 +60,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

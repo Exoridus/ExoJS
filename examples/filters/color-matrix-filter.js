@@ -1,5 +1,5 @@
 // Auto-generated from color-matrix-filter.ts - edit the .ts source, not this file.
-import { Application, Color, ColorMatrixFilter, Scene, Sprite } from '@codexo/exojs';
+import { Application, Color, ColorMatrixFilter, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 // A full-hue ramp shows every preset on every colour at once.
 const HUE_RAMP = assets.technical.color.hueRamp;
@@ -61,7 +61,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

@@ -152,7 +152,7 @@ const makeAppWithRealInput = (): { app: import('#core/Application').Application;
     height: 600,
     pixelRatio: 1,
     options: { input: { gamepadDefinitions: [], pointerDistanceThreshold: 10 } },
-    _backingStoreToDesign: (x: number, y: number): { x: number; y: number } => ({ x, y }),
+    _backingStoreToLogical: (x: number, y: number): { x: number; y: number } => ({ x, y }),
     backend: makeBackend(),
     scenes: makeSceneDirector(),
     onFrame: makeOnFrame(),

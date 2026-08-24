@@ -1,5 +1,5 @@
 // Auto-generated from post-processing-chain.ts - edit the .ts source, not this file.
-import { Application, BlurFilter, CallbackRenderPass, Color, ColorMatrixFilter, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
+import { Application, BlurFilter, CallbackRenderPass, Color, ColorMatrixFilter, FixedResolutionCanvasSizing, Graphics, RenderNodePass, RenderPipeline, RenderTexture, Scene, Sprite } from '@codexo/exojs';
 class PostProcessingChainScene extends Scene {
     scene;
     a;
@@ -57,7 +57,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

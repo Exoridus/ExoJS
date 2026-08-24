@@ -7,7 +7,7 @@ import { type Ref, useEffect, useRef, useState } from 'react';
  * Same as {@link ApplicationOptions} but the `canvas.element` and `canvas.mount`
  * fields are managed for you (the Application binds to the canvas the hook
  * references), so they are omitted. You may still pass
- * `canvas.width`/`height`/`sizingMode`/etc.
+ * `canvas.width`/`height`/`sizing`/etc.
  */
 export type ExoApplicationOptions = Omit<ApplicationOptions, 'canvas'> & {
   readonly canvas?: Omit<CanvasApplicationOptions, 'element' | 'mount'>;
@@ -49,15 +49,19 @@ function colorKey(color: Color | undefined): string | undefined {
  * app down:
  *
  * - `canvas.width` / `canvas.height` → `app.resize(...)`
- * - `canvas.sizingMode` → `app.sizingMode`
  * - `clearColor` → `app.clearColor`
  *
  * Options without a live setter (e.g. `canvas.pixelRatio`, `seed`, `extensions`)
  * are captured at creation; change the `backend` or remount to apply them.
  *
- * Styling note: with the default `'fixed'` sizing mode the engine never touches
- * the canvas CSS, so you may style it freely. The `'fit'`/`'shrink'`/`'letterbox'`
- * modes manage `canvas.style` themselves - don't fight them with a `style` prop.
+ * `canvas.sizing` is captured at creation too, deliberately: a policy is an
+ * object, so a new instance on every render would detach and re-attach the
+ * previous one each time. Assign `app.sizing` yourself to switch strategies.
+ *
+ * Styling note: with no `canvas.sizing` the engine keeps the canvas at the base
+ * resolution and writes only that size, so you may style it freely. A sizing
+ * policy owns the canvas's `width`/`height` styles - don't fight it with a
+ * `style` prop.
  *
  * @param options - Application options (the canvas element is the one you render).
  * @param onReady - Called once each time an Application is created.
@@ -144,14 +148,6 @@ export function useExoApplication(
       app.resize(width, height);
     }
   }, [app, width, height]);
-
-  // ── Live sync: sizing mode ────────────────────────────────────────────────
-  const sizingMode = options?.canvas?.sizingMode;
-  useEffect(() => {
-    if (app !== null && sizingMode !== undefined) {
-      app.sizingMode = sizingMode;
-    }
-  }, [app, sizingMode]);
 
   // ── Live sync: clear colour ───────────────────────────────────────────────
   const clearColor = options?.clearColor;

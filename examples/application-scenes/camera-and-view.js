@@ -1,5 +1,5 @@
 // Auto-generated from camera-and-view.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Keyboard, Scene, Text, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text, View } from '@codexo/exojs';
 class CameraViewScene extends Scene {
     camera;
     world;
@@ -80,7 +80,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

@@ -1,5 +1,5 @@
 // Auto-generated from parallax-starfield.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Scene } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene } from '@codexo/exojs';
 const speeds = [0.15, 0.35, 0.6];
 const counts = [120, 80, 48];
 const colors = [new Color(120, 140, 200), new Color(170, 190, 255), new Color(255, 255, 255)];
@@ -43,7 +43,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

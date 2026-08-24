@@ -1,5 +1,5 @@
 // Auto-generated from hud-overlay-scene.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Label, ProgressBar, Scene } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Label, ProgressBar, Scene } from '@codexo/exojs';
 /**
  * A screen-fixed HUD on `scene.ui` sits above the world automatically - no
  * separate overlay scene or stack. The world (a spinning arc) is drawn from
@@ -44,7 +44,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(20, 32, 58),
 });

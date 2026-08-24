@@ -1,4 +1,4 @@
-import { Application, Color, Container, type RenderingContext, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, type RenderingContext, RenderTexture, Scene, Sprite, Texture } from '@codexo/exojs';
 
 
 
@@ -61,7 +61,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

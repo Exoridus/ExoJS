@@ -1,5 +1,5 @@
 // Auto-generated from fireworks.ts - edit the .ts source, not this file.
-import { Application, BlendModes, Color, Random, Scene, Size, Sprite, Time, Timer, Vector } from '@codexo/exojs';
+import { Application, BlendModes, Color, FixedResolutionCanvasSizing, Random, Scene, Size, Sprite, Time, Timer, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, BurstSpawn, ConeDirection, Constant, Curve, particlesExtension, ParticleSystem, Range, } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 const random = new Random();
@@ -126,7 +126,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     extensions: [particlesExtension],

@@ -27,7 +27,6 @@ import { Texture } from '#rendering/texture/Texture';
 import { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 
-import { CanvasSizing, type CanvasSizingMode } from './CanvasSizing';
 import { Capabilities } from './capabilities';
 import { Clock } from './Clock';
 import { Color } from './Color';
@@ -49,6 +48,7 @@ import {
 } from './SceneTypes';
 import { defaultSerializationRegistry, SerializationRegistry } from './serialization/SerializationRegistry';
 import { Signal } from './Signal';
+import type { CanvasSizing, CanvasSizingContext, CanvasSizingHostMetrics, CanvasSizingMetrics } from './sizing/CanvasSizing';
 import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
@@ -106,15 +106,24 @@ export interface CanvasApplicationOptions {
    * yours: it is left untouched when the application goes down.
    *
    * An `OffscreenCanvas` is accepted and makes the application surface-only:
-   * it has no layout box, no styling and no events, so `mount`, `sizingMode`,
-   * `tabIndex` and `imageRendering` do not apply, and the host has to supply
-   * its own {@link ApplicationOptions.platform} affordances for input. See
+   * it has no layout box, no styling and no events, so `mount`, `tabIndex` and
+   * `imageRendering` do not apply, the document-based sizing policies reject
+   * it, and the host has to supply its own
+   * {@link ApplicationOptions.platform} affordances for input. See
    * {@link OffscreenPlatform}.
    */
   element?: RenderSurface;
-  /** Logical canvas width. Default: 800. */
+  /**
+   * Base (design) resolution in logical pixels, and with it the base aspect
+   * ratio. Default: 800.
+   *
+   * This is the resolution the application is authored against: the logical
+   * coordinate system starts here, {@link CanvasApplicationOptions.sizing}
+   * measures its resolution caps against it, and it is the size a canvas with
+   * no sizing policy keeps for good.
+   */
   width?: number;
-  /** Logical canvas height. Default: 600. */
+  /** Base (design) resolution in logical pixels. See {@link CanvasApplicationOptions.width}. Default: 600. */
   height?: number;
   /**
    * Device/render pixel ratio applied to the backing buffer. Default: the
@@ -134,22 +143,23 @@ export interface CanvasApplicationOptions {
    */
   mount?: HTMLElement | string;
   /**
-   * How the canvas is sized within its parent (needs a parent via `mount`, or
-   * an `element` already in the DOM):
-   * - `'fixed'` (default): exactly `width`×`height`.
-   * - `'fill'`: track the parent's size via `ResizeObserver` and re-render to
-   *   fill it; `width`/`height` are the initial size.
-   * - `'fit'`: render at `width`×`height` and CSS-scale to fit the parent,
-   *   preserving aspect ratio (letterboxed).
-   * - `'shrink'`: like `'fit'` but never upscale beyond `width`×`height` -
-   *   shrinks on smaller screens, stays native on larger ones.
-   * - `'letterbox'`: track the parent's size, render the backing store at the
-   *   parent size × `pixelRatio` (always crisp, no CSS upscale-blur), and keep
-   *   the camera locked to the fixed `width`×`height` design space, centered
-   *   and letterboxed with bars (no crop, no stretch). The "author once at a
-   *   reference resolution" model.
+   * Strategy that keeps the canvas in step with its surroundings. Omit it for a
+   * canvas that stays at `width` × `height` for good, in CSS pixels and in
+   * backing-store pixels alike, and observes nothing.
+   *
+   * The built-in policies -
+   * {@link FixedResolutionCanvasSizing}, {@link CappedResolutionCanvasSizing},
+   * {@link ResponsiveCanvasSizing} and {@link ManualCanvasSizing} - cover the
+   * usual cases; {@link CanvasSizing} is the public base class for anything
+   * else. Each instance owns its own observers, so nothing is attached for a
+   * policy that tracks nothing.
+   *
+   * An instance belongs to one application: it is attached here and detached
+   * again when {@link Application.sizing} is reassigned or the application is
+   * destroyed. The document-based policies need a canvas element with a parent,
+   * which for a canvas created by the engine means `mount` has to be given too.
    */
-  sizingMode?: CanvasSizingMode;
+  sizing?: CanvasSizing;
 }
 
 export interface RenderingApplicationOptions {
@@ -517,6 +527,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * (via `registerSerializer`) serializers remain shared through the fallback.
    */
   public readonly serializers = new SerializationRegistry(defaultSerializationRegistry);
+  /**
+   * Fires whenever the canvas geometry changes, with the current logical width
+   * and height - the values {@link Application.width}/{@link Application.height}
+   * now report.
+   *
+   * Those two need not have moved: a policy that holds the logical view while
+   * the display size or the render resolution follows the host still dispatches,
+   * so a listener that caches something at the backing resolution has a signal
+   * to rebuild on. Read `app.canvas.width`/`height` for that resolution.
+   */
   public readonly onResize = new Signal<[number, number, Application]>();
   public readonly onFrame = new Signal<[Time]>();
   /** Dispatched once per fixed-timestep step (zero or more times per frame), ahead of {@link onFrame}. */
@@ -605,8 +625,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private _destroyPromise: Promise<void> | null = null;
   private _pixelRatio: number = defaultCanvasSettings.pixelRatio;
-  private _designWidth: number = defaultCanvasSettings.width;
-  private _designHeight: number = defaultCanvasSettings.height;
+  private _baseWidth: number = defaultCanvasSettings.width;
+  private _baseHeight: number = defaultCanvasSettings.height;
+  private _logicalWidth: number = defaultCanvasSettings.width;
+  private _logicalHeight: number = defaultCanvasSettings.height;
+  /** Last CSS box written to the canvas element, or `null` while none has been. */
+  private _cssWidth: number | null = null;
+  private _cssHeight: number | null = null;
   private _frameCount = 0;
   private _frameRequest = 0;
   private _backendType: 'webgl2' | 'webgpu';
@@ -628,15 +653,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * when this application goes down; one the engine created does not.
    */
   private readonly _ownsCanvas: boolean;
-  /**
-   * What the parent element's inline styles looked like before `'letterbox'`
-   * mode restyled it, or `null` while no such styles are applied. Restoring
-   * from this touches only the properties the engine wrote, so a page that
-   * styles its own game container inline keeps everything else.
-   */
   private _visibilitySubscription: PlatformSubscription | null = null;
-  private _sizingMode: CanvasSizingMode = 'fixed';
-  private readonly _sizing: CanvasSizing;
+  private _sizing: CanvasSizing | null = null;
   private readonly _audio: AudioManager = new AudioManager();
 
   public constructor(appSettings: ApplicationOptions<Registry> = {}) {
@@ -655,19 +673,23 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       `Application canvas.element must be an HTMLCanvasElement or an OffscreenCanvas (got ${(canvas as object).constructor?.name ?? typeof canvas}). Pass a real canvas, or omit canvas.element to let Application create one.`,
     );
 
-    const logicalWidth = canvasOptions.width ?? defaultCanvasSettings.width;
-    const logicalHeight = canvasOptions.height ?? defaultCanvasSettings.height;
+    const baseWidth = canvasOptions.width ?? defaultCanvasSettings.width;
+    const baseHeight = canvasOptions.height ?? defaultCanvasSettings.height;
 
-    assert(logicalWidth > 0 && logicalHeight > 0, `Application canvas dimensions must be positive (got ${logicalWidth}×${logicalHeight}).`);
+    assert(baseWidth > 0 && baseHeight > 0, `Application canvas dimensions must be positive (got ${baseWidth}×${baseHeight}).`);
 
     this._pixelRatio = canvasOptions.pixelRatio ?? resolveAutoPixelRatio();
-    this._designWidth = logicalWidth;
-    this._designHeight = logicalHeight;
+    this._baseWidth = baseWidth;
+    this._baseHeight = baseHeight;
+    this._logicalWidth = baseWidth;
+    this._logicalHeight = baseHeight;
     this._ownsCanvas = canvasOptions.element === undefined;
     this.canvas = canvas;
     this.element = isDomCanvas(canvas) ? canvas : null;
-    this._sizing = new CanvasSizing(canvas, this.element, this._pixelRatio, logicalWidth, logicalHeight, (width, height) => void this.resize(width, height));
-    this._sizing.applySize(logicalWidth, logicalHeight);
+    // Ahead of the backend, which acquires its context from a surface that has
+    // to carry its real backing-store size by then. The policy, if any, gets
+    // its turn once there is a render target for its first commit to resize.
+    this._commitMetrics(this._baseMetrics(canvasOptions.sizing === undefined));
 
     if (this.element !== null) {
       if (canvasOptions.tabIndex !== undefined) {
@@ -696,15 +718,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     const constructed = new DestroyScope();
 
     try {
-      // Inside the boundary because the sizing host is the first step that
-      // can own something: `'fill'` and `'letterbox'` attach a ResizeObserver
-      // to the parent element, and a DOM node holding an observer whose
-      // callback closes over a dead Application is a live leak, not an inert
-      // one - the next parent layout change would drive `resize()` into a
-      // destroyed backend.
+      // A canvas has to be in the document before a sizing policy can measure
+      // the parent it is meant to follow, so mounting comes first - and inside
+      // the boundary, because a canvas the engine created is one it removes
+      // again when construction fails.
       this._mountCanvas(canvasOptions.mount);
-      this._sizingMode = canvasOptions.sizingMode ?? 'fixed';
-      this._sizing.applyMode(this._sizingMode);
 
       // Established before any subsystem, because input, interaction and the
       // frame loop all read the host through it.
@@ -730,8 +748,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         backend: appSettings.backend ?? defaultBackendConfig,
         canvas: {
           element: this.canvas,
-          width: logicalWidth,
-          height: logicalHeight,
+          width: baseWidth,
+          height: baseHeight,
           pixelRatio: this._pixelRatio,
           ...(this.element !== null && { tabIndex: this.element.tabIndex }),
           ...(canvasOptions.imageRendering !== undefined && { imageRendering: canvasOptions.imageRendering }),
@@ -775,6 +793,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // so that failure never reaches the scope as a tracked item.
       this._backend = constructed.track(this.createBackend(this._backendType, this._snapshot));
       this._rendering = constructed.track(new RenderingContext(this._backend));
+
+      // After the backend, because a policy commits its first geometry as it
+      // attaches and that commit resizes the root render target. Before every
+      // remaining subsystem, because a policy that observes its parent holds a
+      // ResizeObserver, and a DOM node holding an observer whose callback closes
+      // over a half-built application is a live leak rather than an inert one.
+      this._attachSizing(canvasOptions.sizing ?? null);
       this.input = constructed.track(new InputManager(this));
       this.interaction = constructed.track(new InteractionManager(this));
       this.scenes = constructed.track(new SceneDirector<Registry>(this, appSettings.scenes));
@@ -899,7 +924,8 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     // and both outlive us if left: the observer is held by a live DOM node,
     // and an injected platform adapter keeps the visibility subscription.
     attempt(() => {
-      this._sizing.releaseObserver();
+      this._sizing?.detach();
+      this._sizing = null;
     });
     attempt(() => {
       this._visibilitySubscription?.();
@@ -1060,27 +1086,27 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * The active {@link CanvasSizingMode}. Assigning a new mode re-applies the
-   * sizing strategy live: the previous mode's {@link ResizeObserver} (if any)
-   * is disconnected, the CSS that mode owned is undone - including the parent
-   * element styling `'letterbox'` applies, which is restored to whatever it was
-   * before - and only then is the new mode's CSS / observer installed, so no
-   * remnant of the outgoing mode survives the switch. Assigning the current
-   * value is a no-op.
+   * The active sizing policy, or `null` when the canvas simply stays at the
+   * base resolution.
+   *
+   * Assigning swaps the strategy live: the outgoing policy is detached - its
+   * observers released and the CSS box it wrote cleared - the canvas returns to
+   * the base geometry, and only then is the new policy attached, so no remnant
+   * of the previous one survives the switch. Assigning the policy that is
+   * already active still detaches and re-attaches it, which is the supported
+   * way to make one re-read a host it cannot observe by itself.
+   *
+   * The application does not take ownership: a detached policy is left intact
+   * and can be attached again later.
    */
-  public get sizingMode(): CanvasSizingMode {
-    return this._sizingMode;
+  public get sizing(): CanvasSizing | null {
+    return this._sizing;
   }
 
-  public set sizingMode(mode: CanvasSizingMode) {
-    if (mode === this._sizingMode) {
-      return;
-    }
-    const previous = this._sizingMode;
-
-    this._sizing.releaseObserver();
-    this._sizingMode = mode;
-    this._sizing.applyMode(mode, previous);
+  public set sizing(sizing: CanvasSizing | null) {
+    this._detachSizing();
+    this._sizing = sizing;
+    this._applySizing();
   }
 
   /**
@@ -1104,32 +1130,37 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Logical (design-space) canvas width - the value passed as `canvas.width`
-   * at construction / {@link resize}, independent of {@link pixelRatio}. Use
-   * this for layout math (e.g. `app.width / 2` to center) instead of
-   * `app.canvas.width`, which is the physical backing-store size
-   * (`app.width × app.pixelRatio`) and therefore larger on HiDPI displays.
+   * Width of the logical coordinate system the application draws in - the space
+   * of node positions and pointer coordinates. Use it for layout math
+   * (`app.width / 2` to centre) rather than `app.canvas.width`, which is the
+   * backing store in device pixels.
+   *
+   * Equal to the base resolution `canvas.width` unless a sizing policy derives
+   * a different view from the host, which is what
+   * {@link ResponsiveCanvasSizing} does. It is not the CSS size of the canvas,
+   * and it is not the backing store divided by {@link pixelRatio}: all three
+   * are separate axes. {@link Application.onResize} reports every change.
    */
   public get width(): number {
-    return this._designWidth;
+    return this._logicalWidth;
   }
 
-  /** Logical (design-space) canvas height. See {@link Application.width}. */
+  /** Height of the logical coordinate system. See {@link Application.width}. */
   public get height(): number {
-    return this._designHeight;
+    return this._logicalHeight;
   }
 
   /**
-   * Device/render pixel ratio applied to the backing buffer. Defaults to the
-   * host `devicePixelRatio` clamped to `2` (crisp on HiDPI out of the box, but
-   * capped to avoid a runaway fill-rate cost on DPR-3 phones) unless an
-   * explicit `canvas.pixelRatio` option was given. Holds the invariant
-   * `app.canvas.width === Math.round(app.width × app.pixelRatio)` in every
-   * sizing mode except `'letterbox'`, where the backing store instead tracks
-   * the parent's fitted CSS content rect (`contentWidthCss × pixelRatio`,
-   * see {@link computeLetterboxLayout}) while {@link Application.width} stays
-   * fixed at the design size - the GL viewport is recomputed separately to
-   * map the design space onto that backing store.
+   * Device pixels per CSS pixel the backing store is scaled by. Defaults to the
+   * host `devicePixelRatio` clamped to `2` - crisp on HiDPI out of the box,
+   * without the fill-rate cost a DPR-3 phone would otherwise pay - unless an
+   * explicit `canvas.pixelRatio` option was given.
+   *
+   * It converts a requested render resolution into backing-store pixels and
+   * nothing else. Which render resolution is requested is the sizing policy's
+   * decision, so `app.canvas.width` is `pixelRatio` times that resolution, not
+   * times {@link Application.width}: the two coincide only while the logical
+   * view and the render resolution are the same size.
    */
   public get pixelRatio(): number {
     return this._pixelRatio;
@@ -1147,20 +1178,20 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Map a canvas backing-store pixel coordinate into design space. Because the
-   * canvas always renders the full design space across its backing store (in
-   * `'letterbox'` mode the canvas itself is the content area, bars excluded),
-   * this is a straight backing-store → design scale. Pointer positions are
-   * expressed in logical/design pixels via this mapping.
+   * Map a canvas backing-store pixel coordinate into the logical coordinate
+   * system. The whole logical view is always rendered across the whole backing
+   * store, so this is a straight scale - and it is the mapping pointer
+   * positions are expressed through, which is why they follow a policy that
+   * changes the logical view without any further conversion.
    * @internal
    */
-  public _backingStoreToDesign(backingStoreX: number, backingStoreY: number): PointLike {
+  public _backingStoreToLogical(backingStoreX: number, backingStoreY: number): PointLike {
     const backingWidth = this.canvas.width || 1;
     const backingHeight = this.canvas.height || 1;
 
     return {
-      x: (backingStoreX / backingWidth) * this._designWidth,
-      y: (backingStoreY / backingHeight) * this._designHeight,
+      x: (backingStoreX / backingWidth) * this._logicalWidth,
+      y: (backingStoreY / backingHeight) * this._logicalHeight,
     };
   }
 
@@ -1608,16 +1639,24 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Resize the canvas and the active backend's root render target.
-   * Dispatches {@link Application.onResize} after the backend has been
-   * notified.
+   * Set a new base resolution and re-derive the canvas geometry from it.
+   *
+   * With no sizing policy this is the whole story: the logical view, the CSS
+   * box and the backing store all move to `width` x `height` (the last one
+   * times {@link pixelRatio}), and {@link Application.onResize} reports the new
+   * logical size. It is also the seam an externally sized host drives through
+   * under {@link ManualCanvasSizing}, where the CSS box stays the page's.
+   *
+   * Under a policy that tracks its surroundings the base resolution is a
+   * reference rather than a result: the policy is re-attached and immediately
+   * commits the geometry the host actually calls for, so the logical size that
+   * ends up dispatched need not be the one passed here.
    */
   public resize(width: number, height: number): this {
     assert(width > 0 && height > 0, `Application.resize() dimensions must be positive (got ${width}×${height}).`);
 
-    this._designWidth = width;
-    this._designHeight = height;
-    this._sizing.applySize(width, height);
+    this._baseWidth = width;
+    this._baseHeight = height;
     this.options.canvas = {
       ...(this.options.canvas ?? {}),
       width,
@@ -1625,11 +1664,170 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       pixelRatio: this._pixelRatio,
     };
 
-    this.backend.resize(width, height);
-    this._rendering.resize(width, height);
-    this.onResize.dispatch(width, height, this);
+    this._detachSizing();
+    this._applySizing();
 
     return this;
+  }
+
+  /**
+   * The geometry a canvas keeps when nothing is tracking its surroundings: the
+   * base resolution in all three axes. `ownsCssBox` is false whenever a policy
+   * is in play, so the display box is left to whoever does own it - the policy
+   * itself, or the surrounding page under {@link ManualCanvasSizing}.
+   */
+  private _baseMetrics(ownsCssBox: boolean): CanvasSizingMetrics {
+    return {
+      cssWidth: ownsCssBox ? this._baseWidth : null,
+      cssHeight: ownsCssBox ? this._baseHeight : null,
+      logicalWidth: this._baseWidth,
+      logicalHeight: this._baseHeight,
+      renderWidth: this._baseWidth,
+      renderHeight: this._baseHeight,
+    };
+  }
+
+  /**
+   * Put the canvas back on the base geometry and hand it to the active policy.
+   *
+   * The base commit is not redundant with what the policy is about to do: a
+   * policy may decline to commit at all - a collapsed host, a manual one - and
+   * the surface still has to be a valid size when it does.
+   */
+  private _applySizing(): void {
+    this._applyMetrics(this._baseMetrics(this._sizing === null));
+    this._sizing?.attach(this._createSizingContext());
+  }
+
+  /** Install `sizing` as the active policy and give it the canvas. */
+  private _attachSizing(sizing: CanvasSizing | null): void {
+    this._sizing = sizing;
+    this._applySizing();
+  }
+
+  /**
+   * Release the active policy and take back the CSS box committed under it.
+   *
+   * Only a box this application wrote is cleared, which is what leaves a page
+   * that sizes the canvas itself - {@link ManualCanvasSizing} - holding the
+   * geometry it set. And it is cleared here rather than inside the policy
+   * because this is where the last committed value is remembered: a policy
+   * clearing the element directly would leave that record claiming a size the
+   * element no longer has, and the next policy to commit the very same size
+   * would then write nothing at all. A policy stays responsible for any other
+   * styling it applies itself.
+   */
+  private _detachSizing(): void {
+    this._sizing?.detach();
+
+    if (this._cssWidth === null) {
+      return;
+    }
+
+    this._cssWidth = null;
+    this._cssHeight = null;
+
+    if (this.element !== null) {
+      this.element.style.width = '';
+      this.element.style.height = '';
+    }
+  }
+
+  /**
+   * The one channel a sizing policy changes the canvas through: commit the
+   * geometry, then bring the render target and the application's own listeners
+   * onto the new logical size. A commit that changes nothing stops here rather
+   * than re-dispatching {@link Application.onResize}.
+   */
+  private _applyMetrics(metrics: CanvasSizingMetrics): void {
+    if (!this._commitMetrics(metrics)) {
+      return;
+    }
+
+    this.backend.resize(this._logicalWidth, this._logicalHeight);
+    this._rendering.resize(this._logicalWidth, this._logicalHeight);
+    this.onResize.dispatch(this._logicalWidth, this._logicalHeight, this);
+  }
+
+  /**
+   * Write `metrics` onto the surface, the CSS box and the logical size, and
+   * report whether anything actually moved.
+   *
+   * Nothing is written for a geometry that is already in place: assigning
+   * `canvas.width` discards the drawing buffer even when the value is
+   * unchanged, and a `ResizeObserver` fires for changes that leave the observed
+   * box the size it was.
+   *
+   * A non-positive size in any of the three axes is ignored outright, the CSS
+   * box included - a fixed-resolution policy keeps its logical and render sizes
+   * whatever the host does, so a collapsed host reaches this only through the
+   * display box. That is the state of a host with no layout yet, or one that
+   * has collapsed, and there is no geometry to invent for it: the previous one
+   * is kept until the host has a size again.
+   */
+  private _commitMetrics(metrics: CanvasSizingMetrics): boolean {
+    if (metrics.logicalWidth <= 0 || metrics.logicalHeight <= 0 || metrics.renderWidth <= 0 || metrics.renderHeight <= 0) {
+      return false;
+    }
+
+    if ((metrics.cssWidth !== null && metrics.cssWidth <= 0) || (metrics.cssHeight !== null && metrics.cssHeight <= 0)) {
+      return false;
+    }
+
+    const backingWidth = Math.max(1, Math.round(metrics.renderWidth * this._pixelRatio));
+    const backingHeight = Math.max(1, Math.round(metrics.renderHeight * this._pixelRatio));
+    const cssChanged =
+      metrics.cssWidth !== null && metrics.cssHeight !== null && (metrics.cssWidth !== this._cssWidth || metrics.cssHeight !== this._cssHeight);
+    const backingChanged = backingWidth !== this.canvas.width || backingHeight !== this.canvas.height;
+    const logicalChanged = metrics.logicalWidth !== this._logicalWidth || metrics.logicalHeight !== this._logicalHeight;
+
+    if (!cssChanged && !backingChanged && !logicalChanged) {
+      return false;
+    }
+
+    this._logicalWidth = metrics.logicalWidth;
+    this._logicalHeight = metrics.logicalHeight;
+
+    if (backingChanged) {
+      this.canvas.width = backingWidth;
+      this.canvas.height = backingHeight;
+    }
+
+    if (cssChanged && this.element !== null && metrics.cssWidth !== null && metrics.cssHeight !== null) {
+      this._cssWidth = metrics.cssWidth;
+      this._cssHeight = metrics.cssHeight;
+      this.element.style.width = `${metrics.cssWidth}px`;
+      this.element.style.height = `${metrics.cssHeight}px`;
+    }
+
+    return true;
+  }
+
+  /**
+   * The view of this application a {@link CanvasSizing} works against.
+   *
+   * Rebuilt for every attach rather than kept live, which is why re-assigning
+   * {@link Application.sizing} is what makes a policy re-read a host it cannot
+   * observe: the base resolution and the parent element are as they were when
+   * the policy took the context.
+   */
+  private _createSizingContext(): CanvasSizingContext {
+    return {
+      baseWidth: this._baseWidth,
+      baseHeight: this._baseHeight,
+      pixelRatio: this._pixelRatio,
+      surface: this.canvas,
+      element: this.element,
+      host: this.element?.parentElement ?? null,
+      measureHost: (): CanvasSizingHostMetrics | null => {
+        const host = this.element?.parentElement ?? null;
+
+        return host === null ? null : { width: host.clientWidth, height: host.clientHeight };
+      },
+      apply: (metrics: CanvasSizingMetrics): void => {
+        this._applyMetrics(metrics);
+      },
+    };
   }
 
   /** Append the canvas to a mount element or CSS selector, if provided. */
@@ -1690,11 +1888,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * scene director, all clocks, all signals) and release event listeners. The
    * application instance is unusable after this call.
    *
-   * The page is left as it was found: any inline styles `'letterbox'` sizing
-   * wrote onto the canvas's parent element are restored to their previous
-   * values (and only those - nothing else on the element is touched), and a
-   * canvas the engine created itself is removed from the document. A canvas
-   * supplied through `canvas.element` belongs to the caller and stays in place.
+   * The page is left as it was found: the active sizing policy is detached, so
+   * its observers go and the CSS box it wrote is cleared, and a canvas the
+   * engine created itself is removed from the document. A canvas supplied
+   * through `canvas.element` belongs to the caller and stays in place, as does
+   * every element around it - no sizing policy ever styles the page itself.
    *
    * Fires the RAF halt synchronously (so no further frame runs after this
    * call returns) and returns a Promise that fulfils once the rest of teardown
@@ -1745,7 +1943,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
 
     this._visibilitySubscription?.();
     this._visibilitySubscription = null;
-    this._sizing.releaseObserver();
+    // Detached rather than released through `_detachSizing`: the canvas shows a
+    // frozen last frame from here on, and collapsing its display box out from
+    // under that is a visible artefact. What has to go is the observation.
+    this._sizing?.detach();
+    this._sizing = null;
     this._releaseDom();
 
     if (this._frameLoopActive) {
@@ -1771,11 +1973,11 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   }
 
   /**
-   * Hand the page back what it lent us: the parent element keeps whichever
-   * inline styles it had before `'letterbox'` restyled it, and a canvas the
-   * engine created itself leaves the document. A canvas passed in through
-   * `canvas.element` is the caller's element and stays exactly where they put
-   * it - removing it would delete part of their page.
+   * Hand the page back what it lent us: a canvas the engine created itself
+   * leaves the document. A canvas passed in through `canvas.element` is the
+   * caller's element and stays exactly where they put it - removing it would
+   * delete part of their page. The element the caller keeps carries no styling
+   * of ours either; that is released with the sizing policy that wrote it.
    *
    * Synchronous and part of `destroy()`'s immediate half rather than the async
    * teardown chain: once the frame loop is halted the canvas shows a frozen
@@ -1783,8 +1985,6 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * settles is a visible artefact, not an implementation detail.
    */
   private _releaseDom(): void {
-    this._sizing.restoreParentStyles();
-
     if (this._ownsCanvas) {
       this.element?.remove();
     }
@@ -1990,6 +2190,13 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       this._rendering = new RenderingContext(this._backend);
       this.systems._addCoreSystem(this._rendering, { order: SystemOrder.CoreRendering });
       this._coreSystems = this._coreSystems.map(system => (system === previousRendering ? this._rendering : system));
+
+      // A backend sizes its root target from the base resolution, which is not
+      // where a sizing policy may have taken the logical view by now - and the
+      // surface it is about to configure already carries that policy's backing
+      // store.
+      this._backend.resize(this._logicalWidth, this._logicalHeight);
+      this._rendering.resize(this._logicalWidth, this._logicalHeight);
 
       await this._backend.initialize();
     }

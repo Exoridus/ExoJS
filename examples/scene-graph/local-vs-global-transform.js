@@ -1,5 +1,5 @@
 // Auto-generated from local-vs-global-transform.ts - edit the .ts source, not this file.
-import { Application, Color, Container, Scene, Sprite, Text } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Scene, Sprite, Text } from '@codexo/exojs';
 class LocalVsGlobalTransformScene extends Scene {
     parent;
     localSprite;
@@ -43,7 +43,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

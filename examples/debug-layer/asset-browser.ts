@@ -1,4 +1,4 @@
-import { Asset } from '@codexo/exojs';
+import { Asset, FixedResolutionCanvasSizing } from '@codexo/exojs';
 import {
     Application, AudioStream, Color, FontAsset, Graphics, Json, type Pausable, type RenderingContext, Scene,
     type Seekable, type SpritesheetData, Sprite, Spritesheet, SvgAsset, Text, Texture, type Time, type Voice,
@@ -1088,7 +1088,7 @@ class AssetBrowserScene extends Scene {
 
 const app = new Application({
     scenes: { AssetBrowserScene },
-    canvas: { width: W, height: H, mount: document.body, sizingMode: 'fit' },
+    canvas: { width: W, height: H, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
     clearColor: C.bg,
 });
 

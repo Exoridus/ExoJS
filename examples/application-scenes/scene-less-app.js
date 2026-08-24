@@ -1,5 +1,5 @@
 // Auto-generated from scene-less-app.ts - edit the .ts source, not this file.
-import { Application, Color, Sprite } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Sprite } from '@codexo/exojs';
 // A scene-less Application: no Scene is ever registered or started. All
 // frame work happens through a single app-level system - useful for utility
 // apps, splash/loading screens, or anything that doesn't need scene
@@ -10,7 +10,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(18, 22, 33),
 });

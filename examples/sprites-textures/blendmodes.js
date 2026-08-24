@@ -1,5 +1,5 @@
 // Auto-generated from blendmodes.ts - edit the .ts source, not this file.
-import { Application, Asset, BlendModes, Color, ScaleModes, Scene, Sprite } from '@codexo/exojs';
+import { Application, Asset, BlendModes, Color, FixedResolutionCanvasSizing, ScaleModes, Scene, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 // Every public blend mode, in enum order, paired with a display name.
@@ -107,7 +107,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     // A mid-tone backdrop so darkening modes (Subtract, Multiply, Darken) stay
     // visible instead of compositing into a black canvas.

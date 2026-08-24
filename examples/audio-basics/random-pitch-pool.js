@@ -1,5 +1,5 @@
 // Auto-generated from random-pitch-pool.ts - edit the .ts source, not this file.
-import { Application, Color, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, Scene, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 const DETUNE_RANGE = 200; // ± cents
 const FIRE_INTERVAL = 0.08;
@@ -101,7 +101,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
 });

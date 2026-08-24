@@ -1,0 +1,167 @@
+{
+  "title": "CappedResolutionCanvasSizing",
+  "description": "Scales the canvas to its parent and lets the render resolution follow it downwards, but never above the base resolution. The CSS box is the largest base-aspect rectangle that fits the parent, exactly as with FixedResolutionCanvasSizing. Below the base resolution the backing store follows the smaller display size, so a phone renders fewer pixels; above it the backing store stops at `base x pixelRatio`, so a large display costs no more to draw than the resolution the app was authored for. The logical coordinate system is always the base resolution. The balanced responsive mode, and the usual choice when a fixed aspect ratio is wanted but a fixed pixel budget is not. Requires a canvas element with a parent in the document.",
+  "symbol": "CappedResolutionCanvasSizing",
+  "kind": "class",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 3,
+  "counts": {
+    "constructors": 1,
+    "methods": 2,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Scales the canvas to its parent and lets the render resolution follow it downwards, but never above the base resolution.",
+        "The CSS box is the largest base-aspect rectangle that fits the parent, exactly as with FixedResolutionCanvasSizing. Below the base resolution the backing store follows the smaller display size, so a phone renders fewer pixels; above it the backing store stops at `base x pixelRatio`, so a large display costs no more to draw than the resolution the app was authored for. The logical coordinate system is always the base resolution.",
+        "The balanced responsive mode, and the usual choice when a fixed aspect ratio is wanted but a fixed pixel budget is not.",
+        "Requires a canvas element with a parent in the document."
+      ],
+      "importLine": "import { CappedResolutionCanvasSizing } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): CappedResolutionCanvasSizing",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CappedResolutionCanvasSizing",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "CappedResolutionCanvasSizing",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "attach",
+          "signature": "attach(context: CanvasSizingContext): void",
+          "signatureTokens": [
+            {
+              "text": "attach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CanvasSizingContext",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "CanvasSizingContext",
+              "optional": false
+            }
+          ],
+          "returnType": "void",
+          "description": "Take ownership of context. Called once the surface exists and, for a canvas mounted through canvas.mount, once it is in the document."
+        },
+        {
+          "name": "detach",
+          "signature": "detach(): void",
+          "signatureTokens": [
+            {
+              "text": "detach",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Release everything CanvasSizing.attach created - observers, listeners, message channels - and undo any styling the policy applied itself. The CSS box committed through CanvasSizingContext.apply is not one of those: the application clears that on detach. The default implementation does nothing, which is correct for a policy that observes nothing."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sizing/CappedResolutionCanvasSizing.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sizing/CappedResolutionCanvasSizing.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sizing/CappedResolutionCanvasSizing.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sizing/CappedResolutionCanvasSizing.ts"
+}

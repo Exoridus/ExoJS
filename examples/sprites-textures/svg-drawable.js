@@ -1,5 +1,5 @@
 // Auto-generated from svg-drawable.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Scene, Sprite, Texture } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Sprite, Texture } from '@codexo/exojs';
 class SvgDrawableScene extends Scene {
     texture;
     sprite;
@@ -34,7 +34,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     loader: {

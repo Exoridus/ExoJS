@@ -1,5 +1,5 @@
 // Auto-generated from frequency-bands.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, Graphics, Scene, Text } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene, Text } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 // Eight perceptual frequency bands spanning the audible range, from the lowest
@@ -115,7 +115,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: new Color(14, 16, 22),
     loader: {

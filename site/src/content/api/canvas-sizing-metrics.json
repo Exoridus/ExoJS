@@ -1,0 +1,195 @@
+{
+  "title": "CanvasSizingMetrics",
+  "description": "One complete description of how the canvas is sized, in the three axes the engine keeps apart. `cssWidth`/`cssHeight` are the element's display box in CSS pixels, or `null` to leave the box exactly as it is - the form a policy uses when the surrounding page owns the canvas geometry. They are ignored for a surface with no document element. `logicalWidth`/`logicalHeight` are the coordinate system the application draws in: node positions, Application.width/Application.height and pointer coordinates are all expressed in it. `renderWidth`/`renderHeight` are the requested render resolution, also in CSS pixels. The backing store becomes `render x pixelRatio`, so a policy states how many pixels it wants without ever applying the device pixel ratio itself.",
+  "symbol": "CanvasSizingMetrics",
+  "kind": "interface",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "One complete description of how the canvas is sized, in the three axes the engine keeps apart.",
+        "`cssWidth`/`cssHeight` are the element's display box in CSS pixels, or `null` to leave the box exactly as it is - the form a policy uses when the surrounding page owns the canvas geometry. They are ignored for a surface with no document element.",
+        "`logicalWidth`/`logicalHeight` are the coordinate system the application draws in: node positions, Application.width/Application.height and pointer coordinates are all expressed in it.",
+        "`renderWidth`/`renderHeight` are the requested render resolution, also in CSS pixels. The backing store becomes `render x pixelRatio`, so a policy states how many pixels it wants without ever applying the device pixel ratio itself."
+      ],
+      "importLine": "import { CanvasSizingMetrics } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "cssHeight",
+          "signature": "cssHeight: null | number",
+          "signatureTokens": [
+            {
+              "text": "cssHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "cssWidth",
+          "signature": "cssWidth: null | number",
+          "signatureTokens": [
+            {
+              "text": "cssWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "null",
+              "kind": "keyword"
+            },
+            {
+              "text": " | ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "logicalHeight",
+          "signature": "logicalHeight: number",
+          "signatureTokens": [
+            {
+              "text": "logicalHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "logicalWidth",
+          "signature": "logicalWidth: number",
+          "signatureTokens": [
+            {
+              "text": "logicalWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "renderHeight",
+          "signature": "renderHeight: number",
+          "signatureTokens": [
+            {
+              "text": "renderHeight",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        },
+        {
+          "name": "renderWidth",
+          "signature": "renderWidth: number",
+          "signatureTokens": [
+            {
+              "text": "renderWidth",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/sizing/CanvasSizing.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sizing/CanvasSizing.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/sizing/CanvasSizing.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/sizing/CanvasSizing.ts"
+}

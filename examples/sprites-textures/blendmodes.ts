@@ -1,4 +1,4 @@
-import { Application, Asset, BlendModes, Color, type RenderingContext, ScaleModes, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, Asset, BlendModes, Color, FixedResolutionCanvasSizing, type RenderingContext, ScaleModes, Scene, Sprite, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 
@@ -128,7 +128,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     // A mid-tone backdrop so darkening modes (Subtract, Multiply, Darken) stay
     // visible instead of compositing into a black canvas.

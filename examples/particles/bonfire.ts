@@ -1,4 +1,4 @@
-import { Application, BlendModes, Color, type RenderingContext, Scene } from '@codexo/exojs';
+import { Application, BlendModes, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene } from '@codexo/exojs';
 import {
     ColorGradient,
     ColorOverLifetime,
@@ -80,7 +80,7 @@ const app = new Application({
         width: 1280,
         height: 720,
         mount: document.body,
-        sizingMode: 'fit',
+        sizing: new FixedResolutionCanvasSizing(),
     },
     clearColor: Color.black,
     extensions: [particlesExtension],
