@@ -14,6 +14,7 @@ import { AssetCache } from '#assets/AssetCache';
 import type { CacheRecordKey } from '#assets/CacheRecordKey';
 import { IndexedDbStore } from '#assets/IndexedDbStore';
 import { SingleEntryLayout } from '#assets/SingleEntryLayout';
+import { unrestrictedNetwork } from '#core/Connectivity';
 
 const key = (overrides: Partial<CacheRecordKey> = {}): CacheRecordKey => ({
   namespace: 'com.example.world',
@@ -205,6 +206,7 @@ describe('IndexedDbStore in a real browser', () => {
       namespace: 'com.example.world',
       sourceKey: 'url:https://assets.test/level.world',
       layout: SingleEntryLayout.version<string>(1),
+      network: unrestrictedNetwork,
       fetch: fetchRepresentation,
       report: () => undefined,
     };

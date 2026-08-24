@@ -17,6 +17,7 @@ import { CacheFirstPolicy, CacheOnlyPolicy, NetworkFirstPolicy, NetworkOnlyPolic
 import type { CachePolicy } from '#assets/CachePolicy';
 import { serializeCacheRecordKey } from '#assets/CacheRecordKey';
 import { SingleEntryLayout } from '#assets/SingleEntryLayout';
+import { unrestrictedNetwork } from '#core/Connectivity';
 
 import { type CacheStoreDouble, createCacheStoreDouble } from './cache-test-doubles';
 
@@ -45,6 +46,7 @@ function harness(policy: CachePolicy, fetchImpl: () => Promise<string> = () => P
         namespace,
         sourceKey,
         layout: SingleEntryLayout.version<string>(1),
+        network: unrestrictedNetwork,
         fetch: fetchImpl,
         report: error => reported.push(error),
         ...overrides,

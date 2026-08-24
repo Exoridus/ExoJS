@@ -1,6 +1,6 @@
 {
   "title": "ConnectivityPolicyResolver",
-  "description": "Routes acquisitions through the cache alone whenever the application is not allowed to reach the network, and through the configured online policy whenever it is. The decision reads Connectivity.allowsNetwork, so it honours both halves of that question - the environment's hint and the application's own mode - without having to know which one said no. `'unknown'` counts as allowed: the host is not claiming the network is gone, and refusing on no evidence would break every environment that reports nothing.",
+  "description": "Routes acquisitions through the cache alone whenever the application is not allowed to reach the network, and through the configured online policy whenever it is. It holds no connectivity of its own. The decision is made from the CachePolicyResolutionContext.network snapshot the loader hands it per acquisition, which is what lets one resolver - and one `AssetCache` - be shared between applications that disagree about whether they may use the network. `allowsNetwork` already folds both halves of the question together - the environment's hint and the application's own mode - so this never has to know which one said no. `'unknown'` counts as allowed: the host is not claiming the network is gone, and refusing on no evidence would break every environment that reports nothing.",
   "symbol": "ConnectivityPolicyResolver",
   "kind": "class",
   "subsystem": "assets",
@@ -20,7 +20,8 @@
       "members": [],
       "paragraphs": [
         "Routes acquisitions through the cache alone whenever the application is not allowed to reach the network, and through the configured online policy whenever it is.",
-        "The decision reads Connectivity.allowsNetwork, so it honours both halves of that question - the environment's hint and the application's own mode - without having to know which one said no. `'unknown'` counts as allowed: the host is not claiming the network is gone, and refusing on no evidence would break every environment that reports nothing."
+        "It holds no connectivity of its own. The decision is made from the CachePolicyResolutionContext.network snapshot the loader hands it per acquisition, which is what lets one resolver - and one `AssetCache` - be shared between applications that disagree about whether they may use the network.",
+        "`allowsNetwork` already folds both halves of the question together - the environment's hint and the application's own mode - so this never has to know which one said no. `'unknown'` counts as allowed: the host is not claiming the network is gone, and refusing on no evidence would break every environment that reports nothing."
       ],
       "importLine": "import { ConnectivityPolicyResolver } from '@codexo/exojs'",
       "sourceLink": null
@@ -31,7 +32,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(connectivity: Connectivity, options: ConnectivityPolicyResolverOptions): ConnectivityPolicyResolver",
+          "signature": "new(options: ConnectivityPolicyResolverOptions): ConnectivityPolicyResolver",
           "signatureTokens": [
             {
               "text": "new",
@@ -39,22 +40,6 @@
             },
             {
               "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "connectivity",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Connectivity",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
               "kind": "punctuation"
             },
             {
@@ -84,11 +69,6 @@
           ],
           "params": [
             {
-              "name": "connectivity",
-              "type": "Connectivity",
-              "optional": false
-            },
-            {
               "name": "options",
               "type": "ConnectivityPolicyResolverOptions",
               "optional": false
@@ -108,7 +88,7 @@
       "members": [
         {
           "name": "policyFor",
-          "signature": "policyFor(): CachePolicy",
+          "signature": "policyFor(context: CachePolicyResolutionContext): CachePolicy",
           "signatureTokens": [
             {
               "text": "policyFor",
@@ -117,6 +97,18 @@
             {
               "text": "(",
               "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CachePolicyResolutionContext",
+              "kind": "type"
             },
             {
               "text": ")",
@@ -131,7 +123,13 @@
               "kind": "type"
             }
           ],
-          "params": [],
+          "params": [
+            {
+              "name": "context",
+              "type": "CachePolicyResolutionContext",
+              "optional": false
+            }
+          ],
           "returnType": "CachePolicy",
           "description": "The policy this acquisition runs under. Named apart from CachePolicy.resolve on purpose: the two are accepted in the same position, and one method name meaning \"run the acquisition\" on one and \"pick who runs it\" on the other would make the union undiscriminable and the mistake silent."
         }

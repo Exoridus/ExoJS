@@ -790,6 +790,12 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
           fetchOptions: loaderOptions.fetchOptions ?? { ...defaultLoaderFetchOptions },
           ...(loaderOptions.cache !== undefined && { cache: loaderOptions.cache }),
           ...(loaderOptions.concurrency !== undefined && { concurrency: loaderOptions.concurrency }),
+          // Always this application's own. A cache configured with a
+          // `ConnectivityPolicyResolver` therefore follows `app.connectivity`
+          // with no wiring by the caller, and a cache shared with a second
+          // application still follows each application's own answer, because
+          // what travels is a per-acquisition snapshot rather than this object.
+          connectivity: this.connectivity,
         },
         rendering: resolveRenderingOptions(renderingOptions),
         input: {

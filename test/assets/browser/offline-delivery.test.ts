@@ -102,13 +102,15 @@ function createStore(name: string): IndexedDbStore {
 }
 
 /**
- * A loader over `store`, choosing its policy from `connectivity` - the wiring an
- * application does when it is built with both.
+ * A loader over `store`, following `connectivity` - which is exactly what
+ * `Application` does with its own, and the only wiring there is: the resolver
+ * holds nothing, and reads the snapshot the loader hands it per acquisition.
  */
 function createLoader(store: IndexedDbStore, connectivity: Connectivity): Loader {
   const loader = new Loader({
     basePath: '/',
-    cache: new AssetCache({ stores: store, policy: new ConnectivityPolicyResolver(connectivity) }),
+    cache: new AssetCache({ stores: store, policy: new ConnectivityPolicyResolver() }),
+    connectivity,
   });
 
   materializeAssetTypes(loader, coreAssetTypes);
@@ -228,7 +230,8 @@ describe('the offline round trip', () => {
     const connectivity = new Connectivity(host.source);
     const loader = createLoader(createStore(name), connectivity);
 
-    // Streaming media is not acquired at all, so a prewarm has to ask for it.
+    // Streaming media is not acquired while the network is available, so a
+    // prewarm has to ask for it.
     await loader.cacheSource(Asset.type('music', 'audio/theme.wav', { download: true }));
 
     connectivity.mode = 'offline';
@@ -256,6 +259,101 @@ describe('the offline round trip', () => {
 
     createObjectUrl.mockRestore();
     revokeObjectUrl.mockRestore();
+    connectivity.destroy();
+  });
+
+  test('an ordinary streamed media request stops streaming when the network is forbidden', async () => {
+    const name = uniqueName();
+
+    openDatabases.push(name);
+
+    const host = hintSource('online');
+    const connectivity = new Connectivity(host.source);
+    const loader = createLoader(createStore(name), connectivity);
+
+    // 1. Warm the source while the network is available. `download: true` is
+    //    what makes a normally-streamed asset acquirable at all.
+    await loader.cacheSource(Asset.type('music', 'audio/theme.wav', { download: true }));
+
+    // 2. Offline.
+    connectivity.mode = 'offline';
+    fetchSpy.mockClear();
+
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL');
+    const scope = loader.createScope({ name: 'level' });
+
+    // 3. Request it the ORDINARY way - no `download`, the shape a scene writes.
+    //    Online this streams from the URL and never touches the cache; offline
+    //    it must not, or the element would open a network-backed source behind
+    //    the policy's back.
+    const stream = await scope.load(Asset.type('music', 'audio/theme.wav'));
+
+    // 4. The warmed blob answered.
+    expect(createObjectUrl).toHaveBeenCalledTimes(1);
+    expect(stream.audioElement.getAttribute('src')).toBe(createObjectUrl.mock.results[0]!.value as string);
+
+    // 5. Nothing network-backed was installed, and nothing was requested.
+    expect(stream.audioElement.getAttribute('src')?.startsWith('blob:')).toBe(true);
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    scope.destroy();
+    createObjectUrl.mockRestore();
+    connectivity.destroy();
+  });
+
+  test('an uncached ordinary media request fails at once offline, with no source installed', async () => {
+    const name = uniqueName();
+
+    openDatabases.push(name);
+
+    const host = hintSource('online');
+    const connectivity = new Connectivity(host.source);
+    const loader = createLoader(createStore(name), connectivity);
+
+    connectivity.mode = 'offline';
+    fetchSpy.mockClear();
+
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL');
+    const scope = loader.createScope({ name: 'level' });
+
+    await expect(scope.load(Asset.type('music', 'audio/never-warmed.wav'))).rejects.toThrow(AssetCacheMissError);
+
+    // The failure is the cache's, before any element existed: no object URL, no
+    // request, nothing to time out.
+    expect(createObjectUrl).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+
+    scope.destroy();
+    createObjectUrl.mockRestore();
+    connectivity.destroy();
+  });
+
+  test('streaming stays the online default - a URL source, and nothing cached', async () => {
+    const name = uniqueName();
+
+    openDatabases.push(name);
+
+    const host = hintSource('online');
+    const connectivity = new Connectivity(host.source);
+    const loader = createLoader(createStore(name), connectivity);
+    const store = openStores.at(-1)!;
+
+    const createObjectUrl = vi.spyOn(URL, 'createObjectURL');
+    const scope = loader.createScope({ name: 'level' });
+
+    // jsdom-free: a real element pointed at a URL the test server does not
+    // serve fails, which is itself the proof that the URL was installed rather
+    // than a blob. Assert on the element's src, not on the load resolving.
+    const pending = scope.load(Asset.type('music', 'audio/streamed.wav'));
+
+    await expect(pending).rejects.toThrow();
+    expect(createObjectUrl).not.toHaveBeenCalled();
+    await expect(store.get({ namespace: 'music', source: 'url:/audio/streamed.wav', version: 1, record: 'value' })).resolves.toMatchObject({
+      hit: false,
+    });
+
+    scope.destroy();
+    createObjectUrl.mockRestore();
     connectivity.destroy();
   });
 });

@@ -7,7 +7,26 @@ import type { MediaAssetOptions, MediaAssetSource } from '#assets/factories/medi
 import { type MusicAssetOptions, MusicFactory } from '#assets/factories/MusicFactory';
 import { type VideoAssetOptions, VideoFactory } from '#assets/factories/VideoFactory';
 import { AudioStream } from '#audio/AudioStream';
+import type { NetworkSnapshot } from '#core/Connectivity';
 import { Video } from '#rendering/video/Video';
+
+/**
+ * Whether this request streams from its URL, or takes the acquisition path.
+ *
+ * Streaming is the default and the point: the element owns the transfer and
+ * never holds more than it is playing. Two things override it, and both mean
+ * "the application owns this data instead".
+ *
+ * `download: true` is the explicit one - a prewarm, or a caller that wants the
+ * bytes cached. The other is not optional: streaming reaches the network
+ * directly, past the cache and therefore past every policy, so a request that
+ * kept streaming while the application forbade the network would quietly
+ * violate that. Declining to stream puts it back on the cache path, where a
+ * warmed blob answers and an unwarmed one misses.
+ */
+function streamsFromUrl(options: MediaAssetOptions | undefined, network: NetworkSnapshot): boolean {
+  return options?.download !== true && network.allowsNetwork;
+}
 
 /**
  * How a media type reads an acquisition it did not stream.
@@ -18,8 +37,8 @@ import { Video } from '#rendering/video/Video';
  * heap - which is the difference between caching a 200 MB video and running out
  * of memory trying.
  *
- * Only a request that opted out of streaming ever reaches this: the data came
- * from a download, a container slice or a cache.
+ * Only a request that did not stream ever reaches this: the data came from a
+ * download, a container slice or a cache.
  */
 const mediaSourceCodec: AssetSourceCodec<MediaAssetSource, Blob> = {
   fromResponse: response => response.blob(),
@@ -62,8 +81,12 @@ export class MusicAssetType extends AssetType<MediaAssetSource, AudioStream, Mus
   public override readonly _token: AssetConstructor = AudioStream;
   public override readonly codec = mediaSourceCodec;
 
-  public override unacquiredSource({ options }: AssetRequest<MusicAssetOptions>, url: string): { source: MediaAssetSource } | undefined {
-    return options?.download === true ? undefined : { source: { url } };
+  public override unacquiredSource(
+    { options }: AssetRequest<MusicAssetOptions>,
+    url: string,
+    network: NetworkSnapshot,
+  ): { source: MediaAssetSource } | undefined {
+    return streamsFromUrl(options, network) ? { source: { url } } : undefined;
   }
 
   public override resourceIdentity(request: AssetRequest<MusicAssetOptions>): string {
@@ -82,8 +105,12 @@ export class VideoAssetType extends AssetType<MediaAssetSource, Video, VideoAsse
   public override readonly _token: AssetConstructor = Video;
   public override readonly codec = mediaSourceCodec;
 
-  public override unacquiredSource({ options }: AssetRequest<VideoAssetOptions>, url: string): { source: MediaAssetSource } | undefined {
-    return options?.download === true ? undefined : { source: { url } };
+  public override unacquiredSource(
+    { options }: AssetRequest<VideoAssetOptions>,
+    url: string,
+    network: NetworkSnapshot,
+  ): { source: MediaAssetSource } | undefined {
+    return streamsFromUrl(options, network) ? { source: { url } } : undefined;
   }
 
   public override resourceIdentity(request: AssetRequest<VideoAssetOptions>): string {

@@ -467,11 +467,18 @@ describe('Application', () => {
       },
     });
 
+    // The application also hands the loader its own connectivity, which is what
+    // makes a cache configured with a ConnectivityPolicyResolver follow
+    // `app.connectivity` without the caller wiring anything.
     expect(LoaderMock).toHaveBeenCalledWith({
       basePath: '/assets/',
       fetchOptions,
       cache,
       concurrency: 3,
+      // Asserted by contract rather than by class: the harness resets modules
+      // before re-importing Application, so an `instanceof` here would compare
+      // two different module instances of the same class.
+      connectivity: expect.objectContaining({ snapshot: expect.any(Function) }),
     });
   });
 

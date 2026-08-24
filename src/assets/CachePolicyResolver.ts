@@ -1,3 +1,5 @@
+import type { NetworkSnapshot } from '#core/Connectivity';
+
 import type { CachePolicy } from './CachePolicy';
 import type { SourceKey } from './canonicalKey';
 
@@ -7,6 +9,16 @@ export interface CachePolicyResolutionContext {
   readonly namespace: string;
   /** The source identity being acquired. */
   readonly sourceKey: SourceKey;
+  /**
+   * The connectivity facts this acquisition starts under, as the loader knew
+   * them at that moment.
+   *
+   * A snapshot rather than the service itself. A resolver therefore cannot
+   * subscribe to connectivity, cannot outlive the decision, and cannot be
+   * bound to one application - which is what lets one `AssetCache` be shared
+   * between applications that disagree about whether they may use the network.
+   */
+  readonly network: NetworkSnapshot;
 }
 
 /**
@@ -25,7 +37,7 @@ export interface CachePolicyResolutionContext {
  * @example
  * ```ts
  * const resolver: CachePolicyResolver = {
- *   policyFor: () => (allowNetwork ? cacheFirst : cacheOnly),
+ *   policyFor: context => (context.network.allowsNetwork ? cacheFirst : cacheOnly),
  * };
  *
  * new CacheRoute({ types: ['texture'], policy: resolver, stores: persistent });

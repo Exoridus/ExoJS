@@ -22,6 +22,36 @@ export type ConnectivityState = NetworkHint;
 export type NetworkMode = 'auto' | 'online' | 'offline';
 
 /**
+ * The connectivity facts one acquisition started under.
+ *
+ * A value, taken once and never updated: an acquisition that was allowed to
+ * reach the network keeps that permission to completion, and a policy resolver
+ * reading this cannot observe a change that happened after the decision it was
+ * asked to make.
+ *
+ * It carries facts, not the service. Nothing downstream of an acquisition holds
+ * a {@link Connectivity}, subscribes to it, or can change it.
+ */
+export interface NetworkSnapshot {
+  /** Whether this acquisition may reach the network. */
+  readonly allowsNetwork: boolean;
+  /** What the environment appeared to provide. */
+  readonly state: ConnectivityState;
+  /** What the application allowed. */
+  readonly mode: NetworkMode;
+}
+
+/**
+ * What an acquisition assumes when nothing configured connectivity: the network
+ * is permitted, and no claim is made about the environment.
+ *
+ * A loader built without a {@link Connectivity} is not offline - it simply has
+ * nobody telling it otherwise, and refusing on no evidence would break every
+ * such loader.
+ */
+export const unrestrictedNetwork: NetworkSnapshot = Object.freeze({ allowsNetwork: true, state: 'unknown', mode: 'auto' });
+
+/**
  * Whether the application should reach the network at all, right now.
  *
  * Two separate questions, deliberately never equated:
@@ -102,6 +132,18 @@ export class Connectivity {
 
     this._mode = value;
     this.onModeChange.dispatch(value);
+  }
+
+  /**
+   * The facts an acquisition starting now would run under, as one immutable
+   * value.
+   *
+   * This is what reaches a {@link CachePolicyResolver} and an asset type's
+   * transport decision - never this object, so neither can subscribe to it,
+   * hold it past the acquisition, or change it.
+   */
+  public snapshot(): NetworkSnapshot {
+    return { allowsNetwork: this.allowsNetwork, state: this._state, mode: this._mode };
   }
 
   /**

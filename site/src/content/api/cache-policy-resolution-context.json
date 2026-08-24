@@ -6,11 +6,11 @@
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 2,
+  "memberCount": 3,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 2,
+    "properties": 3,
     "events": 0
   },
   "sections": [
@@ -48,6 +48,27 @@
           "params": [],
           "returnType": null,
           "description": "The storage namespace of the acquisition, which is the asset type's id."
+        },
+        {
+          "name": "network",
+          "signature": "network: NetworkSnapshot",
+          "signatureTokens": [
+            {
+              "text": "network",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkSnapshot",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The connectivity facts this acquisition starts under, as the loader knew them at that moment. A snapshot rather than the service itself. A resolver therefore cannot subscribe to connectivity, cannot outlive the decision, and cannot be bound to one application - which is what lets one AssetCache be shared between applications that disagree about whether they may use the network."
         },
         {
           "name": "sourceKey",

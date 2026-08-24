@@ -1,3 +1,4 @@
+import type { Connectivity } from '#core/Connectivity';
 import { Signal } from '#core/Signal';
 
 import { type Asset, AssetImpl, type ValueAsset } from './Asset';
@@ -70,12 +71,24 @@ export type InferLoadedMap<M extends Record<string, CatalogEntry>> = {
  * One or more {@link CacheStore} instances configure a single cache-first
  * route over them; an {@link AssetCache} configures routes and policies
  * explicitly.
+ *
+ * `connectivity` is what makes an acquisition's network permission known to the
+ * cache and to a streaming asset type. {@link Application} supplies its own, so
+ * this is only for a loader built by hand.
  */
 export interface LoaderOptions {
   basePath?: string;
   fetchOptions?: RequestInit;
   cache?: AssetCache | CacheStore | readonly CacheStore[];
   concurrency?: number;
+  /**
+   * Whether acquisitions may reach the network, and what the host reports.
+   *
+   * The loader never subscribes to it and never changes it: it reads a
+   * snapshot when an acquisition starts, and passes that value on. Omitted,
+   * every acquisition runs unrestricted.
+   */
+  connectivity?: Connectivity;
 }
 
 /**
@@ -355,6 +368,7 @@ export class Loader {
       // tears down with itself; an `AssetCache` handed in belongs to whoever
       // built it, and may well be serving other loaders.
       ownsCache: cache !== undefined && !(cache instanceof AssetCache),
+      connectivity: options.connectivity ?? null,
     });
 
     const signals: AssetResidencySignals = { onProgress: this.onProgress, onLoaded: this.onLoaded, onError: this.onError };

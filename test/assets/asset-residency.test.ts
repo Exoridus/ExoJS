@@ -72,6 +72,7 @@ function createResidency(overrides: { cache?: AssetCache; concurrency?: number }
     fetchOptions: {},
     cache: overrides.cache ?? createFakeCache().cache,
     ownsCache: true,
+    connectivity: null,
   });
   const onProgress = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[number, number]>;
   const onLoaded = { dispatch: vi.fn() } as unknown as import('#core/Signal').Signal<[unknown, string, unknown]>;
