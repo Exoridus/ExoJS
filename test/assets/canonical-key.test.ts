@@ -1,4 +1,4 @@
-import { resourceKey, canonicalizeSource, resolveAssetUrl } from '#assets/canonicalKey';
+import { canonicalizeSource, resolveAssetUrl,resourceKey } from '#assets/canonicalKey';
 
 describe('canonicalizeSource', () => {
   test('joins a relative source onto the base path', () => {

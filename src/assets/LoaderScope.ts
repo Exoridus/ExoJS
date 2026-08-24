@@ -2,10 +2,10 @@ import { Signal } from '#core/Signal';
 import type { Destroyable } from '#core/types';
 
 import type { Asset, ValueAsset } from './Asset';
+import type { AssetConstructor } from './AssetConstructor';
 import type { CatalogEntry, KindByPath, LeafForPath, ResourceForKind } from './AssetDefinitions';
 import type { CatalogResourceLeaf, CatalogValueLeaf } from './assetMeta';
 import type { Assets, InferAssetsProperties } from './Assets';
-import type { AssetConstructor } from './AssetConstructor';
 import { LoadBatch } from './LoadBatch';
 import type { InferLoadedMap, Loader, LoadOptions } from './Loader';
 import type { LoadingQueue } from './LoadingQueue';

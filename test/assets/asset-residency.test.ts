@@ -1,12 +1,12 @@
 import { describe, expect, test, vi } from 'vitest';
 
+import type { AssetConstructor } from '#assets/AssetConstructor';
 import { AssetDecoder } from '#assets/AssetDecoder';
 import type { AssetResidencySignals } from '#assets/AssetResidency';
 import { AssetResidency } from '#assets/AssetResidency';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
 import type { CacheRequest, CacheStrategy } from '#assets/CacheStrategy';
 import { type CanonicalAsset, canonicalizeSource, resourceKey, sourceKey } from '#assets/canonicalKey';
-import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { Loader } from '#assets/Loader';
 import { LoaderScope } from '#assets/LoaderScope';
 import type { SeamlessAdapter } from '#assets/seamless';

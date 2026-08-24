@@ -148,11 +148,11 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
    * ```
    */
   public asset(source: string, options?: Options): Asset<Resource> {
-    // The descriptor carries this type's own `id` where a built-in carries an
-    // `AssetDefinitions` key. Both resolve through the same app-local type-name
-    // lookup, so the widening is a naming question, not a dispatch one.
-    // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- a dynamic type's id is deliberately not a key of AssetDefinitions; lifting that constraint is what this API exists for.
-    return new AssetImpl({ type: this.id, source, ...(options ?? {}) } as unknown as AnyAssetConfig) as Asset<Resource>;
+    // A dynamic type's id is deliberately not a key of `AssetDefinitions` -
+    // lifting that constraint is what this API exists for - but both names are
+    // resolved through the same app-local lookup, so the widening is a naming
+    // question rather than a dispatch one.
+    return new AssetImpl({ type: this.id, source, ...(options ?? {}) } as unknown as AnyAssetConfig);
   }
 }
 

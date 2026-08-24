@@ -1,9 +1,9 @@
 import type { AssetBinding, AssetHandler } from '#extensions/Extension';
 
+import type { AssetConstructor } from './AssetConstructor';
 import type { AssetDefinitions } from './AssetDefinitions';
 import { registerAssetKind } from './assetKindRegistry';
 import { registerExtensionKind } from './extensionKindRegistry';
-import type { AssetConstructor } from './AssetConstructor';
 import type { Loader } from './Loader';
 import type { SeamlessAdapter } from './seamless';
 

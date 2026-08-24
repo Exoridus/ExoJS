@@ -74,7 +74,6 @@ export interface AssetDefinitions {
  * type without declaring it to the module system first; the literal half keeps
  * the built-in keys autocompleting.
  */
-// eslint-disable-next-line @typescript-eslint/ban-types -- `string & {}` is the documented way to keep literal autocomplete on a widened union.
 export type AssetTypeName = keyof AssetDefinitions | (string & {});
 
 export type AnyAssetConfig = {

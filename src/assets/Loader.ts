@@ -298,15 +298,17 @@ export class Loader {
    */
   public _canonicalize(type: AssetConstructor, source: string, options?: unknown): CanonicalAsset {
     const locator = canonicalizeSource(this._decoder.basePath, source);
-    const resourceDiscriminator = this._typeRegistry._identityDiscriminator(type, source, options);
-    const sourceDiscriminator = this._typeRegistry._sourceDiscriminator(type, source, options);
+    // The resource discriminator is deliberately absent from the source key: two
+    // resources that differ only in how one download is interpreted must resolve
+    // to one acquisition, or the same bytes would be fetched once per
+    // interpretation. The reverse containment is structural - the resource key is
+    // built ON the source key - so distinct source data can never share a
+    // resident resource even if a type forgets to repeat the distinction.
+    const acquired = sourceKey(locator, this._typeRegistry._sourceDiscriminator(type, source, options));
 
     return {
-      key: resourceKey(this._typeRegistry._typeIdentity(type), locator, resourceDiscriminator),
-      // The resource discriminator is deliberately absent here: two resources
-      // that differ only in how one download is interpreted must resolve to one
-      // acquisition, or the same bytes would be fetched once per interpretation.
-      sourceKey: sourceKey(locator, sourceDiscriminator),
+      key: resourceKey(this._typeRegistry._typeIdentity(type), acquired, this._typeRegistry._identityDiscriminator(type, source, options)),
+      sourceKey: acquired,
       locator,
       type,
       source,
@@ -330,9 +332,9 @@ export class Loader {
 
     const { type: _type, source, ...rest } = asset._config;
     const options = Object.keys(rest).length > 0 ? rest : undefined;
-    const { key, sourceKey: source_, locator } = this._canonicalize(ctor, source, options);
+    const canonical = this._canonicalize(ctor, source, options);
 
-    return { resourceKey: key, sourceKey: source_, locator };
+    return { resourceKey: canonical.key, sourceKey: canonical.sourceKey, locator: canonical.locator };
   }
 
   /**
@@ -1259,6 +1261,15 @@ export class Loader {
    */
   public hasAssetType(typeName: string): boolean {
     return this._typeRegistry.hasAssetType(typeName);
+  }
+
+  /**
+   * Returns true if a file extension is already mapped to an asset type.
+   * Extension is normalised (leading dot stripped, lower-cased).
+   * @advanced
+   */
+  public resolveExtensionType(extension: string): AssetTypeName | undefined {
+    return this._typeRegistry.resolveExtensionType(extension);
   }
 
   /**

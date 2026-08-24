@@ -1,7 +1,7 @@
 import type { AssetBinding, AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 
 import type { AssetConstructor } from './AssetConstructor';
-import type { AssetDependencyScope, AssetFactory, AssetFactoryContext } from './AssetFactory';
+import type { AssetFactory, AssetFactoryContext } from './AssetFactory';
 import type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
 import type { AnyAssetType } from './AssetType';
 import type { AssetLoaderContext, Loader } from './Loader';
@@ -28,7 +28,7 @@ function createTypeToken(id: string): AssetConstructor {
   // report every dynamic type under the same empty name.
   Object.defineProperty(token, 'name', { value: id, configurable: true });
 
-  return token as AssetConstructor;
+  return token;
 }
 
 /** The context a factory sees, assembled from what the loader already resolved for this request. */
@@ -42,7 +42,7 @@ function factoryContext(context: AssetLoaderContext, options: unknown): AssetFac
     // A `LoaderScope` is structurally wider than the dependency seam; the
     // narrowing is what keeps release and teardown of the parent's scope out of
     // a factory's reach.
-    dependencies: context.scope as AssetDependencyScope,
+    dependencies: context.scope,
   };
 }
 

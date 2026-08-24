@@ -29,11 +29,15 @@ export type AssetLocator = string;
  * The identity of one runtime resource: every residency entry, in-flight fetch
  * and ownership claim is keyed by it.
  *
- * Composed of the asset type's identity, the canonical locator, and - when the
- * type declares one - a resource discriminator covering every option that
- * changes the produced resource. Two requests that differ only in an option the
- * type does not treat as resource-relevant resolve to one key and are served by
- * one resource.
+ * Composed of the asset type's identity, the {@link SourceKey} the resource is
+ * built from, and - when the type declares one - a resource discriminator
+ * covering every option that changes the produced resource. Two requests that
+ * differ only in an option the type does not treat as resource-relevant resolve
+ * to one key and are served by one resource.
+ *
+ * Containing the source key rather than the bare locator is what keeps the two
+ * dimensions consistent: distinct source data can never collapse onto one
+ * resident resource, whatever a type's resource discriminator says.
  */
 export type ResourceKey = string;
 
@@ -195,9 +199,9 @@ export function canonicalizeSource(basePath: string, source: string): AssetLocat
   return `url:${resolveAssetUrl(basePath, source)}`;
 }
 
-/** Compose the {@link ResourceKey} for a type identity, a locator, and an optional resource discriminator. */
-export function resourceKey(typeId: string, locator: AssetLocator, discriminator?: string): ResourceKey {
-  return discriminator === undefined || discriminator === '' ? `${typeId}|${locator}` : `${typeId}|${locator}|${discriminator}`;
+/** Compose the {@link ResourceKey} for a type identity, the source it is built from, and an optional resource discriminator. */
+export function resourceKey(typeId: string, source: SourceKey, discriminator?: string): ResourceKey {
+  return discriminator === undefined || discriminator === '' ? `${typeId}|${source}` : `${typeId}|${source}|${discriminator}`;
 }
 
 /**

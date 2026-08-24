@@ -7,5 +7,5 @@
  * identity. A first-class {@link AssetType} carries its own stable string
  * identity instead and needs no constructor of its own.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- a constructor token is matched by identity; its parameters are irrelevant and must not narrow assignability.
+ 
 export type AssetConstructor<T = unknown> = abstract new (...args: any[]) => T;

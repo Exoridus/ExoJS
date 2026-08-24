@@ -2,12 +2,12 @@ import type { LoadStateValue } from '#core/LoadState';
 import { logger } from '#core/logging';
 import type { Signal } from '#core/Signal';
 
+import type { AssetConstructor } from './AssetConstructor';
 import type { AssetDecoder } from './AssetDecoder';
 import { _readMeta } from './assetMeta';
 import { AssetRef } from './AssetRef';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
 import type { AssetLocator, CanonicalAsset, ResourceKey } from './canonicalKey';
-import type { AssetConstructor } from './AssetConstructor';
 import type { LoaderScope, LoaderScopeKind } from './LoaderScope';
 import type { SeamlessAdapter } from './seamless';
 import { isAbortError, SharedAbort } from './SharedAbort';

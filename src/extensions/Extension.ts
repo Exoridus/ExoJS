@@ -1,6 +1,6 @@
+import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { AssetTypeName } from '#assets/AssetDefinitions';
 import type { AnyAssetType } from '#assets/AssetType';
-import type { AssetConstructor } from '#assets/AssetConstructor';
 import type { AssetLoaderContext, Loader } from '#assets/Loader';
 import type { SeamlessAdapter } from '#assets/seamless';
 import type { Application } from '#core/Application';

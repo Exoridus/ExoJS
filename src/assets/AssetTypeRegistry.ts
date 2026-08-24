@@ -1,8 +1,8 @@
 import type { AssetHandler, AssetLoadRequest } from '#extensions/Extension';
 
+import type { AssetConstructor } from './AssetConstructor';
 import type { AssetTypeName } from './AssetDefinitions';
 import { getExtensionKind, normalizeExtension } from './extensionKindRegistry';
-import type { AssetConstructor } from './AssetConstructor';
 import type { AssetLoaderContext } from './Loader';
 import type { SeamlessAdapter } from './seamless';
 
