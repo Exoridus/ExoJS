@@ -1,0 +1,135 @@
+{
+  "title": "CacheRecordKey",
+  "description": "The identity of one persisted cache record. A SourceKey alone is deliberately not enough. It carries no asset type - two types may acquire one URL and keep entirely different representations of it - and it says nothing about the layout that wrote the record. Both belong in the persistent identity, or a store would serve one type's representation to another, and a layout change would decode data it no longer understands.",
+  "symbol": "CacheRecordKey",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 4,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 4,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The identity of one persisted cache record.",
+        "A SourceKey alone is deliberately not enough. It carries no asset type - two types may acquire one URL and keep entirely different representations of it - and it says nothing about the layout that wrote the record. Both belong in the persistent identity, or a store would serve one type's representation to another, and a layout change would decode data it no longer understands."
+      ],
+      "importLine": "import { CacheRecordKey } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "namespace",
+          "signature": "namespace: string",
+          "signatureTokens": [
+            {
+              "text": "namespace",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The storage namespace, which is the asset type's stable id."
+        },
+        {
+          "name": "record",
+          "signature": "record: string",
+          "signatureTokens": [
+            {
+              "text": "record",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Which of the layout's records this is."
+        },
+        {
+          "name": "source",
+          "signature": "source: string",
+          "signatureTokens": [
+            {
+              "text": "source",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The source identity the record was acquired for."
+        },
+        {
+          "name": "version",
+          "signature": "version: number",
+          "signatureTokens": [
+            {
+              "text": "version",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The CacheLayout version that wrote it."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/CacheRecordKey.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheRecordKey.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/CacheRecordKey.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CacheRecordKey.ts"
+}

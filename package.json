@@ -142,6 +142,7 @@
     "test:browser:webgpu": "vitest run --project=browser-webgpu",
     "test:browser:webgpu:chromium": "pnpm run test:browser:webgpu",
     "test:browser:webgpu:firefox": "vitest run --project=browser-webgpu-firefox",
+    "test:browser:assets": "vitest run --project=browser-assets-chromium",
     "test:browser:audio": "vitest run --project=browser-audio-chromium",
     "test:browser:tilemap": "vitest run --project=browser-tilemap-chromium",
     "test:browser:build": "vitest run --project=browser-build-chromium",

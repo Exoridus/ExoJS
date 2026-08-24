@@ -206,7 +206,7 @@
           ],
           "params": [],
           "returnType": "void",
-          "description": "Tears down the loader and all resources it owns. Destroys every cache store, clears all in-memory assets and in-flight tracking, and disconnects all signals. Also calls destroy?.() on every handler registered via bindAsset."
+          "description": "Tears down the loader and all resources it owns. Clears all in-memory assets and in-flight tracking, and disconnects all signals. Also calls destroy?.() on every handler registered via bindAsset. Cache stores are destroyed only when this loader was given the stores themselves, and therefore owns the cache it wrapped them in. An AssetCache passed in belongs to its builder and may be serving other loaders, so it is left alone - destroy it yourself when the application is done with it."
         },
         {
           "name": "get",
@@ -2124,7 +2124,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "Fires for cache failures the configured CacheStrategy degraded instead of propagating - most commonly a persistent store hitting its quota. Purely diagnostic: the affected load still succeeds from the network, so without a listener the only symptom is that caching quietly stopped working. Narrow on AssetCacheError.operation and read Error.cause for the originating DOMException (QuotaExceededError and friends). Reports only failures caused by *this* loader's own requests, even when its CacheStrategy instance is shared with other loaders - the strategy is handed a per-request sink rather than subscribing to one."
+          "description": "Fires for cache failures the configured CachePolicy degraded instead of propagating - most commonly a persistent store hitting its quota. Purely diagnostic: the affected load still succeeds from the network, so without a listener the only symptom is that caching quietly stopped working. Narrow on AssetCacheError.operation and read Error.cause for the originating DOMException (QuotaExceededError and friends). Reports only failures caused by *this* loader's own requests, even when its AssetCache or CachePolicy is shared with other loaders - the cache is handed a per-acquisition sink rather than subscribing to one."
         },
         {
           "name": "onError",

@@ -1,0 +1,161 @@
+{
+  "title": "NetworkFirstPolicy",
+  "description": "Fetches first and only falls back to the cache when the network failed. For content that changes behind a stable URL and should be as fresh as the connection allows, while still working offline. The fallback is deliberately narrow. Only a transport or HTTP failure (`AssetNetworkError`) permits it: a cancelled load must stay cancelled, and a response the codec could not read is a broken source rather than an absent network - serving a stale representation for either would turn a visible failure into a silently wrong asset. When the network failed and the cache has nothing, the network failure is what surfaces, because it is the one that explains the load.",
+  "symbol": "NetworkFirstPolicy",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 2,
+  "counts": {
+    "constructors": 1,
+    "methods": 1,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "Fetches first and only falls back to the cache when the network failed.",
+        "For content that changes behind a stable URL and should be as fresh as the connection allows, while still working offline.",
+        "The fallback is deliberately narrow. Only a transport or HTTP failure (`AssetNetworkError`) permits it: a cancelled load must stay cancelled, and a response the codec could not read is a broken source rather than an absent network - serving a stale representation for either would turn a visible failure into a silently wrong asset. When the network failed and the cache has nothing, the network failure is what surfaces, because it is the one that explains the load."
+      ],
+      "importLine": "import { NetworkFirstPolicy } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(): NetworkFirstPolicy",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "NetworkFirstPolicy",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": "NetworkFirstPolicy",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "resolve",
+          "signature": "resolve(context: CacheContext<T>): Promise<T>",
+          "signatureTokens": [
+            {
+              "text": "resolve",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "context",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheContext",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "context",
+              "type": "CacheContext<T>",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<T>",
+          "description": "Resolve one acquisition to its stored representation."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/cachePolicies.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cachePolicies.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/cachePolicies.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/cachePolicies.ts"
+}

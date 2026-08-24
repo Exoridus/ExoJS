@@ -1,16 +1,16 @@
 {
   "title": "LoaderOptions",
-  "description": "Construction options for Loader. `basePath` is prepended to relative asset paths at fetch time. `cache` accepts one or more CacheStore instances. `cacheStrategy` picks the policy used to consult them - defaults to CacheFirstStrategy (check stores → network → write back). `concurrency` caps the number of simultaneous background-queue fetches (default `6`).",
+  "description": "Construction options for Loader. `basePath` is prepended to relative asset paths at fetch time. `concurrency` caps the number of simultaneous background-queue fetches (default `6`). `cache` configures caching, and is optional: with nothing passed, every acquisition goes straight to the network and no cache machinery runs at all. One or more CacheStore instances configure a single cache-first route over them; an AssetCache configures routes and policies explicitly.",
   "symbol": "LoaderOptions",
   "kind": "interface",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 5,
+  "memberCount": 4,
   "counts": {
     "constructors": 0,
     "methods": 0,
-    "properties": 5,
+    "properties": 4,
     "events": 0
   },
   "sections": [
@@ -20,7 +20,8 @@
       "members": [],
       "paragraphs": [
         "Construction options for Loader.",
-        "`basePath` is prepended to relative asset paths at fetch time. `cache` accepts one or more CacheStore instances. `cacheStrategy` picks the policy used to consult them - defaults to CacheFirstStrategy (check stores → network → write back). `concurrency` caps the number of simultaneous background-queue fetches (default `6`)."
+        "`basePath` is prepended to relative asset paths at fetch time. `concurrency` caps the number of simultaneous background-queue fetches (default `6`).",
+        "`cache` configures caching, and is optional: with nothing passed, every acquisition goes straight to the network and no cache machinery runs at all. One or more CacheStore instances configure a single cache-first route over them; an AssetCache configures routes and policies explicitly."
       ],
       "importLine": "import { LoaderOptions } from '@codexo/exojs'",
       "sourceLink": null
@@ -56,7 +57,7 @@
         },
         {
           "name": "cache",
-          "signature": "cache?: CacheStore | readonly CacheStore[]",
+          "signature": "cache?: AssetCache | CacheStore | readonly CacheStore[]",
           "signatureTokens": [
             {
               "text": "cache",
@@ -68,6 +69,14 @@
             },
             {
               "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AssetCache",
+              "kind": "type"
+            },
+            {
+              "text": " | ",
               "kind": "punctuation"
             },
             {
@@ -93,31 +102,6 @@
             {
               "text": "[]",
               "kind": "punctuation"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "cacheStrategy",
-          "signature": "cacheStrategy?: CacheStrategy",
-          "signatureTokens": [
-            {
-              "text": "cacheStrategy",
-              "kind": "name"
-            },
-            {
-              "text": "?",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "CacheStrategy",
-              "kind": "type"
             }
           ],
           "params": [],

@@ -1,11 +1,12 @@
 /**
- * Low-level key/value database abstraction used by {@link CacheStore}
- * implementations.
+ * Low-level key/value database abstraction with a declared schema.
  *
  * Data is organised into named object stores (`type`) that act as namespaces,
- * each holding entries keyed by `name`. {@link IndexedDbDatabase} is the
- * built-in implementation; custom backends can be provided by implementing
- * this interface and wrapping it in a {@link CacheStore}.
+ * each holding entries keyed by `name`. The set of stores is fixed when the
+ * database is created, which makes this the backing for structured
+ * application data such as save games; the asset cache uses
+ * {@link CacheStore}, whose namespaces are data rather than schema.
+ * {@link IndexedDbDatabase} is the built-in implementation.
  */
 export interface Database {
   /** Human-readable database identifier, typically an application name. */

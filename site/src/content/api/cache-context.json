@@ -1,0 +1,282 @@
+{
+  "title": "CacheContext",
+  "description": "The operations a CachePolicy may perform on one acquisition. Deliberately narrow. A policy decides ORDERING - read before fetch, fetch before read, never one of them - and nothing else. It is given no asset type, no factory, no codec and no store handle, so it cannot reach into how a representation is produced, laid out or persisted. ## Failure contract - read resolves to a miss when no configured store held the record, and rejects when a store could not answer and no later store supplied the value. Every individual store failure is also reported to the loader's cache diagnostics before it is raised here, so a policy that chooses to degrade does not make the failure invisible. - write rejects when any configured store refused the write, after attempting all of them. - fetch rejects with an `AssetNetworkError` for a transport or HTTP failure, with the platform `AbortError` for a cancelled load, and with whatever the codec threw for a representation it could not read. A policy that falls back on network failure must narrow on the first of those - an unreadable response and a cancelled load are not reasons to serve stale data.",
+  "symbol": "CacheContext",
+  "kind": "interface",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "advanced",
+  "memberCount": 6,
+  "counts": {
+    "constructors": 0,
+    "methods": 3,
+    "properties": 3,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "The operations a CachePolicy may perform on one acquisition.",
+        "Deliberately narrow. A policy decides ORDERING - read before fetch, fetch before read, never one of them - and nothing else. It is given no asset type, no factory, no codec and no store handle, so it cannot reach into how a representation is produced, laid out or persisted.",
+        "## Failure contract",
+        "- read resolves to a miss when no configured store held the record, and rejects when a store could not answer and no later store supplied the value. Every individual store failure is also reported to the loader's cache diagnostics before it is raised here, so a policy that chooses to degrade does not make the failure invisible. - write rejects when any configured store refused the write, after attempting all of them. - fetch rejects with an `AssetNetworkError` for a transport or HTTP failure, with the platform `AbortError` for a cancelled load, and with whatever the codec threw for a representation it could not read. A policy that falls back on network failure must narrow on the first of those - an unreadable response and a cancelled load are not reasons to serve stale data."
+      ],
+      "importLine": "import { CacheContext } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "fetch",
+          "signature": "fetch(): Promise<T>",
+          "signatureTokens": [
+            {
+              "text": "fetch",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "Promise<T>",
+          "description": "Acquire the representation from the network."
+        },
+        {
+          "name": "read",
+          "signature": "read(): Promise<CacheReadResult<T>>",
+          "signatureTokens": [
+            {
+              "text": "read",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheReadResult",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": "Promise<CacheReadResult<T>>",
+          "description": "Read the representation from the route's read stores, in their configured order."
+        },
+        {
+          "name": "write",
+          "signature": "write(value: T): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "write",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "T",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "value",
+              "type": "T",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Write the representation to the route's write stores."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "namespace",
+          "signature": "namespace: string",
+          "signatureTokens": [
+            {
+              "text": "namespace",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The storage namespace of the acquisition, which is the asset type's id."
+        },
+        {
+          "name": "signal",
+          "signature": "signal?: AbortSignal",
+          "signatureTokens": [
+            {
+              "text": "signal",
+              "kind": "name"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "AbortSignal",
+              "kind": "type"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Cancellation signal of the load, when the caller started one with a cancellation channel."
+        },
+        {
+          "name": "sourceKey",
+          "signature": "sourceKey: string",
+          "signatureTokens": [
+            {
+              "text": "sourceKey",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "The source identity being acquired."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/CachePolicy.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicy.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/CachePolicy.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/CachePolicy.ts"
+}

@@ -1,13 +1,15 @@
 import type { AssetHandler } from '#extensions/Extension';
 
+import type { AssetCache } from './AssetCache';
 import type { AssetCacheError } from './AssetCacheError';
 import type { AssetTypeRegistry } from './AssetTypeRegistry';
-import type { CacheStore } from './CacheStore';
-import type { CacheRequestFactory, CacheStrategy } from './CacheStrategy';
-import { type CanonicalAsset, resolveAssetUrl } from './canonicalKey';
+import type { CacheLayout } from './CacheLayout';
+import { type CanonicalAsset, canonicalizeSource, resolveAssetUrl, type SourceKey } from './canonicalKey';
+import { fetchAsset } from './fetchAsset';
 import type { AssetLoaderContext, Loader } from './Loader';
 import type { LoaderScope } from './LoaderScope';
 import { isAbortError } from './SharedAbort';
+import { SingleEntryLayout } from './SingleEntryLayout';
 
 /** Sink a decoded resource is handed to, returning the value callers should see for it. */
 export type ResourceStore = (asset: CanonicalAsset, resource: unknown) => unknown;
@@ -16,9 +18,20 @@ export type ResourceStore = (asset: CanonicalAsset, resource: unknown) => unknow
 export interface AssetDecoderOptions {
   basePath: string;
   fetchOptions: RequestInit;
-  stores: readonly CacheStore[];
-  cacheStrategy: CacheStrategy;
+  /** The application's caching configuration, or `null` when nothing is cached. */
+  cache: AssetCache | null;
+  /**
+   * Whether tearing this decoder down also tears the cache down. True only for
+   * a cache the loader built for itself out of the stores it was given.
+   */
+  ownsCache: boolean;
 }
+
+/**
+ * The layout a source acquired through a handler context uses. Those fetches
+ * hand back exactly what the response yielded, so one record holds it.
+ */
+const contextLayout = SingleEntryLayout.version(1);
 
 /**
  * Turns "a type + a path, or a `bindAsset` handler" into a decoded resource:
@@ -36,8 +49,8 @@ export interface AssetDecoderOptions {
 export class AssetDecoder {
   private readonly _loader: Loader;
   private readonly _typeRegistry: AssetTypeRegistry;
-  private readonly _stores: readonly CacheStore[];
-  private readonly _cacheStrategy: CacheStrategy;
+  private readonly _cache: AssetCache | null;
+  private readonly _ownsCache: boolean;
   private _basePath: string;
   private _fetchOptions: RequestInit;
 
@@ -51,10 +64,10 @@ export class AssetDecoder {
   };
 
   /**
-   * Per-request diagnostic sink handed to the cache strategy. One stable
-   * closure per decoder - a strategy shared between loaders reports each
-   * degraded failure only to the loader whose request caused it, and holds no
-   * reference to any loader between calls.
+   * Per-acquisition diagnostic sink handed to the cache. One stable closure
+   * per decoder - a cache or policy shared between loaders reports each failure
+   * only to the loader whose request caused it, and holds no reference to any
+   * loader between calls.
    */
   private readonly _reportCacheError = (error: AssetCacheError): void => {
     this._loader.onCacheError.dispatch(error);
@@ -63,8 +76,8 @@ export class AssetDecoder {
   public constructor(loader: Loader, typeRegistry: AssetTypeRegistry, options: AssetDecoderOptions) {
     this._loader = loader;
     this._typeRegistry = typeRegistry;
-    this._stores = options.stores;
-    this._cacheStrategy = options.cacheStrategy;
+    this._cache = options.cache;
+    this._ownsCache = options.ownsCache;
     this._basePath = options.basePath;
     this._fetchOptions = options.fetchOptions;
   }
@@ -113,54 +126,61 @@ export class AssetDecoder {
   }
 
   /**
-   * Fetches `source` through the loader's cache strategy with an inline
-   * pass-through factory, using the resolved URL as the IDB key so the same
-   * resource is never cached twice under two spellings.
+   * Acquire the representation of `source` through the application's cache
+   * configuration, or straight from the network when there is none.
    *
-   * `process` converts the raw `Response` to the storable intermediate form
-   * (e.g. `r.text()`, `r.arrayBuffer()`, `r.json()`).  `create` is always the
-   * identity function - the cached value is returned unchanged.
+   * `read` turns the raw response into the representation worth keeping. It
+   * runs only on the network leg: a cache hit hands back what was persisted,
+   * without a `Response` ever existing.
    *
-   * `cacheKey` overrides the lookup key for a source whose URL alone does not
-   * identify what comes back - a locale or content variant negotiated on the
-   * request. Without it two variants of one URL would overwrite each other in
-   * the store. Defaults to the resolved URL.
+   * `namespace` and `layout` decide where the representation is persisted;
+   * `sourceKey` decides what identifies it. Keying by the source identity
+   * rather than by the URL is what keeps two source variants negotiated on one
+   * URL from overwriting each other.
    * @internal
    */
-  public _contextFetch<T>(
+  public _acquire<T>(
     source: string,
-    storageName: string,
-    process: (response: Response) => Promise<T>,
+    namespace: string,
+    layout: CacheLayout<T>,
+    sourceKey: SourceKey,
+    read: (response: Response) => Promise<T>,
     signal?: AbortSignal,
-    cacheKey?: string,
   ): Promise<T> {
     const url = this._resolveUrl(source);
-    const factory: CacheRequestFactory = {
-      process,
-      create: data => Promise.resolve(data),
-    };
     // Spread only when a signal is actually threaded through, so a plain fetch
-    // keeps handing the strategy the very `fetchOptions` object it always did.
+    // keeps handing `fetch` the very `fetchOptions` object it always did.
     const requestOptions = signal === undefined ? this._fetchOptions : { ...this._fetchOptions, signal };
+    const fetchRepresentation = async (): Promise<T> => read(await fetchAsset(url, requestOptions));
 
-    return this._cacheStrategy.resolve(
-      { storageName, key: cacheKey ?? url, url, requestOptions, factory, options: undefined, reportCacheError: this._reportCacheError },
-      this._stores,
-    ) as Promise<T>;
+    if (this._cache === null) {
+      return fetchRepresentation();
+    }
+
+    return this._cache.resolve<T>({ namespace, sourceKey, layout, signal, fetch: fetchRepresentation, report: this._reportCacheError });
+  }
+
+  /**
+   * The acquisition a handler context's `fetch*` helpers perform: one record,
+   * keyed by the canonical locator of the source they were given.
+   * @internal
+   */
+  public _acquireForContext<T>(source: string, namespace: string, read: (response: Response) => Promise<T>, signal?: AbortSignal): Promise<T> {
+    return this._acquire(source, namespace, contextLayout as CacheLayout<T>, canonicalizeSource(this._basePath, source), read, signal);
   }
 
   /**
    * Builds an {@link AssetLoaderContext} for a handler invocation.
    *
-   * The `fetch*` helpers on the returned context route through the loader's
-   * configured cache strategy and IDB stores, keyed by the resolved URL (so the
-   * same resource is never fetched or cached twice, however it was spelled).
+   * The `fetch*` helpers on the returned context route through the
+   * application's cache configuration, keyed by the canonical locator of the
+   * source, so the same representation is never fetched or cached twice
+   * however it was spelled.
    *
-   * `storageName`, when given (from the handler's binding
-   * binding), replaces the shared `__ctx_binary`/`__ctx_text`/`__ctx_json`
-   * namespace for every `fetch*` call made through this context, giving the
-   * binding its own IDB namespace instead of sharing one with every other
-   * handler.
+   * `storageName`, when given by the handler's binding, replaces the shared
+   * `__ctx_binary`/`__ctx_text`/`__ctx_json` namespace for every `fetch*` call
+   * made through this context, giving the binding its own cache namespace
+   * instead of sharing one with every other handler.
    *
    * `signal` is the cancellation signal of the load this handler invocation
    * belongs to. Every `fetch*` helper forwards it automatically; it is also
@@ -180,9 +200,9 @@ export class AssetDecoder {
       locator: asset.locator,
       signal,
       resolveUrl: (source: string) => this._resolveUrl(source),
-      fetchText: (source: string) => this._contextFetch<string>(source, storageName ?? '__ctx_text', r => r.text(), signal),
-      fetchArrayBuffer: (source: string) => this._contextFetch<ArrayBuffer>(source, storageName ?? '__ctx_binary', r => r.arrayBuffer(), signal),
-      fetchJson: <T = unknown>(source: string) => this._contextFetch<T>(source, storageName ?? '__ctx_json', r => r.json() as Promise<T>, signal),
+      fetchText: (source: string) => this._acquireForContext<string>(source, storageName ?? '__ctx_text', r => r.text(), signal),
+      fetchArrayBuffer: (source: string) => this._acquireForContext<ArrayBuffer>(source, storageName ?? '__ctx_binary', r => r.arrayBuffer(), signal),
+      fetchJson: <T = unknown>(source: string) => this._acquireForContext<T>(source, storageName ?? '__ctx_json', r => r.json() as Promise<T>, signal),
     };
     return ctx;
   }
@@ -192,9 +212,9 @@ export class AssetDecoder {
    * `storeResource` callback.
    *
    * This does NOT automatically bypass caching - the handler controls caching
-   * by calling `context.fetchText` /
-   * `context.fetchArrayBuffer` / `context.fetchJson`, which route through
-   * the loader's cache strategy.
+   * by calling `context.fetchText` / `context.fetchArrayBuffer` /
+   * `context.fetchJson`, which route through the application's cache
+   * configuration.
    *
    * A cancellation rejection is rethrown unwrapped: the "Failed to load ... from
    * ..." envelope would hide the `AbortError` name the residency dispatches on to
@@ -273,10 +293,16 @@ export class AssetDecoder {
     this._storeResource(asset, resource);
   }
 
-  /** Destroys every configured cache store. */
+  /**
+   * Destroys the cache, but only one this decoder's loader built for itself.
+   *
+   * An {@link AssetCache} handed in is an application-level object, and
+   * sharing one between loaders is what routes and tiers are for - so tearing
+   * down one loader must not close stores another is still reading.
+   */
   public destroy(): void {
-    for (const store of this._stores) {
-      store.destroy();
+    if (this._ownsCache) {
+      this._cache?.destroy();
     }
   }
 }

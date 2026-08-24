@@ -20,8 +20,8 @@ export interface AssetNetworkErrorOptions {
 }
 
 /**
- * Structured asset-network failure. Thrown by {@link CacheFirstStrategy} and
- * {@link NetworkOnlyStrategy} when the network leg of a load fails - either
+ * Structured asset-network failure. Raised whenever the network leg of a load
+ * fails - either
  * because the request never completed (offline, DNS, CORS, TLS) or because the
  * server answered with a non-`ok` status.
  *

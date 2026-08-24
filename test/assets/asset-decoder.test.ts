@@ -1,54 +1,38 @@
 import { describe, expect, test, vi } from 'vitest';
 
+import { AssetCache } from '#assets/AssetCache';
 import type { AssetConstructor } from '#assets/AssetConstructor';
 import { AssetDecoder } from '#assets/AssetDecoder';
 import { AssetTypeRegistry } from '#assets/AssetTypeRegistry';
-import type { CacheStore } from '#assets/CacheStore';
-import type { CacheRequest, CacheStrategy } from '#assets/CacheStrategy';
+import type { CacheContext } from '#assets/CachePolicy';
+import { CacheRoute } from '#assets/CacheRoute';
 import { type CanonicalAsset, canonicalizeSource, resourceKey, sourceKey } from '#assets/canonicalKey';
 import type { Loader } from '#assets/Loader';
 import type { LoaderScope } from '#assets/LoaderScope';
+
+import { createCacheStoreDouble, createRecordingPolicy } from './cache-test-doubles';
 
 class TypeA {}
 
 const fakeLoader = {} as Loader;
 const fakeScope = { id: 1, kind: 'dependency' } as unknown as LoaderScope;
 
-const createCacheStoreMock = (overrides: Partial<CacheStore> = {}): CacheStore => ({
-  load: vi.fn(async (): Promise<unknown | null> => null),
-  save: vi.fn(async (): Promise<void> => undefined),
-  delete: vi.fn(async (): Promise<boolean> => true),
-  clear: vi.fn(async (): Promise<boolean> => true),
-  destroy: vi.fn(),
-  ...overrides,
-});
+/** A cache whose policy resolves to a canned value and records the contexts it saw. */
+function createFakeCache(resolveTo: () => unknown = () => 'resolved'): { cache: AssetCache; contexts: Array<CacheContext<unknown>> } {
+  const { policy, contexts } = createRecordingPolicy(context => Promise.resolve(resolveTo()) as ReturnType<typeof context.fetch>);
 
-/** Fake strategy that resolves to a canned value and records the request it received. */
-function createFakeStrategy(resolveTo: (request: CacheRequest) => unknown = () => 'resolved'): {
-  strategy: CacheStrategy;
-  requests: CacheRequest[];
-} {
-  const requests: CacheRequest[] = [];
-  const strategy: CacheStrategy = {
-    resolve: vi.fn(async (request: CacheRequest) => {
-      requests.push(request);
-      return resolveTo(request);
-    }),
-  };
-  return { strategy, requests };
+  return { cache: new AssetCache({ policy }), contexts };
 }
 
-function createDecoder(overrides: { cacheStrategy?: CacheStrategy; stores?: CacheStore[]; basePath?: string } = {}) {
+function createDecoder(overrides: { cache?: AssetCache | null; basePath?: string; ownsCache?: boolean } = {}) {
   const typeRegistry = new AssetTypeRegistry();
-  const stores = overrides.stores ?? [];
-  const { strategy } = overrides.cacheStrategy ? { strategy: overrides.cacheStrategy } : createFakeStrategy();
   const storeResource = vi.fn((_asset: CanonicalAsset, resource: unknown) => resource);
 
   const decoder = new AssetDecoder(fakeLoader, typeRegistry, {
     basePath: overrides.basePath ?? '',
     fetchOptions: {},
-    stores,
-    cacheStrategy: strategy,
+    cache: overrides.cache === undefined ? createFakeCache().cache : overrides.cache,
+    ownsCache: overrides.ownsCache ?? false,
   });
 
   decoder._bindResourceStore(storeResource);
@@ -61,7 +45,7 @@ function createDecoder(overrides: { cacheStrategy?: CacheStrategy; stores?: Cach
     source,
   });
 
-  return { decoder, typeRegistry, storeResource, strategy, canonical };
+  return { decoder, typeRegistry, storeResource, canonical };
 }
 
 describe('AssetDecoder', () => {
@@ -122,14 +106,14 @@ describe('AssetDecoder', () => {
   });
 
   test('_dispatchFetch routes context.fetchText through the bindAsset binding storageName instead of the shared namespace', async () => {
-    const { strategy, requests } = createFakeStrategy(() => 'ns-value');
-    const { decoder, typeRegistry, storeResource, canonical } = createDecoder({ cacheStrategy: strategy });
+    const { cache, contexts } = createFakeCache(() => 'ns-value');
+    const { decoder, typeRegistry, storeResource, canonical } = createDecoder({ cache });
 
     typeRegistry.bindAsset({ ctor: TypeA, storageName: 'my-type-ns' }, { load: async (_config, ctx) => ctx.fetchText('hero.png') });
 
     await decoder._dispatchFetch(canonical(TypeA, 'hero.png'), undefined, undefined, fakeScope);
 
-    expect(requests[0]?.storageName).toBe('my-type-ns');
+    expect(contexts[0]?.namespace).toBe('my-type-ns');
     expect(storeResource).toHaveBeenCalledWith(expect.objectContaining({ type: TypeA }), 'ns-value');
   });
 
@@ -161,9 +145,9 @@ describe('AssetDecoder', () => {
     expect(storeResource).not.toHaveBeenCalled();
   });
 
-  test('_buildHandlerContext exposes the owning loader and routes fetch* through _contextFetch', async () => {
-    const { strategy, requests } = createFakeStrategy(() => 'ctx-text-value');
-    const { decoder, canonical } = createDecoder({ cacheStrategy: strategy });
+  test('_buildHandlerContext exposes the owning loader and routes fetch* through the application cache', async () => {
+    const { cache, contexts } = createFakeCache(() => 'ctx-text-value');
+    const { decoder, canonical } = createDecoder({ cache });
 
     const asset = canonical(TypeA, 'hero.txt');
     const context = decoder._buildHandlerContext(asset, fakeScope);
@@ -176,18 +160,28 @@ describe('AssetDecoder', () => {
     const value = await context.fetchText('hero.txt');
 
     expect(value).toBe('ctx-text-value');
-    expect(requests[0]?.storageName).toBe('__ctx_text');
-    expect(requests[0]?.key).toBe('hero.txt');
+    expect(contexts[0]?.namespace).toBe('__ctx_text');
+    expect(contexts[0]?.sourceKey).toBe(canonicalizeSource('', 'hero.txt'));
   });
 
-  test('destroy() destroys every configured cache store', () => {
-    const storeA = createCacheStoreMock();
-    const storeB = createCacheStoreMock();
-    const { decoder, canonical } = createDecoder({ stores: [storeA, storeB] });
+  test('destroy() destroys every store of a cache it owns', () => {
+    const storeA = createCacheStoreDouble('a');
+    const storeB = createCacheStoreDouble('b');
+    const cache = new AssetCache({ routes: [new CacheRoute({ types: ['a'], stores: storeA })], stores: storeB });
+    const { decoder } = createDecoder({ cache, ownsCache: true });
 
     decoder.destroy();
 
     expect(storeA.destroy).toHaveBeenCalledTimes(1);
     expect(storeB.destroy).toHaveBeenCalledTimes(1);
+  });
+
+  test('destroy() leaves a cache it does not own alone', () => {
+    const store = createCacheStoreDouble();
+    const { decoder } = createDecoder({ cache: new AssetCache({ stores: store }), ownsCache: false });
+
+    decoder.destroy();
+
+    expect(store.destroy).not.toHaveBeenCalled();
   });
 });

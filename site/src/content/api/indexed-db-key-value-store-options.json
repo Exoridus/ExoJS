@@ -107,7 +107,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Explicit per-version schema callbacks. See IndexedDbDatabase for migration semantics."
         },
         {
           "name": "name",
@@ -128,7 +128,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "IndexedDB database name."
         },
         {
           "name": "storeName",
@@ -178,7 +178,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Schema version. Default 1."
         }
       ],
       "paragraphs": [],

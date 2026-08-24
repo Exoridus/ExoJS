@@ -1,15 +1,15 @@
 {
   "title": "IndexedDbDatabase",
-  "description": "Database implementation backed by the browser's IndexedDB API. Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. By default the database is initialised with stores for every built-in asset type (font, image, sound, etc.); pass a custom `storeNames` list to restrict or extend the set. Schema migrations are handled in two modes: - **Default** - the constructor-supplied `storeNames` list is diff'd against the existing stores and objects stores added/deleted accordingly. - **Explicit** - a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`, allowing precise schema evolution. Every failure rejects with an AssetCacheError that names the failed AssetCacheOperation, the store and key involved, and carries the originating `DOMException` as Error.cause - so a `QuotaExceededError` is distinguishable from a transaction or schema failure without parsing message text. That holds for the parts of the IndexedDB API that throw synchronously instead of failing a request (opening a transaction on an unknown store, `open()` with an invalid version) just as it does for a failed `IDBRequest`.",
+  "description": "Database implementation backed by the browser's IndexedDB API. Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. The store names are fixed at construction: this is a database with a declared schema, which is what makes it suitable for structured application data such as save games, and unsuitable for a cache whose namespaces are only known at runtime - IndexedDbStore exists for that. Schema migrations run in two modes: - **Default** - the constructor-supplied `storeNames` are diffed against the existing stores and object stores added or deleted accordingly. - **Explicit** - a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`. A callback returning `false` aborts the upgrade, leaving the database at its previous version. A write resolves only once its transaction has committed, so awaiting a write and then reading it back cannot miss. Every failure rejects with an AssetCacheError that names the failed AssetCacheOperation, the store and key involved, and carries the originating `DOMException` as `cause` - so a `QuotaExceededError` is distinguishable from a transaction or schema failure without parsing message text. That holds for the parts of the IndexedDB API that throw synchronously instead of failing a request just as it does for a failed request.",
   "symbol": "IndexedDbDatabase",
   "kind": "class",
   "subsystem": "assets",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 13,
+  "memberCount": 12,
   "counts": {
     "constructors": 1,
-    "methods": 9,
+    "methods": 8,
     "properties": 3,
     "events": 0
   },
@@ -20,9 +20,10 @@
       "members": [],
       "paragraphs": [
         "Database implementation backed by the browser's IndexedDB API.",
-        "Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. By default the database is initialised with stores for every built-in asset type (font, image, sound, etc.); pass a custom `storeNames` list to restrict or extend the set.",
-        "Schema migrations are handled in two modes: - **Default** - the constructor-supplied `storeNames` list is diff'd against the existing stores and objects stores added/deleted accordingly. - **Explicit** - a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`, allowing precise schema evolution.",
-        "Every failure rejects with an AssetCacheError that names the failed AssetCacheOperation, the store and key involved, and carries the originating `DOMException` as Error.cause - so a `QuotaExceededError` is distinguishable from a transaction or schema failure without parsing message text. That holds for the parts of the IndexedDB API that throw synchronously instead of failing a request (opening a transaction on an unknown store, `open()` with an invalid version) just as it does for a failed `IDBRequest`."
+        "Each object store is created with a `keyPath` of `\"name\"`, so records are stored as `{ name, data }` objects. The store names are fixed at construction: this is a database with a declared schema, which is what makes it suitable for structured application data such as save games, and unsuitable for a cache whose namespaces are only known at runtime - IndexedDbStore exists for that.",
+        "Schema migrations run in two modes: - **Default** - the constructor-supplied `storeNames` are diffed against the existing stores and object stores added or deleted accordingly. - **Explicit** - a `migrations` map keyed by target version runs the corresponding callback for each version between `oldVersion` and `newVersion`. A callback returning `false` aborts the upgrade, leaving the database at its previous version.",
+        "A write resolves only once its transaction has committed, so awaiting a write and then reading it back cannot miss.",
+        "Every failure rejects with an AssetCacheError that names the failed AssetCacheOperation, the store and key involved, and carries the originating `DOMException` as `cause` - so a `QuotaExceededError` is distinguishable from a transaction or schema failure without parsing message text. That holds for the parts of the IndexedDB API that throw synchronously instead of failing a request just as it does for a failed request."
       ],
       "importLine": "import { IndexedDbDatabase } from '@codexo/exojs'",
       "sourceLink": null
@@ -512,86 +513,6 @@
           "params": [],
           "returnType": "Promise<boolean>",
           "description": "Closes the live database connection and resets the connected state. Always resolves true; safe to call when not connected."
-        },
-        {
-          "name": "getObjectStore",
-          "signature": "getObjectStore(type: string, transactionMode: IDBTransactionMode): Promise<IDBObjectStore>",
-          "signatureTokens": [
-            {
-              "text": "getObjectStore",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "type",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "string",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "transactionMode",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "IDBTransactionMode",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Promise",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "IDBObjectStore",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            }
-          ],
-          "params": [
-            {
-              "name": "type",
-              "type": "string",
-              "optional": false
-            },
-            {
-              "name": "transactionMode",
-              "type": "IDBTransactionMode",
-              "optional": false
-            }
-          ],
-          "returnType": "Promise<IDBObjectStore>",
-          "description": "Opens (or re-uses) an IDBObjectStore for type in the given transactionMode. Calls connect automatically if the database is not yet open. Used internally by the load/save/delete methods; protected so subclasses can extend with custom transaction shapes."
         },
         {
           "name": "load",

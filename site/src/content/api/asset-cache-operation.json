@@ -1,6 +1,6 @@
 {
   "title": "AssetCacheOperation",
-  "description": "The cache operation that failed. Carried by AssetCacheError.operation so callers can branch on the failure class - a failed `save` is a degraded cache write, a failed `connect` means the whole store is unavailable.",
+  "description": "The cache operation that failed. Carried by AssetCacheError.operation so callers can branch on the failure class - a failed `write` is a degraded cache write, a failed `connect` means the whole store is unavailable.",
   "symbol": "AssetCacheOperation",
   "kind": "type",
   "subsystem": "assets",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "The cache operation that failed. Carried by AssetCacheError.operation so callers can branch on the failure class - a failed `save` is a degraded cache write, a failed `connect` means the whole store is unavailable."
+        "The cache operation that failed. Carried by AssetCacheError.operation so callers can branch on the failure class - a failed `write` is a degraded cache write, a failed `connect` means the whole store is unavailable."
       ],
       "importLine": "import { AssetCacheOperation } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "AssetCacheOperation",
-          "signature": "\"clear\" | \"connect\" | \"delete\" | \"delete-storage\" | \"load\" | \"save\"",
+          "signature": "\"clear\" | \"connect\" | \"delete\" | \"delete-storage\" | \"read\" | \"write\"",
           "signatureTokens": [
             {
               "text": "\"clear\"",
@@ -65,7 +65,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"load\"",
+              "text": "\"read\"",
               "kind": "keyword"
             },
             {
@@ -73,7 +73,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "\"save\"",
+              "text": "\"write\"",
               "kind": "keyword"
             }
           ],

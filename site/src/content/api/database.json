@@ -1,6 +1,6 @@
 {
   "title": "Database",
-  "description": "Low-level key/value database abstraction used by CacheStore implementations. Data is organised into named object stores (`type`) that act as namespaces, each holding entries keyed by `name`. IndexedDbDatabase is the built-in implementation; custom backends can be provided by implementing this interface and wrapping it in a CacheStore.",
+  "description": "Low-level key/value database abstraction with a declared schema. Data is organised into named object stores (`type`) that act as namespaces, each holding entries keyed by `name`. The set of stores is fixed when the database is created, which makes this the backing for structured application data such as save games; the asset cache uses CacheStore, whose namespaces are data rather than schema. IndexedDbDatabase is the built-in implementation.",
   "symbol": "Database",
   "kind": "interface",
   "subsystem": "assets",
@@ -19,8 +19,8 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Low-level key/value database abstraction used by CacheStore implementations.",
-        "Data is organised into named object stores (`type`) that act as namespaces, each holding entries keyed by `name`. IndexedDbDatabase is the built-in implementation; custom backends can be provided by implementing this interface and wrapping it in a CacheStore."
+        "Low-level key/value database abstraction with a declared schema.",
+        "Data is organised into named object stores (`type`) that act as namespaces, each holding entries keyed by `name`. The set of stores is fixed when the database is created, which makes this the backing for structured application data such as save games; the asset cache uses CacheStore, whose namespaces are data rather than schema. IndexedDbDatabase is the built-in implementation."
       ],
       "importLine": "import { Database } from '@codexo/exojs'",
       "sourceLink": null

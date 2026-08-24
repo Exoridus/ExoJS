@@ -160,6 +160,9 @@ export default defineConfig({
             'test/rendering/parity/**/*.test.ts',
             'test/perf/rendering/**/*.test.ts',
             'test/perf/webgpu/**/*.test.ts',
+            // The asset browser suite needs a real IndexedDB and runs in the
+            // browser-assets-chromium project; jsdom implements none of it.
+            'test/assets/browser/**/*.test.ts',
           ],
         }),
         plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
@@ -589,6 +592,28 @@ export default defineConfig({
           globals: true,
           setupFiles: browserSetupFiles,
           include: ['packages/exojs-tilemap/test/browser/**/*.test.ts'],
+          browser: {
+            enabled: true,
+            headless: true,
+            provider: playwright({ launchOptions: { channel: 'chromium' } }),
+            instances: [{ browser: 'chromium' }],
+          },
+        },
+      },
+
+      // ── browser-assets-chromium - a real IndexedDB, not a hand-written fake ──
+      // Structured clone, transaction commit ordering and key ranges are the
+      // three things the asset cache leans on and a fake can only imitate: a
+      // stand-in confirms that the store calls the API the way this repository
+      // decided it would, never that a browser agrees. jsdom ships no
+      // IndexedDB at all, so this is the only lane where the persistent store
+      // is exercised as such.
+      {
+        ...browserBase,
+        test: {
+          name: 'browser-assets-chromium',
+          globals: true,
+          include: ['test/assets/browser/**/*.test.ts'],
           browser: {
             enabled: true,
             headless: true,

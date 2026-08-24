@@ -1,0 +1,429 @@
+{
+  "title": "MemoryCacheStore",
+  "description": "CacheStore that keeps records in a `Map` for the lifetime of the process. Holds values BY REFERENCE - no cloning, no serialization - so it accepts anything at all and is as fast as a lookup, but does not isolate a caller from later mutation of a stored object and does not survive a reload. Its usual place is in front of a persistent store, where a hit avoids the asynchronous round trip: ```ts new AssetCache({ read: [new MemoryCacheStore(), idb], write: [idb], promote: true }) ```",
+  "symbol": "MemoryCacheStore",
+  "kind": "class",
+  "subsystem": "assets",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 7,
+  "counts": {
+    "constructors": 1,
+    "methods": 5,
+    "properties": 1,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "CacheStore that keeps records in a `Map` for the lifetime of the process.",
+        "Holds values BY REFERENCE - no cloning, no serialization - so it accepts anything at all and is as fast as a lookup, but does not isolate a caller from later mutation of a stored object and does not survive a reload.",
+        "Its usual place is in front of a persistent store, where a hit avoids the asynchronous round trip:",
+        "```ts new AssetCache({ read: [new MemoryCacheStore(), idb], write: [idb], promote: true }) ```"
+      ],
+      "importLine": "import { MemoryCacheStore } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "constructors",
+      "title": "Constructors",
+      "members": [
+        {
+          "name": "new",
+          "signature": "new(id: string): MemoryCacheStore",
+          "signatureTokens": [
+            {
+              "text": "new",
+              "kind": "keyword"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "id",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "MemoryCacheStore",
+              "kind": "type"
+            }
+          ],
+          "params": [
+            {
+              "name": "id",
+              "type": "string",
+              "optional": false
+            }
+          ],
+          "returnType": "MemoryCacheStore",
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "methods",
+      "title": "Methods",
+      "members": [
+        {
+          "name": "clear",
+          "signature": "clear(namespace?: string): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "clear",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "namespace",
+              "kind": "param"
+            },
+            {
+              "text": "?",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "namespace",
+              "type": "string",
+              "optional": true
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Removes every record of namespace, or the whole store when it is omitted."
+        },
+        {
+          "name": "delete",
+          "signature": "delete(key: CacheRecordKey): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "delete",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "key",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheRecordKey",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "key",
+              "type": "CacheRecordKey",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Removes one record. Removing an absent record is not a failure."
+        },
+        {
+          "name": "destroy",
+          "signature": "destroy(): void",
+          "signatureTokens": [
+            {
+              "text": "destroy",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": "void",
+          "description": "Synchronously releases any open handles held by the store."
+        },
+        {
+          "name": "get",
+          "signature": "get(key: CacheRecordKey): Promise<CacheReadResult>",
+          "signatureTokens": [
+            {
+              "text": "get",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "key",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheRecordKey",
+              "kind": "type"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheReadResult",
+              "kind": "type"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "key",
+              "type": "CacheRecordKey",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<CacheReadResult>",
+          "description": "Reads one record. Resolves to a miss when it is absent; rejects when the store could not answer."
+        },
+        {
+          "name": "set",
+          "signature": "set(key: CacheRecordKey, value: unknown): Promise<void>",
+          "signatureTokens": [
+            {
+              "text": "set",
+              "kind": "name"
+            },
+            {
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "key",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "CacheRecordKey",
+              "kind": "type"
+            },
+            {
+              "text": ", ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "unknown",
+              "kind": "keyword"
+            },
+            {
+              "text": ")",
+              "kind": "punctuation"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Promise",
+              "kind": "type"
+            },
+            {
+              "text": "<",
+              "kind": "punctuation"
+            },
+            {
+              "text": "void",
+              "kind": "keyword"
+            },
+            {
+              "text": ">",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [
+            {
+              "name": "key",
+              "type": "CacheRecordKey",
+              "optional": false
+            },
+            {
+              "name": "value",
+              "type": "unknown",
+              "optional": false
+            }
+          ],
+          "returnType": "Promise<void>",
+          "description": "Writes one record, replacing any existing one. Must not resolve before the write is durable in whatever sense the backend offers. A backend with transactions resolves on commit, not on the write request being accepted - otherwise a caller that awaits a write and then reads it back can miss."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "properties",
+      "title": "Properties",
+      "members": [
+        {
+          "name": "id",
+          "signature": "id: string",
+          "signatureTokens": [
+            {
+              "text": "id",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "string",
+              "kind": "keyword"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": "Stable identifier for this store, used in diagnostics to name which store of a multi-store route failed."
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/assets/MemoryCacheStore.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/MemoryCacheStore.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/assets/MemoryCacheStore.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/assets/MemoryCacheStore.ts"
+}

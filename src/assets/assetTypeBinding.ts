@@ -4,6 +4,7 @@ import type { AssetConstructor } from './AssetConstructor';
 import type { AssetFactory, AssetFactoryContext } from './AssetFactory';
 import type { AssetSourceCodec, SourceCodecContext } from './AssetSourceCodec';
 import type { AnyAssetType } from './AssetType';
+import type { CacheLayout } from './CacheLayout';
 import type { AssetLoaderContext, Loader } from './Loader';
 
 /**
@@ -52,6 +53,7 @@ function factoryContext(context: AssetLoaderContext, options: unknown): AssetFac
  */
 function createAssetTypeHandler(assetType: AnyAssetType, loader: Loader): AssetHandler {
   const codec: AssetSourceCodec<unknown, unknown> = assetType.codec;
+  const layout: CacheLayout<unknown> = assetType.layout;
   const fromBytes = codec.fromBytes?.bind(codec);
   const factory: AssetFactory<unknown, unknown, unknown> = assetType.createFactory();
   const resourceIdentity = assetType.resourceIdentity?.bind(assetType);
@@ -75,6 +77,7 @@ function createAssetTypeHandler(assetType: AnyAssetType, loader: Loader): AssetH
         source,
         response => codec.fromResponse(response, forCodec),
         assetType.id,
+        layout,
         context.sourceKey,
         context.signal,
       );
@@ -102,7 +105,7 @@ function createAssetTypeHandler(assetType: AnyAssetType, loader: Loader): AssetH
  * set of conflict checks.
  *
  * The type's `id` becomes its dispatch name, its resource-key identity and its
- * storage namespace at once - three places that must agree, and would drift if
+ * cache namespace at once - three places that must agree, and would drift if
  * each were named separately.
  * @internal
  */

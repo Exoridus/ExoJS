@@ -144,7 +144,7 @@ describe('IndexedDbDatabase', () => {
       const { IndexedDbDatabase } = await loadWithFakeIndexedDb();
       const db = new IndexedDbDatabase('failing-migration-db', 1, [], { 1: () => false });
 
-      await expect(db.connect()).rejects.toThrow('The database opening was aborted.');
+      await expect(db.connect()).rejects.toThrow('The database "failing-migration-db" could not be opened.');
     });
 
     test('rejects when the request is blocked by another connection', async () => {
@@ -153,7 +153,7 @@ describe('IndexedDbDatabase', () => {
 
       fakeIdb.blockNextOpen();
 
-      await expect(db.connect()).rejects.toThrow('The request for the database connection has been blocked.');
+      await expect(db.connect()).rejects.toThrow('Opening the database "blocked-db" is blocked by another connection holding an older version.');
     });
 
     test('rejects when the open request itself errors', async () => {
@@ -162,7 +162,7 @@ describe('IndexedDbDatabase', () => {
 
       fakeIdb.failNextOpen();
 
-      await expect(db.connect()).rejects.toThrow('An error occurred while requesting the database connection.');
+      await expect(db.connect()).rejects.toThrow('The database "open-error-db" could not be opened.');
     });
 
     test('rejects when the upgrade transaction reports a database error', async () => {
@@ -171,7 +171,7 @@ describe('IndexedDbDatabase', () => {
 
       fakeIdb.failNextUpgrade();
 
-      await expect(db.connect()).rejects.toThrow('An error occurred while opening the database.');
+      await expect(db.connect()).rejects.toThrow('The database "upgrade-error-db" could not be opened.');
     });
 
     test('an external close event triggers the internal disconnect handler', async () => {
@@ -296,7 +296,7 @@ describe('IndexedDbDatabase', () => {
       const error = await rejection(db.load('image', 'hero'));
 
       expect(error).toBeInstanceOf(AssetCacheError);
-      expect((error as TypedCacheError).operation).toBe('load');
+      expect((error as TypedCacheError).operation).toBe('read');
       expect((error as TypedCacheError).store).toBe('image');
       expect((error as TypedCacheError).key).toBe('hero');
       expect((error as TypedCacheError).cause).toBe(requestError);
@@ -312,7 +312,7 @@ describe('IndexedDbDatabase', () => {
       const error = await rejection(db.save('image', 'hero', { frames: 4 }));
 
       expect(error).toBeInstanceOf(AssetCacheError);
-      expect((error as TypedCacheError).operation).toBe('save');
+      expect((error as TypedCacheError).operation).toBe('write');
       expect((error as TypedCacheError).cause).toBe(quotaError);
       // The DOMException name must reach a log line that only prints `message`.
       expect((error as Error).message).toContain('QuotaExceededError');
@@ -402,7 +402,7 @@ describe('IndexedDbDatabase', () => {
       const error = await rejection(db.load('does-not-exist', 'hero'));
 
       expect(error).toBeInstanceOf(AssetCacheError);
-      expect((error as TypedCacheError).operation).toBe('load');
+      expect((error as TypedCacheError).operation).toBe('read');
       expect((error as TypedCacheError).store).toBe('does-not-exist');
       expect((error as TypedCacheError).key).toBe('hero');
       expect((error as TypedCacheError).cause).toBeInstanceOf(Error);
@@ -414,7 +414,7 @@ describe('IndexedDbDatabase', () => {
 
       const operations = await Promise.all([rejection(db.save('nope', 'hero', 1)), rejection(db.delete('nope', 'hero')), rejection(db.clearStorage('nope'))]);
 
-      expect(operations.map(error => (error as TypedCacheError).operation)).toEqual(['save', 'delete', 'clear']);
+      expect(operations.map(error => (error as TypedCacheError).operation)).toEqual(['write', 'delete', 'clear']);
       // `clearStorage` targets a whole store, so it carries no record key.
       expect((operations[2] as TypedCacheError).key).toBeNull();
     });
@@ -429,7 +429,7 @@ describe('IndexedDbDatabase', () => {
       const error = await rejection(db.load('image', 'hero'));
 
       expect(error).toBeInstanceOf(AssetCacheError);
-      // Already typed by `connect()` - re-wrapping it as a 'load' failure would
+      // Already typed by `connect()` - re-wrapping it as a 'read' failure would
       // bury the real cause one level deeper and mislabel the operation.
       expect((error as TypedCacheError).operation).toBe('connect');
       expect((error as TypedCacheError).cause).toBe(openError);

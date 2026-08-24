@@ -1,8 +1,11 @@
 export { AbstractAssetFactory } from './AbstractAssetFactory';
 export type { ValueAsset } from './Asset';
 export { Asset } from './Asset';
+export type { AssetCacheOptions } from './AssetCache';
+export { AssetCache } from './AssetCache';
 export type { AssetCacheErrorOptions, AssetCacheOperation } from './AssetCacheError';
 export { AssetCacheError } from './AssetCacheError';
+export { AssetCacheMissError } from './AssetCacheMissError';
 export type { AssetConstructor } from './AssetConstructor';
 export type {
   AnyAssetConfig,
@@ -27,9 +30,16 @@ export { binarySourceCodec, jsonSourceCodec, textSourceCodec } from './AssetSour
 export type { AssetStatus } from './AssetStatus';
 export type { AnyAssetType, AssetRequest } from './AssetType';
 export { AssetType } from './AssetType';
-export { CacheFirstStrategy } from './CacheFirstStrategy';
+export type { CacheLayout, CacheLayoutContext } from './CacheLayout';
+export { CacheFirstPolicy, CacheOnlyPolicy, NetworkFirstPolicy, NetworkOnlyPolicy } from './cachePolicies';
+export type { CacheContext, CachePolicy } from './CachePolicy';
+export type { CacheReadResult } from './CacheReadResult';
+export { cacheHit, cacheMiss } from './CacheReadResult';
+export type { CacheRecordKey } from './CacheRecordKey';
+export { cacheNamespacePrefix, serializeCacheRecordKey } from './CacheRecordKey';
+export type { CacheRouteOptions } from './CacheRoute';
+export { CacheRoute } from './CacheRoute';
 export type { CacheStore } from './CacheStore';
-export type { CacheRequest, CacheStrategy } from './CacheStrategy';
 export type { AssetLocator, ResourceKey, SourceKey } from './canonicalKey';
 export type { Database } from './Database';
 export type { DefineAssetDescriptor } from './defineAsset';
@@ -47,9 +57,10 @@ export type { LoaderScopeKind, LoaderScopeOptions } from './LoaderScope';
 export { LoaderScope } from './LoaderScope';
 export type { LoadingProgress } from './LoadingQueue';
 export { LoadingQueue } from './LoadingQueue';
+export { MemoryCacheStore } from './MemoryCacheStore';
 export { MemoryStore } from './MemoryStore';
-export { NetworkOnlyStrategy } from './NetworkOnlyStrategy';
 export type { PreSizeOptions, SeamlessAdapter } from './seamless';
+export { SingleEntryLayout } from './SingleEntryLayout';
 export { BinaryAsset, CsvAsset, FontAsset, ImageAsset, Json, SubtitleAsset, SvgAsset, TextAsset, WasmAsset, XmlAsset } from './tokens';
 export type { WebStorageStoreOptions } from './WebStorageStore';
 export { WebStorageStore } from './WebStorageStore';
