@@ -40,10 +40,22 @@ ignore:
   - 'site/**'
 
 comment:
-  layout: 'reach,diff,flags,components,files'
+  layout: 'reach,diff,flags,components,files,bundle_analysis'
   behavior: default
   require_changes: true # only comment when coverage actually changes
   after_n_builds: 2 # same reason as `codecov.notify` — never comment on half the data
+
+# Bundle analysis. `scripts/build.ts` uploads per-bundle module stats for every
+# artefact it builds when CODECOV_TOKEN is present, which is what lets Codecov
+# report a base-vs-PR size delta in the PR comment above.
+#
+# Informational on purpose: the hard budget is the `pnpm size` gate in the
+# Package Build + Verify job, whose limits live in package.json#size-limit and
+# whose absolute numbers the same job writes to the run summary. A percentage
+# threshold here would be a second, differently-shaped budget nobody set.
+bundle_analysis:
+  status: informational
+  warning_threshold: '5%'
 
 # Upload flags — one per CI lane that uploads (see _ci-checks.yml).
 flags:

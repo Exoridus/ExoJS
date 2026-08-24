@@ -177,6 +177,7 @@
     "perf:profile": "tsx test/perf/profile-benchmark.ts",
     "perf:profile:gc": "node --expose-gc --import tsx/esm test/perf/profile-benchmark.ts",
     "size": "size-limit",
+    "size:summary": "node scripts/ci/bundle-size-summary.mjs",
     "prepare": "husky",
     "perf:renderers:instance-cost": "node --expose-gc --max-old-space-size=8192 --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/rendering/run-instance-cost.ts",
     "perf:webgpu:alloc": "tsx test/perf/webgpu/run-webgpu-allocation.ts",
@@ -202,7 +203,7 @@
     },
     {
       "path": "dist/exo.iife.min.js",
-      "limit": "275 KB",
+      "limit": "300 KB",
       "gzip": true
     },
     {

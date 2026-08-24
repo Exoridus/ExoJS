@@ -916,6 +916,12 @@ jobs:
       - name: Check bundle sizes
         run: pnpm size
 
+      # Reports, never judges: the step above is the gate. `always()` so a
+      # breached budget still says by how much instead of only that it failed.
+      - name: Report bundle budgets
+        if: always()
+        run: pnpm size:summary
+
       - name: Verify core package exports
         run: pnpm verify:exports
 
