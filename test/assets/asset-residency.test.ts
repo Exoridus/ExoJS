@@ -11,6 +11,7 @@ import { type CanonicalAsset, canonicalizeSource, resourceKey, sourceKey } from 
 import type { Loader } from '#assets/Loader';
 import { LoaderScope } from '#assets/LoaderScope';
 import type { SeamlessAdapter } from '#assets/seamless';
+import type { WeakHandleSet } from '#assets/WeakHandleSet';
 
 import { testAssetType } from './test-asset-type';
 
@@ -255,7 +256,7 @@ describe('AssetResidency', () => {
       const key = canonical(TypeA, 'a.png').key;
       const handleA = residency._getSeamless(canonical(TypeA, 'a.png'), adapter);
       const handleB = {};
-      const deferred = (residency as unknown as { _deferred: Map<string, { handles: { add(h: object): void } }> })._deferred.get(key)!;
+      const deferred = (residency as unknown as { _deferred: Map<string, { readonly handles: WeakHandleSet }> })._deferred.get(key)!;
       residency._addDeferredHandle(key, deferred, handleB);
 
       const donor = { decoded: true };

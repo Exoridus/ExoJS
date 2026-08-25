@@ -146,7 +146,7 @@ describe('Application.update() — loop timing', () => {
 
     // Stub out input/interaction so jsdom's missing gamepad API doesn't error.
     // These tests exercise loop timing logic, not the input subsystem.
-    vi.spyOn(app.input, 'preUpdate').mockReturnValue(app.input);
+    vi.spyOn(app.input, 'preUpdate').mockImplementation(() => undefined);
     vi.spyOn(app.interaction, 'preUpdate').mockImplementation(() => undefined);
   });
 

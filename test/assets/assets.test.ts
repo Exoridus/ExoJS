@@ -7,6 +7,7 @@ import { Assets } from '#assets/Assets';
 import { Sound } from '#audio/Sound';
 import { logger } from '#core/logging';
 import { Texture } from '#rendering/texture/Texture';
+import { ScaleModes } from '#rendering/types';
 
 describe('Assets', () => {
   test('materializes plain configs into meta-stamped handle-hybrid leaves, exposed as direct properties and via entries', () => {
@@ -23,10 +24,10 @@ describe('Assets', () => {
 
   test('carries extra config fields into the leaf meta opts', () => {
     const bag = new Assets({
-      logo: { type: 'texture', source: '/logo.png', textureOptions: { minFilter: 'nearest' } },
+      logo: { type: 'texture', source: '/logo.png', textureOptions: { scaleMode: ScaleModes.Nearest } },
     });
 
-    expect(_readMeta(bag.logo)).toEqual({ kind: 'texture', src: '/logo.png', opts: { textureOptions: { minFilter: 'nearest' } } });
+    expect(_readMeta(bag.logo)).toEqual({ kind: 'texture', src: '/logo.png', opts: { textureOptions: { scaleMode: ScaleModes.Nearest } } });
   });
 
   test('converts an already-constructed Asset into a fresh handle-hybrid leaf (no longer passed through by reference)', () => {

@@ -1,6 +1,4 @@
-﻿import type { MockInstance } from 'vitest';
-
-import { Perf } from '#core/Perf';
+﻿import { Perf } from '#core/Perf';
 
 // jsdom does not implement the User Timing API (mark/measure/clearMarks/
 // clearMeasures). Tests therefore inject a minimal mock on `performance`
@@ -49,7 +47,7 @@ describe('Perf utilities', () => {
   });
 
   test('perfMeasure returns undefined when performance.measure throws', () => {
-    (performance.measure as MockInstance).mockImplementation(() => {
+    vi.mocked(performance.measure).mockImplementation(() => {
       throw new DOMException('Mark not found', 'InvalidAccessError');
     });
     const result = Perf.measure('exo:bad', 'exo:nonexistent');
