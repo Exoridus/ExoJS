@@ -649,8 +649,13 @@ export default defineConfig({
         },
       },
     ],
-  },
-  benchmark: {
-    include: ['test/bench/**/*.bench.ts'],
+    // Nested under `test`, which is where Vitest reads it. As a sibling of
+    // `test` the key has no effect and the run falls back to the default
+    // include, which matches any `*.bench.ts` anywhere below the root -
+    // including a nested checkout or worktree holding its own copy of these
+    // same files.
+    benchmark: {
+      include: ['test/bench/**/*.bench.ts'],
+    },
   },
 });

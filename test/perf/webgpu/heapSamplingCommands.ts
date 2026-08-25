@@ -35,13 +35,16 @@ export interface SamplingProfileNode {
 
 /**
  * The playwright provider augments `BrowserCommandContext` with `page` and
- * `context`; the augmentation is only visible where the provider's types are
- * imported, so the two fields are narrowed locally instead.
+ * `context`. That augmentation is visible in some programs and not others, so
+ * the two fields are stated here as the minimum this file uses. An
+ * intersection rather than `extends`: where the augmentation *is* visible,
+ * `page` is Playwright's full `Page`, and re-declaring it as a narrower type
+ * through inheritance is an error.
  */
-interface PlaywrightCommandContext extends BrowserCommandContext {
+type PlaywrightCommandContext = BrowserCommandContext & {
   readonly page: object;
   readonly context: { newCDPSession(page: object): Promise<CdpSession> };
-}
+};
 
 interface CdpSession {
   send(method: string, params?: Record<string, unknown>): Promise<unknown>;

@@ -1,0 +1,33 @@
+{
+  // Type-check for the repository's own tooling: the gate runners, the release
+  // cut, the build driver, the measurement harnesses, and the root config
+  // files.
+  //
+  // `tsconfig.json` covers `src/**` only, so until this config existed nothing
+  // type-checked `scripts/**` - a rename or a changed signature surfaced when
+  // the script next ran, which for the release cut means during a release.
+  // ESLint runs over the tree but with `disableTypeChecked`, since these files
+  // sit outside any typed program; that catches unused symbols and import
+  // order, not types.
+  //
+  // These are Node programs executed through `tsx`, so they import each other
+  // by their real `.ts` paths rather than extensionless specifiers - hence
+  // `allowImportingTsExtensions` with `noEmit`. `verbatimModuleSyntax` from the
+  // shared base stays on: the scripts are ESM and the distinction between a
+  // type and a value import is the same contract here as in the engine.
+  "extends": "@codexo/exojs-config/typescript/base.json",
+  "compilerOptions": {
+    "lib": ["es2023"],
+    "types": ["node"],
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false
+  },
+  // `exo-full.entry.ts` is a bundler entry, not a Node program: it re-exports
+  // every extension package and is type-checked by `tsconfig.examples.json`
+  // against their sources.
+  "include": ["scripts/**/*.ts", "*.config.ts"],
+  "exclude": ["scripts/exo-full.entry.ts"]
+}

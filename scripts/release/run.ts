@@ -19,7 +19,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { resolveRevision } from '../../packages/exojs-config/build-defines/index.js';
+import { resolveRevision } from '@codexo/exojs-config/build-defines';
 import { checkAllTarballTypes } from './attw.ts';
 import { createExecRunner } from './command-runner.ts';
 import { verifyExternalConsumers } from './external-consumers.ts';
@@ -39,8 +39,14 @@ const runner = createExecRunner({ echo: true });
 const argv = process.argv.slice(2);
 const has = (flag: string): boolean => argv.includes(flag);
 
-const log = (message: string): void => process.stdout.write(`${message}\n`);
-const die = (message: string): never => {
+const log = (message: string): void => {
+  process.stdout.write(`${message}\n`);
+};
+// A `never` return only ends control flow for the caller when the callee is a
+// function declaration or a constant with an explicit type annotation.
+type Abort = (message: string) => never;
+
+const die: Abort = message => {
   process.stderr.write(`\n✗ ${message}\n`);
   process.exit(1);
 };
@@ -119,7 +125,8 @@ const doPrepare = (): void => {
     // Offline-smoke subset only: `@codexo/exojs-react` is excluded because its
     // `react`/`react-dom` peers cannot be resolved in an offline throwaway
     // project. attw still type-checks every packed tarball (react included).
-    const smokeNames = new Set(LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke).map(p => p.name));
+    // Literal union from `as const` again - the manifest supplies plain strings.
+    const smokeNames: ReadonlySet<string> = new Set(LOCKSTEP_PACKAGES.filter(p => p.inOfflineSmoke).map(p => p.name));
     const smokeTarballs = manifest.packages.filter(p => smokeNames.has(p.name)).map(p => resolve(stagingDir, p.file));
     const consumers = verifyExternalConsumers(smokeTarballs);
     for (const c of consumers.checks) log(`  ${c.ok ? '✓' : '✗'} ${c.name}${c.detail ? ` — ${c.detail}` : ''}`);

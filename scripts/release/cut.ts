@@ -46,10 +46,19 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 const LOCKSTEP_DIRS: { name: string; dir: string }[] = LOCKSTEP_PACKAGES.map(p => ({ name: p.name, dir: p.dir }));
 
-const EXTENSION_NAMES = new Set(LOCKSTEP_PACKAGES.filter(p => p.isExtension).map(p => p.name));
+// `LOCKSTEP_PACKAGES` is `as const`, so mapping its names yields a literal
+// union and `Set.has` would accept only those literals - but the caller tests
+// names read back from a package manifest, which are plain strings.
+const EXTENSION_NAMES: ReadonlySet<string> = new Set(LOCKSTEP_PACKAGES.filter(p => p.isExtension).map(p => p.name));
 
-const log = (msg: string): void => process.stdout.write(`${msg}\n`);
-const die = (msg: string): never => {
+const log = (msg: string): void => {
+  process.stdout.write(`${msg}\n`);
+};
+// A `never` return only ends control flow for the caller when the callee is a
+// function declaration or a constant with an explicit type annotation.
+type Abort = (msg: string) => never;
+
+const die: Abort = msg => {
   process.stderr.write(`\n✗ ${msg}\n`);
   process.exit(1);
 };

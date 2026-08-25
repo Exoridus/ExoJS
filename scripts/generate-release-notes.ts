@@ -9,6 +9,11 @@ interface ChangelogEntry {
   version: string;
 }
 
+/** A changelog entry after validation: the release date is known to be present. */
+interface DatedChangelogEntry extends ChangelogEntry {
+  releaseDate: string;
+}
+
 interface ChangelogEntryWithBounds extends ChangelogEntry {
   bodyStart: number;
   headingStart: number;
@@ -58,7 +63,11 @@ const placeholderPattern = /\$\{([A-Z_]+)}/g;
 const semverTagPattern = /^v(?<major>\d+)\.(?<minor>\d+)\.(?<patch>\d+)(?:[-+].+)?$/;
 const repoSlugPattern = /^(?<owner>[A-Za-z0-9_.-]+)\/(?<repo>[A-Za-z0-9_.-]+)$/;
 
-const fail = (message: string): never => {
+// A `never` return only ends control flow for the caller when the callee is a
+// function declaration or a constant with an explicit type annotation.
+type Abort = (message: string) => never;
+
+const fail: Abort = message => {
   throw new Error(message);
 };
 
@@ -136,22 +145,24 @@ const parseChangelogEntries = (changelog: string): ChangelogEntry[] => {
   });
 };
 
-const getMatchingChangelogEntry = (changelog: string, version: string): ChangelogEntry => {
+const getMatchingChangelogEntry = (changelog: string, version: string): DatedChangelogEntry => {
   const entries = parseChangelogEntries(changelog);
   const matchingEntry = entries.find(entry => entry.version === version);
   if (!matchingEntry) {
     fail(`Missing changelog section for version ${version}. Expected heading: "## [${version}] - YYYY-MM-DD".`);
   }
 
-  if (!matchingEntry.releaseDate) {
+  const { releaseDate } = matchingEntry;
+
+  if (!releaseDate) {
     fail(`Release date is missing for changelog section [${version}]. Expected heading: "## [${version}] - YYYY-MM-DD".`);
   }
 
   if (!matchingEntry.sectionBody) {
-    fail(`Changelog section [${version}] is empty. Add release notes content under "## [${version}] - ${matchingEntry.releaseDate}".`);
+    fail(`Changelog section [${version}] is empty. Add release notes content under "## [${version}] - ${releaseDate}".`);
   }
 
-  return matchingEntry;
+  return { ...matchingEntry, releaseDate };
 };
 
 const resolveRepoUrl = (repo: string): string => {

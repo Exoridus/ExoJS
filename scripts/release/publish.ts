@@ -63,7 +63,7 @@ const isAlreadyPublished = (runner: CommandRunner, pkg: TarballRecord): boolean 
   return result.code === 0 && result.stdout.trim() === pkg.version;
 };
 
-const publishTarball = (runner: CommandRunner, pkg: TarballRecord, absoluteTarball: string, options: PublishOptions): CommandResult => {
+const publishTarball = (runner: CommandRunner, _pkg: TarballRecord, absoluteTarball: string, options: PublishOptions): CommandResult => {
   const args = ['publish', absoluteTarball, '--tag', options.distTag, '--access', 'public'];
   if (options.provenance) args.push('--provenance');
   if (options.dryRun) args.push('--dry-run');

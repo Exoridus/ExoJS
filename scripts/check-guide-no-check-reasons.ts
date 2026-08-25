@@ -72,7 +72,11 @@ const CHECKED_LANGS = new Set(['ts', 'tsx', 'typescript', 'js', 'javascript']);
 // and ```ts no-check: pseudo-code``` both count; a bare ```ts no-check``` does not.
 const NO_CHECK_REASON_RE = /\bno-check\b\s*(?:--|:|—)?\s*(.*)$/;
 
-const fail = (message: string): never => {
+// A `never` return only ends control flow for the caller when the callee is a
+// function declaration or a constant with an explicit type annotation.
+type Abort = (message: string) => never;
+
+const fail: Abort = message => {
   console.error(message);
   process.exit(1);
 };

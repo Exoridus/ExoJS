@@ -48,7 +48,11 @@ const USAGE = `Usage: pnpm create:package <name> [--dep <pkg>]... [--description
   --description "..."  package.json description
   --no-offline-smoke   exclude from the offline external-consumer smoke (react is the precedent)`;
 
-const fail = (message: string): never => {
+// A `never` return only ends control flow for the caller when the callee is a
+// function declaration or a constant with an explicit type annotation.
+type Abort = (message: string) => never;
+
+const fail: Abort = message => {
   process.stderr.write(`create:package: ${message}\n\n${USAGE}\n`);
   process.exit(1);
 };
