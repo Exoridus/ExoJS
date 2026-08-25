@@ -7,7 +7,8 @@
  */
 
 import type { Application } from '#core/Application';
-import type { Time } from '#core/Time';
+import type { Seconds } from '#core/units';
+import { Time } from '#core/units';
 import { DebugLayer } from '#debug/DebugLayer';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
@@ -15,7 +16,7 @@ class TestLayer extends DebugLayer {
   public updateCalls = 0;
   public renderCalls = 0;
 
-  public override update(_delta: Time): void {
+  public override update(_delta: Seconds): void {
     this.updateCalls++;
   }
 
@@ -47,7 +48,7 @@ describe('DebugLayer', () => {
 
   test('subclasses can implement update() and render()', () => {
     const layer = new TestLayer(makeApp());
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     layer.update(fakeTime);
     layer.render({} as unknown as RenderBackend);

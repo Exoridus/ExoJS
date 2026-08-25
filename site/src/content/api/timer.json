@@ -1,16 +1,16 @@
 {
   "title": "Timer",
-  "description": "Clock variant with a fixed limit. Inherits start/stop/reset/restart semantics; adds Timer.expired (true once `elapsedTime >= limit`) and remaining-time accessors. Useful for cooldowns, delays, and any timed gating logic where you want to ask \"is the duration up?\" each frame.",
+  "description": "Clock variant with a fixed limit. Inherits start/stop/reset/restart semantics; adds Timer.expired (true once the elapsed time reaches the limit) and remaining-time accessors. Useful for cooldowns, delays, and any timed gating logic where you want to ask \"is the duration up?\" each frame.",
   "symbol": "Timer",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 18,
+  "memberCount": 17,
   "counts": {
     "constructors": 1,
     "methods": 5,
-    "properties": 12,
+    "properties": 11,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Clock variant with a fixed limit. Inherits start/stop/reset/restart semantics; adds Timer.expired (true once `elapsedTime >= limit`) and remaining-time accessors. Useful for cooldowns, delays, and any timed gating logic where you want to ask \"is the duration up?\" each frame."
+        "Clock variant with a fixed limit. Inherits start/stop/reset/restart semantics; adds Timer.expired (true once the elapsed time reaches the limit) and remaining-time accessors. Useful for cooldowns, delays, and any timed gating logic where you want to ask \"is the duration up?\" each frame."
       ],
       "importLine": "import { Timer } from '@codexo/exojs'",
       "sourceLink": null
@@ -30,7 +30,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(limit: Time, autoStart: boolean, timeSource?: TimeSource): Timer",
+          "signature": "new(limit: Seconds, autoStart: boolean, timeSource?: TimeSource): Timer",
           "signatureTokens": [
             {
               "text": "new",
@@ -49,7 +49,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Seconds",
               "kind": "type"
             },
             {
@@ -104,7 +104,7 @@
           "params": [
             {
               "name": "limit",
-              "type": "Time",
+              "type": "Seconds",
               "optional": false
             },
             {
@@ -303,11 +303,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Clock.elapsedMilliseconds in hours."
         },
         {
           "name": "elapsedMilliseconds",
-          "signature": "elapsedMilliseconds: number",
+          "signature": "elapsedMilliseconds: Milliseconds",
           "signatureTokens": [
             {
               "text": "elapsedMilliseconds",
@@ -318,13 +318,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Milliseconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Total accumulated time since the last Clock.reset. While the clock is running the value advances on every read, folding in the interval since the previous one; while stopped it stays at the moment of stopping."
         },
         {
           "name": "elapsedMinutes",
@@ -345,11 +345,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Clock.elapsedMilliseconds in minutes."
         },
         {
           "name": "elapsedSeconds",
-          "signature": "elapsedSeconds: number",
+          "signature": "elapsedSeconds: Seconds",
           "signatureTokens": [
             {
               "text": "elapsedSeconds",
@@ -360,34 +360,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "elapsedTime",
-          "signature": "elapsedTime: Time",
-          "signatureTokens": [
-            {
-              "text": "elapsedTime",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
+              "text": "Seconds",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Total accumulated time since the last Clock.reset. While the clock is running, the value advances on every read by folding in the delta since the previous read; while stopped, the value is fixed at the stop point. Returns the same Time instance - read the scalar fields if you need an unchanging snapshot."
+          "description": "Clock.elapsedMilliseconds in seconds."
         },
         {
           "name": "expired",
@@ -412,7 +391,7 @@
         },
         {
           "name": "limit",
-          "signature": "limit: Time",
+          "signature": "limit: Seconds",
           "signatureTokens": [
             {
               "text": "limit",
@@ -423,7 +402,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Seconds",
               "kind": "type"
             }
           ],
@@ -450,11 +429,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Timer.remainingSeconds in hours."
         },
         {
           "name": "remainingMilliseconds",
-          "signature": "remainingMilliseconds: number",
+          "signature": "remainingMilliseconds: Milliseconds",
           "signatureTokens": [
             {
               "text": "remainingMilliseconds",
@@ -465,13 +444,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Milliseconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Timer.remainingSeconds in milliseconds."
         },
         {
           "name": "remainingMinutes",
@@ -492,11 +471,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Timer.remainingSeconds in minutes."
         },
         {
           "name": "remainingSeconds",
-          "signature": "remainingSeconds: number",
+          "signature": "remainingSeconds: Seconds",
           "signatureTokens": [
             {
               "text": "remainingSeconds",
@@ -507,13 +486,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Time left until Timer.expired, clamped at zero."
         },
         {
           "name": "running",

@@ -9,7 +9,7 @@ import {
   RenderPipeline,
   Scene,
   Sprite,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 
 class CustomRenderPassScene extends Scene {
@@ -52,8 +52,8 @@ class CustomRenderPassScene extends Scene {
       .addPass(new RenderNodePass(this.front));
   }
 
-  override update(delta: Time): void {
-    this.angle += delta.seconds * 2.2;
+  override update(delta: Seconds): void {
+    this.angle += delta * 2.2;
   }
 
   override draw(context: RenderingContext): void {

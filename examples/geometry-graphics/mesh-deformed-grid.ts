@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Mesh, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Mesh, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 
 const COLS = 16;
 const ROWS = 16;
@@ -64,8 +64,8 @@ class MeshDeformedGridScene extends Scene {
     this.mesh.setPosition((width / 2) | 0, (height / 2) | 0);
   }
 
-  override update(delta: Time): void {
-    this.time += delta.seconds;
+  override update(delta: Seconds): void {
+    this.time += delta;
     const verts = this.mesh.vertices;
     const rest = this.restVertices;
     const t = this.time;

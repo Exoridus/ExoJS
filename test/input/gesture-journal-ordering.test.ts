@@ -21,7 +21,7 @@
  */
 
 import type { Application } from '#core/Application';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 import { InputManager } from '#input/InputManager';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 
@@ -81,7 +81,7 @@ const createInputManager = (canvas?: HTMLCanvasElement): { im: InputManager; can
 
 /** One frame boundary with no engine time elapsed - drains the journal without advancing any hold. */
 const drainFrame = (im: InputManager): void => {
-  im.preUpdate(Time.zero);
+  im.preUpdate(Time.seconds(0));
 };
 
 /**
@@ -90,13 +90,13 @@ const drainFrame = (im: InputManager): void => {
  * this time, so this is the only clock that can mature one.
  */
 const advanceFrames = (im: InputManager, milliseconds: number): void => {
-  const frame = new Time(16);
   let remaining = milliseconds;
 
   while (remaining > 0) {
-    frame.milliseconds = Math.min(16, remaining);
-    im.preUpdate(frame);
-    remaining -= frame.milliseconds;
+    const stepMs = Math.min(16, remaining);
+
+    im.preUpdate(Time.toSeconds(Time.milliseconds(stepMs)));
+    remaining -= stepMs;
   }
 };
 

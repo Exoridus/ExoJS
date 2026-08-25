@@ -50,7 +50,7 @@ class KeyboardScene extends Scene {
   update(delta) {
     const app = this.app;
     const { width, height } = app;
-    const speed = 280 * delta.seconds;
+    const speed = 280 * delta;
     const moveX = (this.right.active ? 1 : 0) - (this.left.active ? 1 : 0);
     const moveY = (this.down.active ? 1 : 0) - (this.up.active ? 1 : 0);
     this.position.x = Math.max(20, Math.min(width - 20, this.position.x + moveX * speed));

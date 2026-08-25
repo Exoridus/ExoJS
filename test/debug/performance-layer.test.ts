@@ -7,7 +7,8 @@
  * directly with a populated scene graph.
  */
 
-import type { Time } from '#core/Time';
+import type { Seconds } from '#core/units';
+import { Time } from '#core/units';
 import { PerformanceLayer } from '#debug/PerformanceLayer';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -90,7 +91,7 @@ const makeApp = (opts: { root?: FakeNode | null } = {}) =>
     scenes: { currentScene: opts.root !== undefined && opts.root !== null ? { root: opts.root } : null },
   }) as unknown as import('#core/Application').Application;
 
-const time = (ms: number): Time => ({ milliseconds: ms, seconds: ms / 1000 }) as unknown as Time;
+const time = (ms: number): Seconds => Time.toSeconds(Time.milliseconds(ms));
 
 /** Peek at the layer's private text/graphics nodes for HUD-content assertions. */
 const internals = (

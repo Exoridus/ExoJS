@@ -517,7 +517,7 @@
         },
         {
           "name": "fixedUpdate",
-          "signature": "fixedUpdate(_step: Time): void",
+          "signature": "fixedUpdate(_step: Seconds): void",
           "signatureTokens": [
             {
               "text": "fixedUpdate",
@@ -536,7 +536,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Seconds",
               "kind": "type"
             },
             {
@@ -555,7 +555,7 @@
           "params": [
             {
               "name": "_step",
-              "type": "Time",
+              "type": "Seconds",
               "optional": false
             }
           ],
@@ -1834,7 +1834,7 @@
         },
         {
           "name": "update",
-          "signature": "update(_delta: Time): void",
+          "signature": "update(_delta: Seconds): void",
           "signatureTokens": [
             {
               "text": "update",
@@ -1853,7 +1853,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Seconds",
               "kind": "type"
             },
             {
@@ -1872,7 +1872,7 @@
           "params": [
             {
               "name": "_delta",
-              "type": "Time",
+              "type": "Seconds",
               "optional": false
             }
           ],

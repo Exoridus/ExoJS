@@ -18,14 +18,14 @@ The split between application and scene matters: the application is the long-liv
 A scene is a class that extends `Scene`. Override the hooks you need; leave the rest at their defaults:
 
 ```ts
-import { RenderingContext, Scene, Time } from '@codexo/exojs';
+import { RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 
 class TitleScene extends Scene {
     init() {
         // build state
     }
 
-    update(delta: Time) {
+    update(delta: Seconds) {
         // per-frame logic
     }
 
@@ -159,7 +159,7 @@ The first time a scene starts:
 Then, every frame while the scene is active:
 
 3. `fixedUpdate(delta)` — zero or more deterministic steps with a constant `delta`, run before `update`.
-4. `update(delta)` — advance state. `delta.seconds` is the elapsed time since the last frame.
+4. `update(delta)` — advance state. `delta` is the elapsed time since the last frame.
 5. `draw(context)` — render the current state.
 
 Two signals bracket activation from the outside rather than being hooks you override: `Scene.onActivate` fires every time the scene becomes `Active` (fresh start, a consumed preload, or a restore from retention); `Scene.onSuspend` fires when the scene is suspended for retention instead of ended permanently.
@@ -210,8 +210,8 @@ The `init` hook runs once per scene-start. If you start the scene again later it
 `update` runs once per real frame, so its `delta` varies with the display's refresh rate and any hitches. `fixedUpdate` is the other logic hook: the engine runs it a constant number of times per second — independent of frame rate — before `update`:
 
 ```ts
-fixedUpdate(delta: Time) {
-    this.world.step(delta.seconds);
+fixedUpdate(delta: Seconds) {
+    this.world.step(delta);
 }
 ```
 
@@ -225,7 +225,7 @@ const app = new Application({ fixedTimeStep: 1 / 30 });
 
 At 60 fps, that is one `fixedUpdate` call per frame, tracking `update` one-to-one. At 144 fps, some frames get zero calls and others get one, averaging out to the configured rate. On a stalled frame (a GC pause, a dropped tab), it can run several calls back-to-back so simulation time is never silently lost — capped at an internal maximum so a single long freeze cannot spiral into minutes of catch-up.
 
-Because the step size never changes, `fixedUpdate` is the right place for anything that must behave identically regardless of frame rate — physics stepping is the headline case; see [Physics basics](/ExoJS/en/guide/physics/physics-basics/) for a full `world.step(delta.seconds)` walkthrough. Leave camera movement, UI, and anything purely visual in `update`: running those at a fixed rate would make them look choppy on high-refresh-rate displays instead of smoother.
+Because the step size never changes, `fixedUpdate` is the right place for anything that must behave identically regardless of frame rate — physics stepping is the headline case; see [Physics basics](/ExoJS/en/guide/physics/physics-basics/) for a full `world.step(delta)` walkthrough. Leave camera movement, UI, and anything purely visual in `update`: running those at a fixed rate would make them look choppy on high-refresh-rate displays instead of smoother.
 
 <Callout type="info" title="Which hook for what">
 Deterministic simulation — physics, anything that must behave identically across frame rates — belongs in `fixedUpdate`. Keep camera, UI and purely visual motion in `update`; a fixed rate makes those look choppy on high-refresh displays.
@@ -258,12 +258,12 @@ If you don't need buttery-smooth motion, ignore `frameAlpha` — most scenes nev
 The `update` hook runs once per frame, before `draw`. The argument carries the elapsed time since the previous frame:
 
 ```ts
-update(delta: Time) {
-    this.hero.rotate(120 * delta.seconds);
+update(delta: Seconds) {
+    this.hero.rotate(120 * delta);
 }
 ```
 
-Multiplying by `delta.seconds` keeps motion frame-rate independent. The same code runs identically at 60 fps and 144 fps.
+Multiplying by `delta` keeps motion frame-rate independent. The same code runs identically at 60 fps and 144 fps.
 
 ## draw: explicit rendering
 

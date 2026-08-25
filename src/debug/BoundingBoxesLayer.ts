@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import type { Time } from '#core/Time';
+import type { Seconds } from '#core/units';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -74,7 +74,7 @@ export class BoundingBoxesLayer extends DebugLayer {
   }
 
   /** No per-frame pre-computation required; all state is derived in {@link render}. */
-  public override update(_delta: Time): void {
+  public override update(_delta: Seconds): void {
     // State is built in render() each frame; nothing to pre-compute here.
   }
 

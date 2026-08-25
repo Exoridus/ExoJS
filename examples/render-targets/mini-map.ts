@@ -10,7 +10,7 @@ import {
   RenderTexture,
   Scene,
   Sprite,
-  type Time,
+  type Seconds,
   View,
 } from '@codexo/exojs';
 
@@ -66,13 +66,13 @@ class MiniMapScene extends Scene {
       .addPass(new RenderNodePass(this.overlay));
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
     const marginX = 80;
     const marginY = 60;
 
-    this.time += delta.seconds;
+    this.time += delta;
 
     this.world.clear();
     // Filled play-area: gives the minimap a recognizable region. Sub-pixel grid

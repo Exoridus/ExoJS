@@ -3,11 +3,11 @@ import type { MockInstance } from 'vitest';
 import { getAudioContext } from '#audio/audio-context';
 import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
-import type { Time } from '#core/Time';
+import { Time } from '#core/units';
 
 const createAudioBufferStub = (duration = 10): AudioBuffer => ({ duration }) as AudioBuffer;
 
-const frame = { seconds: 0.016 } as unknown as Time;
+const frame = Time.seconds(0.016);
 
 interface MockParam {
   value: number;

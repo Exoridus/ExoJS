@@ -1,6 +1,6 @@
 {
   "title": "Cloneable",
-  "description": "Structural interface for value types that support a deep clone and an in-place copy from a same-type source. Implemented by Color, Time, Vector, Matrix, Rectangle, and other ExoJS value classes. `T` is the cloned type and must be named explicitly - TypeScript cannot infer an interface's implementer, and a default would silently widen every existing use. It is a lower bound, so an implementer whose subclasses must each clone to their own type still declares `clone(): this`. Naming a weaker `T` is the point for observable value types: an observable size clones to a plain, callback-free Size, and the signature says so instead of handing back something that only looks observable.",
+  "description": "Structural interface for value types that support a deep clone and an in-place copy from a same-type source. Implemented by Color, Vector, Matrix, Rectangle, and other ExoJS value classes. `T` is the cloned type and must be named explicitly - TypeScript cannot infer an interface's implementer, and a default would silently widen every existing use. It is a lower bound, so an implementer whose subclasses must each clone to their own type still declares `clone(): this`. Naming a weaker `T` is the point for observable value types: an observable size clones to a plain, callback-free Size, and the signature says so instead of handing back something that only looks observable.",
   "symbol": "Cloneable",
   "kind": "interface",
   "subsystem": "core",
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Structural interface for value types that support a deep clone and an in-place copy from a same-type source. Implemented by Color, Time, Vector, Matrix, Rectangle, and other ExoJS value classes.",
+        "Structural interface for value types that support a deep clone and an in-place copy from a same-type source. Implemented by Color, Vector, Matrix, Rectangle, and other ExoJS value classes.",
         "`T` is the cloned type and must be named explicitly - TypeScript cannot infer an interface's implementer, and a default would silently widen every existing use. It is a lower bound, so an implementer whose subclasses must each clone to their own type still declares `clone(): this`. Naming a weaker `T` is the point for observable value types: an observable size clones to a plain, callback-free Size, and the signature says so instead of handing back something that only looks observable."
       ],
       "importLine": "import { Cloneable } from '@codexo/exojs'",

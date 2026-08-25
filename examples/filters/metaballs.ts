@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, ShaderFilter, type Time } from '@codexo/exojs';
+import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, ShaderFilter, type Seconds } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Threshold pass: render solid cyan where the (blurred) red field is dense
@@ -42,12 +42,12 @@ class MetaballsScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
 
     for (const point of this.points) {
-      point.a += delta.seconds * (0.4 + point.r / 600);
+      point.a += delta * (0.4 + point.r / 600);
     }
 
     this.balls.clear();

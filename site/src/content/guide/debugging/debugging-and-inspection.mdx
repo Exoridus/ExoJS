@@ -140,7 +140,7 @@ unsubscribe();
 For warnings that could otherwise repeat every frame (a stale asset reference checked in `update`, say), pass `once` — the entry is dropped after the first call for a given key, at any severity:
 
 ```ts
-update(delta: Time) {
+update(delta: Seconds) {
     if (this.texture.width > 4096) {
         logger.warn('Texture exceeds 4096px — this may hurt performance on mobile GPUs.', { source: 'rendering', once: 'huge-texture' });
     }
@@ -227,7 +227,7 @@ The screen-space view swap is necessary because `RenderPassInspectorLayer` retur
 If you only need the data and not the built-in panel, read `inspector.entries` and `inspector.totalPasses` directly — the `update` call is still required to populate the entry snapshot:
 
 ```ts
-update(delta: Time) {
+update(delta: Seconds) {
     // ... game logic ...
 
     console.log(`Passes this frame: ${this.inspector.totalPasses}`);

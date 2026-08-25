@@ -9,7 +9,7 @@ import {
   type RenderingContext,
   Scene,
   Sprite,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
@@ -64,10 +64,10 @@ class GameScene extends Scene {
     app.input.onPointerTap.add(() => this.togglePause());
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     if (this.frozen) return;
 
-    this.time += delta.seconds;
+    this.time += delta;
     this.sprite.setRotation(this.time * 80);
   }
 

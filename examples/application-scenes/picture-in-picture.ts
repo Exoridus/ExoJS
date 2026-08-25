@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, type Time, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, type Seconds, View } from '@codexo/exojs';
 
 class PictureInPictureScene extends Scene {
   private mainView!: View;
@@ -28,8 +28,8 @@ class PictureInPictureScene extends Scene {
     this.frame.drawRectangle(width * 0.68, height * 0.04, width * 0.28, height * 0.28);
   }
 
-  override update(delta: Time): void {
-    this.sprite.move(this.velocity * delta.seconds, 0);
+  override update(delta: Seconds): void {
+    this.sprite.move(this.velocity * delta, 0);
 
     if (this.sprite.position.x > 320 || this.sprite.position.x < -320) {
       this.velocity *= -1;

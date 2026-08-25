@@ -1,4 +1,4 @@
-import type { Time } from '#core/Time';
+import type { Seconds } from '#core/units';
 
 import type { Pointer } from './Pointer';
 
@@ -105,15 +105,15 @@ export class GestureRecognizer {
    *
    * @internal
    */
-  public update(delta: Time): void {
+  public update(delta: Seconds): void {
     if (this.longPressEntries.size === 0) {
       return;
     }
 
-    const seconds = delta.seconds;
+    const deltaSeconds = delta;
 
     for (const entry of this.longPressEntries.values()) {
-      entry.elapsedSeconds += seconds;
+      entry.elapsedSeconds += deltaSeconds;
 
       if (entry.elapsedSeconds >= longPressSeconds) {
         this.longPressEntries.delete(entry.pointerId);

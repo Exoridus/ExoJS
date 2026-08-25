@@ -1,5 +1,5 @@
 import { Color } from '#core/Color';
-import type { Time } from '#core/Time';
+import { Time } from '#core/units';
 import { Matrix } from '#math/Matrix';
 import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
@@ -359,7 +359,7 @@ describe('RenderingContext', () => {
     const { backend } = createMockBackend();
     const context = new RenderingContext(backend);
     const pip = new View(0, 0, 100, 100);
-    const tick = { milliseconds: 16 } as Time;
+    const tick = Time.toSeconds(Time.milliseconds(16));
 
     pip.follow({ x: 40, y: 0 }, { lerp: 1 });
     context.trackView(pip);
@@ -380,7 +380,7 @@ describe('RenderingContext', () => {
     const context = new RenderingContext(backend);
     const pip = new View(0, 0, 100, 100);
     const node = new Container();
-    const tick = { milliseconds: 16 } as Time;
+    const tick = Time.toSeconds(Time.milliseconds(16));
 
     pip.follow({ x: 40, y: 0 }, { lerp: 1 });
     context.render(node, { view: pip }); // render-usage registers pip for the next update

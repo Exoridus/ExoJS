@@ -11,7 +11,7 @@ import type { MockInstance } from 'vitest';
  */
 import { Application, ApplicationState } from '#core/Application';
 import { logger } from '#core/logging';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 
 const overlaySpies = vi.hoisted(() => ({
   show: vi.fn(),
@@ -109,7 +109,7 @@ function frameClock(app: Application): import('#core/Clock').Clock {
 }
 
 function mockFrameElapsed(app: Application, ms: number): void {
-  vi.spyOn(frameClock(app), 'elapsedTime', 'get').mockReturnValue(new Time(ms));
+  vi.spyOn(frameClock(app), 'elapsedSeconds', 'get').mockReturnValue(Time.toSeconds(Time.milliseconds(ms)));
 }
 
 describe('Application frame guard', () => {

@@ -1,4 +1,4 @@
-import { Application, Asset, AudioStream, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
+import { Application, Asset, AudioStream, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text, type Seconds } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -56,13 +56,13 @@ class TempoTrackingScene extends Scene {
     app.audio.play(this.music, { loop: true, volume: 0.8 });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     // Raw onset strength straight from the detector (positive spectral flux).
     this.onset = this.detector.onsetStrength;
 
     // Follow the loudest recent onset for the auto-gain reference, then bleed
     // it off so the bar stays responsive as the material changes.
-    this.onsetPeak = Math.max(this.onset, this.onsetPeak * (1 - delta.seconds * 0.4));
+    this.onsetPeak = Math.max(this.onset, this.onsetPeak * (1 - delta * 0.4));
   }
 
   override draw(context: RenderingContext): void {

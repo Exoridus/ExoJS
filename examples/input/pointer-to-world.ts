@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Time, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, View } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // The camera continuously pans (a slow figure-eight) and breathes its zoom, so
@@ -69,12 +69,12 @@ class PointerToWorldScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const width = app.width;
     const height = app.height;
 
-    this.elapsed += delta.seconds;
+    this.elapsed += delta;
 
     // Slow figure-eight pan plus a gentle zoom breath.
     const centerX = width / 2 + Math.sin(this.elapsed * 0.5) * 220;
@@ -82,7 +82,7 @@ class PointerToWorldScene extends Scene {
 
     this.view.setCenter(centerX, centerY);
     this.view.setZoom(this.userZoom * (1 + Math.sin(this.elapsed * 0.35) * 0.25));
-    this.view.update(delta.milliseconds);
+    this.view.update(delta * 1000);
 
     // Live world coordinate under the cursor - recomputed every frame because
     // the mapping changes as the camera moves.

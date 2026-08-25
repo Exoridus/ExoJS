@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Mesh, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Mesh, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 
 const UV_GRID = assets.technical.filtering.uvGrid256;
 const HALF = 300;
@@ -20,8 +20,8 @@ class MeshTexturedQuadScene extends Scene {
     this.quad.setPosition((width / 2) | 0, (height / 2) | 0);
   }
 
-  override update(delta: Time): void {
-    this.quad.rotate(delta.seconds * 30);
+  override update(delta: Seconds): void {
+    this.quad.rotate(delta * 30);
   }
 
   override draw(context: RenderingContext): void {

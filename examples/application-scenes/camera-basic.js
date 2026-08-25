@@ -32,7 +32,7 @@ class CameraBasicScene extends Scene {
   }
   update(delta) {
     const app = this.app;
-    app.rendering.view.rotation += delta.seconds * 15;
+    app.rendering.view.rotation += delta * 15;
   }
   draw(context) {
     const app = this.app;

@@ -1,6 +1,6 @@
 import type { TimeSource } from '#platform/PlatformAdapter';
 
-import { Time } from './Time';
+import { type Milliseconds, milliseconds, type Seconds, seconds } from './units';
 import { getPreciseTime } from './utils';
 
 /** The host's own monotonic clock, used by any clock given no other source. */
@@ -13,20 +13,18 @@ const hostTimeSource: TimeSource = { now: getPreciseTime };
  * object with a `now()` to drive the clock deterministically from a test. Use
  * {@link Clock.start}, {@link Clock.stop}, {@link Clock.reset}, and
  * {@link Clock.restart} to control the running state; read elapsed time via
- * {@link Clock.elapsedTime} (the {@link Time} instance is shared - copy it
- * if you need to keep a snapshot).
+ * {@link Clock.elapsedSeconds}.
  *
  * Use {@link Timer} for a clock with a fixed limit and `expired` flag.
  */
 export class Clock {
-  private _startTime: Time;
-  private _elapsedTime: Time = new Time(0);
+  private _startTime: Milliseconds = milliseconds(0);
+  private _elapsed: Milliseconds = milliseconds(0);
   private _running = false;
 
   private readonly _timeSource: TimeSource;
 
-  public constructor(startTime: Time = Time.zero, autoStart = false, timeSource: TimeSource = hostTimeSource) {
-    this._startTime = startTime.clone();
+  public constructor(autoStart = false, timeSource: TimeSource = hostTimeSource) {
     this._timeSource = timeSource;
 
     if (autoStart) {
@@ -39,44 +37,41 @@ export class Clock {
   }
 
   /**
-   * Total accumulated time since the last {@link Clock.reset}. While the
-   * clock is running, the value advances on every read by folding in the
-   * delta since the previous read; while stopped, the value is fixed at
-   * the stop point. Returns the same {@link Time} instance - read the
-   * scalar fields if you need an unchanging snapshot.
+   * Total accumulated time since the last {@link Clock.reset}. While the clock
+   * is running the value advances on every read, folding in the interval since
+   * the previous one; while stopped it stays at the moment of stopping.
    */
-  public get elapsedTime(): Time {
+  public get elapsedMilliseconds(): Milliseconds {
     if (this._running) {
       const now = this._timeSource.now();
 
-      this._elapsedTime.add(now - this._startTime.milliseconds);
-      this._startTime.milliseconds = now;
+      this._elapsed = milliseconds(this._elapsed + (now - this._startTime));
+      this._startTime = milliseconds(now);
     }
 
-    return this._elapsedTime;
+    return this._elapsed;
   }
 
-  public get elapsedMilliseconds(): number {
-    return this.elapsedTime.milliseconds;
+  /** {@link Clock.elapsedMilliseconds} in seconds. */
+  public get elapsedSeconds(): Seconds {
+    return seconds(this.elapsedMilliseconds / 1000);
   }
 
-  public get elapsedSeconds(): number {
-    return this.elapsedTime.seconds;
-  }
-
+  /** {@link Clock.elapsedMilliseconds} in minutes. */
   public get elapsedMinutes(): number {
-    return this.elapsedTime.minutes;
+    return this.elapsedMilliseconds / 60000;
   }
 
+  /** {@link Clock.elapsedMilliseconds} in hours. */
   public get elapsedHours(): number {
-    return this.elapsedTime.hours;
+    return this.elapsedMilliseconds / 3600000;
   }
 
   /** Begin accumulating time. No-op when already running. */
   public start(): this {
     if (!this._running) {
       this._running = true;
-      this._startTime.milliseconds = this._timeSource.now();
+      this._startTime = milliseconds(this._timeSource.now());
     }
 
     return this;
@@ -86,7 +81,7 @@ export class Clock {
   public stop(): this {
     if (this._running) {
       this._running = false;
-      this._elapsedTime.add(this._timeSource.now() - this._startTime.milliseconds);
+      this._elapsed = milliseconds(this._elapsed + (this._timeSource.now() - this._startTime));
     }
 
     return this;
@@ -95,7 +90,7 @@ export class Clock {
   /** Halt and zero the accumulated time. The clock is left stopped. */
   public reset(): this {
     this._running = false;
-    this._elapsedTime.setMilliseconds(0);
+    this._elapsed = milliseconds(0);
 
     return this;
   }
@@ -109,7 +104,6 @@ export class Clock {
   }
 
   public destroy(): void {
-    this._startTime.destroy();
-    this._elapsedTime.destroy();
+    // no-op - the clock owns only numbers, kept for Destroyable conformance
   }
 }

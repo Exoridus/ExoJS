@@ -16,7 +16,7 @@ import {
   SvgAsset,
   Text,
   Texture,
-  type Time,
+  type Seconds,
   type Voice,
 } from '@codexo/exojs';
 
@@ -595,12 +595,12 @@ class AssetBrowserScene extends Scene {
     this.scrollOff = Math.max(0, Math.min(maxScroll, this.scrollOff + delta));
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     if (!this.animPlaying) return;
     if (this.cat !== 'sprites' && this.cat !== 'spritesheets' && this.cat !== 'inputPrompts') return;
     const frames = this.currentFrameKeys();
     if (!frames.length) return;
-    this.frameTimer += delta.seconds;
+    this.frameTimer += delta;
     if (this.frameTimer >= 0.07) {
       this.frameTimer = 0;
       this.frameIdx = (this.frameIdx + 1) % frames.length;

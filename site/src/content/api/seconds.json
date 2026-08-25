@@ -1,0 +1,89 @@
+{
+  "title": "Seconds",
+  "description": "A length of time in seconds. The unit every duration in the public API is expressed in - frame deltas, the fixed step, elapsed totals, timer limits. It is a `number` at runtime and reads as one everywhere (`delta < 0.5`, `Math.round(delta)`); the brand only stops a millisecond value from being passed where seconds are meant, which no plain `number` signature can catch. Build one with Time.seconds, Time.minutes or Time.hours. Arithmetic returns a plain `number` - re-label the result when handing it back to the engine.",
+  "symbol": "Seconds",
+  "kind": "type",
+  "subsystem": "core",
+  "importPath": "@codexo/exojs",
+  "tier": "stable",
+  "memberCount": 0,
+  "counts": {
+    "constructors": 0,
+    "methods": 0,
+    "properties": 0,
+    "events": 0
+  },
+  "sections": [
+    {
+      "id": "import",
+      "title": "Import",
+      "members": [],
+      "paragraphs": [
+        "A length of time in seconds.",
+        "The unit every duration in the public API is expressed in - frame deltas, the fixed step, elapsed totals, timer limits. It is a `number` at runtime and reads as one everywhere (`delta < 0.5`, `Math.round(delta)`); the brand only stops a millisecond value from being passed where seconds are meant, which no plain `number` signature can catch.",
+        "Build one with Time.seconds, Time.minutes or Time.hours. Arithmetic returns a plain `number` - re-label the result when handing it back to the engine."
+      ],
+      "importLine": "import { Seconds } from '@codexo/exojs'",
+      "sourceLink": null
+    },
+    {
+      "id": "definition",
+      "title": "Definition",
+      "members": [
+        {
+          "name": "Seconds",
+          "signature": "number & { [secondsBrand]: true }",
+          "signatureTokens": [
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": " & ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "{ ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "[secondsBrand]",
+              "kind": "name"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "true",
+              "kind": "keyword"
+            },
+            {
+              "text": " }",
+              "kind": "punctuation"
+            }
+          ],
+          "params": [],
+          "returnType": null,
+          "description": ""
+        }
+      ],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": null
+    },
+    {
+      "id": "source",
+      "title": "Source",
+      "members": [],
+      "paragraphs": [],
+      "importLine": null,
+      "sourceLink": {
+        "label": "src/core/units.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/units.ts"
+      }
+    }
+  ],
+  "sourcePath": "src/core/units.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/units.ts"
+}

@@ -227,13 +227,13 @@ describe('system-driven interpolation', () => {
     node.setPosition(-1, -1);
 
     // Two fixed steps for this frame: neither may present.
-    world.fixedUpdate(Time.zero);
-    world.fixedUpdate(Time.zero);
+    world.fixedUpdate(Time.seconds(0));
+    world.fixedUpdate(Time.seconds(0));
 
     expect(node.x).toBe(-1);
 
     hostAlpha = 0.25;
-    world.update(Time.zero);
+    world.update(Time.seconds(0));
 
     // previous = 10 (start of the second step), current = 20.
     expect(body.previousX).toBeCloseTo(10, 6);
@@ -247,12 +247,12 @@ describe('system-driven interpolation', () => {
     const node = fakeNode();
 
     world.bind(body, node as unknown as SceneNode);
-    world.fixedUpdate(Time.zero);
+    world.fixedUpdate(Time.seconds(0));
 
     expect(node.x).toBeCloseTo(body.x, 6);
 
     const snapped = node.x;
-    world.update(Time.zero);
+    world.update(Time.seconds(0));
 
     expect(node.x).toBe(snapped);
   });

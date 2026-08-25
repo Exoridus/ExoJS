@@ -53,7 +53,7 @@ class SpritesheetFramesScene extends Scene {
     if (!this.playing) {
       return;
     }
-    this.elapsed += delta.seconds;
+    this.elapsed += delta;
     const frameDuration = 1 / this.fps;
     while (this.elapsed >= frameDuration) {
       this.elapsed -= frameDuration;

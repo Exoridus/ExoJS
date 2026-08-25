@@ -12,7 +12,7 @@ import {
   type Seekable,
   Sprite,
   Text,
-  type Time,
+  type Seconds,
   View,
   type Voice,
 } from '@codexo/exojs';
@@ -135,9 +135,9 @@ class BossIntroCinematicScene extends Scene {
     app.tweens.create(this.musicVoice).to({ volume: 0.85 }, 2.0).start();
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     // Advance the camera shake (and follow/bounds) animation each frame.
-    this.view.update(delta.milliseconds);
+    this.view.update(delta * 1000);
   }
 
   override draw(context: RenderingContext): void {

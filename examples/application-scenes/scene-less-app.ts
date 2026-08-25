@@ -26,7 +26,7 @@ let angle = 0;
 
 app.systems.add({
   update(delta) {
-    angle += delta.seconds;
+    angle += delta;
     square.rotation = angle * 40;
   },
   draw(context: RenderingContext) {

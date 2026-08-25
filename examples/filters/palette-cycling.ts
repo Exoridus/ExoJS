@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, LutFilter, type RenderingContext, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, LutFilter, type RenderingContext, Scene, Sprite, Texture, type Seconds } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
@@ -54,8 +54,8 @@ class ColourRampCyclingScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
-    this.offset = (this.offset + delta.seconds * 80) % RAMP_SIZE;
+  override update(delta: Seconds): void {
+    this.offset = (this.offset + delta * 80) % RAMP_SIZE;
     this.ramp.source = buildRampCanvas(Math.floor(this.offset));
   }
 

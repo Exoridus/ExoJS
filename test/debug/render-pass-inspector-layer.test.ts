@@ -130,7 +130,7 @@ const makeApp = (root: FakeNode | null = null) =>
     onResize: new Signal(),
   }) as unknown as import('#core/Application').Application;
 
-const makeTime = () => ({ milliseconds: 16, seconds: 0.016 }) as unknown as import('#core/Time').Time;
+const makeTime = () => ({ milliseconds: 16, seconds: 0.016 }) as unknown as import('#core/units').Seconds;
 
 // ---------------------------------------------------------------------------
 // Tests

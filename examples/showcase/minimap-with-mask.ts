@@ -10,7 +10,7 @@ import {
   RenderTexture,
   Scene,
   Sprite,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 
 class MinimapWithMaskScene extends Scene {
@@ -69,8 +69,8 @@ class MinimapWithMaskScene extends Scene {
   }
   // #endregion guide:minimap-setup
 
-  override update(delta: Time): void {
-    this.time += delta.seconds;
+  override update(delta: Seconds): void {
+    this.time += delta;
   }
 
   private drawWorld(backend: RenderingContext['backend']): void {

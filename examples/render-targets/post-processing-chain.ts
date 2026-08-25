@@ -12,7 +12,7 @@ import {
   RenderTexture,
   Scene,
   Sprite,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 
 class PostProcessingChainScene extends Scene {
@@ -46,10 +46,10 @@ class PostProcessingChainScene extends Scene {
       .addPass(new RenderNodePass(this.final, { clear: Color.black }));
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
-    this.time += delta.seconds;
+    this.time += delta;
     this.scene.clear();
     this.scene.fillColor = new Color(80, 130, 255);
     this.scene.drawCircle(width / 2 + Math.cos(this.time * 1.6) * (width * 0.32), height / 2 + Math.sin(this.time * 1.8) * (height * 0.32), 78);

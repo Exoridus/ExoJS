@@ -24,7 +24,7 @@ class ContainersScene extends Scene {
     this.rainbow.y = bounds.y;
     this.rainbow.width = bounds.width;
     this.rainbow.height = bounds.height;
-    this.bunnies.rotate(delta.seconds * 36);
+    this.bunnies.rotate(delta * 36);
   }
   draw(context) {
     context.render(this.rainbow);

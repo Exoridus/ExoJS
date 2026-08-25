@@ -18,7 +18,7 @@
  * rather than a parallel test-only dispatch fallback.
  */
 
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 import { type GestureJournalEvent, GestureRecognizer } from '#input/GestureRecognizer';
 import type { Pointer } from '#input/Pointer';
 
@@ -62,13 +62,13 @@ const toRad = (degrees: number): number => degrees * (Math.PI / 180);
  * drives it rather than as one artificial jump.
  */
 const advanceEngineTime = (recognizer: GestureRecognizer, milliseconds: number): void => {
-  const frame = new Time(16);
   let remaining = milliseconds;
 
   while (remaining > 0) {
-    frame.milliseconds = Math.min(16, remaining);
-    recognizer.update(frame);
-    remaining -= frame.milliseconds;
+    const stepMs = Math.min(16, remaining);
+
+    recognizer.update(Time.toSeconds(Time.milliseconds(stepMs)));
+    remaining -= stepMs;
   }
 };
 
@@ -243,7 +243,7 @@ describe('GestureRecognizer — long press', () => {
     // application, a backgrounded tab, or a paused scene leaves the
     // recognizer in. A `setTimeout`-based hold would have matured by now.
     await new Promise(resolve => setTimeout(resolve, 20));
-    recognizer.update(Time.zero);
+    recognizer.update(Time.seconds(0));
 
     expect(longPresses(events)).toHaveLength(0);
 

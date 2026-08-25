@@ -62,7 +62,7 @@ class MiniMapScene extends Scene {
     const { width, height } = app;
     const marginX = 80;
     const marginY = 60;
-    this.time += delta.seconds;
+    this.time += delta;
     this.world.clear();
     // Filled play-area: gives the minimap a recognizable region. Sub-pixel grid
     // lines alone vanish when the world is shrunk into the 220×160 texture.

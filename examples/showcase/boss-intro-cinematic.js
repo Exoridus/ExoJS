@@ -107,7 +107,7 @@ class BossIntroCinematicScene extends Scene {
   }
   update(delta) {
     // Advance the camera shake (and follow/bounds) animation each frame.
-    this.view.update(delta.milliseconds);
+    this.view.update(delta * 1000);
   }
   draw(context) {
     const app = this.app;

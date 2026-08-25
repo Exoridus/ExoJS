@@ -45,14 +45,14 @@ class SpriteStressScene extends Scene {
   }
   update(delta) {
     const app = this.app;
-    const time = app.activeTime.seconds;
-    this.spriteLayer.rotate(delta.seconds * 2.5);
+    const time = app.activeSeconds;
+    this.spriteLayer.rotate(delta * 2.5);
     for (const entry of this.sprites) {
       const localPhase = time + entry.phase;
       const scale = entry.baseScale + Math.sin(localPhase * 1.8) * 0.08;
       entry.sprite.x = entry.offsetX + Math.sin(localPhase * 1.4) * entry.driftX;
       entry.sprite.y = entry.offsetY + Math.cos(localPhase * 1.7) * entry.driftY;
-      entry.sprite.rotation += delta.seconds * entry.rotationSpeed;
+      entry.sprite.rotation += delta * entry.rotationSpeed;
       entry.sprite.setScale(scale);
     }
   }

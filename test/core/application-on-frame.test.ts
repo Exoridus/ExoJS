@@ -1,4 +1,6 @@
 import type { MockInstance } from 'vitest';
+
+import { Time } from '#core/units';
 /**
  * Tests for Application.onFrame signal (added in 0.6.17).
  */
@@ -163,11 +165,10 @@ describe('Application.onFrame', () => {
       _renderTransition: vi.fn(),
     };
 
-    // Get the Signal/Time classes from the same module registry that Application uses.
+    // Get Signal from the same module registry that Application uses.
     const { Signal } = await import('#core/Signal');
-    const { Time } = await import('#core/Time');
 
-    const onFrame = new Signal<[import('#core/Time').Time]>();
+    const onFrame = new Signal<[import('#core/units').Seconds]>();
 
     onFrame.add(() => {
       callOrder.push('onFrame.dispatch');
@@ -194,12 +195,12 @@ describe('Application.onFrame', () => {
     rawApp['tweens'] = { _prepareFrame: vi.fn() };
     rawApp['_rendering'] = { _prepareFrame: vi.fn() };
     rawApp['_backend'] = backend;
-    rawApp['_frameClock'] = { elapsedTime: { milliseconds: 16, seconds: 0.016 }, restart: vi.fn() };
+    rawApp['_frameClock'] = { elapsedSeconds: 0.016, restart: vi.fn() };
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     // Object.create() bypasses the constructor, so the real field
-    // initializer (`= new Time()`) never runs - stand in with a real Time so
+    // initializer (`= Time.seconds(0)`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
-    rawApp['_frameDelta'] = new Time();
+    rawApp['_frameDelta'] = Time.seconds(0);
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = onFrame;

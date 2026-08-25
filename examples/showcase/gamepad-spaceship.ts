@@ -11,7 +11,7 @@ import {
   Scene,
   Sprite,
   Text,
-  type Time,
+  type Seconds,
   Vector,
   type Voice,
 } from '@codexo/exojs';
@@ -142,7 +142,7 @@ class GamepadSpaceshipScene extends Scene {
     }
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
 
@@ -151,30 +151,30 @@ class GamepadSpaceshipScene extends Scene {
     if (mag > 0.05) {
       this.facing = Math.atan2(this.thrust.y, this.thrust.x);
       this.ship.setRotation((this.facing * 180) / Math.PI + 90);
-      this.velocity.x += Math.cos(this.facing) * mag * 420 * delta.seconds;
-      this.velocity.y += Math.sin(this.facing) * mag * 420 * delta.seconds;
+      this.velocity.x += Math.cos(this.facing) * mag * 420 * delta;
+      this.velocity.y += Math.sin(this.facing) * mag * 420 * delta;
       this.engine.volume = 0.08 + mag * 0.3;
     } else {
       this.engine.volume = 0;
     }
 
-    this.ship.move(this.velocity.x * delta.seconds, this.velocity.y * delta.seconds);
+    this.ship.move(this.velocity.x * delta, this.velocity.y * delta);
     this.velocity.x *= 0.985;
     this.velocity.y *= 0.985;
     this.wrap(this.ship.position, width, height);
 
     for (const asteroid of this.asteroids) {
-      asteroid.x += asteroid.vx * delta.seconds;
-      asteroid.y += asteroid.vy * delta.seconds;
+      asteroid.x += asteroid.vx * delta;
+      asteroid.y += asteroid.vy * delta;
       this.wrap(asteroid, width, height);
     }
 
     for (let i = this.bullets.length - 1; i >= 0; i--) {
       const bullet = this.bullets[i];
 
-      bullet.x += bullet.vx * delta.seconds;
-      bullet.y += bullet.vy * delta.seconds;
-      bullet.life -= delta.seconds;
+      bullet.x += bullet.vx * delta;
+      bullet.y += bullet.vy * delta;
+      bullet.life -= delta;
 
       if (bullet.life <= 0 || bullet.x < -20 || bullet.x > width + 20 || bullet.y < -20 || bullet.y > height + 20) {
         this.bullets.splice(i, 1);

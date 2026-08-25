@@ -9,7 +9,7 @@ import {
   type RenderingContext,
   Scene,
   Stack,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 
 /**
@@ -78,8 +78,8 @@ class HudScene extends Scene {
     this.ui.addChild(panel);
   }
 
-  override update(delta: Time): void {
-    this.angle += delta.seconds * 60;
+  override update(delta: Seconds): void {
+    this.angle += delta * 60;
     this.spinner.setRotation(this.angle);
   }
 

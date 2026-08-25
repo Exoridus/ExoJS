@@ -68,7 +68,7 @@ class MovingSourceScene extends Scene {
     });
   }
   update(delta) {
-    this.angle += delta.seconds * 1.1;
+    this.angle += delta * 1.1;
     this.source.x = this.listener.x + Math.cos(this.angle) * ORBIT_X;
     this.source.y = this.listener.y + Math.sin(this.angle) * ORBIT_Y;
     if (this.voice) this.voice.position = this.source;

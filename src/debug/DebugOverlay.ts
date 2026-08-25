@@ -1,5 +1,5 @@
 import type { Application } from '#core/Application';
-import type { Time } from '#core/Time';
+import type { Seconds } from '#core/units';
 import type { InputBinding } from '#input/InputBinding';
 import { Keyboard } from '#input/types';
 import { View } from '#rendering/View';
@@ -65,7 +65,7 @@ export class DebugOverlay {
 
   private readonly _app: Application;
   private readonly _view: View;
-  private readonly _onFrameHandler: (delta: Time) => void;
+  private readonly _onFrameHandler: (delta: Seconds) => void;
   private readonly _onResizeHandler: (width: number, height: number) => void;
   /** One per keybinding - held so `destroy()` can release the keys it claimed. */
   private readonly _keyBindings: readonly InputBinding[];
@@ -126,7 +126,7 @@ export class DebugOverlay {
     this._view.setCenter(width / 2, height / 2);
   }
 
-  private _onFrame(delta: Time): void {
+  private _onFrame(delta: Seconds): void {
     if (!this.visible) return;
 
     const layers = Object.values(this.layers) as DebugLayer[];

@@ -348,7 +348,7 @@ Use `AnimatedSprite` when you have frame strips from a texture atlas and want cl
 
 Tweens are driven by the `TweenManager` on every frame via `app.tweens.update(delta)`, which happens automatically. You never call `update` on individual tweens unless you created them standalone (without a manager).
 
-Frame-loop animation — the `update(delta)` pattern where you read `delta.seconds` and multiply transforms — is the right choice for continuous motion that doesn't have a defined endpoint: character movement, physics, any state that evolves based on input or simulation. Tweens are the right choice for motion with a clear start and end: UI transitions, camera pans, scripted sequences, one-shot effects.
+Frame-loop animation — the `update(delta)` pattern where you read `delta` and multiply transforms — is the right choice for continuous motion that doesn't have a defined endpoint: character movement, physics, any state that evolves based on input or simulation. Tweens are the right choice for motion with a clear start and end: UI transitions, camera pans, scripted sequences, one-shot effects.
 
 ## Examples
 

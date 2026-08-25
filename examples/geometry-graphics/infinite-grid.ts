@@ -1,4 +1,15 @@
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, ShaderFilter, Sprite, type Time, View } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  ShaderFilter,
+  Sprite,
+  type Seconds,
+  View,
+} from '@codexo/exojs';
 
 const glsl = `#version 300 es
 precision mediump float;
@@ -97,9 +108,9 @@ class InfiniteGridScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
-    this.view.move(this.move.x * 340 * delta.seconds, this.move.y * 340 * delta.seconds);
-    this.view.setZoom(Math.max(0.2, this.view.zoomLevel + this.move.zoom * delta.seconds));
+  override update(delta: Seconds): void {
+    this.view.move(this.move.x * 340 * delta, this.move.y * 340 * delta);
+    this.view.setZoom(Math.max(0.2, this.view.zoomLevel + this.move.zoom * delta));
     this.filter.setUniform('uCenter', [this.view.center.x, this.view.center.y]);
     this.filter.setUniform('uViewSize', [this.view.width, this.view.height]);
   }

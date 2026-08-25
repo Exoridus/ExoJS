@@ -1,8 +1,8 @@
 import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { AudioManager } from '#audio/AudioManager';
-import type { Time } from '#core/Time';
+import { Time } from '#core/units';
 
-const frame = { seconds: 0.016 } as unknown as Time;
+const frame = Time.seconds(0.016);
 
 /** The shared mock context reports `'running'`; `state` is readonly on the real type. */
 const setContextState = (state: AudioContextState): void => {

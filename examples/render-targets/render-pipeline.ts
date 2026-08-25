@@ -12,7 +12,7 @@ import {
   RenderTexture,
   Scene,
   Sprite,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 
 // A composable frame, configured once: the world renders off-screen, a blur step turns it into its
@@ -77,10 +77,10 @@ class RenderPipelineScene extends Scene {
     this.detachResize = () => app.onResize.remove(handleResize);
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
-    this.time += delta.seconds;
+    this.time += delta;
 
     // `enabled` lives on the pass - flip it and the composer skips the step next frame.
     this.blurPass.enabled = Math.floor(this.time / 2.5) % 2 === 0;

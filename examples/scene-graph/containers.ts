@@ -1,4 +1,4 @@
-import { Application, Asset, Assets, Color, Container, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, Asset, Assets, Color, Container, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
 
 class ContainersScene extends Scene {
   private rainbow!: Sprite;
@@ -25,7 +25,7 @@ class ContainersScene extends Scene {
     }
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const bounds = this.bunnies.getBounds();
 
     this.rainbow.x = bounds.x;
@@ -33,7 +33,7 @@ class ContainersScene extends Scene {
     this.rainbow.width = bounds.width;
     this.rainbow.height = bounds.height;
 
-    this.bunnies.rotate(delta.seconds * 36);
+    this.bunnies.rotate(delta * 36);
   }
 
   override draw(context: RenderingContext): void {

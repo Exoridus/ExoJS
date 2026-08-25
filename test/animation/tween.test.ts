@@ -2,10 +2,10 @@
 import { Tween } from '#animation/Tween';
 import { TweenManager } from '#animation/TweenManager';
 import { TweenState } from '#animation/types';
-import { Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 
 /** TweenManager.update() takes a Time; tests express their deltas in seconds. */
-const sec = (seconds: number): Time => new Time(seconds, Time.seconds);
+const sec = (seconds: number): Seconds => Time.seconds(seconds);
 
 // Minimal sprite-like target.
 const makeSprite = (x = 0, y = 0, alpha = 1) => ({ x, y, alpha });

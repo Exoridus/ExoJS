@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, Sprite, Text, type Seconds } from '@codexo/exojs';
 
 class PauseResumeScene extends Scene {
   private sprite!: Sprite;
@@ -36,8 +36,8 @@ class PauseResumeScene extends Scene {
     this.label.text = this.app.scenes.paused ? 'Paused (draw running)' : 'Running';
   }
 
-  override update(delta: Time): void {
-    this.sprite.rotate(delta.seconds * 180);
+  override update(delta: Seconds): void {
+    this.sprite.rotate(delta * 180);
   }
 
   override draw(context: RenderingContext): void {

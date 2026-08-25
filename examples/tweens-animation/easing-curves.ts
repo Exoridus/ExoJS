@@ -1,4 +1,4 @@
-import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
+import { Application, Color, Ease, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Text, type Seconds } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // Every built-in Ease function, in source order.
@@ -88,8 +88,8 @@ class EasingCurvesScene extends Scene {
     return plotTop + plotHeight * (1 - Math.max(0, Math.min(1, norm)));
   }
 
-  override update(delta: Time): void {
-    this.t += this.direction * delta.seconds * 0.6;
+  override update(delta: Seconds): void {
+    this.t += this.direction * delta * 0.6;
 
     if (this.t >= 1) {
       this.t = 1;

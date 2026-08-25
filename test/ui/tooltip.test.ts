@@ -8,7 +8,7 @@
 import type { Application } from '#core/Application';
 import { Signal } from '#core/Signal';
 import type { Stage } from '#core/Stage';
-import { Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 import { InteractionEvent } from '#input/InteractionEvent';
 import type { Pointer } from '#input/Pointer';
 import { Container } from '#rendering/Container';
@@ -55,12 +55,12 @@ afterEach(() => {
 /** A minimal fake app carrying a real onFrame Signal and a mutable scene.paused flag. */
 interface FakeApp {
   app: Application;
-  onFrame: Signal<[Time]>;
+  onFrame: Signal<[Seconds]>;
   scene: { paused: boolean };
 }
 
 const makeApp = (): FakeApp => {
-  const onFrame = new Signal<[Time]>();
+  const onFrame = new Signal<[Seconds]>();
   const scene = { paused: false };
   const app = {
     onFrame,
@@ -90,8 +90,8 @@ const attachStage = (root: UIRoot, app: Application): void => {
 };
 
 /** Advance the fake app's frame clock by `seconds`. */
-const tick = (onFrame: Signal<[Time]>, seconds: number): void => {
-  onFrame.dispatch(new Time(seconds, Time.seconds));
+const tick = (onFrame: Signal<[Seconds]>, seconds: number): void => {
+  onFrame.dispatch(Time.seconds(seconds));
 };
 
 /**

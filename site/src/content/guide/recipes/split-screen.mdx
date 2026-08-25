@@ -40,7 +40,7 @@ init() {
         .setTint(new Color(255, 180, 120));
 }
 
-update(delta: Time) {
+update(delta: Seconds) {
     // Move players independently...
     this._leftPlayer.move(/* WASD */);
     this._rightPlayer.move(/* Arrows */);

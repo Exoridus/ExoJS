@@ -2,10 +2,10 @@ import { Tween } from '#animation/Tween';
 import { TweenManager } from '#animation/TweenManager';
 import { TweenSequencer, TweenSequencerState } from '#animation/TweenSequencer';
 import { TweenState } from '#animation/types';
-import { Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 
 /** Wrap a seconds value so it can be passed to TweenManager.update(). */
-const sec = (seconds: number): Time => new Time(seconds, Time.seconds);
+const sec = (seconds: number): Seconds => Time.seconds(seconds);
 
 /** Create a minimal target object and a tween that animates x 0→100 over `duration` seconds. */
 const makeTween = (duration = 1.0): { tween: Tween<{ x: number }>; target: { x: number } } => {

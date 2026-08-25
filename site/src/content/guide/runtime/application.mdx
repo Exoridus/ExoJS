@@ -222,7 +222,7 @@ import type { Application } from '@codexo/exojs';
 declare const application: Application;
 
 application.onFrame.add(time => {
-    console.log(`Frame at ${time.seconds.toFixed(3)}s`);
+    console.log(`Frame at ${time.toFixed(3)}s`);
 });
 
 application.onResize.add((width, height) => {

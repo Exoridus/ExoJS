@@ -1,13 +1,13 @@
 import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
-import { Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 
 // The `preUpdate` phase - the frame slot ahead of the fixed steps, where the
 // engine's own per-frame state is brought in sync before any simulation runs.
 // Ordering semantics (order/before/after) are shared with the other phases and
 // covered in system-registry.test.ts; these specs cover the phase itself.
 
-const delta = (): Time => new Time(16);
+const delta = (): Seconds => Time.toSeconds(Time.milliseconds(16));
 
 describe('SystemRegistry preUpdate phase', () => {
   test('dispatches a system that only implements preUpdate', () => {

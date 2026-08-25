@@ -1,4 +1,14 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type InputBinding, Keyboard, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  type InputBinding,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  type Seconds,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 // Two ways to read the keyboard, shown side by side:
@@ -53,10 +63,10 @@ class KeyboardScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
-    const speed = 280 * delta.seconds;
+    const speed = 280 * delta;
     const moveX = (this.right.active ? 1 : 0) - (this.left.active ? 1 : 0);
     const moveY = (this.down.active ? 1 : 0) - (this.up.active ? 1 : 0);
 

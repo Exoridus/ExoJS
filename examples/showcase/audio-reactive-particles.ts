@@ -7,7 +7,7 @@ import {
   type RenderingContext,
   Scene,
   Text,
-  type Time,
+  type Seconds,
   Vector,
   type Voice,
 } from '@codexo/exojs';
@@ -88,7 +88,7 @@ class AudioReactiveParticlesScene extends Scene {
     this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
   }
 
-  override update(_delta: Time): void {
+  override update(_delta: Seconds): void {
     // Low band (bass) drives how MANY particles spawn this second.
     const low = this.analyser.getBandEnergy(20, 180);
     // High band (treble) drives how WIDE the velocity cone fans out.

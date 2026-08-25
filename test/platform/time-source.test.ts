@@ -6,8 +6,8 @@
  */
 
 import { Clock } from '#core/Clock';
-import { Time } from '#core/Time';
 import { Timer } from '#core/Timer';
+import { Time } from '#core/units';
 import type { TimeSource } from '#platform/PlatformAdapter';
 
 /** A time source the test moves by hand. */
@@ -28,7 +28,7 @@ const createFakeTime = (): TimeSource & { advance: (ms: number) => void; set: (m
 describe('Clock time source', () => {
   it('accumulates from the source it was given, not from the host clock', () => {
     const time = createFakeTime();
-    const clock = new Clock(Time.zero, false, time);
+    const clock = new Clock(false, time);
 
     clock.start();
     time.advance(250);
@@ -38,7 +38,7 @@ describe('Clock time source', () => {
 
   it('holds elapsed time while stopped and continues from there on restart', () => {
     const time = createFakeTime();
-    const clock = new Clock(Time.zero, false, time);
+    const clock = new Clock(false, time);
 
     clock.start();
     time.advance(100);
@@ -56,7 +56,7 @@ describe('Clock time source', () => {
 
   it('zeroes on reset and starts a fresh span on restart', () => {
     const time = createFakeTime();
-    const clock = new Clock(Time.zero, false, time);
+    const clock = new Clock(false, time);
 
     clock.start();
     time.advance(80);
@@ -74,7 +74,7 @@ describe('Clock time source', () => {
   it('never reads the global clock once a source was supplied', () => {
     const time = createFakeTime();
     const globalNow = vi.spyOn(performance, 'now');
-    const clock = new Clock(Time.zero, true, time);
+    const clock = new Clock(true, time);
 
     time.advance(10);
     void clock.elapsedMilliseconds;
@@ -99,7 +99,7 @@ describe('Clock time source', () => {
 
   it('passes a source through Timer to the clock underneath', () => {
     const time = createFakeTime();
-    const timer = new Timer(new Time(50), true, time);
+    const timer = new Timer(Time.toSeconds(Time.milliseconds(50)), true, time);
 
     time.advance(49);
     expect(timer.expired).toBe(false);

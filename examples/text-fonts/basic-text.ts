@@ -1,7 +1,7 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Text, Time } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Text } from '@codexo/exojs';
 
 class BasicTextScene extends Scene {
-  private time!: Time;
+  private elapsed = 0;
   private text!: Text;
 
   override async load(): Promise<void> {
@@ -9,8 +9,6 @@ class BasicTextScene extends Scene {
     await this.loader.load(Asset.type('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
 
     const { width, height } = app;
-
-    this.time = new Time();
 
     this.text = new Text('Hello World!', {
       align: 'left',
@@ -25,9 +23,10 @@ class BasicTextScene extends Scene {
     this.text.setAnchor(0.5, 0.5);
   }
 
-  override update(delta: Time): void {
-    this.text.text = `Hello World! ${this.time.addTime(delta).seconds | 0}`;
-    this.text.rotate(delta.seconds * 36);
+  override update(delta: Seconds): void {
+    this.elapsed += delta;
+    this.text.text = `Hello World! ${this.elapsed | 0}`;
+    this.text.rotate(delta * 36);
   }
 
   override draw(context: RenderingContext): void {

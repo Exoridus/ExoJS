@@ -2187,7 +2187,7 @@
         },
         {
           "name": "update",
-          "signature": "update(delta: Time): this",
+          "signature": "update(delta: Seconds): this",
           "signatureTokens": [
             {
               "text": "update",
@@ -2206,7 +2206,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Seconds",
               "kind": "type"
             },
             {
@@ -2225,7 +2225,7 @@
           "params": [
             {
               "name": "delta",
-              "type": "Time",
+              "type": "Seconds",
               "optional": false
             }
           ],

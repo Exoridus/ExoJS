@@ -60,7 +60,7 @@ class HudScene extends Scene {
     this.ui.addChild(panel);
   }
   update(delta) {
-    this.angle += delta.seconds * 60;
+    this.angle += delta * 60;
     this.spinner.setRotation(this.angle);
   }
   draw(context) {

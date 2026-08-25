@@ -4,6 +4,7 @@ import { AudioManager } from '#audio/AudioManager';
 import { NoopVoice } from '#audio/NoopVoice';
 import { Sound } from '#audio/Sound';
 import { logger, LogSeverity } from '#core/logging';
+import { Time } from '#core/units';
 
 const makeBuffer = (duration = 2): AudioBuffer => ({ duration }) as AudioBuffer;
 
@@ -124,7 +125,7 @@ describe('playback while the AudioContext is locked', () => {
 
     // Unlocked: the frame tick re-arms the one-shot.
     setContextState('running');
-    manager.preUpdate({ seconds: 0.016 } as never);
+    manager.preUpdate(Time.seconds(0.016));
 
     // ...and suspended again (an iOS audio-session interruption, a bfcache restore).
     setContextState('suspended');

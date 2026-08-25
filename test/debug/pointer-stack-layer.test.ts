@@ -4,6 +4,7 @@
  * PointerStackLayer tests (0.7.5).
  */
 import { Signal } from '#core/Signal';
+import { Time } from '#core/units';
 import { PointerStackLayer } from '#debug/PointerStackLayer';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -141,7 +142,7 @@ describe('PointerStackLayer', () => {
   test('update() does not throw when no pointer', () => {
     const app = makeApp({ pointerPos: null });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     expect(() => layer.update(fakeTime)).not.toThrow();
   });
@@ -149,7 +150,7 @@ describe('PointerStackLayer', () => {
   test('render() does not throw when root is null', () => {
     const app = makeApp({ root: null });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
     const backend = makeBackend();
 
     expect(() => {
@@ -168,7 +169,7 @@ describe('PointerStackLayer', () => {
 
     const app = makeApp({ root, pointerPos: { x: 100, y: 100 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
     const backend = app.backend;
 
     layer.update(fakeTime);
@@ -188,7 +189,7 @@ describe('PointerStackLayer', () => {
     const root = makeNode({ containsResult: false, children: [nodeA, nodeB, nodeC] });
     const app = makeApp({ root, pointerPos: { x: 100, y: 100 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
     const backend = app.backend;
 
     // Run update to populate lines.
@@ -213,7 +214,7 @@ describe('PointerStackLayer', () => {
     const root = makeNode({ containsResult: false, children: nodes });
     const app = makeApp({ root, pointerPos: { x: 50, y: 50 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
     const backend = app.backend;
 
     // Should not throw even with 15 matching nodes.
@@ -227,7 +228,7 @@ describe('PointerStackLayer', () => {
     const root = makeNode({ containsResult: false });
     const app = makeApp({ root, pointerPos: null });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
     const backend = app.backend;
 
     expect(() => {
@@ -247,7 +248,7 @@ describe('PointerStackLayer', () => {
     const root = makeNode({ containsResult: false, children: [invisibleNode, visibleNode] });
     const app = makeApp({ root, pointerPos: { x: 10, y: 10 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
     const backend = app.backend;
 
     layer.update(fakeTime);
@@ -263,7 +264,7 @@ describe('PointerStackLayer', () => {
   test('update() called twice reuses the already-built panel', () => {
     const app = makeApp({ pointerPos: { x: 10, y: 10 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     layer.update(fakeTime);
     expect(() => layer.update(fakeTime)).not.toThrow();
@@ -274,7 +275,7 @@ describe('PointerStackLayer', () => {
     const root = makeNode({ containsResult: false, children: [interactiveNode] });
     const app = makeApp({ root, pointerPos: { x: 5, y: 5 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     layer.update(fakeTime);
 
@@ -289,7 +290,7 @@ describe('PointerStackLayer', () => {
     const leaf = { visible: true, zIndex: 0, interactive: false, contains: vi.fn(() => true), constructor: { name: 'Leaf' } };
     const app = makeApp({ root: leaf as unknown as FakeNode, pointerPos: { x: 1, y: 1 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     expect(() => layer.update(fakeTime)).not.toThrow();
   });
@@ -304,7 +305,7 @@ describe('PointerStackLayer', () => {
   test('destroy() cleans up without throwing', () => {
     const app = makeApp({ pointerPos: { x: 10, y: 10 } });
     const layer = new PointerStackLayer(app);
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
     const backend = app.backend;
 
     // Trigger internal build.

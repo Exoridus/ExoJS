@@ -1,7 +1,7 @@
 import { logger, LogSeverity } from '#core/logging';
 import type { System } from '#core/System';
 import { SystemRegistry } from '#core/SystemRegistry';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 
 // Direct SystemRegistry tests - order/before/after ordering in isolation,
 // without going through Scene/Application wiring (see scene-systems.test.ts
@@ -16,7 +16,7 @@ const makeSystem = (log: string[], name: string, order?: number): System => ({
 
 const tick = (registry: SystemRegistry): void => {
   registry._beginFrame();
-  registry._update(new Time(16));
+  registry._update(Time.toSeconds(Time.milliseconds(16)));
   registry._endFrame();
 };
 

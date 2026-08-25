@@ -5,7 +5,7 @@
  */
 
 import type { Application } from '#core/Application';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 import { InputManager } from '#input/InputManager';
 import { keyboardChannelFromCode } from '#input/keyboardCodes';
 import { Keyboard } from '#input/types';
@@ -186,7 +186,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
     press({ code: 'MediaPlayPause' });
     press({ code: '', key: 'Unidentified', keyCode: 229 });
     release({ code: 'MediaPlayPause' });
-    im.preUpdate(Time.zero);
+    im.preUpdate(Time.seconds(0));
 
     expect(onKeyDown).not.toHaveBeenCalled();
     expect(onKeyUp).not.toHaveBeenCalled();
@@ -200,7 +200,7 @@ describe('InputManager — layout-independent keyboard channels', () => {
 
     im.onKeyDown.add(onKeyDown);
     press({ code: 'ArrowLeft', key: 'ArrowLeft', keyCode: 37 });
-    im.preUpdate(Time.zero);
+    im.preUpdate(Time.seconds(0));
 
     expect(onKeyDown).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledWith(Keyboard.Left);
@@ -250,7 +250,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
 
     im.onKeyDown.add(onKeyDown);
     press({ code: 'AltLeft', key: 'Alt', keyCode: 18 });
-    im.preUpdate(Time.zero);
+    im.preUpdate(Time.seconds(0));
 
     expect(onKeyDown).toHaveBeenCalledTimes(1);
     expect(onKeyDown).toHaveBeenCalledWith(Keyboard.AltLeft);
@@ -265,7 +265,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
     im.onStart(Keyboard.Control, onStart);
 
     press({ code: 'ControlRight', key: 'Control', keyCode: 17 });
-    im.preUpdate(Time.zero);
+    im.preUpdate(Time.seconds(0));
 
     expect(onStart).toHaveBeenCalledTimes(1);
 
@@ -279,7 +279,7 @@ describe('InputManager — modifier side and aggregate channels', () => {
     im.onStart(Keyboard.ControlLeft, onStart);
 
     press({ code: 'ControlRight', key: 'Control', keyCode: 17 });
-    im.preUpdate(Time.zero);
+    im.preUpdate(Time.seconds(0));
 
     expect(onStart).not.toHaveBeenCalled();
 

@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
 
 class CameraBasicScene extends Scene {
   private bunny!: Sprite;
@@ -39,9 +39,9 @@ class CameraBasicScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
-    app.rendering.view.rotation += delta.seconds * 15;
+    app.rendering.view.rotation += delta * 15;
   }
 
   override draw(context: RenderingContext): void {

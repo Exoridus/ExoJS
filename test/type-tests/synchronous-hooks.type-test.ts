@@ -12,7 +12,7 @@
 // once at its default strictness and once with `--strictNullChecks false`
 // passed on the command line (see the script in package.json).
 
-import { type RenderingContext, Scene, type Synchronous, type System, type Time } from '@codexo/exojs';
+import { type RenderingContext, Scene, type Seconds, type Synchronous, type System } from '@codexo/exojs';
 
 // ── Scene: synchronous overrides are accepted, exactly as before ────────────
 
@@ -21,11 +21,11 @@ class SyncScene extends Scene {
     // noop
   }
 
-  public override fixedUpdate(_step: Time): void {
+  public override fixedUpdate(_step: Seconds): void {
     // noop
   }
 
-  public override update(_delta: Time): void {
+  public override update(_delta: Seconds): void {
     // noop
   }
 
@@ -37,7 +37,7 @@ void SyncScene;
 
 // An unannotated override infers `void` and is accepted too.
 class InferredSyncScene extends Scene {
-  public override update(_delta: Time) {
+  public override update(_delta: Seconds) {
     // noop
   }
 }
@@ -45,7 +45,7 @@ void InferredSyncScene;
 
 // The hook return type is nameable, for code that wants to be explicit.
 class ExplicitSyncScene extends Scene {
-  public override update(_delta: Time): Synchronous {
+  public override update(_delta: Seconds): Synchronous {
     // noop
   }
 }
@@ -55,7 +55,7 @@ void ExplicitSyncScene;
 // convention (Application, SceneDirector, AnimatedSprite, ParticleSystem, ...)
 // must keep compiling, so a non-thenable return stays legal.
 class FluentScene extends Scene {
-  public override update(_delta: Time): this {
+  public override update(_delta: Seconds): this {
     return this;
   }
 }
@@ -73,7 +73,7 @@ void AsyncInitScene;
 
 class AsyncFixedUpdateScene extends Scene {
   // @ts-expect-error - fixedUpdate() must be synchronous.
-  public override async fixedUpdate(_step: Time): Promise<void> {
+  public override async fixedUpdate(_step: Seconds): Promise<void> {
     await Promise.resolve();
   }
 }
@@ -81,7 +81,7 @@ void AsyncFixedUpdateScene;
 
 class AsyncUpdateScene extends Scene {
   // @ts-expect-error - update() must be synchronous.
-  public override async update(_delta: Time): Promise<void> {
+  public override async update(_delta: Seconds): Promise<void> {
     await Promise.resolve();
   }
 }
@@ -99,7 +99,7 @@ void AsyncDrawScene;
 // mistake is almost always written without the explicit `Promise<void>`.
 class InferredAsyncUpdateScene extends Scene {
   // @ts-expect-error - update() must be synchronous.
-  public override async update(_delta: Time) {
+  public override async update(_delta: Seconds) {
     await Promise.resolve();
   }
 }
@@ -108,7 +108,7 @@ void InferredAsyncUpdateScene;
 // Returning a Promise without `async` is the same violation.
 class ThenableUpdateScene extends Scene {
   // @ts-expect-error - update() must not return a Promise.
-  public override update(_delta: Time): Promise<void> {
+  public override update(_delta: Seconds): Promise<void> {
     return Promise.resolve();
   }
 }
@@ -124,7 +124,7 @@ class CustomThenable {
 
 class CustomThenableScene extends Scene {
   // @ts-expect-error - update() must not return a thenable of any kind.
-  public override update(_delta: Time): CustomThenable {
+  public override update(_delta: Seconds): CustomThenable {
     return new CustomThenable();
   }
 }
@@ -164,7 +164,7 @@ const asyncDrawSystem: System = {
 void asyncDrawSystem;
 
 class AsyncSystemClass {
-  public async update(_delta: Time): Promise<void> {
+  public async update(_delta: Seconds): Promise<void> {
     await Promise.resolve();
   }
 }

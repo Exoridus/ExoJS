@@ -11,7 +11,7 @@ import {
   SystemOrder,
   Texture,
   TextureRegion,
-  type Time,
+  type Seconds,
   Vector,
 } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
@@ -163,7 +163,7 @@ class TiledMapPhysicsActorScene extends Scene {
     this.debug = new PhysicsDebugDraw(app, this.world, { drawShapes: true, drawCenters: true });
   }
 
-  override update(_delta: Time): void {
+  override update(_delta: Seconds): void {
     const app = this.app;
 
     const { width, height } = app;

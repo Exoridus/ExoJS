@@ -8,7 +8,7 @@ import {
   Scene,
   Sprite,
   Texture,
-  type Time,
+  type Seconds,
   Video,
 } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
@@ -107,15 +107,15 @@ class VideoDrawableScene extends Scene {
     }
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
-    this.elapsed += delta.seconds;
+    this.elapsed += delta;
 
     const { width, height } = app;
 
     // Drift the composited sprite across the video so the overlay is obvious.
     this.overlay.setPosition(width / 2 + Math.sin(this.elapsed) * (width * 0.3), height / 2 + Math.cos(this.elapsed * 0.7) * (height * 0.25));
-    this.overlay.rotate(delta.seconds * 60);
+    this.overlay.rotate(delta * 60);
   }
 
   override draw(context: RenderingContext): void {

@@ -1,4 +1,15 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Text, type Time } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  Text,
+  type Seconds,
+} from '@codexo/exojs';
 
 const CANVAS_WIDTH = 1280;
 const CANVAS_HEIGHT = 720;
@@ -143,10 +154,10 @@ class PlayScene extends Scene {
     this.orbs.push({ gfx, vx: ((tx - ox) / dist) * speed, vy: ((ty - oy) / dist) * speed, danger });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
-    this.elapsed += delta.seconds;
-    this.spawnTimer += delta.seconds;
+    this.elapsed += delta;
+    this.spawnTimer += delta;
 
     if (this.spawnTimer >= SPAWN_INTERVAL) {
       this.spawnTimer -= SPAWN_INTERVAL;
@@ -155,8 +166,8 @@ class PlayScene extends Scene {
 
     const mag = Math.hypot(this.dx, this.dy) || 1;
     if (this.dx !== 0 || this.dy !== 0) {
-      this.px += (this.dx / mag) * PLAYER_SPEED * delta.seconds;
-      this.py += (this.dy / mag) * PLAYER_SPEED * delta.seconds;
+      this.px += (this.dx / mag) * PLAYER_SPEED * delta;
+      this.py += (this.dy / mag) * PLAYER_SPEED * delta;
     }
     this.px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this.px));
     this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));
@@ -167,7 +178,7 @@ class PlayScene extends Scene {
     const survived: OrbData[] = [];
 
     for (const orb of this.orbs) {
-      orb.gfx.move(orb.vx * delta.seconds, orb.vy * delta.seconds);
+      orb.gfx.move(orb.vx * delta, orb.vy * delta);
 
       if (gameEnded) {
         this.world.removeChild(orb.gfx);

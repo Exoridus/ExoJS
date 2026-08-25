@@ -23,14 +23,14 @@ class SpriteBasicsScene extends Scene {
   }
   update(delta) {
     const app = this.app;
-    this.elapsed += delta.seconds;
+    this.elapsed += delta;
     const { width, height } = app;
     // Position: a gentle figure-eight drift around the canvas centre.
     const driftX = Math.sin(this.elapsed * 0.8) * 90;
     const driftY = Math.sin(this.elapsed * 1.6) * 50;
     this.ship.setPosition(width / 2 + driftX, height / 2 + driftY);
     // Rotation: a steady spin (degrees per second).
-    this.ship.rotate(delta.seconds * 90);
+    this.ship.rotate(delta * 90);
     // Scale: a slow breathing pulse between 2.4x and 3.6x.
     this.ship.setScale(3 + Math.sin(this.elapsed * 1.2) * 0.6);
     // Alpha: fade the tint's alpha channel between 0.2 and 1.0 and re-apply.

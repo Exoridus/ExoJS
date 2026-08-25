@@ -109,7 +109,7 @@ class ReverbAndDelayScene extends Scene {
     this.hud.setStatus('Click anywhere to trigger the impact');
   }
   update(delta) {
-    this.flash = Math.max(0, this.flash - delta.seconds * 2.2);
+    this.flash = Math.max(0, this.flash - delta * 2.2);
   }
   draw(context) {
     const app = this.app;

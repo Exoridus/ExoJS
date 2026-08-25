@@ -154,7 +154,7 @@ sprite.filters = [waveFilter];
 
 // Update uniforms per frame
 update(delta) {
-    this._time += delta.seconds;
+    this._time += delta;
     waveFilter.setUniform('uTime', this._time);
 }
 ```

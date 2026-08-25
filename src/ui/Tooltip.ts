@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import type { Time } from '#core/Time';
+import type { Seconds } from '#core/units';
 import type { InteractionEvent } from '#input/InteractionEvent';
 import { Container } from '#rendering/Container';
 import { Graphics } from '#rendering/primitives/Graphics';
@@ -75,12 +75,12 @@ export class Tooltip {
    * tooltip about to appear exactly like it freezes everything else, instead
    * of the delay quietly finishing in the background.
    */
-  private readonly _onFrame = (time: Time): void => {
+  private readonly _onFrame = (time: Seconds): void => {
     if (this._scheduledApp?.scenes.currentScene?.paused === true) {
       return;
     }
 
-    this._elapsedSeconds += time.seconds;
+    this._elapsedSeconds += time;
 
     if (this._elapsedSeconds >= this._delaySeconds) {
       const x = this._pendingX;

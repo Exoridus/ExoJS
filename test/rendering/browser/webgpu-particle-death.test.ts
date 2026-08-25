@@ -18,7 +18,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import { Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 import { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
@@ -74,7 +74,7 @@ const createTexture = (size = 8): Texture => {
   return new Texture(src);
 };
 
-const tick = (seconds: number): Time => Time.zero.clone().set(seconds * 1000);
+const tick = (value: number): Seconds => Time.seconds(value);
 
 /**
  * Runs frames until `settled` reports true, or gives up after `frames`.

@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import type { Time } from '#core/Time';
+import type { Seconds } from '#core/units';
 import { Container } from '#rendering/Container';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
@@ -91,7 +91,7 @@ export class PerformanceLayer extends DebugLayer {
    * initializes the panel scene graph on first call to avoid touching the
    * glyph atlas until the layer is actually shown.
    */
-  public override update(delta: Time): void {
+  public override update(delta: Seconds): void {
     // Lazily build the scene graph on first update so that Text (which
     // touches the glyph atlas immediately) is only constructed when the
     // layer is first made visible - not at DebugOverlay construction time.
@@ -100,7 +100,7 @@ export class PerformanceLayer extends DebugLayer {
     }
 
     // --- FPS rolling average ---
-    const frameMs = delta.milliseconds;
+    const frameMs = delta * 1000;
 
     this._fpsSamples[this._fpsSampleIndex] = frameMs;
     this._fpsSampleIndex = (this._fpsSampleIndex + 1) % fpsSampleCount;

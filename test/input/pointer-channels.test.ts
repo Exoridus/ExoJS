@@ -4,7 +4,7 @@
  */
 
 import type { Application } from '#core/Application';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 import { InputManager } from '#input/InputManager';
 import { Pointer, PointerState } from '#input/Pointer';
 import { ChannelSize, PointerButton } from '#input/types';
@@ -384,13 +384,13 @@ describe('Gesture — pinch', () => {
 describe('Gesture — long press', () => {
   /** Feed `milliseconds` of engine time through the manager, in 16 ms frames. */
   const advanceFrames = (im: InputManager, milliseconds: number): void => {
-    const frame = new Time(16);
     let remaining = milliseconds;
 
     while (remaining > 0) {
-      frame.milliseconds = Math.min(16, remaining);
-      im.preUpdate(frame);
-      remaining -= frame.milliseconds;
+      const stepMs = Math.min(16, remaining);
+
+      im.preUpdate(Time.toSeconds(Time.milliseconds(stepMs)));
+      remaining -= stepMs;
     }
   };
 
@@ -409,7 +409,7 @@ describe('Gesture — long press', () => {
 
     // Frames without a delta advance the hold by nothing at all - the hold is
     // measured in engine time, so a frame boundary on its own cannot mature it.
-    im.preUpdate(Time.zero);
+    im.preUpdate(Time.seconds(0));
 
     expect(longPressSpy).not.toHaveBeenCalled();
 

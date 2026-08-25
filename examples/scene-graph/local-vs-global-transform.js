@@ -28,7 +28,7 @@ class LocalVsGlobalTransformScene extends Scene {
     this.globalLabel.setPosition((width * 3) / 4 - 50, height / 2 - 220);
   }
   update(delta) {
-    this.parent.rotate(delta.seconds * 60);
+    this.parent.rotate(delta * 60);
   }
   draw(context) {
     context.render(this.parent);

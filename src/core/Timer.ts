@@ -1,53 +1,57 @@
 import type { TimeSource } from '#platform/PlatformAdapter';
 
 import { Clock } from './Clock';
-import { Time } from './Time';
+import { type Milliseconds, milliseconds, type Seconds, seconds } from './units';
 
 /**
  * {@link Clock} variant with a fixed limit. Inherits start/stop/reset/restart
- * semantics; adds {@link Timer.expired} (true once `elapsedTime >= limit`)
- * and remaining-time accessors. Useful for cooldowns, delays, and any timed
- * gating logic where you want to ask "is the duration up?" each frame.
+ * semantics; adds {@link Timer.expired} (true once the elapsed time reaches the
+ * limit) and remaining-time accessors. Useful for cooldowns, delays, and any
+ * timed gating logic where you want to ask "is the duration up?" each frame.
  */
 export class Timer extends Clock {
-  private readonly _limit: Time;
+  private _limit: Seconds;
 
-  public constructor(limit: Time, autoStart = false, timeSource?: TimeSource) {
-    super(Time.zero, false, timeSource);
+  public constructor(limit: Seconds, autoStart = false, timeSource?: TimeSource) {
+    super(false, timeSource);
 
-    this._limit = limit.clone();
+    this._limit = limit;
 
     if (autoStart) {
       this.restart();
     }
   }
 
-  public get limit(): Time {
+  public get limit(): Seconds {
     return this._limit;
   }
 
-  public set limit(limit: Time) {
-    this._limit.copy(limit);
+  public set limit(limit: Seconds) {
+    this._limit = limit;
   }
 
   /** `true` once the elapsed time has reached or exceeded the configured limit. */
   public get expired(): boolean {
-    return this.elapsedMilliseconds >= this._limit.milliseconds;
+    return this.elapsedSeconds >= this._limit;
   }
 
-  public get remainingMilliseconds(): number {
-    return Math.max(0, this._limit.milliseconds - this.elapsedMilliseconds);
+  /** Time left until {@link Timer.expired}, clamped at zero. */
+  public get remainingSeconds(): Seconds {
+    return seconds(Math.max(0, this._limit - this.elapsedSeconds));
   }
 
-  public get remainingSeconds(): number {
-    return this.remainingMilliseconds / Time.seconds;
+  /** {@link Timer.remainingSeconds} in milliseconds. */
+  public get remainingMilliseconds(): Milliseconds {
+    return milliseconds(this.remainingSeconds * 1000);
   }
 
+  /** {@link Timer.remainingSeconds} in minutes. */
   public get remainingMinutes(): number {
-    return this.remainingMilliseconds / Time.minutes;
+    return this.remainingSeconds / 60;
   }
 
+  /** {@link Timer.remainingSeconds} in hours. */
   public get remainingHours(): number {
-    return this.remainingMilliseconds / Time.hours;
+    return this.remainingSeconds / 3600;
   }
 }

@@ -37,7 +37,7 @@ class CustomRenderPassScene extends Scene {
       .addPass(new RenderNodePass(this.front));
   }
   update(delta) {
-    this.angle += delta.seconds * 2.2;
+    this.angle += delta * 2.2;
   }
   draw(context) {
     this.pipeline.execute(context);

@@ -22,7 +22,7 @@ square.setPosition(app.width / 2, app.height / 2);
 let angle = 0;
 app.systems.add({
   update(delta) {
-    angle += delta.seconds;
+    angle += delta;
     square.rotation = angle * 40;
   },
   draw(context) {

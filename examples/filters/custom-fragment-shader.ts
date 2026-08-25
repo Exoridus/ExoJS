@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite, type Seconds } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const HUE_RAMP = assets.technical.color.hueRamp;
@@ -45,8 +45,8 @@ class CustomFragmentShaderScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
-    this.time += delta.seconds;
+  override update(delta: Seconds): void {
+    this.time += delta;
     this.filter.setUniform('uTime', this.time);
   }
 

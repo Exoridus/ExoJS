@@ -96,8 +96,8 @@ class KeyRebindingScene extends Scene {
       this.jumpVelocity = -560;
     }
     // Simple gravity so the rebound jump is visible.
-    this.jumpVelocity = Math.min(900, this.jumpVelocity + 1800 * delta.seconds);
-    this.heroY += this.jumpVelocity * delta.seconds;
+    this.jumpVelocity = Math.min(900, this.jumpVelocity + 1800 * delta);
+    this.heroY += this.jumpVelocity * delta;
     if (this.heroY > this.groundY) {
       this.heroY = this.groundY;
       this.jumpVelocity = 0;

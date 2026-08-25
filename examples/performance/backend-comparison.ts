@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 const options = {
@@ -42,11 +42,11 @@ class DemoScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
     for (const item of this.sprites) {
-      item.sprite.move(item.vx * delta.seconds, item.vy * delta.seconds);
+      item.sprite.move(item.vx * delta, item.vy * delta);
       if (item.sprite.position.x < 0 || item.sprite.position.x > width) item.vx *= -1;
       if (item.sprite.position.y < 0 || item.sprite.position.y > height) item.vy *= -1;
     }

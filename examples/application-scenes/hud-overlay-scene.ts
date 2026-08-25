@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Label, ProgressBar, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Label, ProgressBar, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 
 /**
  * A screen-fixed HUD on `scene.ui` sits above the world automatically - no
@@ -25,9 +25,9 @@ class GameScene extends Scene {
     this.ui.addChild(this.health);
   }
 
-  override update(delta: Time): void {
-    this.angle += delta.seconds * 90;
-    this.time += delta.seconds;
+  override update(delta: Seconds): void {
+    this.angle += delta * 90;
+    this.time += delta;
     this.health.value = (Math.sin(this.time) + 1) / 2;
   }
 

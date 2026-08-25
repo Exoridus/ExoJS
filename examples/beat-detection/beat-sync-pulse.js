@@ -65,7 +65,7 @@ class BeatSyncPulseScene extends Scene {
     app.audio.play(this.music, { loop: true, volume: 0.8 });
   }
   update(delta) {
-    this.pulse = Math.max(0, this.pulse - delta.seconds * 1.2);
+    this.pulse = Math.max(0, this.pulse - delta * 1.2);
     this.sprite.setScale(1 + this.pulse);
   }
   draw(context) {

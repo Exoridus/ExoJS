@@ -1,5 +1,5 @@
 import { AnimationManager } from '#animation/AnimationManager';
-import { Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 import { Rectangle } from '#math/Rectangle';
 import { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 
@@ -8,7 +8,7 @@ const createFrames = (): Rectangle[] => [new Rectangle(0, 0, 16, 16), new Rectan
 /** A three-frame clip at 10fps - one frame advance per 100ms. */
 const createSprite = (): AnimatedSprite => new AnimatedSprite(null, { walk: { frames: createFrames(), fps: 10 } });
 
-const frame = (milliseconds: number): Time => new Time(milliseconds);
+const frame = (milliseconds: number): Seconds => Time.toSeconds(Time.milliseconds(milliseconds));
 
 describe('AnimationManager', () => {
   test('advances registered sprites by the frame delta converted to seconds', () => {

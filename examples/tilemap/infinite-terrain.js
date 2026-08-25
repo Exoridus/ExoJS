@@ -162,10 +162,10 @@ class InfiniteTerrainScene extends Scene {
   update(delta) {
     if (this.moveX !== 0 || this.moveY !== 0) {
       const length = Math.hypot(this.moveX, this.moveY) || 1;
-      this.explorer.move((this.moveX / length) * MOVE_SPEED * delta.seconds, (this.moveY / length) * MOVE_SPEED * delta.seconds);
+      this.explorer.move((this.moveX / length) * MOVE_SPEED * delta, (this.moveY / length) * MOVE_SPEED * delta);
     }
     this.streamer.update();
-    this.hudTimer += delta.seconds;
+    this.hudTimer += delta;
     if (this.hudTimer >= 0.25) {
       this.hudTimer = 0;
       const tx = Math.floor(this.explorer.x / TILE);

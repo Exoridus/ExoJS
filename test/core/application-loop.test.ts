@@ -6,7 +6,7 @@
  *   - internal MAX_DELTA_MS clamp applied to simulation delta
  */
 import { Application, ApplicationState } from '#core/Application';
-import { type Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 
 // ---------------------------------------------------------------------------
 // Backend stubs - keep WebGL2 / WebGPU out of jsdom.
@@ -237,8 +237,8 @@ describe('Application.update() — loop timing', () => {
       app.update();
 
       // Should receive 16ms (≈0.016s), not a huge accumulated spike
-      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
-      expect(receivedDelta.seconds).toBeCloseTo(0.016, 4);
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Seconds;
+      expect(receivedDelta).toBeCloseTo(0.016, 4);
     });
   });
 
@@ -255,10 +255,10 @@ describe('Application.update() — loop timing', () => {
       app.update();
 
       expect(tweensUpdateSpy).toHaveBeenCalledTimes(1);
-      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Seconds;
 
       // MAX_DELTA_MS = 100 → 0.1 seconds
-      expect(receivedDelta.seconds).toBeLessThanOrEqual(0.1);
+      expect(receivedDelta).toBeLessThanOrEqual(0.1);
     });
 
     test('a very large raw delta is clamped before sceneDirector.update receives it', () => {
@@ -269,9 +269,9 @@ describe('Application.update() — loop timing', () => {
       app.update();
 
       expect(sceneUpdateSpy).toHaveBeenCalledTimes(1);
-      const receivedDelta = sceneUpdateSpy.mock.calls[0][0] as Time;
+      const receivedDelta = sceneUpdateSpy.mock.calls[0][0] as Seconds;
 
-      expect(receivedDelta.milliseconds).toBeLessThanOrEqual(100);
+      expect(receivedDelta * 1000).toBeLessThanOrEqual(100);
     });
 
     test('a normal frame delta (16ms) passes through unchanged', () => {
@@ -282,9 +282,9 @@ describe('Application.update() — loop timing', () => {
       app.update();
 
       expect(tweensUpdateSpy).toHaveBeenCalledTimes(1);
-      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Seconds;
 
-      expect(receivedDelta.seconds).toBeCloseTo(0.016, 4);
+      expect(receivedDelta).toBeCloseTo(0.016, 4);
     });
 
     test('a delta exactly at the cap boundary (100ms) passes through unchanged', () => {
@@ -294,9 +294,9 @@ describe('Application.update() — loop timing', () => {
 
       app.update();
 
-      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Seconds;
 
-      expect(receivedDelta.seconds).toBeCloseTo(0.1, 4);
+      expect(receivedDelta).toBeCloseTo(0.1, 4);
     });
 
     test('a delta one millisecond above the cap is clamped to exactly the cap', () => {
@@ -306,10 +306,10 @@ describe('Application.update() — loop timing', () => {
 
       app.update();
 
-      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Seconds;
 
       // Must be <= 0.1, not 0.101
-      expect(receivedDelta.seconds).toBeLessThanOrEqual(0.1);
+      expect(receivedDelta).toBeLessThanOrEqual(0.1);
     });
 
     test('raw delta beyond cap is still recorded in backend.stats.rawFrameDeltaMs', () => {
@@ -327,10 +327,10 @@ describe('Application.update() — loop timing', () => {
 
       app.update();
 
-      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Time;
+      const receivedDelta = tweensUpdateSpy.mock.calls[0][0] as Seconds;
 
       // Simulation delta is clamped to 100ms = 0.1s
-      expect(receivedDelta.seconds).toBeLessThanOrEqual(0.1);
+      expect(receivedDelta).toBeLessThanOrEqual(0.1);
       // Raw stat records the actual 200ms
       expect(app.backend.stats.rawFrameDeltaMs).toBe(200);
     });
@@ -365,8 +365,8 @@ describe('Application.update() — loop timing', () => {
       const framePeriodMs = 16;
       const observedDeltas: number[] = [];
 
-      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
-        observedDeltas.push(delta.milliseconds);
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Seconds) => {
+        observedDeltas.push(delta * 1000);
       });
 
       // Charge the frame's own processing cost to the timeline from inside the
@@ -391,8 +391,8 @@ describe('Application.update() — loop timing', () => {
     test('the frame delta is the distance between two frame timestamps', () => {
       const observedDeltas: number[] = [];
 
-      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
-        observedDeltas.push(delta.milliseconds);
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Seconds) => {
+        observedDeltas.push(delta * 1000);
       });
 
       (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] = 0;
@@ -408,8 +408,8 @@ describe('Application.update() — loop timing', () => {
       const globalNow = vi.spyOn(performance, 'now');
 
       vi.spyOn(app.platform, 'now').mockReturnValue(25);
-      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
-        observedDeltas.push(delta.milliseconds);
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Seconds) => {
+        observedDeltas.push(delta * 1000);
       });
 
       (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] = 0;
@@ -430,8 +430,8 @@ describe('Application.update() — loop timing', () => {
 
         return 1;
       });
-      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Time) => {
-        observedDeltas.push(delta.milliseconds);
+      vi.spyOn(app.tweens, 'preUpdate').mockImplementation((delta: Seconds) => {
+        observedDeltas.push(delta * 1000);
       });
 
       (app as unknown as { _startFrameLoop: () => void })._startFrameLoop();
@@ -500,9 +500,9 @@ describe('Application.update() — loop timing', () => {
       app.update();
 
       expect(frameHandler).toHaveBeenCalledTimes(1);
-      const dispatchedDelta = frameHandler.mock.calls[0][0] as Time;
+      const dispatchedDelta = frameHandler.mock.calls[0][0] as Seconds;
 
-      expect(dispatchedDelta.milliseconds).toBeCloseTo(16, 4);
+      expect(dispatchedDelta * 1000).toBeCloseTo(16, 4);
     });
 
     test('the frame is cleared to clearColor, once, before the scene draws', () => {
@@ -607,16 +607,19 @@ describe('Application.update() — loop timing', () => {
       expect(fixedSpy).toHaveBeenCalledTimes(5);
     });
 
-    // Regression: the same Time instance is handed to every fixed step for
-    // the whole Application's lifetime (unlike frameDelta, which is
-    // re-set() every frame), so a mutation from user code used to corrupt
-    // the fixed step permanently, not just for the current frame.
-    test('the Time instance handed to onFixedFrame/scenes.fixedUpdate is frozen — mutating it throws instead of corrupting future fixed steps', () => {
+    // Regression: the fixed step used to be one shared `Time` instance handed
+    // to every step for the Application's whole lifetime, so a write from user
+    // code corrupted it permanently rather than for the current frame only. It
+    // is a number now - a handler receives a copy and has nothing to write to.
+    test('every route receives the same fixed-step value, and a handler cannot change it', () => {
       const fixedSpy = vi.spyOn(app.scenes, 'fixedUpdate');
-      let receivedViaOnFixedFrame: Time | undefined;
+      let receivedViaOnFixedFrame: Seconds | undefined;
 
       app.onFixedFrame.add(step => {
         receivedViaOnFixedFrame = step;
+        // Writing to the parameter cannot reach the engine's own value.
+        step = Time.seconds(999);
+        void step;
       });
 
       mockFrameElapsed(app, STEP_MS);
@@ -625,13 +628,14 @@ describe('Application.update() — loop timing', () => {
       const stepFromScenes = fixedSpy.mock.calls[0]?.[0];
 
       expect(stepFromScenes).toBeDefined();
-      expect(receivedViaOnFixedFrame).toBe(stepFromScenes); // same shared instance, both routes
-      expect(Object.isFrozen(stepFromScenes)).toBe(true);
-      expect(() => stepFromScenes!.set(999)).toThrow(TypeError);
-      expect(() => receivedViaOnFixedFrame!.add(1)).toThrow(TypeError);
+      expect(receivedViaOnFixedFrame).toBe(stepFromScenes);
+      expect(stepFromScenes! * 1000).toBeCloseTo(STEP_MS, 4);
 
-      // The value itself is provably unchanged by the attempted mutations.
-      expect(stepFromScenes!.milliseconds).toBeCloseTo(STEP_MS, 4);
+      // A second frame still reports the unchanged step.
+      mockFrameElapsed(app, STEP_MS);
+      app.update();
+
+      expect(receivedViaOnFixedFrame! * 1000).toBeCloseTo(STEP_MS, 4);
     });
   });
 });

@@ -34,7 +34,7 @@ import {
   UnregisteredSceneError,
 } from '#core/SceneTypes';
 import { Signal } from '#core/Signal';
-import { Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 import type { Pointer } from '#input/Pointer';
 import { Rectangle } from '#math/Rectangle';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
@@ -126,7 +126,7 @@ const createApplicationStub = (): ApplicationStub => {
 // Mirrors the per-frame call sequence Application.update() makes on
 // SceneDirector: logic update + transition update, draw + transition render.
 const tick = (manager: SceneDirector, app: ReturnType<typeof createApplicationStub>, milliseconds = 16): void => {
-  const time = new Time(milliseconds);
+  const time = Time.toSeconds(Time.milliseconds(milliseconds));
 
   manager.preUpdate(time);
   manager.update(time);
@@ -156,7 +156,7 @@ class FakeSession implements SceneTransitionSession {
   public updateCallCount = 0;
   public renderCallCount = 0;
 
-  public update(_delta: Time): void {
+  public update(_delta: Seconds): void {
     this.updateCallCount++;
   }
 
@@ -375,10 +375,10 @@ describe('SceneDirector', () => {
 
     await manager.change(TestScene);
 
-    manager.fixedUpdate(new Time(16));
+    manager.fixedUpdate(Time.toSeconds(Time.milliseconds(16)));
     expect(fixedUpdate).toHaveBeenCalledTimes(1);
 
-    manager.fixedUpdate(new Time(16));
+    manager.fixedUpdate(Time.toSeconds(Time.milliseconds(16)));
     expect(fixedUpdate).toHaveBeenCalledTimes(2);
   });
 
@@ -531,10 +531,10 @@ describe('SceneDirector', () => {
     await manager.change(TestScene);
     manager.currentScene?.systems.add({ fixedUpdate: fixedSystemUpdate });
 
-    manager.fixedUpdate(new Time(16));
+    manager.fixedUpdate(Time.toSeconds(Time.milliseconds(16)));
     expect(fixedSystemUpdate).toHaveBeenCalledTimes(1);
 
-    manager.fixedUpdate(new Time(16));
+    manager.fixedUpdate(Time.toSeconds(Time.milliseconds(16)));
     expect(fixedSystemUpdate).toHaveBeenCalledTimes(2);
   });
 
@@ -1650,7 +1650,7 @@ describe('SceneDirector — transition session driving', () => {
       public constructor(private readonly environment: SceneTransitionEnvironment) {
         this.environment.commit();
       }
-      public update(_delta: Time): void {
+      public update(_delta: Seconds): void {
         if (this.environment.committed) {
           this.done = true;
         }
@@ -2326,7 +2326,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
 
       public constructor(private readonly environment: SceneTransitionEnvironment) {}
 
-      public update(_delta: Time): void {
+      public update(_delta: Seconds): void {
         if (this.destroyed) {
           this.callsAfterDestroy.push('update');
         }

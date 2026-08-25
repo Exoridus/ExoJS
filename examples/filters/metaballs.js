@@ -40,7 +40,7 @@ class MetaballsScene extends Scene {
     const app = this.app;
     const { width, height } = app;
     for (const point of this.points) {
-      point.a += delta.seconds * (0.4 + point.r / 600);
+      point.a += delta * (0.4 + point.r / 600);
     }
     this.balls.clear();
     this.balls.fillColor = Color.white;

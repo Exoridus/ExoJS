@@ -93,7 +93,7 @@ class BlendmodesScene extends Scene {
     const offset = (Math.cos(this.ticker * 1.4) * 0.5 + 0.5) * (width * 0.22);
     this.left.setPosition(width / 2 - offset, height / 2);
     this.right.setPosition(width / 2 + offset, height / 2);
-    this.ticker += delta.seconds;
+    this.ticker += delta;
   }
   draw(context) {
     context.render(this.background);

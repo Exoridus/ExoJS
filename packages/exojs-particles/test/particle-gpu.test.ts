@@ -1,6 +1,6 @@
 /// <reference types="@webgpu/types" />
 
-import { Color, logger, Rectangle, Texture, Time } from '@codexo/exojs';
+import { Color, logger, Rectangle, type Seconds, Texture, Time } from '@codexo/exojs';
 import type { RenderPlanBuilder } from '@codexo/exojs/renderer-sdk';
 import { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
 import type { MockInstance } from 'vitest';
@@ -30,7 +30,7 @@ const makeTexture = (): Texture => {
   return new Texture(canvas);
 };
 
-const tick = (s: number): Time => Time.zero.clone().set(s * 1000);
+const tick = (s: number): Seconds => Time.seconds(s);
 
 interface MockComputePass {
   setPipeline: MockInstance;

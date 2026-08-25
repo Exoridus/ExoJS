@@ -53,7 +53,7 @@ import type { CanvasSizing, CanvasSizingContext, CanvasSizingHostMetrics, Canvas
 import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
-import { freezeTime, Time } from './Time';
+import { type Seconds, seconds } from './units';
 import { canvasSourceToDataUrl, isWebKitUserAgent } from './utils';
 
 /**
@@ -559,9 +559,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * to rebuild on. Read `app.canvas.width`/`height` for that resolution.
    */
   public readonly onResize = new Signal<[number, number, Application]>();
-  public readonly onFrame = new Signal<[Time]>();
+  public readonly onFrame = new Signal<[Seconds]>();
   /** Dispatched once per fixed-timestep step (zero or more times per frame), ahead of {@link onFrame}. */
-  public readonly onFixedFrame = new Signal<[Time]>();
+  public readonly onFixedFrame = new Signal<[Seconds]>();
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
   public readonly onVisibilityChange = new Signal<[visible: boolean]>();
   public readonly onBackendLost = new Signal();
@@ -614,20 +614,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    */
   private _lastFrameTimestamp = 0;
   private readonly _fixed: FixedTimestep;
-  // The fixed-step duration - a true constant for the Application's whole
-  // lifetime (set from `options.fixedTimeStep` in the constructor and never
-  // re-`set()` afterward, unlike `_frameDelta` below). It is handed to user
-  // code every fixed step via `systems._fixedUpdate`/`scenes.fixedUpdate`/
-  // `onFixedFrame.dispatch`, so - same bug class as the old `Time.temp` - a
-  // mutation from user code would corrupt every subsequent fixed step for
-  // the rest of the app's run, not just the current one. Frozen at
-  // construction (see `freezeTime`) so that throws instead.
-  private readonly _fixedTime: Time;
-  // Scratch instance for the per-frame variable-step delta - mutated in
-  // place every frame instead of allocating a Time. Owned by the frame loop
-  // (not exposed publicly, unlike the old `Time.temp`), since it hands out
-  // the exact object user code sees as `frameDelta`.
-  private readonly _frameDelta: Time = new Time();
+  private readonly _fixedSeconds: Seconds;
   private _frameAlpha = 0;
 
   private _state: ApplicationState = ApplicationState.Stopped;
@@ -763,9 +750,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // Every runtime clock reads the host through the adapter, so a platform
       // with a deterministic time source makes the whole frame loop
       // deterministic - there is no second, global clock behind it.
-      this._startupClock = new Clock(Time.zero, false, this.platform);
-      this._activeClock = new Clock(Time.zero, false, this.platform);
-      this._frameClock = new Clock(Time.zero, false, this.platform);
+      this._startupClock = new Clock(false, this.platform);
+      this._activeClock = new Clock(false, this.platform);
+      this._frameClock = new Clock(false, this.platform);
 
       // Only an adapter created here is ours to release - an injected one stays
       // the caller's on the failure path, exactly as in `destroy()`.
@@ -847,7 +834,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
 
       this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
-      this._fixedTime = freezeTime(new Time(fixedStepMs));
+      this._fixedSeconds = seconds(fixedStepMs / 1000);
 
       this._startupClock.start();
 
@@ -1031,16 +1018,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     return this._state;
   }
 
-  public get startupTime(): Time {
-    return this._startupClock.elapsedTime;
+  public get startupSeconds(): Seconds {
+    return this._startupClock.elapsedSeconds;
   }
 
-  public get activeTime(): Time {
-    return this._activeClock.elapsedTime;
+  public get activeSeconds(): Seconds {
+    return this._activeClock.elapsedSeconds;
   }
 
-  public get frameTime(): Time {
-    return this._frameClock.elapsedTime;
+  public get frameSeconds(): Seconds {
+    return this._frameClock.elapsedSeconds;
   }
 
   public get frameCount(): number {
@@ -1461,7 +1448,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         this._frameClock.restart();
 
         const clampedDeltaMs = Math.min(rawDeltaMs, maxDeltaMs);
-        const frameDelta = this._frameDelta.set(clampedDeltaMs);
+        const frameDelta = seconds(clampedDeltaMs / 1000);
         const frameStart = this.platform.now();
 
         if (__DEV__) Perf.mark(frameStartMark);
@@ -1481,9 +1468,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
         const fixedSteps = this._fixed.advance(clampedDeltaMs);
 
         for (let step = 0; step < fixedSteps; step++) {
-          this.systems._fixedUpdate(this._fixedTime);
-          this.scenes.fixedUpdate(this._fixedTime);
-          this.onFixedFrame.dispatch(this._fixedTime);
+          this.systems._fixedUpdate(this._fixedSeconds);
+          this.scenes.fixedUpdate(this._fixedSeconds);
+          this.onFixedFrame.dispatch(this._fixedSeconds);
         }
 
         this._frameAlpha = this._fixed.alpha;

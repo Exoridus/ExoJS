@@ -1,16 +1,16 @@
 {
   "title": "Clock",
-  "description": "High-precision clock that accumulates elapsed time while running. Reads the host's monotonic clock unless a TimeSource is supplied - pass an application's platform adapter to follow its time, or any object with a `now()` to drive the clock deterministically from a test. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared - copy it if you need to keep a snapshot). Use Timer for a clock with a fixed limit and `expired` flag.",
+  "description": "High-precision clock that accumulates elapsed time while running. Reads the host's monotonic clock unless a TimeSource is supplied - pass an application's platform adapter to follow its time, or any object with a `now()` to drive the clock deterministically from a test. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedSeconds. Use Timer for a clock with a fixed limit and `expired` flag.",
   "symbol": "Clock",
   "kind": "class",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 12,
+  "memberCount": 11,
   "counts": {
     "constructors": 1,
     "methods": 5,
-    "properties": 6,
+    "properties": 5,
     "events": 0
   },
   "sections": [
@@ -19,7 +19,7 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "High-precision clock that accumulates elapsed time while running. Reads the host's monotonic clock unless a TimeSource is supplied - pass an application's platform adapter to follow its time, or any object with a `now()` to drive the clock deterministically from a test. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedTime (the Time instance is shared - copy it if you need to keep a snapshot).",
+        "High-precision clock that accumulates elapsed time while running. Reads the host's monotonic clock unless a TimeSource is supplied - pass an application's platform adapter to follow its time, or any object with a `now()` to drive the clock deterministically from a test. Use Clock.start, Clock.stop, Clock.reset, and Clock.restart to control the running state; read elapsed time via Clock.elapsedSeconds.",
         "Use Timer for a clock with a fixed limit and `expired` flag."
       ],
       "importLine": "import { Clock } from '@codexo/exojs'",
@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(startTime: Time, autoStart: boolean, timeSource: TimeSource): Clock",
+          "signature": "new(autoStart: boolean, timeSource: TimeSource): Clock",
           "signatureTokens": [
             {
               "text": "new",
@@ -39,22 +39,6 @@
             },
             {
               "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "startTime",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
               "kind": "punctuation"
             },
             {
@@ -99,11 +83,6 @@
             }
           ],
           "params": [
-            {
-              "name": "startTime",
-              "type": "Time",
-              "optional": false
-            },
             {
               "name": "autoStart",
               "type": "boolean",
@@ -300,11 +279,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Clock.elapsedMilliseconds in hours."
         },
         {
           "name": "elapsedMilliseconds",
-          "signature": "elapsedMilliseconds: number",
+          "signature": "elapsedMilliseconds: Milliseconds",
           "signatureTokens": [
             {
               "text": "elapsedMilliseconds",
@@ -315,13 +294,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Milliseconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Total accumulated time since the last Clock.reset. While the clock is running the value advances on every read, folding in the interval since the previous one; while stopped it stays at the moment of stopping."
         },
         {
           "name": "elapsedMinutes",
@@ -342,11 +321,11 @@
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Clock.elapsedMilliseconds in minutes."
         },
         {
           "name": "elapsedSeconds",
-          "signature": "elapsedSeconds: number",
+          "signature": "elapsedSeconds: Seconds",
           "signatureTokens": [
             {
               "text": "elapsedSeconds",
@@ -357,34 +336,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "elapsedTime",
-          "signature": "elapsedTime: Time",
-          "signatureTokens": [
-            {
-              "text": "elapsedTime",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
+              "text": "Seconds",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Total accumulated time since the last Clock.reset. While the clock is running, the value advances on every read by folding in the delta since the previous read; while stopped, the value is fixed at the stop point. Returns the same Time instance - read the scalar fields if you need an unchanging snapshot."
+          "description": "Clock.elapsedMilliseconds in seconds."
         },
         {
           "name": "running",

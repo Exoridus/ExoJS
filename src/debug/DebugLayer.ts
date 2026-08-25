@@ -1,5 +1,5 @@
 import type { Application } from '#core/Application';
-import type { Time } from '#core/Time';
+import type { Seconds } from '#core/units';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
 /**
@@ -32,7 +32,7 @@ export abstract class DebugLayer {
   }
 
   /** Update internal state from this frame's data. Called only when visible. */
-  public abstract update(delta: Time): void;
+  public abstract update(delta: Seconds): void;
 
   /**
    * Render the layer's content using the backend. The DebugOverlay manages

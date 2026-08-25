@@ -251,18 +251,18 @@ Import the `Sweep` namespace from `@codexo/exojs` as shown in the movement examp
 ### Tunneling-safe movement
 
 ```ts
-import { Sprite, Sweep, type Time } from '@codexo/exojs';
+import { Sprite, Sweep, type Seconds } from '@codexo/exojs';
 
 declare const player: Sprite;
 declare const wall: Sprite;
 declare const velocityX: number;
 declare const velocityY: number;
-declare const frameTime: Time;
+declare const frameTime: Seconds;
 
 // In your update loop:
 const playerBounds = player.getBounds();
-const moveX = velocityX * frameTime.seconds;
-const moveY = velocityY * frameTime.seconds;
+const moveX = velocityX * frameTime;
+const moveY = velocityY * frameTime;
 const hit = Sweep.rectangle(playerBounds, moveX, moveY, wall.getBounds());
 
 if (hit !== null) {
@@ -272,8 +272,8 @@ if (hit !== null) {
     // Optionally slide along the surface by removing the normal component
     const remaining = 1 - hit.t;
     const dot = velocityX * hit.normalX + velocityY * hit.normalY;
-    const slideX = (velocityX - dot * hit.normalX) * remaining * frameTime.seconds;
-    const slideY = (velocityY - dot * hit.normalY) * remaining * frameTime.seconds;
+    const slideX = (velocityX - dot * hit.normalX) * remaining * frameTime;
+    const slideY = (velocityY - dot * hit.normalY) * remaining * frameTime;
     player.move(slideX, slideY);
 } else {
     // No hit — full move

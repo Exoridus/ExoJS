@@ -6,6 +6,7 @@
  */
 
 import { Signal } from '#core/Signal';
+import { Time } from '#core/units';
 import { DebugOverlay } from '#debug/DebugOverlay';
 import * as debugExports from '#debug/index';
 import { RenderPassInspectorLayer } from '#debug/RenderPassInspectorLayer';
@@ -85,7 +86,7 @@ const makeSceneDirector = () => ({
   scene: null as null | { root: object },
 });
 
-const makeOnFrame = () => new Signal<[import('#core/Time').Time]>();
+const makeOnFrame = () => new Signal<[import('#core/units').Seconds]>();
 const makeOnResize = () => new Signal<[number, number, unknown]>();
 
 /**
@@ -296,7 +297,7 @@ describe('DebugOverlay — render path', () => {
     const debug = new DebugOverlay(app);
 
     // visible defaults to false - dispatch a frame
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     app.onFrame.dispatch(fakeTime);
 
@@ -311,7 +312,7 @@ describe('DebugOverlay — render path', () => {
 
     debug.layers.performance.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     app.onFrame.dispatch(fakeTime);
 
@@ -326,7 +327,7 @@ describe('DebugOverlay — render path', () => {
 
     debug.layers.performance.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     app.onFrame.dispatch(fakeTime);
 
@@ -482,7 +483,7 @@ describe('DebugOverlay — render-pass inspector layer', () => {
 
     debug.layers.renderPassInspector.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     app.onFrame.dispatch(fakeTime);
 
@@ -520,7 +521,7 @@ describe('DebugOverlay — master visible switch', () => {
     debug.layers.performance.visible = true;
     debug.layers.boundingBoxes.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     app.onFrame.dispatch(fakeTime);
 
@@ -537,7 +538,7 @@ describe('DebugOverlay — master visible switch', () => {
     debug.visible = true;
     debug.layers.performance.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     app.onFrame.dispatch(fakeTime);
 
@@ -553,7 +554,7 @@ describe('DebugOverlay — master visible switch', () => {
     debug.layers.performance.visible = true;
     debug.visible = false;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     app.onFrame.dispatch(fakeTime);
     expect(app.backend.setView).not.toHaveBeenCalled();
@@ -574,7 +575,7 @@ describe('DebugOverlay — view-mode routing', () => {
     // Enable only a world-mode layer (boundingBoxes).
     debug.layers.boundingBoxes.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     app.onFrame.dispatch(fakeTime);
 
@@ -591,7 +592,7 @@ describe('DebugOverlay — view-mode routing', () => {
     // Enable only a screen-mode layer (performance).
     debug.layers.performance.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     app.onFrame.dispatch(fakeTime);
 
@@ -609,7 +610,7 @@ describe('DebugOverlay — view-mode routing', () => {
     debug.layers.boundingBoxes.visible = true;
     debug.layers.performance.visible = true;
 
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     app.onFrame.dispatch(fakeTime);
 
