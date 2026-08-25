@@ -13,6 +13,8 @@ import unicorn from 'eslint-plugin-unicorn';
 import unusedImports from 'eslint-plugin-unused-imports';
 import globals from 'globals';
 
+import { typeAwareCorrectnessRules } from './correctness.js';
+
 /**
  * Source policy for an official extension package: the engine rule set, minus
  * the Core-only import boundaries (an extension may import Core by name).
@@ -301,7 +303,6 @@ export function extensionSourceConfig({ files, tsconfigRootDir }) {
 
       // Unicorn
       'unicorn/error-message': 'error',
-      'unicorn/no-array-for-each': 'warn',
       'unicorn/no-instanceof-array': 'error',
       'unicorn/no-typeof-undefined': 'error',
       'unicorn/no-useless-undefined': 'error',
@@ -310,10 +311,12 @@ export function extensionSourceConfig({ files, tsconfigRootDir }) {
       'unicorn/prefer-array-some': 'error',
       'unicorn/prefer-default-parameters': 'error',
       'unicorn/prefer-node-protocol': 'error',
-      'unicorn/prefer-spread': 'warn',
       'unicorn/prefer-string-replace-all': 'error',
-      'unicorn/prefer-ternary': 'warn',
       'unicorn/throw-new-error': 'error',
+
+      // Measured strict/unicorn additions, plus the promotions of the
+      // warnings above. Last so those promotions take effect.
+      ...typeAwareCorrectnessRules,
     },
   },
   ];

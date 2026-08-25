@@ -7,6 +7,7 @@
   "exports": {
     "./eslint": "./eslint/index.js",
     "./eslint/base": "./eslint/base.js",
+    "./eslint/correctness": "./eslint/correctness.js",
     "./eslint/extension": "./eslint/extension.js",
     "./eslint/package-test": "./eslint/package-test.js",
     "./eslint/react": "./eslint/react.js",

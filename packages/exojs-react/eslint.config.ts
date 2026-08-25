@@ -53,6 +53,16 @@ export default defineConfig([
   // This config file is in no TypeScript program of its own.
   ...nodeToolingConfig({ files: ['*.config.ts'] }),
 
+  // `<Scene name component>` renders nothing: it is a declaration the parent
+  // `<Scenes>` reads through Children.forEach, so its props are consumed one
+  // level up and no rule can see that from the component itself.
+  {
+    files: ['src/Scenes.tsx'],
+    rules: {
+      '@eslint-react/no-unused-props': 'off',
+    },
+  },
+
   ...packageTestConfig({ files: TESTS }),
   ...vitestConfig({ files: TESTS }),
 

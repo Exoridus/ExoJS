@@ -28,6 +28,14 @@ import tseslint from 'typescript-eslint';
 export function languageBaselineConfig({ tsconfigRootDir }) {
   return [
   {
+    // A disable comment that no longer suppresses anything is a claim about the
+    // code that has stopped being true, and the same goes for an inline rule
+    // config nothing reads. Both are errors rather than warnings so they fail
+    // the same way whether or not a run passes --max-warnings.
+    linterOptions: {
+      reportUnusedDisableDirectives: 'error',
+      reportUnusedInlineConfigs: 'error',
+    },
     languageOptions: {
       parserOptions: { tsconfigRootDir },
     },

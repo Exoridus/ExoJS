@@ -118,13 +118,32 @@ export function reactConfig({ files, tsconfigRootDir }) {
       '@typescript-eslint/unbound-method': 'off',
 
       '@eslint-react/dom-no-unsafe-iframe-sandbox': 'error',
-      '@eslint-react/no-array-index-key': 'warn',
+      '@eslint-react/no-array-index-key': 'error',
       '@eslint-react/no-nested-component-definitions': 'error',
       '@eslint-react/no-unstable-default-props': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-      'react-hooks/immutability': 'warn',
-      'react-hooks/preserve-manual-memoization': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
+      // Correctness rules `recommended-typescript` leaves off. Each was measured
+      // at zero across the site and the integration package before being turned
+      // on, so they are guards on new code rather than a backlog.
+      '@eslint-react/no-duplicate-key': 'error',
+      '@eslint-react/no-implicit-key': 'error',
+      '@eslint-react/no-implicit-ref': 'error',
+      // A `value && <X />` that leaks `0` or `''` into the tree renders it.
+      '@eslint-react/no-leaked-conditional-rendering': 'error',
+      '@eslint-react/no-missing-context-display-name': 'error',
+      '@eslint-react/no-misused-capture-owner-stack': 'error',
+      // A context value rebuilt every render re-renders every consumer.
+      '@eslint-react/no-unstable-context-value': 'error',
+      '@eslint-react/no-unused-props': 'error',
+      '@eslint-react/no-unused-state': 'error',
+      '@eslint-react/refs': 'error',
+
+      // The hooks rules below were warnings with nothing left to migrate.
+      // `@eslint-react/no-class-component` and `no-implicit-children` stay off:
+      // both are house-style opinions rather than correctness.
+      'react-hooks/exhaustive-deps': 'error',
+      'react-hooks/immutability': 'error',
+      'react-hooks/preserve-manual-memoization': 'error',
+      'react-hooks/set-state-in-effect': 'error',
 
       curly: 'error',
       eqeqeq: ['error', 'always', { null: 'ignore' }],

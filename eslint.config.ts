@@ -1,5 +1,6 @@
 import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
 import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/eslint/base';
+import { typeAwareCorrectnessRules } from '@codexo/exojs-config/eslint/correctness';
 import { extensionSourceConfig } from '@codexo/exojs-config/eslint/extension';
 import { packageTestConfig } from '@codexo/exojs-config/eslint/package-test';
 import { reactConfig } from '@codexo/exojs-config/eslint/react';
@@ -311,7 +312,6 @@ export default defineConfig([
 
       // Unicorn
       'unicorn/error-message': 'error',
-      'unicorn/no-array-for-each': 'warn',
       'unicorn/no-instanceof-array': 'error',
       'unicorn/no-typeof-undefined': 'error',
       'unicorn/no-useless-undefined': 'error',
@@ -320,10 +320,12 @@ export default defineConfig([
       'unicorn/prefer-array-some': 'error',
       'unicorn/prefer-default-parameters': 'error',
       'unicorn/prefer-node-protocol': 'error',
-      'unicorn/prefer-spread': 'warn',
       'unicorn/prefer-string-replace-all': 'error',
-      'unicorn/prefer-ternary': 'warn',
       'unicorn/throw-new-error': 'error',
+
+      // Measured strict/unicorn additions, plus the promotions of the
+      // warnings above. Last so those promotions take effect.
+      ...typeAwareCorrectnessRules,
     },
   },
 
