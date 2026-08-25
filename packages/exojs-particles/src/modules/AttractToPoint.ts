@@ -1,4 +1,4 @@
-﻿import type { ParticleBatch } from "#ParticleStorage";
+﻿import type { ParticleBatch } from '#ParticleStorage';
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';

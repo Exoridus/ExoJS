@@ -93,10 +93,7 @@ describe('@codexo/exojs-ldtk asset type - ldtkMapType', () => {
 describe('buildSnapshot([ldtkExtension])', () => {
   it('materializes tilemapExtension before ldtkExtension', () => {
     const snapshot = buildSnapshot([ldtkExtension]);
-    expect(snapshot.extensions.map(e => e.id)).toEqual([
-      '@codexo/exojs-tilemap',
-      '@codexo/exojs-ldtk',
-    ]);
+    expect(snapshot.extensions.map(e => e.id)).toEqual(['@codexo/exojs-tilemap', '@codexo/exojs-ldtk']);
   });
 
   it('collects both LDtk asset types', () => {
@@ -113,4 +110,3 @@ describe('buildSnapshot([ldtkExtension])', () => {
     expect(snapshot.renderers).toHaveLength(1);
   });
 });
-

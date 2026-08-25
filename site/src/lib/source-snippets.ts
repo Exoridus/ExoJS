@@ -41,17 +41,17 @@ const REGION_CLOSE_RE = /^[ \t]*\/\/ #endregion guide:(.+)$/;
  * original source directory.
  */
 function repoRoot(): string {
-    let dir = process.cwd();
-    for (let i = 0; i < 8; i++) {
-        if (existsSync(join(dir, 'pnpm-workspace.yaml'))) {
-            return dir;
-        }
-        const parent = dirname(dir);
-        if (parent === dir) break; // filesystem root
-        dir = parent;
+  let dir = process.cwd();
+  for (let i = 0; i < 8; i++) {
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) {
+      return dir;
     }
-    // Last resort: return cwd and let readFileSync emit a clear error.
-    return process.cwd();
+    const parent = dirname(dir);
+    if (parent === dir) break; // filesystem root
+    dir = parent;
+  }
+  // Last resort: return cwd and let readFileSync emit a clear error.
+  return process.cwd();
 }
 
 /**
@@ -74,86 +74,72 @@ function repoRoot(): string {
  * @throws If the region contains no non-empty lines after stripping markers.
  */
 export function extractSnippetRegion(filePath: string, region: string): string {
-    const absolutePath = join(repoRoot(), filePath);
+  const absolutePath = join(repoRoot(), filePath);
 
-    let source: string;
-    try {
-        source = readFileSync(absolutePath, 'utf8');
-    } catch {
-        throw new Error(
-            `[SourceSnippet] File not found: ${filePath}\n` +
-            `  (resolved to: ${absolutePath})`,
-        );
+  let source: string;
+  try {
+    source = readFileSync(absolutePath, 'utf8');
+  } catch {
+    throw new Error(`[SourceSnippet] File not found: ${filePath}\n` + `  (resolved to: ${absolutePath})`);
+  }
+
+  const lines = source.split('\n');
+
+  // Validate: no duplicate region names.
+  const openCount = lines.filter(l => {
+    const m = REGION_OPEN_RE.exec(l);
+    return m !== null && m[1].trim() === region;
+  }).length;
+
+  if (openCount > 1) {
+    throw new Error(`[SourceSnippet] Duplicate region "${region}" in ${filePath} ` + `(found ${openCount} opening markers).`);
+  }
+
+  // Extract lines between open and close markers.
+  const snippetLines: string[] = [];
+  let inside = false;
+  let found = false;
+
+  for (const line of lines) {
+    const openMatch = REGION_OPEN_RE.exec(line);
+    if (openMatch?.[1].trim() === region) {
+      inside = true;
+      found = true;
+      continue;
     }
 
-    const lines = source.split('\n');
-
-    // Validate: no duplicate region names.
-    const openCount = lines.filter(l => {
-        const m = REGION_OPEN_RE.exec(l);
-        return m !== null && m[1].trim() === region;
-    }).length;
-
-    if (openCount > 1) {
-        throw new Error(
-            `[SourceSnippet] Duplicate region "${region}" in ${filePath} ` +
-            `(found ${openCount} opening markers).`,
-        );
+    const closeMatch = REGION_CLOSE_RE.exec(line);
+    if (closeMatch?.[1].trim() === region) {
+      inside = false;
+      continue;
     }
 
-    // Extract lines between open and close markers.
-    const snippetLines: string[] = [];
-    let inside = false;
-    let found = false;
-
-    for (const line of lines) {
-        const openMatch = REGION_OPEN_RE.exec(line);
-        if (openMatch?.[1].trim() === region) {
-            inside = true;
-            found = true;
-            continue;
-        }
-
-        const closeMatch = REGION_CLOSE_RE.exec(line);
-        if (closeMatch?.[1].trim() === region) {
-            inside = false;
-            continue;
-        }
-
-        if (inside) {
-            snippetLines.push(line);
-        }
+    if (inside) {
+      snippetLines.push(line);
     }
+  }
 
-    if (!found) {
-        throw new Error(
-            `[SourceSnippet] Region "${region}" not found in ${filePath}.\n` +
-            `  Add a "// #region guide:${region}" marker to the source file.`,
-        );
-    }
+  if (!found) {
+    throw new Error(`[SourceSnippet] Region "${region}" not found in ${filePath}.\n` + `  Add a "// #region guide:${region}" marker to the source file.`);
+  }
 
-    // Remove trailing empty lines added by formatting.
-    while (snippetLines.length > 0 && snippetLines[snippetLines.length - 1].trim() === '') {
-        snippetLines.pop();
-    }
+  // Remove trailing empty lines added by formatting.
+  while (snippetLines.length > 0 && snippetLines[snippetLines.length - 1].trim() === '') {
+    snippetLines.pop();
+  }
 
-    const nonEmpty = snippetLines.filter(l => l.trim() !== '');
-    if (nonEmpty.length === 0) {
-        throw new Error(
-            `[SourceSnippet] Region "${region}" in ${filePath} is empty ` +
-            `(contains no non-empty lines).`,
-        );
-    }
+  const nonEmpty = snippetLines.filter(l => l.trim() !== '');
+  if (nonEmpty.length === 0) {
+    throw new Error(`[SourceSnippet] Region "${region}" in ${filePath} is empty ` + `(contains no non-empty lines).`);
+  }
 
-    // Dedent: find the minimum leading whitespace across all non-empty lines.
-    const minIndent = nonEmpty.reduce((min, line) => {
-        const indent = (/^(\s*)/.exec(line))?.[1].length ?? 0;
-        return Math.min(min, indent);
-    }, Infinity);
+  // Dedent: find the minimum leading whitespace across all non-empty lines.
+  const minIndent = nonEmpty.reduce((min, line) => {
+    const indent = /^(\s*)/.exec(line)?.[1].length ?? 0;
+    return Math.min(min, indent);
+  }, Infinity);
 
-    const dedented = snippetLines.map(line =>
-        line.length >= minIndent ? line.slice(minIndent) : line,
-    );
+  const dedented = snippetLines.map(line => (line.length >= minIndent ? line.slice(minIndent) : line));
 
-    return dedented.join('\n');
+  return dedented.join('\n');
 }

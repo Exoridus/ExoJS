@@ -26,8 +26,7 @@ const cells = (...coordinates: number[]): number[] => coordinates;
 const flat = (loop: readonly PointLike[]): number[] => loop.flatMap(vertex => [vertex.x, vertex.y]);
 
 /** Loops as comparable strings, order-independent. */
-const normalise = (loops: readonly (readonly PointLike[])[]): string[] =>
-  loops.map(loop => flat(loop).join(',')).sort();
+const normalise = (loops: readonly (readonly PointLike[])[]): string[] => loops.map(loop => flat(loop).join(',')).sort();
 
 describe('traceCellOutlines', () => {
   it('traces one cell as a four-vertex island loop', () => {

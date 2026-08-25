@@ -118,7 +118,10 @@ const layeredData: LdtkData = {
           levelId: 5,
           visible: true,
           iid: 'bbbbbbbb-0000-0000-0000-000000000002',
-          intGridCsv: [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          intGridCsv: [
+            1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+          ],
         },
         {
           __identifier: 'Entities',
@@ -347,9 +350,7 @@ describe('ldtkToTileMap', () => {
 
     it('maps scalar field instances to TileMapObject properties', () => {
       const result = ldtkToTileMap(layeredData);
-      const player = result.levels[0]?.objectLayers[0]?.objects.find(
-        o => o.type === 'Player',
-      );
+      const player = result.levels[0]?.objectLayers[0]?.objects.find(o => o.type === 'Player');
       expect(player?.properties['speed']).toBe(1.5);
       expect(player?.properties['name']).toBe('Hero');
     });
@@ -408,9 +409,7 @@ describe('ldtkToTileMap', () => {
         defs: {
           ...parallaxData.defs,
           layers: parallaxData.defs.layers.map(def =>
-            def.uid === 101
-              ? { ...def, parallaxFactorX: 0.5, parallaxFactorY: -0.25, parallaxScaling: false }
-              : def,
+            def.uid === 101 ? { ...def, parallaxFactorX: 0.5, parallaxFactorY: -0.25, parallaxScaling: false } : def,
           ),
         },
       };
@@ -426,15 +425,11 @@ describe('ldtkToTileMap', () => {
         ...layeredData,
         defs: {
           ...layeredData.defs,
-          layers: layeredData.defs.layers.map(def =>
-            def.uid === 101 ? { ...def, pxOffsetX: 7, pxOffsetY: -9 } : def,
-          ),
+          layers: layeredData.defs.layers.map(def => (def.uid === 101 ? { ...def, pxOffsetX: 7, pxOffsetY: -9 } : def)),
         },
         levels: layeredData.levels.map(level => ({
           ...level,
-          layerInstances: level.layerInstances?.map(layer =>
-            layer.layerDefUid === 101 ? { ...layer, pxOffsetX: 3, pxOffsetY: 4 } : layer,
-          ) ?? null,
+          layerInstances: level.layerInstances?.map(layer => (layer.layerDefUid === 101 ? { ...layer, pxOffsetX: 3, pxOffsetY: 4 } : layer)) ?? null,
         })),
       };
       const tilesLayer = ldtkToTileMap(data).levels[0]?.layers.find(l => l.name === 'Tiles');

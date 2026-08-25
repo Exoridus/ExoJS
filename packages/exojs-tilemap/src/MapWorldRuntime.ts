@@ -84,7 +84,6 @@ export interface MapLevelLoadOptions<Context, Result extends Destroyable> extend
  * @typeParam Result - what the level's spawner produced, if it had one.
  */
 export class MapLevelRuntime<Result extends Destroyable = Destroyable> implements Destroyable {
-
   /** {@link MapLevel.id} of the loaded level. */
   public readonly id: string;
   /** Metadata of the loaded level. */
@@ -100,13 +99,7 @@ export class MapLevelRuntime<Result extends Destroyable = Destroyable> implement
   private _destroyed = false;
 
   /** Level runtimes are produced by {@link MapWorldRuntime.loadLevel}. @internal */
-  public constructor(
-    level: MapLevel,
-    scope: LoaderScope,
-    map: TileMap,
-    spawns: MapSpawnSession<Result> | null,
-    onDestroy: (runtime: MapLevelRuntime) => void,
-  ) {
+  public constructor(level: MapLevel, scope: LoaderScope, map: TileMap, spawns: MapSpawnSession<Result> | null, onDestroy: (runtime: MapLevelRuntime) => void) {
     this.id = level.id;
     this.level = level;
     this.scope = scope;
@@ -180,7 +173,6 @@ interface InFlightLoad {
  * ```
  */
 export class MapWorldRuntime implements Destroyable {
-
   /** The world this runtime streams levels out of. */
   public readonly world: MapWorld;
   /** The runtime's own scope: parent of every level scope, child of the injected one. */
@@ -227,10 +219,7 @@ export class MapWorldRuntime implements Destroyable {
   }
 
   public loadLevel(id: string, options?: MapLevelCancelOptions): Promise<MapLevelRuntime>;
-  public loadLevel<Context, Result extends Destroyable>(
-    id: string,
-    options: MapLevelLoadOptions<Context, Result>,
-  ): Promise<MapLevelRuntime<Result>>;
+  public loadLevel<Context, Result extends Destroyable>(id: string, options: MapLevelLoadOptions<Context, Result>): Promise<MapLevelRuntime<Result>>;
   /**
    * Load a level, or return the one already loaded.
    *
@@ -258,8 +247,7 @@ export class MapWorldRuntime implements Destroyable {
     // The live map erases Result - one runtime holds levels loaded with
     // different spawners - while every call site keeps its own through the
     // signature above.
-    const typed = (promise: Promise<MapLevelRuntime>): Promise<MapLevelRuntime<Result>> =>
-      promise as Promise<MapLevelRuntime<Result>>;
+    const typed = (promise: Promise<MapLevelRuntime>): Promise<MapLevelRuntime<Result>> => promise as Promise<MapLevelRuntime<Result>>;
 
     if (this._destroyed) {
       return Promise.reject(new Error(`MapWorldRuntime: cannot load level "${id}" - the runtime is destroyed.`));
@@ -273,9 +261,7 @@ export class MapWorldRuntime implements Destroyable {
 
     const level = this.world.getLevel(id);
     if (level === undefined) {
-      return Promise.reject(
-        new Error(`MapWorldRuntime: world "${this.world.name}" has no level with id "${id}".`),
-      );
+      return Promise.reject(new Error(`MapWorldRuntime: world "${this.world.name}" has no level with id "${id}".`));
     }
 
     const controller = new AbortController();
@@ -393,7 +379,7 @@ export class MapWorldRuntime implements Destroyable {
       throw error;
     }
 
-    const runtime = new MapLevelRuntime<Result>(level, scope, map, spawns, (destroyed) => {
+    const runtime = new MapLevelRuntime<Result>(level, scope, map, spawns, destroyed => {
       if (this._live.get(destroyed.id) === destroyed) this._live.delete(destroyed.id);
     });
 

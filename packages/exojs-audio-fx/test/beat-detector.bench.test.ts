@@ -17,8 +17,8 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { allFixtures, type BeatFixture,SAMPLE_RATE } from './fixtures/beat-fixtures';
-import { type BeatMetrics,computeMetrics, formatMetrics } from './harness/beat-metrics';
+import { allFixtures, type BeatFixture, SAMPLE_RATE } from './fixtures/beat-fixtures';
+import { type BeatMetrics, computeMetrics, formatMetrics } from './harness/beat-metrics';
 import { runDetector } from './harness/beat-sandbox';
 
 // ── Snapshot path ──────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ function classifyFailures(m: BeatMetrics, fixture: BeatFixture): string[] {
   }
   // For ramp: check if BPM error is very large (> 10% = significant tracking lag)
   const isRamp = typeof fixture.bpm === 'function';
-  if (isRamp && m.bpmError.meanAbs > m.trueBpmAtMid * 0.10) {
+  if (isRamp && m.bpmError.meanAbs > m.trueBpmAtMid * 0.1) {
     fails.push(`ramp-lag:bpm-err=${m.bpmError.meanAbs.toFixed(1)}`);
   }
   return fails;
@@ -112,12 +112,11 @@ let allMetrics: Map<string, BaselineEntry>;
 // ── Test suite ─────────────────────────────────────────────────────────────────
 
 describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
-  beforeAll(
-    () => {
-      allMetrics = new Map<string, BaselineEntry>();
+  beforeAll(() => {
+    allMetrics = new Map<string, BaselineEntry>();
 
-      for (const fixture of FIXTURES) {
-        const m = measureFixture(fixture);
+    for (const fixture of FIXTURES) {
+      const m = measureFixture(fixture);
       const failures = classifyFailures(m, fixture);
       const entry: BaselineEntry = {
         label: m.label,
@@ -152,11 +151,9 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
         failures,
         formatted: formatMetrics(m),
       };
-        allMetrics.set(fixture.label, entry);
-      }
-    },
-    240_000,
-  );
+      allMetrics.set(fixture.label, entry);
+    }
+  }, 240_000);
 
   // ── Per-fixture sanity assertions ──
 
@@ -200,9 +197,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
     }
 
     // Stage-2 target list: fixtures the CURRENT detector fails
-    const failingFixtures = FIXTURES.filter(
-      (f) => (allMetrics.get(f.label)?.failures.length ?? 0) > 0,
-    );
+    const failingFixtures = FIXTURES.filter(f => (allMetrics.get(f.label)?.failures.length ?? 0) > 0);
     if (failingFixtures.length > 0) {
       console.log('====== Stage-2 TARGET LIST (current failures) ======');
       for (const f of failingFixtures) {
@@ -225,14 +220,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
 
   // The six tempos that USED to lock to a sub-harmonic (or never lock) must now lock to
   // the true fundamental within 3%, with no octave error.
-  for (const label of [
-    'clicktrack_120bpm',
-    'clicktrack_128bpm',
-    'clicktrack_140bpm',
-    'clicktrack_180bpm',
-    'clicktrack_220bpm',
-    'clicktrack_250bpm',
-  ]) {
+  for (const label of ['clicktrack_120bpm', 'clicktrack_128bpm', 'clicktrack_140bpm', 'clicktrack_180bpm', 'clicktrack_220bpm', 'clicktrack_250bpm']) {
     it(`${label} locks to fundamental ≤3%, no octave error`, () => {
       const e = allMetrics.get(label)!;
       expect(e.octaveHalf).toBe(false);
@@ -243,13 +231,7 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   }
 
   // Musical / drifting fixtures: no octave error, ≤5%.
-  for (const label of [
-    'doubleTime_128bpm',
-    'swing_120bpm_67pct',
-    'grooveOffset_120bpm_10ms',
-    'breakDrop_128bpm',
-    'tempoRamp_120_to_135bpm',
-  ]) {
+  for (const label of ['doubleTime_128bpm', 'swing_120bpm_67pct', 'grooveOffset_120bpm_10ms', 'breakDrop_128bpm', 'tempoRamp_120_to_135bpm']) {
     it(`${label} no octave error, BPM error ≤5%`, () => {
       const e = allMetrics.get(label)!;
       expect(e.octaveHalf).toBe(false);
@@ -467,18 +449,14 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   const BASELINE_FIRST_BEAT_SEC = 1.213;
 
   it('mean time-to-first-beat reduced ≥50% vs the 1.213 s original-detector baseline', () => {
-    const times = FIXTURES.map((f) => allMetrics.get(f.label)!.timeToFirstBeatSec).filter(
-      (t): t is number => t !== null,
-    );
+    const times = FIXTURES.map(f => allMetrics.get(f.label)!.timeToFirstBeatSec).filter((t): t is number => t !== null);
     expect(times.length).toBe(FIXTURES.length); // every fixture emits a beat
     const mean = times.reduce((a, b) => a + b, 0) / times.length;
     expect(mean).toBeLessThanOrEqual(BASELINE_FIRST_BEAT_SEC * 0.5);
   });
 
   it('median time-to-first-beat reduced ≥50% vs the 1.213 s original-detector baseline', () => {
-    const times = FIXTURES.map((f) => allMetrics.get(f.label)!.timeToFirstBeatSec!).sort(
-      (a, b) => a - b,
-    );
+    const times = FIXTURES.map(f => allMetrics.get(f.label)!.timeToFirstBeatSec!).sort((a, b) => a - b);
     const median = times[Math.floor(times.length / 2)];
     expect(median).toBeLessThanOrEqual(BASELINE_FIRST_BEAT_SEC * 0.5);
   });
@@ -487,12 +465,26 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
   // parent commit - the "current settled-beat FP rate". Every emitted beat was settled in the
   // original detector, so this is the bar the LOCKED beats must not exceed.
   const BASELINE_FP_PER_MIN: Record<string, number> = {
-    clicktrack_50bpm: 4, clicktrack_60bpm: 0, clicktrack_90bpm: 4, clicktrack_120bpm: 0,
-    clicktrack_128bpm: 0, clicktrack_140bpm: 0, clicktrack_180bpm: 0, clicktrack_220bpm: 0,
-    clicktrack_250bpm: 4, clicktrack_300bpm: 0, halfTime_64bpm: 0, doubleTime_128bpm: 0,
-    tempoRamp_120_to_135bpm: 0, breakDrop_128bpm: 2.5, swing_120bpm_67pct: 0,
-    grooveOffset_120bpm_10ms: 0, djMix_180bpm: 0, tempoDrift_150_to_128bpm: 0,
-    djMixDrift_180bpm_d5: 10, softOnset_90bpm: 4,
+    clicktrack_50bpm: 4,
+    clicktrack_60bpm: 0,
+    clicktrack_90bpm: 4,
+    clicktrack_120bpm: 0,
+    clicktrack_128bpm: 0,
+    clicktrack_140bpm: 0,
+    clicktrack_180bpm: 0,
+    clicktrack_220bpm: 0,
+    clicktrack_250bpm: 4,
+    clicktrack_300bpm: 0,
+    halfTime_64bpm: 0,
+    doubleTime_128bpm: 0,
+    tempoRamp_120_to_135bpm: 0,
+    breakDrop_128bpm: 2.5,
+    swing_120bpm_67pct: 0,
+    grooveOffset_120bpm_10ms: 0,
+    djMix_180bpm: 0,
+    tempoDrift_150_to_128bpm: 0,
+    djMixDrift_180bpm_d5: 10,
+    softOnset_90bpm: 4,
   };
 
   for (const fixture of FIXTURES) {
@@ -527,13 +519,12 @@ describe('BeatDetector Stage-1 baseline', { timeout: 300_000 }, () => {
 
     const snapshot = {
       generatedAt: new Date().toISOString(),
-      description:
-        'Stage-1 BeatDetector baseline. ' +
-        'Phase 1 = RECORD ONLY; thresholds become hard assertions in Stage 2.',
-      stage2TargetList: FIXTURES.filter(
-        (f) => (allMetrics.get(f.label)?.failures.length ?? 0) > 0,
-      ).map((f) => ({ label: f.label, failures: allMetrics.get(f.label)!.failures })),
-      fixtures: FIXTURES.map((f) => allMetrics.get(f.label)!),
+      description: 'Stage-1 BeatDetector baseline. ' + 'Phase 1 = RECORD ONLY; thresholds become hard assertions in Stage 2.',
+      stage2TargetList: FIXTURES.filter(f => (allMetrics.get(f.label)?.failures.length ?? 0) > 0).map(f => ({
+        label: f.label,
+        failures: allMetrics.get(f.label)!.failures,
+      })),
+      fixtures: FIXTURES.map(f => allMetrics.get(f.label)!),
     };
 
     try {

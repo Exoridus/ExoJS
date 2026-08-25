@@ -29,7 +29,12 @@
         padding: 12px;
         background: var(--bg);
         color: var(--text);
-        font: 13px/1.45 -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+        font:
+          13px/1.45 -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          system-ui,
+          sans-serif;
       }
 
       h1 {
@@ -245,7 +250,11 @@
         <button id="copy-json">Copy JSON</button>
         <button id="clear-results">Clear results</button>
       </div>
-      <textarea id="json-output" readonly placeholder="Run the matrix, then press Copy JSON. The text also appears here so you can select it by hand if the clipboard is blocked."></textarea>
+      <textarea
+        id="json-output"
+        readonly
+        placeholder="Run the matrix, then press Copy JSON. The text also appears here so you can select it by hand if the clipboard is blocked."
+      ></textarea>
     </section>
 
     <script type="module" src="./probe.ts"></script>

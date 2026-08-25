@@ -23,9 +23,7 @@ describe('resolveTiledObjectAlignment — default per map orientation', () => {
   });
 
   it('passes an explicit alignment through unchanged, whatever the orientation', () => {
-    const explicit: readonly TiledObjectAlignment[] = [
-      'topleft', 'top', 'topright', 'left', 'center', 'right', 'bottomleft', 'bottom', 'bottomright',
-    ];
+    const explicit: readonly TiledObjectAlignment[] = ['topleft', 'top', 'topright', 'left', 'center', 'right', 'bottomleft', 'bottom', 'bottomright'];
     const orientations: readonly TiledOrientation[] = ['orthogonal', 'isometric', 'staggered', 'hexagonal'];
 
     for (const alignment of explicit) {

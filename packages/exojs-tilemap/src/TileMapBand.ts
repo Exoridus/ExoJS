@@ -158,9 +158,7 @@ export class TileMapBand extends Container {
    * @internal
    */
   public _reorder(documentIndex: ReadonlyMap<TileLayer | ImageLayer, number>): void {
-    this._layerNodes.sort(
-      (a, b) => (documentIndex.get(a.layer) ?? 0) - (documentIndex.get(b.layer) ?? 0),
-    );
+    this._layerNodes.sort((a, b) => (documentIndex.get(a.layer) ?? 0) - (documentIndex.get(b.layer) ?? 0));
 
     for (const node of this._layerNodes) {
       if (node.parent === this) {

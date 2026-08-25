@@ -243,12 +243,7 @@ describe('ColorOverSpeed wgsl contribution', () => {
     mod.uploadTextures(device, new Map([['gradient', texture]]));
 
     expect(writeTexture).toHaveBeenCalledTimes(1);
-    const [dest, data, layout, size] = writeTexture.mock.calls[0] as [
-      GPUImageCopyTexture,
-      ArrayBuffer,
-      GPUImageDataLayout,
-      GPUExtent3DStrict,
-    ];
+    const [dest, data, layout, size] = writeTexture.mock.calls[0] as [GPUImageCopyTexture, ArrayBuffer, GPUImageDataLayout, GPUExtent3DStrict];
 
     expect(dest.texture).toBe(texture);
     expect(size).toEqual({ width: 256, height: 1, depthOrArrayLayers: 1 });
@@ -257,7 +252,7 @@ describe('ColorOverSpeed wgsl contribution', () => {
     const bytes = new Uint8Array(data);
     // First tap samples t=0 (black); last tap samples t=1 (white).
     expect(bytes[0]).toBe(0);
-    expect(bytes[(255 * 4) + 0]).toBe(255);
+    expect(bytes[255 * 4 + 0]).toBe(255);
   });
 });
 

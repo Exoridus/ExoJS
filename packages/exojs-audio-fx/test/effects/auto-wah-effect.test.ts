@@ -376,9 +376,7 @@ describe('AutoWahEffect', () => {
       const ctx = getAudioContext();
       const wahFilter = makeBiquadFilterNode(ctx);
       let biquadCallCount = 0;
-      vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() =>
-        ([wahFilter, makeBiquadFilterNode(ctx)][biquadCallCount++]) as unknown as BiquadFilterNode,
-      );
+      vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => [wahFilter, makeBiquadFilterNode(ctx)][biquadCallCount++] as unknown as BiquadFilterNode);
 
       const effect = new AutoWahEffect({ baseFrequency: 200 });
       effect.baseFrequency = 800;
@@ -451,9 +449,7 @@ describe('AutoWahEffect', () => {
       const ctx = getAudioContext();
       const wahFilter = makeBiquadFilterNode(ctx);
       let biquadCallCount = 0;
-      vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() =>
-        ([wahFilter, makeBiquadFilterNode(ctx)][biquadCallCount++]) as unknown as BiquadFilterNode,
-      );
+      vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => [wahFilter, makeBiquadFilterNode(ctx)][biquadCallCount++] as unknown as BiquadFilterNode);
 
       const effect = new AutoWahEffect({ q: 4 });
       effect.q = 10;
@@ -486,19 +482,15 @@ describe('AutoWahEffect', () => {
       const ctx = getAudioContext();
       const smoothingLowpass = makeBiquadFilterNode(ctx);
       let biquadCallCount = 0;
-      vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() =>
-        ([makeBiquadFilterNode(ctx), smoothingLowpass][biquadCallCount++]) as unknown as BiquadFilterNode,
+      vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(
+        () => [makeBiquadFilterNode(ctx), smoothingLowpass][biquadCallCount++] as unknown as BiquadFilterNode,
       );
 
       const effect = new AutoWahEffect({ responseMs: 30 });
       effect.responseMs = 100;
       // Expected cutoff: 1000 / (2π × 100) ≈ 1.592 Hz
       const expectedCutoff = 1000 / (2 * Math.PI * 100);
-      expect(smoothingLowpass.frequency.setTargetAtTime).toHaveBeenCalledWith(
-        expect.closeTo(expectedCutoff, 3),
-        expect.anything(),
-        expect.anything(),
-      );
+      expect(smoothingLowpass.frequency.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(expectedCutoff, 3), expect.anything(), expect.anything());
       effect.destroy();
     });
   });
@@ -566,9 +558,7 @@ describe('AutoWahEffect', () => {
       let gainCallCount = 0;
       let biquadCallCount = 0;
       vi.spyOn(ctx, 'createGain').mockImplementation(() => gainNodes[gainCallCount++] as unknown as GainNode);
-      vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(
-        () => [wahFilter, smoothingLowpass][biquadCallCount++] as unknown as BiquadFilterNode,
-      );
+      vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => [wahFilter, smoothingLowpass][biquadCallCount++] as unknown as BiquadFilterNode);
       vi.spyOn(ctx, 'createWaveShaper').mockReturnValue(rectifier as unknown as WaveShaperNode);
 
       const effect = new AutoWahEffect();

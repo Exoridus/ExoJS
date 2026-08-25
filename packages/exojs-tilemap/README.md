@@ -58,14 +58,7 @@ directly.
 
 ```ts
 import { Application, TextureRegion } from '@codexo/exojs';
-import {
-  TileLayer,
-  TileMap,
-  TileMapNode,
-  TileSet,
-  tilemapExtension,
-  TILE_TRANSFORM_IDENTITY,
-} from '@codexo/exojs-tilemap';
+import { TileLayer, TileMap, TileMapNode, TileSet, tilemapExtension, TILE_TRANSFORM_IDENTITY } from '@codexo/exojs-tilemap';
 
 const app = new Application({ extensions: [tilemapExtension] /* canvas, … */ });
 
@@ -107,7 +100,7 @@ app.scenes.root.addChild(new TileMapNode(map));
 ### Interleaving actors between layers — `TileMapView`
 
 `TileMapNode` owns **only** the map's layer nodes and renders them back-to-front — use it when
-nothing renders between layers. To draw application actors *between* tile layers, create a
+nothing renders between layers. To draw application actors _between_ tile layers, create a
 `TileMapView`: it generates one `TileLayerNode` per map layer (stable identity, map document
 order) and groups them into named `TileMapBand`s that you parent yourself, as siblings of your
 own actor containers:
@@ -122,7 +115,7 @@ const view = map.createView({
 
 worldRoot.addChild(
   view.band('ground'),
-  actors,            // app-owned actor container — drawn between ground and roof
+  actors, // app-owned actor container — drawn between ground and roof
   view.band('roof'),
 );
 ```
@@ -152,7 +145,7 @@ Actors are application-owned siblings. `TileMapView` never adopts or destroys ac
 
 - **Chunk-first.** A `TileLayerNode` is a container of per-chunk `TileChunkNode` drawables (one
   per non-empty loaded chunk). The renderer batches tiles by `(shader, tileset texture)` and
-  issues one instanced draw per batch — draw calls scale with *visible chunks × layers*, not
+  issues one instanced draw per batch — draw calls scale with _visible chunks × layers_, not
   total tile count.
 - **Revision-cached geometry.** Each chunk's quad geometry is built once and cached against the
   source chunk's `revision`. Unchanged chunks never rebuild; a camera pan rebuilds nothing —
@@ -188,8 +181,8 @@ Actors are application-owned siblings. `TileMapView` never adopts or destroys ac
 ## Core compatibility
 
 | `@codexo/exojs-tilemap` | `@codexo/exojs` |
-|---|---|
-| 0.x | matching `0.x` |
+| ----------------------- | --------------- |
+| 0.x                     | matching `0.x`  |
 
 ## Links
 

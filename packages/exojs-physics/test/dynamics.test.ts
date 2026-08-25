@@ -52,7 +52,9 @@ const addBox = (
       type: 'dynamic',
       position: { x, y },
       ...(options.fixedRotation === undefined ? {} : { fixedRotation: options.fixedRotation }),
-      colliders: [{ shape: new BoxShape(width, height), density: options.density ?? 1, friction: options.friction ?? 0.5, restitution: options.restitution ?? 0 }],
+      colliders: [
+        { shape: new BoxShape(width, height), density: options.density ?? 1, friction: options.friction ?? 0.5, restitution: options.restitution ?? 0 },
+      ],
     }),
   );
 };

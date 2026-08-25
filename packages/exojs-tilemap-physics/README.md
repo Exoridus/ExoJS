@@ -30,7 +30,7 @@ const world = new PhysicsWorld({ gravity: { x: 0, y: 1600 } });
 const colliders = new TileColliderStreamer(world, groundLayer);
 
 scene.systems.add({
-  update: (delta) => {
+  update: delta => {
     colliders.sync();
     world.step(delta.seconds);
   },
@@ -88,16 +88,16 @@ for (const { object, body } of built) {
 
 ## Geometry mapping
 
-| Source | Collider |
-|---|---|
-| Merged whole-cell region (`regionMode: 'boxes'`) | one box per merged rectangle |
-| Merged whole-cell region (`regionMode: 'outline'`) | one closed chain per boundary loop |
-| Rectangle | box |
-| Ellipse | capsule along the major axis, or a circle when round |
-| Convex polygon | one polygon |
-| Concave polygon | several convex polygons on the same body |
-| Polyline | open chain; closed chain when its endpoints coincide |
-| Point | nothing |
+| Source                                             | Collider                                             |
+| -------------------------------------------------- | ---------------------------------------------------- |
+| Merged whole-cell region (`regionMode: 'boxes'`)   | one box per merged rectangle                         |
+| Merged whole-cell region (`regionMode: 'outline'`) | one closed chain per boundary loop                   |
+| Rectangle                                          | box                                                  |
+| Ellipse                                            | capsule along the major axis, or a circle when round |
+| Convex polygon                                     | one polygon                                          |
+| Concave polygon                                    | several convex polygons on the same body             |
+| Polyline                                           | open chain; closed chain when its endpoints coincide |
+| Point                                              | nothing                                              |
 
 An ellipse maps to the capsule with the minor semi-axis as its radius and the
 difference of the semi-axes as its spine. That capsule contains the ellipse and
@@ -158,8 +158,8 @@ cells that resolve differently keep their own.
 ## Core compatibility
 
 | `@codexo/exojs-tilemap-physics` | `@codexo/exojs` |
-|---|---|
-| 0.15.x | 0.15.x |
+| ------------------------------- | --------------- |
+| 0.15.x                          | 0.15.x          |
 
 ## License
 

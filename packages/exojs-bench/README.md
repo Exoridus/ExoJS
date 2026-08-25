@@ -44,14 +44,14 @@ domain), asset loading, GC headroom — everything outside `mutate` +
 
 ## Metrics
 
-| column | what it is |
-| --- | --- |
-| `cpuMsMedian` / `cpuMsP95` | wall clock bracketing `mutate` + `renderFrame`, per frame. The primary metric: the CPU cost of the render path. |
-| `frameMsMedian` / `frameMsP95` | GPU time for the frame, from a HARDWARE clock (see below). |
-| `queueMsMedian` / `queueMsP95` | WebGPU only: queue occupancy attributed to the frame that caused it. A different measurement from `frameMs*`, not a second opinion on it (see below). |
-| `drawCalls` / `textureBinds` / `bufferUploads` | per-frame counts from a probe wrapped around the live graphics context. |
-| `status` | `ok`, `exceeded` (aborted on a sustained slowdown), or `unavailable` (never measured). |
-| `note` | per-cell disclosure: which frame-time source was used, why a cell aborted, which counters were skipped. |
+| column                                         | what it is                                                                                                                                            |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cpuMsMedian` / `cpuMsP95`                     | wall clock bracketing `mutate` + `renderFrame`, per frame. The primary metric: the CPU cost of the render path.                                       |
+| `frameMsMedian` / `frameMsP95`                 | GPU time for the frame, from a HARDWARE clock (see below).                                                                                            |
+| `queueMsMedian` / `queueMsP95`                 | WebGPU only: queue occupancy attributed to the frame that caused it. A different measurement from `frameMs*`, not a second opinion on it (see below). |
+| `drawCalls` / `textureBinds` / `bufferUploads` | per-frame counts from a probe wrapped around the live graphics context.                                                                               |
+| `status`                                       | `ok`, `exceeded` (aborted on a sustained slowdown), or `unavailable` (never measured).                                                                |
+| `note`                                         | per-cell disclosure: which frame-time source was used, why a cell aborted, which counters were skipped.                                               |
 
 Frame time is never fabricated, and its source differs per backend — which
 matters when reading a WebGL2 row against a WebGPU one:
@@ -163,12 +163,12 @@ Both counts are derived from the cell's node count and recorded per row in the
 report, so a median over 30 frames is never presented as equal in confidence to
 one over 120.
 
-| node count | warmup frames | timed frames |
-| --- | ---: | ---: |
-| < 5 000 | 10 | 120 |
-| 5 000 – 24 999 | 10 | 90 |
-| 25 000 – 99 999 | 25 | 60 |
-| >= 100 000 | 40 | 30 |
+| node count      | warmup frames | timed frames |
+| --------------- | ------------: | -----------: |
+| < 5 000         |            10 |          120 |
+| 5 000 – 24 999  |            10 |           90 |
+| 25 000 – 99 999 |            25 |           60 |
+| >= 100 000      |            40 |           30 |
 
 Warmup settles shader compilation, texture upload and JIT; its frames are
 discarded. It scales _up_ with node count precisely because the timed window
@@ -305,10 +305,10 @@ the same neighbourhood, and a large deviation is worth investigating.
   1 000 000 static sprites laid out over 4x the viewport's area with a moving
   camera, 40 warmup frames, 30 timed frames
 
-| backend | CPU median | CPU p95 | frame median | frame p95 | draw calls / frame |
-| --- | ---: | ---: | ---: | ---: | ---: |
-| WebGL2 | 0.402 ms | 10.08 ms | 0.330 ms | 1.17 ms | 1 |
-| WebGPU | 0.380 ms | 10.45 ms | 2.98 ms | 4.66 ms | 1 |
+| backend | CPU median |  CPU p95 | frame median | frame p95 | draw calls / frame |
+| ------- | ---------: | -------: | -----------: | --------: | -----------------: |
+| WebGL2  |   0.402 ms | 10.08 ms |     0.330 ms |   1.17 ms |                  1 |
+| WebGPU  |   0.380 ms | 10.45 ms |      2.98 ms |   4.66 ms |                  1 |
 
 Reading notes, in the order they matter:
 
@@ -324,11 +324,11 @@ Reading notes, in the order they matter:
   moves. The table's per-frame `1` is derived. The report itself prints the
   window's raw total in that column — `drawCalls = 30` over 30 timed frames —
   with the note `structural counters did not divide evenly over 30 frame(s); raw
-  totals reported`, which trips on this cell because a sibling counter
+totals reported`, which trips on this cell because a sibling counter
   (`bufferUploads`) has no whole-frame quotient. Divide the column by
   `timedFrames` when a cell carries that note.
 - **This is one workload.** `scrolling-world` is a deliberately extreme static
-  world. Nothing here generalises to a million *animated* sprites, to other
+  world. Nothing here generalises to a million _animated_ sprites, to other
   archetypes, or to other hardware.
 
 For context on where those numbers came from: before the engine kept its

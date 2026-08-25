@@ -1,4 +1,4 @@
-﻿import type { ParticleEmitter } from "#ParticleStorage";
+﻿import type { ParticleEmitter } from '#ParticleStorage';
 
 /**
  * Per-frame particle spawner. Subclasses decide how many particles to emit each

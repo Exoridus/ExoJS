@@ -293,7 +293,9 @@ const main = async (): Promise<void> => {
       `  engine   ${version}`,
       '',
       '  On the phone, open the first URL that answers:',
-      ...candidates.map(candidate => `    ${scheme}://${candidate.address}:${port}/   (${candidate.name}${candidate.virtual ? ', virtual adapter — unlikely' : ''})`),
+      ...candidates.map(
+        candidate => `    ${scheme}://${candidate.address}:${port}/   (${candidate.name}${candidate.virtual ? ', virtual adapter — unlikely' : ''})`,
+      ),
       `  On this machine:      ${scheme}://127.0.0.1:${port}/`,
       '',
       plainHttp

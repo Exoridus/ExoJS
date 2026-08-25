@@ -12,7 +12,7 @@ npm install @codexo/exojs @codexo/exojs-aseprite
 `@codexo/exojs` is a peer dependency. This package has no other runtime dependencies.
 
 > Export your sprite sheet from Aseprite as a **JSON + PNG** pair (`File → Export Sprite Sheet`,
-> *Output → JSON Data*). Either array or hash frame mode works; frame tags become animation clips.
+> _Output → JSON Data_). Either array or hash frame mode works; frame tags become animation clips.
 
 ## What this package provides
 
@@ -56,8 +56,8 @@ releases the parsed sprite sheet; the Loader handles texture lifecycle and dedup
 ## Core compatibility
 
 | `@codexo/exojs-aseprite` | `@codexo/exojs` |
-|---|---|
-| 0.14.x | 0.14.x |
+| ------------------------ | --------------- |
+| 0.14.x                   | 0.14.x          |
 
 ## Links
 

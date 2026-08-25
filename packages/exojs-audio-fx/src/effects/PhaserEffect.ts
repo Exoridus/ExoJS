@@ -148,11 +148,7 @@ export class PhaserEffect extends AudioEffect {
   public set rateHz(value: number) {
     this._rateHz = Math.max(0, Math.min(20, value));
     if (this._setup) {
-      this._setup.lfoOscillator.frequency.setTargetAtTime(
-        this._rateHz,
-        this._setup.inputGain.context.currentTime,
-        0.01,
-      );
+      this._setup.lfoOscillator.frequency.setTargetAtTime(this._rateHz, this._setup.inputGain.context.currentTime, 0.01);
     }
   }
 
@@ -185,11 +181,7 @@ export class PhaserEffect extends AudioEffect {
   public set depth(value: number) {
     this._depth = Math.max(0, Math.min(1, value));
     if (this._setup) {
-      this._setup.lfoGain.gain.setTargetAtTime(
-        this._depth * this._baseFrequency,
-        this._setup.inputGain.context.currentTime,
-        0.01,
-      );
+      this._setup.lfoGain.gain.setTargetAtTime(this._depth * this._baseFrequency, this._setup.inputGain.context.currentTime, 0.01);
     }
   }
 
@@ -203,11 +195,7 @@ export class PhaserEffect extends AudioEffect {
   public set feedback(value: number) {
     this._feedback = Math.max(0, Math.min(0.9, value));
     if (this._setup) {
-      this._setup.feedbackGain.gain.setTargetAtTime(
-        this._feedback,
-        this._setup.inputGain.context.currentTime,
-        0.01,
-      );
+      this._setup.feedbackGain.gain.setTargetAtTime(this._feedback, this._setup.inputGain.context.currentTime, 0.01);
     }
   }
 

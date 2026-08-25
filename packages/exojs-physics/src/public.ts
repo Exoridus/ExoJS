@@ -17,7 +17,7 @@ export { WeldJoint, type WeldJointOptions } from './joints/WeldJoint';
 export { WheelJoint, type WheelJointOptions } from './joints/WheelJoint';
 export type { BodyOptions } from './PhysicsBody';
 export { PhysicsBody } from './PhysicsBody';
-export { type PhysicsBuildInfo,physicsBuildInfo } from './physicsBuildInfo';
+export { type PhysicsBuildInfo, physicsBuildInfo } from './physicsBuildInfo';
 export type { AttachOptions, PhysicsWorldOptions } from './PhysicsWorld';
 export { PhysicsWorld } from './PhysicsWorld';
 export type { QueryFilter, RayHit } from './query/QueryEngine';

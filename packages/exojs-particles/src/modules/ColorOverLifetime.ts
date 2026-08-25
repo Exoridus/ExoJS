@@ -2,8 +2,8 @@
 
 import { Color } from '@codexo/exojs';
 
-import type { ColorGradient } from "#distributions/ColorGradient";
-import type { ParticleBatch } from "#ParticleStorage";
+import type { ColorGradient } from '#distributions/ColorGradient';
+import type { ParticleBatch } from '#ParticleStorage';
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';

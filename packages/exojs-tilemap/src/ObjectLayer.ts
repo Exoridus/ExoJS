@@ -239,12 +239,7 @@ export interface ObjectQuery {
  * @internal
  */
 function isTilePropertyObjectRef(value: TilePropertyValue): value is TilePropertyObjectRef {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    !Array.isArray(value) &&
-    (value as { kind?: unknown }).kind === TilePropertyKind.ObjectRef
-  );
+  return typeof value === 'object' && value !== null && !Array.isArray(value) && (value as { kind?: unknown }).kind === TilePropertyKind.ObjectRef;
 }
 
 /**
@@ -468,10 +463,7 @@ export class ObjectLayer<S extends ObjectSchema = ObjectSchema> {
    * that keeps the narrowed `properties` type inside the predicate. Returns a
    * fresh array.
    */
-  public where<T extends keyof S & string>(
-    type: T,
-    predicate: (object: TypedObject<S, T>) => boolean,
-  ): Array<TypedObject<S, T>> {
+  public where<T extends keyof S & string>(type: T, predicate: (object: TypedObject<S, T>) => boolean): Array<TypedObject<S, T>> {
     return this.byType(type).filter(object => predicate(object));
   }
 

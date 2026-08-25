@@ -1,14 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import type { TiledGroupLayerData,TiledObjectLayerData } from '../src/data';
-import {
-  createTiledLayer,
-  TiledGroupLayer,
-  TiledImageLayer,
-  TiledLayer,
-  TiledObjectLayer,
-  TiledTileLayer,
-} from '../src/TiledLayer';
+import type { TiledGroupLayerData, TiledObjectLayerData } from '../src/data';
+import { createTiledLayer, TiledGroupLayer, TiledImageLayer, TiledLayer, TiledObjectLayer, TiledTileLayer } from '../src/TiledLayer';
 
 const BASE = {
   id: 1,

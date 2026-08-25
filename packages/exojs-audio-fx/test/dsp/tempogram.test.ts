@@ -1,11 +1,4 @@
-import {
-  computeAcf,
-  computeTempoCandidates,
-  findTempoPeaks,
-  isOctaveRelated,
-  scoreTempoHypotheses,
-  tempoPrior,
-} from '../../src/dsp/tempogram';
+import { computeAcf, computeTempoCandidates, findTempoPeaks, isOctaveRelated, scoreTempoHypotheses, tempoPrior } from '../../src/dsp/tempogram';
 
 const SAMPLE_RATE = 48000;
 const HOP_SIZE = 512;
@@ -183,8 +176,8 @@ describe('computeTempoCandidates — octave disambiguation', () => {
       minBpm: 50,
       maxBpm: 250,
     });
-    const fund = cands.find((c) => Math.abs(c.bpm - 250) / 250 < 0.05);
-    const half = cands.find((c) => Math.abs(c.bpm - 125) / 125 < 0.05);
+    const fund = cands.find(c => Math.abs(c.bpm - 250) / 250 < 0.05);
+    const half = cands.find(c => Math.abs(c.bpm - 125) / 125 < 0.05);
     expect(fund).toBeDefined();
     if (half) expect(fund!.score).toBeGreaterThan(half.score);
   });

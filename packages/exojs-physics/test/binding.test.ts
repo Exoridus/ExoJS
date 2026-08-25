@@ -53,9 +53,7 @@ describe('SceneNode binding', () => {
 
   it('writes the body rotation onto the node (radians → degrees)', () => {
     const world = new PhysicsWorld();
-    const body = world.add(
-      new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, angle: Math.PI / 2, colliders: [{ shape: new BoxShape(10, 10) }] }),
-    );
+    const body = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, angle: Math.PI / 2, colliders: [{ shape: new BoxShape(10, 10) }] }));
     const node = fakeNode();
 
     world.bind(body, node as unknown as SceneNode);

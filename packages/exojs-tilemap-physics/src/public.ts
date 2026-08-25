@@ -6,10 +6,4 @@ export type { ObjectCollider, ObjectColliderOptions } from './objectLayer';
 export { buildObjectLayerColliders } from './objectLayer';
 export type { TileColliderOptions } from './TileColliderStreamer';
 export { TileColliderStreamer } from './TileColliderStreamer';
-export type {
-  ColliderDefaults,
-  TileColliderContext,
-  TileColliderMaterial,
-  TileColliderMaterialResolver,
-  TileRegionMode,
-} from './types';
+export type { ColliderDefaults, TileColliderContext, TileColliderMaterial, TileColliderMaterialResolver, TileRegionMode } from './types';

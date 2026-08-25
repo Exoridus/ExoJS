@@ -59,11 +59,7 @@ function makeVoiceLike(): Voice {
  * dispatches until `flipToReady()` is called.
  */
 async function withSuspendedBeatDetectorContext<T>(
-  run: (mod: {
-    fresh: typeof import('@codexo/exojs');
-    FreshBeatDetector: typeof BeatDetector;
-    flipToReady: () => void;
-  }) => T | Promise<T>,
+  run: (mod: { fresh: typeof import('@codexo/exojs'); FreshBeatDetector: typeof BeatDetector; flipToReady: () => void }) => T | Promise<T>,
 ): Promise<T> {
   const OriginalAudioContext = globalThis.AudioContext;
   class SuspendedMockAudioContext extends (OriginalAudioContext as unknown as new () => AudioContext) {
@@ -1131,9 +1127,7 @@ describe('BeatDetector', () => {
       await d.ready;
       const stream = { getTracks: () => [] } as unknown as MediaStream;
       const ctx = getAudioContext();
-      const resolve = (
-        d as unknown as { _resolveToAudioNode: (s: unknown, c: unknown) => AudioNode | null }
-      )._resolveToAudioNode.bind(d);
+      const resolve = (d as unknown as { _resolveToAudioNode: (s: unknown, c: unknown) => AudioNode | null })._resolveToAudioNode.bind(d);
       const first = resolve(stream, ctx);
       expect(first).not.toBeNull();
       const disconnectSpy = vi.spyOn(first!, 'disconnect');

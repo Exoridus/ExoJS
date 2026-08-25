@@ -21,12 +21,5 @@ export { createMatterJsAdapter } from './adapters/matter-js';
 export { createRapierAdapter } from './adapters/rapier';
 export { buildPhysicsMatrix, PHYSICS_ARCHETYPES, STEP_DELTA } from './archetypes';
 export { type PhysicsMatrixOutcome, type PhysicsProvenance, runPhysicsMatrix } from './driver';
-export type {
-  PhysicsAdapter,
-  PhysicsArchetypeId,
-  PhysicsArchetypeSpec,
-  PhysicsCellResult,
-  PhysicsCellSpec,
-  PhysicsStructuralCounters,
-} from './PhysicsAdapter';
+export type { PhysicsAdapter, PhysicsArchetypeId, PhysicsArchetypeSpec, PhysicsCellResult, PhysicsCellSpec, PhysicsStructuralCounters } from './PhysicsAdapter';
 export { type PhysicsReportData, writePhysicsReport } from './report';

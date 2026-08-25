@@ -21,7 +21,7 @@ export const NO_GPU_TIMER_NOTE = 'frame time from rAF delta; no GPU timer';
  * column that sees it.
  */
 export const WEBGPU_TIMESTAMP_NOTE =
-  'frame time from hardware timestamp-query around the frame\'s render passes (render-pass execution only — queue.writeBuffer upload copies are queue operations outside any pass and are NOT included; see queueMs* for a measure that does see them). Not comparable to the WebGL2 hardware query, which brackets the frame\'s whole GL command stream including uploads';
+  "frame time from hardware timestamp-query around the frame's render passes (render-pass execution only — queue.writeBuffer upload copies are queue operations outside any pass and are NOT included; see queueMs* for a measure that does see them). Not comparable to the WebGL2 hardware query, which brackets the frame's whole GL command stream including uploads";
 
 /**
  * Note recorded on a WebGPU cell that could not obtain `timestamp-query`, so it
@@ -38,7 +38,7 @@ export const WEBGPU_NO_TIMESTAMP_NOTE =
  * what that column is and - just as importantly - what its floor is.
  */
 export const WEBGPU_QUEUE_NOTE =
-  'queueMs* = queue occupancy attributed to the frame that caused it (doneAt − max(submitAt, previous doneAt)), from queue.onSubmittedWorkDone. It is an UPPER BOUND on the frame\'s queue work and carries a completion-observation floor of ~0.5ms (presenting frame) to ~3.2ms (non-presenting), so any value below ~4ms is dominated by observation latency rather than GPU work; read it for large events, never as a small-frame GPU time';
+  "queueMs* = queue occupancy attributed to the frame that caused it (doneAt − max(submitAt, previous doneAt)), from queue.onSubmittedWorkDone. It is an UPPER BOUND on the frame's queue work and carries a completion-observation floor of ~0.5ms (presenting frame) to ~3.2ms (non-presenting), so any value below ~4ms is dominated by observation latency rather than GPU work; read it for large events, never as a small-frame GPU time";
 
 /** Both series a GPU timer can produce for one cell. */
 export interface GpuFrameSamples {
@@ -510,4 +510,3 @@ export const createWebGpuGpuTimer = (device: GPUDevice): GpuFrameTimer => {
     },
   };
 };
-

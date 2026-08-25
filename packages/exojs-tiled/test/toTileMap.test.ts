@@ -144,8 +144,7 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
       expect(tile, `cell ${i}`).not.toBeNull();
       expect(tile!.tileset.name).toBe('tiles-a');
       expect(tile!.localTileId).toBe(0);
-      expect({ flipX: tile!.transform.flipX, flipY: tile!.transform.flipY, diagonal: tile!.transform.diagonal })
-        .toEqual(EXPECTED_FLIPS[i]);
+      expect({ flipX: tile!.transform.flipX, flipY: tile!.transform.flipY, diagonal: tile!.transform.diagonal }).toEqual(EXPECTED_FLIPS[i]);
     }
   });
 
@@ -268,46 +267,90 @@ describe('runtime binding vs source.toTileMap() equivalence', () => {
 
 describe('TiledMap.toTileMap() — rejects maps it cannot convert faithfully', () => {
   const baseLayer = {
-    id: 1, name: 'Ground', type: 'tilelayer', visible: true, opacity: 1,
-    x: 0, y: 0, width: 2, height: 1, data: [1, 1],
+    id: 1,
+    name: 'Ground',
+    type: 'tilelayer',
+    visible: true,
+    opacity: 1,
+    x: 0,
+    y: 0,
+    width: 2,
+    height: 1,
+    data: [1, 1],
   };
   const baseTileset = {
-    firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
-    tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+    firstgid: 1,
+    name: 'tiles',
+    image: 'tiles-a.png',
+    imagewidth: 64,
+    imageheight: 32,
+    tilewidth: 16,
+    tileheight: 16,
+    columns: 4,
+    tilecount: 8,
   };
 
   it('throws TiledFormatError for a non-orthogonal (isometric) map', async () => {
     const { loadSource } = makeContext({
       'iso.tmj': {
-        type: 'map', version: '1.10', orientation: 'isometric', width: 2, height: 1,
-        tilewidth: 16, tileheight: 16, infinite: false,
-        layers: [baseLayer], tilesets: [baseTileset],
+        type: 'map',
+        version: '1.10',
+        orientation: 'isometric',
+        width: 2,
+        height: 1,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
+        layers: [baseLayer],
+        tilesets: [baseTileset],
       },
     });
     const map = await loadSource('iso.tmj');
     expect(() => map.toTileMap()).toThrow(TiledFormatError);
     expect(() => map.toTileMap()).toThrow(/orthogonal/);
   });
-
 });
 
 // ── Infinite maps / chunk provider ────────────────────────────────────────
 
 describe('TiledMap.toTileMap() — infinite maps', () => {
   const baseTileset = {
-    firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
-    tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+    firstgid: 1,
+    name: 'tiles',
+    image: 'tiles-a.png',
+    imagewidth: 64,
+    imageheight: 32,
+    tilewidth: 16,
+    tileheight: 16,
+    columns: 4,
+    tilecount: 8,
   };
 
   function makeInfiniteMapContext(chunks: readonly { x: number; y: number; width: number; height: number; data: number[] }[]) {
     return makeContext({
       'inf.tmj': {
-        type: 'map', version: '1.10', orientation: 'orthogonal', width: 0, height: 0,
-        tilewidth: 16, tileheight: 16, infinite: true,
-        layers: [{
-          id: 1, name: 'Ground', type: 'tilelayer', visible: true, opacity: 1, x: 0, y: 0,
-          width: 0, height: 0, chunks,
-        }],
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        width: 0,
+        height: 0,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: true,
+        layers: [
+          {
+            id: 1,
+            name: 'Ground',
+            type: 'tilelayer',
+            visible: true,
+            opacity: 1,
+            x: 0,
+            y: 0,
+            width: 0,
+            height: 0,
+            chunks,
+          },
+        ],
         tilesets: [baseTileset],
       },
     });
@@ -332,12 +375,28 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
   it('getChunkSource returns undefined for a non-chunked (finite) layer id, whose layer stays bounded', async () => {
     const { loadSource } = makeContext({
       'finite.tmj': {
-        type: 'map', version: '1.10', orientation: 'orthogonal', width: 2, height: 1,
-        tilewidth: 16, tileheight: 16, infinite: false,
-        layers: [{
-          id: 1, name: 'Ground', type: 'tilelayer', visible: true, opacity: 1, x: 0, y: 0,
-          width: 2, height: 1, data: [1, 1],
-        }],
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        width: 2,
+        height: 1,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
+        layers: [
+          {
+            id: 1,
+            name: 'Ground',
+            type: 'tilelayer',
+            visible: true,
+            opacity: 1,
+            x: 0,
+            y: 0,
+            width: 2,
+            height: 1,
+            data: [1, 1],
+          },
+        ],
         tilesets: [baseTileset],
       },
     });
@@ -424,9 +483,7 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
   it('getChunk resolves flip flags through the same path as populateTileLayer', async () => {
     // 2147483649 = base gid 1 with the horizontal-flip flag (0x80000000) set -
     // same literal convention as fixtures/orthogonal-rich.tmj's flip-combination row.
-    const { loadSource } = makeInfiniteMapContext([
-      { x: 0, y: 0, width: 16, height: 16, data: [2147483649, ...new Array(255).fill(0)] },
-    ]);
+    const { loadSource } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: [2147483649, ...new Array(255).fill(0)] }]);
     const map = await loadSource('inf.tmj');
     map.toTileMap();
     const source = map.getChunkSource(1)!;
@@ -520,20 +577,39 @@ describe('TiledMap.toTileMap() — object layers', () => {
   it('leaves a rotated tile object pivoting about the Tiled anchor, not about (x, y)', async () => {
     const { loadSource: rotatedLoad } = makeContext({
       'rotated-tile-object.tmj': {
-        type: 'map', version: '1.10', orientation: 'orthogonal',
-        width: 4, height: 4, tilewidth: 16, tileheight: 16, infinite: false,
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        width: 4,
+        height: 4,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
         layers: [
           {
-            id: 1, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 1, x: 0, y: 0,
-            objects: [
-              { id: 1, name: 'crate', type: '', gid: 1, x: 32, y: 48, width: 16, height: 16, rotation: 45, visible: true },
-            ],
+            id: 1,
+            name: 'Spawns',
+            type: 'objectgroup',
+            visible: true,
+            opacity: 1,
+            x: 0,
+            y: 0,
+            objects: [{ id: 1, name: 'crate', type: '', gid: 1, x: 32, y: 48, width: 16, height: 16, rotation: 45, visible: true }],
           },
         ],
-        tilesets: [{
-          firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
-          tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
-        }],
+        tilesets: [
+          {
+            firstgid: 1,
+            name: 'tiles',
+            image: 'tiles-a.png',
+            imagewidth: 64,
+            imageheight: 32,
+            tilewidth: 16,
+            tileheight: 16,
+            columns: 4,
+            tilecount: 8,
+          },
+        ],
       },
     });
 
@@ -551,21 +627,40 @@ describe('TiledMap.toTileMap() — object layers', () => {
   it('keeps the tileset tileoffset out of a tile object position, but reachable through its tileset', async () => {
     const { loadSource: offsetLoad } = makeContext({
       'tileoffset-object.tmj': {
-        type: 'map', version: '1.10', orientation: 'orthogonal',
-        width: 4, height: 4, tilewidth: 16, tileheight: 16, infinite: false,
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        width: 4,
+        height: 4,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
         layers: [
           {
-            id: 1, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 1, x: 0, y: 0,
-            objects: [
-              { id: 1, name: 'crate', type: '', gid: 1, x: 32, y: 48, width: 16, height: 16, rotation: 0, visible: true },
-            ],
+            id: 1,
+            name: 'Spawns',
+            type: 'objectgroup',
+            visible: true,
+            opacity: 1,
+            x: 0,
+            y: 0,
+            objects: [{ id: 1, name: 'crate', type: '', gid: 1, x: 32, y: 48, width: 16, height: 16, rotation: 0, visible: true }],
           },
         ],
-        tilesets: [{
-          firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
-          tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
-          tileoffset: { x: 4, y: -8 },
-        }],
+        tilesets: [
+          {
+            firstgid: 1,
+            name: 'tiles',
+            image: 'tiles-a.png',
+            imagewidth: 64,
+            imageheight: 32,
+            tilewidth: 16,
+            tileheight: 16,
+            columns: 4,
+            tilecount: 8,
+            tileoffset: { x: 4, y: -8 },
+          },
+        ],
       },
     });
 
@@ -640,16 +735,29 @@ describe('TiledMap.toTileMap() — image layers', () => {
 
 describe('TiledMap.toTileMap() — combined document order (renderableLayers)', () => {
   const baseTileset = {
-    firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
-    tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+    firstgid: 1,
+    name: 'tiles',
+    image: 'tiles-a.png',
+    imagewidth: 64,
+    imageheight: 32,
+    tilewidth: 16,
+    tileheight: 16,
+    columns: 4,
+    tilecount: 8,
   };
   const baseTile = { id: 1, name: 'TileA', type: 'tilelayer', visible: true, opacity: 1, x: 0, y: 0, width: 2, height: 1, data: [1, 1] };
 
   it('renderableLayers preserves flat tile -> image -> tile document order', async () => {
     const { loadSource } = makeContext({
       'order-flat.tmj': {
-        type: 'map', version: '1.10', orientation: 'orthogonal',
-        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        width: 2,
+        height: 1,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
         layers: [
           { ...baseTile, id: 1, name: 'TileA' },
           { id: 2, name: 'ImageB', type: 'imagelayer', visible: true, opacity: 1, x: 0, y: 0, image: 'bg.png' },
@@ -673,15 +781,25 @@ describe('TiledMap.toTileMap() — combined document order (renderableLayers)', 
   it('renderableLayers preserves flattened document order when the image layer sits inside a group between two tile layers', async () => {
     const { loadSource } = makeContext({
       'order-grouped.tmj': {
-        type: 'map', version: '1.10', orientation: 'orthogonal',
-        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        width: 2,
+        height: 1,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
         layers: [
           { ...baseTile, id: 1, name: 'TileA' },
           {
-            id: 2, name: 'Wrapper', type: 'group', visible: true, opacity: 1, x: 0, y: 0,
-            layers: [
-              { id: 3, name: 'ImageB', type: 'imagelayer', visible: true, opacity: 1, x: 0, y: 0, image: 'bg.png' },
-            ],
+            id: 2,
+            name: 'Wrapper',
+            type: 'group',
+            visible: true,
+            opacity: 1,
+            x: 0,
+            y: 0,
+            layers: [{ id: 3, name: 'ImageB', type: 'imagelayer', visible: true, opacity: 1, x: 0, y: 0, image: 'bg.png' }],
           },
           { ...baseTile, id: 4, name: 'TileC' },
         ],
@@ -705,21 +823,42 @@ describe('TiledMap.toTileMap() — combined document order (renderableLayers)', 
 
 describe('TiledMap.toTileMap() — parallax forwarding', () => {
   const baseTileset = {
-    firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
-    tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+    firstgid: 1,
+    name: 'tiles',
+    image: 'tiles-a.png',
+    imagewidth: 64,
+    imageheight: 32,
+    tilewidth: 16,
+    tileheight: 16,
+    columns: 4,
+    tilecount: 8,
   };
 
   it('forwards parallaxX and parallaxY from Tiled layer data to runtime TileLayer', async () => {
     const { loadSource } = makeContext({
       'parallax.tmj': {
-        type: 'map', version: '1.10', orientation: 'orthogonal',
-        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        width: 2,
+        height: 1,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
         layers: [
           {
-            id: 1, name: 'Background', type: 'tilelayer',
-            visible: true, opacity: 1, x: 0, y: 0,
-            width: 2, height: 1, data: [1, 1],
-            parallaxx: 0.5, parallaxy: 0.25,
+            id: 1,
+            name: 'Background',
+            type: 'tilelayer',
+            visible: true,
+            opacity: 1,
+            x: 0,
+            y: 0,
+            width: 2,
+            height: 1,
+            data: [1, 1],
+            parallaxx: 0.5,
+            parallaxy: 0.25,
           },
         ],
         tilesets: [baseTileset],
@@ -737,13 +876,26 @@ describe('TiledMap.toTileMap() — parallax forwarding', () => {
   it('defaults parallaxX and parallaxY to 1.0 when absent from Tiled data', async () => {
     const { loadSource } = makeContext({
       'no-parallax.tmj': {
-        type: 'map', version: '1.10', orientation: 'orthogonal',
-        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        width: 2,
+        height: 1,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
         layers: [
           {
-            id: 1, name: 'Ground', type: 'tilelayer',
-            visible: true, opacity: 1, x: 0, y: 0,
-            width: 2, height: 1, data: [1, 1],
+            id: 1,
+            name: 'Ground',
+            type: 'tilelayer',
+            visible: true,
+            opacity: 1,
+            x: 0,
+            y: 0,
+            width: 2,
+            height: 1,
+            data: [1, 1],
           },
         ],
         tilesets: [baseTileset],
@@ -763,24 +915,54 @@ describe('TiledMap.toTileMap() — parallax forwarding', () => {
 
 describe('TiledMap.toTileMap() — group layer style is folded into the flattened children', () => {
   const baseTileset = {
-    firstgid: 1, name: 'tiles', image: 'tiles-a.png', imagewidth: 64, imageheight: 32,
-    tilewidth: 16, tileheight: 16, columns: 4, tilecount: 8,
+    firstgid: 1,
+    name: 'tiles',
+    image: 'tiles-a.png',
+    imagewidth: 64,
+    imageheight: 32,
+    tilewidth: 16,
+    tileheight: 16,
+    columns: 4,
+    tilecount: 8,
   };
 
   const tileLayer = (id: number, name: string, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
-    id, name, type: 'tilelayer', visible: true, opacity: 1, x: 0, y: 0,
-    width: 2, height: 1, data: [1, 1], ...extra,
+    id,
+    name,
+    type: 'tilelayer',
+    visible: true,
+    opacity: 1,
+    x: 0,
+    y: 0,
+    width: 2,
+    height: 1,
+    data: [1, 1],
+    ...extra,
   });
 
   const groupLayer = (id: number, name: string, layers: unknown[], extra: Record<string, unknown> = {}): Record<string, unknown> => ({
-    id, name, type: 'group', visible: true, opacity: 1, x: 0, y: 0, layers, ...extra,
+    id,
+    name,
+    type: 'group',
+    visible: true,
+    opacity: 1,
+    x: 0,
+    y: 0,
+    layers,
+    ...extra,
   });
 
   const convert = async (layers: unknown[]): Promise<TileMap> => {
     const { loadSource } = makeContext({
       'groups.tmj': {
-        type: 'map', version: '1.10', orientation: 'orthogonal',
-        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        width: 2,
+        height: 1,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
         layers,
         tilesets: [baseTileset],
       },
@@ -802,9 +984,7 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
   });
 
   it('group and child offsets add', async () => {
-    const runtime = await convert([
-      groupLayer(1, 'Shifted', [tileLayer(2, 'Ground', { offsetx: 3, offsety: -4 })], { offsetx: 10, offsety: 20 }),
-    ]);
+    const runtime = await convert([groupLayer(1, 'Shifted', [tileLayer(2, 'Ground', { offsetx: 3, offsety: -4 })], { offsetx: 10, offsety: 20 })]);
 
     const layer = runtime.getTileLayer('Ground')!;
 
@@ -813,9 +993,7 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
   });
 
   it('group and child parallax factors multiply', async () => {
-    const runtime = await convert([
-      groupLayer(1, 'Far', [tileLayer(2, 'Ground', { parallaxx: 0.5, parallaxy: 0.25 })], { parallaxx: 0.5, parallaxy: 2 }),
-    ]);
+    const runtime = await convert([groupLayer(1, 'Far', [tileLayer(2, 'Ground', { parallaxx: 0.5, parallaxy: 0.25 })], { parallaxx: 0.5, parallaxy: 2 })]);
 
     const layer = runtime.getTileLayer('Ground')!;
 
@@ -824,9 +1002,7 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
   });
 
   it('group and child tint colours multiply per channel', async () => {
-    const runtime = await convert([
-      groupLayer(1, 'Tinted', [tileLayer(2, 'Ground', { tintcolor: '#ff8040' })], { tintcolor: '#808080' }),
-    ]);
+    const runtime = await convert([groupLayer(1, 'Tinted', [tileLayer(2, 'Ground', { tintcolor: '#ff8040' })], { tintcolor: '#808080' })]);
 
     // 0xff·0x80/255 = 0x80, 0x80·0x80/255 = 0x40, 0x40·0x80/255 = 0x20.
     expect(runtime.getTileLayer('Ground')!.tintColor).toBe(0x804020);
@@ -841,7 +1017,8 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
   it('nested groups compose all the way down', async () => {
     const runtime = await convert([
       groupLayer(1, 'Outer', [groupLayer(2, 'Inner', [tileLayer(3, 'Ground')], { opacity: 0.5, offsetx: 5 })], {
-        opacity: 0.5, offsetx: 5,
+        opacity: 0.5,
+        offsetx: 5,
       }),
     ]);
 
@@ -852,21 +1029,20 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
   });
 
   it('a hidden outer group wins over a visible inner one', async () => {
-    const runtime = await convert([
-      groupLayer(1, 'Outer', [groupLayer(2, 'Inner', [tileLayer(3, 'Ground')])], { visible: false }),
-    ]);
+    const runtime = await convert([groupLayer(1, 'Outer', [groupLayer(2, 'Inner', [tileLayer(3, 'Ground')])], { visible: false })]);
 
     expect(runtime.getTileLayer('Ground')!.visible).toBe(false);
   });
 
   it('image layers inside a group inherit the group style too', async () => {
     const runtime = await convert([
-      groupLayer(
-        1,
-        'Wrapper',
-        [{ id: 2, name: 'Background', type: 'imagelayer', visible: true, opacity: 0.5, x: 0, y: 0, image: 'bg.png', offsetx: 4 }],
-        { visible: false, opacity: 0.5, offsetx: 6, parallaxx: 0.5, tintcolor: '#808080' },
-      ),
+      groupLayer(1, 'Wrapper', [{ id: 2, name: 'Background', type: 'imagelayer', visible: true, opacity: 0.5, x: 0, y: 0, image: 'bg.png', offsetx: 4 }], {
+        visible: false,
+        opacity: 0.5,
+        offsetx: 6,
+        parallaxx: 0.5,
+        tintcolor: '#808080',
+      }),
     ]);
 
     const layer = runtime.imageLayers[0]!;
@@ -885,8 +1061,18 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
         'Wrapper',
         [
           {
-            id: 2, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 0.5, x: 0, y: 0,
-            offsetx: 4, parallaxx: 0.5, parallaxy: 0.5, tintcolor: '#ff8040', objects: [],
+            id: 2,
+            name: 'Spawns',
+            type: 'objectgroup',
+            visible: true,
+            opacity: 0.5,
+            x: 0,
+            y: 0,
+            offsetx: 4,
+            parallaxx: 0.5,
+            parallaxy: 0.5,
+            tintcolor: '#ff8040',
+            objects: [],
           },
         ],
         { visible: false, opacity: 0.5, offsetx: 6, parallaxx: 0.5, parallaxy: 2, tintcolor: '#808080' },
@@ -907,8 +1093,17 @@ describe('TiledMap.toTileMap() — group layer style is folded into the flattene
   it('an object layer outside any group keeps its own parallax and tint verbatim', async () => {
     const runtime = await convert([
       {
-        id: 1, name: 'Spawns', type: 'objectgroup', visible: true, opacity: 1, x: 0, y: 0,
-        parallaxx: 0.5, parallaxy: 0.25, tintcolor: '#123456', objects: [],
+        id: 1,
+        name: 'Spawns',
+        type: 'objectgroup',
+        visible: true,
+        opacity: 1,
+        x: 0,
+        y: 0,
+        parallaxx: 0.5,
+        parallaxy: 0.25,
+        tintcolor: '#123456',
+        objects: [],
       },
     ]);
 

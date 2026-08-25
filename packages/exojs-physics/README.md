@@ -57,23 +57,23 @@ class GameScene extends Scene {
 
 ## What it does
 
-| Area | API |
-|---|---|
-| World | `PhysicsWorld`, `step`, `gravity`, `timeStepper`, `destroy` |
-| Bodies | `new PhysicsBody` + `world.add` (`dynamic`/`static`/`kinematic`), `setTransform`, mass/inertia from colliders |
-| Colliders | `new Collider` + `body.addCollider` / `colliders: [...]`, density/friction/restitution, `isSensor`, filter, offset |
-| Attach | `world.attach(node, def)` — body + collider + `bind` in one call |
-| Shapes | solid: `CircleShape`, `CapsuleShape`, `PolygonShape` (convex-validated), `BoxShape`; boundary: `SegmentShape`, `ChainShape` |
-| Concave outlines | `toConvexPolygonShapes(vertices)` — one possibly-concave outline into the convex `PolygonShape`s for a single body |
-| Dynamics | fixed-step TGS-Soft solver, gravity, forces/impulses, friction/restitution, sleeping islands |
-| Joints | `DistanceJoint`, `RevoluteJoint`, `PrismaticJoint`, `WheelJoint`, `WeldJoint`, `MouseJoint` |
-| Continuous collision | `body.isBullet` — exact translational shape cast of the whole shape, not just its centre |
-| Contact policy | `world.contactModifier` — per-contact material/enable decisions (one-way platforms, conditional friction) |
-| Filtering | `CollisionFilter` (category/mask/group), `shouldCollide` |
-| Events | `onCollisionStart` / `onCollisionEnd` / `onSensorEnter` / `onSensorExit` — immutable snapshots |
-| Queries | `queryPoint`, `queryAabb` (+ `out` / `forEachAabbHit`), `rayCast`, `rayCastAll`, `overlapShape` |
-| Binding | `bind(body, node)` — node tracks the body's position each step |
-| Debug | `@codexo/exojs-physics/debug` → `PhysicsDebugDraw` (shapes/AABBs/contacts/normals/centres/broad-phase/joints) |
+| Area                 | API                                                                                                                         |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| World                | `PhysicsWorld`, `step`, `gravity`, `timeStepper`, `destroy`                                                                 |
+| Bodies               | `new PhysicsBody` + `world.add` (`dynamic`/`static`/`kinematic`), `setTransform`, mass/inertia from colliders               |
+| Colliders            | `new Collider` + `body.addCollider` / `colliders: [...]`, density/friction/restitution, `isSensor`, filter, offset          |
+| Attach               | `world.attach(node, def)` — body + collider + `bind` in one call                                                            |
+| Shapes               | solid: `CircleShape`, `CapsuleShape`, `PolygonShape` (convex-validated), `BoxShape`; boundary: `SegmentShape`, `ChainShape` |
+| Concave outlines     | `toConvexPolygonShapes(vertices)` — one possibly-concave outline into the convex `PolygonShape`s for a single body          |
+| Dynamics             | fixed-step TGS-Soft solver, gravity, forces/impulses, friction/restitution, sleeping islands                                |
+| Joints               | `DistanceJoint`, `RevoluteJoint`, `PrismaticJoint`, `WheelJoint`, `WeldJoint`, `MouseJoint`                                 |
+| Continuous collision | `body.isBullet` — exact translational shape cast of the whole shape, not just its centre                                    |
+| Contact policy       | `world.contactModifier` — per-contact material/enable decisions (one-way platforms, conditional friction)                   |
+| Filtering            | `CollisionFilter` (category/mask/group), `shouldCollide`                                                                    |
+| Events               | `onCollisionStart` / `onCollisionEnd` / `onSensorEnter` / `onSensorExit` — immutable snapshots                              |
+| Queries              | `queryPoint`, `queryAabb` (+ `out` / `forEachAabbHit`), `rayCast`, `rayCastAll`, `overlapShape`                             |
+| Binding              | `bind(body, node)` — node tracks the body's position each step                                                              |
+| Debug                | `@codexo/exojs-physics/debug` → `PhysicsDebugDraw` (shapes/AABBs/contacts/normals/centres/broad-phase/joints)               |
 
 Building a level out of a tilemap? `@codexo/exojs-tilemap-physics` turns
 `@codexo/exojs-tilemap` collision geometry into static bodies and keeps them in
@@ -109,7 +109,7 @@ are boundaries with no interior, so they contribute collision only and a
 `dynamic` body needs at least one solid collider alongside them. A chain is one
 authored collider that the engine solves edge by edge with shared-vertex
 adjacency, so a body slides across a seam without snagging. Two boundaries never
-collide with each other, and a boundary is never the *moving* operand of a
+collide with each other, and a boundary is never the _moving_ operand of a
 continuous shape cast — level structure is swept against, not swept.
 
 ## License

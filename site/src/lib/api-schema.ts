@@ -12,9 +12,9 @@ import { API_SUBSYSTEM_ORDER } from './api-reference';
 
 /** A single parameter of a constructor/method signature. */
 export const apiParamSchema = z.object({
-    name: z.string(),
-    type: z.string(),
-    optional: z.boolean(),
+  name: z.string(),
+  type: z.string(),
+  optional: z.boolean(),
 });
 
 /**
@@ -24,8 +24,8 @@ export const apiParamSchema = z.object({
  * marks what is a type from the AST, the page decides what actually has a page.
  */
 export const apiTokenSchema = z.object({
-    text: z.string(),
-    kind: z.enum(['name', 'param', 'keyword', 'type', 'punctuation']),
+  text: z.string(),
+  kind: z.enum(['name', 'param', 'keyword', 'type', 'punctuation']),
 });
 
 /**
@@ -35,18 +35,18 @@ export const apiTokenSchema = z.object({
  * the structured fields exist so later phases can highlight/link each token.
  */
 export const apiMemberSchema = z.object({
-    name: z.string(),
-    signature: z.string(),
-    signatureTokens: z.array(apiTokenSchema),
-    params: z.array(apiParamSchema),
-    returnType: z.string().nullable(),
-    description: z.string(),
+  name: z.string(),
+  signature: z.string(),
+  signatureTokens: z.array(apiTokenSchema),
+  params: z.array(apiParamSchema),
+  returnType: z.string().nullable(),
+  description: z.string(),
 });
 
 /** A rendered link (source link on the Source section). */
 export const apiLinkSchema = z.object({
-    label: z.string(),
-    href: z.string(),
+  label: z.string(),
+  href: z.string(),
 });
 
 /**
@@ -56,36 +56,36 @@ export const apiLinkSchema = z.object({
  * `sourceLink`. Fields not relevant to a section are empty/null.
  */
 export const apiSectionSchema = z.object({
-    id: z.string(),
-    title: z.string(),
-    members: z.array(apiMemberSchema),
-    paragraphs: z.array(z.string()),
-    importLine: z.string().nullable(),
-    sourceLink: apiLinkSchema.nullable(),
+  id: z.string(),
+  title: z.string(),
+  members: z.array(apiMemberSchema),
+  paragraphs: z.array(z.string()),
+  importLine: z.string().nullable(),
+  sourceLink: apiLinkSchema.nullable(),
 });
 
 /** Per-section-kind member tallies used by the index/all pages and stat card. */
 export const apiCountsSchema = z.object({
-    constructors: z.number().int().min(0),
-    methods: z.number().int().min(0),
-    properties: z.number().int().min(0),
-    events: z.number().int().min(0),
+  constructors: z.number().int().min(0),
+  methods: z.number().int().min(0),
+  properties: z.number().int().min(0),
+  events: z.number().int().min(0),
 });
 
 /** A complete API symbol page as typed, structured data. */
 export const apiSymbolSchema = z.object({
-    title: z.string(),
-    description: z.string(),
-    symbol: z.string(),
-    kind: z.enum(['class', 'enum', 'interface', 'type', 'function', 'namespace', 'variable']),
-    subsystem: z.enum(API_SUBSYSTEM_ORDER),
-    importPath: z.string(),
-    tier: z.enum(['stable', 'advanced']),
-    memberCount: z.number().int().min(0),
-    counts: apiCountsSchema,
-    sections: z.array(apiSectionSchema),
-    sourcePath: z.string().optional(),
-    sourceUrl: z.string().optional(),
+  title: z.string(),
+  description: z.string(),
+  symbol: z.string(),
+  kind: z.enum(['class', 'enum', 'interface', 'type', 'function', 'namespace', 'variable']),
+  subsystem: z.enum(API_SUBSYSTEM_ORDER),
+  importPath: z.string(),
+  tier: z.enum(['stable', 'advanced']),
+  memberCount: z.number().int().min(0),
+  counts: apiCountsSchema,
+  sections: z.array(apiSectionSchema),
+  sourcePath: z.string().optional(),
+  sourceUrl: z.string().optional(),
 });
 
 export type ApiParam = z.infer<typeof apiParamSchema>;

@@ -1,12 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import type {
-  TileMapObject,
-  TilePropertyObjectRef,
-  TilePropertyPoint,
-  TilePropertyTileRef,
-  TilePropertyValue,
-} from '../src/index';
+import type { TileMapObject, TilePropertyObjectRef, TilePropertyPoint, TilePropertyTileRef, TilePropertyValue } from '../src/index';
 import { ObjectKind, ObjectLayer, TileMap, TilePropertyKind } from '../src/index';
 
 const rectangle = (id: number, name: string, type: string, properties: Record<string, TilePropertyValue> = {}): TileMapObject => ({
@@ -172,10 +166,7 @@ describe('ObjectLayer query() value-matching for structured TilePropertyValue ki
   it('scalar value equality is unchanged', () => {
     const layer = new ObjectLayer({
       id: 1,
-      objects: [
-        rectangle(1, 'a', 'spawn', { team: 'red' }),
-        rectangle(2, 'b', 'spawn', { team: 'blue' }),
-      ],
+      objects: [rectangle(1, 'a', 'spawn', { team: 'red' }), rectangle(2, 'b', 'spawn', { team: 'blue' })],
     });
 
     expect(layer.query({ property: 'team', value: 'red' })).toHaveLength(1);

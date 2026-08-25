@@ -89,12 +89,7 @@ export function resetTileGeometryRebuildCount(): void {
  * @param tileHeight Map/layer tile cell height in pixels.
  * @internal
  */
-export function buildChunkPages(
-  chunk: ReadonlyTileChunk,
-  tilesets: readonly TileSet[],
-  tileWidth: number,
-  tileHeight: number,
-): ChunkPage[] {
+export function buildChunkPages(chunk: ReadonlyTileChunk, tilesets: readonly TileSet[], tileWidth: number, tileHeight: number): ChunkPage[] {
   tileGeometryRebuildCount++;
 
   if (chunk.empty) {

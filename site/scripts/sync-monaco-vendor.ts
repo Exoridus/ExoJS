@@ -9,49 +9,49 @@ const projectRoot = path.resolve(__dirname, '..');
 const requireFromSite = createRequire(import.meta.url);
 
 const resolveSourceDir = (): string => {
-    if (process.env.MONACO_PACKAGE_PATH) {
-        return path.resolve(projectRoot, process.env.MONACO_PACKAGE_PATH, 'min', 'vs');
+  if (process.env.MONACO_PACKAGE_PATH) {
+    return path.resolve(projectRoot, process.env.MONACO_PACKAGE_PATH, 'min', 'vs');
+  }
+
+  try {
+    const packageJsonPath = requireFromSite.resolve('monaco-editor/package.json');
+    return path.resolve(path.dirname(packageJsonPath), 'min', 'vs');
+  } catch {
+    // Fall through to explicit path candidates.
+  }
+
+  const candidates = [
+    path.resolve(projectRoot, 'node_modules', 'monaco-editor', 'min', 'vs'),
+    path.resolve(projectRoot, '..', 'node_modules', 'monaco-editor', 'min', 'vs'),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
     }
+  }
 
-    try {
-        const packageJsonPath = requireFromSite.resolve('monaco-editor/package.json');
-        return path.resolve(path.dirname(packageJsonPath), 'min', 'vs');
-    } catch {
-        // Fall through to explicit path candidates.
-    }
-
-    const candidates = [
-        path.resolve(projectRoot, 'node_modules', 'monaco-editor', 'min', 'vs'),
-        path.resolve(projectRoot, '..', 'node_modules', 'monaco-editor', 'min', 'vs'),
-    ];
-
-    for (const candidate of candidates) {
-        if (fs.existsSync(candidate)) {
-            return candidate;
-        }
-    }
-
-    return candidates[0];
+  return candidates[0];
 };
 
 const sourceDir = resolveSourceDir();
 const targetDir = path.resolve(projectRoot, 'public', 'vendor', 'monaco', 'vs');
 
 const syncMonacoVendor = (): void => {
-    if (!fs.existsSync(sourceDir)) {
-        if (fs.existsSync(targetDir)) {
-            console.log(`[vendor:sync] Monaco source missing at ${sourceDir}. Keeping existing ${targetDir}.`);
-            return;
-        }
-
-        throw new Error(`[vendor:sync] Missing monaco-editor source at ${sourceDir} and no existing vendor files at ${targetDir}.`);
+  if (!fs.existsSync(sourceDir)) {
+    if (fs.existsSync(targetDir)) {
+      console.log(`[vendor:sync] Monaco source missing at ${sourceDir}. Keeping existing ${targetDir}.`);
+      return;
     }
 
-    fs.rmSync(targetDir, { recursive: true, force: true });
-    fs.mkdirSync(path.dirname(targetDir), { recursive: true });
-    fs.cpSync(sourceDir, targetDir, { recursive: true, force: true });
+    throw new Error(`[vendor:sync] Missing monaco-editor source at ${sourceDir} and no existing vendor files at ${targetDir}.`);
+  }
 
-    console.log(`[vendor:sync] Copied Monaco min/vs from ${sourceDir} -> ${targetDir}`);
+  fs.rmSync(targetDir, { recursive: true, force: true });
+  fs.mkdirSync(path.dirname(targetDir), { recursive: true });
+  fs.cpSync(sourceDir, targetDir, { recursive: true, force: true });
+
+  console.log(`[vendor:sync] Copied Monaco min/vs from ${sourceDir} -> ${targetDir}`);
 };
 
 syncMonacoVendor();

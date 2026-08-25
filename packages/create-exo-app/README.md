@@ -26,10 +26,10 @@ npm run dev
 
 ## Templates
 
-| Template | Description |
-|---|---|
-| `minimal` | Smallest TypeScript ExoJS app — one `Scene`, one rotating box |
-| `game-starter` | Keyboard-controlled player, `GameScene` + `GameOverScene`, score HUD |
+| Template         | Description                                                             |
+| ---------------- | ----------------------------------------------------------------------- |
+| `minimal`        | Smallest TypeScript ExoJS app — one `Scene`, one rotating box           |
+| `game-starter`   | Keyboard-controlled player, `GameScene` + `GameOverScene`, score HUD    |
 | `audio-reactive` | `AudioAnalyser`-driven frequency bar visualiser; click-to-start gesture |
 
 ## CLI options

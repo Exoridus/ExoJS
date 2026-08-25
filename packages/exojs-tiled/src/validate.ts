@@ -362,12 +362,20 @@ function validateTiledTileLayerData(obj: Record<string, unknown>, base: TiledLay
   // markers. Reaching here with them still set means the data was not decoded
   // (e.g. validate was called directly) - reject rather than mis-parse.
   if (obj.compression !== undefined) {
-    throw new TiledFormatError(source, joinPath(path, 'compression'), `compressed tile layer data is not supported (compression: ${JSON.stringify(obj.compression)})`);
+    throw new TiledFormatError(
+      source,
+      joinPath(path, 'compression'),
+      `compressed tile layer data is not supported (compression: ${JSON.stringify(obj.compression)})`,
+    );
   }
 
   const encoding = obj.encoding;
   if (encoding !== undefined && !(typeof encoding === 'string' && SUPPORTED_TILE_LAYER_ENCODINGS.has(encoding))) {
-    throw new TiledFormatError(source, joinPath(path, 'encoding'), `unsupported tile layer encoding ${JSON.stringify(encoding)} (only plain CSV/array data is supported)`);
+    throw new TiledFormatError(
+      source,
+      joinPath(path, 'encoding'),
+      `unsupported tile layer encoding ${JSON.stringify(encoding)} (only plain CSV/array data is supported)`,
+    );
   }
 
   const width = expectNonNegativeInteger(obj.width, source, joinPath(path, 'width'));
@@ -495,7 +503,9 @@ export function validateTiledTileData(raw: unknown, source: string, path: string
     id: expectNonNegativeInteger(obj.id, source, joinPath(path, 'id')),
     type: optionalString(obj, 'type', source, path),
     properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
-    animation: optionalMapArray(obj.animation, source, joinPath(path, 'animation'), (item, itemPath) => validateTiledAnimationFrameData(item, source, itemPath)),
+    animation: optionalMapArray(obj.animation, source, joinPath(path, 'animation'), (item, itemPath) =>
+      validateTiledAnimationFrameData(item, source, itemPath),
+    ),
     objectgroup,
     image: optionalString(obj, 'image', source, path),
     imagewidth: optionalNonNegativeInteger(obj, 'imagewidth', source, path),
@@ -518,9 +528,7 @@ function validateTiledWangColorData(raw: unknown, source: string, path: string):
 function validateTiledWangTileData(raw: unknown, source: string, path: string): TiledWangTileData {
   const obj = expectObject(raw, source, path);
   const tileid = expectNonNegativeInteger(obj.tileid, source, joinPath(path, 'tileid'));
-  const wangid = mapArray(obj.wangid, source, joinPath(path, 'wangid'), (item, itemPath) =>
-    expectNonNegativeInteger(item, source, itemPath),
-  );
+  const wangid = mapArray(obj.wangid, source, joinPath(path, 'wangid'), (item, itemPath) => expectNonNegativeInteger(item, source, itemPath));
   return { tileid, wangid };
 }
 
@@ -531,12 +539,8 @@ function validateTiledWangSetData(raw: unknown, source: string, path: string): T
     // type is accepted as any string - unknown values are treated as-is per spec
     type: expectString(obj.type, source, joinPath(path, 'type')),
     tile: expectInteger(obj.tile, source, joinPath(path, 'tile')),
-    colors: mapArray(obj.colors, source, joinPath(path, 'colors'), (item, itemPath) =>
-      validateTiledWangColorData(item, source, itemPath),
-    ),
-    wangtiles: mapArray(obj.wangtiles, source, joinPath(path, 'wangtiles'), (item, itemPath) =>
-      validateTiledWangTileData(item, source, itemPath),
-    ),
+    colors: mapArray(obj.colors, source, joinPath(path, 'colors'), (item, itemPath) => validateTiledWangColorData(item, source, itemPath)),
+    wangtiles: mapArray(obj.wangtiles, source, joinPath(path, 'wangtiles'), (item, itemPath) => validateTiledWangTileData(item, source, itemPath)),
     properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
   };
 }

@@ -242,7 +242,8 @@ describe('createWorkerPlugin', () => {
 });
 
 describe('exojs', () => {
-  const queryPlugins = (plugins: SourcePlugin[]): InlineSourcePlugin[] => plugins.filter((plugin): plugin is InlineSourcePlugin => plugin.resolveId !== undefined);
+  const queryPlugins = (plugins: SourcePlugin[]): InlineSourcePlugin[] =>
+    plugins.filter((plugin): plugin is InlineSourcePlugin => plugin.resolveId !== undefined);
 
   it('installs every source plugin', () => {
     const names = exojs().map(plugin => plugin.name);

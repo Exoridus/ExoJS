@@ -13,8 +13,7 @@ import { LdtkFormatError } from '../src/validate';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
-const PKG_DIR =
-  basename(process.cwd()) === 'exojs-ldtk' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-ldtk');
+const PKG_DIR = basename(process.cwd()) === 'exojs-ldtk' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-ldtk');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
 function loadFixture(name: string): unknown {
@@ -81,7 +80,6 @@ const STREAMING_FIXTURES: Record<string, unknown> = {
 };
 
 class Thing implements Destroyable {
-
   public destroyed = false;
 
   public constructor(public readonly id: string) {}
@@ -118,11 +116,7 @@ describe('ldtkToMapWorld', () => {
       { id: 'level-cave', side: MapLevelSide.Unknown },
     ]);
     // The level outside this world is dropped from the resolved neighbour list.
-    expect(world!.getNeighbours('level-forest').map(level => level.id)).toEqual([
-      'level-cave',
-      'level-sky',
-      'level-cave',
-    ]);
+    expect(world!.getNeighbours('level-forest').map(level => level.id)).toEqual(['level-cave', 'level-sky', 'level-cave']);
   });
 
   it('carries level fields and the reserved LDtk keys as level properties', () => {
@@ -322,9 +316,7 @@ describe('LdtkProject streaming', () => {
   it('rejects a world name the project does not have', async () => {
     const project = await loadLdtkProject(makeContext([], STREAMING_FIXTURES, 'streaming.ldtk'));
 
-    expect(() => project.createRuntime({ scope: fakeScope('root', [], STREAMING_FIXTURES), world: 'nope' })).toThrow(
-      /has no world named "nope"/,
-    );
+    expect(() => project.createRuntime({ scope: fakeScope('root', [], STREAMING_FIXTURES), world: 'nope' })).toThrow(/has no world named "nope"/);
   });
 
   it('streams a named world of a multi-world project', async () => {

@@ -32,7 +32,10 @@ export function verifyRuntimePackage(dir, opts) {
   ok('exports "." entry', pkg.exports?.['.']?.types && pkg.exports['.'].import);
   ok('exports ./package.json', pkg.exports?.['./package.json'] === './package.json');
   ok('files allowlist', Array.isArray(pkg.files) && pkg.files.length > 0);
-  ok('files ship dist/esm', (pkg.files ?? []).some((f) => f.includes('dist/esm')));
+  ok(
+    'files ship dist/esm',
+    (pkg.files ?? []).some(f => f.includes('dist/esm')),
+  );
   ok('ships LICENSE', (pkg.files ?? []).includes('LICENSE'));
   ok('publishConfig public', pkg.publishConfig?.access === 'public');
   ok('LICENSE file present', existsSync(join(dir, 'LICENSE')));
@@ -51,7 +54,10 @@ export function verifyRuntimePackage(dir, opts) {
     const star = pkg.imports['#*'];
     const conds = star && typeof star === 'object' ? Object.keys(star) : [];
     ok('imports `#*` conditional', conds.length > 0);
-    ok('imports has package source condition', conds.some((c) => SOURCE_CONDITION_RE.test(c)));
+    ok(
+      'imports has package source condition',
+      conds.some(c => SOURCE_CONDITION_RE.test(c)),
+    );
     ok('imports default -> dist', star?.default?.includes('dist/esm'));
   }
 
@@ -62,10 +68,10 @@ export function verifyRuntimePackage(dir, opts) {
     ok('library sideEffects: false', pkg.sideEffects === false);
   } else {
     ok('Core sideEffects: false', pkg.sideEffects === false);
-    ok('Core has no extension deps', !Object.keys({ ...pkg.dependencies }).some((d) => /^@codexo\/exojs-(particles|tiled)/.test(d)));
+    ok('Core has no extension deps', !Object.keys({ ...pkg.dependencies }).some(d => /^@codexo\/exojs-(particles|tiled)/.test(d)));
   }
 
-  return { ok: checks.every((c) => c.ok), checks };
+  return { ok: checks.every(c => c.ok), checks };
 }
 
 /**
@@ -95,7 +101,10 @@ export function verifyToolingPackage(dir, opts) {
   ok('exports "." entry', pkg.exports?.['.']?.types && pkg.exports['.'].import);
   ok('exports ./package.json', pkg.exports?.['./package.json'] === './package.json');
   ok('files allowlist', Array.isArray(pkg.files) && pkg.files.length > 0);
-  ok('files ship dist/esm', (pkg.files ?? []).some((f) => f.includes('dist/esm')));
+  ok(
+    'files ship dist/esm',
+    (pkg.files ?? []).some(f => f.includes('dist/esm')),
+  );
   ok('ships LICENSE', (pkg.files ?? []).includes('LICENSE'));
   ok('publishConfig public', pkg.publishConfig?.access === 'public');
   ok('LICENSE file present', existsSync(join(dir, 'LICENSE')));
@@ -108,11 +117,11 @@ export function verifyToolingPackage(dir, opts) {
   ok('no workspace: in deps', !JSON.stringify(pkg.dependencies ?? {}).includes('workspace:'));
 
   const runtimeDeps = { ...pkg.dependencies, ...pkg.peerDependencies };
-  ok('no engine dependency', !Object.keys(runtimeDeps).some((d) => d === '@codexo/exojs' || d.startsWith('@codexo/exojs-')));
+  ok('no engine dependency', !Object.keys(runtimeDeps).some(d => d === '@codexo/exojs' || d.startsWith('@codexo/exojs-')));
   ok('no private config dependency', !Object.keys({ ...runtimeDeps, ...pkg.devDependencies }).includes('@codexo/exojs-config'));
   ok('library sideEffects: false', pkg.sideEffects === false);
 
-  return { ok: checks.every((c) => c.ok), checks };
+  return { ok: checks.every(c => c.ok), checks };
 }
 
 /**
@@ -131,5 +140,5 @@ export function verifyConfigPackage(dir) {
   ok('no runtime @codexo/exojs dep', !pkg.dependencies?.['@codexo/exojs'] && !pkg.peerDependencies?.['@codexo/exojs']);
   ok('exposes tooling subpaths', Boolean(pkg.exports?.['./eslint'] && pkg.exports?.['./typescript/base.json']));
   ok('no vague root export', pkg.exports?.['.'] === undefined);
-  return { ok: checks.every((c) => c.ok), checks };
+  return { ok: checks.every(c => c.ok), checks };
 }

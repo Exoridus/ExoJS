@@ -17,7 +17,6 @@ import { ldtkToMapWorld } from './ldtkToMapWorld';
  * **not** own tileset textures; those remain in the Loader cache.
  */
 export class LdtkMap {
-
   /** Resolved URL this map was loaded from. */
   public readonly source: string;
   /** The raw parsed LDtk document. */
@@ -84,9 +83,7 @@ export class LdtkMap {
    * The lookup is O(n) in the number of levels.
    */
   public getLevelByName(identifier: string): TileMap | undefined {
-    const index = getLdtkLevelEntries(this.data).findIndex(
-      entry => entry.level.identifier === identifier,
-    );
+    const index = getLdtkLevelEntries(this.data).findIndex(entry => entry.level.identifier === identifier);
     if (index === -1) return undefined;
     return this.levels[index];
   }

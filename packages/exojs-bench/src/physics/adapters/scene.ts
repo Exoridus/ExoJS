@@ -32,9 +32,7 @@ export const BODY_SIZE = 16;
 export const PERTURB_SPEED = 400;
 
 /** A box (full width/height) or circle collider shape, engine-neutral. */
-export type ShapeDesc =
-  | { readonly kind: 'box'; readonly width: number; readonly height: number }
-  | { readonly kind: 'circle'; readonly radius: number };
+export type ShapeDesc = { readonly kind: 'box'; readonly width: number; readonly height: number } | { readonly kind: 'circle'; readonly radius: number };
 
 /** One body in the neutral scene: its role, centre position, shape and material. */
 export interface BodyDesc {

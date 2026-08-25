@@ -110,7 +110,7 @@ describe('GranularProcessor normalizeGain DSP', () => {
 
   // ── normalizeGain holds the level roughly constant across densities ─────────
   it('with normalizeGain, output level stays roughly constant across densities', () => {
-    const ratios = [50, 100, 200].map((density) => rmsRatio({ density, grainSize: 0.05, normalizeGain: true }));
+    const ratios = [50, 100, 200].map(density => rmsRatio({ density, grainSize: 0.05, normalizeGain: true }));
     const max = Math.max(...ratios);
     const min = Math.min(...ratios);
     expect(max / min).toBeLessThan(1.5); // < ~3.5 dB spread

@@ -22,7 +22,6 @@ export type MapSpawnErrorReason =
  * For `'factory-failed'` the error a factory raised is preserved as `cause`.
  */
 export class MapSpawnError extends Error {
-
   public override readonly name = 'MapSpawnError';
   public readonly reason: MapSpawnErrorReason;
   /** {@link MapObjectDescriptor.id} of the object that failed. */
@@ -53,9 +52,7 @@ export type MapObjectFactory<Context, Result extends Destroyable> = (
 ) => Result | null | Promise<Result | null>;
 
 /** Dispatch key to factory. Keys are matched against the spawner's `identify` result. */
-export type MapObjectFactories<Context, Result extends Destroyable> = Readonly<
-  Record<string, MapObjectFactory<Context, Result>>
->;
+export type MapObjectFactories<Context, Result extends Destroyable> = Readonly<Record<string, MapObjectFactory<Context, Result>>>;
 
 /** What to do with an object no factory is registered for. */
 export type UnknownMapObjectPolicy = 'ignore' | 'error';
@@ -130,17 +127,13 @@ export interface MapSpawnOptions {
  * ```
  */
 export class MapObjectSpawner<Context = void, Result extends Destroyable = SceneNode> {
-
   /** What to do with an object no factory matched. */
   public readonly unknown: UnknownMapObjectPolicy;
 
   private readonly _factories: MapObjectFactories<Context, Result>;
   private readonly _identify: (object: MapObjectDescriptor, context: Context) => string | null;
 
-  public constructor(
-    factories: MapObjectFactories<Context, Result>,
-    options?: MapObjectSpawnerOptions<Context>,
-  ) {
+  public constructor(factories: MapObjectFactories<Context, Result>, options?: MapObjectSpawnerOptions<Context>) {
     this._factories = factories;
     this._identify = options?.identify ?? defaultIdentify;
     this.unknown = options?.unknown ?? 'ignore';
@@ -257,8 +250,7 @@ async function runFactory<Context, Result extends Destroyable>(
       'factory-failed',
       object.id,
       object.kind,
-      `MapObjectSpawner: the factory for "${object.kind ?? '<no kind>'}" failed on object "${object.id}" ` +
-        `of layer "${object.layer.name}".`,
+      `MapObjectSpawner: the factory for "${object.kind ?? '<no kind>'}" failed on object "${object.id}" ` + `of layer "${object.layer.name}".`,
       { cause: error },
     );
   }

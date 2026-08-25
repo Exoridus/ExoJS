@@ -127,7 +127,7 @@ async function loadExternalLevel(level: LdtkLevel, ldtkSource: string, context: 
 function withResolvedLevels(data: LdtkData, resolvedLevels: readonly LdtkLevel[]): LdtkData {
   if (data.worlds && data.worlds.length > 0) {
     let cursor = 0;
-    const worlds = data.worlds.map((world) => {
+    const worlds = data.worlds.map(world => {
       const levels = resolvedLevels.slice(cursor, cursor + world.levels.length);
       cursor += world.levels.length;
       return { ...world, levels };
@@ -167,14 +167,12 @@ export async function loadLdtkMap(context: AssetFactoryContext): Promise<LdtkMap
   // levels[] - still get their external .ldtkl files resolved.
   const [tilesetEntries, resolvedLevels] = await Promise.all([
     Promise.all(
-      data.defs.tilesets.map(async (def) => {
+      data.defs.tilesets.map(async def => {
         const ts = await loadLdtkTileset(def, source, context);
         return [def.uid, ts] as const;
       }),
     ),
-    Promise.all(
-      getLdtkLevelEntries(data).map((entry) => loadExternalLevel(entry.level, source, context)),
-    ),
+    Promise.all(getLdtkLevelEntries(data).map(entry => loadExternalLevel(entry.level, source, context))),
   ]);
 
   const tilesets = new Map<number, TileSet>();

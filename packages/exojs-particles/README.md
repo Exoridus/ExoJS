@@ -13,8 +13,8 @@ This package requires `@codexo/exojs` as a peer dependency. Both must be the sam
 ## Core compatibility
 
 | `@codexo/exojs-particles` | `@codexo/exojs` |
-|---|---|
-| 0.12.x | 0.12.x |
+| ------------------------- | --------------- |
+| 0.12.x                    | 0.12.x          |
 
 ## Usage — side-effect-free root entry
 
@@ -25,7 +25,7 @@ import { Application } from '@codexo/exojs';
 import { ParticleSystem, particlesExtension } from '@codexo/exojs-particles';
 
 const app = new Application({
-    extensions: [particlesExtension],
+  extensions: [particlesExtension],
 });
 ```
 
@@ -47,7 +47,7 @@ const app = new Application({ extensions: [particlesExtension] });
 import { createParticlesExtension } from '@codexo/exojs-particles';
 
 const app = new Application({
-    extensions: [createParticlesExtension({ batchSize: 8192 })],
+  extensions: [createParticlesExtension({ batchSize: 8192 })],
 });
 ```
 
@@ -57,7 +57,7 @@ Pass any combination of descriptors:
 
 ```ts
 const app = new Application({
-    extensions: [particlesExtension],
+  extensions: [particlesExtension],
 });
 ```
 
@@ -65,31 +65,24 @@ const app = new Application({
 
 ```ts
 import { Application, type RenderingContext, Scene } from '@codexo/exojs';
-import {
-    Constant,
-    ParticleSystem,
-    particlesExtension,
-    RateSpawn,
-} from '@codexo/exojs-particles';
+import { Constant, ParticleSystem, particlesExtension, RateSpawn } from '@codexo/exojs-particles';
 
 const app = new Application({ extensions: [particlesExtension], canvas: { mount: document.body } });
 
 class DemoScene extends Scene {
-    private system!: ParticleSystem;
+  private system!: ParticleSystem;
 
-    override async load(): Promise<void> {
-        const texture = await this.loader.load('/particle.png');
+  override async load(): Promise<void> {
+    const texture = await this.loader.load('/particle.png');
 
-        this.system = new ParticleSystem(texture, { capacity: 1024 });
-        this.systems.add(this.system);
-        this.system.addSpawnModule(
-            new RateSpawn({ rate: new Constant(120), lifetime: new Constant(2) }),
-        );
-    }
+    this.system = new ParticleSystem(texture, { capacity: 1024 });
+    this.systems.add(this.system);
+    this.system.addSpawnModule(new RateSpawn({ rate: new Constant(120), lifetime: new Constant(2) }));
+  }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.system);
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.system);
+  }
 }
 
 app.start(DemoScene);

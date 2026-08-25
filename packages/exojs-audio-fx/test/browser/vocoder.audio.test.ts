@@ -83,5 +83,4 @@ describe('Vocoder worklet — real Web Audio', () => {
     // the 660 Hz modulator emphasises 660 relative to 2200 more than the 2200 Hz one does
     expect(lowRatio).toBeGreaterThan(highRatio);
   });
-
 });

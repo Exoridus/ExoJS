@@ -3,7 +3,7 @@ import type { BaseProvenance, HostInfo, LibraryProvenance } from '../shared/prov
 import { readHostInfo, readLibraryProvenance } from '../shared/provenance';
 import { createCpuTimer, median, percentile, shouldAbort } from '../shared/timing';
 import { createExoJsPhysicsAdapter } from './adapters/exojs-physics';
-import { buildPhysicsMatrix, PHYSICS_ARCHETYPES, seedFor,STEP_DELTA } from './archetypes';
+import { buildPhysicsMatrix, PHYSICS_ARCHETYPES, seedFor, STEP_DELTA } from './archetypes';
 import type { PhysicsAdapter, PhysicsCellResult, PhysicsCellSpec } from './PhysicsAdapter';
 
 /** npm package name of the native physics arm, resolved for version provenance. */
@@ -156,28 +156,29 @@ const runCell = (adapter: PhysicsAdapter, spec: PhysicsCellSpec): PhysicsCellRes
  * allocator state are shared and comparable), and `onCellResult` fires after
  * each cell so the caller can checkpoint it immediately.
  */
-export const runPhysicsMatrix = (options: {
-  adapters?: readonly PhysicsAdapter[];
-  /**
-   * npm package names whose installed versions are recorded in the report header
-   * (one per arm). Defaults to the native physics package alone; the CLI passes
-   * the competitor package names for whichever adapter arms actually resolved, so
-   * a run never claims a version for an arm it did not include.
-   */
-  libraries?: readonly string[];
-  filter?: Partial<PhysicsCellSpec>;
-  /** Forces every selected cell's timed-step count to this value (smoke/spot-check knob; never a reportable run). */
-  timedStepsOverride?: number;
-  onCellResult?: PhysicsCellResultSink;
-} = {}): PhysicsMatrixOutcome => {
+export const runPhysicsMatrix = (
+  options: {
+    adapters?: readonly PhysicsAdapter[];
+    /**
+     * npm package names whose installed versions are recorded in the report header
+     * (one per arm). Defaults to the native physics package alone; the CLI passes
+     * the competitor package names for whichever adapter arms actually resolved, so
+     * a run never claims a version for an arm it did not include.
+     */
+    libraries?: readonly string[];
+    filter?: Partial<PhysicsCellSpec>;
+    /** Forces every selected cell's timed-step count to this value (smoke/spot-check knob; never a reportable run). */
+    timedStepsOverride?: number;
+    onCellResult?: PhysicsCellResultSink;
+  } = {},
+): PhysicsMatrixOutcome => {
   const adapters = options.adapters ?? [createExoJsPhysicsAdapter()];
   const libraries = readLibraryProvenance(options.libraries ?? [NATIVE_PHYSICS_PACKAGE]);
   const engineVersion = libraries.find(library => library.name === NATIVE_PHYSICS_PACKAGE)?.version ?? libraries[0]?.version ?? 'unknown';
 
   const allCells = buildPhysicsMatrix(adapters);
   const filtered = options.filter ? applyFilter(allCells, options.filter) : allCells;
-  const cells =
-    options.timedStepsOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedSteps: options.timedStepsOverride! }));
+  const cells = options.timedStepsOverride === undefined ? filtered : filtered.map(cell => ({ ...cell, timedSteps: options.timedStepsOverride! }));
 
   if (cells.length === 0) {
     throw new Error('The physics matrix is empty: no arm/archetype/body-count matched the requested filter.');

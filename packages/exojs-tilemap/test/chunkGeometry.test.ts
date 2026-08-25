@@ -182,7 +182,11 @@ describe('buildChunkPages', () => {
   it('returns no pages when the chunk reports itself empty (short-circuit before scanning cells)', () => {
     const tileset = makeTileset();
     const emptyChunk: ReadonlyTileChunk = {
-      cx: 0, cy: 0, width: 1, height: 1, revision: 1,
+      cx: 0,
+      cy: 0,
+      width: 1,
+      height: 1,
+      revision: 1,
       empty: true,
       getRawAt: () => {
         throw new Error('must not be called when chunk.empty is true');

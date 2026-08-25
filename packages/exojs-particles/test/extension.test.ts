@@ -2,7 +2,7 @@ import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
 import { RenderBackendType } from '@codexo/exojs/renderer-sdk';
 import { describe, expect, it } from 'vitest';
 
-import { createParticlesExtension,particlesExtension } from '../src/particlesExtension';
+import { createParticlesExtension, particlesExtension } from '../src/particlesExtension';
 import { ParticleSystem } from '../src/ParticleSystem';
 import { WebGl2ParticleRenderer } from '../src/renderers/WebGl2ParticleRenderer';
 import { WebGpuParticleRenderer } from '../src/renderers/WebGpuParticleRenderer';
@@ -34,7 +34,6 @@ describe('@codexo/exojs-particles root', () => {
     expect(ext.id).toBe('@codexo/exojs-particles');
     expect(ext.renderers).toBeDefined();
   });
-
 });
 
 describe('particlesExtension renderer binding — renders through the package', () => {
@@ -66,4 +65,3 @@ describe('particlesExtension renderer binding — renders through the package', 
     expect(renderer).toBeInstanceOf(WebGl2ParticleRenderer);
   });
 });
-

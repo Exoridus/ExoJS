@@ -169,11 +169,7 @@ export class DistortionEffect extends AudioEffect {
     this._tone = Math.max(0, Math.min(1, value));
     if (this._setup) {
       const ctx = this._setup.toneFilter.context;
-      this._setup.toneFilter.frequency.setTargetAtTime(
-        DistortionEffect._toneToFrequency(this._tone),
-        ctx.currentTime,
-        0.01,
-      );
+      this._setup.toneFilter.frequency.setTargetAtTime(DistortionEffect._toneToFrequency(this._tone), ctx.currentTime, 0.01);
     }
   }
 

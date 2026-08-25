@@ -12,8 +12,7 @@ import {
 
 export const TILE = 16;
 
-const fakeTexture = (): Texture =>
-  ({ destroyed: false, destroy: () => {}, height: 512, label: 'test', uid: 0, width: 512 }) as unknown as Texture;
+const fakeTexture = (): Texture => ({ destroyed: false, destroy: () => {}, height: 512, label: 'test', uid: 0, width: 512 }) as unknown as Texture;
 
 const fakeRegion = (): TextureRegion => new TextureRegion(fakeTexture(), { height: 512, width: 512, x: 0, y: 0 });
 

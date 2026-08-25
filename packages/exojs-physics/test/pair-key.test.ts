@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { Collider } from '../src/Collider';
-import { ContactGraph,pairKey,pairKeyStride } from '../src/ContactGraph';
+import { ContactGraph, pairKey, pairKeyStride } from '../src/ContactGraph';
 import { createTransform } from '../src/math';
 import { PhysicsBody } from '../src/PhysicsBody';
 import { CircleShape } from '../src/shapes/CircleShape';

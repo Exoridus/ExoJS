@@ -1022,5 +1022,4 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
       }
     });
   }
-
 }

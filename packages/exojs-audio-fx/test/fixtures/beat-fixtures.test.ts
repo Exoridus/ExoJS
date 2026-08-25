@@ -53,7 +53,7 @@ describe('clicktrack fixtures', () => {
     describe(`clicktrack(${bpm} BPM)`, () => {
       const fixture = clicktrack(bpm, DURATION);
       const ibi = 60 / bpm;
-      const expectedCount = Math.floor(DURATION * bpm / 60);
+      const expectedCount = Math.floor((DURATION * bpm) / 60);
 
       it('beat count = floor(duration * bpm / 60) ± 1', () => {
         expect(fixture.beatTimesSec.length).toBeGreaterThanOrEqual(expectedCount - 1);
@@ -103,7 +103,7 @@ describe('halfTime fixture', () => {
   });
 
   it('click count roughly = floor(15 * 64 / 60)', () => {
-    const expected = Math.floor(15 * 64 / 60);
+    const expected = Math.floor((15 * 64) / 60);
     expect(f.beatTimesSec.length).toBeGreaterThanOrEqual(expected - 1);
     expect(f.beatTimesSec.length).toBeLessThanOrEqual(expected + 1);
   });
@@ -130,7 +130,7 @@ describe('doubleTime fixture', () => {
   });
 
   it('click count roughly = floor(15 * 128 / 60)', () => {
-    const expected = Math.floor(15 * 128 / 60);
+    const expected = Math.floor((15 * 128) / 60);
     expect(f.beatTimesSec.length).toBeGreaterThanOrEqual(expected - 1);
     expect(f.beatTimesSec.length).toBeLessThanOrEqual(expected + 1);
   });
@@ -197,7 +197,7 @@ describe('breakDrop fixture', () => {
     // At 128 BPM: bar = 4 * (60/128) = 1.875s
     // Groove: 0 - 7.5s, break: 7.5 - 15s, drop: 15s +
     const grooveEnd = 4 * 4 * (60 / 128); // ~7.5s
-    const breakEnd = 8 * 4 * (60 / 128);  // ~15.0s
+    const breakEnd = 8 * 4 * (60 / 128); // ~15.0s
 
     const inBreak = f.beatTimesSec.filter(t => t > grooveEnd + 0.1 && t < breakEnd - 0.1);
     expect(inBreak.length).toBe(0);
@@ -228,7 +228,7 @@ describe('swing fixture', () => {
   });
 
   it('ground truth beat count = floor(15 * 120 / 60)', () => {
-    const expected = Math.floor(15 * 120 / 60);
+    const expected = Math.floor((15 * 120) / 60);
     expect(f.beatTimesSec.length).toBe(expected);
   });
 
@@ -259,7 +259,7 @@ describe('grooveOffset fixture', () => {
   });
 
   it('beat count = floor(15 * 120 / 60)', () => {
-    const expected = Math.floor(15 * 120 / 60);
+    const expected = Math.floor((15 * 120) / 60);
     expect(f.beatTimesSec.length).toBe(expected);
   });
 
@@ -287,7 +287,7 @@ describe('grooveOffset fixture', () => {
 describe('djMix fixture', () => {
   const f = djMix(180, 30);
   const ibi = 60 / 180;
-  const expectedCount = Math.floor(30 * 180 / 60);
+  const expectedCount = Math.floor((30 * 180) / 60);
 
   it('bpm = 180', () => {
     expect(f.bpm).toBe(180);
@@ -426,7 +426,7 @@ describe('djMixDrift fixture', () => {
 describe('softOnset fixture', () => {
   const f = softOnset(90, DEFAULT_DURATION_SEC);
   const ibi = 60 / 90;
-  const expectedCount = Math.floor(DEFAULT_DURATION_SEC * 90 / 60);
+  const expectedCount = Math.floor((DEFAULT_DURATION_SEC * 90) / 60);
 
   it('bpm = 90', () => {
     expect(f.bpm).toBe(90);

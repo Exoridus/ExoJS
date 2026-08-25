@@ -9,49 +9,49 @@ const projectRoot = path.resolve(__dirname, '..');
 const requireFromSite = createRequire(import.meta.url);
 
 const resolvePackageRoot = (): string => {
-    const candidates: string[] = [];
+  const candidates: string[] = [];
 
-    if (process.env.EXOJS_PACKAGE_PATH) {
-        candidates.push(path.resolve(projectRoot, process.env.EXOJS_PACKAGE_PATH));
+  if (process.env.EXOJS_PACKAGE_PATH) {
+    candidates.push(path.resolve(projectRoot, process.env.EXOJS_PACKAGE_PATH));
+  }
+
+  // Prefer Node's module resolver so both classic installs and npm workspace
+  // hoisting layouts are handled without hard-coded node_modules assumptions.
+  try {
+    const packageJsonPath = requireFromSite.resolve('@codexo/exojs/package.json');
+    candidates.push(path.dirname(packageJsonPath));
+  } catch {
+    // Fall through to explicit path candidates.
+  }
+
+  candidates.push(
+    path.resolve(projectRoot, 'node_modules', '@codexo', 'exojs'),
+    path.resolve(projectRoot, 'node_modules', 'exojs'),
+    path.resolve(projectRoot, '..', 'node_modules', '@codexo', 'exojs'),
+    // Workspace fallback: root package folder itself.
+    path.resolve(projectRoot, '..'),
+  );
+
+  const uniqueCandidates = [...new Set(candidates)];
+  const hasPackageJson = (candidate: string): boolean => fs.existsSync(path.resolve(candidate, 'package.json'));
+  const hasDist = (candidate: string): boolean => fs.existsSync(path.resolve(candidate, 'dist'));
+
+  // `file:` dependencies can resolve to a virtual-store snapshot that does not
+  // contain `dist` if install happened before the library build. Prefer a
+  // candidate with both package.json and dist to avoid stale snapshots.
+  for (const candidate of uniqueCandidates) {
+    if (hasPackageJson(candidate) && hasDist(candidate)) {
+      return candidate;
     }
+  }
 
-    // Prefer Node's module resolver so both classic installs and npm workspace
-    // hoisting layouts are handled without hard-coded node_modules assumptions.
-    try {
-        const packageJsonPath = requireFromSite.resolve('@codexo/exojs/package.json');
-        candidates.push(path.dirname(packageJsonPath));
-    } catch {
-        // Fall through to explicit path candidates.
+  for (const candidate of uniqueCandidates) {
+    if (hasPackageJson(candidate)) {
+      return candidate;
     }
+  }
 
-    candidates.push(
-        path.resolve(projectRoot, 'node_modules', '@codexo', 'exojs'),
-        path.resolve(projectRoot, 'node_modules', 'exojs'),
-        path.resolve(projectRoot, '..', 'node_modules', '@codexo', 'exojs'),
-        // Workspace fallback: root package folder itself.
-        path.resolve(projectRoot, '..')
-    );
-
-    const uniqueCandidates = [...new Set(candidates)];
-    const hasPackageJson = (candidate: string): boolean => fs.existsSync(path.resolve(candidate, 'package.json'));
-    const hasDist = (candidate: string): boolean => fs.existsSync(path.resolve(candidate, 'dist'));
-
-    // `file:` dependencies can resolve to a virtual-store snapshot that does not
-    // contain `dist` if install happened before the library build. Prefer a
-    // candidate with both package.json and dist to avoid stale snapshots.
-    for (const candidate of uniqueCandidates) {
-        if (hasPackageJson(candidate) && hasDist(candidate)) {
-            return candidate;
-        }
-    }
-
-    for (const candidate of uniqueCandidates) {
-        if (hasPackageJson(candidate)) {
-            return candidate;
-        }
-    }
-
-    return uniqueCandidates[0] ?? path.resolve(projectRoot, '..');
+  return uniqueCandidates[0] ?? path.resolve(projectRoot, '..');
 };
 
 const packageRoot = resolvePackageRoot();
@@ -78,9 +78,9 @@ const generatedTypingsFiles = ['exo.d.ts', 'module-shims.d.ts', 'esm-typings.jso
 // (released versions load via jsDelivr at runtime); leftovers from prior
 // syncs may remain on disk and are harmless - they're gitignored.
 const flatManagedEntries: ReadonlyArray<{ name: string; type: 'file' | 'dir' }> = [
-    ...requiredArtifacts.map(name => ({ name, type: 'file' as const })),
-    ...generatedTypingsFiles.map(name => ({ name, type: 'file' as const })),
-    { name: 'esm', type: 'dir' as const },
+  ...requiredArtifacts.map(name => ({ name, type: 'file' as const })),
+  ...generatedTypingsFiles.map(name => ({ name, type: 'file' as const })),
+  { name: 'esm', type: 'dir' as const },
 ];
 
 // module-shims declares the public package module re-exporting from the
@@ -99,154 +99,152 @@ const moduleShims = `declare module "@codexo/exojs" {
 // public subpath exports, this function will also generate shim `.d.ts` files
 // for each subpath so they resolve correctly under node resolution.
 interface MonacoShimEntry {
-    virtualPath: string;
-    content: string;
+  virtualPath: string;
+  content: string;
 }
 
 interface MonacoRegistry {
-    packageJson: string;
-    subpathShims: ReadonlyArray<MonacoShimEntry>;
+  packageJson: string;
+  subpathShims: ReadonlyArray<MonacoShimEntry>;
 }
 
 const buildMonacoRegistry = (packageName: string, pkgRootDir: string, version: string): MonacoRegistry => {
-    const sourcePackageJsonPath = path.resolve(pkgRootDir, 'package.json');
-    const sourcePackageJson = JSON.parse(fs.readFileSync(sourcePackageJsonPath, 'utf8')) as {
-        exports?: Record<string, Record<string, string | undefined> | string>;
-    };
+  const sourcePackageJsonPath = path.resolve(pkgRootDir, 'package.json');
+  const sourcePackageJson = JSON.parse(fs.readFileSync(sourcePackageJsonPath, 'utf8')) as {
+    exports?: Record<string, Record<string, string | undefined> | string>;
+  };
 
-    const packageJson = JSON.stringify({
-        name: packageName,
-        version,
-        types: './dist/esm/index.d.ts',
+  const packageJson = JSON.stringify({
+    name: packageName,
+    version,
+    types: './dist/esm/index.d.ts',
+  });
+
+  const subpathShims: MonacoShimEntry[] = [];
+  const pkgVirtualRoot = `/node_modules/${packageName}`;
+
+  for (const [subpathKey, conditions] of Object.entries(sourcePackageJson.exports ?? {})) {
+    if (subpathKey === '.' || subpathKey === './package.json') continue;
+
+    const typesPath = typeof conditions === 'object' && conditions !== null ? conditions['types'] : undefined;
+
+    if (typeof typesPath !== 'string' || !typesPath.startsWith('./dist/esm/')) continue;
+
+    // './dist/esm/input/gamepad-mappings.d.ts' → 'dist/esm/input/gamepad-mappings'
+    const targetRelToRoot = typesPath.slice(2).replace(/\.d\.ts$/, '');
+    // './backend/webgl2' → 'backend/webgl2'
+    const subpath = subpathKey.slice(2);
+
+    const shimVirtualPath = `file://${pkgVirtualRoot}/${subpath}.d.ts`;
+
+    // Compute relative path from the shim's virtual dir to the target.
+    // E.g. shim at /backend/webgl2.d.ts, dir=/backend, target=dist/esm/backend/webgl2
+    // → '../dist/esm/backend/webgl2'
+    const shimDir = path.posix.dirname(`${pkgVirtualRoot}/${subpath}.d.ts`);
+    const targetAbs = `${pkgVirtualRoot}/${targetRelToRoot}`;
+    let relPath = path.posix.relative(shimDir, targetAbs);
+    if (!relPath.startsWith('.')) relPath = `./${relPath}`;
+
+    subpathShims.push({
+      virtualPath: shimVirtualPath,
+      content: `export * from '${relPath}';\n`,
     });
+  }
 
-    const subpathShims: MonacoShimEntry[] = [];
-    const pkgVirtualRoot = `/node_modules/${packageName}`;
-
-    for (const [subpathKey, conditions] of Object.entries(sourcePackageJson.exports ?? {})) {
-        if (subpathKey === '.' || subpathKey === './package.json') continue;
-
-        const typesPath = typeof conditions === 'object' && conditions !== null ? conditions['types'] : undefined;
-
-        if (typeof typesPath !== 'string' || !typesPath.startsWith('./dist/esm/')) continue;
-
-        // './dist/esm/input/gamepad-mappings.d.ts' → 'dist/esm/input/gamepad-mappings'
-        const targetRelToRoot = typesPath.slice(2).replace(/\.d\.ts$/, '');
-        // './backend/webgl2' → 'backend/webgl2'
-        const subpath = subpathKey.slice(2);
-
-        const shimVirtualPath = `file://${pkgVirtualRoot}/${subpath}.d.ts`;
-
-        // Compute relative path from the shim's virtual dir to the target.
-        // E.g. shim at /backend/webgl2.d.ts, dir=/backend, target=dist/esm/backend/webgl2
-        // → '../dist/esm/backend/webgl2'
-        const shimDir = path.posix.dirname(`${pkgVirtualRoot}/${subpath}.d.ts`);
-        const targetAbs = `${pkgVirtualRoot}/${targetRelToRoot}`;
-        let relPath = path.posix.relative(shimDir, targetAbs);
-        if (!relPath.startsWith('.')) relPath = `./${relPath}`;
-
-        subpathShims.push({
-            virtualPath: shimVirtualPath,
-            content: `export * from '${relPath}';\n`,
-        });
-    }
-
-    return { packageJson, subpathShims };
+  return { packageJson, subpathShims };
 };
 
 const ensureSourcePackage = (): void => {
-    if (!fs.existsSync(sourceDistDir)) {
-        throw new Error(
-            `[vendor:sync] Missing ExoJS package dist at ${sourceDistDir}. Install dependencies and ensure the local @codexo/exojs package is built.`
-        );
-    }
+  if (!fs.existsSync(sourceDistDir)) {
+    throw new Error(`[vendor:sync] Missing ExoJS package dist at ${sourceDistDir}. Install dependencies and ensure the local @codexo/exojs package is built.`);
+  }
 };
 
 const readRootPackageVersion = (): string => {
-    const rootPackageJsonPath = path.resolve(projectRoot, '..', 'package.json');
-    if (!fs.existsSync(rootPackageJsonPath)) {
-        throw new Error(`[vendor:sync] Root package.json missing at ${rootPackageJsonPath}.`);
-    }
-    const rootPackageJson = JSON.parse(fs.readFileSync(rootPackageJsonPath, 'utf8')) as { version?: unknown };
-    if (typeof rootPackageJson.version !== 'string' || rootPackageJson.version.length === 0) {
-        throw new Error(`[vendor:sync] Root package.json at ${rootPackageJsonPath} has no usable "version" field.`);
-    }
-    return rootPackageJson.version;
+  const rootPackageJsonPath = path.resolve(projectRoot, '..', 'package.json');
+  if (!fs.existsSync(rootPackageJsonPath)) {
+    throw new Error(`[vendor:sync] Root package.json missing at ${rootPackageJsonPath}.`);
+  }
+  const rootPackageJson = JSON.parse(fs.readFileSync(rootPackageJsonPath, 'utf8')) as { version?: unknown };
+  if (typeof rootPackageJson.version !== 'string' || rootPackageJson.version.length === 0) {
+    throw new Error(`[vendor:sync] Root package.json at ${rootPackageJsonPath} has no usable "version" field.`);
+  }
+  return rootPackageJson.version;
 };
 
 const patchExoDeclarations = (declarationsPath: string): void => {
-    if (!fs.existsSync(declarationsPath)) {
-        return;
-    }
+  if (!fs.existsSync(declarationsPath)) {
+    return;
+  }
 
-    const original = fs.readFileSync(declarationsPath, 'utf8');
-    const patched = original
-        .replace('        init?: (resources: ResourceContainer) => void;', '        init?: (loader: Loader) => Promise<void> | void;')
-        .replace('        unload?: () => Promise<void> | void;', '        unload?: (loader: Loader) => Promise<void> | void;')
-        .replace('        init(resources: ResourceContainer): void;', '        init(loader: Loader): Promise<void> | void;')
-        .replace('        unload(): Promise<void> | void;', '        unload(loader: Loader): Promise<void> | void;');
+  const original = fs.readFileSync(declarationsPath, 'utf8');
+  const patched = original
+    .replace('        init?: (resources: ResourceContainer) => void;', '        init?: (loader: Loader) => Promise<void> | void;')
+    .replace('        unload?: () => Promise<void> | void;', '        unload?: (loader: Loader) => Promise<void> | void;')
+    .replace('        init(resources: ResourceContainer): void;', '        init(loader: Loader): Promise<void> | void;')
+    .replace('        unload(): Promise<void> | void;', '        unload(loader: Loader): Promise<void> | void;');
 
-    if (patched !== original) {
-        fs.writeFileSync(declarationsPath, patched, 'utf8');
-    }
+  if (patched !== original) {
+    fs.writeFileSync(declarationsPath, patched, 'utf8');
+  }
 };
 
 const copyArtifact = (fileName: string, targetDir: string, options: { required: boolean }): boolean => {
-    const sourcePath = path.resolve(sourceDistDir, fileName);
-    const targetPath = path.resolve(targetDir, fileName);
+  const sourcePath = path.resolve(sourceDistDir, fileName);
+  const targetPath = path.resolve(targetDir, fileName);
 
-    if (!fs.existsSync(sourcePath)) {
-        if (options.required) {
-            throw new Error(`[vendor:sync] Missing required ExoJS package file at ${sourcePath}.`);
-        }
-        console.warn(`[vendor:sync] Optional file ${fileName} not present at ${sourcePath} — skipping.`);
-        return false;
+  if (!fs.existsSync(sourcePath)) {
+    if (options.required) {
+      throw new Error(`[vendor:sync] Missing required ExoJS package file at ${sourcePath}.`);
     }
+    console.warn(`[vendor:sync] Optional file ${fileName} not present at ${sourcePath} — skipping.`);
+    return false;
+  }
 
-    fs.copyFileSync(sourcePath, targetPath);
-    return true;
+  fs.copyFileSync(sourcePath, targetPath);
+  return true;
 };
 
 // Walks a directory and returns every file path relative to the passed root,
 // using forward slashes.
 const collectFiles = (rootDir: string): string[] => {
-    const results: string[] = [];
+  const results: string[] = [];
 
-    const walk = (relDir: string): void => {
-        const absDir = path.resolve(rootDir, relDir);
-        for (const entry of fs.readdirSync(absDir, { withFileTypes: true })) {
-            const relEntry = relDir ? path.join(relDir, entry.name) : entry.name;
-            if (entry.isDirectory()) {
-                walk(relEntry);
-            } else if (entry.isFile()) {
-                results.push(relEntry.split(path.sep).join('/'));
-            }
-        }
-    };
+  const walk = (relDir: string): void => {
+    const absDir = path.resolve(rootDir, relDir);
+    for (const entry of fs.readdirSync(absDir, { withFileTypes: true })) {
+      const relEntry = relDir ? path.join(relDir, entry.name) : entry.name;
+      if (entry.isDirectory()) {
+        walk(relEntry);
+      } else if (entry.isFile()) {
+        results.push(relEntry.split(path.sep).join('/'));
+      }
+    }
+  };
 
-    walk('');
-    return results.sort();
+  walk('');
+  return results.sort();
 };
 
 // Enumerate only declaration files from a root path.
 const collectDeclarationFiles = (rootDir: string): string[] => collectFiles(rootDir).filter(rel => rel.endsWith('.d.ts'));
 
 const copyEsmTree = (sourceEsmDir: string, destEsmDir: string): { allFiles: string[]; dtsFiles: string[] } => {
-    fs.rmSync(destEsmDir, { recursive: true, force: true });
-    fs.mkdirSync(destEsmDir, { recursive: true });
+  fs.rmSync(destEsmDir, { recursive: true, force: true });
+  fs.mkdirSync(destEsmDir, { recursive: true });
 
-    const allFiles = collectFiles(sourceEsmDir);
-    for (const rel of allFiles) {
-        const src = path.resolve(sourceEsmDir, rel);
-        const dst = path.resolve(destEsmDir, rel);
-        fs.mkdirSync(path.dirname(dst), { recursive: true });
-        fs.copyFileSync(src, dst);
-    }
+  const allFiles = collectFiles(sourceEsmDir);
+  for (const rel of allFiles) {
+    const src = path.resolve(sourceEsmDir, rel);
+    const dst = path.resolve(destEsmDir, rel);
+    fs.mkdirSync(path.dirname(dst), { recursive: true });
+    fs.copyFileSync(src, dst);
+  }
 
-    return {
-        allFiles,
-        dtsFiles: collectDeclarationFiles(sourceEsmDir),
-    };
+  return {
+    allFiles,
+    dtsFiles: collectDeclarationFiles(sourceEsmDir),
+  };
 };
 
 // Monaco (the in-browser TypeScript worker) cannot resolve Node `#`-subpath
@@ -258,38 +256,38 @@ const copyEsmTree = (sourceEsmDir: string, destEsmDir: string): { allFiles: stri
 // esm tree - so rewrite each `#<path>` to a path relative to its declaration
 // file. Then assert none survived: a stray one silently breaks the playground.
 const rewriteSubpathImports = (esmDir: string, dtsRelFiles: ReadonlyArray<string>): number => {
-    const importRe = /(\bfrom\s*|\bimport\s*\(\s*)(['"])#([^'"]+)\2/g;
-    let rewritten = 0;
+  const importRe = /(\bfrom\s*|\bimport\s*\(\s*)(['"])#([^'"]+)\2/g;
+  let rewritten = 0;
 
-    for (const rel of dtsRelFiles) {
-        const abs = path.resolve(esmDir, rel);
-        const fromDir = path.posix.dirname(rel);
-        const original = fs.readFileSync(abs, 'utf8');
-        const updated = original.replace(importRe, (_match, prefix: string, quote: string, target: string) => {
-            let relPath = path.posix.relative(fromDir, target);
-            if (!relPath.startsWith('.')) relPath = `./${relPath}`;
-            return `${prefix}${quote}${relPath}${quote}`;
-        });
+  for (const rel of dtsRelFiles) {
+    const abs = path.resolve(esmDir, rel);
+    const fromDir = path.posix.dirname(rel);
+    const original = fs.readFileSync(abs, 'utf8');
+    const updated = original.replace(importRe, (_match, prefix: string, quote: string, target: string) => {
+      let relPath = path.posix.relative(fromDir, target);
+      if (!relPath.startsWith('.')) relPath = `./${relPath}`;
+      return `${prefix}${quote}${relPath}${quote}`;
+    });
 
-        if (updated !== original) {
-            fs.writeFileSync(abs, updated, 'utf8');
-            rewritten += 1;
-        }
+    if (updated !== original) {
+      fs.writeFileSync(abs, updated, 'utf8');
+      rewritten += 1;
     }
+  }
 
-    // Only flag `#` in import position - not GLSL `"#version ..."` strings, hex
-    // colours like `'#6495ed'`, or `//# sourceMappingURL` comments.
-    const leakRe = /(?:\bfrom\s*|\bimport\s*\(\s*)['"]#[^'"]+['"]/;
-    const leaked = dtsRelFiles.filter(rel => leakRe.test(fs.readFileSync(path.resolve(esmDir, rel), 'utf8')));
+  // Only flag `#` in import position - not GLSL `"#version ..."` strings, hex
+  // colours like `'#6495ed'`, or `//# sourceMappingURL` comments.
+  const leakRe = /(?:\bfrom\s*|\bimport\s*\(\s*)['"]#[^'"]+['"]/;
+  const leaked = dtsRelFiles.filter(rel => leakRe.test(fs.readFileSync(path.resolve(esmDir, rel), 'utf8')));
 
-    if (leaked.length > 0) {
-        throw new Error(
-            `[vendor:sync] ${leaked.length} declaration file(s) still contain unresolved '#' subpath imports after rewrite ` +
-                `(Monaco cannot resolve them — the playground would report missing exports): ${leaked.slice(0, 5).join(', ')}${leaked.length > 5 ? ', …' : ''}`
-        );
-    }
+  if (leaked.length > 0) {
+    throw new Error(
+      `[vendor:sync] ${leaked.length} declaration file(s) still contain unresolved '#' subpath imports after rewrite ` +
+        `(Monaco cannot resolve them — the playground would report missing exports): ${leaked.slice(0, 5).join(', ')}${leaked.length > 5 ? ', …' : ''}`,
+    );
+  }
 
-    return rewritten;
+  return rewritten;
 };
 
 // Copy the ESM runtime tree and normalize declarations into a layout Monaco
@@ -305,134 +303,140 @@ const rewriteSubpathImports = (esmDir: string, dtsRelFiles: ReadonlyArray<string
 // `preview.html` imports both `@codexo/exojs` and `@codexo/exojs/debug` from
 // the ESM tree. Missing `dist/esm/` is therefore a hard error.
 const syncTypings = (): void => {
-    const sourceFlatDts = path.resolve(sourceDistDir, 'exo.d.ts');
-    const sourceEsmDir = path.resolve(sourceDistDir, 'esm');
-    const destFlatDts = path.resolve(flatTargetDir, 'exo.d.ts');
-    const destEsmDir = path.resolve(flatTargetDir, 'esm');
-    const destManifest = path.resolve(flatTargetDir, 'esm-typings.json');
+  const sourceFlatDts = path.resolve(sourceDistDir, 'exo.d.ts');
+  const sourceEsmDir = path.resolve(sourceDistDir, 'esm');
+  const destFlatDts = path.resolve(flatTargetDir, 'exo.d.ts');
+  const destEsmDir = path.resolve(flatTargetDir, 'esm');
+  const destManifest = path.resolve(flatTargetDir, 'esm-typings.json');
 
-    // Clear any prior sync's outputs so re-syncs are deterministic.
-    fs.rmSync(destFlatDts, { force: true });
-    fs.rmSync(destManifest, { force: true });
-    fs.rmSync(destEsmDir, { recursive: true, force: true });
+  // Clear any prior sync's outputs so re-syncs are deterministic.
+  fs.rmSync(destFlatDts, { force: true });
+  fs.rmSync(destManifest, { force: true });
+  fs.rmSync(destEsmDir, { recursive: true, force: true });
 
-    if (!fs.existsSync(sourceEsmDir)) {
-        throw new Error(
-            `[vendor:sync] Missing required ExoJS package ESM runtime at ${sourceEsmDir}. preview.html imports @codexo/exojs from dist/esm/.`
-        );
-    }
+  if (!fs.existsSync(sourceEsmDir)) {
+    throw new Error(`[vendor:sync] Missing required ExoJS package ESM runtime at ${sourceEsmDir}. preview.html imports @codexo/exojs from dist/esm/.`);
+  }
 
-    const { allFiles, dtsFiles } = copyEsmTree(sourceEsmDir, destEsmDir);
-    const rewritten = rewriteSubpathImports(destEsmDir, dtsFiles);
-    console.log(`[vendor:sync] rewrote '#'-subpath imports to relative paths in ${rewritten} declaration file(s) (Monaco cannot resolve '#').`);
+  const { allFiles, dtsFiles } = copyEsmTree(sourceEsmDir, destEsmDir);
+  const rewritten = rewriteSubpathImports(destEsmDir, dtsFiles);
+  console.log(`[vendor:sync] rewrote '#'-subpath imports to relative paths in ${rewritten} declaration file(s) (Monaco cannot resolve '#').`);
 
-    if (fs.existsSync(sourceFlatDts)) {
-        fs.copyFileSync(sourceFlatDts, destFlatDts);
-        patchExoDeclarations(destFlatDts);
-        console.log(`[vendor:sync] exo.d.ts: copied bundled declarations from ${sourceFlatDts}.`);
-    } else {
-        fs.writeFileSync(
-            destFlatDts,
-            [
-                '// Auto-generated by sync-exo-vendor.ts.',
-                '//',
-                '// The library does not ship a single bundled exo.d.ts at the dist root,',
-                '// so this stub re-exports from the per-module declaration tree under',
-                "// ./esm. Monaco resolves the relative path against this file's virtual",
-                '// path (file:///node_modules/@codexo/exojs/dist/exo.d.ts) and lands in the tree',
-                '// shipped to ./esm by the same sync run.',
-                "export * from './esm/index';",
-                '',
-            ].join('\n'),
-            'utf8'
-        );
-        console.log(`[vendor:sync] exo.d.ts: shim re-exporting ${dtsFiles.length} declarations from ${sourceEsmDir}.`);
-    }
+  if (fs.existsSync(sourceFlatDts)) {
+    fs.copyFileSync(sourceFlatDts, destFlatDts);
+    patchExoDeclarations(destFlatDts);
+    console.log(`[vendor:sync] exo.d.ts: copied bundled declarations from ${sourceFlatDts}.`);
+  } else {
+    fs.writeFileSync(
+      destFlatDts,
+      [
+        '// Auto-generated by sync-exo-vendor.ts.',
+        '//',
+        '// The library does not ship a single bundled exo.d.ts at the dist root,',
+        '// so this stub re-exports from the per-module declaration tree under',
+        "// ./esm. Monaco resolves the relative path against this file's virtual",
+        '// path (file:///node_modules/@codexo/exojs/dist/exo.d.ts) and lands in the tree',
+        '// shipped to ./esm by the same sync run.',
+        "export * from './esm/index';",
+        '',
+      ].join('\n'),
+      'utf8',
+    );
+    console.log(`[vendor:sync] exo.d.ts: shim re-exporting ${dtsFiles.length} declarations from ${sourceEsmDir}.`);
+  }
 
-    fs.writeFileSync(destManifest, JSON.stringify(dtsFiles, null, 2) + '\n', 'utf8');
-    console.log(`[vendor:sync] esm runtime: copied ${allFiles.length} files (${dtsFiles.length} declarations) from ${sourceEsmDir}.`);
+  fs.writeFileSync(destManifest, JSON.stringify(dtsFiles, null, 2) + '\n', 'utf8');
+  console.log(`[vendor:sync] esm runtime: copied ${allFiles.length} files (${dtsFiles.length} declarations) from ${sourceEsmDir}.`);
 };
 
 const syncVendor = (): void => {
-    ensureSourcePackage();
+  ensureSourcePackage();
 
-    const versionId = readRootPackageVersion();
+  const versionId = readRootPackageVersion();
 
-    fs.mkdirSync(flatTargetDir, { recursive: true });
+  fs.mkdirSync(flatTargetDir, { recursive: true });
 
-    // Clear only the entries we manage; any leftover versioned subdirectories
-    // from older syncs are left in place - they're gitignored and harmless.
-    for (const entry of flatManagedEntries) {
-        const target = path.resolve(flatTargetDir, entry.name);
-        if (entry.type === 'dir') {
-            fs.rmSync(target, { recursive: true, force: true });
-        } else {
-            fs.rmSync(target, { force: true });
-        }
+  // Clear only the entries we manage; any leftover versioned subdirectories
+  // from older syncs are left in place - they're gitignored and harmless.
+  for (const entry of flatManagedEntries) {
+    const target = path.resolve(flatTargetDir, entry.name);
+    if (entry.type === 'dir') {
+      fs.rmSync(target, { recursive: true, force: true });
+    } else {
+      fs.rmSync(target, { force: true });
+    }
+  }
+
+  for (const fileName of requiredArtifacts) {
+    copyArtifact(fileName, flatTargetDir, { required: true });
+  }
+
+  syncTypings();
+
+  fs.writeFileSync(path.resolve(flatTargetDir, 'module-shims.d.ts'), moduleShims, 'utf8');
+
+  const registry = buildMonacoRegistry('@codexo/exojs', packageRoot, versionId);
+  fs.writeFileSync(path.resolve(flatTargetDir, 'monaco-registry.json'), JSON.stringify(registry, null, 2) + '\n', 'utf8');
+
+  console.log(`[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`);
+
+  // Sync extension packages. Each gets the same Monaco-resolvable treatment as
+  // core: copy the ESM tree, rewrite '#'-subpath imports to relative paths
+  // (Monaco can't resolve '#'), emit an `esm-typings.json` manifest, and emit a
+  // `monaco-registry.json` (virtual package.json + subpath shims for e.g.
+  // `/debug`). Without this the playground's TypeScript worker
+  // can't resolve `@codexo/exojs-particles` & co. and every extension example
+  // shows a ts2307 "Cannot find module" error.
+  const extensionPackages = [
+    'exojs-particles',
+    'exojs-audio-fx',
+    'exojs-tilemap',
+    'exojs-tiled',
+    'exojs-ldtk',
+    'exojs-physics',
+    'exojs-tilemap-physics',
+  ] as const;
+  for (const pkgName of extensionPackages) {
+    let pkgRoot: string | null = null;
+    try {
+      const pkgJsonPath = requireFromSite.resolve(`@codexo/${pkgName}/package.json`);
+      pkgRoot = path.dirname(pkgJsonPath);
+    } catch {
+      // Fall back to workspace path.
+      pkgRoot = path.resolve(projectRoot, '..', 'packages', pkgName);
+    }
+    const pkgDist = path.resolve(pkgRoot, 'dist', 'esm');
+    if (!fs.existsSync(pkgDist)) {
+      // Hard error on purpose. This used to warn-and-skip, which shipped a
+      // playground where every extension example failed at runtime with
+      // "Cannot find module '@codexo/exojs-...'" - and nobody saw the warning.
+      throw new Error(
+        `[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist}. ` +
+          `Build the extension packages first: pnpm --filter "@codexo/exojs-*" build`,
+      );
+    }
+    const vendorDir = path.resolve(projectRoot, 'public', 'vendor', pkgName);
+    const destDir = path.resolve(vendorDir, 'esm');
+    fs.rmSync(vendorDir, { recursive: true, force: true });
+    fs.mkdirSync(destDir, { recursive: true });
+    const files = collectFiles(pkgDist);
+    for (const rel of files) {
+      const src = path.resolve(pkgDist, rel);
+      const dst = path.resolve(destDir, rel);
+      fs.mkdirSync(path.dirname(dst), { recursive: true });
+      fs.copyFileSync(src, dst);
     }
 
-    for (const fileName of requiredArtifacts) {
-        copyArtifact(fileName, flatTargetDir, { required: true });
-    }
+    const dtsFiles = collectDeclarationFiles(pkgDist);
+    const rewritten = rewriteSubpathImports(destDir, dtsFiles);
+    fs.writeFileSync(path.resolve(vendorDir, 'esm-typings.json'), JSON.stringify(dtsFiles, null, 2) + '\n', 'utf8');
+    const extRegistry = buildMonacoRegistry(`@codexo/${pkgName}`, pkgRoot, versionId);
+    fs.writeFileSync(path.resolve(vendorDir, 'monaco-registry.json'), JSON.stringify(extRegistry, null, 2) + '\n', 'utf8');
 
-    syncTypings();
-
-    fs.writeFileSync(path.resolve(flatTargetDir, 'module-shims.d.ts'), moduleShims, 'utf8');
-
-    const registry = buildMonacoRegistry('@codexo/exojs', packageRoot, versionId);
-    fs.writeFileSync(path.resolve(flatTargetDir, 'monaco-registry.json'), JSON.stringify(registry, null, 2) + '\n', 'utf8');
-
-    console.log(`[vendor:sync] Copied ExoJS ESM runtime + declarations from ${sourceDistDir} -> ${flatTargetDir}`);
-
-    // Sync extension packages. Each gets the same Monaco-resolvable treatment as
-    // core: copy the ESM tree, rewrite '#'-subpath imports to relative paths
-    // (Monaco can't resolve '#'), emit an `esm-typings.json` manifest, and emit a
-    // `monaco-registry.json` (virtual package.json + subpath shims for e.g.
-    // `/debug`). Without this the playground's TypeScript worker
-    // can't resolve `@codexo/exojs-particles` & co. and every extension example
-    // shows a ts2307 "Cannot find module" error.
-    const extensionPackages = ['exojs-particles', 'exojs-audio-fx', 'exojs-tilemap', 'exojs-tiled', 'exojs-ldtk', 'exojs-physics', 'exojs-tilemap-physics'] as const;
-    for (const pkgName of extensionPackages) {
-        let pkgRoot: string | null = null;
-        try {
-            const pkgJsonPath = requireFromSite.resolve(`@codexo/${pkgName}/package.json`);
-            pkgRoot = path.dirname(pkgJsonPath);
-        } catch {
-            // Fall back to workspace path.
-            pkgRoot = path.resolve(projectRoot, '..', 'packages', pkgName);
-        }
-        const pkgDist = path.resolve(pkgRoot, 'dist', 'esm');
-        if (!fs.existsSync(pkgDist)) {
-            // Hard error on purpose. This used to warn-and-skip, which shipped a
-            // playground where every extension example failed at runtime with
-            // "Cannot find module '@codexo/exojs-...'" - and nobody saw the warning.
-            throw new Error(
-                `[vendor:sync] Extension package @codexo/${pkgName} dist not found at ${pkgDist}. ` +
-                    `Build the extension packages first: pnpm --filter "@codexo/exojs-*" build`
-            );
-        }
-        const vendorDir = path.resolve(projectRoot, 'public', 'vendor', pkgName);
-        const destDir = path.resolve(vendorDir, 'esm');
-        fs.rmSync(vendorDir, { recursive: true, force: true });
-        fs.mkdirSync(destDir, { recursive: true });
-        const files = collectFiles(pkgDist);
-        for (const rel of files) {
-            const src = path.resolve(pkgDist, rel);
-            const dst = path.resolve(destDir, rel);
-            fs.mkdirSync(path.dirname(dst), { recursive: true });
-            fs.copyFileSync(src, dst);
-        }
-
-        const dtsFiles = collectDeclarationFiles(pkgDist);
-        const rewritten = rewriteSubpathImports(destDir, dtsFiles);
-        fs.writeFileSync(path.resolve(vendorDir, 'esm-typings.json'), JSON.stringify(dtsFiles, null, 2) + '\n', 'utf8');
-        const extRegistry = buildMonacoRegistry(`@codexo/${pkgName}`, pkgRoot, versionId);
-        fs.writeFileSync(path.resolve(vendorDir, 'monaco-registry.json'), JSON.stringify(extRegistry, null, 2) + '\n', 'utf8');
-
-        console.log(
-            `[vendor:sync] Copied @codexo/${pkgName} ESM (${files.length} files, ${dtsFiles.length} declarations, ${rewritten} '#'-rewritten) -> vendor/${pkgName}/`
-        );
-    }
+    console.log(
+      `[vendor:sync] Copied @codexo/${pkgName} ESM (${files.length} files, ${dtsFiles.length} declarations, ${rewritten} '#'-rewritten) -> vendor/${pkgName}/`,
+    );
+  }
 };
 
 syncVendor();

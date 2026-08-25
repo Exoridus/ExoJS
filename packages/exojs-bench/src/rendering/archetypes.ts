@@ -87,7 +87,16 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // flush overhead. A 64-leaf plateau produces a realistic "a few hundred state
   // switches per frame" scene whose draw-call count the report records, so the
   // measured CPU cost can be read per batch rather than per node.
-  { id: 'mixed-blend', nodeCounts: GPU_BOUND_COUNTS, nestingDepth: 2, textureCount: 4, mutationFraction: 0, cullingEnabled: false, blendModeCount: 4, blendRunLength: 64 },
+  {
+    id: 'mixed-blend',
+    nodeCounts: GPU_BOUND_COUNTS,
+    nestingDepth: 2,
+    textureCount: 4,
+    mutationFraction: 0,
+    cullingEnabled: false,
+    blendModeCount: 4,
+    blendRunLength: 64,
+  },
   // Identical to `mixed-blend` in every field EXCEPT `materialCount`, so the
   // delta between the two rows on the ExoJS arm is exactly the custom-material
   // path's cost. NOT a cross-arm comparison: the Pixi arm cannot express
@@ -180,7 +189,16 @@ export const ARCHETYPES: readonly ArchetypeSpec[] = [
   // Otherwise identical to `static-heavy` (depth 4, one texture, no mutation),
   // so the delta between the two rows is the camera and the off-screen content
   // and nothing else.
-  { id: 'scrolling-world', nodeCounts: SCALING_COUNTS, nestingDepth: 4, textureCount: 1, mutationFraction: 0, cullingEnabled: true, worldSpan: 2, cameraSpeed: 8 },
+  {
+    id: 'scrolling-world',
+    nodeCounts: SCALING_COUNTS,
+    nestingDepth: 4,
+    textureCount: 1,
+    mutationFraction: 0,
+    cullingEnabled: true,
+    worldSpan: 2,
+    cameraSpeed: 8,
+  },
   {
     id: 'mixed-material-atlased',
     nodeCounts: GPU_BOUND_COUNTS,

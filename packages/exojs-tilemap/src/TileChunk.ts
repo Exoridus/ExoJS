@@ -115,7 +115,7 @@ export class TileChunk implements ReadonlyTileChunk {
     }
 
     // Guard against TypedArray length limits.
-    if (size > 0xFFFFFFFF) {
+    if (size > 0xffffffff) {
       throw new Error(`TileChunk size ${size} exceeds TypedArray maximum length.`);
     }
 
@@ -126,9 +126,7 @@ export class TileChunk implements ReadonlyTileChunk {
 
     if (source) {
       if (source.length !== size) {
-        throw new Error(
-          `TileChunk source length ${source.length} != ${size}.`,
-        );
+        throw new Error(`TileChunk source length ${source.length} != ${size}.`);
       }
       // Defensive copy - caller mutation of source array will not affect storage.
       this._tiles = new Uint32Array(source);

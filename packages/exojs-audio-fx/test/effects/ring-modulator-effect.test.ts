@@ -350,11 +350,7 @@ describe('RingModulatorEffect', () => {
       expect(effect.wet).toBe(0.8);
       expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(0.8, expect.anything(), expect.anything());
       // Use closeTo for 1 - 0.8 = 0.19999... floating-point result.
-      expect(dryGain.gain.setTargetAtTime).toHaveBeenCalledWith(
-        expect.closeTo(0.2, 5),
-        expect.anything(),
-        expect.anything(),
-      );
+      expect(dryGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.2, 5), expect.anything(), expect.anything());
       effect.destroy();
     });
 
@@ -395,13 +391,7 @@ describe('RingModulatorEffect', () => {
 
     it('disconnects all gain nodes', () => {
       const ctx = getAudioContext();
-      const gainNodes = [
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-      ];
+      const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let gainCallCount = 0;
       vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gainNodes[gainCallCount++] as unknown as GainNode;

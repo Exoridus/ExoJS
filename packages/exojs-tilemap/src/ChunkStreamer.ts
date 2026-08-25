@@ -90,9 +90,7 @@ export class ChunkStreamer {
     this._maxChunkLoadsPerFrame = options?.maxChunkLoadsPerFrame ?? DEFAULT_MAX_CHUNK_LOADS_PER_FRAME;
 
     if (this._unloadRadius < this._loadRadius) {
-      throw new Error(
-        `ChunkStreamer unloadRadius (${this._unloadRadius}) must be >= loadRadius (${this._loadRadius}).`,
-      );
+      throw new Error(`ChunkStreamer unloadRadius (${this._unloadRadius}) must be >= loadRadius (${this._loadRadius}).`);
     }
   }
 
@@ -233,7 +231,9 @@ export class ChunkStreamer {
 
     if (isThenable(result)) {
       result.then(
-        payload => { this._onResolved(key, cx, cy, token, payload); },
+        payload => {
+          this._onResolved(key, cx, cy, token, payload);
+        },
         (error: unknown) => {
           this._inFlight.delete(key);
           logger.warn(`ChunkStreamer: source.getChunk(${cx}, ${cy}) rejected.`, {

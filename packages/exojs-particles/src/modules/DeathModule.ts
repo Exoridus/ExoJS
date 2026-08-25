@@ -1,5 +1,5 @@
-import type { ParticleDeathContext } from "#ParticleStorage";
-import type { ParticleSystem } from "#ParticleSystem";
+import type { ParticleDeathContext } from '#ParticleStorage';
+import type { ParticleSystem } from '#ParticleSystem';
 
 /**
  * Per-particle hook invoked exactly once after a particle expires, carrying its

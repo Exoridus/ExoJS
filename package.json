@@ -40,9 +40,7 @@
       "default": "./dist/esm/index.js"
     },
     "./extensions": {
-      "types": "./dist/esm/extensions/index.d.ts",
-      "import": "./dist/esm/extensions/index.js",
-      "default": "./dist/esm/extensions/index.js"
+      "types": "./dist/esm/extensions/index.d.ts"
     },
     "./renderer-sdk": {
       "types": "./dist/esm/renderer-sdk.d.ts",

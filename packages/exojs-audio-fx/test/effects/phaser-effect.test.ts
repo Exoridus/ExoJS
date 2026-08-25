@@ -70,13 +70,25 @@ const wireAll = (ctx: AudioContext, stages = 4) => {
   const delaySpy = vi.spyOn(ctx, 'createDelay').mockReturnValue(feedbackDelay as unknown as DelayNode);
 
   let filterCallCount = 0;
-  const filterSpy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(
-    () => allpassFilters[filterCallCount++] as unknown as BiquadFilterNode,
-  );
+  const filterSpy = vi.spyOn(ctx, 'createBiquadFilter').mockImplementation(() => allpassFilters[filterCallCount++] as unknown as BiquadFilterNode);
 
   const oscillatorSpy = vi.spyOn(ctx, 'createOscillator').mockReturnValue(lfoOscillator as unknown as OscillatorNode);
 
-  return { inputGain, outputGain, dryGain, wetGain, feedbackGain, feedbackDelay, lfoGain, allpassFilters, lfoOscillator, gainSpy, delaySpy, filterSpy, oscillatorSpy };
+  return {
+    inputGain,
+    outputGain,
+    dryGain,
+    wetGain,
+    feedbackGain,
+    feedbackDelay,
+    lfoGain,
+    allpassFilters,
+    lfoOscillator,
+    gainSpy,
+    delaySpy,
+    filterSpy,
+    oscillatorSpy,
+  };
 };
 
 // ---------------------------------------------------------------------------

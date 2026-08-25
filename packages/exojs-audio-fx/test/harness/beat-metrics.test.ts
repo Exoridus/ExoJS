@@ -20,12 +20,7 @@ const SAMPLE_RATE = 48000;
 
 // ── Helpers to build synthetic message logs ────────────────────────────────────
 
-function makeBeat(
-  audioTime: number,
-  tempo: number,
-  audioTimeSec?: number,
-  status: 'provisional' | 'locked' = 'locked',
-): BeatMessage {
+function makeBeat(audioTime: number, tempo: number, audioTimeSec?: number, status: 'provisional' | 'locked' = 'locked'): BeatMessage {
   return {
     type: 'beat',
     _audioTimeSec: audioTimeSec ?? audioTime,
@@ -84,7 +79,7 @@ describe('computeMetrics — perfect log', () => {
     // Settled state messages after t=1.5s
     ...Array.from({ length: 10 }, (_, i) => makeState(bpm, 2 + i * 0.5)),
     // Perfect beats: audioTime == GT time
-    ...gtTimes.map((t) => makeBeat(t, bpm)),
+    ...gtTimes.map(t => makeBeat(t, bpm)),
   ];
 
   const fixture = makeFixture(gtTimes, bpm, durationSec);
@@ -131,11 +126,8 @@ describe('computeMetrics — jittered beats', () => {
   const jitterSec = jitterMs / 1000;
 
   // Each emitted beat is `jitterMs` late
-  const emittedTimes = gtTimes.map((t) => t + jitterSec);
-  const messages: WorkletMessage[] = [
-    ...Array.from({ length: 8 }, (_, i) => makeState(bpm, 1.5 + i * 0.5)),
-    ...emittedTimes.map((t) => makeBeat(t, bpm)),
-  ];
+  const emittedTimes = gtTimes.map(t => t + jitterSec);
+  const messages: WorkletMessage[] = [...Array.from({ length: 8 }, (_, i) => makeState(bpm, 1.5 + i * 0.5)), ...emittedTimes.map(t => makeBeat(t, bpm))];
 
   const fixture = makeFixture(gtTimes, bpm, durationSec);
   const m = computeMetrics(messages, fixture);
@@ -166,7 +158,7 @@ describe('computeMetrics — injected extra beat → 1 FP', () => {
   const extraBeatTime = 8.0; // far from all GT times
   const messages: WorkletMessage[] = [
     ...Array.from({ length: 8 }, (_, i) => makeState(bpm, 1.5 + i * 0.5)),
-    ...gtTimes.map((t) => makeBeat(t, bpm)),
+    ...gtTimes.map(t => makeBeat(t, bpm)),
     makeBeat(extraBeatTime, bpm),
   ];
 
@@ -219,10 +211,7 @@ describe('computeMetrics — octave error (half-octave: detecting 0.5x trueBpm)'
   const gtTimes = Array.from({ length: 8 }, (_, i) => 2 + i * (60 / trueBpm));
 
   // All state messages report wrong (half-octave) tempo
-  const messages: WorkletMessage[] = [
-    ...Array.from({ length: 10 }, (_, i) => makeState(wrongBpm, 2 + i * 0.5)),
-    ...gtTimes.map((t) => makeBeat(t, wrongBpm)),
-  ];
+  const messages: WorkletMessage[] = [...Array.from({ length: 10 }, (_, i) => makeState(wrongBpm, 2 + i * 0.5)), ...gtTimes.map(t => makeBeat(t, wrongBpm))];
 
   const fixture = makeFixture(gtTimes, trueBpm, durationSec);
   const m = computeMetrics(messages, fixture);
@@ -242,10 +231,7 @@ describe('computeMetrics — octave error (double-octave: detecting 2x trueBpm)'
   const durationSec = 10;
   const gtTimes = Array.from({ length: 5 }, (_, i) => 2 + i * (60 / trueBpm));
 
-  const messages: WorkletMessage[] = [
-    ...Array.from({ length: 10 }, (_, i) => makeState(wrongBpm, 2 + i * 0.5)),
-    ...gtTimes.map((t) => makeBeat(t, wrongBpm)),
-  ];
+  const messages: WorkletMessage[] = [...Array.from({ length: 10 }, (_, i) => makeState(wrongBpm, 2 + i * 0.5)), ...gtTimes.map(t => makeBeat(t, wrongBpm))];
 
   const fixture = makeFixture(gtTimes, trueBpm, durationSec);
   const m = computeMetrics(messages, fixture);
@@ -282,7 +268,7 @@ describe('computeMetrics — lock time', () => {
       // Two wrong, then 4 correct (K=3)
       makeState(200, 1.0),
       makeState(200, 1.5),
-      makeState(bpm, firstCorrectTime),       // first correct
+      makeState(bpm, firstCorrectTime), // first correct
       makeState(bpm, firstCorrectTime + 0.5), // second
       makeState(bpm, firstCorrectTime + 1.0), // third → lock!
       makeState(bpm, firstCorrectTime + 1.5),
@@ -312,10 +298,7 @@ describe('computeMetrics — provisional/locked stats', () => {
     makeBeat(gtTimes[5], bpm, 4.5, 'locked'),
     makeBeat(8.7, bpm, 8.7, 'locked'), // locked FP far from any GT onset
   ];
-  const messages: WorkletMessage[] = [
-    ...Array.from({ length: 6 }, (_, i) => makeState(bpm, 3.5 + i * 0.5)),
-    ...beats,
-  ];
+  const messages: WorkletMessage[] = [...Array.from({ length: 6 }, (_, i) => makeState(bpm, 3.5 + i * 0.5)), ...beats];
   const fixture = makeFixture(gtTimes, bpm, durationSec);
   const m = computeMetrics(messages, fixture);
 
@@ -354,9 +337,9 @@ describe('computeMetrics — sorting is stable (message order does not affect of
   const gtTimes = Array.from({ length: 5 }, (_, i) => 2 + i * ibi);
   const jitterSec = 0.01;
 
-  const emittedTimes = gtTimes.map((t) => t + jitterSec);
+  const emittedTimes = gtTimes.map(t => t + jitterSec);
   const states = Array.from({ length: 5 }, (_, i) => makeState(bpm, 1.5 + i * 0.5));
-  const beats = emittedTimes.map((t) => makeBeat(t, bpm));
+  const beats = emittedTimes.map(t => makeBeat(t, bpm));
 
   const forwardMessages: WorkletMessage[] = [...states, ...beats];
   // Reverse the beat order (simulate out-of-order delivery)

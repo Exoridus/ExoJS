@@ -321,14 +321,7 @@ describe('FlangerEffect', () => {
     it('updates lfoGain.gain via setTargetAtTime', () => {
       const ctx = getAudioContext();
       let gainCallCount = 0;
-      const gainNodes = [
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-      ];
+      const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gainNodes[gainCallCount++] as unknown as GainNode;
       });
@@ -411,14 +404,7 @@ describe('FlangerEffect', () => {
     it('updates feedbackGain.gain via setTargetAtTime', () => {
       const ctx = getAudioContext();
       let gainCallCount = 0;
-      const gainNodes = [
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-      ];
+      const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gainNodes[gainCallCount++] as unknown as GainNode;
       });
@@ -460,14 +446,7 @@ describe('FlangerEffect', () => {
     it('updates dryGain (1-wet) and wetGain (wet) via setTargetAtTime', () => {
       const ctx = getAudioContext();
       let gainCallCount = 0;
-      const gainNodes = [
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-      ];
+      const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gainNodes[gainCallCount++] as unknown as GainNode;
       });
@@ -576,14 +555,7 @@ describe('FlangerEffect', () => {
 
     it('disconnects all nodes on destroy', () => {
       const ctx = getAudioContext();
-      const gainNodes = [
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-        makeGainNode(ctx),
-      ];
+      const gainNodes = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       const delayNode = makeDelayNode(ctx);
       const lfoOscillator = makeOscillatorNode(ctx);
 

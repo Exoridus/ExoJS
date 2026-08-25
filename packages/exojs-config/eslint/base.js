@@ -27,77 +27,77 @@ import tseslint from 'typescript-eslint';
  */
 export function languageBaselineConfig({ tsconfigRootDir }) {
   return [
-  {
-    // A disable comment that no longer suppresses anything is a claim about the
-    // code that has stopped being true, and the same goes for an inline rule
-    // config nothing reads. Both are errors rather than warnings so they fail
-    // the same way whether or not a run passes --max-warnings.
-    linterOptions: {
-      reportUnusedDisableDirectives: 'error',
-      reportUnusedInlineConfigs: 'error',
+    {
+      // A disable comment that no longer suppresses anything is a claim about the
+      // code that has stopped being true, and the same goes for an inline rule
+      // config nothing reads. Both are errors rather than warnings so they fail
+      // the same way whether or not a run passes --max-warnings.
+      linterOptions: {
+        reportUnusedDisableDirectives: 'error',
+        reportUnusedInlineConfigs: 'error',
+      },
+      languageOptions: {
+        parserOptions: { tsconfigRootDir },
+      },
     },
-    languageOptions: {
-      parserOptions: { tsconfigRootDir },
+
+    // Base JavaScript recommendations
+    js.configs.recommended,
+
+    // TypeScript recommended + type-aware strict/stylistic baseline
+    ...tseslint.configs.recommendedTypeChecked,
+    ...tseslint.configs.stylisticTypeChecked,
+
+    // typescript-eslint's `eslint-recommended` turns off ~20 core correctness
+    // rules on the grounds that the compiler already reports them. That holds
+    // only where a tsconfig actually covers the file, and most of this repo is
+    // not covered: `tsconfig.json` is `src/**` only, each package tsconfig has
+    // `exclude: ["test"]`, and `test/**`, `scripts/**`, `*.config.ts` and
+    // `site/src/**` are in no typecheck gate at all. A `const` reassignment in
+    // four of those five places passes every check today.
+    //
+    // Re-enabled repo-wide rather than per-directory: the delegation is only
+    // ever safe when it tracks tsconfig coverage exactly, and keeping a second
+    // list in sync with that coverage is what failed in the first place. Over
+    // `src/**` these are simply redundant with the compiler - they are all
+    // syntactic, so the cost is nil.
+    //
+    // Four are deliberately left off - each is blind to the TS type space in a
+    // way that produces false positives on correct code here:
+    //
+    // - `no-undef` misfires on type-only names and ambient globals in TS
+    //   (typescript-eslint recommends against enabling it at all).
+    // - `no-redeclare`, including the TS variant, cannot tell an `interface X` /
+    //   `const X` facade pair from a real redeclaration, and this repo uses that
+    //   pattern deliberately (Asset, Assets, ActionMap).
+    // - `constructor-super` does not recognise `extends (Base as unknown as new
+    //   () => T)` as a constructor, which is how the audio-fx tests build mock
+    //   subclasses.
+    // - `no-new-symbol` is deprecated in favour of `no-new-native-nonconstructor`.
+    //
+    // The compiler reports all four as TS2304/TS2451/TS2377 in the places it
+    // does cover, which is where they would have mattered most.
+    //
+    // `no-dupe-class-members` is taken in its TS variant, which knows overload
+    // signatures are not duplicates.
+    {
+      rules: {
+        'getter-return': 'error',
+        'no-class-assign': 'error',
+        'no-const-assign': 'error',
+        'no-dupe-args': 'error',
+        'no-dupe-keys': 'error',
+        'no-func-assign': 'error',
+        'no-import-assign': 'error',
+        'no-new-native-nonconstructor': 'error',
+        'no-obj-calls': 'error',
+        'no-setter-return': 'error',
+        'no-this-before-super': 'error',
+        'no-unreachable': 'error',
+        'no-unsafe-negation': 'error',
+        '@typescript-eslint/no-dupe-class-members': 'error',
+      },
     },
-  },
-
-  // Base JavaScript recommendations
-  js.configs.recommended,
-
-  // TypeScript recommended + type-aware strict/stylistic baseline
-  ...tseslint.configs.recommendedTypeChecked,
-  ...tseslint.configs.stylisticTypeChecked,
-
-  // typescript-eslint's `eslint-recommended` turns off ~20 core correctness
-  // rules on the grounds that the compiler already reports them. That holds
-  // only where a tsconfig actually covers the file, and most of this repo is
-  // not covered: `tsconfig.json` is `src/**` only, each package tsconfig has
-  // `exclude: ["test"]`, and `test/**`, `scripts/**`, `*.config.ts` and
-  // `site/src/**` are in no typecheck gate at all. A `const` reassignment in
-  // four of those five places passes every check today.
-  //
-  // Re-enabled repo-wide rather than per-directory: the delegation is only
-  // ever safe when it tracks tsconfig coverage exactly, and keeping a second
-  // list in sync with that coverage is what failed in the first place. Over
-  // `src/**` these are simply redundant with the compiler - they are all
-  // syntactic, so the cost is nil.
-  //
-  // Four are deliberately left off - each is blind to the TS type space in a
-  // way that produces false positives on correct code here:
-  //
-  // - `no-undef` misfires on type-only names and ambient globals in TS
-  //   (typescript-eslint recommends against enabling it at all).
-  // - `no-redeclare`, including the TS variant, cannot tell an `interface X` /
-  //   `const X` facade pair from a real redeclaration, and this repo uses that
-  //   pattern deliberately (Asset, Assets, ActionMap).
-  // - `constructor-super` does not recognise `extends (Base as unknown as new
-  //   () => T)` as a constructor, which is how the audio-fx tests build mock
-  //   subclasses.
-  // - `no-new-symbol` is deprecated in favour of `no-new-native-nonconstructor`.
-  //
-  // The compiler reports all four as TS2304/TS2451/TS2377 in the places it
-  // does cover, which is where they would have mattered most.
-  //
-  // `no-dupe-class-members` is taken in its TS variant, which knows overload
-  // signatures are not duplicates.
-  {
-    rules: {
-      'getter-return': 'error',
-      'no-class-assign': 'error',
-      'no-const-assign': 'error',
-      'no-dupe-args': 'error',
-      'no-dupe-keys': 'error',
-      'no-func-assign': 'error',
-      'no-import-assign': 'error',
-      'no-new-native-nonconstructor': 'error',
-      'no-obj-calls': 'error',
-      'no-setter-return': 'error',
-      'no-this-before-super': 'error',
-      'no-unreachable': 'error',
-      'no-unsafe-negation': 'error',
-      '@typescript-eslint/no-dupe-class-members': 'error',
-    },
-  },
   ];
 }
 
@@ -113,35 +113,35 @@ export function languageBaselineConfig({ tsconfigRootDir }) {
  */
 export function nodeToolingConfig({ files }) {
   return [
-  {
-    files,
-    ...tseslint.configs.disableTypeChecked,
-  },
-  {
-    files,
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: {
-        ...globals.node,
-        ...globals.es2024,
+    {
+      files,
+      ...tseslint.configs.disableTypeChecked,
+    },
+    {
+      files,
+      languageOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+        globals: {
+          ...globals.node,
+          ...globals.es2024,
+        },
+        parserOptions: {
+          project: null,
+        },
       },
-      parserOptions: {
-        project: null,
+      plugins: {
+        unicorn,
+      },
+      rules: {
+        'no-console': 'error',
+        '@typescript-eslint/no-require-imports': 'error',
+        // Base no-unused-vars handled by `unused-imports/no-unused-vars`, which
+        // honours the `_` prefix this repo uses for deliberately unused bindings.
+        '@typescript-eslint/no-unused-vars': 'off',
+        'unicorn/prefer-node-protocol': 'error',
+        'security/detect-non-literal-fs-filename': 'off',
       },
     },
-    plugins: {
-      unicorn,
-    },
-    rules: {
-      'no-console': 'warn',
-      '@typescript-eslint/no-require-imports': 'warn',
-      // Base no-unused-vars handled by `unused-imports/no-unused-vars`, which
-      // honours the `_` prefix this repo uses for deliberately unused bindings.
-      '@typescript-eslint/no-unused-vars': 'off',
-      'unicorn/prefer-node-protocol': 'warn',
-      'security/detect-non-literal-fs-filename': 'off',
-    },
-  },
   ];
 }

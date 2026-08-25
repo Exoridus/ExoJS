@@ -3,7 +3,7 @@ import { basename, join } from 'node:path';
 
 import type { Destroyable } from '@codexo/exojs';
 import type { TileMap } from '@codexo/exojs-tilemap';
-import { mapObjectDescriptors,MapObjectSpawner } from '@codexo/exojs-tilemap';
+import { mapObjectDescriptors, MapObjectSpawner } from '@codexo/exojs-tilemap';
 import { describe, expect, it } from 'vitest';
 
 import { TiledObject } from '../src/TiledObject';
@@ -12,8 +12,7 @@ import { makeTiledContext } from './type-context';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
-const PKG_DIR =
-  basename(process.cwd()) === 'exojs-tiled' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-tiled');
+const PKG_DIR = basename(process.cwd()) === 'exojs-tiled' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-tiled');
 
 function rawObject(overrides: Record<string, unknown>): Record<string, unknown> {
   return { id: 1, name: 'thing', x: 0, y: 0, width: 16, height: 16, rotation: 0, visible: true, ...overrides };
@@ -93,7 +92,6 @@ async function richMap(): Promise<TileMap> {
 }
 
 class Thing implements Destroyable {
-
   public destroyed = false;
 
   public constructor(public readonly id: string) {}

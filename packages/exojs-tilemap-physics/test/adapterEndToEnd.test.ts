@@ -14,8 +14,7 @@ import { TileColliderStreamer } from '../src/TileColliderStreamer';
 
 const TILE = 16;
 
-const fakeTexture = (): Texture =>
-  ({ destroyed: false, destroy: () => {}, height: 64, label: 'test', uid: 0, width: 64 }) as unknown as Texture;
+const fakeTexture = (): Texture => ({ destroyed: false, destroy: () => {}, height: 64, label: 'test', uid: 0, width: 64 }) as unknown as Texture;
 
 const world = (): PhysicsWorld => new PhysicsWorld({ gravity: { x: 0, y: 0 } });
 
@@ -44,9 +43,7 @@ const tiledLayer = (objects: readonly Record<string, unknown>[]): TileLayer => {
       height: 1,
       tilewidth: TILE,
       tileheight: TILE,
-      layers: [
-        { id: 1, name: 'ground', type: 'tilelayer', visible: true, opacity: 1, x: 0, y: 0, width: 1, height: 1, data: [1] },
-      ],
+      layers: [{ id: 1, name: 'ground', type: 'tilelayer', visible: true, opacity: 1, x: 0, y: 0, width: 1, height: 1, data: [1] }],
       tilesets: [{ firstgid: 1, source: 'atlas.tsj' }],
     } as never,
     [tileset],

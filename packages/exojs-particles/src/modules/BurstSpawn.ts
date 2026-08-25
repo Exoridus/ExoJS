@@ -1,7 +1,7 @@
 ﻿import { Color } from '@codexo/exojs';
 import { Vector } from '@codexo/exojs';
 
-import type { ParticleEmitter } from "#ParticleStorage";
+import type { ParticleEmitter } from '#ParticleStorage';
 
 import { fillParticle, type ParticleSpawnFields } from './spawnFields';
 import { SpawnModule } from './SpawnModule';

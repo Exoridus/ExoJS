@@ -290,8 +290,8 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
     this._prevMelFrameIdx = 0;
 
     // Lag range in hops for BPM range
-    this._minLag = Math.max(1, Math.round((60 / this._maxBpm) * this._sampleRate / this._hopSize));
-    this._maxLag = Math.round((60 / this._minBpm) * this._sampleRate / this._hopSize);
+    this._minLag = Math.max(1, Math.round(((60 / this._maxBpm) * this._sampleRate) / this._hopSize));
+    this._maxLag = Math.round(((60 / this._minBpm) * this._sampleRate) / this._hopSize);
     // ACF is computed down to a shorter lag than the candidate band: high-BPM
     // fundamentals become interior peaks and the 2f/3f super-harmonic penalty can read
     // energy above maxBpm.
@@ -632,7 +632,8 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
       // Fresh score of the currently-tracked tempo from this frame.
       let currentScore = 0;
       for (let c = 0; c < this._candidates.length; c++) {
-        if (Math.abs(this._candidates[c]!.bpm / this._bestBpm - 1) < 0.03 && this._candidates[c]!.score > currentScore) currentScore = this._candidates[c]!.score;
+        if (Math.abs(this._candidates[c]!.bpm / this._bestBpm - 1) < 0.03 && this._candidates[c]!.score > currentScore)
+          currentScore = this._candidates[c]!.score;
       }
       if (currentScore <= 0) currentScore = this._bestScore * 0.9;
 
@@ -1171,7 +1172,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
       beatPhase,
       confidence: settled ? this._confidence : 0,
       gridStability: settled ? this._confidence : 0,
-      tempoCandidates: settled ? this._candidates.map((c) => ({ bpm: c.bpm, score: c.score })) : [],
+      tempoCandidates: settled ? this._candidates.map(c => ({ bpm: c.bpm, score: c.score })) : [],
       rms: this._rms,
       onsetStrength: this._onsetStrength,
       bandEnergy: be,

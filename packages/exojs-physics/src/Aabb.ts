@@ -10,12 +10,10 @@ import type { AabbLike } from '@codexo/exojs';
 export const createAabb = (): AabbLike => ({ minX: 0, minY: 0, maxX: 0, maxY: 0 });
 
 /** `true` when two AABBs overlap (touching edges count as overlapping). */
-export const aabbOverlap = (a: AabbLike, b: AabbLike): boolean =>
-  a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY;
+export const aabbOverlap = (a: AabbLike, b: AabbLike): boolean => a.minX <= b.maxX && a.maxX >= b.minX && a.minY <= b.maxY && a.maxY >= b.minY;
 
 /** `true` when `(x, y)` lies inside (or on the edge of) `aabb`. */
-export const aabbContainsPoint = (aabb: AabbLike, x: number, y: number): boolean =>
-  x >= aabb.minX && x <= aabb.maxX && y >= aabb.minY && y <= aabb.maxY;
+export const aabbContainsPoint = (aabb: AabbLike, x: number, y: number): boolean => x >= aabb.minX && x <= aabb.maxX && y >= aabb.minY && y <= aabb.maxY;
 
 /** Grow `aabb` outward by `margin` on every side, in place. */
 export const expandAabb = (aabb: AabbLike, margin: number): AabbLike => {

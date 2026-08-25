@@ -1,7 +1,7 @@
 ﻿/// <reference types="@webgpu/types" />
 
-import type { Curve } from "#distributions/Curve";
-import type { ParticleBatch } from "#ParticleStorage";
+import type { Curve } from '#distributions/Curve';
+import type { ParticleBatch } from '#ParticleStorage';
 
 import { UpdateModule } from './UpdateModule';
 import type { WgslContribution } from './WgslContribution';

@@ -1,6 +1,6 @@
 import { AnimatedSprite, type AnimatedSpriteClipDefinition, Spritesheet, type Texture } from '@codexo/exojs';
 
-import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteLayer, type AsepriteSlice,isAsepriteArrayData } from './AsepriteData';
+import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type AsepriteLayer, type AsepriteSlice, isAsepriteArrayData } from './AsepriteData';
 
 /**
  * Normalises an {@link AsepriteData} document into an ordered array of
@@ -129,7 +129,6 @@ function resolveTaggedFrames(frameArray: AsepriteFrameData[], indices: number[])
  * ```
  */
 export class AsepriteSheet {
-
   /** The underlying {@link Spritesheet} whose frames are keyed by index string. */
   public readonly spritesheet: Spritesheet;
 

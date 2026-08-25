@@ -134,7 +134,11 @@ describe('contact events', () => {
     const world = new PhysicsWorld();
     colliderAt(world, new BoxShape(10, 10), { x: 0, y: 0 }, 0, 'static', { filter: { category: 0x0001, mask: 0x0001 } });
     world.add(
-      new PhysicsBody({ type: 'kinematic', position: { x: 5, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), filter: { category: 0x0002, mask: 0x0002 } }] }),
+      new PhysicsBody({
+        type: 'kinematic',
+        position: { x: 5, y: 0 },
+        colliders: [{ shape: new BoxShape(10, 10), filter: { category: 0x0002, mask: 0x0002 } }],
+      }),
     );
 
     const start = vi.fn();
@@ -253,7 +257,11 @@ describe('collision filter group override', () => {
       new PhysicsBody({
         type: 'dynamic',
         position: { x: 0, y: 0 },
-        colliders: [{ shape: new BoxShape(10, 10) }, { shape: new BoxShape(10, 10), offset: { x: 4, y: 0 } }, { shape: new BoxShape(10, 10), offset: { x: -4, y: 0 }, isSensor: true }],
+        colliders: [
+          { shape: new BoxShape(10, 10) },
+          { shape: new BoxShape(10, 10), offset: { x: 4, y: 0 } },
+          { shape: new BoxShape(10, 10), offset: { x: -4, y: 0 }, isSensor: true },
+        ],
       }),
     );
 

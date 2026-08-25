@@ -98,8 +98,7 @@ const readMeshTable = (mesh: Geometry, out: Float32Array | null = null): Float32
   const { attributes, stride, vertexData } = mesh;
   const vertexCount = mesh.vertexCount;
   const table = out !== null && out.length === vertexCount * floatsPerMeshVertex ? out : new Float32Array(vertexCount * floatsPerMeshVertex);
-  const view =
-    vertexData instanceof Float32Array ? new DataView(vertexData.buffer, vertexData.byteOffset, vertexData.byteLength) : new DataView(vertexData);
+  const view = vertexData instanceof Float32Array ? new DataView(vertexData.buffer, vertexData.byteOffset, vertexData.byteLength) : new DataView(vertexData);
 
   const position =
     attributes.find(attribute => positionAttributeNames.has(attribute.name)) ??

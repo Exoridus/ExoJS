@@ -8,99 +8,99 @@
    line here and every API page updates; nothing below hardcodes these.
    ────────────────────────────────────────────────────────────────────── */
 :root {
-    --api-token-name: var(--fg);
-    --api-token-param: var(--fg-muted);
-    --api-token-keyword: color-mix(in oklab, var(--accent), var(--fg-faint) 42%);
-    --api-token-type: var(--fg);
-    --api-token-link: var(--accent);
-    --api-token-link-line: var(--accent-line);
-    --api-token-punctuation: var(--fg-faint);
+  --api-token-name: var(--fg);
+  --api-token-param: var(--fg-muted);
+  --api-token-keyword: color-mix(in oklab, var(--accent), var(--fg-faint) 42%);
+  --api-token-type: var(--fg);
+  --api-token-link: var(--accent);
+  --api-token-link-line: var(--accent-line);
+  --api-token-punctuation: var(--fg-faint);
 
-    --api-kind-class: var(--accent);
-    --api-kind-interface: var(--sky);
-    --api-kind-enum: var(--rose);
-    --api-kind-type: var(--violet);
+  --api-kind-class: var(--accent);
+  --api-kind-interface: var(--sky);
+  --api-kind-enum: var(--rose);
+  --api-kind-type: var(--violet);
 }
 
 *,
 *::before,
 *::after {
-    box-sizing: border-box;
+  box-sizing: border-box;
 }
 
 html,
 body {
-    margin: 0;
-    padding: 0;
+  margin: 0;
+  padding: 0;
 }
 
 html {
-    font-family: var(--f-sans);
-    font-size: 16px;
-    color-scheme: dark;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+  font-family: var(--f-sans);
+  font-size: 16px;
+  color-scheme: dark;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 html[data-theme='light'] {
-    color-scheme: light;
+  color-scheme: light;
 }
 
 body {
-    min-height: 100vh;
-    background: var(--color-bg);
-    color: var(--color-text);
-    font-size: var(--text-md);
-    line-height: var(--leading-normal);
-    text-rendering: optimizeLegibility;
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-size: var(--text-md);
+  line-height: var(--leading-normal);
+  text-rendering: optimizeLegibility;
 }
 
 a {
-    color: var(--color-text);
-    text-decoration-color: color-mix(in oklab, var(--color-accent), transparent 45%);
-    text-underline-offset: 0.2em;
-    transition:
-        color var(--transition-fast),
-        text-decoration-color var(--transition-fast);
+  color: var(--color-text);
+  text-decoration-color: color-mix(in oklab, var(--color-accent), transparent 45%);
+  text-underline-offset: 0.2em;
+  transition:
+    color var(--transition-fast),
+    text-decoration-color var(--transition-fast);
 }
 
 a:hover {
-    color: var(--color-accent);
-    text-decoration-color: var(--color-accent-border);
+  color: var(--color-accent);
+  text-decoration-color: var(--color-accent-border);
 }
 
 button,
 input,
 select,
 textarea {
-    color: inherit;
-    font: inherit;
+  color: inherit;
+  font: inherit;
 }
 
 code,
 pre,
 kbd {
-    font-family: var(--f-mono);
+  font-family: var(--f-mono);
 }
 
 ::selection {
-    background: color-mix(in oklab, var(--color-accent-soft), transparent 15%);
+  background: color-mix(in oklab, var(--color-accent-soft), transparent 15%);
 }
 
 :focus-visible {
-    outline: 2px solid var(--focus-ring);
-    outline-offset: 2px;
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 :where(pre.astro-code) {
-    border: 1px solid var(--color-border-soft);
-    border-radius: var(--radius-card);
-    padding: 0.92rem 1rem !important;
-    overflow: auto;
-    background: var(--color-code-bg) !important;
-    box-shadow: var(--shadow-sm);
-    font-size: 0.9rem;
-    line-height: 1.68;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  padding: 0.92rem 1rem !important;
+  overflow: auto;
+  background: var(--color-code-bg) !important;
+  box-shadow: var(--shadow-sm);
+  font-size: 0.9rem;
+  line-height: 1.68;
 }
 
 // Code blocks always sit on the dark `--color-code-bg` surface (dark in both
@@ -110,7 +110,7 @@ kbd {
 // Dual-theme `<Code>`/markdown output still defines `--shiki-dark`; we just pin
 // to it regardless of the site's data-theme.
 :where(pre.astro-code, pre.astro-code span) {
-    color: var(--shiki-dark) !important;
+  color: var(--shiki-dark) !important;
 }
 
 p :where(code),
@@ -119,161 +119,161 @@ h1 :where(code),
 h2 :where(code),
 h3 :where(code),
 h4 :where(code) {
-    border: 1px solid var(--color-border-soft);
-    border-radius: var(--radius-inline);
-    padding: 0.08rem 0.34rem;
-    background: var(--color-inline-code-bg);
-    font-size: 0.88em;
-    line-height: inherit;
-    box-decoration-break: clone;
-    -webkit-box-decoration-break: clone;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-inline);
+  padding: 0.08rem 0.34rem;
+  background: var(--color-inline-code-bg);
+  font-size: 0.88em;
+  line-height: inherit;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
 }
 
 .docs-shell__content {
-    font-size: var(--text-md);
-    line-height: var(--leading-relaxed);
+  font-size: var(--text-md);
+  line-height: var(--leading-relaxed);
 }
 
 .docs-shell__content :where(h1, h2, h3, h4) {
-    color: var(--color-text);
-    letter-spacing: -0.015em;
-    line-height: var(--leading-tight);
-    margin: 1.2em 0 0.48em;
+  color: var(--color-text);
+  letter-spacing: -0.015em;
+  line-height: var(--leading-tight);
+  margin: 1.2em 0 0.48em;
 }
 
 .docs-shell__content :where(h1) {
-    margin-top: 0;
-    font-size: clamp(2rem, 3.2vw, 2.65rem);
+  margin-top: 0;
+  font-size: clamp(2rem, 3.2vw, 2.65rem);
 }
 
 .docs-shell__content :where(h2) {
-    font-size: clamp(1.45rem, 2.2vw, 1.95rem);
-    border-bottom: 1px solid var(--color-border-soft);
-    padding-bottom: 0.3em;
+  font-size: clamp(1.45rem, 2.2vw, 1.95rem);
+  border-bottom: 1px solid var(--color-border-soft);
+  padding-bottom: 0.3em;
 }
 
 .docs-shell__content :where(h3) {
-    font-size: clamp(1.18rem, 1.4vw, 1.4rem);
+  font-size: clamp(1.18rem, 1.4vw, 1.4rem);
 }
 
 .docs-shell__content :where(h4) {
-    font-size: var(--text-lg);
+  font-size: var(--text-lg);
 }
 
 .docs-shell__content :where(p, li) {
-    max-width: 72ch;
-    color: var(--color-text);
+  max-width: 72ch;
+  color: var(--color-text);
 }
 
 .docs-shell__content :where(p) {
-    margin: 0.8em 0;
+  margin: 0.8em 0;
 }
 
 .docs-shell__content :where(ul, ol) {
-    padding-left: 1.25rem;
+  padding-left: 1.25rem;
 }
 
 .docs-shell__content :where(blockquote) {
-    margin: 1rem 0;
-    padding: 0.85rem 1rem;
-    border-radius: var(--radius-card);
-    border: 1px solid var(--color-accent-border);
-    background: var(--color-accent-soft);
+  margin: 1rem 0;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-card);
+  border: 1px solid var(--color-accent-border);
+  background: var(--color-accent-soft);
 }
 
 .docs-shell__content :where(table) {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1rem 0;
-    border: 1px solid var(--color-border-soft);
-    border-radius: var(--radius-card);
-    overflow: hidden;
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  overflow: hidden;
 }
 
 .docs-shell__content :where(th, td) {
-    border-bottom: 1px solid var(--color-border-soft);
-    padding: 0.58rem 0.7rem;
-    text-align: left;
-    vertical-align: top;
+  border-bottom: 1px solid var(--color-border-soft);
+  padding: 0.58rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
 }
 
 .docs-shell__content :where(th) {
-    font-size: var(--text-sm);
-    color: var(--color-text-muted);
-    background: color-mix(in oklab, var(--color-surface), transparent 8%);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  background: color-mix(in oklab, var(--color-surface), transparent 8%);
 }
 
 .docs-shell__content :where(tr:last-child td) {
-    border-bottom: 0;
+  border-bottom: 0;
 }
 
 .btn,
 .button-base {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.45rem;
-    min-height: 36px;
-    padding: 0.5rem 0.9rem;
-    border: 1px solid var(--color-border-soft);
-    border-radius: var(--radius-control);
-    background: var(--color-surface);
-    color: var(--color-text);
-    font-size: var(--text-sm);
-    font-weight: 600;
-    text-decoration: none;
-    transition:
-        background var(--transition-fast),
-        border-color var(--transition-fast),
-        color var(--transition-fast),
-        transform var(--transition-fast);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 36px;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  transition:
+    background var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 .btn:hover,
 .button-base:hover {
-    border-color: var(--color-border);
-    background: var(--color-surface-2);
+  border-color: var(--color-border);
+  background: var(--color-surface-2);
 }
 
 .btn:active,
 .button-base:active {
-    transform: translateY(1px);
+  transform: translateY(1px);
 }
 
 .btn--primary,
 .button-base--primary {
-    border-color: var(--color-accent-border);
-    background: var(--color-accent-soft);
-    color: var(--color-text);
+  border-color: var(--color-accent-border);
+  background: var(--color-accent-soft);
+  color: var(--color-text);
 }
 
 .btn--primary:hover,
 .button-base--primary:hover {
-    background: color-mix(in oklab, var(--color-accent-soft), var(--color-surface) 25%);
+  background: color-mix(in oklab, var(--color-accent-soft), var(--color-surface) 25%);
 }
 
 .card,
 .panel {
-    border: 1px solid var(--color-border-soft);
-    border-radius: var(--radius-card);
-    background: var(--color-card);
-    box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius-card);
+  background: var(--color-card);
+  box-shadow: var(--shadow-sm);
 }
 
 .badge,
 .pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.34rem;
-    border-radius: var(--r-pill);
-    border: 1px solid var(--color-border-soft);
-    background: var(--color-surface);
-    color: var(--color-text-muted);
-    font-size: 0.72rem;
-    font-family: var(--f-mono);
-    padding: 0.18rem 0.54rem;
-    letter-spacing: 0.03em;
-    line-height: 1.3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.34rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--color-border-soft);
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-family: var(--f-mono);
+  padding: 0.18rem 0.54rem;
+  letter-spacing: 0.03em;
+  line-height: 1.3;
 }
 
 // --- Docs-shell shared patterns ---------------------------------------------
@@ -283,229 +283,229 @@ h4 :where(code) {
 // overrides (widths, spacing, extra states).
 
 .toc h6 {
-    margin: 0;
-    font-family: var(--f-mono);
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--fg-faint);
+  margin: 0;
+  font-family: var(--f-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fg-faint);
 }
 
 .toc ul {
-    list-style: none;
-    margin: var(--s-3) 0 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+  list-style: none;
+  margin: var(--s-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .toc a {
-    display: block;
-    border-left: 2px solid transparent;
-    padding: 4px 0 4px var(--s-3);
-    margin-left: -10px;
-    color: var(--fg-muted);
-    text-decoration: none;
-    font-size: 13px;
+  display: block;
+  border-left: 2px solid transparent;
+  padding: 4px 0 4px var(--s-3);
+  margin-left: -10px;
+  color: var(--fg-muted);
+  text-decoration: none;
+  font-size: 13px;
 }
 
 .toc a:hover,
 .toc a:focus-visible {
-    color: var(--fg);
-    outline: none;
+  color: var(--fg);
+  outline: none;
 }
 
 .toc a[data-active='true'] {
-    color: var(--accent);
-    border-left-color: var(--accent);
+  color: var(--accent);
+  border-left-color: var(--accent);
 }
 
 .toc__resources {
-    margin-top: 1.5rem;
-    padding-top: 0.75rem;
-    border-top: 1px solid var(--line-soft);
+  margin-top: 1.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line-soft);
 }
 
 .api-head {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: var(--s-5);
-    margin-bottom: var(--s-5);
-    flex-wrap: wrap;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--s-5);
+  margin-bottom: var(--s-5);
+  flex-wrap: wrap;
 }
 
 .api-head h1 {
-    margin: 0 0 4px;
-    font-size: 32px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
+  margin: 0 0 4px;
+  font-size: 32px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .api-head p {
-    margin: 0;
-    color: var(--fg-muted);
-    max-width: 68ch;
+  margin: 0;
+  color: var(--fg-muted);
+  max-width: 68ch;
 }
 
 .api-section-head {
-    font-size: 11px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--fg-faint);
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: var(--s-2);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-faint);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
 }
 
 .api-section-head .line {
-    flex: 1;
-    height: 1px;
-    background: var(--line-soft);
+  flex: 1;
+  height: 1px;
+  background: var(--line-soft);
 }
 
 .api-kind {
-    display: inline-flex;
-    align-items: center;
-    border-radius: var(--r-pill);
-    border: 1px solid var(--line-soft);
-    padding: 1px 6px;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    line-height: 1.3;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-soft);
+  padding: 1px 6px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  line-height: 1.3;
 }
 
 /* Badge hues come from the central API palette above (--api-kind-*). */
 .api-kind.kind-class {
-    color: var(--api-kind-class);
-    border-color: color-mix(in oklab, var(--api-kind-class), transparent 65%);
-    background: color-mix(in oklab, var(--api-kind-class), transparent 88%);
+  color: var(--api-kind-class);
+  border-color: color-mix(in oklab, var(--api-kind-class), transparent 65%);
+  background: color-mix(in oklab, var(--api-kind-class), transparent 88%);
 }
 
 .api-kind.kind-interface {
-    color: var(--api-kind-interface);
-    border-color: color-mix(in oklab, var(--api-kind-interface), transparent 62%);
-    background: color-mix(in oklab, var(--api-kind-interface), transparent 88%);
+  color: var(--api-kind-interface);
+  border-color: color-mix(in oklab, var(--api-kind-interface), transparent 62%);
+  background: color-mix(in oklab, var(--api-kind-interface), transparent 88%);
 }
 
 .api-kind.kind-enum {
-    color: var(--api-kind-enum);
-    border-color: color-mix(in oklab, var(--api-kind-enum), transparent 65%);
-    background: color-mix(in oklab, var(--api-kind-enum), transparent 88%);
+  color: var(--api-kind-enum);
+  border-color: color-mix(in oklab, var(--api-kind-enum), transparent 65%);
+  background: color-mix(in oklab, var(--api-kind-enum), transparent 88%);
 }
 
 .api-kind.kind-type {
-    color: var(--api-kind-type);
-    border-color: color-mix(in oklab, var(--api-kind-type), transparent 62%);
-    background: color-mix(in oklab, var(--api-kind-type), transparent 88%);
+  color: var(--api-kind-type);
+  border-color: color-mix(in oklab, var(--api-kind-type), transparent 62%);
+  background: color-mix(in oklab, var(--api-kind-type), transparent 88%);
 }
 
 .api-search {
-    display: flex;
-    align-items: center;
-    gap: var(--s-2);
-    max-width: 100%;
-    padding: 8px 10px;
-    border-radius: var(--r-3);
-    background: var(--bg-elevated);
-    border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  max-width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--r-3);
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
 }
 
 .api-search__icon {
-    color: var(--fg-faint);
-    font-family: var(--f-mono);
-    font-size: 12px;
+  color: var(--fg-faint);
+  font-family: var(--f-mono);
+  font-size: 12px;
 }
 
 .api-search input {
-    background: transparent;
-    border: none;
-    outline: none;
-    flex: 1;
-    font-size: 14px;
-    color: var(--fg);
-    min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  flex: 1;
+  font-size: 14px;
+  color: var(--fg);
+  min-width: 0;
 }
 
 .api-search button {
-    border: 1px solid var(--line-soft);
-    background: var(--bg-canvas);
-    color: var(--fg-muted);
-    border-radius: var(--r-pill);
-    font-family: var(--f-mono);
-    font-size: 11px;
-    padding: 4px 9px;
+  border: 1px solid var(--line-soft);
+  background: var(--bg-canvas);
+  color: var(--fg-muted);
+  border-radius: var(--r-pill);
+  font-family: var(--f-mono);
+  font-size: 11px;
+  padding: 4px 9px;
 }
 
 .api-search button:hover,
 .api-search button:focus-visible {
-    color: var(--fg);
-    border-color: var(--accent-line);
-    background: var(--accent-soft);
-    outline: none;
+  color: var(--fg);
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  outline: none;
 }
 
 .skip-link {
-    position: fixed;
-    top: 8px;
-    left: 8px;
-    z-index: 2000;
-    padding: 8px 14px;
-    border-radius: var(--r-2);
-    background: var(--color-panel);
-    color: var(--color-text);
-    font-size: 13px;
-    font-weight: 600;
-    text-decoration: none;
-    border: 1px solid var(--color-border-soft);
-    box-shadow: var(--shadow-md);
-    transform: translateY(-200%);
-    transition: transform 120ms ease-out;
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 2000;
+  padding: 8px 14px;
+  border-radius: var(--r-2);
+  background: var(--color-panel);
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--color-border-soft);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-200%);
+  transition: transform 120ms ease-out;
 }
 
 .skip-link:focus,
 .skip-link:focus-visible {
-    transform: translateY(0);
-    outline: 2px solid var(--focus-ring);
-    outline-offset: 2px;
+  transform: translateY(0);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 #main-content:focus,
 #main-content:focus-visible {
-    outline: none;
+  outline: none;
 }
 
 .app-shell {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    background:
-        radial-gradient(circle at 78% -6%, color-mix(in oklab, var(--color-accent-soft), transparent 20%), transparent 42%),
-        linear-gradient(var(--color-bg), var(--color-bg));
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(circle at 78% -6%, color-mix(in oklab, var(--color-accent-soft), transparent 20%), transparent 42%),
+    linear-gradient(var(--color-bg), var(--color-bg));
 }
 
 .app-shell__main {
-    flex: 1;
+  flex: 1;
 }
 
 .app-shell__footer {
-    border-top: 1px solid var(--color-border-soft);
-    padding: var(--s-4) var(--s-6);
-    color: var(--color-text-faint);
-    font-size: 12px;
+  border-top: 1px solid var(--color-border-soft);
+  padding: var(--s-4) var(--s-6);
+  color: var(--color-text-faint);
+  font-size: 12px;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    *,
-    *::before,
-    *::after {
-        animation-duration: 0.001ms !important;
-        animation-iteration-count: 1 !important;
-        transition-duration: 0.001ms !important;
-        scroll-behavior: auto !important;
-    }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

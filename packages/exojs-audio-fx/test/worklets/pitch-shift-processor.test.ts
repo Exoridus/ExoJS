@@ -50,7 +50,8 @@ function makeSine(freq: number, amplitude: number, n: number): Float32Array {
 
 /** Single-frequency DFT magnitude (no FFT needed for spot checks). */
 function magnitudeAt(buf: Float32Array, freq: number): number {
-  let re = 0, im = 0;
+  let re = 0,
+    im = 0;
   const omega = (2 * Math.PI * freq) / SAMPLE_RATE;
   for (let i = 0; i < buf.length; i++) {
     re += buf[i] * Math.cos(omega * i);
@@ -67,23 +68,26 @@ function rms(buf: Float32Array): number {
 
 /** Dominant frequency via a coarse magnitude sweep + local refine. */
 function dominantFreq(buf: Float32Array, lo = 50, hi = 4000): { freq: number; mag: number } {
-  let bestF = lo, bestM = -1;
+  let bestF = lo,
+    bestM = -1;
   for (let f = lo; f <= hi; f += 2) {
     const m = magnitudeAt(buf, f);
-    if (m > bestM) { bestM = m; bestF = f; }
+    if (m > bestM) {
+      bestM = m;
+      bestF = f;
+    }
   }
   for (let f = bestF - 2; f <= bestF + 2; f += 0.25) {
     const m = magnitudeAt(buf, f);
-    if (m > bestM) { bestM = m; bestF = f; }
+    if (m > bestM) {
+      bestM = m;
+      bestF = f;
+    }
   }
   return { freq: bestF, mag: bestM };
 }
 
-function runWorklet(
-  Processor: PitchProcessorConstructor,
-  input: Float32Array,
-  opts: { pitch: number; grainSize: number },
-): Float32Array {
+function runWorklet(Processor: PitchProcessorConstructor, input: Float32Array, opts: { pitch: number; grainSize: number }): Float32Array {
   const proc = new Processor({ processorOptions: { grainSize: opts.grainSize } });
   const n = input.length;
   const out = new Float32Array(n);

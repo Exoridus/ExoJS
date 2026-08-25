@@ -5,9 +5,9 @@
  * union's meaning, so generated documentation sorts by rendered text.
  */
 export function sortUnionMembers<T>(members: readonly T[], textOf: (member: T) => string): T[] {
-    return [...members].sort((left, right) => {
-        const leftText = textOf(left);
-        const rightText = textOf(right);
-        return leftText < rightText ? -1 : leftText > rightText ? 1 : 0;
-    });
+  return [...members].sort((left, right) => {
+    const leftText = textOf(left);
+    const rightText = textOf(right);
+    return leftText < rightText ? -1 : leftText > rightText ? 1 : 0;
+  });
 }

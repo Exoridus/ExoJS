@@ -27,22 +27,54 @@ export class GameScene extends Scene {
     this.addChild(this._scoreText);
 
     // WASD + arrow keys
-    this.inputs.onActive(Keyboard.W, () => { this._move.up = 1; });
-    this.inputs.onStop(Keyboard.W, () => { this._move.up = 0; });
-    this.inputs.onActive(Keyboard.S, () => { this._move.down = 1; });
-    this.inputs.onStop(Keyboard.S, () => { this._move.down = 0; });
-    this.inputs.onActive(Keyboard.A, () => { this._move.left = 1; });
-    this.inputs.onStop(Keyboard.A, () => { this._move.left = 0; });
-    this.inputs.onActive(Keyboard.D, () => { this._move.right = 1; });
-    this.inputs.onStop(Keyboard.D, () => { this._move.right = 0; });
-    this.inputs.onActive(Keyboard.Up, () => { this._move.up = 1; });
-    this.inputs.onStop(Keyboard.Up, () => { this._move.up = 0; });
-    this.inputs.onActive(Keyboard.Down, () => { this._move.down = 1; });
-    this.inputs.onStop(Keyboard.Down, () => { this._move.down = 0; });
-    this.inputs.onActive(Keyboard.Left, () => { this._move.left = 1; });
-    this.inputs.onStop(Keyboard.Left, () => { this._move.left = 0; });
-    this.inputs.onActive(Keyboard.Right, () => { this._move.right = 1; });
-    this.inputs.onStop(Keyboard.Right, () => { this._move.right = 0; });
+    this.inputs.onActive(Keyboard.W, () => {
+      this._move.up = 1;
+    });
+    this.inputs.onStop(Keyboard.W, () => {
+      this._move.up = 0;
+    });
+    this.inputs.onActive(Keyboard.S, () => {
+      this._move.down = 1;
+    });
+    this.inputs.onStop(Keyboard.S, () => {
+      this._move.down = 0;
+    });
+    this.inputs.onActive(Keyboard.A, () => {
+      this._move.left = 1;
+    });
+    this.inputs.onStop(Keyboard.A, () => {
+      this._move.left = 0;
+    });
+    this.inputs.onActive(Keyboard.D, () => {
+      this._move.right = 1;
+    });
+    this.inputs.onStop(Keyboard.D, () => {
+      this._move.right = 0;
+    });
+    this.inputs.onActive(Keyboard.Up, () => {
+      this._move.up = 1;
+    });
+    this.inputs.onStop(Keyboard.Up, () => {
+      this._move.up = 0;
+    });
+    this.inputs.onActive(Keyboard.Down, () => {
+      this._move.down = 1;
+    });
+    this.inputs.onStop(Keyboard.Down, () => {
+      this._move.down = 0;
+    });
+    this.inputs.onActive(Keyboard.Left, () => {
+      this._move.left = 1;
+    });
+    this.inputs.onStop(Keyboard.Left, () => {
+      this._move.left = 0;
+    });
+    this.inputs.onActive(Keyboard.Right, () => {
+      this._move.right = 1;
+    });
+    this.inputs.onStop(Keyboard.Right, () => {
+      this._move.right = 0;
+    });
 
     this.inputs.onTrigger(Keyboard.Escape, () => {
       void this.app!.scenes.change(GameOverScene, { data: { score: Math.floor(this._elapsed) } });

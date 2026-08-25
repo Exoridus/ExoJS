@@ -140,7 +140,9 @@ function pearson(xs: number[], ys: number[]): number {
   if (n < 2) return 0;
   const mx = xs.reduce((a, b) => a + b, 0) / n;
   const my = ys.reduce((a, b) => a + b, 0) / n;
-  let num = 0, dxSq = 0, dySq = 0;
+  let num = 0,
+    dxSq = 0,
+    dySq = 0;
   for (let i = 0; i < n; i++) {
     const dx = xs[i] - mx;
     const dy = ys[i] - my;
@@ -159,11 +161,7 @@ function pearson(xs: number[], ys: number[]): number {
  *   fpTimes - emitted beats with no GT match
  *   missTimes - GT onsets with no matched emitted beat
  */
-function greedyMatch(
-  emittedTimes: number[],
-  gtTimes: number[],
-  windowSec: number,
-): { offsets: number[]; fpTimes: number[]; missTimes: number[] } {
+function greedyMatch(emittedTimes: number[], gtTimes: number[], windowSec: number): { offsets: number[]; fpTimes: number[]; missTimes: number[] } {
   const sorted = [...emittedTimes].sort((a, b) => a - b);
   const gt = [...gtTimes].sort((a, b) => a - b);
   const usedGt = new Set<number>();
@@ -218,7 +216,7 @@ export function computeMetrics(
   // ── BPM error from settled state messages ──
 
   const stateMessages = extractStateMessages(messages);
-  const settledStates = stateMessages.filter((s) => s.tempo > 0);
+  const settledStates = stateMessages.filter(s => s.tempo > 0);
 
   const bpmErrors: number[] = [];
   const bpmErrorsSigned: number[] = [];
@@ -232,9 +230,7 @@ export function computeMetrics(
   const bpmError: BpmErrorStats = {
     meanAbs: bpmErrors.length ? bpmErrors.reduce((a, b) => a + b, 0) / bpmErrors.length : 0,
     maxAbs: bpmErrors.length ? Math.max(...bpmErrors) : 0,
-    signedMean: bpmErrorsSigned.length
-      ? bpmErrorsSigned.reduce((a, b) => a + b, 0) / bpmErrorsSigned.length
-      : 0,
+    signedMean: bpmErrorsSigned.length ? bpmErrorsSigned.reduce((a, b) => a + b, 0) / bpmErrorsSigned.length : 0,
     signedPct: 0,
     sampleCount: bpmErrors.length,
   };
@@ -248,10 +244,7 @@ export function computeMetrics(
 
   for (const s of stateMessages) {
     const trueBpm = resolveBpmAt(fixture, s._audioTimeSec);
-    const isLocked =
-      s.tempo > 0 &&
-      trueBpm > 0 &&
-      Math.abs(s.tempo - trueBpm) / trueBpm <= lockThresholdPct / 100;
+    const isLocked = s.tempo > 0 && trueBpm > 0 && Math.abs(s.tempo - trueBpm) / trueBpm <= lockThresholdPct / 100;
 
     if (isLocked) {
       consecutiveCount++;
@@ -269,11 +262,11 @@ export function computeMetrics(
   // ── Beat-event offset + FP/miss ──
 
   const beatMsgs = extractBeatMessages(messages);
-  const emittedTimes = beatMsgs.map((m) => m.audioTime);
+  const emittedTimes = beatMsgs.map(m => m.audioTime);
   const gtTimes = fixture.beatTimesSec;
 
   const { offsets, fpTimes, missTimes } = greedyMatch(emittedTimes, gtTimes, matchWindowSec);
-  const offsetsMs = offsets.map((o) => o * 1000);
+  const offsetsMs = offsets.map(o => o * 1000);
   const sortedOffsets = [...offsetsMs].sort((a, b) => a - b);
 
   const beatOffset: BeatOffsetStats = {
@@ -300,8 +293,7 @@ export function computeMetrics(
   const correctFlags: number[] = [];
   for (const s of settledStates) {
     const trueBpm = resolveBpmAt(fixture, s._audioTimeSec);
-    const correct =
-      trueBpm > 0 && Math.abs(s.tempo - trueBpm) / trueBpm <= lockThresholdPct / 100 ? 1 : 0;
+    const correct = trueBpm > 0 && Math.abs(s.tempo - trueBpm) / trueBpm <= lockThresholdPct / 100 ? 1 : 0;
     confValues.push(s.confidence);
     correctFlags.push(correct);
   }
@@ -309,9 +301,7 @@ export function computeMetrics(
   const correctConf = confValues.filter((_, i) => correctFlags[i] === 1);
   const wrongConf = confValues.filter((_, i) => correctFlags[i] === 0);
   const confidence: ConfidenceCorrelation = {
-    meanWhenCorrect: correctConf.length
-      ? correctConf.reduce((a, b) => a + b, 0) / correctConf.length
-      : 0,
+    meanWhenCorrect: correctConf.length ? correctConf.reduce((a, b) => a + b, 0) / correctConf.length : 0,
     meanWhenWrong: wrongConf.length ? wrongConf.reduce((a, b) => a + b, 0) / wrongConf.length : 0,
     pearsonR: pearson(confValues, correctFlags),
     sampleCount: confValues.length,
@@ -341,17 +331,20 @@ export function computeMetrics(
 
   // ── Detection rate ──
 
-  const detectionRate =
-    stateMessages.length > 0 ? settledStates.length / stateMessages.length : 0;
+  const detectionRate = stateMessages.length > 0 ? settledStates.length / stateMessages.length : 0;
 
   // ── Provisional vs locked beats ──
 
   const timeToFirstBeatSec = beatMsgs.length > 0 ? beatMsgs[0]._audioTimeSec : null;
-  const lockedBeats = beatMsgs.filter((b) => b.status === 'locked');
-  const provisionalBeats = beatMsgs.filter((b) => b.status === 'provisional');
+  const lockedBeats = beatMsgs.filter(b => b.status === 'locked');
+  const provisionalBeats = beatMsgs.filter(b => b.status === 'provisional');
   const firstLocked = lockedBeats[0];
-  const lockedMatch = greedyMatch(lockedBeats.map((b) => b.audioTime), gtTimes, matchWindowSec);
-  const lockedOffsetsMs = lockedMatch.offsets.map((o) => o * 1000);
+  const lockedMatch = greedyMatch(
+    lockedBeats.map(b => b.audioTime),
+    gtTimes,
+    matchWindowSec,
+  );
+  const lockedOffsetsMs = lockedMatch.offsets.map(o => o * 1000);
 
   let provLockedTransitions = 0;
   for (let i = 1; i < beatMsgs.length; i++) {
@@ -359,7 +352,7 @@ export function computeMetrics(
       provLockedTransitions++;
     }
   }
-  const statusComplete = beatMsgs.every((b) => b.status === 'provisional' || b.status === 'locked');
+  const statusComplete = beatMsgs.every(b => b.status === 'provisional' || b.status === 'locked');
 
   const t7: T7Stats = {
     timeToFirstBeatSec,
@@ -368,9 +361,7 @@ export function computeMetrics(
     lockedBeatCount: lockedBeats.length,
     lockedFpRatePerMin: durationMin > 0 ? lockedMatch.fpTimes.length / durationMin : 0,
     lockedFpCount: lockedMatch.fpTimes.length,
-    lockedBeatOffsetMeanMs: lockedOffsetsMs.length
-      ? lockedOffsetsMs.reduce((a, b) => a + b, 0) / lockedOffsetsMs.length
-      : 0,
+    lockedBeatOffsetMeanMs: lockedOffsetsMs.length ? lockedOffsetsMs.reduce((a, b) => a + b, 0) / lockedOffsetsMs.length : 0,
     provLockedTransitions,
     statusComplete,
   };
@@ -411,8 +402,8 @@ export function formatMetrics(m: BeatMetrics): string {
   // BPM error
   lines.push(
     `  BPM error      : mean=${fmt(m.bpmError.meanAbs, 2)} max=${fmt(m.bpmError.maxAbs, 2)} ` +
-    `signed=${fmt(m.bpmError.signedMean, 2)} (${fmt(m.bpmError.signedPct, 2)}%) ` +
-    `[n=${m.bpmError.sampleCount}]`,
+      `signed=${fmt(m.bpmError.signedMean, 2)} (${fmt(m.bpmError.signedPct, 2)}%) ` +
+      `[n=${m.bpmError.sampleCount}]`,
   );
   if (m.bpmError.sampleCount > 0 && m.bpmError.meanAbs > m.trueBpmAtMid * 0.05) {
     fails.push(`BPM error > 5% (mean=${fmt(m.bpmError.meanAbs, 1)} BPM)`);
@@ -421,14 +412,14 @@ export function formatMetrics(m: BeatMetrics): string {
   // Beat offset
   lines.push(
     `  Beat offset    : mean=${fmt(m.beatOffset.meanMs, 1)}ms p90=${fmt(m.beatOffset.p90Ms, 1)}ms ` +
-    `median=${fmt(m.beatOffset.medianMs, 1)}ms [${m.beatOffset.matchedCount} matched]`,
+      `median=${fmt(m.beatOffset.medianMs, 1)}ms [${m.beatOffset.matchedCount} matched]`,
   );
 
   // FP / miss
   lines.push(
     `  Beats          : emitted=${m.beatOffset.emittedCount} GT=${m.beatOffset.gtCount} ` +
-    `matched=${m.beatOffset.matchedCount} FP=${m.fpMiss.fpCount} (${fmt(m.fpMiss.fpRatePerMin, 1)}/min) ` +
-    `miss=${m.fpMiss.missCount} recall=${fmt(m.fpMiss.recall * 100, 1)}%`,
+      `matched=${m.beatOffset.matchedCount} FP=${m.fpMiss.fpCount} (${fmt(m.fpMiss.fpRatePerMin, 1)}/min) ` +
+      `miss=${m.fpMiss.missCount} recall=${fmt(m.fpMiss.recall * 100, 1)}%`,
   );
   if (m.fpMiss.fpRatePerMin > 10) {
     fails.push(`FP rate > 10/min (${fmt(m.fpMiss.fpRatePerMin, 1)}/min)`);
@@ -447,15 +438,12 @@ export function formatMetrics(m: BeatMetrics): string {
   // Confidence
   lines.push(
     `  Confidence     : correct=${fmt(m.confidence.meanWhenCorrect, 3)} ` +
-    `wrong=${fmt(m.confidence.meanWhenWrong, 3)} r=${fmt(m.confidence.pearsonR, 3)} ` +
-    `[n=${m.confidence.sampleCount}]`,
+      `wrong=${fmt(m.confidence.meanWhenWrong, 3)} r=${fmt(m.confidence.pearsonR, 3)} ` +
+      `[n=${m.confidence.sampleCount}]`,
   );
 
   // Octave error
-  const octStr =
-    m.octaveError.halfOctave ? 'HALF-OCTAVE (locked at 0.5x)'
-    : m.octaveError.doubleOctave ? 'DOUBLE-OCTAVE (locked at 2x)'
-    : 'none';
+  const octStr = m.octaveError.halfOctave ? 'HALF-OCTAVE (locked at 0.5x)' : m.octaveError.doubleOctave ? 'DOUBLE-OCTAVE (locked at 2x)' : 'none';
   lines.push(`  Octave error   : ${octStr}`);
   if (m.octaveError.halfOctave || m.octaveError.doubleOctave) {
     fails.push(`octave error: ${octStr}`);

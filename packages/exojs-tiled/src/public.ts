@@ -113,14 +113,7 @@ export type {
 
 // ── Parsed source model ─────────────────────────────────────────────────────
 export type { TiledLayerType } from './TiledLayer';
-export {
-  createTiledLayer,
-  TiledGroupLayer,
-  TiledImageLayer,
-  TiledLayer,
-  TiledObjectLayer,
-  TiledTileLayer,
-} from './TiledLayer';
+export { createTiledLayer, TiledGroupLayer, TiledImageLayer, TiledLayer, TiledObjectLayer, TiledTileLayer } from './TiledLayer';
 export { TiledMap } from './TiledMap';
 export { TiledObject } from './TiledObject';
 export type { TiledTilesetResources } from './TiledTileset';

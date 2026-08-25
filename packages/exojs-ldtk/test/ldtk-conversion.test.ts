@@ -3,13 +3,7 @@ import type { TileProperties } from '@codexo/exojs-tilemap';
 import { TileSet } from '@codexo/exojs-tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
-import type {
-  LdtkData,
-  LdtkEntityInstance,
-  LdtkFieldInstance,
-  LdtkLayerInstance,
-  LdtkLevel,
-} from '../src/LdtkData';
+import type { LdtkData, LdtkEntityInstance, LdtkFieldInstance, LdtkLayerInstance, LdtkLevel } from '../src/LdtkData';
 import { LDTK_FLIP_NONE, LDTK_FLIP_X, LDTK_FLIP_XY, LDTK_FLIP_Y } from '../src/LdtkData';
 import { createLdtkIntGridCellSource, getLdtkIntGridValueAt, ldtkToTileMap } from '../src/ldtkToTileMap';
 
@@ -201,8 +195,7 @@ describe('ldtkToTileMap — tile population edge cases', () => {
       autoLayerTiles: [],
     });
 
-    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
-      .layers[0]!;
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!.layers[0]!;
     expect(layer.countNonEmptyTiles()).toBe(1);
     expect(layer.getTileAt(1, 0)).toBeNull();
     expect(layer.getTileAt(2, 0)).toBeNull();
@@ -227,8 +220,7 @@ describe('ldtkToTileMap — tile population edge cases', () => {
       autoLayerTiles: [],
     });
 
-    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
-      .layers[0]!;
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!.layers[0]!;
     expect(layer.countNonEmptyTiles()).toBe(1);
     expect(layer.getTileAt(0, 0)).not.toBeNull();
   });
@@ -249,8 +241,7 @@ describe('ldtkToTileMap — tile population edge cases', () => {
       autoLayerTiles: [],
     });
 
-    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
-      .layers[0]!;
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!.layers[0]!;
     expect(layer.countNonEmptyTiles()).toBe(0);
   });
 });
@@ -303,8 +294,7 @@ describe('ldtkToTileMap — IntGrid', () => {
       autoLayerTiles: [{ px: [0, 0], src: [0, 0], f: 0, t: 3 }],
     });
 
-    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
-      .layers[0]!;
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!.layers[0]!;
     expect(layer.countNonEmptyTiles()).toBe(1);
     expect(layer.getTileAt(0, 0)!.localTileId).toBe(3);
   });
@@ -324,8 +314,7 @@ describe('ldtkToTileMap — IntGrid', () => {
       intGridCsv: [1, 2, 3, 4],
     });
 
-    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
-      .layers[0]!;
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!.layers[0]!;
     expect(layer.countNonEmptyTiles()).toBe(0);
     expect(layer.width).toBe(4);
   });
@@ -604,12 +593,7 @@ describe('ldtkToTileMap — level field instances', () => {
     };
 
     const map = ldtkToTileMap(data).levels[0]!;
-    expect(Object.keys(map.properties).sort()).toEqual([
-      'ldtkIid',
-      'ldtkUid',
-      'worldX',
-      'worldY',
-    ]);
+    expect(Object.keys(map.properties).sort()).toEqual(['ldtkIid', 'ldtkUid', 'worldX', 'worldY']);
   });
 });
 
@@ -1172,13 +1156,10 @@ describe('ldtkToTileMap — Array field conversion', () => {
 });
 
 describe('ldtkToTileMap — null-valued scalar fields (all scalar types)', () => {
-  it.each(['Int', 'Float', 'Bool', 'String', 'Multilines', 'Color', 'FilePath', 'Enum'] as const)(
-    'omits a null-valued %s field',
-    __type => {
-      const props = convertSingleField({ __identifier: 'x', __type, __value: null });
-      expect('x' in props).toBe(false);
-    },
-  );
+  it.each(['Int', 'Float', 'Bool', 'String', 'Multilines', 'Color', 'FilePath', 'Enum'] as const)('omits a null-valued %s field', __type => {
+    const props = convertSingleField({ __identifier: 'x', __type, __value: null });
+    expect('x' in props).toBe(false);
+  });
 });
 
 describe('ldtkToTileMap — ObjectLayer metadata', () => {
@@ -1235,10 +1216,7 @@ describe('ldtkToTileMap — entity id assignment across layers and levels', () =
               levelId: 1,
               visible: true,
               iid: 'ent-a',
-              entityInstances: [
-                makeEntity('A0'),
-                makeEntity('A1'),
-              ],
+              entityInstances: [makeEntity('A0'), makeEntity('A1')],
             },
             {
               __identifier: 'EntitiesB',
@@ -1369,8 +1347,7 @@ describe('ldtkToTileMap — Tiles/AutoLayer tile-source fallback when the field 
       // gridTiles intentionally omitted
     });
 
-    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
-      .layers[0]!;
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!.layers[0]!;
     expect(layer.countNonEmptyTiles()).toBe(0);
   });
 
@@ -1389,8 +1366,7 @@ describe('ldtkToTileMap — Tiles/AutoLayer tile-source fallback when the field 
       // autoLayerTiles intentionally omitted
     });
 
-    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
-      .layers[0]!;
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!.layers[0]!;
     expect(layer.countNonEmptyTiles()).toBe(0);
   });
 });
@@ -1413,8 +1389,7 @@ describe('ldtkToTileMap — IntGrid auto-tiles reference a tileset uid missing f
       autoLayerTiles: [{ px: [0, 0], src: [0, 0], f: 0, t: 3 }],
     });
 
-    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!
-      .layers[0]!;
+    const layer = ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) }).levels[0]!.layers[0]!;
     expect(layer.countNonEmptyTiles()).toBe(0);
   });
 });
@@ -1480,11 +1455,7 @@ describe('ldtkToTileMap — Entities layer fallback / defensive entries', () => 
     // entityInstances is typed as a dense array, but the conversion loop
     // defensively guards against a sparse/holey array - construct one via a
     // cast to exercise that guard.
-    const holeyInstances = [
-      makeEntity('First'),
-      undefined,
-      makeEntity('Second'),
-    ] as unknown as readonly LdtkEntityInstance[];
+    const holeyInstances = [makeEntity('First'), undefined, makeEntity('Second')] as unknown as readonly LdtkEntityInstance[];
 
     const data = docWithLayer({
       __identifier: 'Entities',

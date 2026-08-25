@@ -27,7 +27,9 @@ export type TiledPropertyType = 'string' | 'int' | 'float' | 'bool' | 'color' | 
  * The value of a `class`-typed custom property: a nested map of member name
  * to value, recursively allowing further `class` members.
  */
-export interface TiledClassPropertyValueData { readonly [name: string]: string | number | boolean | TiledClassPropertyValueData }
+export interface TiledClassPropertyValueData {
+  readonly [name: string]: string | number | boolean | TiledClassPropertyValueData;
+}
 
 /**
  * One custom property entry as written by Tiled (`properties` arrays on
@@ -134,17 +136,7 @@ export interface TiledWangSetData {
  * `'unspecified'` is Tiled's own default and is orientation-dependent - see
  * {@link import('./objectAlignment').resolveTiledObjectAlignment}.
  */
-export type TiledObjectAlignment =
-  | 'unspecified'
-  | 'topleft'
-  | 'top'
-  | 'topright'
-  | 'left'
-  | 'center'
-  | 'right'
-  | 'bottomleft'
-  | 'bottom'
-  | 'bottomright';
+export type TiledObjectAlignment = 'unspecified' | 'topleft' | 'top' | 'topright' | 'left' | 'center' | 'right' | 'bottomleft' | 'bottom' | 'bottomright';
 
 /**
  * A Tiled tileset, as the root of a standalone `.tsj` file or (minus

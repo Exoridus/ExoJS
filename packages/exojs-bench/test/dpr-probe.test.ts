@@ -53,10 +53,7 @@ describe('probe matrix', () => {
 
     for (const cell of cells) {
       const previous = groups[groups.length - 1];
-      const isNewGroup =
-        previous === undefined ||
-        cells[cells.indexOf(cell) - 1]?.scene !== cell.scene ||
-        cells[cells.indexOf(cell) - 1]?.mode !== cell.mode;
+      const isNewGroup = previous === undefined || cells[cells.indexOf(cell) - 1]?.scene !== cell.scene || cells[cells.indexOf(cell) - 1]?.mode !== cell.mode;
 
       if (isNewGroup) {
         groups.push([cell.pixelRatio]);

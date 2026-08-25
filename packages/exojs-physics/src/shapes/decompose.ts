@@ -54,7 +54,9 @@ export const decomposeToConvexParts = (vertices: ReadonlyArray<Readonly<PointLik
   // so a short index list is how a polygon that survived the checks above but is
   // still numerically degenerate shows up. Accepting it would silently drop area.
   if (indices.length !== (count - 2) * 3) {
-    throw new RangeError(`decomposeToConvexParts: could not triangulate the outline (${indices.length / 3} of ${count - 2} triangles); check it for near-degenerate geometry.`);
+    throw new RangeError(
+      `decomposeToConvexParts: could not triangulate the outline (${indices.length / 3} of ${count - 2} triangles); check it for near-degenerate geometry.`,
+    );
   }
 
   const sourceArea = Math.abs(signedArea(points));
@@ -67,7 +69,9 @@ export const decomposeToConvexParts = (vertices: ReadonlyArray<Readonly<PointLik
   const partArea = cycles.reduce((sum, cycle) => sum + Math.abs(cycleArea(points, cycle)), 0);
 
   if (parts.length === 0 || Math.abs(partArea - sourceArea) > sourceArea * 1e-6) {
-    throw new RangeError(`decomposeToConvexParts: the parts cover ${partArea.toFixed(4)} of the outline's ${sourceArea.toFixed(4)}; the outline is too degenerate to decompose.`);
+    throw new RangeError(
+      `decomposeToConvexParts: the parts cover ${partArea.toFixed(4)} of the outline's ${sourceArea.toFixed(4)}; the outline is too degenerate to decompose.`,
+    );
   }
 
   return parts;
@@ -207,8 +211,12 @@ const segmentsIntersect = (points: number[], a: number, b: number, c: number, d:
 
 /** Sign of the turn `a → b → c`: `1` left, `-1` right, `0` collinear. */
 const orientation = (points: number[], a: number, b: number, c: number): number => {
-  const cross = (points[b * 2]! - points[a * 2]!) * (points[c * 2 + 1]! - points[a * 2 + 1]!) - (points[b * 2 + 1]! - points[a * 2 + 1]!) * (points[c * 2]! - points[a * 2]!);
-  const scale = Math.hypot(points[b * 2]! - points[a * 2]!, points[b * 2 + 1]! - points[a * 2 + 1]!) * Math.hypot(points[c * 2]! - points[a * 2]!, points[c * 2 + 1]! - points[a * 2 + 1]!);
+  const cross =
+    (points[b * 2]! - points[a * 2]!) * (points[c * 2 + 1]! - points[a * 2 + 1]!) -
+    (points[b * 2 + 1]! - points[a * 2 + 1]!) * (points[c * 2]! - points[a * 2]!);
+  const scale =
+    Math.hypot(points[b * 2]! - points[a * 2]!, points[b * 2 + 1]! - points[a * 2 + 1]!) *
+    Math.hypot(points[c * 2]! - points[a * 2]!, points[c * 2 + 1]! - points[a * 2 + 1]!);
 
   if (scale === 0 || Math.abs(cross) <= collinearEpsilon * scale) {
     return 0;

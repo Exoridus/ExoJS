@@ -96,50 +96,50 @@ The runtime binding additionally calls `TiledMap.toTileMap()` to produce the gen
 await loader.load(Asset.type('tileMap', 'maps/world.json', { format: 'tiled' }));
 ```
 
-| Option | Type | Default | Description |
-|---|---|---|---|
+| Option   | Type      | Default   | Description                                                                                                                                                                                             |
+| -------- | --------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `format` | `'tiled'` | `'tiled'` | Format hint for ambiguous `.json` paths. `.tmj`/`.tsj` are recognised by extension. `'tiled'` is the only accepted value (a foreign format is a compile error). Participates in the asset identity key. |
 
-Options are optional. Parsing is always strict: `validateTiledMapData` throws a `TiledFormatError` on any malformed *known* field, and silently preserves *unknown* fields (so real-world Tiled files using features ExoJS does not model still load).
+Options are optional. Parsing is always strict: `validateTiledMapData` throws a `TiledFormatError` on any malformed _known_ field, and silently preserves _unknown_ fields (so real-world Tiled files using features ExoJS does not model still load).
 
 ## Parsed API overview
 
 ### `TiledMap`
 
 ```ts
-map.source            // resolved URL this map was loaded from
-map.width             // map width in tiles
-map.height            // map height in tiles
-map.tileWidth         // tile grid cell width in pixels
-map.tileHeight        // tile grid cell height in pixels
-map.orientation       // 'orthogonal' | 'isometric' | 'staggered' | 'hexagonal'
-map.renderOrder       // 'right-down' | 'right-up' | 'left-down' | 'left-up' | undefined
-map.infinite          // true for infinite maps (layers use chunks, not flat data)
-map.backgroundColor   // optional CSS color string
-map.layers            // TiledLayer[] — parsed layer hierarchy
-map.tilesets          // TiledTileset[] — sorted by firstGid ascending
-map.properties        // TiledPropertyData[] — custom properties
-map.findTilesetForGid(gid)  // → TiledTileset | undefined (masks flip bits automatically)
-map.getProperty(name)       // → TiledPropertyData | undefined
-map.toTileMap()             // → TileMap — synchronous runtime conversion
-map.destroy()               // no-op; textures are Loader-owned
+map.source; // resolved URL this map was loaded from
+map.width; // map width in tiles
+map.height; // map height in tiles
+map.tileWidth; // tile grid cell width in pixels
+map.tileHeight; // tile grid cell height in pixels
+map.orientation; // 'orthogonal' | 'isometric' | 'staggered' | 'hexagonal'
+map.renderOrder; // 'right-down' | 'right-up' | 'left-down' | 'left-up' | undefined
+map.infinite; // true for infinite maps (layers use chunks, not flat data)
+map.backgroundColor; // optional CSS color string
+map.layers; // TiledLayer[] — parsed layer hierarchy
+map.tilesets; // TiledTileset[] — sorted by firstGid ascending
+map.properties; // TiledPropertyData[] — custom properties
+map.findTilesetForGid(gid); // → TiledTileset | undefined (masks flip bits automatically)
+map.getProperty(name); // → TiledPropertyData | undefined
+map.toTileMap(); // → TileMap — synchronous runtime conversion
+map.destroy(); // no-op; textures are Loader-owned
 ```
 
 ### `TiledTileset`
 
 ```ts
-tileset.firstGid      // first GID in this tileset's range (inclusive)
-tileset.lastGid       // last GID in this tileset's range (inclusive)
-tileset.name
-tileset.tileWidth / tileHeight
-tileset.tileCount / columns / spacing / margin
-tileset.source        // resolved .tsj URL (undefined for embedded tilesets)
-tileset.imageUrl      // resolved atlas image URL (undefined for collection-of-images)
-tileset.texture       // Texture loaded for imageUrl (Loader-owned)
-tileset.tileTextures  // Map<localId, Texture> for collection-of-images tilesets (Loader-owned)
-tileset.tiles         // TiledTileData[] — per-tile animation/property/collision data
-tileset.getTile(localId)    // → TiledTileData | undefined
-tileset.getProperty(name)   // → TiledPropertyData | undefined
+tileset.firstGid; // first GID in this tileset's range (inclusive)
+tileset.lastGid; // last GID in this tileset's range (inclusive)
+tileset.name;
+tileset.tileWidth / tileHeight;
+tileset.tileCount / columns / spacing / margin;
+tileset.source; // resolved .tsj URL (undefined for embedded tilesets)
+tileset.imageUrl; // resolved atlas image URL (undefined for collection-of-images)
+tileset.texture; // Texture loaded for imageUrl (Loader-owned)
+tileset.tileTextures; // Map<localId, Texture> for collection-of-images tilesets (Loader-owned)
+tileset.tiles; // TiledTileData[] — per-tile animation/property/collision data
+tileset.getTile(localId); // → TiledTileData | undefined
+tileset.getProperty(name); // → TiledPropertyData | undefined
 ```
 
 ### `TiledLayer` subclasses
@@ -147,12 +147,12 @@ tileset.getProperty(name)   // → TiledPropertyData | undefined
 All layers extend `TiledLayer` (base: `id`, `name`, `class`, `visible`, `opacity`, `x`, `y`,
 `offsetX/Y`, `parallaxX/Y`, `tintColor`, `properties`, `getProperty(name)`).
 
-| Subclass | `type` | Extra fields |
-|---|---|---|
-| `TiledTileLayer` | `'tilelayer'` | `width`, `height`, `data?: number[]` (finite), `chunks?` (infinite) |
-| `TiledObjectLayer` | `'objectgroup'` | `drawOrder`, `objects: TiledObject[]` |
-| `TiledImageLayer` | `'imagelayer'` | `image`, `repeatX`, `repeatY` |
-| `TiledGroupLayer` | `'group'` | `layers: TiledLayer[]` |
+| Subclass           | `type`          | Extra fields                                                        |
+| ------------------ | --------------- | ------------------------------------------------------------------- |
+| `TiledTileLayer`   | `'tilelayer'`   | `width`, `height`, `data?: number[]` (finite), `chunks?` (infinite) |
+| `TiledObjectLayer` | `'objectgroup'` | `drawOrder`, `objects: TiledObject[]`                               |
+| `TiledImageLayer`  | `'imagelayer'`  | `image`, `repeatX`, `repeatY`                                       |
+| `TiledGroupLayer`  | `'group'`       | `layers: TiledLayer[]`                                              |
 
 ### `TiledObject`
 
@@ -173,8 +173,8 @@ The Loader handles texture lifecycle (including deduplication across maps that s
 ## Core compatibility
 
 | `@codexo/exojs-tiled` | `@codexo/exojs` |
-|---|---|
-| 0.13.x | 0.13.x |
+| --------------------- | --------------- |
+| 0.13.x                | 0.13.x          |
 
 ## Links
 

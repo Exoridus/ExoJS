@@ -43,4 +43,3 @@ describe('@codexo/exojs-tilemap root', () => {
     expect(() => create(fakeBackend('unsupported' as unknown as RenderBackendType))).toThrow(/Unsupported render backend/);
   });
 });
-

@@ -31,9 +31,7 @@ describe('kind to shape', () => {
   it('maps an elongated ellipse to a capsule that covers it', () => {
     const semiMajor = 20;
     const semiMinor = 6;
-    const { built } = build([
-      shape({ kind: ObjectKind.Ellipse, x: 0, y: 0, width: semiMajor * 2, height: semiMinor * 2 }),
-    ]);
+    const { built } = build([shape({ kind: ObjectKind.Ellipse, x: 0, y: 0, width: semiMajor * 2, height: semiMinor * 2 })]);
     const collider = built[0]!.body.colliders[0]!;
     const capsule = collider.shape as { type: string; radius: number; length: number };
 
@@ -123,11 +121,7 @@ describe('kind to shape', () => {
   });
 
   it('builds nothing for points, tile objects and text objects', () => {
-    const { built } = build([
-      shape({ kind: ObjectKind.Point, width: 0, height: 0 }),
-      shape({ kind: ObjectKind.Tile }),
-      shape({ kind: ObjectKind.Text }),
-    ]);
+    const { built } = build([shape({ kind: ObjectKind.Point, width: 0, height: 0 }), shape({ kind: ObjectKind.Tile }), shape({ kind: ObjectKind.Text })]);
 
     expect(built).toEqual([]);
   });

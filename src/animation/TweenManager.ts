@@ -4,6 +4,21 @@ import { Tween } from './Tween';
 import { TweenSequencer } from './TweenSequencer';
 import { TweenState } from './types';
 
+/**
+ * Refill `cursor` with the contents of `source` and return it, without
+ * allocating. The copy is what makes the walk tolerate a callback that mutates
+ * `source` while it runs.
+ */
+function fill<T>(cursor: T[], source: readonly T[]): T[] {
+  cursor.length = 0;
+
+  for (const item of source) {
+    cursor.push(item);
+  }
+
+  return cursor;
+}
+
 /** Any object that can be driven each frame by a delta in seconds. @internal */
 interface Ticker {
   update(deltaSeconds: number): void;
@@ -29,6 +44,20 @@ export class TweenManager {
   private _tweens: Tween[] = [];
   private _tickers: Ticker[] = [];
   private _destroyed = false;
+
+  /**
+   * Reused iteration buffers for {@link preUpdate}. A tween callback may add or
+   * remove entries while the frame is walking the list, so the walk has to read
+   * a snapshot - but taking that snapshot with a fresh array would allocate two
+   * arrays on every frame of every application that animates anything. These
+   * are refilled in place instead, and their capacity survives across frames.
+   *
+   * Safe to hold as state because `preUpdate` is never re-entrant: it is driven
+   * by one system phase, and a callback that reached it again would already be
+   * corrupting the tween list it is iterating.
+   */
+  private readonly _tweenCursor: Tween[] = [];
+  private readonly _tickerCursor: Ticker[] = [];
 
   /**
    * Create a new Tween bound to this manager and return it. Call
@@ -178,17 +207,23 @@ export class TweenManager {
   public preUpdate(delta: Time): void {
     if (this._destroyed) return;
 
-    const snapshot = [...this._tweens];
+    const seconds = delta.seconds;
+    const tweens = fill(this._tweenCursor, this._tweens);
 
-    for (const tween of snapshot) {
-      tween.update(delta.seconds);
+    for (const tween of tweens) {
+      tween.update(seconds);
     }
 
-    const tickerSnapshot = [...this._tickers];
+    const tickers = fill(this._tickerCursor, this._tickers);
 
-    for (const ticker of tickerSnapshot) {
-      ticker.update(delta.seconds);
+    for (const ticker of tickers) {
+      ticker.update(seconds);
     }
+
+    // Dropped once the walk is done: holding the entries would keep a stopped
+    // tween alive until the next frame overwrote its slot.
+    tweens.length = 0;
+    tickers.length = 0;
   }
 
   /**

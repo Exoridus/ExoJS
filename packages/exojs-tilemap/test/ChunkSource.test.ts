@@ -28,12 +28,16 @@ function makeTileset(): TileSet {
 }
 
 describe('ChunkPayload / ChunkSource', () => {
-  it('ChunkPayload is structurally compatible with _adoptChunk\'s existing usage', () => {
+  it("ChunkPayload is structurally compatible with _adoptChunk's existing usage", () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 0, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 2, chunkHeight: 2,
+      id: 0,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 2,
+      chunkHeight: 2,
     });
     const payload: ChunkPayload = { width: 2, height: 2, tiles: new Uint32Array(4) };
 

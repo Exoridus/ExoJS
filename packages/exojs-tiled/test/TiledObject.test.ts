@@ -43,12 +43,19 @@ describe('TiledObject', () => {
   });
 
   it('maps polygon point array', () => {
-    const pts = [{ x: 0, y: 0 }, { x: 8, y: 0 }, { x: 8, y: 8 }];
+    const pts = [
+      { x: 0, y: 0 },
+      { x: 8, y: 0 },
+      { x: 8, y: 8 },
+    ];
     expect(new TiledObject({ ...base, polygon: pts }).polygon).toEqual(pts);
   });
 
   it('maps polyline point array', () => {
-    const pts = [{ x: 0, y: 0 }, { x: 16, y: 16 }];
+    const pts = [
+      { x: 0, y: 0 },
+      { x: 16, y: 16 },
+    ];
     expect(new TiledObject({ ...base, polyline: pts }).polyline).toEqual(pts);
   });
 

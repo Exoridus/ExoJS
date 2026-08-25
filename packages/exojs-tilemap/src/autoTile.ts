@@ -34,11 +34,7 @@ export interface AutoTileOptions {
  * Compute a 4-bit edge bitmask for the cell at `(tx, ty)`.
  * Top=1, Right=2, Bottom=4, Left=8.
  */
-function computeEdgeMask(
-  tx: number,
-  ty: number,
-  inGroup: (nx: number, ny: number) => boolean,
-): number {
+function computeEdgeMask(tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): number {
   let mask = 0;
   if (inGroup(tx, ty - 1)) mask |= 1;
   if (inGroup(tx + 1, ty)) mask |= 2;
@@ -59,11 +55,7 @@ function computeEdgeMask(
  * 32 | 64 | 128
  * ```
  */
-function computeBlobMask(
-  tx: number,
-  ty: number,
-  inGroup: (nx: number, ny: number) => boolean,
-): number {
+function computeBlobMask(tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): number {
   const top = inGroup(tx, ty - 1);
   const right = inGroup(tx + 1, ty);
   const bottom = inGroup(tx, ty + 1);
@@ -82,15 +74,8 @@ function computeBlobMask(
 }
 
 /** Compute the mask for a cell given the Wang mode and a membership predicate. */
-function computeMask(
-  wangSet: WangSet,
-  tx: number,
-  ty: number,
-  inGroup: (nx: number, ny: number) => boolean,
-): number {
-  return wangSet.type === 'edge'
-    ? computeEdgeMask(tx, ty, inGroup)
-    : computeBlobMask(tx, ty, inGroup);
+function computeMask(wangSet: WangSet, tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): number {
+  return wangSet.type === 'edge' ? computeEdgeMask(tx, ty, inGroup) : computeBlobMask(tx, ty, inGroup);
 }
 
 /**
@@ -98,13 +83,7 @@ function computeMask(
  * cell's current orientation transform. No-op if the mask has no mapping or
  * the target tileset is missing.
  */
-function applyVariant(
-  layer: TileLayer,
-  wangSet: WangSet,
-  tx: number,
-  ty: number,
-  inGroup: (nx: number, ny: number) => boolean,
-): void {
+function applyVariant(layer: TileLayer, wangSet: WangSet, tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): void {
   const newLocalTileId = wangSet.getTileId(computeMask(wangSet, tx, ty, inGroup));
   if (newLocalTileId === undefined) return;
 
@@ -162,9 +141,7 @@ export function autoTile(layer: TileLayer, wangSet: WangSet, options?: AutoTileO
   const w = layer.width;
   const h = layer.height;
   if (w === undefined || h === undefined) {
-    throw new Error(
-      'autoTile() requires a bounded layer (sweeps the whole layer) — use refreshCell() on an unbounded layer instead.',
-    );
+    throw new Error('autoTile() requires a bounded layer (sweeps the whole layer) — use refreshCell() on an unbounded layer instead.');
   }
 
   // ── Pass 1: snapshot ─────────────────────────────────────────────────
@@ -239,13 +216,7 @@ export function autoTile(layer: TileLayer, wangSet: WangSet, options?: AutoTileO
  * @param wangSet The Wang set to resolve variants from.
  * @param options Membership / border options (shared with {@link autoTile}).
  */
-export function refreshCell(
-  layer: TileLayer,
-  x: number,
-  y: number,
-  wangSet: WangSet,
-  options?: AutoTileOptions,
-): void {
+export function refreshCell(layer: TileLayer, x: number, y: number, wangSet: WangSet, options?: AutoTileOptions): void {
   const matchFn = options?.matchFn;
   const wrapBorder = options?.wrapBorder ?? true;
   const w = layer.width;

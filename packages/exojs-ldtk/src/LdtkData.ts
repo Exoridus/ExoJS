@@ -8,7 +8,6 @@
  * @see https://ldtk.io/json/
  */
 
-
 import type { TilePropertyPoint, TilePropertyTileRef } from '@codexo/exojs-tilemap';
 
 // ── Tile data ─────────────────────────────────────────────────────────────────
@@ -42,15 +41,7 @@ export interface LdtkTileData {
  * LDtk field types whose `__value` is a bare scalar (or `null`, when the
  * field has no value set).
  */
-export type LdtkFieldScalarType =
-  | 'Int'
-  | 'Float'
-  | 'Bool'
-  | 'String'
-  | 'Multilines'
-  | 'Color'
-  | 'FilePath'
-  | 'Enum';
+export type LdtkFieldScalarType = 'Int' | 'Float' | 'Bool' | 'String' | 'Multilines' | 'Color' | 'FilePath' | 'Enum';
 
 /**
  * Raw `__value` shape for a `Point`-typed field. Structurally identical to

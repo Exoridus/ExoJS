@@ -183,11 +183,7 @@ export class AutoWahEffect extends AudioEffect {
   public set responseMs(value: number) {
     this._responseMs = Math.max(1, Math.min(500, value));
     if (this._setup) {
-      this._setup.smoothingLowpass.frequency.setTargetAtTime(
-        this._smoothingCutoff(),
-        this._setup.smoothingLowpass.context.currentTime,
-        0.01,
-      );
+      this._setup.smoothingLowpass.frequency.setTargetAtTime(this._smoothingCutoff(), this._setup.smoothingLowpass.context.currentTime, 0.01);
     }
   }
 

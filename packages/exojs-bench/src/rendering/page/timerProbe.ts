@@ -200,7 +200,11 @@ export interface TimerProbeResult {
 type Restore = () => void;
 
 /** Replace one method, returning the undo. */
-const patchMethod = (target: Record<string, unknown>, name: string, make: (original: (...args: never[]) => unknown) => (...args: never[]) => unknown): Restore => {
+const patchMethod = (
+  target: Record<string, unknown>,
+  name: string,
+  make: (original: (...args: never[]) => unknown) => (...args: never[]) => unknown,
+): Restore => {
   const original = target[name];
 
   if (typeof original !== 'function') {
@@ -233,19 +237,22 @@ const patchRequestDeviceForTimestamps = (): Restore => {
     };
   }
 
-  return patchMethod(adapterPrototype.prototype, 'requestDevice', original =>
-    function requestDevice(this: GPUAdapter, ...args: never[]): unknown {
-      const descriptor = (args[0] as GPUDeviceDescriptor | undefined) ?? {};
-      const features = new Set<GPUFeatureName>(descriptor.requiredFeatures ?? []);
+  return patchMethod(
+    adapterPrototype.prototype,
+    'requestDevice',
+    original =>
+      function requestDevice(this: GPUAdapter, ...args: never[]): unknown {
+        const descriptor = (args[0] as GPUDeviceDescriptor | undefined) ?? {};
+        const features = new Set<GPUFeatureName>(descriptor.requiredFeatures ?? []);
 
-      if (this.features.has('timestamp-query')) {
-        features.add('timestamp-query');
-      }
+        if (this.features.has('timestamp-query')) {
+          features.add('timestamp-query');
+        }
 
-      const next = { ...descriptor, requiredFeatures: [...features] } as GPUDeviceDescriptor;
+        const next = { ...descriptor, requiredFeatures: [...features] } as GPUDeviceDescriptor;
 
-      return (original as (this: GPUAdapter, d: GPUDeviceDescriptor) => unknown).call(this, next);
-    },
+        return (original as (this: GPUAdapter, d: GPUDeviceDescriptor) => unknown).call(this, next);
+      },
   );
 };
 
@@ -274,7 +281,8 @@ const writeBufferBytes = (args: readonly unknown[]): number => {
   const data = args[2];
 
   if (typeof size === 'number') {
-    const elementSize = ArrayBuffer.isView(data) && !(data instanceof DataView) ? ((data as unknown as { BYTES_PER_ELEMENT: number }).BYTES_PER_ELEMENT ?? 1) : 1;
+    const elementSize =
+      ArrayBuffer.isView(data) && !(data instanceof DataView) ? ((data as unknown as { BYTES_PER_ELEMENT: number }).BYTES_PER_ELEMENT ?? 1) : 1;
 
     return size * elementSize;
   }
@@ -362,70 +370,79 @@ const createTimestampRig = (device: GPUDevice): TimestampRig => {
   const deviceRecord = device as unknown as Record<string, unknown>;
 
   restores.push(
-    patchMethod(deviceRecord, 'createCommandEncoder', original =>
-      function createCommandEncoder(this: GPUDevice, ...args: never[]): unknown {
-        const encoder = (original as (this: GPUDevice, ...a: never[]) => unknown).apply(this, args) as GPUCommandEncoder;
+    patchMethod(
+      deviceRecord,
+      'createCommandEncoder',
+      original =>
+        function createCommandEncoder(this: GPUDevice, ...args: never[]): unknown {
+          const encoder = (original as (this: GPUDevice, ...a: never[]) => unknown).apply(this, args) as GPUCommandEncoder;
 
-        if (currentFrame < 0) {
-          return encoder;
-        }
-
-        if (nextSlot >= MAX_TIMED_ENCODERS || nextQuery + TIMESTAMPS_PER_ENCODER > QUERY_CAPACITY) {
-          if (!exhausted) {
-            exhausted = true;
-            notes.push(`timestamp capacity exhausted after ${nextSlot} encoders; later frames carry no hardware GPU time`);
+          if (currentFrame < 0) {
+            return encoder;
           }
 
+          if (nextSlot >= MAX_TIMED_ENCODERS || nextQuery + TIMESTAMPS_PER_ENCODER > QUERY_CAPACITY) {
+            if (!exhausted) {
+              exhausted = true;
+              notes.push(`timestamp capacity exhausted after ${nextSlot} encoders; later frames carry no hardware GPU time`);
+            }
+
+            return encoder;
+          }
+
+          const book: EncoderTimestamps = { slot: nextSlot, firstQuery: nextQuery, count: 0 };
+
+          slotFrame[nextSlot] = currentFrame;
+          nextSlot++;
+          nextQuery += TIMESTAMPS_PER_ENCODER;
+
+          const encoderRecord = encoder as unknown as Record<string, unknown>;
+
+          // Per-encoder wrappers are not restore-tracked: encoders are per-frame
+          // throwaways, and restoring `createCommandEncoder` stops all injection.
+          patchMethod(
+            encoderRecord,
+            'beginRenderPass',
+            beginOriginal =>
+              function beginRenderPass(this: GPUCommandEncoder, ...passArgs: never[]): unknown {
+                // Written through an index signature: the engine's reused descriptor
+                // is typed under `exactOptionalPropertyTypes`, where clearing the
+                // member to `undefined` is not assignable.
+                const descriptor = passArgs[0] as unknown as Record<string, unknown>;
+
+                if (book.count + 2 <= TIMESTAMPS_PER_ENCODER) {
+                  descriptor['timestampWrites'] = {
+                    querySet,
+                    beginningOfPassWriteIndex: book.firstQuery + book.count,
+                    endOfPassWriteIndex: book.firstQuery + book.count + 1,
+                  } satisfies GPURenderPassTimestampWrites;
+                  book.count += 2;
+                } else {
+                  // The engine REUSES one descriptor object across passes, so a stale
+                  // `timestampWrites` would re-write query indices already written in
+                  // this submit - a validation error. Clear it explicitly.
+                  descriptor['timestampWrites'] = undefined;
+                }
+
+                return (beginOriginal as (this: GPUCommandEncoder, ...a: never[]) => unknown).apply(this, passArgs);
+              },
+          );
+
+          patchMethod(
+            encoderRecord,
+            'finish',
+            finishOriginal =>
+              function finish(this: GPUCommandEncoder, ...finishArgs: never[]): unknown {
+                if (book.count > 0) {
+                  this.resolveQuerySet(querySet, book.firstQuery, book.count, resolveBuffer, book.slot * RESOLVE_STRIDE_BYTES);
+                }
+
+                return (finishOriginal as (this: GPUCommandEncoder, ...a: never[]) => unknown).apply(this, finishArgs);
+              },
+          );
+
           return encoder;
-        }
-
-        const book: EncoderTimestamps = { slot: nextSlot, firstQuery: nextQuery, count: 0 };
-
-        slotFrame[nextSlot] = currentFrame;
-        nextSlot++;
-        nextQuery += TIMESTAMPS_PER_ENCODER;
-
-        const encoderRecord = encoder as unknown as Record<string, unknown>;
-
-        // Per-encoder wrappers are not restore-tracked: encoders are per-frame
-        // throwaways, and restoring `createCommandEncoder` stops all injection.
-        patchMethod(encoderRecord, 'beginRenderPass', beginOriginal =>
-          function beginRenderPass(this: GPUCommandEncoder, ...passArgs: never[]): unknown {
-            // Written through an index signature: the engine's reused descriptor
-            // is typed under `exactOptionalPropertyTypes`, where clearing the
-            // member to `undefined` is not assignable.
-            const descriptor = passArgs[0] as unknown as Record<string, unknown>;
-
-            if (book.count + 2 <= TIMESTAMPS_PER_ENCODER) {
-              descriptor['timestampWrites'] = {
-                querySet,
-                beginningOfPassWriteIndex: book.firstQuery + book.count,
-                endOfPassWriteIndex: book.firstQuery + book.count + 1,
-              } satisfies GPURenderPassTimestampWrites;
-              book.count += 2;
-            } else {
-              // The engine REUSES one descriptor object across passes, so a stale
-              // `timestampWrites` would re-write query indices already written in
-              // this submit - a validation error. Clear it explicitly.
-              descriptor['timestampWrites'] = undefined;
-            }
-
-            return (beginOriginal as (this: GPUCommandEncoder, ...a: never[]) => unknown).apply(this, passArgs);
-          },
-        );
-
-        patchMethod(encoderRecord, 'finish', finishOriginal =>
-          function finish(this: GPUCommandEncoder, ...finishArgs: never[]): unknown {
-            if (book.count > 0) {
-              this.resolveQuerySet(querySet, book.firstQuery, book.count, resolveBuffer, book.slot * RESOLVE_STRIDE_BYTES);
-            }
-
-            return (finishOriginal as (this: GPUCommandEncoder, ...a: never[]) => unknown).apply(this, finishArgs);
-          },
-        );
-
-        return encoder;
-      },
+        },
     ),
   );
 
@@ -697,15 +714,18 @@ export const runTimerProbe = async (spec: TimerProbeSpec): Promise<TimerProbeRes
   const counters = newFrameCounters();
 
   restores.push(
-    patchMethod(DerivedSelectionState.prototype as unknown as Record<string, unknown>, 'update', original =>
-      function update(this: DerivedSelectionState, ...args: never[]): unknown {
-        const result = (original as (this: DerivedSelectionState, ...a: never[]) => unknown).apply(this, args);
+    patchMethod(
+      DerivedSelectionState.prototype as unknown as Record<string, unknown>,
+      'update',
+      original =>
+        function update(this: DerivedSelectionState, ...args: never[]): unknown {
+          const result = (original as (this: DerivedSelectionState, ...a: never[]) => unknown).apply(this, args);
 
-        counters.selections++;
-        counters.entered += this.enteredCount;
+          counters.selections++;
+          counters.entered += this.enteredCount;
 
-        return result;
-      },
+          return result;
+        },
     ),
   );
 
@@ -715,27 +735,33 @@ export const runTimerProbe = async (spec: TimerProbeSpec): Promise<TimerProbeRes
     const queueRecord = (device as unknown as { queue: Record<string, unknown> }).queue;
 
     restores.push(
-      patchMethod(queueRecord, 'writeBuffer', original =>
-        function writeBuffer(this: unknown, ...args: never[]): unknown {
-          counters.writeBufferBytes += writeBufferBytes(args as readonly unknown[]);
+      patchMethod(
+        queueRecord,
+        'writeBuffer',
+        original =>
+          function writeBuffer(this: unknown, ...args: never[]): unknown {
+            counters.writeBufferBytes += writeBufferBytes(args as readonly unknown[]);
 
-          return (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
-        },
+            return (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
+          },
       ),
     );
 
     restores.push(
-      patchMethod(queueRecord, 'submit', original =>
-        function submit(this: unknown, ...args: never[]): unknown {
-          const result = (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
-          const at = performance.now() - epoch;
+      patchMethod(
+        queueRecord,
+        'submit',
+        original =>
+          function submit(this: unknown, ...args: never[]): unknown {
+            const result = (original as (this: unknown, ...a: never[]) => unknown).apply(this, args);
+            const at = performance.now() - epoch;
 
-          counters.submits++;
-          counters.firstSubmitAt ??= at;
-          counters.lastSubmitAt = at;
+            counters.submits++;
+            counters.firstSubmitAt ??= at;
+            counters.lastSubmitAt = at;
 
-          return result;
-        },
+            return result;
+          },
       ),
     );
   }

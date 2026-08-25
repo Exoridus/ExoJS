@@ -96,7 +96,12 @@ interface ProbeApplication {
  * the things under measurement here rather than something to work around
  * silently.
  */
-const bootProbeApplication = async (canvas: HTMLCanvasElement, stage: StageSize, pixelRatio: number, backend: ProbeBackendRequest): Promise<ProbeApplication> => {
+const bootProbeApplication = async (
+  canvas: HTMLCanvasElement,
+  stage: StageSize,
+  pixelRatio: number,
+  backend: ProbeBackendRequest,
+): Promise<ProbeApplication> => {
   const app = new Application({
     canvas: { element: canvas, width: stage.width, height: stage.height, pixelRatio },
     backend: { type: backend },

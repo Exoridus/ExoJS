@@ -152,10 +152,7 @@ export const TEXT_RATIO_CELLS: readonly ProbeCell[] = [
  * read as a DPR cost. The drift itself stays auditable: every result carries its
  * ordinal and its offset from the run start.
  */
-export const buildProbeMatrix = (
-  scenes: readonly ProbeSceneSpec[] = PROBE_SCENES,
-  pixelRatios: readonly number[] = PROBE_PIXEL_RATIOS,
-): ProbeCell[] => {
+export const buildProbeMatrix = (scenes: readonly ProbeSceneSpec[] = PROBE_SCENES, pixelRatios: readonly number[] = PROBE_PIXEL_RATIOS): ProbeCell[] => {
   const cells: ProbeCell[] = [];
 
   for (const scene of scenes) {

@@ -14,7 +14,6 @@ import { logger } from '@codexo/exojs';
  * @typeParam Result - what the factories produced.
  */
 export class MapSpawnSession<Result extends Destroyable> implements Destroyable {
-
   /**
    * The spawned objects in spawn order: object-layer order, then object order
    * within each layer. Objects whose factory returned `null` are not in here.

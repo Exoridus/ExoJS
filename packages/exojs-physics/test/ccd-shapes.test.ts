@@ -39,8 +39,7 @@ const movingRightFrom = (world: PhysicsWorld, shape: ConstructorParameters<typeo
   colliderAt(world, shape, { x: 100, y });
 
 /** A vertical boundary/obstacle centred on `x = 50`. */
-const obstacleAt = (world: PhysicsWorld, shape: ConstructorParameters<typeof Collider>[0]['shape'], y = 0): Collider =>
-  colliderAt(world, shape, { x: 50, y });
+const obstacleAt = (world: PhysicsWorld, shape: ConstructorParameters<typeof Collider>[0]['shape'], y = 0): Collider => colliderAt(world, shape, { x: 50, y });
 
 describe('the sweep matrix', () => {
   it('casts every mass-bearing shape against every target shape', () => {
@@ -173,9 +172,9 @@ describe('sweep invariants across the matrix', () => {
     const moving = colliderAt(world, new CapsuleShape(0, -10, 0, 10, 4), { x: 40, y: 0 });
 
     expect(sweepProxies(moving, 40, 0, obstacleAt(world, new SegmentShape(0, -20, 0, 20)), hit)).toBe(false);
-    expect(sweepProxies(colliderAt(world, new CapsuleShape(0, -10, 0, 10, 4), { x: 46, y: 0 }), 46, 0, obstacleAt(world, new SegmentShape(0, -20, 0, 20)), hit)).toBe(
-      true,
-    );
+    expect(
+      sweepProxies(colliderAt(world, new CapsuleShape(0, -10, 0, 10, 4), { x: 46, y: 0 }), 46, 0, obstacleAt(world, new SegmentShape(0, -20, 0, 20)), hit),
+    ).toBe(true);
     expect(hit.t).toBeGreaterThan(0);
     expect(hit.t).toBeLessThanOrEqual(1);
   });

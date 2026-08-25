@@ -39,10 +39,12 @@ function makeLayer(opts: Partial<ImageLayerOptions> = {}): ImageLayer {
  *    no-slot capture bookkeeping,
  *  - `backend`             - stored verbatim by the retained-plan cache commit.
  */
-function mockBuilder(options: {
-  center?: { x: number; y: number };
-  bounds?: { x: number; y: number; width: number; height: number };
-} = {}): unknown {
+function mockBuilder(
+  options: {
+    center?: { x: number; y: number };
+    bounds?: { x: number; y: number; width: number; height: number };
+  } = {},
+): unknown {
   const center = options.center ?? { x: 0, y: 0 };
   const bounds = options.bounds ?? { x: 0, y: 0, width: 0, height: 0 };
 
@@ -125,9 +127,7 @@ describe('ImageLayerNode construction', () => {
 
 describe('ImageLayerNode parallax', () => {
   it('initial position is the layer offset (not parallax-shifted)', () => {
-    const node = new ImageLayerNode(
-      makeLayer({ offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5 }),
-    );
+    const node = new ImageLayerNode(makeLayer({ offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5 }));
 
     // Construction must NOT apply a parallax shift - the shift is render-time only.
     expect(node.x).toBe(10);
@@ -148,9 +148,7 @@ describe('ImageLayerNode parallax', () => {
   });
 
   it('expands repeat coverage in local space when parallax scaling shrinks the node', () => {
-    const node = new ImageLayerNode(
-      makeLayer({ texture: fakeTexture(64, 64), repeatX: true, parallaxScale: 0.5 }),
-    );
+    const node = new ImageLayerNode(makeLayer({ texture: fakeTexture(64, 64), repeatX: true, parallaxScale: 0.5 }));
 
     collect(node, mockBuilder({ bounds: { x: 0, y: 0, width: 160, height: 64 } }));
 
@@ -158,9 +156,7 @@ describe('ImageLayerNode parallax', () => {
   });
 
   it('position is restored to the base offset after _collectContent', () => {
-    const node = new ImageLayerNode(
-      makeLayer({ offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5 }),
-    );
+    const node = new ImageLayerNode(makeLayer({ offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5 }));
 
     collect(node, mockBuilder({ center: { x: 100, y: 200 } }));
 
@@ -177,9 +173,7 @@ describe('ImageLayerNode parallax', () => {
 describe('ImageLayerNode repeat coverage', () => {
   it('repeatX: child spans the view with a period-aligned origin', () => {
     // offsetX 10, parallaxX 1, image 64 wide; view bounds { x: -130, width: 300 }.
-    const node = new ImageLayerNode(
-      makeLayer({ texture: fakeTexture(64, 64), offsetX: 10, repeatX: true }),
-    );
+    const node = new ImageLayerNode(makeLayer({ texture: fakeTexture(64, 64), offsetX: 10, repeatX: true }));
 
     collect(node, mockBuilder({ bounds: { x: -130, y: 0, width: 300, height: 200 } }));
 
@@ -195,14 +189,15 @@ describe('ImageLayerNode repeat coverage', () => {
 
   it('repeatX with parallax: pattern anchor follows the patched origin', () => {
     // parallaxX 0.5, center.x 100 → patched nodeX = 10 + 100*(1-0.5) = 60.
-    const node = new ImageLayerNode(
-      makeLayer({ texture: fakeTexture(64, 64), offsetX: 10, parallaxX: 0.5, repeatX: true }),
-    );
+    const node = new ImageLayerNode(makeLayer({ texture: fakeTexture(64, 64), offsetX: 10, parallaxX: 0.5, repeatX: true }));
 
-    collect(node, mockBuilder({
-      center: { x: 100, y: 0 },
-      bounds: { x: -130, y: 0, width: 300, height: 200 },
-    }));
+    collect(
+      node,
+      mockBuilder({
+        center: { x: 100, y: 0 },
+        bounds: { x: -130, y: 0, width: 300, height: 200 },
+      }),
+    );
 
     // nodeX        = 10 + 100*(1 - 0.5) = 60
     // localViewMin = -130 - 60 = -190
@@ -216,9 +211,7 @@ describe('ImageLayerNode repeat coverage', () => {
 
   it('repeat coverage holds for negative view coordinates', () => {
     // offsetX 5, parallaxX 1, image 48 wide; view bounds { x: -300, width: 220 }.
-    const node = new ImageLayerNode(
-      makeLayer({ texture: fakeTexture(48, 48), offsetX: 5, repeatX: true }),
-    );
+    const node = new ImageLayerNode(makeLayer({ texture: fakeTexture(48, 48), offsetX: 5, repeatX: true }));
 
     collect(node, mockBuilder({ bounds: { x: -300, y: 0, width: 220, height: 100 } }));
 
@@ -234,9 +227,7 @@ describe('ImageLayerNode repeat coverage', () => {
 
   it('non-repeating axis keeps natural image size and local 0', () => {
     // repeatX only; Y must stay natural (imgH) at local 0.
-    const node = new ImageLayerNode(
-      makeLayer({ texture: fakeTexture(64, 48), offsetX: 10, repeatX: true }),
-    );
+    const node = new ImageLayerNode(makeLayer({ texture: fakeTexture(64, 48), offsetX: 10, repeatX: true }));
 
     collect(node, mockBuilder({ bounds: { x: -130, y: 55, width: 300, height: 200 } }));
 
@@ -248,9 +239,7 @@ describe('ImageLayerNode repeat coverage', () => {
 
   it('repeatY: child spans the view vertically with a period-aligned origin', () => {
     // repeatY only; offsetY 10, parallaxY 1, image 64 tall; view bounds { y: -130, height: 300 }.
-    const node = new ImageLayerNode(
-      makeLayer({ texture: fakeTexture(64, 64), offsetY: 10, repeatY: true }),
-    );
+    const node = new ImageLayerNode(makeLayer({ texture: fakeTexture(64, 64), offsetY: 10, repeatY: true }));
 
     collect(node, mockBuilder({ bounds: { x: 0, y: -130, width: 200, height: 300 } }));
 
@@ -317,9 +306,7 @@ describe('ImageLayerNode repeat coverage', () => {
 
 describe('ImageLayerNode repeat coverage cache', () => {
   it('skips the resize/reposition on a second collect with unchanged view bounds', () => {
-    const node = new ImageLayerNode(
-      makeLayer({ texture: fakeTexture(64, 64), offsetX: 10, repeatX: true }),
-    );
+    const node = new ImageLayerNode(makeLayer({ texture: fakeTexture(64, 64), offsetX: 10, repeatX: true }));
     const builder = mockBuilder({ bounds: { x: -130, y: 0, width: 300, height: 200 } });
 
     collect(node, builder);

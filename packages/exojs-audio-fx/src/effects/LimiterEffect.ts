@@ -128,11 +128,7 @@ export class LimiterEffect extends AudioEffect {
   public set threshold(value: number) {
     this._threshold = Math.max(-60, Math.min(0, value));
     if (this._setup) {
-      this._setup.compressor.threshold.setTargetAtTime(
-        this._threshold,
-        this._setup.compressor.context.currentTime,
-        0.01,
-      );
+      this._setup.compressor.threshold.setTargetAtTime(this._threshold, this._setup.compressor.context.currentTime, 0.01);
     }
   }
 
@@ -147,11 +143,7 @@ export class LimiterEffect extends AudioEffect {
   public set attack(value: number) {
     this._attack = Math.max(0, Math.min(1, value));
     if (this._setup) {
-      this._setup.compressor.attack.setTargetAtTime(
-        this._attack,
-        this._setup.compressor.context.currentTime,
-        0.01,
-      );
+      this._setup.compressor.attack.setTargetAtTime(this._attack, this._setup.compressor.context.currentTime, 0.01);
     }
   }
 
@@ -166,11 +158,7 @@ export class LimiterEffect extends AudioEffect {
   public set release(value: number) {
     this._release = Math.max(0, Math.min(1, value));
     if (this._setup) {
-      this._setup.compressor.release.setTargetAtTime(
-        this._release,
-        this._setup.compressor.context.currentTime,
-        0.01,
-      );
+      this._setup.compressor.release.setTargetAtTime(this._release, this._setup.compressor.context.currentTime, 0.01);
     }
   }
 

@@ -1,85 +1,85 @@
 .root {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.55rem;
-    min-height: 26px;
-    padding: 0.28rem 0.75rem;
-    box-sizing: border-box;
-    background: var(--bg-panel);
-    border-top: 1px solid var(--line-soft);
-    color: var(--fg-faint);
-    font-family: var(--f-mono);
-    font-size: 0.66rem;
-    letter-spacing: 0.01em;
-    user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  min-height: 26px;
+  padding: 0.28rem 0.75rem;
+  box-sizing: border-box;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--line-soft);
+  color: var(--fg-faint);
+  font-family: var(--f-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.01em;
+  user-select: none;
 }
 
 .left,
 .right {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.65rem;
-    min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
 }
 
 .right {
-    flex: 1 1 auto;
-    justify-content: flex-end;
+  flex: 1 1 auto;
+  justify-content: flex-end;
 }
 
 .chip {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
 }
 
 .chip--lang .lang-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 999px;
-    background: var(--accent);
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--accent);
 }
 
 .chip--dirty[data-dirty='true'] {
-    color: oklch(74% 0.13 62);
+  color: oklch(74% 0.13 62);
 }
 
 .dirty-dot {
-    font-size: 0.78rem;
-    line-height: 1;
+  font-size: 0.78rem;
+  line-height: 1;
 }
 
 @media (max-width: 640px) {
-    .root {
-        padding: 0.28rem 0.5rem;
-    }
+  .root {
+    padding: 0.28rem 0.5rem;
+  }
 
-    .chip--encoding,
-    .chip--selection {
-        display: none;
-    }
+  .chip--encoding,
+  .chip--selection {
+    display: none;
+  }
 }
 
 .chip--view-toggle {
-    appearance: none;
-    background: transparent;
-    border: 1px solid var(--line-soft);
-    border-radius: 999px;
-    padding: 0.05rem 0.5rem;
-    color: inherit;
-    font: inherit;
-    letter-spacing: inherit;
-    cursor: pointer;
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  padding: 0.05rem 0.5rem;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
 }
 
 .chip--view-toggle:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .chip--view-toggle:focus-visible {
-    outline: 2px solid var(--accent-line);
-    outline-offset: 2px;
+  outline: 2px solid var(--accent-line);
+  outline-offset: 2px;
 }

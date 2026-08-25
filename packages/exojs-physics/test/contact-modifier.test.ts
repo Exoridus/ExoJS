@@ -167,7 +167,9 @@ describe('contact modifier', () => {
     // being unioned with it. A disabled contact must not do that either.
     const run = (disableContact: boolean): PhysicsBody => {
       const world = new PhysicsWorld({ gravity: { x: 0, y: GRAVITY } });
-      const platform = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 320 }, colliders: [{ shape: new BoxShape(1200, 40), friction: 0 }] }));
+      const platform = world.add(
+        new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 320 }, colliders: [{ shape: new BoxShape(1200, 40), friction: 0 }] }),
+      );
       const box = addBox(world, 0, 300 - 12, 0);
 
       advance(world, 2);
