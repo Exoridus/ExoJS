@@ -29,9 +29,9 @@ class MockResizeObserver implements ResizeObserver {
   public static instances: MockResizeObserver[] = [];
 
   private readonly _callback: ResizeObserverCallback;
-  public readonly observe: MockInstance = vi.fn();
-  public readonly unobserve: MockInstance = vi.fn();
-  public readonly disconnect: MockInstance = vi.fn();
+  public readonly observe = vi.fn<ResizeObserver['observe']>();
+  public readonly unobserve = vi.fn<ResizeObserver['unobserve']>();
+  public readonly disconnect = vi.fn<ResizeObserver['disconnect']>();
 
   public constructor(callback: ResizeObserverCallback) {
     this._callback = callback;
@@ -43,6 +43,15 @@ class MockResizeObserver implements ResizeObserver {
     this._callback([], this);
   }
 }
+
+/**
+ * Clear an options field the way a stray caller still can at runtime -
+ * `exactOptionalPropertyTypes` forbids writing `undefined` through the
+ * declared type, which is exactly what the defensive fallbacks guard against.
+ */
+const clearOption = <T extends object, K extends keyof T>(options: T, key: K): void => {
+  (options as Record<K, T[K] | undefined>)[key] = undefined;
+};
 
 // ---------------------------------------------------------------------------
 // Harness - mirrors application.test.ts's loadApplicationHarness, extended
@@ -1512,7 +1521,7 @@ describe('Application lifecycle / getters / sizing', () => {
       const { Application } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
 
-      app.options.canvas = undefined;
+      clearOption(app.options, 'canvas');
 
       expect(() => app.resize(320, 240)).not.toThrow();
       expect(app.options.canvas).toEqual({ width: 320, height: 240, pixelRatio: 1 });
@@ -1558,7 +1567,7 @@ describe('Application lifecycle / getters / sizing', () => {
         const { Application, webglManager } = await loadHarness({ webgpuInitialize });
         const app = new Application({ canvas: { element: document.createElement('canvas') } });
 
-        app.options.rendering = undefined;
+        clearOption(app.options, 'rendering');
 
         await app.start();
 

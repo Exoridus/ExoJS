@@ -1,11 +1,11 @@
-import type { Scene } from '#core/Scene';
+import { Scene } from '#core/Scene';
 import { SceneNavigationTransaction } from '#core/scene/SceneNavigationTransaction';
 import type { SceneScope } from '#core/SceneScope';
 import { SceneState } from '#core/SceneState';
 import type { AnySceneConstructor } from '#core/SceneTypes';
 import { Signal } from '#core/Signal';
 
-class FakeTarget {}
+class FakeTarget extends Scene {}
 
 const makeFakeScope = (state: SceneState = SceneState.Active): SceneScope & { state: SceneState } => {
   const scope = {
