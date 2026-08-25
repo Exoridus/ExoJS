@@ -3,7 +3,6 @@ import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/
 import { typeAwareCorrectnessRules } from '@codexo/exojs-config/eslint/correctness';
 import { extensionSourceConfig } from '@codexo/exojs-config/eslint/extension';
 import { packageTestConfig } from '@codexo/exojs-config/eslint/package-test';
-import { reactConfig } from '@codexo/exojs-config/eslint/react';
 import { vitestConfig } from '@codexo/exojs-config/eslint/vitest';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
@@ -333,8 +332,6 @@ export default defineConfig([
   // `packages/exojs-react` lints its own tree with the same shared policy.
   ...extensionSourceConfig({ files: ['packages/exojs-*/src/**/*.ts'], tsconfigRootDir: import.meta.dirname }),
 
-  // @codexo/exojs-bench is an internal benchmark TOOL - a Node CLI plus an
-  // in-browser rendering harness - not a shipped library. It legitimately
   // The published build tooling runs in Node: it drives esbuild and reads the
   // filesystem. The generic `packages/exojs-*/src` block grants browser
   // globals, which is the wrong environment here, so the Node ones are added on
@@ -347,6 +344,8 @@ export default defineConfig([
     },
   },
 
+  // @codexo/exojs-bench is an internal benchmark TOOL - a Node CLI plus an
+  // in-browser rendering harness - not a shipped library. It legitimately
   // monkeypatches live graphics contexts and casts through `unknown` to
   // instrument arbitrary engines, and it was linted under the relaxed `test/**`
   // profile at its former `test/perf/baseline/` location. Preserve that profile
@@ -406,12 +405,11 @@ export default defineConfig([
   // Extension package tests. `packages/exojs-react` lints its own tree.
   ...packageTestConfig({ files: ['packages/exojs-*/test/**/*.{ts,tsx}'] }),
 
-  // Site React islands. Astro files are type-checked by `astro check`; this
-  // covers the TypeScript/TSX components that ship browser interactivity. The
-  // policy is shared with `packages/exojs-react`, which applies it from its own
-  // config - this root config knows which files are React, not what React
-  // linting means.
-  ...reactConfig({ files: ['site/src/**/*.{ts,tsx}'], tsconfigRootDir: import.meta.dirname }),
+  // Site sources are deliberately absent here. ESLint resolves the config
+  // nearest to each linted file, so `site/eslint.config.ts` governs them even
+  // when the run starts at the repository root - a block for them here would
+  // never be consulted. The root `lint` script still globs them so they stay in
+  // this gate; what they are linted WITH belongs to the site.
 
   // ---------------------------------------------------------------------------
   // Per-subsystem overrides for src/. Scoped narrowly because these directories
