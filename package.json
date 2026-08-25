@@ -173,6 +173,7 @@
     "perf:bench:interaction": "node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/interaction-benchmark.ts",
     "perf:bench:collect-phase": "node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/collect-phase-benchmark.ts",
     "perf:bench:all": "pnpm perf:bench:rendering && pnpm perf:bench:audio && pnpm perf:bench:collision && pnpm perf:bench:scene-graph && pnpm perf:bench:interaction && pnpm perf:bench:collect-phase",
+    "perf:smoke": "pnpm perf:bench:all && pnpm perf:profile",
     "bench:setup": "pnpm --filter @codexo/exojs-bench bench:setup",
     "perf:baseline": "pnpm --filter @codexo/exojs-bench bench",
     "perf:profile": "node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm test/perf/profile-benchmark.ts",
