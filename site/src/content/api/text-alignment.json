@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Horizontal alignment mode for multi-line text layout."
-      ],
+      "paragraphs": ["Horizontal alignment mode for multi-line text layout."],
       "importLine": "import { TextAlignment } from '@codexo/exojs'",
       "sourceLink": null
     },

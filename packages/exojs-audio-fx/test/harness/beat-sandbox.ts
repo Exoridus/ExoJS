@@ -78,16 +78,10 @@ export type WorkletMessage = BeatMessage | StateMessage | TempoChangeMessage | B
 
 interface BeatProcessorLike {
   port: { postMessage: (m: unknown) => void };
-  process(
-    inputs: Float32Array[][],
-    outputs: Float32Array[][],
-    parameters: Record<string, Float32Array>,
-  ): boolean;
+  process(inputs: Float32Array[][], outputs: Float32Array[][], parameters: Record<string, Float32Array>): boolean;
 }
 
-type BeatProcessorCtor = new (options: {
-  processorOptions?: Record<string, unknown>;
-}) => BeatProcessorLike;
+type BeatProcessorCtor = new (options: { processorOptions?: Record<string, unknown> }) => BeatProcessorLike;
 
 // ── Module-level cache - eval runs once per test session ───────────────────────
 

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A subscriber invoked with every dispatched LogEntry."
-      ],
+      "paragraphs": ["A subscriber invoked with every dispatched LogEntry."],
       "importLine": "import { LogSink } from '@codexo/exojs'",
       "sourceLink": null
     },

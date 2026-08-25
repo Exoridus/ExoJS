@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Union of every concrete `TypedArray` constructor result."
-      ],
+      "paragraphs": ["Union of every concrete `TypedArray` constructor result."],
       "importLine": "import { TypedArray } from '@codexo/exojs'",
       "sourceLink": null
     },

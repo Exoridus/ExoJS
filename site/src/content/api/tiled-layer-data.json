@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Discriminated union of all four Tiled layer types, keyed by `type`."
-      ],
+      "paragraphs": ["Discriminated union of all four Tiled layer types, keyed by `type`."],
       "importLine": "import { TiledLayerData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

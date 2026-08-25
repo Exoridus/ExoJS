@@ -59,7 +59,13 @@ describe('PolygonShape — convex validation', () => {
   });
 
   it('rejects fewer than three vertices', () => {
-    expect(() => new PolygonShape([{ x: 0, y: 0 }, { x: 1, y: 1 }])).toThrow(RangeError);
+    expect(
+      () =>
+        new PolygonShape([
+          { x: 0, y: 0 },
+          { x: 1, y: 1 },
+        ]),
+    ).toThrow(RangeError);
   });
 
   it('rejects a non-convex polygon', () => {
@@ -76,15 +82,33 @@ describe('PolygonShape — convex validation', () => {
   });
 
   it('rejects a degenerate (collinear) polygon', () => {
-    expect(() => new PolygonShape([{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }])).toThrow(RangeError);
+    expect(
+      () =>
+        new PolygonShape([
+          { x: 0, y: 0 },
+          { x: 1, y: 0 },
+          { x: 2, y: 0 },
+        ]),
+    ).toThrow(RangeError);
   });
 
   it('rejects non-finite vertices', () => {
-    expect(() => new PolygonShape([{ x: 0, y: 0 }, { x: Number.NaN, y: 0 }, { x: 1, y: 1 }])).toThrow(RangeError);
+    expect(
+      () =>
+        new PolygonShape([
+          { x: 0, y: 0 },
+          { x: Number.NaN, y: 0 },
+          { x: 1, y: 1 },
+        ]),
+    ).toThrow(RangeError);
   });
 
   it('freezes the vertex and normal arrays', () => {
-    const p = new PolygonShape([{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 1, y: 2 }]);
+    const p = new PolygonShape([
+      { x: 0, y: 0 },
+      { x: 2, y: 0 },
+      { x: 1, y: 2 },
+    ]);
 
     expect(Object.isFrozen(p.vertices)).toBe(true);
     expect(Object.isFrozen(p.normals)).toBe(true);
@@ -150,7 +174,15 @@ describe('BoxShape', () => {
 
 describe('Shape mass capability', () => {
   it('exposes frozen mass properties on every solid shape', () => {
-    const shapes = [new CircleShape(4), new BoxShape(4, 4), new PolygonShape([{ x: 0, y: 0 }, { x: 2, y: 0 }, { x: 0, y: 2 }])];
+    const shapes = [
+      new CircleShape(4),
+      new BoxShape(4, 4),
+      new PolygonShape([
+        { x: 0, y: 0 },
+        { x: 2, y: 0 },
+        { x: 0, y: 2 },
+      ]),
+    ];
 
     for (const shape of shapes) {
       expect(shape.massProperties).not.toBeNull();

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options shared by every binding factory method."
-      ],
+      "paragraphs": ["Construction options shared by every binding factory method."],
       "importLine": "import { InputBindingOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

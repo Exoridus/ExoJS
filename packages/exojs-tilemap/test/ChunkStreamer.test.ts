@@ -34,9 +34,13 @@ function makeTileset(): TileSet {
 
 function makeUnboundedLayer(tileset: TileSet, chunkSize = 4, tileSize = 16): TileLayer {
   return new TileLayer({
-    id: 0, name: 'l',
-    tileWidth: tileSize, tileHeight: tileSize, tilesets: [tileset],
-    chunkWidth: chunkSize, chunkHeight: chunkSize,
+    id: 0,
+    name: 'l',
+    tileWidth: tileSize,
+    tileHeight: tileSize,
+    tilesets: [tileset],
+    chunkWidth: chunkSize,
+    chunkHeight: chunkSize,
   });
 }
 
@@ -68,16 +72,14 @@ describe('ChunkStreamer construction', () => {
     const tileset = makeTileset();
     const layer = makeUnboundedLayer(tileset);
     const view = new View(0, 0, 64, 64);
-    expect(() => new ChunkStreamer(layer, makeAlwaysAvailableSource(), view, { loadRadius: 3, unloadRadius: 1 }))
-      .toThrow(/unloadRadius.*loadRadius/);
+    expect(() => new ChunkStreamer(layer, makeAlwaysAvailableSource(), view, { loadRadius: 3, unloadRadius: 1 })).toThrow(/unloadRadius.*loadRadius/);
   });
 
   it('accepts unloadRadius === loadRadius', () => {
     const tileset = makeTileset();
     const layer = makeUnboundedLayer(tileset);
     const view = new View(0, 0, 64, 64);
-    expect(() => new ChunkStreamer(layer, makeAlwaysAvailableSource(), view, { loadRadius: 2, unloadRadius: 2 }))
-      .not.toThrow();
+    expect(() => new ChunkStreamer(layer, makeAlwaysAvailableSource(), view, { loadRadius: 2, unloadRadius: 2 })).not.toThrow();
   });
 });
 
@@ -116,9 +118,15 @@ describe('ChunkStreamer.update() — sync provider, load range', () => {
   it('works on a bounded layer too, clamped to chunkRange()', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 0, name: 'l', width: 8, height: 8,
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 0,
+      name: 'l',
+      width: 8,
+      height: 8,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     }); // chunkRange() = {minCx:0,minCy:0,maxCx:1,maxCy:1}
     const view = new View(200, 200, 64, 64); // far outside the map, near the edge in chunk-range-clamped terms
     const streamer = new ChunkStreamer(layer, makeAlwaysAvailableSource(), view, { loadRadius: 5, unloadRadius: 5 });
@@ -223,7 +231,9 @@ describe('ChunkStreamer.update() — async provider', () => {
     const layer = makeUnboundedLayer(tileset);
     const view = new View(0, 0, 32, 32);
     let resolvePayload!: (payload: ChunkPayload | null) => void;
-    const pending = new Promise<ChunkPayload | null>(resolve => { resolvePayload = resolve; });
+    const pending = new Promise<ChunkPayload | null>(resolve => {
+      resolvePayload = resolve;
+    });
     const source: ChunkSource = { getChunk: () => pending };
     const streamer = new ChunkStreamer(layer, source, view);
 
@@ -254,7 +264,11 @@ describe('ChunkStreamer.update() — async provider', () => {
     const tileset = makeTileset();
     const layer = makeUnboundedLayer(tileset);
     const view = new View(0, 0, 32, 32);
-    const source: ChunkSource = { getChunk: async () => { throw new Error('boom'); } };
+    const source: ChunkSource = {
+      getChunk: async () => {
+        throw new Error('boom');
+      },
+    };
     const streamer = new ChunkStreamer(layer, source, view);
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
@@ -308,15 +322,24 @@ describe('ChunkStreamer.update() — parallax-aware wanted range', () => {
     const view = new View(1000, 0, 40, 40);
 
     const plainLayer = new TileLayer({
-      id: 0, name: 'plain',
-      tileWidth: 10, tileHeight: 10, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 0,
+      name: 'plain',
+      tileWidth: 10,
+      tileHeight: 10,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     const parallaxLayer = new TileLayer({
-      id: 1, name: 'parallax',
-      tileWidth: 10, tileHeight: 10, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
-      parallaxX: 0.5, parallaxY: 0.5,
+      id: 1,
+      name: 'parallax',
+      tileWidth: 10,
+      tileHeight: 10,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
+      parallaxX: 0.5,
+      parallaxY: 0.5,
     });
 
     new ChunkStreamer(plainLayer, makeAlwaysAvailableSource(), view).update();
@@ -328,14 +351,19 @@ describe('ChunkStreamer.update() — parallax-aware wanted range', () => {
     expect(plainChunks).not.toEqual(parallaxChunks);
   });
 
-  it('a parallax layer\'s streamed range exactly matches TileLayer.pixelToTile()\'s own parallax-shifted formula', () => {
+  it("a parallax layer's streamed range exactly matches TileLayer.pixelToTile()'s own parallax-shifted formula", () => {
     const tileset = makeTileset();
     const view = new View(500, 0, 40, 40);
     const layer = new TileLayer({
-      id: 0, name: 'l',
-      tileWidth: 10, tileHeight: 10, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
-      parallaxX: 0.5, parallaxY: 1,
+      id: 0,
+      name: 'l',
+      tileWidth: 10,
+      tileHeight: 10,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
+      parallaxX: 0.5,
+      parallaxY: 1,
     });
 
     new ChunkStreamer(layer, makeAlwaysAvailableSource(), view).update();
@@ -358,10 +386,17 @@ describe('ChunkStreamer.update() — parallax-aware wanted range', () => {
     const tileset = makeTileset();
     const view = new View(500, 0, 40, 40);
     const layer = new TileLayer({
-      id: 0, name: 'scaled', offsetX: 20,
-      tileWidth: 10, tileHeight: 10, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
-      parallaxX: 0.5, parallaxY: 1, parallaxScale: 0.5,
+      id: 0,
+      name: 'scaled',
+      offsetX: 20,
+      tileWidth: 10,
+      tileHeight: 10,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
+      parallaxX: 0.5,
+      parallaxY: 1,
+      parallaxScale: 0.5,
     });
 
     new ChunkStreamer(layer, makeAlwaysAvailableSource(), view, { loadRadius: 0, unloadRadius: 0 }).update();
@@ -447,7 +482,9 @@ describe('ChunkStreamer.destroy() — async in-flight-resolve race', () => {
     // is in flight and there is no ambiguity about which coordinate it is.
     const view = new View(32, 32, 2, 2);
     let resolvePayload!: (payload: ChunkPayload | null) => void;
-    const pending = new Promise<ChunkPayload | null>(resolve => { resolvePayload = resolve; });
+    const pending = new Promise<ChunkPayload | null>(resolve => {
+      resolvePayload = resolve;
+    });
     const source: ChunkSource = { getChunk: () => pending };
     const streamer = new ChunkStreamer(layer, source, view, { loadRadius: 0, unloadRadius: 0 });
 
@@ -467,7 +504,9 @@ describe('ChunkStreamer.destroy() — async in-flight-resolve race', () => {
     const layer = makeUnboundedLayer(tileset);
     const view = new View(32, 32, 2, 2);
     let resolvePayload!: (payload: ChunkPayload | null) => void;
-    const pending = new Promise<ChunkPayload | null>(resolve => { resolvePayload = resolve; });
+    const pending = new Promise<ChunkPayload | null>(resolve => {
+      resolvePayload = resolve;
+    });
     const source: ChunkSource = { getChunk: () => pending };
     const streamer = new ChunkStreamer(layer, source, view, { loadRadius: 0, unloadRadius: 0 });
 
@@ -486,7 +525,9 @@ describe('ChunkStreamer.destroy() — async in-flight-resolve race', () => {
     // A follow-up update() must stay a no-op - no leftover in-flight/resident
     // bookkeeping from the pre-destroy adoption resurrects anything.
     view.setCenter(1000, 1000);
-    expect(() => { streamer.update(); }).not.toThrow();
+    expect(() => {
+      streamer.update();
+    }).not.toThrow();
     expect(streamer.residentCount).toBe(0);
     expect([...layer.loadedChunks()]).toHaveLength(0);
   });

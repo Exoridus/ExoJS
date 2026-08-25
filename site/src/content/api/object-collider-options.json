@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for buildObjectLayerColliders."
-      ],
+      "paragraphs": ["Options for buildObjectLayerColliders."],
       "importLine": "import { ObjectColliderOptions } from '@codexo/exojs-tilemap-physics'",
       "sourceLink": null
     },

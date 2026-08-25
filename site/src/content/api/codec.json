@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Binary codec facade, grouped as a namespace so the public API carries no loose codec functions."
-      ],
+      "paragraphs": ["Binary codec facade, grouped as a namespace so the public API carries no loose codec functions."],
       "importLine": "import { Codec } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for BiquadEffect."
-      ],
+      "paragraphs": ["Construction options for BiquadEffect."],
       "importLine": "import { BiquadEffectOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

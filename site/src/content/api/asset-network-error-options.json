@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for an AssetNetworkError."
-      ],
+      "paragraphs": ["Construction options for an AssetNetworkError."],
       "importLine": "import { AssetNetworkErrorOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

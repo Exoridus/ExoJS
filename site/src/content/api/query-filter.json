@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A category/mask/group filter applied to a query. Omitting it matches everything."
-      ],
+      "paragraphs": ["A category/mask/group filter applied to a query. Omitting it matches everything."],
       "importLine": "import { QueryFilter } from '@codexo/exojs-physics'",
       "sourceLink": null
     },

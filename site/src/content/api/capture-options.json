@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for RenderingContext.capture - allocates a new RenderTexture."
-      ],
+      "paragraphs": ["Options for RenderingContext.capture - allocates a new RenderTexture."],
       "importLine": "import { CaptureOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

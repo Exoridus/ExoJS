@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The root of a `.tmj` map file."
-      ],
+      "paragraphs": ["The root of a `.tmj` map file."],
       "importLine": "import { TiledMapData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

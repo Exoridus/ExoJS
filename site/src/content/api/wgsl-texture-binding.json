@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A 1D texture binding (used by Curve / ColorGradient lookups)."
-      ],
+      "paragraphs": ["A 1D texture binding (used by Curve / ColorGradient lookups)."],
       "importLine": "import { WgslTextureBinding } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

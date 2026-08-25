@@ -1,15 +1,5 @@
 import { ApplicationState, type Scene as ExoScene, type SceneTransitionSelection } from '@codexo/exojs';
-import {
-  Children,
-  createContext,
-  isValidElement,
-  type ReactElement,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { Children, createContext, isValidElement, type ReactElement, type ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 
 import { useExoApp } from './useExoApp';
 
@@ -147,9 +137,5 @@ export function Scenes({ active, transition, children }: ScenesProps): ReactElem
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [app, active]);
 
-  return (
-    <ActiveSceneContext.Provider value={instance}>
-      {instance !== null && entry?.children}
-    </ActiveSceneContext.Provider>
-  );
+  return <ActiveSceneContext.Provider value={instance}>{instance !== null && entry?.children}</ActiveSceneContext.Provider>;
 }

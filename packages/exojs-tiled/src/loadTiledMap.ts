@@ -79,11 +79,7 @@ async function loadTiledTileset(ref: TiledTilesetRefData, mapSource: string, con
  * {@link TiledMap.toTileMap} can attach the pre-loaded {@link Texture} to each
  * runtime image layer without performing additional I/O.
  */
-async function loadImageLayerTextures(
-  layers: readonly TiledLayerData[],
-  mapSource: string,
-  context: TiledContext,
-): Promise<Map<number, Texture>> {
+async function loadImageLayerTextures(layers: readonly TiledLayerData[], mapSource: string, context: TiledContext): Promise<Map<number, Texture>> {
   const result = new Map<number, Texture>();
 
   for (const layer of layers) {

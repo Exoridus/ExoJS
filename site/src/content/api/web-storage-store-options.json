@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for WebStorageStore."
-      ],
+      "paragraphs": ["Construction options for WebStorageStore."],
       "importLine": "import { WebStorageStoreOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

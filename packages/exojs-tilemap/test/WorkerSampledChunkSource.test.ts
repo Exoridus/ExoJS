@@ -86,9 +86,13 @@ function makeTileset(): TileSet {
 
 function makeUnboundedLayer(tileset: TileSet, chunkWidth = 4, chunkHeight = 4): TileLayer {
   return new TileLayer({
-    id: 0, name: 'l',
-    tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-    chunkWidth, chunkHeight,
+    id: 0,
+    name: 'l',
+    tileWidth: 16,
+    tileHeight: 16,
+    tilesets: [tileset],
+    chunkWidth,
+    chunkHeight,
   });
 }
 
@@ -131,12 +135,18 @@ describe('createWorkerSampledChunkSource', () => {
     expect(await payloadPromise).toBeNull();
   });
 
-  it('clamps cells past a bounded layer\'s width/height to empty', async () => {
+  it("clamps cells past a bounded layer's width/height to empty", async () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 0, name: 'l', width: 5, height: 5,
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 0,
+      name: 'l',
+      width: 5,
+      height: 5,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     const source = createWorkerSampledChunkSource(layer, {
       workerSource: '/* unused */',

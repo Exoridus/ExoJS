@@ -9,9 +9,7 @@ const RAW_MINIMAL = {
   jsonVersion: '1.5.3',
   defaultGridSize: 16,
   defs: {
-    tilesets: [
-      { uid: 1, identifier: 'Atlas', relPath: 'tiles.png', tileGridSize: 16, pxWid: 64, pxHei: 64, spacing: 0, padding: 0 },
-    ],
+    tilesets: [{ uid: 1, identifier: 'Atlas', relPath: 'tiles.png', tileGridSize: 16, pxWid: 64, pxHei: 64, spacing: 0, padding: 0 }],
     layers: [
       { uid: 101, identifier: 'Tiles', type: 'Tiles', gridSize: 16, tilesetDefUid: 1 },
       { uid: 102, identifier: 'Walls', type: 'IntGrid', gridSize: 16, intGridValues: [{ value: 1, identifier: 'solid', color: '#ff0000' }] },
@@ -66,45 +64,74 @@ describe('validateLdtkData — accepts well-formed documents', () => {
   });
 
   it('accepts a tileset with a null relPath (embedded / image-less atlas)', () => {
-    expect(() => validateLdtkData(withRoot(root => { root.defs.tilesets[0].relPath = null; }), SOURCE)).not.toThrow();
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.defs.tilesets[0].relPath = null;
+        }),
+        SOURCE,
+      ),
+    ).not.toThrow();
   });
 
   it('accepts a level with null layerInstances (externalized level)', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.levels[0].layerInstances = null;
-      root.levels[0].externalRelPath = 'levels/Level_0.ldtkl';
-    }), SOURCE)).not.toThrow();
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.levels[0].layerInstances = null;
+          root.levels[0].externalRelPath = 'levels/Level_0.ldtkl';
+        }),
+        SOURCE,
+      ),
+    ).not.toThrow();
   });
 
   it('accepts a multi-world document', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.worlds = [{
-        identifier: 'WorldA',
-        iid: 'world-a',
-        worldGridWidth: 256,
-        worldGridHeight: 256,
-        worldLayout: 'Free',
-        levels: root.levels,
-      }];
-      root.levels = [];
-    }), SOURCE)).not.toThrow();
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.worlds = [
+            {
+              identifier: 'WorldA',
+              iid: 'world-a',
+              worldGridWidth: 256,
+              worldGridHeight: 256,
+              worldLayout: 'Free',
+              levels: root.levels,
+            },
+          ];
+          root.levels = [];
+        }),
+        SOURCE,
+      ),
+    ).not.toThrow();
   });
 
   it('accepts a null worldLayout', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.worlds = [{ identifier: 'W', iid: 'w', worldGridWidth: 1, worldGridHeight: 1, worldLayout: null, levels: [] }];
-      root.levels = [];
-    }), SOURCE)).not.toThrow();
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.worlds = [{ identifier: 'W', iid: 'w', worldGridWidth: 1, worldGridHeight: 1, worldLayout: null, levels: [] }];
+          root.levels = [];
+        }),
+        SOURCE,
+      ),
+    ).not.toThrow();
   });
 
   it('accepts a layer definition with parallax factors and parallaxScaling', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.defs.layers[0].parallaxFactorX = 0.5;
-      root.defs.layers[0].parallaxFactorY = -0.25;
-      root.defs.layers[0].parallaxScaling = false;
-      root.defs.layers[0].pxOffsetX = 3;
-      root.defs.layers[0].pxOffsetY = -4;
-    }), SOURCE)).not.toThrow();
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.defs.layers[0].parallaxFactorX = 0.5;
+          root.defs.layers[0].parallaxFactorY = -0.25;
+          root.defs.layers[0].parallaxScaling = false;
+          root.defs.layers[0].pxOffsetX = 3;
+          root.defs.layers[0].pxOffsetY = -4;
+        }),
+        SOURCE,
+      ),
+    ).not.toThrow();
   });
 });
 
@@ -120,14 +147,21 @@ describe('validateLdtkData — rejects malformed documents', () => {
   });
 
   it('reports the source URL and the property path in the message', () => {
-    const raw = withRoot(root => { root.defs.tilesets[0].tileGridSize = 'big'; });
+    const raw = withRoot(root => {
+      root.defs.tilesets[0].tileGridSize = 'big';
+    });
     expect(() => validateLdtkData(raw, SOURCE)).toThrow(/world\.ldtk/);
     expect(() => validateLdtkData(raw, SOURCE)).toThrow(/defs\.tilesets\[0\]\.tileGridSize/);
   });
 
   it('exposes source and path as fields on the thrown error', () => {
     try {
-      validateLdtkData(withRoot(root => { root.levels[0].pxWid = null; }), SOURCE);
+      validateLdtkData(
+        withRoot(root => {
+          root.levels[0].pxWid = null;
+        }),
+        SOURCE,
+      );
       expect.unreachable('validateLdtkData should have thrown');
     } catch (error) {
       expect(error).toBeInstanceOf(LdtkFormatError);
@@ -137,82 +171,171 @@ describe('validateLdtkData — rejects malformed documents', () => {
   });
 
   it('rejects a missing defs block', () => {
-    expect(() => validateLdtkData(withRoot(root => { delete root.defs; }), SOURCE)).toThrow(/defs/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          delete root.defs;
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/defs/);
   });
 
   it('rejects a non-array levels list', () => {
-    expect(() => validateLdtkData(withRoot(root => { root.levels = {}; }), SOURCE)).toThrow(/expected an array/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.levels = {};
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/expected an array/);
   });
 
   it('rejects a tileset with a non-positive tileGridSize (would divide by zero)', () => {
-    expect(() => validateLdtkData(withRoot(root => { root.defs.tilesets[0].tileGridSize = 0; }), SOURCE))
-      .toThrow(/expected a positive integer/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.defs.tilesets[0].tileGridSize = 0;
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/expected a positive integer/);
   });
 
   it('rejects a tileset whose relPath is neither a string nor null', () => {
-    expect(() => validateLdtkData(withRoot(root => { root.defs.tilesets[0].relPath = 7; }), SOURCE))
-      .toThrow(/defs\.tilesets\[0\]\.relPath/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.defs.tilesets[0].relPath = 7;
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/defs\.tilesets\[0\]\.relPath/);
   });
 
   it('rejects an unknown layer definition type', () => {
-    expect(() => validateLdtkData(withRoot(root => { root.defs.layers[0].type = 'Hexes'; }), SOURCE))
-      .toThrow(/unknown layer type "Hexes"/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.defs.layers[0].type = 'Hexes';
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/unknown layer type "Hexes"/);
   });
 
   it('rejects an unknown layer instance type', () => {
-    expect(() => validateLdtkData(withRoot(root => { root.levels[0].layerInstances[0].__type = 'Hexes'; }), SOURCE))
-      .toThrow(/unknown layer type "Hexes"/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.levels[0].layerInstances[0].__type = 'Hexes';
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/unknown layer type "Hexes"/);
   });
 
   it('rejects a level whose layerInstances is neither an array nor null', () => {
-    expect(() => validateLdtkData(withRoot(root => { root.levels[0].layerInstances = 3; }), SOURCE))
-      .toThrow(/levels\[0\]\.layerInstances/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.levels[0].layerInstances = 3;
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/levels\[0\]\.layerInstances/);
   });
 
   it('rejects a tile whose px is not a pair of numbers', () => {
-    expect(() => validateLdtkData(withRoot(root => { root.levels[0].layerInstances[0].gridTiles[0].px = [0]; }), SOURCE))
-      .toThrow(/gridTiles\[0\]\.px/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.levels[0].layerInstances[0].gridTiles[0].px = [0];
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/gridTiles\[0\]\.px/);
   });
 
   it('rejects a non-numeric IntGrid CSV entry', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.levels[0].layerInstances[0].intGridCsv = [0, 'x'];
-    }), SOURCE)).toThrow(/intGridCsv\[1\]/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.levels[0].layerInstances[0].intGridCsv = [0, 'x'];
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/intGridCsv\[1\]/);
   });
 
   it('rejects an entity instance with a malformed pivot', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.levels[0].layerInstances[0].__type = 'Entities';
-      delete root.levels[0].layerInstances[0].gridTiles;
-      root.levels[0].layerInstances[0].entityInstances = [{
-        __identifier: 'Player', __type: 'Player', px: [0, 0], width: 16, height: 16,
-        __pivot: [0], fieldInstances: [], iid: 'e', defUid: 1,
-      }];
-    }), SOURCE)).toThrow(/__pivot/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.levels[0].layerInstances[0].__type = 'Entities';
+          delete root.levels[0].layerInstances[0].gridTiles;
+          root.levels[0].layerInstances[0].entityInstances = [
+            {
+              __identifier: 'Player',
+              __type: 'Player',
+              px: [0, 0],
+              width: 16,
+              height: 16,
+              __pivot: [0],
+              fieldInstances: [],
+              iid: 'e',
+              defUid: 1,
+            },
+          ];
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/__pivot/);
   });
 
   it('rejects a field instance without an identifier', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.levels[0].fieldInstances = [{ __type: 'String', __value: 'x' }];
-    }), SOURCE)).toThrow(/fieldInstances\[0\]\.__identifier/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.levels[0].fieldInstances = [{ __type: 'String', __value: 'x' }];
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/fieldInstances\[0\]\.__identifier/);
   });
 
   it('rejects a non-numeric parallaxFactorX on a layer definition', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.defs.layers[0].parallaxFactorX = 'fast';
-    }), SOURCE)).toThrow(/defs\.layers\[0\]\.parallaxFactorX/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.defs.layers[0].parallaxFactorX = 'fast';
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/defs\.layers\[0\]\.parallaxFactorX/);
   });
 
   it('rejects a non-boolean parallaxScaling on a layer definition', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.defs.layers[0].parallaxScaling = 'yes';
-    }), SOURCE)).toThrow(/defs\.layers\[0\]\.parallaxScaling/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.defs.layers[0].parallaxScaling = 'yes';
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/defs\.layers\[0\]\.parallaxScaling/);
   });
 
   it('rejects a non-numeric definition-level layer offset', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.defs.layers[0].pxOffsetX = 'right';
-    }), SOURCE)).toThrow(/defs\.layers\[0\]\.pxOffsetX/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.defs.layers[0].pxOffsetX = 'right';
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/defs\.layers\[0\]\.pxOffsetX/);
   });
 });
 
@@ -227,21 +350,17 @@ describe('validateLdtkData — field instance __value shapes', () => {
   });
 
   it('accepts a well-formed Point', () => {
-    expect(() =>
-      validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: { cx: 3, cy: 4 } }), SOURCE),
-    ).not.toThrow();
+    expect(() => validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: { cx: 3, cy: 4 } }), SOURCE)).not.toThrow();
   });
 
   it('rejects a Point whose value is not an object', () => {
-    expect(() => validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: 5 }), SOURCE)).toThrow(
-      /fieldInstances\[0\]\.__value/,
-    );
+    expect(() => validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: 5 }), SOURCE)).toThrow(/fieldInstances\[0\]\.__value/);
   });
 
   it('rejects a Point carrying x/y instead of cx/cy', () => {
-    expect(() =>
-      validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: { x: 3, y: 4 } }), SOURCE),
-    ).toThrow(/fieldInstances\[0\]\.__value\.cx/);
+    expect(() => validateLdtkData(withField({ __identifier: 'spawn', __type: 'Point', __value: { x: 3, y: 4 } }), SOURCE)).toThrow(
+      /fieldInstances\[0\]\.__value\.cx/,
+    );
   });
 
   it('rejects a numeric value on a String field', () => {
@@ -258,49 +377,48 @@ describe('validateLdtkData — field instance __value shapes', () => {
 
   it('rejects an EntityRef missing one of its iids', () => {
     expect(() =>
-      validateLdtkData(
-        withField({ __identifier: 'target', __type: 'EntityRef', __value: { entityIid: 'a', layerIid: 'b', levelIid: 'c' } }),
-        SOURCE,
-      ),
+      validateLdtkData(withField({ __identifier: 'target', __type: 'EntityRef', __value: { entityIid: 'a', layerIid: 'b', levelIid: 'c' } }), SOURCE),
     ).toThrow(/fieldInstances\[0\]\.__value\.worldIid/);
   });
 
   it('rejects a Tile with a non-numeric rect', () => {
-    expect(() =>
-      validateLdtkData(
-        withField({ __identifier: 'icon', __type: 'Tile', __value: { tilesetUid: 1, x: 0, y: 0, w: '16', h: 16 } }),
-        SOURCE,
-      ),
-    ).toThrow(/fieldInstances\[0\]\.__value\.w/);
+    expect(() => validateLdtkData(withField({ __identifier: 'icon', __type: 'Tile', __value: { tilesetUid: 1, x: 0, y: 0, w: '16', h: 16 } }), SOURCE)).toThrow(
+      /fieldInstances\[0\]\.__value\.w/,
+    );
   });
 
   it('validates every element of an Array<T> field and points at the bad index', () => {
-    expect(() =>
-      validateLdtkData(
-        withField({ __identifier: 'waypoints', __type: 'Array<Point>', __value: [{ cx: 0, cy: 0 }, { cx: 1 }] }),
-        SOURCE,
-      ),
-    ).toThrow(/fieldInstances\[0\]\.__value\[1\]\.cy/);
+    expect(() => validateLdtkData(withField({ __identifier: 'waypoints', __type: 'Array<Point>', __value: [{ cx: 0, cy: 0 }, { cx: 1 }] }), SOURCE)).toThrow(
+      /fieldInstances\[0\]\.__value\[1\]\.cy/,
+    );
   });
 
   it('leaves a field type this package does not model unchecked', () => {
-    expect(() =>
-      validateLdtkData(withField({ __identifier: 'future', __type: 'SomeFutureType', __value: { anything: true } }), SOURCE),
-    ).not.toThrow();
+    expect(() => validateLdtkData(withField({ __identifier: 'future', __type: 'SomeFutureType', __value: { anything: true } }), SOURCE)).not.toThrow();
   });
 
   it('rejects a world entry that is not an object', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.worlds = ['nope'];
-      root.levels = [];
-    }), SOURCE)).toThrow(/worlds\[0\]/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.worlds = ['nope'];
+          root.levels = [];
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/worlds\[0\]/);
   });
 
   it('rejects an unknown worldLayout', () => {
-    expect(() => validateLdtkData(withRoot(root => {
-      root.worlds = [{ identifier: 'W', iid: 'w', worldGridWidth: 1, worldGridHeight: 1, worldLayout: 'Spiral', levels: [] }];
-      root.levels = [];
-    }), SOURCE)).toThrow(/unknown world layout "Spiral"/);
+    expect(() =>
+      validateLdtkData(
+        withRoot(root => {
+          root.worlds = [{ identifier: 'W', iid: 'w', worldGridWidth: 1, worldGridHeight: 1, worldLayout: 'Spiral', levels: [] }];
+          root.levels = [];
+        }),
+        SOURCE,
+      ),
+    ).toThrow(/unknown world layout "Spiral"/);
   });
 });
 

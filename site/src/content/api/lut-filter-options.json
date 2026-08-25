@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for LutFilter."
-      ],
+      "paragraphs": ["Construction options for LutFilter."],
       "importLine": "import { LutFilterOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

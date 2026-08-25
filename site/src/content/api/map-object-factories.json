@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Dispatch key to factory. Keys are matched against the spawner's `identify` result."
-      ],
+      "paragraphs": ["Dispatch key to factory. Keys are matched against the spawner's `identify` result."],
       "importLine": "import { MapObjectFactories } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

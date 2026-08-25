@@ -102,7 +102,7 @@ comparison is meaningless. `exojs.ts` follows these rules and any new adapter
    Pixi (or whichever arm is inert) an equivalent culling mechanism first, or
    the comparison is asymmetric again.
 2. **Same mutation selection.** Use `selectMutationIndices(nodeCount,
-   spec.mutationFraction, seed)` (from `../../shared/mutation.ts`) — the shared,
+spec.mutationFraction, seed)` (from `../../shared/mutation.ts`) — the shared,
    canonical selection — to pick the leaves you mutate, and expose the result
    through `mutationSignature()`. The helper seeds a fresh `createRng(seed)` and
    draws **exactly one** `rng()` value **per leaf, in ascending index order**,

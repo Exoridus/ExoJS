@@ -1,21 +1,8 @@
 import { logger, type PointLike } from '@codexo/exojs';
-import {
-  BoxShape,
-  CapsuleShape,
-  ChainShape,
-  CircleShape,
-  type ColliderOptions,
-  toConvexPolygonShapes,
-} from '@codexo/exojs-physics';
-import {
-  ObjectKind,
-  type TileCollisionGeometry,
-  type TileCollisionRect,
-  type TileCollisionShape,
-  type TileMapObject,
-} from '@codexo/exojs-tilemap';
+import { BoxShape, CapsuleShape, ChainShape, CircleShape, type ColliderOptions, toConvexPolygonShapes } from '@codexo/exojs-physics';
+import { ObjectKind, type TileCollisionGeometry, type TileCollisionRect, type TileCollisionShape, type TileMapObject } from '@codexo/exojs-tilemap';
 
-import { materialKey, type ResolvedMaterial,resolveMaterial } from './material';
+import { materialKey, type ResolvedMaterial, resolveMaterial } from './material';
 import { traceCellOutlines } from './outline';
 import type { TileColliderMaterialResolver, TileRegionMode } from './types';
 
@@ -52,13 +39,7 @@ const applyMaterial = (material: ResolvedMaterial): Omit<ColliderOptions, 'shape
 });
 
 /** Centre of an axis-aligned box rotated about its own top-left origin. */
-const rotatedCentre = (
-  x: number,
-  y: number,
-  width: number,
-  height: number,
-  angle: number,
-): PointLike => {
+const rotatedCentre = (x: number, y: number, width: number, height: number, angle: number): PointLike => {
   const cos = Math.cos(angle);
   const sin = Math.sin(angle);
 
@@ -90,9 +71,7 @@ const ellipseShape = (width: number, height: number): BoxShape | CapsuleShape | 
     return new CircleShape(semiMinor);
   }
 
-  return width >= height
-    ? new CapsuleShape(-spine / 2, 0, spine / 2, 0, semiMinor)
-    : new CapsuleShape(0, -spine / 2, 0, spine / 2, semiMinor);
+  return width >= height ? new CapsuleShape(-spine / 2, 0, spine / 2, 0, semiMinor) : new CapsuleShape(0, -spine / 2, 0, spine / 2, semiMinor);
 };
 
 /** `true` when a polyline's endpoints coincide, i.e. the author drew a loop. */
@@ -221,12 +200,7 @@ const rectCell = (rect: TileCollisionRect, options: ColliderPlacement): { tx: nu
   ty: Math.round((rect.y - options.layerOffsetY) / options.tileHeight),
 });
 
-const boxForRect = (
-  rect: TileCollisionRect,
-  material: ResolvedMaterial,
-  originX: number,
-  originY: number,
-): ColliderOptions => ({
+const boxForRect = (rect: TileCollisionRect, material: ResolvedMaterial, originX: number, originY: number): ColliderOptions => ({
   shape: new BoxShape(rect.width, rect.height),
   offset: { x: rect.x + rect.width / 2 - originX, y: rect.y + rect.height / 2 - originY },
   ...applyMaterial(material),
@@ -243,12 +217,7 @@ interface ResolvedRect {
  * cells whose colliders would be indistinguishable are traced into one
  * boundary, and cells that resolve differently keep their own.
  */
-const chainsForRects = (
-  regions: readonly ResolvedRect[],
-  options: ColliderBuildOptions,
-  originX: number,
-  originY: number,
-): ColliderOptions[] => {
+const chainsForRects = (regions: readonly ResolvedRect[], options: ColliderBuildOptions, originX: number, originY: number): ColliderOptions[] => {
   const groups = new Map<string, { material: ResolvedMaterial; cells: number[] }>();
 
   for (const { rect, material } of regions) {
@@ -289,8 +258,7 @@ const chainsForRects = (
   return colliders;
 };
 
-const shapeLabel = (shape: TileCollisionShape): string =>
-  shape.source.name || `tile ${shape.tx},${shape.ty}`;
+const shapeLabel = (shape: TileCollisionShape): string => shape.source.name || `tile ${shape.tx},${shape.ty}`;
 
 const objectLabel = (object: TileMapObject): string => object.name || String(object.id);
 
@@ -303,10 +271,7 @@ export { objectLabel };
  * Order is contractual: merged regions first in the order the extraction emits
  * them, then per-tile shapes in tile walk order.
  */
-export const buildTileColliders = (
-  geometry: TileCollisionGeometry,
-  options: ColliderBuildOptions,
-): ColliderOptions[] => {
+export const buildTileColliders = (geometry: TileCollisionGeometry, options: ColliderBuildOptions): ColliderOptions[] => {
   const originX = options.x;
   const originY = options.y;
   const regions: ResolvedRect[] = geometry.rects.map(rect => {

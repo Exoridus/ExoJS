@@ -18,10 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Describes how costly a style change is to incorporate.",
-        "Hints accumulate to the heaviest pending change: `tint` < `layout` < `font`"
-      ],
+      "paragraphs": ["Describes how costly a style change is to incorporate.", "Hints accumulate to the heaviest pending change: `tint` < `layout` < `font`"],
       "importLine": "import { StyleChangeHint } from '@codexo/exojs'",
       "sourceLink": null
     },

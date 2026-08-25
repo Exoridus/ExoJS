@@ -125,11 +125,7 @@ export class FlangerEffect extends AudioEffect {
   public set delayMs(value: number) {
     this._delayMs = Math.max(0.5, Math.min(20, value));
     if (this._nodes) {
-      this._nodes.delayNode.delayTime.setTargetAtTime(
-        this._delayMs / 1000,
-        this._nodes.delayNode.context.currentTime,
-        0.01,
-      );
+      this._nodes.delayNode.delayTime.setTargetAtTime(this._delayMs / 1000, this._nodes.delayNode.context.currentTime, 0.01);
     }
   }
 
@@ -141,11 +137,7 @@ export class FlangerEffect extends AudioEffect {
   public set depthMs(value: number) {
     this._depthMs = Math.max(0, Math.min(10, value));
     if (this._nodes) {
-      this._nodes.lfoGain.gain.setTargetAtTime(
-        this._depthMs / 1000,
-        this._nodes.lfoGain.context.currentTime,
-        0.01,
-      );
+      this._nodes.lfoGain.gain.setTargetAtTime(this._depthMs / 1000, this._nodes.lfoGain.context.currentTime, 0.01);
     }
   }
 
@@ -157,11 +149,7 @@ export class FlangerEffect extends AudioEffect {
   public set rateHz(value: number) {
     this._rateHz = Math.max(0, Math.min(10, value));
     if (this._nodes) {
-      this._nodes.lfoOscillator.frequency.setTargetAtTime(
-        this._rateHz,
-        this._nodes.inputGain.context.currentTime,
-        0.01,
-      );
+      this._nodes.lfoOscillator.frequency.setTargetAtTime(this._rateHz, this._nodes.inputGain.context.currentTime, 0.01);
     }
   }
 
@@ -176,11 +164,7 @@ export class FlangerEffect extends AudioEffect {
   public set feedback(value: number) {
     this._feedback = Math.max(0, Math.min(0.95, value));
     if (this._nodes) {
-      this._nodes.feedbackGain.gain.setTargetAtTime(
-        this._feedback,
-        this._nodes.feedbackGain.context.currentTime,
-        0.01,
-      );
+      this._nodes.feedbackGain.gain.setTargetAtTime(this._feedback, this._nodes.feedbackGain.context.currentTime, 0.01);
     }
   }
 

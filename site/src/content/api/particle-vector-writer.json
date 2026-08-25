@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Writable two-component channel of a single particle."
-      ],
+      "paragraphs": ["Writable two-component channel of a single particle."],
       "importLine": "import { ParticleVectorWriter } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "One entry of a level's `__neighbours` array: an adjacency to another level, plus the direction code LDtk assigned it."
-      ],
+      "paragraphs": ["One entry of a level's `__neighbours` array: an adjacency to another level, plus the direction code LDtk assigned it."],
       "importLine": "import { LdtkLevelNeighbour } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

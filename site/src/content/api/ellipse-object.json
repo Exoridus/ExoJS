@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "An ellipse inscribed in `[x, y, width, height]`."
-      ],
+      "paragraphs": ["An ellipse inscribed in `[x, y, width, height]`."],
       "importLine": "import { EllipseObject } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

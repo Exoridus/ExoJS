@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Availability policy for a scene-owned ActionMap."
-      ],
+      "paragraphs": ["Availability policy for a scene-owned ActionMap."],
       "importLine": "import { SceneActionMapOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

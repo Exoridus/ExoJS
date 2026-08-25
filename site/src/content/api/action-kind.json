@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Which action kind a SerializedActionBinding belongs to."
-      ],
+      "paragraphs": ["Which action kind a SerializedActionBinding belongs to."],
       "importLine": "import { ActionKind } from '@codexo/exojs'",
       "sourceLink": null
     },

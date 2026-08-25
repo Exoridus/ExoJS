@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Linear gradient in UV space projected from `start` to `end`."
-      ],
+      "paragraphs": ["Linear gradient in UV space projected from `start` to `end`."],
       "importLine": "import { LinearGradient } from '@codexo/exojs'",
       "sourceLink": null
     },

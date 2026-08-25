@@ -9,10 +9,12 @@ import { TileSet } from '../src/TileSet';
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 function fakeRegion(tw = 2048, th = 2048): TextureRegion {
-  return new TextureRegion(
-    { width: tw, height: th, uid: 0, label: 'test', destroy: () => {}, destroyed: false } as unknown as Texture,
-    { x: 0, y: 0, width: tw, height: th },
-  );
+  return new TextureRegion({ width: tw, height: th, uid: 0, label: 'test', destroy: () => {}, destroyed: false } as unknown as Texture, {
+    x: 0,
+    y: 0,
+    width: tw,
+    height: th,
+  });
 }
 
 function makeTileset(name: string, tileCount = 256): TileSet {

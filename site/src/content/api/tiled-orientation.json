@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The orientation values Tiled may write for a map."
-      ],
+      "paragraphs": ["The orientation values Tiled may write for a map."],
       "importLine": "import { TiledOrientation } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

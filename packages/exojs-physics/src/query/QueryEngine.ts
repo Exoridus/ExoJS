@@ -613,7 +613,7 @@ const queryProxies = (shape: AnyShape, x: number, y: number, angle: number): rea
     return [makeProxy(shape, x, y, angle)];
   }
 
-  return shape.edges.map((edge) => makeProxy(edge, x, y, angle));
+  return shape.edges.map(edge => makeProxy(edge, x, y, angle));
 };
 
 /** World AABB covering every proxy of a query shape. */

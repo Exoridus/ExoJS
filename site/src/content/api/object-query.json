@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Filter for ObjectLayer.query. Unspecified fields match everything."
-      ],
+      "paragraphs": ["Filter for ObjectLayer.query. Unspecified fields match everything."],
       "importLine": "import { ObjectQuery } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

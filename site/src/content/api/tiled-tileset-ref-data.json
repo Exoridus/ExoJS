@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "One entry of TiledMapData.tilesets - either external (`source`) or embedded."
-      ],
+      "paragraphs": ["One entry of TiledMapData.tilesets - either external (`source`) or embedded."],
       "importLine": "import { TiledTilesetRefData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

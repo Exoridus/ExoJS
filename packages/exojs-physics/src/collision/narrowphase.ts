@@ -400,8 +400,7 @@ const copyClip = (from: ClipVertex, to: ClipVertex): void => {
   to.id = from.id;
 };
 
-const encodeId = (flip: boolean, refEdge: number, incidentId: number): number =>
-  (flip ? 1 << 20 : 0) | ((refEdge & 0xff) << 12) | (incidentId & 0xfff);
+const encodeId = (flip: boolean, refEdge: number, incidentId: number): number => (flip ? 1 << 20 : 0) | ((refEdge & 0xff) << 12) | (incidentId & 0xfff);
 
 /**
  * Convex ring vs convex ring: SAT reference face + Sutherland-Hodgman clip, with

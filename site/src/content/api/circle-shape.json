@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A circle of the given `radius` centred on the collider's local origin. The cheapest shape for both broad- and narrow-phase."
-      ],
+      "paragraphs": ["A circle of the given `radius` centred on the collider's local origin. The cheapest shape for both broad- and narrow-phase."],
       "importLine": "import { CircleShape } from '@codexo/exojs-physics'",
       "sourceLink": null
     },

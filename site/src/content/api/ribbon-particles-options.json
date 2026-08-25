@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for RibbonParticles."
-      ],
+      "paragraphs": ["Construction options for RibbonParticles."],
       "importLine": "import { RibbonParticlesOptions } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

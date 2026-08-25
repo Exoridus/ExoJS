@@ -320,8 +320,11 @@ describe('TileAnimator + unbounded layers', () => {
   it('scanning an unbounded layer finds zero animated cells (documented v1 limitation, not a crash)', () => {
     const ts = makeTileset256();
     const layer = new TileLayer({
-      id: 0, name: 'l',
-      tileWidth: 32, tileHeight: 32, tilesets: [ts],
+      id: 0,
+      name: 'l',
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [ts],
     });
     layer._adoptChunk(0, 0, { width: 32, height: 32, tiles: new Uint32Array(1024) });
 

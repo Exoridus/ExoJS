@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The shape an ActionMap is built from."
-      ],
+      "paragraphs": ["The shape an ActionMap is built from."],
       "importLine": "import { ActionRecord } from '@codexo/exojs'",
       "sourceLink": null
     },

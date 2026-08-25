@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The shader languages a ShaderFilter can carry."
-      ],
+      "paragraphs": ["The shader languages a ShaderFilter can carry."],
       "importLine": "import { ShaderFilterLanguage } from '@codexo/exojs'",
       "sourceLink": null
     },

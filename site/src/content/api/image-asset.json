@@ -18,10 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Dispatch token for image loading.",
-        "`loader.load(Asset.type('image', 'img.png'))` returns `Promise<HTMLImageElement>`."
-      ],
+      "paragraphs": ["Dispatch token for image loading.", "`loader.load(Asset.type('image', 'img.png'))` returns `Promise<HTMLImageElement>`."],
       "importLine": "import { ImageAsset } from '@codexo/exojs'",
       "sourceLink": null
     },

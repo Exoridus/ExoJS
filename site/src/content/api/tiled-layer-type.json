@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Discriminant shared by every TiledLayer subclass, mirroring TiledLayerData's `type`."
-      ],
+      "paragraphs": ["Discriminant shared by every TiledLayer subclass, mirroring TiledLayerData's `type`."],
       "importLine": "import { TiledLayerType } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

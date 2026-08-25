@@ -1,5 +1,5 @@
-﻿import type { ParticleDeathContext } from "#ParticleStorage";
-import type { ParticleSystem } from "#ParticleSystem";
+﻿import type { ParticleDeathContext } from '#ParticleStorage';
+import type { ParticleSystem } from '#ParticleSystem';
 
 import { DeathModule } from './DeathModule';
 import type { SpawnModule } from './SpawnModule';

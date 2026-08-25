@@ -26,47 +26,59 @@ function fakeRegion(width = 512, height = 512): TextureRegion {
 
 describe('TileSet construction validation', () => {
   it('rejects a missing or non-string name', () => {
-    expect(() => new TileSet({
-      name: '',
-      texture: fakeRegion(),
-      tileWidth: 32,
-      tileHeight: 32,
-      tileCount: 16,
-    })).toThrow(/name must be a non-empty string/);
+    expect(
+      () =>
+        new TileSet({
+          name: '',
+          texture: fakeRegion(),
+          tileWidth: 32,
+          tileHeight: 32,
+          tileCount: 16,
+        }),
+    ).toThrow(/name must be a non-empty string/);
   });
 
   it('rejects a missing texture', () => {
-    expect(() => new TileSet({
-      name: 't',
-      texture: undefined as unknown as TextureRegion,
-      tileWidth: 32,
-      tileHeight: 32,
-      tileCount: 16,
-    })).toThrow(/valid TextureRegion/);
+    expect(
+      () =>
+        new TileSet({
+          name: 't',
+          texture: undefined as unknown as TextureRegion,
+          tileWidth: 32,
+          tileHeight: 32,
+          tileCount: 16,
+        }),
+    ).toThrow(/valid TextureRegion/);
   });
 
   it('rejects a grid whose computed width exceeds the atlas', () => {
     // 40px atlas, tileWidth 32, explicit columns 2 → grid width 64 > 40.
-    expect(() => new TileSet({
-      name: 't',
-      texture: fakeRegion(40, 320),
-      tileWidth: 32,
-      tileHeight: 32,
-      tileCount: 8,
-      columns: 2,
-    })).toThrow(/grid width exceeds atlas/);
+    expect(
+      () =>
+        new TileSet({
+          name: 't',
+          texture: fakeRegion(40, 320),
+          tileWidth: 32,
+          tileHeight: 32,
+          tileCount: 8,
+          columns: 2,
+        }),
+    ).toThrow(/grid width exceeds atlas/);
   });
 
   it('rejects a grid whose computed height exceeds the atlas', () => {
     // 1 column forces every one of the 8 tiles into its own row: 8 rows * 32px = 256 > 40.
-    expect(() => new TileSet({
-      name: 't',
-      texture: fakeRegion(320, 40),
-      tileWidth: 32,
-      tileHeight: 32,
-      tileCount: 8,
-      columns: 1,
-    })).toThrow(/grid height exceeds atlas/);
+    expect(
+      () =>
+        new TileSet({
+          name: 't',
+          texture: fakeRegion(320, 40),
+          tileWidth: 32,
+          tileHeight: 32,
+          tileCount: 8,
+          columns: 1,
+        }),
+    ).toThrow(/grid height exceeds atlas/);
   });
 });
 
@@ -79,10 +91,21 @@ describe('TileSet._setDefinition', () => {
 
   it('copies and freezes per-tile collision shapes', () => {
     const ts = new TileSet({ name: 't', texture: fakeRegion(), tileWidth: 32, tileHeight: 32, tileCount: 4 });
-    const collision = [{
-      kind: 'rectangle' as const,
-      id: 1, name: '', type: '', x: 0, y: 0, width: 8, height: 8, rotation: 0, visible: true, properties: {},
-    }];
+    const collision = [
+      {
+        kind: 'rectangle' as const,
+        id: 1,
+        name: '',
+        type: '',
+        x: 0,
+        y: 0,
+        width: 8,
+        height: 8,
+        rotation: 0,
+        visible: true,
+        properties: {},
+      },
+    ];
 
     ts._setDefinition(0, { collision });
 
@@ -96,15 +119,29 @@ describe('TileSet._setDefinition', () => {
 describe('TileSet._setDefinitions', () => {
   it('replaces the internal definitions map from an array, copying each field', () => {
     const ts = new TileSet({ name: 't', texture: fakeRegion(), tileWidth: 32, tileHeight: 32, tileCount: 4 });
-    const collision = [{
-      kind: 'rectangle' as const,
-      id: 1, name: '', type: '', x: 0, y: 0, width: 8, height: 8, rotation: 0, visible: true, properties: {},
-    }];
+    const collision = [
+      {
+        kind: 'rectangle' as const,
+        id: 1,
+        name: '',
+        type: '',
+        x: 0,
+        y: 0,
+        width: 8,
+        height: 8,
+        rotation: 0,
+        visible: true,
+        properties: {},
+      },
+    ];
     const definitions: TileDefinition[] = [
       {
         localTileId: 0,
         properties: { solid: true },
-        animation: [{ localTileId: 0, duration: 100 }, { localTileId: 1, duration: 100 }],
+        animation: [
+          { localTileId: 0, duration: 100 },
+          { localTileId: 1, duration: 100 },
+        ],
         collision,
       },
       { localTileId: 1 }, // no properties/animation/collision at all

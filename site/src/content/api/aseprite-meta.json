@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Metadata block of an Aseprite JSON export."
-      ],
+      "paragraphs": ["Metadata block of an Aseprite JSON export."],
       "importLine": "import { AsepriteMeta } from '@codexo/exojs-aseprite'",
       "sourceLink": null
     },

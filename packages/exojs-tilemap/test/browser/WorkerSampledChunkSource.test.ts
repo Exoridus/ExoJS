@@ -34,9 +34,13 @@ describe('createWorkerSampledChunkSource — real Worker', () => {
   it('tiles installed via ChunkStreamer are readable through TileLayer.getTileAt', async () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 0, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 0,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     const source = createWorkerSampledChunkSource(layer, {
       workerSource: sumSamplerWorkerSource,
@@ -50,9 +54,12 @@ describe('createWorkerSampledChunkSource — real Worker', () => {
       // ChunkStreamer's async branch installs on a later microtask/message-event
       // tick, not synchronously - wait for the worker round trip to actually
       // complete before asserting.
-      await vi.waitFor(() => {
-        expect(layer.getTileAt(0, 0)).not.toBeNull();
-      }, { timeout: 5000 });
+      await vi.waitFor(
+        () => {
+          expect(layer.getTileAt(0, 0)).not.toBeNull();
+        },
+        { timeout: 5000 },
+      );
 
       // Even samples resolve to a tile, odd ones stay empty. The expectation is
       // derived from the same helper the worker bundled, so a build that dropped

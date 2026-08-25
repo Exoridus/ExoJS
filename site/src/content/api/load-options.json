@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for the catalog/asset/leaf Loader.load forms."
-      ],
+      "paragraphs": ["Options for the catalog/asset/leaf Loader.load forms."],
       "importLine": "import { LoadOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,10 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Dispatch token for binary data loading.",
-        "`loader.load(Asset.type('binary', 'data.bin'))` returns `Promise<ArrayBuffer>`."
-      ],
+      "paragraphs": ["Dispatch token for binary data loading.", "`loader.load(Asset.type('binary', 'data.bin'))` returns `Promise<ArrayBuffer>`."],
       "importLine": "import { BinaryAsset } from '@codexo/exojs'",
       "sourceLink": null
     },

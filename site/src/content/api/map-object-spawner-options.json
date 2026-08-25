@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for MapObjectSpawner."
-      ],
+      "paragraphs": ["Options for MapObjectSpawner."],
       "importLine": "import { MapObjectSpawnerOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

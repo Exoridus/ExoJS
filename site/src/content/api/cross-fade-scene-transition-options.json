@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for CrossFadeSceneTransition."
-      ],
+      "paragraphs": ["Options for CrossFadeSceneTransition."],
       "importLine": "import { CrossFadeSceneTransitionOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for createSampledChunkSource."
-      ],
+      "paragraphs": ["Options for createSampledChunkSource."],
       "importLine": "import { SampledChunkSourceOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

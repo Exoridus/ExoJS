@@ -403,7 +403,8 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
 
     this._writeUniformData(backend, system, drawCall.texture);
 
-    const vertexBuffer = gpuState !== null ? gpuState.instanceBuffer : this._uploadModeData(device, resources, mode, targetVertexBytes, vertexByteOffset, drawCount);
+    const vertexBuffer =
+      gpuState !== null ? gpuState.instanceBuffer : this._uploadModeData(device, resources, mode, targetVertexBytes, vertexByteOffset, drawCount);
 
     device.queue.writeBuffer(
       this._uniformBuffer!,
@@ -872,7 +873,9 @@ export class WebGpuParticleRenderer extends AbstractWebGpuRenderer<ParticleSyste
       // `stripIndexFormat` is required for an indexed strip and forbidden
       // otherwise, so it is omitted rather than set to `undefined`.
       primitive:
-        resources.stripIndexFormat === undefined ? { topology: resources.topology } : { topology: resources.topology, stripIndexFormat: resources.stripIndexFormat },
+        resources.stripIndexFormat === undefined
+          ? { topology: resources.topology }
+          : { topology: resources.topology, stripIndexFormat: resources.stripIndexFormat },
     };
 
     if (stencil) {

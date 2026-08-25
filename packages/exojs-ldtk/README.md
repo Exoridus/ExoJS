@@ -94,8 +94,8 @@ scene nodes — the application owns those.
 ## Core compatibility
 
 | `@codexo/exojs-ldtk` | `@codexo/exojs` |
-|---|---|
-| 0.14.x | 0.14.x |
+| -------------------- | --------------- |
+| 0.14.x               | 0.14.x          |
 
 ## Links
 

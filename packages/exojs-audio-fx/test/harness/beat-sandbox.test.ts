@@ -10,7 +10,7 @@
  */
 
 import { clicktrack, SAMPLE_RATE } from '../fixtures/beat-fixtures';
-import { type BeatMessage, runDetector,type StateMessage, type WorkletMessage } from './beat-sandbox';
+import { type BeatMessage, runDetector, type StateMessage, type WorkletMessage } from './beat-sandbox';
 
 // Use a 15-second 120-BPM clicktrack for all sandbox tests
 const FIXTURE = clicktrack(120, 15);
@@ -27,7 +27,7 @@ function stateMessages(msgs: WorkletMessage[]): StateMessage[] {
 /** Serialize a message log to a stable string for equality comparison. */
 function serializeLog(msgs: WorkletMessage[]): string {
   return JSON.stringify(
-    msgs.map((m) => {
+    msgs.map(m => {
       // Exclude _audioTimeSec from determinism comparison (it's an annotation
       // that depends on block size; actual message content must be identical).
       const { _audioTimeSec: _ignored, ...rest } = m as WorkletMessage & { _audioTimeSec: number };
@@ -58,13 +58,13 @@ describe('BeatDetector sandbox — block-independence', { timeout: 120_000 }, ()
 
   beforeAll(() => {
     const { messages } = runDetector(FIXTURE.samples, { blockSize: 128 });
-    refBeatTimes = beatMessages(messages).map((m) => m.audioTime);
+    refBeatTimes = beatMessages(messages).map(m => m.audioTime);
   });
 
   for (const bs of blockSizes) {
     it(`blockSize=${bs === TOTAL_SAMPLES ? 'whole-buffer' : bs} yields identical beat.audioTime sequence`, () => {
       const { messages } = runDetector(FIXTURE.samples, { blockSize: bs });
-      const beatTimes = beatMessages(messages).map((m) => m.audioTime);
+      const beatTimes = beatMessages(messages).map(m => m.audioTime);
       // beat.audioTime is computed from sample counts inside the worklet;
       // block boundaries do not affect the computation, so results must be exact.
       expect(beatTimes).toEqual(refBeatTimes);
@@ -90,9 +90,7 @@ describe('BeatDetector sandbox — basic detection (120 BPM)', { timeout: 60_000
     // The state tempo report is gated on the locked grid. A 120-BPM clicktrack
     // locks well within ~2 s, so locked state messages with tempo > 0 must appear.
     const warmupMs = 2000;
-    const settledStates = stateMessages(messages).filter(
-      (s) => s._audioTimeSec * 1000 >= warmupMs && s.tempo > 0,
-    );
+    const settledStates = stateMessages(messages).filter(s => s._audioTimeSec * 1000 >= warmupMs && s.tempo > 0);
     expect(settledStates.length).toBeGreaterThan(0);
   });
 

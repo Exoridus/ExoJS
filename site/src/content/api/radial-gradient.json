@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Radial gradient in UV space around `center` with normalized radius."
-      ],
+      "paragraphs": ["Radial gradient in UV space around `center` with normalized radius."],
       "importLine": "import { RadialGradient } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Aseprite JSON export in array mode - frames is an ordered array."
-      ],
+      "paragraphs": ["Aseprite JSON export in array mode - frames is an ordered array."],
       "importLine": "import { AsepriteArrayData } from '@codexo/exojs-aseprite'",
       "sourceLink": null
     },

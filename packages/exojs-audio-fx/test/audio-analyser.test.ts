@@ -37,11 +37,7 @@ function makeMediaStream(): MediaStream {
  * in registration order.
  */
 async function withSuspendedContext<T>(
-  run: (mod: {
-    fresh: typeof import('@codexo/exojs');
-    FreshAudioAnalyser: typeof AudioAnalyser;
-    flipToReady: () => void;
-  }) => T | Promise<T>,
+  run: (mod: { fresh: typeof import('@codexo/exojs'); FreshAudioAnalyser: typeof AudioAnalyser; flipToReady: () => void }) => T | Promise<T>,
 ): Promise<T> {
   const OriginalAudioContext = globalThis.AudioContext;
   class SuspendedMockAudioContext extends (OriginalAudioContext as unknown as new () => AudioContext) {

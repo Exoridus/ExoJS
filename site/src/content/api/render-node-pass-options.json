@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for RenderNodePass."
-      ],
+      "paragraphs": ["Options for RenderNodePass."],
       "importLine": "import { RenderNodePassOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

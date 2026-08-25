@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Root LDtk JSON document (`*.ldtk`)."
-      ],
+      "paragraphs": ["Root LDtk JSON document (`*.ldtk`)."],
       "importLine": "import { LdtkData } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

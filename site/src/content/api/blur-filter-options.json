@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction-time options for a BlurFilter."
-      ],
+      "paragraphs": ["Construction-time options for a BlurFilter."],
       "importLine": "import { BlurFilterOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
-import { BoxShape, CircleShape, DistanceJoint, MouseJoint, PhysicsBody, PhysicsWorld, PrismaticJoint, RevoluteJoint, WeldJoint, WheelJoint } from '../src/index';
+import {
+  BoxShape,
+  CircleShape,
+  DistanceJoint,
+  MouseJoint,
+  PhysicsBody,
+  PhysicsWorld,
+  PrismaticJoint,
+  RevoluteJoint,
+  WeldJoint,
+  WheelJoint,
+} from '../src/index';
 
 /**
  * Joints. Soft constraints solved in the sub-step loop
@@ -249,7 +260,15 @@ describe('joints', () => {
     const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
 
     world.addJoint(
-      new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 0, y: 1 }, enableLimit: true, lowerTranslation: 0, upperTranslation: 100 }),
+      new PrismaticJoint({
+        bodyA: anchor,
+        bodyB: slider,
+        anchor: { x: 0, y: 0 },
+        axis: { x: 0, y: 1 },
+        enableLimit: true,
+        lowerTranslation: 0,
+        upperTranslation: 100,
+      }),
     );
 
     advance(world, 3);
@@ -265,7 +284,15 @@ describe('joints', () => {
     const slider = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(20, 20) }] }));
 
     world.addJoint(
-      new PrismaticJoint({ bodyA: anchor, bodyB: slider, anchor: { x: 0, y: 0 }, axis: { x: 1, y: 0 }, enableMotor: true, motorSpeed: 100, maxMotorForce: 1e8 }),
+      new PrismaticJoint({
+        bodyA: anchor,
+        bodyB: slider,
+        anchor: { x: 0, y: 0 },
+        axis: { x: 1, y: 0 },
+        enableMotor: true,
+        motorSpeed: 100,
+        maxMotorForce: 1e8,
+      }),
     );
 
     advance(world, 0.5);
@@ -546,7 +573,9 @@ describe('joints', () => {
     const chassis = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 } }));
     const wheel = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 30 }, colliders: [{ shape: new CircleShape(10) }] }));
 
-    expect(() => new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 0 }, hertz: 5, dampingRatio: 1 })).toThrow(RangeError);
+    expect(() => new WheelJoint({ bodyA: chassis, bodyB: wheel, anchor: { x: 0, y: 30 }, axis: { x: 0, y: 0 }, hertz: 5, dampingRatio: 1 })).toThrow(
+      RangeError,
+    );
   });
 
   it('a wheel motor on a fixed-rotation wheel does nothing (zero angular effective mass)', () => {

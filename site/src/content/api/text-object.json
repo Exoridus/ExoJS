@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A text object carrying styled text content within `[x, y, width, height]`."
-      ],
+      "paragraphs": ["A text object carrying styled text content within `[x, y, width, height]`."],
       "importLine": "import { TextObject } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

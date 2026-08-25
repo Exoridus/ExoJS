@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Why a MapSpawnError was raised."
-      ],
+      "paragraphs": ["Why a MapSpawnError was raised."],
       "importLine": "import { MapSpawnErrorReason } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

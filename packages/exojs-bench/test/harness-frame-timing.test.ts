@@ -1,7 +1,7 @@
 import { ARCHETYPES } from '../src/rendering/archetypes';
 import type { Backend, CellSpec, EngineAdapter } from '../src/rendering/EngineAdapter';
 import { runCell } from '../src/rendering/page/harness';
-import { mutationSignature,selectMutationIndices } from '../src/shared/mutation';
+import { mutationSignature, selectMutationIndices } from '../src/shared/mutation';
 
 /** The harness's own fixed RNG seed (`page/harness.ts`), mirrored so the fake arm reports the signature it expects. */
 const SEED = 0xc0ffee;
@@ -148,17 +148,7 @@ describe('WebGPU warmup/timing measurement boundary', () => {
     // the first timed submit IS the measurement boundary: any warmup work is off
     // the queue before a timed frame's cumulative `onSubmittedWorkDone` bracket
     // opens. Each timed frame then contributes its own submit/wait pair.
-    expect(arm.events).toEqual([
-      'submit',
-      'submit',
-      'submit',
-      'queue-wait',
-      'submit',
-      'queue-wait',
-      'submit',
-      'queue-wait',
-      'teardown',
-    ]);
+    expect(arm.events).toEqual(['submit', 'submit', 'submit', 'queue-wait', 'submit', 'queue-wait', 'submit', 'queue-wait', 'teardown']);
   });
 
   test('never charges a timed frame with work submitted during warmup', async () => {
@@ -316,7 +306,9 @@ const createFakeWebGpuDevice = (options: {
     createCommandEncoder: (): GPUCommandEncoder =>
       ({
         beginRenderPass: (descriptor: GPURenderPassDescriptor): GPURenderPassEncoder => {
-          const writes = (descriptor as unknown as Record<string, unknown>)['timestampWrites'] as { beginningOfPassWriteIndex: number; endOfPassWriteIndex: number } | undefined;
+          const writes = (descriptor as unknown as Record<string, unknown>)['timestampWrites'] as
+            | { beginningOfPassWriteIndex: number; endOfPassWriteIndex: number }
+            | undefined;
 
           if (writes === undefined) {
             timestampWritesSeen.push(null);

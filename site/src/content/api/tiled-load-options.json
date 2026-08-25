@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options accepted by both the runtime (`TileMap`) and source (`TiledMap`) asset bindings when loading a Tiled map."
-      ],
+      "paragraphs": ["Options accepted by both the runtime (`TileMap`) and source (`TiledMap`) asset bindings when loading a Tiled map."],
       "importLine": "import { TiledLoadOptions } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

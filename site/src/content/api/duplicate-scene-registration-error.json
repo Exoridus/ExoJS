@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Thrown (dev builds only) when `ApplicationOptions.scenes` registers the same constructor under more than one key."
-      ],
+      "paragraphs": ["Thrown (dev builds only) when `ApplicationOptions.scenes` registers the same constructor under more than one key."],
       "importLine": "import { DuplicateSceneRegistrationError } from '@codexo/exojs'",
       "sourceLink": null
     },

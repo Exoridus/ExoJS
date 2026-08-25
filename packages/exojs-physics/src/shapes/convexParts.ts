@@ -20,4 +20,5 @@ import { PolygonShape } from './PolygonShape';
  * non-collinear vertices, on a self-intersecting outline, or when a part comes
  * out too degenerate for {@link PolygonShape}.
  */
-export const toConvexPolygonShapes = (vertices: ReadonlyArray<Readonly<PointLike>>): PolygonShape[] => decomposeToConvexParts(vertices).map(part => new PolygonShape(part));
+export const toConvexPolygonShapes = (vertices: ReadonlyArray<Readonly<PointLike>>): PolygonShape[] =>
+  decomposeToConvexParts(vertices).map(part => new PolygonShape(part));

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A signed chunk coordinate pair."
-      ],
+      "paragraphs": ["A signed chunk coordinate pair."],
       "importLine": "import { ChunkCoord } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

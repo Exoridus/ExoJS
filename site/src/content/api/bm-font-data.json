@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Parsed representation of a BMFont (.fnt) descriptor."
-      ],
+      "paragraphs": ["Parsed representation of a BMFont (.fnt) descriptor."],
       "importLine": "import { BmFontData } from '@codexo/exojs'",
       "sourceLink": null
     },

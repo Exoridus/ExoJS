@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A two-dimensional binding with at least one source."
-      ],
+      "paragraphs": ["A two-dimensional binding with at least one source."],
       "importLine": "import { VectorBinding } from '@codexo/exojs'",
       "sourceLink": null
     },

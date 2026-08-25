@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Collider settings a TileColliderMaterialResolver may override."
-      ],
+      "paragraphs": ["Collider settings a TileColliderMaterialResolver may override."],
       "importLine": "import { TileColliderMaterial } from '@codexo/exojs-tilemap-physics'",
       "sourceLink": null
     },

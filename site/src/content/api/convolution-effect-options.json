@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for ConvolutionEffect."
-      ],
+      "paragraphs": ["Construction options for ConvolutionEffect."],
       "importLine": "import { ConvolutionEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

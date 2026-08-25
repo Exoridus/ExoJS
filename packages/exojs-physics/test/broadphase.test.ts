@@ -127,11 +127,11 @@ describe('AabbTreeBroadPhase', () => {
     const out: CandidatePair[] = [];
 
     broadPhase.computePairs(colliders, out);
-    expect(colliders.every((c) => c._treeProxy !== -1)).toBe(true);
+    expect(colliders.every(c => c._treeProxy !== -1)).toBe(true);
 
     broadPhase.destroy();
 
-    expect(colliders.every((c) => c._treeProxy === -1)).toBe(true);
+    expect(colliders.every(c => c._treeProxy === -1)).toBe(true);
   });
 
   it('matches the brute-force oracle across many randomized, evolving configurations', () => {
@@ -171,7 +171,11 @@ describe('AabbTreeBroadPhase', () => {
       new PhysicsBody({
         type: 'dynamic',
         position: { x: 0, y: 0 },
-        colliders: [{ shape: new BoxShape(10, 10) }, { shape: new BoxShape(10, 10), offset: { x: 4, y: 0 } }, { shape: new CircleShape(6), offset: { x: -4, y: 0 } }],
+        colliders: [
+          { shape: new BoxShape(10, 10) },
+          { shape: new BoxShape(10, 10), offset: { x: 4, y: 0 } },
+          { shape: new CircleShape(6), offset: { x: -4, y: 0 } },
+        ],
       }),
     );
     const other = colliderAt(world, new BoxShape(10, 10), { x: 6, y: 0 });

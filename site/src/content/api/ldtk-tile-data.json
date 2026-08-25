@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A single tile placed in a Tiles or AutoLayer layer instance."
-      ],
+      "paragraphs": ["A single tile placed in a Tiles or AutoLayer layer instance."],
       "importLine": "import { LdtkTileData } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

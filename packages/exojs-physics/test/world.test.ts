@@ -94,9 +94,7 @@ describe('PhysicsWorld lifecycle and mass model', () => {
   it('treats static and kinematic bodies as infinite mass', () => {
     const world = new PhysicsWorld();
     const staticBody = world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), density: 5 }] }));
-    const kinematicBody = world.add(
-      new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), density: 5 }] }),
-    );
+    const kinematicBody = world.add(new PhysicsBody({ type: 'kinematic', position: { x: 0, y: 0 }, colliders: [{ shape: new BoxShape(10, 10), density: 5 }] }));
 
     expect(staticBody.invMass).toBe(0);
     expect(staticBody.invInertia).toBe(0);
@@ -525,8 +523,8 @@ describe('PhysicsWorld.attach convenience', () => {
   });
 });
 
-describe('PhysicsWorld.attach: defaults to the node\'s world position (P2f)', () => {
-  it('places the body at the node\'s current world position when no position option is given', () => {
+describe("PhysicsWorld.attach: defaults to the node's world position (P2f)", () => {
+  it("places the body at the node's current world position when no position option is given", () => {
     const world = new PhysicsWorld();
     const node = new Drawable();
 
@@ -540,7 +538,7 @@ describe('PhysicsWorld.attach: defaults to the node\'s world position (P2f)', ()
     node.destroy();
   });
 
-  it('respects an explicit position option over the node\'s world position', () => {
+  it("respects an explicit position option over the node's world position", () => {
     const world = new PhysicsWorld();
     const node = new Drawable();
 
@@ -571,7 +569,7 @@ describe('PhysicsWorld.attach: defaults to the node\'s world position (P2f)', ()
     parent.destroy();
   });
 
-  it('defaults the body angle to the node\'s current world rotation when no angle option is given', () => {
+  it("defaults the body angle to the node's current world rotation when no angle option is given", () => {
     const world = new PhysicsWorld();
     const node = new Drawable();
 
@@ -584,7 +582,7 @@ describe('PhysicsWorld.attach: defaults to the node\'s world position (P2f)', ()
     node.destroy();
   });
 
-  it('respects an explicit angle option over the node\'s world rotation', () => {
+  it("respects an explicit angle option over the node's world rotation", () => {
     const world = new PhysicsWorld();
     const node = new Drawable();
 
@@ -597,7 +595,7 @@ describe('PhysicsWorld.attach: defaults to the node\'s world position (P2f)', ()
     node.destroy();
   });
 
-  it('composes WORLD rotation through a rotated parent (not just the node\'s own local rotation)', () => {
+  it("composes WORLD rotation through a rotated parent (not just the node's own local rotation)", () => {
     const world = new PhysicsWorld();
     const parent = new Container();
     const node = new Drawable();

@@ -1,11 +1,10 @@
-
 import { type ImageLayer } from './ImageLayer';
 import type { ObjectLayer, ObjectSchema } from './ObjectLayer';
 import { type TileLayer } from './TileLayer';
 import type { TileMapViewOptions } from './TileMapView';
 import { TileMapView } from './TileMapView';
 import { type TileSet } from './TileSet';
-import type { ResolvedTile,TileProperties } from './types';
+import type { ResolvedTile, TileProperties } from './types';
 import { validatePairedDimensions, validatePositiveInteger } from './types';
 
 /**
@@ -96,7 +95,6 @@ export interface TileMapOptions {
  * @advanced
  */
 export class TileMap {
-
   /** Map name (debug). */
   public readonly name: string;
 
@@ -173,9 +171,7 @@ export class TileMap {
     this.renderOrder = options.renderOrder ?? 'right-down';
 
     this._tilesets = options.tilesets ? [...options.tilesets] : [];
-    this.properties = options.properties
-      ? Object.freeze({ ...options.properties })
-      : Object.freeze({});
+    this.properties = options.properties ? Object.freeze({ ...options.properties }) : Object.freeze({});
 
     if (options.layers) {
       for (const layer of options.layers) {
@@ -216,9 +212,7 @@ export class TileMap {
 
     for (const id of tileIds) {
       if (imageIds.has(id)) {
-        throw new Error(
-          `Layer ID ${id} exists as both a tile layer and an image layer in map "${this.name}"; documentOrder cannot disambiguate them.`,
-        );
+        throw new Error(`Layer ID ${id} exists as both a tile layer and an image layer in map "${this.name}"; documentOrder cannot disambiguate them.`);
       }
     }
 
@@ -307,9 +301,7 @@ export class TileMap {
 
   private _addLayer(layer: TileLayer): void {
     if (this._layerById.has(layer.id)) {
-      throw new Error(
-        `Layer ID ${layer.id} already exists in map "${this.name}".`,
-      );
+      throw new Error(`Layer ID ${layer.id} already exists in map "${this.name}".`);
     }
     this._layerById.set(layer.id, layer);
     this._layers.push(layer);
@@ -437,9 +429,7 @@ export class TileMap {
   /** Shared by the constructor and {@link addImageLayer}: enforce ID uniqueness within the image-layer kind. */
   private _addImageLayer(layer: ImageLayer): void {
     if (this._imageLayers.some(existing => existing.id === layer.id)) {
-      throw new Error(
-        `Image layer ID ${layer.id} already exists in map "${this.name}".`,
-      );
+      throw new Error(`Image layer ID ${layer.id} already exists in map "${this.name}".`);
     }
     this._imageLayers.push(layer);
   }

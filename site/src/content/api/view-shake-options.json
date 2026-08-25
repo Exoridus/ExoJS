@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for View.shake."
-      ],
+      "paragraphs": ["Options for View.shake."],
       "importLine": "import { ViewShakeOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

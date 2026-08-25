@@ -51,10 +51,7 @@ interface TileSetSetup {
   readonly offsetY?: number;
 }
 
-function makeTileset(
-  collisionByTile: Record<number, readonly TileMapObject[]>,
-  setup: TileSetSetup = {},
-): TileSet {
+function makeTileset(collisionByTile: Record<number, readonly TileMapObject[]>, setup: TileSetSetup = {}): TileSet {
   const tileset = new TileSet({
     name: 'ts',
     texture: fakeRegion(),
@@ -93,14 +90,7 @@ function makeLayer(tileset: TileSet, setup: LayerSetup = {}): TileLayer {
   });
 }
 
-function place(
-  layer: TileLayer,
-  tileset: TileSet,
-  tx: number,
-  ty: number,
-  localTileId = 0,
-  transform: TileTransform = TILE_TRANSFORM_IDENTITY,
-): void {
+function place(layer: TileLayer, tileset: TileSet, tx: number, ty: number, localTileId = 0, transform: TileTransform = TILE_TRANSFORM_IDENTITY): void {
   layer.setTileAt(tx, ty, { tileset, localTileId, transform });
 }
 
@@ -322,10 +312,7 @@ describe('buildTileCollisionGeometry — offsets and transforms', () => {
   });
 
   it('applies the tileset draw offset, matching the rendered tile position', () => {
-    const tileset = makeTileset(
-      { 0: [shape({ x: 0, y: 0, width: 8, height: 8 })] },
-      { offsetX: 3, offsetY: -5 },
-    );
+    const tileset = makeTileset({ 0: [shape({ x: 0, y: 0, width: 8, height: 8 })] }, { offsetX: 3, offsetY: -5 });
     const layer = makeLayer(tileset);
     place(layer, tileset, 1, 1);
 

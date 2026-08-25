@@ -160,9 +160,7 @@ describe('LimiterEffect', () => {
       let i = 0;
       // _setupNodes createGain order: inputGain, outputGain, dryGain, wetGain
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
-      const compressorSpy = vi
-        .spyOn(ctx, 'createDynamicsCompressor')
-        .mockReturnValue(compressor as unknown as DynamicsCompressorNode);
+      const compressorSpy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(compressor as unknown as DynamicsCompressorNode);
       const [inputGain, outputGain, dryGain, wetGain] = gains;
       return { compressor, gains, inputGain, outputGain, dryGain, wetGain, gainSpy, compressorSpy };
     };
@@ -339,9 +337,7 @@ describe('LimiterEffect', () => {
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let i = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
-      const compressorSpy = vi
-        .spyOn(ctx, 'createDynamicsCompressor')
-        .mockReturnValue(compressor as unknown as DynamicsCompressorNode);
+      const compressorSpy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(compressor as unknown as DynamicsCompressorNode);
 
       const effect = new LimiterEffect();
       effect.threshold = -12;
@@ -382,9 +378,7 @@ describe('LimiterEffect', () => {
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let i = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
-      const compressorSpy = vi
-        .spyOn(ctx, 'createDynamicsCompressor')
-        .mockReturnValue(compressor as unknown as DynamicsCompressorNode);
+      const compressorSpy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(compressor as unknown as DynamicsCompressorNode);
 
       const effect = new LimiterEffect();
       effect.attack = 0.01;
@@ -425,9 +419,7 @@ describe('LimiterEffect', () => {
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let i = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
-      const compressorSpy = vi
-        .spyOn(ctx, 'createDynamicsCompressor')
-        .mockReturnValue(compressor as unknown as DynamicsCompressorNode);
+      const compressorSpy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(compressor as unknown as DynamicsCompressorNode);
 
       const effect = new LimiterEffect();
       effect.release = 0.3;
@@ -468,9 +460,7 @@ describe('LimiterEffect', () => {
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let i = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
-      const compressorSpy = vi
-        .spyOn(ctx, 'createDynamicsCompressor')
-        .mockReturnValue(compressor as unknown as DynamicsCompressorNode);
+      const compressorSpy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(compressor as unknown as DynamicsCompressorNode);
 
       const effect = new LimiterEffect();
       effect.ratio = 8;
@@ -511,9 +501,7 @@ describe('LimiterEffect', () => {
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let i = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
-      const compressorSpy = vi
-        .spyOn(ctx, 'createDynamicsCompressor')
-        .mockReturnValue(compressor as unknown as DynamicsCompressorNode);
+      const compressorSpy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(compressor as unknown as DynamicsCompressorNode);
 
       const effect = new LimiterEffect();
       effect.knee = 6;
@@ -539,9 +527,7 @@ describe('LimiterEffect', () => {
       const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
       let i = 0;
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[i++] as unknown as GainNode);
-      const compressorSpy = vi
-        .spyOn(ctx, 'createDynamicsCompressor')
-        .mockReturnValue(compressor as unknown as DynamicsCompressorNode);
+      const compressorSpy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(compressor as unknown as DynamicsCompressorNode);
       const [, , dryGain, wetGain] = gains;
       return { dryGain, wetGain, gainSpy, compressorSpy };
     };
@@ -591,9 +577,7 @@ describe('LimiterEffect', () => {
       const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => {
         return gains[gainCallCount++] as unknown as GainNode;
       });
-      const compressorSpy = vi
-        .spyOn(ctx, 'createDynamicsCompressor')
-        .mockReturnValue(compressor as unknown as DynamicsCompressorNode);
+      const compressorSpy = vi.spyOn(ctx, 'createDynamicsCompressor').mockReturnValue(compressor as unknown as DynamicsCompressorNode);
 
       const effect = new LimiterEffect();
       effect.destroy();

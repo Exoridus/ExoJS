@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options accepted by an asset of the built-in `video` type."
-      ],
+      "paragraphs": ["Options accepted by an asset of the built-in `video` type."],
       "importLine": "import { VideoAssetOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

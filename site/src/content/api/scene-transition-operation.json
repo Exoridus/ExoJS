@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "What kind of navigation a SceneTransitionSession is running for. Read via SceneTransitionContext.operation."
-      ],
+      "paragraphs": ["What kind of navigation a SceneTransitionSession is running for. Read via SceneTransitionContext.operation."],
       "importLine": "import { SceneTransitionOperation } from '@codexo/exojs'",
       "sourceLink": null
     },

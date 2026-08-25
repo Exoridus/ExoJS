@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Streaming audio backed by an `<audio>` element."
-      ],
+      "paragraphs": ["Streaming audio backed by an `<audio>` element."],
       "importLine": "import { MusicAssetType } from '@codexo/exojs'",
       "sourceLink": null
     },

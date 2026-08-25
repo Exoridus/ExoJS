@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Pixel region rectangle used throughout the Aseprite JSON format."
-      ],
+      "paragraphs": ["Pixel region rectangle used throughout the Aseprite JSON format."],
       "importLine": "import { AsepriteRect } from '@codexo/exojs-aseprite'",
       "sourceLink": null
     },

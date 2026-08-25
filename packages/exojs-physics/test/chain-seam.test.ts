@@ -54,9 +54,7 @@ const slideAcross = (shape: AnyShape, chain: ChainShape, startX = -120, steps = 
 
   world.add(new PhysicsBody({ type: 'static', position: { x: 0, y: 100 }, colliders: [{ shape: chain, friction: 0 }] }));
 
-  const body = world.add(
-    new PhysicsBody({ type: 'dynamic', position: { x: startX, y: 60 }, colliders: [{ shape, density: 1, friction: 0 }] }),
-  );
+  const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: startX, y: 60 }, colliders: [{ shape, density: 1, friction: 0 }] }));
 
   for (let i = 0; i < 90; i++) {
     world.step(DT);

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "An axis-aligned rectangle object spanning `[x, y, width, height]`."
-      ],
+      "paragraphs": ["An axis-aligned rectangle object spanning `[x, y, width, height]`."],
       "importLine": "import { RectangleObject } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

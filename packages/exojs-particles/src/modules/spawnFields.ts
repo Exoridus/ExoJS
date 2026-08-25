@@ -1,7 +1,7 @@
 import type { Color, Vector } from '@codexo/exojs';
 
-import type { Distribution } from "#distributions/Distribution";
-import type { ParticleWriter } from "#ParticleStorage";
+import type { Distribution } from '#distributions/Distribution';
+import type { ParticleWriter } from '#ParticleStorage';
 
 /**
  * Per-property spawn configuration shared by the built-in spawners.

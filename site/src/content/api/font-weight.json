@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Font weight values accepted by CSS / Canvas 2D."
-      ],
+      "paragraphs": ["Font weight values accepted by CSS / Canvas 2D."],
       "importLine": "import { FontWeight } from '@codexo/exojs'",
       "sourceLink": null
     },

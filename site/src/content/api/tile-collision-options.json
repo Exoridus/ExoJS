@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for buildTileCollisionGeometry."
-      ],
+      "paragraphs": ["Options for buildTileCollisionGeometry."],
       "importLine": "import { TileCollisionOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

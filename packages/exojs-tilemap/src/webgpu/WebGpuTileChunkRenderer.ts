@@ -36,7 +36,6 @@ const initialBatchCapacity = 256;
 const indicesPerInstance = 6;
 const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 
-
 const tileShaderSource = fillShaderSource(tileShaderTemplate, { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT });
 
 /**
@@ -244,14 +243,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     }
   }
 
-  private _renderPage(
-    backend: WebGpuBackend,
-    texture: Texture,
-    quads: readonly TileQuad[],
-    blendMode: BlendModes,
-    tintRgba: number,
-    nodeIndex: number,
-  ): void {
+  private _renderPage(backend: WebGpuBackend, texture: Texture, quads: readonly TileQuad[], blendMode: BlendModes, tintRgba: number, nodeIndex: number): void {
     if (quads.length === 0) {
       return;
     }
@@ -400,9 +392,7 @@ export class WebGpuTileChunkRenderer extends AbstractWebGpuRenderer<TileChunkNod
     // ending (submitting) the pass first.
     if (
       (ownDrawsInPass && (projectionChanged || (willDraw && targetInstanceBytes > this._instanceBufferCapacity))) ||
-      (willDraw &&
-        coordinator.passHasDraws &&
-        (backend._textureUploadWouldMutate(texture) || backend._transformStorageWouldGrow(this._maxNodeIndex + 1)))
+      (willDraw && coordinator.passHasDraws && (backend._textureUploadWouldMutate(texture) || backend._transformStorageWouldGrow(this._maxNodeIndex + 1)))
     ) {
       coordinator.endPass();
     }

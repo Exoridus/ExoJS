@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for an ActionMap."
-      ],
+      "paragraphs": ["Construction options for an ActionMap."],
       "importLine": "import { ActionMapOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

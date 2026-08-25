@@ -198,9 +198,9 @@ export function packTile(tilesetIndex: number, localTileId: number, transform: T
   if (transform.diagonal) bits |= TRANSFORM_DIAGONAL;
   // +1 so 0 means "empty" not "tile 0 without transform"
   const storedId = localTileId + 1;
-  return (storedId & PACKED_LOCAL_MASK)
-    | ((tilesetIndex << PACKED_TILESET_SHIFT) & PACKED_TILESET_MASK)
-    | ((bits << PACKED_TRANSFORM_SHIFT) & PACKED_TRANSFORM_MASK);
+  return (
+    (storedId & PACKED_LOCAL_MASK) | ((tilesetIndex << PACKED_TILESET_SHIFT) & PACKED_TILESET_MASK) | ((bits << PACKED_TRANSFORM_SHIFT) & PACKED_TRANSFORM_MASK)
+  );
 }
 
 /**
@@ -352,12 +352,7 @@ export function validateInteger(value: number, label: string): void {
  * @param fieldPrefix Used as the field-name prefix passed to {@link validatePositiveInteger} (e.g. `"layer"` for `"layer.width"`).
  * @throws If exactly one of `width`/`height` is provided, or either is not a positive integer.
  */
-export function validatePairedDimensions(
-  width: number | undefined,
-  height: number | undefined,
-  entityName: string,
-  fieldPrefix: string,
-): void {
+export function validatePairedDimensions(width: number | undefined, height: number | undefined, entityName: string, fieldPrefix: string): void {
   if (width !== undefined || height !== undefined) {
     if (width === undefined || height === undefined) {
       throw new Error(`${entityName} width and height must both be provided (bounded) or both omitted (unbounded).`);

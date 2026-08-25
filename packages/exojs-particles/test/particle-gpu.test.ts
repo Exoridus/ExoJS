@@ -651,9 +651,7 @@ describe('ParticleSystem._compile pre-existing dead slots', () => {
     expect(system.gpuMode).toBe(true);
 
     const positionsBuffer = findBufferByLabel(env, 'particle-positions');
-    const offsets = (env.queue.writeBuffer as unknown as MockInstance).mock.calls
-      .filter(([buffer]) => buffer === positionsBuffer)
-      .map(([, offset]) => offset);
+    const offsets = (env.queue.writeBuffer as unknown as MockInstance).mock.calls.filter(([buffer]) => buffer === positionsBuffer).map(([, offset]) => offset);
 
     // Slot a (alive) is uploaded at byte offset 0; slot b (dead pre-compile)
     // must be skipped, so its byte offset (8) never appears.
@@ -1025,7 +1023,7 @@ describe('ParticleGpuState direct construction', () => {
     restoreGlobals();
   });
 
-  test('throws if a registered module lacks wgsl(), bypassing ParticleSystem\'s own eligibility guard', () => {
+  test("throws if a registered module lacks wgsl(), bypassing ParticleSystem's own eligibility guard", () => {
     const env = makeMockDevice();
 
     class NoWgslModule extends UpdateModule {

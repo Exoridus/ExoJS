@@ -215,11 +215,7 @@ describe('TileMapView direct layer-node access', () => {
       tileWidth: 32,
       tileHeight: 32,
       tilesets: [tileset],
-      layers: [
-        makeLayer(tileset, { id: 1, name: 'decor' }),
-        makeLayer(tileset, { id: 2, name: 'decor' }),
-        makeLayer(tileset, { id: 3, name: 'solid' }),
-      ],
+      layers: [makeLayer(tileset, { id: 1, name: 'decor' }), makeLayer(tileset, { id: 2, name: 'decor' }), makeLayer(tileset, { id: 3, name: 'solid' })],
     });
     const view = map.createView();
 
@@ -1176,10 +1172,7 @@ describe('TileMapBand transform', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapBand bounds', () => {
-  function makeBoundsScene(
-    layerOpts: readonly LayerOpts[],
-    definition: TileMapBandDefinition,
-  ): { map: TileMap; view: TileMapView; band: TileMapBand } {
+  function makeBoundsScene(layerOpts: readonly LayerOpts[], definition: TileMapBandDefinition): { map: TileMap; view: TileMapView; band: TileMapBand } {
     const tileset = makeTileset();
     const map = new TileMap({
       name: 'bounds',
@@ -1223,7 +1216,10 @@ describe('TileMapBand bounds', () => {
 
   it('a multi-layer band is the union of its layer bounds', () => {
     const { band } = makeBoundsScene(
-      [{ id: 1, name: 'a' }, { id: 2, name: 'b', width: 2, height: 2, offsetX: 200 }],
+      [
+        { id: 1, name: 'a' },
+        { id: 2, name: 'b', width: 2, height: 2, offsetX: 200 },
+      ],
       [1, 2],
     );
 
@@ -1243,7 +1239,10 @@ describe('TileMapBand bounds', () => {
 
   it('bounds shrink after a member layer is removed and the view refreshed', () => {
     const { map, view, band } = makeBoundsScene(
-      [{ id: 1, name: 'a' }, { id: 2, name: 'b', width: 2, height: 2, offsetX: 200 }],
+      [
+        { id: 1, name: 'a' },
+        { id: 2, name: 'b', width: 2, height: 2, offsetX: 200 },
+      ],
       [1, 2],
     );
 
@@ -1352,7 +1351,14 @@ describe('TileMapBand internal membership operations', () => {
 
     otherContainer.addChild(nodeA); // reparent away, but membership is kept
 
-    expect(() => band._reorder(new Map([[nodeA.layer, 0], [nodeB.layer, 1]]))).not.toThrow();
+    expect(() =>
+      band._reorder(
+        new Map([
+          [nodeA.layer, 0],
+          [nodeB.layer, 1],
+        ]),
+      ),
+    ).not.toThrow();
     expect(band.layerNodes).toEqual([nodeA, nodeB]); // membership unaffected
     expect(nodeA.parent).toBe(otherContainer); // not re-adopted by the band
     expect(band.children).toContain(nodeB);

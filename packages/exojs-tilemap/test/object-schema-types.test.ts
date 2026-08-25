@@ -36,9 +36,7 @@ describe('ObjectKind value object', () => {
   });
 
   it('ObjectKind type is the union of the seven object literals', () => {
-    expectTypeOf<ObjectKind>().toEqualTypeOf<
-      'rectangle' | 'ellipse' | 'polygon' | 'polyline' | 'point' | 'tile' | 'text'
-    >();
+    expectTypeOf<ObjectKind>().toEqualTypeOf<'rectangle' | 'ellipse' | 'polygon' | 'polyline' | 'point' | 'tile' | 'text'>();
   });
 
   it('TileMapObjectKind remains a structural alias of ObjectKind', () => {

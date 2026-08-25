@@ -14,10 +14,7 @@ export class GameOverScene extends Scene<GameOverData> {
 
     this.app!.clearColor.set(48, 10, 10);
 
-    this._label = new Text(
-      `Game Over\nScore: ${data.score}\n\nPress Space to restart`,
-      { align: 'center', fillColor: Color.white, fontSize: 26 },
-    );
+    this._label = new Text(`Game Over\nScore: ${data.score}\n\nPress Space to restart`, { align: 'center', fillColor: Color.white, fontSize: 26 });
     this._label.setAnchor(0.5);
     this._label.setPosition(width / 2, height / 2);
 

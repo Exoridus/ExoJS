@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Top-level serialized form of a Scene produced by Scene.serialize and consumed by Scene.deserialize."
-      ],
+      "paragraphs": ["Top-level serialized form of a Scene produced by Scene.serialize and consumed by Scene.deserialize."],
       "importLine": "import { SerializedScene } from '@codexo/exojs'",
       "sourceLink": null
     },

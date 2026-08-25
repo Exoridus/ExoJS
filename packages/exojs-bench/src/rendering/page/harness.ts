@@ -176,7 +176,11 @@ const noopStructuralProbe: StructuralProbe = {
  * submit-to-done wall clock (see {@link createWebGpuGpuTimer}) - a de-vsynced
  * measure of GPU work that replaces the old vsync-bound rAF delta.
  */
-const attachProbes = (adapter: EngineAdapter, spec: CellSpec, canvas: HTMLCanvasElement): { probe: StructuralProbe; gpuTimer: GpuFrameTimer; structuralNote: string | null } => {
+const attachProbes = (
+  adapter: EngineAdapter,
+  spec: CellSpec,
+  canvas: HTMLCanvasElement,
+): { probe: StructuralProbe; gpuTimer: GpuFrameTimer; structuralNote: string | null } => {
   if (spec.backend === 'webgpu') {
     const device = adapter.gpuDevice?.() ?? null;
 

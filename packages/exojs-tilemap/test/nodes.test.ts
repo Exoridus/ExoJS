@@ -127,8 +127,17 @@ describe('TileLayerNode', () => {
   it('parallax layer: initial position is the base offset (not parallax-shifted)', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'bg', width: 4, height: 4, tileWidth: 32, tileHeight: 32,
-      tilesets: [tileset], offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5,
+      id: 1,
+      name: 'bg',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      offsetX: 10,
+      offsetY: 20,
+      parallaxX: 0.5,
+      parallaxY: 0.5,
     });
     const node = new TileLayerNode(layer);
 
@@ -140,8 +149,17 @@ describe('TileLayerNode', () => {
   it('parallax layer: position is restored to base offset after _collectContent', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'bg', width: 4, height: 4, tileWidth: 32, tileHeight: 32,
-      tilesets: [tileset], offsetX: 10, offsetY: 20, parallaxX: 0.5, parallaxY: 0.5,
+      id: 1,
+      name: 'bg',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      offsetX: 10,
+      offsetY: 20,
+      parallaxX: 0.5,
+      parallaxY: 0.5,
     });
     const node = new TileLayerNode(layer);
 
@@ -162,8 +180,14 @@ describe('TileLayerNode', () => {
   it('parallax scale is applied during collection and restores a caller scale afterwards', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'bg', width: 4, height: 4, tileWidth: 32, tileHeight: 32,
-      tilesets: [tileset], parallaxScale: 0.5,
+      id: 1,
+      name: 'bg',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      parallaxScale: 0.5,
     });
     const node = new TileLayerNode(layer).setScale(2, 3);
     const setScale = vi.spyOn(node, 'setScale');
@@ -180,8 +204,14 @@ describe('TileLayerNode', () => {
   it('bounded parallax layer opts out of static-bounds culling', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'bg', width: 4, height: 4, tileWidth: 32, tileHeight: 32,
-      tilesets: [tileset], parallaxX: 0.5,
+      id: 1,
+      name: 'bg',
+      width: 4,
+      height: 4,
+      tileWidth: 32,
+      tileHeight: 32,
+      tilesets: [tileset],
+      parallaxX: 0.5,
     });
     const node = new TileLayerNode(layer);
 
@@ -242,8 +272,14 @@ describe('TileLayerNode', () => {
     const tileset = makeTileset();
     const layer = fillLayer(
       new TileLayer({
-        id: 1, name: 'tinted', width: 4, height: 4, tileWidth: 32, tileHeight: 32,
-        tilesets: [tileset], tintColor: 0x336699,
+        id: 1,
+        name: 'tinted',
+        width: 4,
+        height: 4,
+        tileWidth: 32,
+        tileHeight: 32,
+        tilesets: [tileset],
+        tintColor: 0x336699,
       }),
       tileset,
     );
@@ -451,10 +487,7 @@ describe('TileMapNode interleaved image layers', () => {
       tileWidth: 32,
       tileHeight: 32,
       tilesets: [tileset],
-      layers: [
-        fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset),
-        fillLayer(makeLayer(tileset, { id: 2, name: 'roofs' }), tileset),
-      ],
+      layers: [fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset), fillLayer(makeLayer(tileset, { id: 2, name: 'roofs' }), tileset)],
       imageLayers: [makeImageLayer({ id: 10, name: 'bg' }), makeImageLayer({ id: 11, name: 'fg' })],
       documentOrder: [10, 1, 11, 2],
     });
@@ -548,12 +581,17 @@ describe('unbounded layer/map nodes', () => {
   it('TileLayerNode.getLocalBounds() falls back to children aggregate when unbounded, and is not cullable', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     layer._adoptChunk(2, 3, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
 
@@ -586,16 +624,23 @@ describe('unbounded layer/map nodes', () => {
   it('TileMapNode.getLocalBounds() falls back to children aggregate when the map is unbounded', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     layer._adoptChunk(0, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
     const map = new TileMap({
-      name: 'm', tileWidth: 16, tileHeight: 16,
+      name: 'm',
+      tileWidth: 16,
+      tileHeight: 16,
       layers: [layer],
     });
 
@@ -615,21 +660,35 @@ describe('unbounded layer/map nodes', () => {
   it('TileMapNode is not cullable when the map is unbounded, and cullable when bounded', () => {
     const tileset = makeTileset();
     const unboundedLayer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
     });
     const unboundedMap = new TileMap({
-      name: 'm', tileWidth: 16, tileHeight: 16,
+      name: 'm',
+      tileWidth: 16,
+      tileHeight: 16,
       layers: [unboundedLayer],
     });
     expect(new TileMapNode(unboundedMap).cullable).toBe(false);
 
     const boundedLayer = new TileLayer({
-      id: 1, name: 'l', width: 10, height: 10,
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
+      id: 1,
+      name: 'l',
+      width: 10,
+      height: 10,
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
     });
     const boundedMap = new TileMap({
-      name: 'm', width: 10, height: 10, tileWidth: 16, tileHeight: 16,
+      name: 'm',
+      width: 10,
+      height: 10,
+      tileWidth: 16,
+      tileHeight: 16,
       layers: [boundedLayer],
     });
     expect(new TileMapNode(boundedMap).cullable).toBe(true);
@@ -638,19 +697,25 @@ describe('unbounded layer/map nodes', () => {
   it('TileLayerNode.getLocalBounds() excludes chunk nodes hidden via visible = false', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     // Visible chunk at (0,0) → (0, 0, 64, 64).
     layer._adoptChunk(0, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
     // Far-away chunk at (10,10) that will be hidden; if it leaked into the
     // aggregate, bounds would grow far past (0, 0, 64, 64).
     layer._adoptChunk(10, 10, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
 
@@ -670,26 +735,38 @@ describe('unbounded layer/map nodes', () => {
   it('TileMapNode.getLocalBounds() excludes layer nodes hidden via visible = false', () => {
     const tileset = makeTileset();
     const layerA = new TileLayer({
-      id: 1, name: 'a',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'a',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     layerA._adoptChunk(0, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
     const layerB = new TileLayer({
-      id: 2, name: 'b',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 2,
+      name: 'b',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     // Far-away chunk on a second layer that will be hidden entirely.
     layerB._adoptChunk(10, 10, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
     const map = new TileMap({
-      name: 'm', tileWidth: 16, tileHeight: 16,
+      name: 'm',
+      tileWidth: 16,
+      tileHeight: 16,
       layers: [layerA, layerB],
     });
 
@@ -709,12 +786,17 @@ describe('unbounded layer/map nodes', () => {
   it('TileLayerNode.getLocalBounds() aggregates a chunk at negative coordinates', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     layer._adoptChunk(-3, -2, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
 
@@ -734,12 +816,17 @@ describe('TileLayerNode structural-listener reaction', () => {
   it('adopting a new non-empty chunk adds exactly one TileChunkNode, without touching other chunk nodes', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     layer._adoptChunk(0, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
 
@@ -749,7 +836,8 @@ describe('TileLayerNode structural-listener reaction', () => {
     const originalNode = node.chunkNodes[0];
 
     layer._adoptChunk(5, 5, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
 
@@ -762,9 +850,13 @@ describe('TileLayerNode structural-listener reaction', () => {
   it('adopting an empty chunk does not add a TileChunkNode', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     const node = new TileLayerNode(layer);
 
@@ -776,12 +868,17 @@ describe('TileLayerNode structural-listener reaction', () => {
   it('evicting a chunk removes and destroys its TileChunkNode', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     layer._adoptChunk(0, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
     const node = new TileLayerNode(layer);
@@ -799,12 +896,17 @@ describe('TileLayerNode structural-listener reaction', () => {
   it('evicting a coordinate with no chunk node is a no-op that does not affect other nodes', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     layer._adoptChunk(0, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
     const node = new TileLayerNode(layer);
@@ -818,12 +920,17 @@ describe('TileLayerNode structural-listener reaction', () => {
   it('re-adopting at an already-resident coordinate replaces the node with fresh content', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     layer._adoptChunk(0, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
     const node = new TileLayerNode(layer);
@@ -831,7 +938,8 @@ describe('TileLayerNode structural-listener reaction', () => {
     const staleNode = node.chunkNodes[0]!;
 
     layer._adoptChunk(0, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 1, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
 
@@ -839,17 +947,22 @@ describe('TileLayerNode structural-listener reaction', () => {
     expect(node.chunkNodes[0]).not.toBe(staleNode);
   });
 
-  it('a freshly-adopted chunk node gets the layer\'s current tint even when opacity/tint have not changed since the last full sync', () => {
+  it("a freshly-adopted chunk node gets the layer's current tint even when opacity/tint have not changed since the last full sync", () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
       opacity: 0.5,
       tintColor: 0x00ff00,
     });
     layer._adoptChunk(0, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
     const node = new TileLayerNode(layer);
@@ -859,7 +972,8 @@ describe('TileLayerNode structural-listener reaction', () => {
     // call would short-circuit on its own change-detection guard and skip the
     // newly-added node entirely.
     layer._adoptChunk(1, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
 
@@ -873,15 +987,20 @@ describe('TileLayerNode structural-listener reaction', () => {
   it('destroy() unsubscribes from the layer — further layer mutation does not affect the destroyed node', () => {
     const tileset = makeTileset();
     const layer = new TileLayer({
-      id: 1, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
+      id: 1,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
     });
     const node = new TileLayerNode(layer);
     node.destroy();
 
     layer._adoptChunk(0, 0, {
-      width: 4, height: 4,
+      width: 4,
+      height: 4,
       tiles: new Uint32Array([packTile(0, 0, TILE_TRANSFORM_IDENTITY), ...new Array(15).fill(0)]),
     });
 

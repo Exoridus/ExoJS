@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Spawn configuration for RateSpawn: the emission rate plus the shared per-property fields."
-      ],
+      "paragraphs": ["Spawn configuration for RateSpawn: the emission rate plus the shared per-property fields."],
       "importLine": "import { RateSpawnConfig } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

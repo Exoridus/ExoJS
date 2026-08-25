@@ -81,7 +81,7 @@ const overlappingPair = (first: ShapeType, second: ShapeType): { a: Collider; b:
   };
 };
 
-const orderedPairs = solverKinds.flatMap((first) => solverKinds.map((second) => ({ first, second })));
+const orderedPairs = solverKinds.flatMap(first => solverKinds.map(second => ({ first, second })));
 
 describe('cross-shape collision matrix', () => {
   it.each(orderedPairs.filter(({ first, second }) => !(first === 'segment' && second === 'segment')))(
@@ -116,7 +116,7 @@ describe('cross-shape collision matrix', () => {
     expect(testOverlap(b, a)).toBe(false);
   });
 
-  it.each(solverKinds)('separates %s from a partner just out of reach', (kind) => {
+  it.each(solverKinds)('separates %s from a partner just out of reach', kind => {
     const world = new PhysicsWorld();
     const a = colliderAt(world, probe(kind), { x: 0, y: 0 });
     // 1px of clearance instead of 1px of overlap.
@@ -158,7 +158,7 @@ describe('a chain in the matrix', () => {
     return { chain, edge: chain.chainEdges![0]! };
   };
 
-  it.each(['circle', 'polygon', 'capsule'] as const)('solves a chain edge against %s', (kind) => {
+  it.each(['circle', 'polygon', 'capsule'] as const)('solves a chain edge against %s', kind => {
     const world = new PhysicsWorld();
     const solid = colliderAt(world, probe(kind), { x: 0, y: 0 });
     // Below the solid, so the chain's outward normal (up, for a left-to-right

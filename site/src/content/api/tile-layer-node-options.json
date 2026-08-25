@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for a TileLayerNode. All optional; reserved for forward compatibility."
-      ],
+      "paragraphs": ["Options for a TileLayerNode. All optional; reserved for forward compatibility."],
       "importLine": "import { TileLayerNodeOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

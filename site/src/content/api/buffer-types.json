@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "GPU buffer binding targets. Values are WebGL2 GLenum constants used when calling `gl.bindBuffer`."
-      ],
+      "paragraphs": ["GPU buffer binding targets. Values are WebGL2 GLenum constants used when calling `gl.bindBuffer`."],
       "importLine": "import { BufferTypes } from '@codexo/exojs'",
       "sourceLink": null
     },

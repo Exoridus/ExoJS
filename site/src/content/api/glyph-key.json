@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A key that uniquely identifies a glyph within a GlyphAtlas. Format: `${char}:${size}`"
-      ],
+      "paragraphs": ["A key that uniquely identifies a glyph within a GlyphAtlas. Format: `${char}:${size}`"],
       "importLine": "import { GlyphKey } from '@codexo/exojs'",
       "sourceLink": null
     },

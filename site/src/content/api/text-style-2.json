@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Text styling options carried by a TextObject."
-      ],
+      "paragraphs": ["Text styling options carried by a TextObject."],
       "importLine": "import { TextStyle } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

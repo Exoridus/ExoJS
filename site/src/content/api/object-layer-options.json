@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for an ObjectLayer."
-      ],
+      "paragraphs": ["Construction options for an ObjectLayer."],
       "importLine": "import { ObjectLayerOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

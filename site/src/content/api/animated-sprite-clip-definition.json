@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Definition for a single animation clip registered on an AnimatedSprite."
-      ],
+      "paragraphs": ["Definition for a single animation clip registered on an AnimatedSprite."],
       "importLine": "import { AnimatedSpriteClipDefinition } from '@codexo/exojs'",
       "sourceLink": null
     },

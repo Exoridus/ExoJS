@@ -4,16 +4,7 @@
 
 export type { AudioAnalyserOptions, AudioAnalyserSource, SpectrumMappingOptions } from './AudioAnalyser';
 export { AudioAnalyser } from './AudioAnalyser';
-export type {
-  BandEnergy,
-  BarInfo,
-  BeatDetectorOptions,
-  BeatDetectorSource,
-  BeatInfo,
-  TempoCandidate,
-  TimeSignature,
-  UpcomingBeat,
-} from './BeatDetector';
+export type { BandEnergy, BarInfo, BeatDetectorOptions, BeatDetectorSource, BeatInfo, TempoCandidate, TimeSignature, UpcomingBeat } from './BeatDetector';
 export { BeatDetector } from './BeatDetector';
 export { AutoWahEffect, type AutoWahEffectOptions } from './effects/AutoWahEffect';
 export { BitCrusherEffect, type BitCrusherEffectOptions } from './effects/BitCrusherEffect';

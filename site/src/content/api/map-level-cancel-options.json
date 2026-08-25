@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for a MapWorldRuntime.loadLevel that spawns nothing."
-      ],
+      "paragraphs": ["Options for a MapWorldRuntime.loadLevel that spawns nothing."],
       "importLine": "import { MapLevelCancelOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

@@ -63,12 +63,7 @@ function rms(buf: Float32Array): number {
   return Math.sqrt(s / buf.length);
 }
 
-function runCrusher(
-  proc: BitCrusherProcessorLike,
-  input: Float32Array,
-  bits: number,
-  normFreq: number,
-): Float32Array {
+function runCrusher(proc: BitCrusherProcessorLike, input: Float32Array, bits: number, normFreq: number): Float32Array {
   const n = input.length;
   const out = new Float32Array(n);
   for (let off = 0; off < n; off += BLOCK) {

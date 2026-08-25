@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A voice that can be positioned in 2D space and optionally track a node."
-      ],
+      "paragraphs": ["A voice that can be positioned in 2D space and optionally track a node."],
       "importLine": "import { Spatializable } from '@codexo/exojs'",
       "sourceLink": null
     },

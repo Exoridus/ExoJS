@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Anything that can produce an axis-aligned bounding Rectangle."
-      ],
+      "paragraphs": ["Anything that can produce an axis-aligned bounding Rectangle."],
       "importLine": "import { HasBoundingBox } from '@codexo/exojs'",
       "sourceLink": null
     },

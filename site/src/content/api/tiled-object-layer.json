@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "An object layer: a flat list of TiledObjects."
-      ],
+      "paragraphs": ["An object layer: a flat list of TiledObjects."],
       "importLine": "import { TiledObjectLayer } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

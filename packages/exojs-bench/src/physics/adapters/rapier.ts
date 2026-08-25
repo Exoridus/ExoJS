@@ -56,9 +56,7 @@ export const createRapierAdapter = async (): Promise<PhysicsAdapter | null> => {
     // glue prints a harmless upstream deprecation notice here - it is not an error.
     await R.init();
   } catch {
-    console.warn(
-      "[physics] rapier arm unavailable — '@dimforge/rapier2d-compat' is not linked or failed to init (run bench:setup). Skipping the rapier arm.",
-    );
+    console.warn("[physics] rapier arm unavailable — '@dimforge/rapier2d-compat' is not linked or failed to init (run bench:setup). Skipping the rapier arm.");
 
     return null;
   }

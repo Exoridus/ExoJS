@@ -1,13 +1,6 @@
 import { View } from '@codexo/exojs';
 import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
-import {
-  type ChunkPayload,
-  type ChunkSource,
-  ChunkStreamer,
-  packTile,
-  TILE_TRANSFORM_IDENTITY,
-  type TileLayer,
-} from '@codexo/exojs-tilemap';
+import { type ChunkPayload, type ChunkSource, ChunkStreamer, packTile, TILE_TRANSFORM_IDENTITY, type TileLayer } from '@codexo/exojs-tilemap';
 import { describe, expect, it, vi } from 'vitest';
 
 import { TileColliderStreamer } from '../src/TileColliderStreamer';
@@ -39,13 +32,7 @@ const colliderCount = (bridge: TileColliderStreamer): number => {
 
 const describeWorld = (bridge: TileColliderStreamer): string =>
   [...bridge.bodies()]
-    .map(body =>
-      [
-        body.x,
-        body.y,
-        ...body.colliders.map(collider => `${collider.shape.type}@${collider.offsetX},${collider.offsetY}`),
-      ].join(':'),
-    )
+    .map(body => [body.x, body.y, ...body.colliders.map(collider => `${collider.shape.type}@${collider.offsetX},${collider.offsetY}`)].join(':'))
     .join('|');
 
 describe('TileColliderStreamer lifecycle', () => {

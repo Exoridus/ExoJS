@@ -12,10 +12,7 @@ import { LdtkFormatError } from '../src/validate';
 // ── Fixture loading ───────────────────────────────────────────────────────────
 
 // Support both "pnpm test" (cwd=repo root) and "pnpm --filter ... test" (cwd=package).
-const PKG_DIR =
-  basename(process.cwd()) === 'exojs-ldtk'
-    ? process.cwd()
-    : join(process.cwd(), 'packages', 'exojs-ldtk');
+const PKG_DIR = basename(process.cwd()) === 'exojs-ldtk' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-ldtk');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
 function loadFixture(name: string): unknown {
@@ -633,9 +630,7 @@ describe('loadLdtkMap — structural validation', () => {
     const broken = JSON.parse(JSON.stringify(loadFixture('world.ldtk'))) as any;
     broken.levels[0].layerInstances[0].gridTiles[0].t = 'first';
     const { contextFor } = makeContext({ [ABS_SOURCE]: broken });
-    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(
-      /world\.ldtk" at levels\[0\]\.layerInstances\[0\]\.gridTiles\[0\]\.t/,
-    );
+    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(/world\.ldtk" at levels\[0\]\.layerInstances\[0\]\.gridTiles\[0\]\.t/);
   });
 
   it('does not fetch tileset images for a document that fails validation', async () => {
@@ -649,10 +644,19 @@ describe('loadLdtkMap — structural validation', () => {
       jsonVersion: '1.5.3',
       defaultGridSize: 16,
       defs: { tilesets: [], layers: [] },
-      levels: [{
-        identifier: 'Level_0', uid: 1, iid: 'iid-1', worldX: 0, worldY: 0, pxWid: 16, pxHei: 16,
-        layerInstances: null, externalRelPath: 'levels/Level_0.ldtkl',
-      }],
+      levels: [
+        {
+          identifier: 'Level_0',
+          uid: 1,
+          iid: 'iid-1',
+          worldX: 0,
+          worldY: 0,
+          pxWid: 16,
+          pxHei: 16,
+          layerInstances: null,
+          externalRelPath: 'levels/Level_0.ldtkl',
+        },
+      ],
     };
     const external = { identifier: 'Level_0', uid: 1, iid: 'iid-1', worldX: 0, worldY: 0, pxWid: 16, pxHei: 'tall', layerInstances: [] };
     const { contextFor } = makeContext({
@@ -660,8 +664,6 @@ describe('loadLdtkMap — structural validation', () => {
       'https://example.com/maps/levels/Level_0.ldtkl': external,
     });
 
-    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(
-      /levels\/Level_0\.ldtkl" at pxHei/,
-    );
+    await expect(loadLdtkMap(contextFor(ABS_SOURCE))).rejects.toThrow(/levels\/Level_0\.ldtkl" at pxHei/);
   });
 });

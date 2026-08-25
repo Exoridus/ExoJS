@@ -44,9 +44,13 @@ function makeTileset(): TileSet {
 
 function makeUnboundedLayer(tileset: TileSet, chunkWidth = 4, chunkHeight = 4): TileLayer {
   return new TileLayer({
-    id: 0, name: 'l',
-    tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-    chunkWidth, chunkHeight,
+    id: 0,
+    name: 'l',
+    tileWidth: 16,
+    tileHeight: 16,
+    tilesets: [tileset],
+    chunkWidth,
+    chunkHeight,
   });
 }
 
@@ -153,16 +157,21 @@ describe('createSampledChunkSource', () => {
     expect(() => source.getChunk(0, 0)).toThrow(/Tileset index -1/);
   });
 
-  it('clamps edge-chunk cells past a bounded layer\'s width/height to empty', () => {
+  it("clamps edge-chunk cells past a bounded layer's width/height to empty", () => {
     const tileset = makeTileset();
     // width=5, height=5 is not a multiple of chunkWidth=4/chunkHeight=4, so
     // chunk (1, 0) nominally covers tx in [4, 7] but only tx=4 is in-bounds
     // (valid tx is 0..4).
     const layer = new TileLayer({
-      id: 0, name: 'l',
-      tileWidth: 16, tileHeight: 16, tilesets: [tileset],
-      chunkWidth: 4, chunkHeight: 4,
-      width: 5, height: 5,
+      id: 0,
+      name: 'l',
+      tileWidth: 16,
+      tileHeight: 16,
+      tilesets: [tileset],
+      chunkWidth: 4,
+      chunkHeight: 4,
+      width: 5,
+      height: 5,
     });
     const source = createSampledChunkSource(layer, {
       // Resolve unconditionally: if the fix were absent, this would fill

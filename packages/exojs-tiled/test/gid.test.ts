@@ -35,7 +35,8 @@ describe('maskTiledGid', () => {
   });
 
   it('strips all four flag bits at once', () => {
-    const flagged = (TILED_FLIPPED_HORIZONTALLY_FLAG | TILED_FLIPPED_VERTICALLY_FLAG | TILED_FLIPPED_DIAGONALLY_FLAG | TILED_ROTATED_HEXAGONAL_120_FLAG | 5) >>> 0;
+    const flagged =
+      (TILED_FLIPPED_HORIZONTALLY_FLAG | TILED_FLIPPED_VERTICALLY_FLAG | TILED_FLIPPED_DIAGONALLY_FLAG | TILED_ROTATED_HEXAGONAL_120_FLAG | 5) >>> 0;
     expect(maskTiledGid(flagged)).toBe(5);
   });
 

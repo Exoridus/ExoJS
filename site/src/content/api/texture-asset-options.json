@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options accepted by an asset of the built-in `texture` type."
-      ],
+      "paragraphs": ["Options accepted by an asset of the built-in `texture` type."],
       "importLine": "import { TextureAssetOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -48,8 +48,7 @@ const toRow = (result: PhysicsCellResult): string[] => {
   ];
 };
 
-const toCsv = (data: PhysicsReportData): string =>
-  [COLUMNS.join(','), ...data.results.map(result => toRow(result).map(csvField).join(','))].join('\n');
+const toCsv = (data: PhysicsReportData): string => [COLUMNS.join(','), ...data.results.map(result => toRow(result).map(csvField).join(','))].join('\n');
 
 /**
  * Human-readable Markdown: the arm versions and the host/provenance block first
@@ -101,7 +100,11 @@ const toMarkdown = (data: PhysicsReportData): string => {
   lines.push(`| ${COLUMNS.map(() => '---').join(' | ')} |`);
 
   for (const result of data.results) {
-    lines.push(`| ${toRow(result).map(field => field.replaceAll('|', '\\|')).join(' | ')} |`);
+    lines.push(
+      `| ${toRow(result)
+        .map(field => field.replaceAll('|', '\\|'))
+        .join(' | ')} |`,
+    );
   }
 
   lines.push('');

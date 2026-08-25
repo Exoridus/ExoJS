@@ -96,10 +96,7 @@ function makeBoundaryMap(): { map: TileMap; tileset: TileSet } {
     tileWidth: 32,
     tileHeight: 32,
     tilesets: [tileset],
-    layers: [
-      makeBoundaryLayer(tileset, { id: 1, name: 'background' }),
-      makeBoundaryLayer(tileset, { id: 2, name: 'ground' }),
-    ],
+    layers: [makeBoundaryLayer(tileset, { id: 1, name: 'background' }), makeBoundaryLayer(tileset, { id: 2, name: 'ground' })],
   });
   return { map, tileset };
 }

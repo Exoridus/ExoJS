@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction-time options for a TextStyle. All properties are optional; defaults match the TextStyle constructor."
-      ],
+      "paragraphs": ["Construction-time options for a TextStyle. All properties are optional; defaults match the TextStyle constructor."],
       "importLine": "import { BitmapTextOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

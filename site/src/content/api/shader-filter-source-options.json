@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Shader sources for a ShaderFilter, one entry per language."
-      ],
+      "paragraphs": ["Shader sources for a ShaderFilter, one entry per language."],
       "importLine": "import { ShaderFilterSourceOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

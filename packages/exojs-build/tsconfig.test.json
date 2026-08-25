@@ -5,10 +5,7 @@
   // the AudioWorkletGlobalScope respectively, neither combinable with `dom`).
   // They are checked by the repository-root `tsconfig.workers.json` and by
   // `./tsconfig.worklets.json`.
-  "extends": [
-    "./tsconfig.json",
-    "@codexo/exojs-config/typescript/package-test.json"
-  ],
+  "extends": ["./tsconfig.json", "@codexo/exojs-config/typescript/package-test.json"],
   "compilerOptions": {
     "lib": ["es2022", "dom", "dom.iterable"],
     "types": ["node", "vitest/globals"],

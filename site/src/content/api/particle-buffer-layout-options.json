@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for ParticleBufferLayout."
-      ],
+      "paragraphs": ["Construction options for ParticleBufferLayout."],
       "importLine": "import { ParticleBufferLayoutOptions } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for CallbackRenderPass."
-      ],
+      "paragraphs": ["Options for CallbackRenderPass."],
       "importLine": "import { CallbackRenderPassOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

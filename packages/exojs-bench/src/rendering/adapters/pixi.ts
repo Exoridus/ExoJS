@@ -160,7 +160,9 @@ export const createPixiAdapter = (config: PixiAdapterConfig = 'default'): Engine
         // reuses it across every cell; Pixi must never detach it from the DOM.
         instance.destroy({ removeView: false }, { children: true, texture: true });
 
-        throw new Error(`Pixi did not honour the '${target}' backend: renderer.type=${actual} (expected ${EXPECTED_RENDERER_TYPE[target]}); refusing to measure a mismatched backend.`);
+        throw new Error(
+          `Pixi did not honour the '${target}' backend: renderer.type=${actual} (expected ${EXPECTED_RENDERER_TYPE[target]}); refusing to measure a mismatched backend.`,
+        );
       }
 
       app = instance;

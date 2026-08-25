@@ -219,13 +219,7 @@ function transformRotation(transform: TileTransform): number {
  * also swaps the box dimensions) is applied first, then the axis mirrors -
  * the same order the renderer's orientation code implies.
  */
-function mapLocalPoint(
-  px: number,
-  py: number,
-  boxWidth: number,
-  boxHeight: number,
-  transform: TileTransform,
-): ObjectPoint {
+function mapLocalPoint(px: number, py: number, boxWidth: number, boxHeight: number, transform: TileTransform): ObjectPoint {
   let x = px;
   let y = py;
   let width = boxWidth;
@@ -275,14 +269,7 @@ interface PlacedShape {
  * tile's flip/rotation transform, the tileset draw offset and the layer offset.
  * Returns `null` for kinds that carry no collision geometry.
  */
-function placeShape(
-  object: TileMapObject,
-  layer: TileLayer,
-  tileset: TileSet,
-  transform: TileTransform,
-  tx: number,
-  ty: number,
-): PlacedShape | null {
+function placeShape(object: TileMapObject, layer: TileLayer, tileset: TileSet, transform: TileTransform, tx: number, ty: number): PlacedShape | null {
   if (object.kind === ObjectKind.Tile || object.kind === ObjectKind.Text) {
     return null;
   }
@@ -493,11 +480,7 @@ function unmergedCells(cells: ReadonlyMap<string, string>, layer: TileLayer): Ti
  * textbook pass - it is linear in the number of cells and always produces a
  * valid, non-overlapping cover, which matters more here than minimality.
  */
-function mergeCells(
-  cells: ReadonlyMap<string, string>,
-  region: TileRegion,
-  layer: TileLayer,
-): TileCollisionRect[] {
+function mergeCells(cells: ReadonlyMap<string, string>, region: TileRegion, layer: TileLayer): TileCollisionRect[] {
   const consumed = new Set<string>();
   const rects: TileCollisionRect[] = [];
   const endTx = region.x + region.width;
@@ -513,11 +496,7 @@ function mergeCells(
 
       let width = 1;
 
-      while (
-        tx + width < endTx &&
-        cells.get(cellKey(tx + width, ty)) === key &&
-        !consumed.has(cellKey(tx + width, ty))
-      ) {
+      while (tx + width < endTx && cells.get(cellKey(tx + width, ty)) === key && !consumed.has(cellKey(tx + width, ty))) {
         width++;
       }
 
@@ -598,10 +577,7 @@ function mergeCells(
  * ```
  * @advanced
  */
-export function buildTileCollisionGeometry(
-  layer: TileLayer,
-  options: TileCollisionOptions = {},
-): TileCollisionGeometry {
+export function buildTileCollisionGeometry(layer: TileLayer, options: TileCollisionOptions = {}): TileCollisionGeometry {
   const cellSource = options.cells;
   const region = resolveRegion(layer, options);
 

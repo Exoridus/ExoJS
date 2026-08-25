@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for IndexedDbKeyValueStore."
-      ],
+      "paragraphs": ["Construction options for IndexedDbKeyValueStore."],
       "importLine": "import { IndexedDbKeyValueStoreOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

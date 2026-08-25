@@ -280,14 +280,7 @@ export class TileLayerNode extends Container {
    */
   private _createChunkNode(chunk: ReadonlyTileChunk): TileChunkNode {
     const layer = this._layer;
-    const node = new TileChunkNode(
-      chunk,
-      layer.tilesets,
-      layer.tileWidth,
-      layer.tileHeight,
-      layer.chunkWidth,
-      layer.chunkHeight,
-    );
+    const node = new TileChunkNode(chunk, layer.tilesets, layer.tileWidth, layer.tileHeight, layer.chunkWidth, layer.chunkHeight);
 
     node.cullable = this._cullChunks;
 

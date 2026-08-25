@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "One adjacency edge from a level to another level in the same MapWorld."
-      ],
+      "paragraphs": ["One adjacency edge from a level to another level in the same MapWorld."],
       "importLine": "import { MapLevelNeighbour } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

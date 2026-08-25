@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Top-level definitions block (`defs`)."
-      ],
+      "paragraphs": ["Top-level definitions block (`defs`)."],
       "importLine": "import { LdtkDefs } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

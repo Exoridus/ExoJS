@@ -39,13 +39,13 @@ const run = (cmd, args, { cwd, runner } = {}) => {
 // ---- mode validation -------------------------------------------------------
 
 /** @param {string} mode */
-export const isValidMode = (mode) => mode === 'development' || mode === 'production';
+export const isValidMode = mode => mode === 'development' || mode === 'production';
 
 /**
  * @param {string} mode
  * @returns {'development' | 'production'}
  */
-export const validateMode = (mode) => {
+export const validateMode = mode => {
   if (!isValidMode(mode)) throw new Error(`Invalid build mode "${mode}". Expected "development" or "production".`);
   return mode;
 };
@@ -57,7 +57,7 @@ export const validateMode = (mode) => {
  * @param {string} packageDir - directory containing package.json
  * @returns {string}
  */
-export const resolveVersion = (packageDir) => {
+export const resolveVersion = packageDir => {
   try {
     const pkg = JSON.parse(readFileSync(resolve(packageDir, 'package.json'), 'utf8'));
     return typeof pkg.version === 'string' ? pkg.version : '0.0.0';

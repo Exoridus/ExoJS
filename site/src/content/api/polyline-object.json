@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "An open polyline; `points` are relative to the object origin."
-      ],
+      "paragraphs": ["An open polyline; `points` are relative to the object origin."],
       "importLine": "import { PolylineObject } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

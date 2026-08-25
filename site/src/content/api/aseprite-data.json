@@ -18,10 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Union of both Aseprite JSON export formats.",
-        "Use isAsepriteArrayData to discriminate between array and hash mode."
-      ],
+      "paragraphs": ["Union of both Aseprite JSON export formats.", "Use isAsepriteArrayData to discriminate between array and hash mode."],
       "importLine": "import { AsepriteData } from '@codexo/exojs-aseprite'",
       "sourceLink": null
     },

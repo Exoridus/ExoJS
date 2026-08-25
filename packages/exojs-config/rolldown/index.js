@@ -47,7 +47,14 @@ export function createExtensionBuildOptions(opts) {
 
   const packageName = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).name ?? 'extension';
   const codecovPlugins = process.env.CODECOV_TOKEN
-    ? [codecovRollupPlugin({ enableBundleAnalysis: true, bundleName: packageName.replace(/^@codexo\//, ''), uploadToken: process.env.CODECOV_TOKEN, telemetry: false })]
+    ? [
+        codecovRollupPlugin({
+          enableBundleAnalysis: true,
+          bundleName: packageName.replace(/^@codexo\//, ''),
+          uploadToken: process.env.CODECOV_TOKEN,
+          telemetry: false,
+        }),
+      ]
     : [];
 
   return {

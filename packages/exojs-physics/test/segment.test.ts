@@ -59,9 +59,7 @@ describe('a dynamic body must carry mass', () => {
 
   it('accepts a boundary collider alongside a solid one', () => {
     const world = new PhysicsWorld();
-    const body = world.add(
-      new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new BoxShape(10, 10) }, { shape: new SegmentShape(-10, 0, 10, 0) }] }),
-    );
+    const body = world.add(new PhysicsBody({ type: 'dynamic', colliders: [{ shape: new BoxShape(10, 10) }, { shape: new SegmentShape(-10, 0, 10, 0) }] }));
 
     // The segment contributes collision only; the mass is the box's alone.
     expect(body.mass).toBeCloseTo(100);

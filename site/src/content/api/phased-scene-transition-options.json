@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for PhasedSceneTransition and its subclasses."
-      ],
+      "paragraphs": ["Construction options for PhasedSceneTransition and its subclasses."],
       "importLine": "import { PhasedSceneTransitionOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

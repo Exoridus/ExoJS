@@ -75,7 +75,5 @@ export function ldtkToMapWorld(data: LdtkData): readonly MapWorld[] {
     return Object.freeze(worlds);
   }
 
-  return Object.freeze([
-    new MapWorld({ levels: entries.map((entry, index) => convertLevel(entry.level, entry.worldIid, index)) }),
-  ]);
+  return Object.freeze([new MapWorld({ levels: entries.map((entry, index) => convertLevel(entry.level, entry.worldIid, index)) })]);
 }

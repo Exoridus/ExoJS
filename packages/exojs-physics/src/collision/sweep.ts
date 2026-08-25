@@ -571,14 +571,7 @@ const sweepRings = (moving: CollisionProxy, dx: number, dy: number, target: Coll
  * end pose) against the static `target`. Returns `false` as soon as an axis
  * proves the shapes never meet within the motion.
  */
-const sweptSatAxes = (
-  axisOwner: CollisionProxy,
-  moving: CollisionProxy,
-  dx: number,
-  dy: number,
-  target: CollisionProxy,
-  state: SweptSatState,
-): boolean => {
+const sweptSatAxes = (axisOwner: CollisionProxy, moving: CollisionProxy, dx: number, dy: number, target: CollisionProxy, state: SweptSatState): boolean => {
   const axes = axisOwner.worldNormals;
   const axisCount = coreCount(axisOwner);
   const mv = moving.worldVertices;

@@ -39,7 +39,6 @@ const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
 const transformTextureUnit = 1;
 const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 
-
 const tileVertexSource = fillShaderSource(tileVertexTemplate, { tileRowMask: TILE_ROW_MASK, tileDiagonalBit: TILE_DIAGONAL_BIT });
 
 interface TileRendererConnection {
@@ -134,14 +133,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     }
   }
 
-  private _renderPage(
-    backend: WebGl2Backend,
-    texture: Texture,
-    quads: readonly TileQuad[],
-    blendMode: BlendModes,
-    tintRgba: number,
-    nodeIndex: number,
-  ): void {
+  private _renderPage(backend: WebGl2Backend, texture: Texture, quads: readonly TileQuad[], blendMode: BlendModes, tintRgba: number, nodeIndex: number): void {
     if (quads.length === 0) {
       return;
     }
@@ -187,14 +179,7 @@ export class WebGl2TileChunkRenderer extends AbstractWebGl2Renderer<TileChunkNod
     }
   }
 
-  private _writeRun(
-    quads: readonly TileQuad[],
-    offset: number,
-    count: number,
-    flipY: boolean,
-    tintRgba: number,
-    nodeIndex: number,
-  ): void {
+  private _writeRun(quads: readonly TileQuad[], offset: number, count: number, flipY: boolean, tintRgba: number, nodeIndex: number): void {
     const f32 = this._instanceFloat32;
     const u32 = this._instanceUint32;
     const baseWord = nodeIndex & TILE_ROW_MASK;

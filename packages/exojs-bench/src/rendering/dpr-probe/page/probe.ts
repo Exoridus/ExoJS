@@ -349,11 +349,15 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
   ];
 
   if (!globalThis.crossOriginIsolated) {
-    notes.push('crossOriginIsolated is FALSE — `performance.now()` is coarsened, so the cpuMs columns are quantised. Check `timerResolutionMs` before reading small differences.');
+    notes.push(
+      'crossOriginIsolated is FALSE — `performance.now()` is coarsened, so the cpuMs columns are quantised. Check `timerResolutionMs` before reading small differences.',
+    );
   }
 
   if (backendSelected === 'webgl2') {
-    notes.push('WebGL2 run. `EXT_disjoint_timer_query_webgl2` is the only hardware GPU clock available here and browsers usually withhold it; a null gpuMs column means it was absent, never that GPU time was zero.');
+    notes.push(
+      'WebGL2 run. `EXT_disjoint_timer_query_webgl2` is the only hardware GPU clock available here and browsers usually withhold it; a null gpuMs column means it was absent, never that GPU time was zero.',
+    );
   }
 
   if (webgpuTimestampQuery === false) {
@@ -366,7 +370,9 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
       : "The stage was the device's usable area, so these numbers reflect a full-screen app but do not compare to a capture taken on a differently sized screen.",
   );
 
-  notes.push('rafDeltaMs* is PRESENTATION CADENCE, not GPU time. On a vsync-paced device it reads ~16.7 ms for anything the device keeps up with and only rises once it does not.');
+  notes.push(
+    'rafDeltaMs* is PRESENTATION CADENCE, not GPU time. On a vsync-paced device it reads ~16.7 ms for anything the device keeps up with and only rises once it does not.',
+  );
 
   return notes;
 };
@@ -481,7 +487,14 @@ const runCells = async (cells: readonly ProbeCell[], measureMs: number, label: s
  * so the capture states them as observed facts.
  */
 const probeEnvironmentOnce = async (): Promise<void> => {
-  const preview = await startVisualPreview({ scene: 'baseline', mode: 'inherit', pixelRatio: 1, stage: resolveStage(), backend: backendRequest(), host: stageHost });
+  const preview = await startVisualPreview({
+    scene: 'baseline',
+    mode: 'inherit',
+    pixelRatio: 1,
+    stage: resolveStage(),
+    backend: backendRequest(),
+    host: stageHost,
+  });
 
   lastBackendSelected = preview.backendType;
   await preview.stop();
@@ -494,7 +507,7 @@ const probeEnvironmentOnce = async (): Promise<void> => {
     lastWebgpuTimestampQuery = adapter?.features.has('timestamp-query') ?? false;
     lastGpuTimerSource =
       lastWebgpuTimestampQuery === true
-        ? 'WebGPU hardware timestamp-query around the frame\'s render passes'
+        ? "WebGPU hardware timestamp-query around the frame's render passes"
         : 'none — the WebGPU device exposes no timestamp-query feature';
   } else {
     lastWebgpuTimestampQuery = null;

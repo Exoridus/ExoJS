@@ -9,24 +9,24 @@
 import { packSampleValue } from './sum-sampler-math';
 
 interface ChunkRequestMessage {
-    requestId: number;
-    cx: number;
-    cy: number;
-    chunkWidth: number;
-    chunkHeight: number;
+  requestId: number;
+  cx: number;
+  cy: number;
+  chunkWidth: number;
+  chunkHeight: number;
 }
 
 self.onmessage = (event: MessageEvent<ChunkRequestMessage>): void => {
-    const { requestId, cx, cy, chunkWidth, chunkHeight } = event.data;
-    const values = new Float64Array(chunkWidth * chunkHeight);
-    const startTx = cx * chunkWidth;
-    const startTy = cy * chunkHeight;
+  const { requestId, cx, cy, chunkWidth, chunkHeight } = event.data;
+  const values = new Float64Array(chunkWidth * chunkHeight);
+  const startTx = cx * chunkWidth;
+  const startTy = cy * chunkHeight;
 
-    for (let ty = 0; ty < chunkHeight; ty++) {
-        for (let tx = 0; tx < chunkWidth; tx++) {
-            values[ty * chunkWidth + tx] = packSampleValue(startTx + tx, startTy + ty);
-        }
+  for (let ty = 0; ty < chunkHeight; ty++) {
+    for (let tx = 0; tx < chunkWidth; tx++) {
+      values[ty * chunkWidth + tx] = packSampleValue(startTx + tx, startTy + ty);
     }
+  }
 
-    self.postMessage({ requestId, values }, [values.buffer]);
+  self.postMessage({ requestId, values }, [values.buffer]);
 };

@@ -253,16 +253,34 @@ describe('QueryEngine spatial-index narrowing parity', () => {
     // see e.g. `world.queryPoint` at PhysicsWorld.ts:538, which forwards to its
     // internal `_query: QueryEngine` (now constructed with the backend's
     // `spatialIndex`, per Step 6 above).
-    const indexedPoint = world.queryPoint(point).map(c => c.id).sort((a, b) => a - b);
-    const linearPoint = unindexed.queryPoint(point).map(c => c.id).sort((a, b) => a - b);
+    const indexedPoint = world
+      .queryPoint(point)
+      .map(c => c.id)
+      .sort((a, b) => a - b);
+    const linearPoint = unindexed
+      .queryPoint(point)
+      .map(c => c.id)
+      .sort((a, b) => a - b);
     expect(indexedPoint).toEqual(linearPoint);
 
-    const indexedAabb = world.queryAabb(bounds).map(c => c.id).sort((a, b) => a - b);
-    const linearAabb = unindexed.queryAabb(bounds).map(c => c.id).sort((a, b) => a - b);
+    const indexedAabb = world
+      .queryAabb(bounds)
+      .map(c => c.id)
+      .sort((a, b) => a - b);
+    const linearAabb = unindexed
+      .queryAabb(bounds)
+      .map(c => c.id)
+      .sort((a, b) => a - b);
     expect(indexedAabb).toEqual(linearAabb);
 
-    const indexedShape = world.overlapShape(new BoxShape(20, 20), { x: 15, y: 15 }).map(c => c.id).sort((a, b) => a - b);
-    const linearShape = unindexed.overlapShape(new BoxShape(20, 20), { x: 15, y: 15 }).map(c => c.id).sort((a, b) => a - b);
+    const indexedShape = world
+      .overlapShape(new BoxShape(20, 20), { x: 15, y: 15 })
+      .map(c => c.id)
+      .sort((a, b) => a - b);
+    const linearShape = unindexed
+      .overlapShape(new BoxShape(20, 20), { x: 15, y: 15 })
+      .map(c => c.id)
+      .sort((a, b) => a - b);
     expect(indexedShape).toEqual(linearShape);
 
     expect(indexedPoint.length).toBeGreaterThan(0);
@@ -287,8 +305,14 @@ describe('QueryEngine spatial-index narrowing parity', () => {
     expect((indexedNearest as RayHit).collider).toBe((linearNearest as RayHit).collider);
     expect((indexedNearest as RayHit).distance).toBeCloseTo((linearNearest as RayHit).distance, 6);
 
-    const indexedAll = world.rayCastAll(origin, direction).map(h => h.collider.id).sort((a, b) => a - b);
-    const linearAll = unindexed.rayCastAll(origin, direction).map(h => h.collider.id).sort((a, b) => a - b);
+    const indexedAll = world
+      .rayCastAll(origin, direction)
+      .map(h => h.collider.id)
+      .sort((a, b) => a - b);
+    const linearAll = unindexed
+      .rayCastAll(origin, direction)
+      .map(h => h.collider.id)
+      .sort((a, b) => a - b);
     expect(indexedAll).toEqual(linearAll);
     expect(indexedAll.length).toBeGreaterThan(0); // sanity: not vacuously equal on empty results
   });
@@ -329,7 +353,9 @@ describe('QueryEngine spatial-index narrowing parity', () => {
       const linearAll = unindexed.rayCastAll(origin, direction, undefined, undefined, maxDistance);
 
       expect(indexedAll.map(h => h.collider.id).sort((a, b) => a - b)).toEqual(linearAll.map(h => h.collider.id).sort((a, b) => a - b));
-      expect(indexedAll.map(h => Math.round(h.distance * 1e6)).sort((a, b) => a - b)).toEqual(linearAll.map(h => Math.round(h.distance * 1e6)).sort((a, b) => a - b));
+      expect(indexedAll.map(h => Math.round(h.distance * 1e6)).sort((a, b) => a - b)).toEqual(
+        linearAll.map(h => Math.round(h.distance * 1e6)).sort((a, b) => a - b),
+      );
     }
   });
 });

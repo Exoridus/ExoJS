@@ -240,9 +240,7 @@ describe('capsule in a world', () => {
 
     // Released just above its resting height, the way the sleeping suite drops
     // its boxes. A long fall is a different question - see the note below.
-    const body = world.add(
-      new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 288 }, colliders: [{ shape: new CapsuleShape(-15, 0, 15, 0, 8) }] }),
-    );
+    const body = world.add(new PhysicsBody({ type: 'dynamic', position: { x: 0, y: 288 }, colliders: [{ shape: new CapsuleShape(-15, 0, 15, 0, 8) }] }));
 
     for (let frame = 0; frame < 180; frame++) {
       world.step(DT);

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for MapWorldRuntime."
-      ],
+      "paragraphs": ["Options for MapWorldRuntime."],
       "importLine": "import { MapWorldRuntimeOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

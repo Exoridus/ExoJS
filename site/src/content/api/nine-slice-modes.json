@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Per-section fill mode overrides for a nine-slice sprite."
-      ],
+      "paragraphs": ["Per-section fill mode overrides for a nine-slice sprite."],
       "importLine": "import { NineSliceModes } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -314,7 +314,12 @@ describe('convex decomposition', () => {
   });
 
   it('rejects an outline with fewer than three effective vertices', () => {
-    expect(() => decomposeToConvexParts([{ x: 0, y: 0 }, { x: 10, y: 0 }])).toThrow(RangeError);
+    expect(() =>
+      decomposeToConvexParts([
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+      ]),
+    ).toThrow(RangeError);
     // Three vertices, but all on one line.
     expect(() =>
       decomposeToConvexParts([

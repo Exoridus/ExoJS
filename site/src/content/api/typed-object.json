@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A TileMapObject whose `properties` are narrowed to the schema shape declared for the object `type` `T` in schema `S`."
-      ],
+      "paragraphs": ["A TileMapObject whose `properties` are narrowed to the schema shape declared for the object `type` `T` in schema `S`."],
       "importLine": "import { TypedObject } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

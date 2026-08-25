@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options accepted by an asset of the built-in `image` type."
-      ],
+      "paragraphs": ["Options accepted by an asset of the built-in `image` type."],
       "importLine": "import { ImageAssetOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

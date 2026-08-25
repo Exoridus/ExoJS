@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A single frame entry in a SpritesheetData descriptor."
-      ],
+      "paragraphs": ["A single frame entry in a SpritesheetData descriptor."],
       "importLine": "import { SpritesheetFrame } from '@codexo/exojs'",
       "sourceLink": null
     },

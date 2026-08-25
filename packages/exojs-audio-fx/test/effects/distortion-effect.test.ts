@@ -39,12 +39,8 @@ const wireAll = (ctx: AudioContext) => {
   const gains = [makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx), makeGainNode(ctx)];
   let gainIdx = 0;
   const gainSpy = vi.spyOn(ctx, 'createGain').mockImplementation(() => gains[gainIdx++] as unknown as GainNode);
-  const waveShaperSpy = vi
-    .spyOn(ctx, 'createWaveShaper')
-    .mockReturnValue(waveShaper as unknown as WaveShaperNode);
-  const biquadSpy = vi
-    .spyOn(ctx, 'createBiquadFilter')
-    .mockReturnValue(toneFilter as unknown as BiquadFilterNode);
+  const waveShaperSpy = vi.spyOn(ctx, 'createWaveShaper').mockReturnValue(waveShaper as unknown as WaveShaperNode);
+  const biquadSpy = vi.spyOn(ctx, 'createBiquadFilter').mockReturnValue(toneFilter as unknown as BiquadFilterNode);
   const [inputGain, outputGain, dryGain, wetGain] = gains;
   return { waveShaper, toneFilter, gains, inputGain, outputGain, dryGain, wetGain, gainSpy, waveShaperSpy, biquadSpy };
 };
@@ -191,8 +187,7 @@ describe('DistortionEffect', () => {
 
     it('connects wet path: input → waveShaper → toneFilter → wetGain → output', () => {
       const ctx = getAudioContext();
-      const { inputGain, outputGain, waveShaper, toneFilter, wetGain, gainSpy, waveShaperSpy, biquadSpy } =
-        wireAll(ctx);
+      const { inputGain, outputGain, waveShaper, toneFilter, wetGain, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
       const effect = new DistortionEffect();
       expect(inputGain.connect).toHaveBeenCalledWith(waveShaper);
       expect(waveShaper.connect).toHaveBeenCalledWith(toneFilter);
@@ -266,10 +261,7 @@ describe('DistortionEffect', () => {
       const { toneFilter, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
       const effect = new DistortionEffect({ tone: 1 });
       // 100 * 200^1 = 20000
-      expect(toneFilter.frequency.setValueAtTime).toHaveBeenCalledWith(
-        expect.closeTo(20000, 0),
-        expect.anything(),
-      );
+      expect(toneFilter.frequency.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(20000, 0), expect.anything());
       effect.destroy();
       gainSpy.mockRestore();
       waveShaperSpy.mockRestore();
@@ -281,10 +273,7 @@ describe('DistortionEffect', () => {
       const { toneFilter, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
       const effect = new DistortionEffect({ tone: 0 });
       // 100 * 200^0 = 100
-      expect(toneFilter.frequency.setValueAtTime).toHaveBeenCalledWith(
-        expect.closeTo(100, 0),
-        expect.anything(),
-      );
+      expect(toneFilter.frequency.setValueAtTime).toHaveBeenCalledWith(expect.closeTo(100, 0), expect.anything());
       effect.destroy();
       gainSpy.mockRestore();
       waveShaperSpy.mockRestore();
@@ -351,16 +340,8 @@ describe('DistortionEffect', () => {
       const { dryGain, wetGain, gainSpy, waveShaperSpy, biquadSpy } = wireAll(ctx);
       const effect = new DistortionEffect();
       effect.wet = 0.6;
-      expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(
-        expect.closeTo(0.6),
-        expect.anything(),
-        expect.anything(),
-      );
-      expect(dryGain.gain.setTargetAtTime).toHaveBeenCalledWith(
-        expect.closeTo(0.4),
-        expect.anything(),
-        expect.anything(),
-      );
+      expect(wetGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.6), expect.anything(), expect.anything());
+      expect(dryGain.gain.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(0.4), expect.anything(), expect.anything());
       effect.destroy();
       gainSpy.mockRestore();
       waveShaperSpy.mockRestore();
@@ -428,11 +409,7 @@ describe('DistortionEffect', () => {
       const effect = new DistortionEffect({ tone: 1 });
       effect.tone = 0.5;
       // 100 * 200^0.5 ≈ 1414 Hz
-      expect(toneFilter.frequency.setTargetAtTime).toHaveBeenCalledWith(
-        expect.closeTo(100 * Math.pow(200, 0.5), 0),
-        expect.anything(),
-        expect.anything(),
-      );
+      expect(toneFilter.frequency.setTargetAtTime).toHaveBeenCalledWith(expect.closeTo(100 * Math.pow(200, 0.5), 0), expect.anything(), expect.anything());
       effect.destroy();
       gainSpy.mockRestore();
       waveShaperSpy.mockRestore();

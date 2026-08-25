@@ -4,14 +4,7 @@ import { TileChunk } from './TileChunk';
 import type { TileSet } from './TileSet';
 import type { TileProperties } from './types';
 import type { PackedTile, ResolvedTile } from './types';
-import {
-  packTile,
-  unpackTile,
-  validateInteger,
-  validateNonNegativeInteger,
-  validatePairedDimensions,
-  validatePositiveInteger,
-} from './types';
+import { packTile, unpackTile, validateInteger, validateNonNegativeInteger, validatePairedDimensions, validatePositiveInteger } from './types';
 import { tileToChunkCoord, tileToLocalInChunk } from './types';
 
 /**
@@ -277,8 +270,7 @@ export class TileLayer {
    * @throws When dimensions, chunk size, or other options are invalid.
    */
   public constructor(options: TileLayerOptions) {
-    const { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY, parallaxScale } =
-      validateTileLayerOptions(options);
+    const { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY, parallaxScale } = validateTileLayerOptions(options);
 
     this.id = options.id;
     this.name = options.name;
@@ -298,9 +290,7 @@ export class TileLayer {
     this.parallaxScale = parallaxScale;
     this.class = options.class ?? '';
     this.tintColor = options.tintColor ?? null;
-    this.properties = options.properties
-      ? Object.freeze({ ...options.properties })
-      : Object.freeze({});
+    this.properties = options.properties ? Object.freeze({ ...options.properties }) : Object.freeze({});
   }
 
   // ── Bounds helpers ────────────────────────────────────────────────────
@@ -365,10 +355,7 @@ export class TileLayer {
       let ch = this.chunkHeight;
       if (range !== null && this.width !== undefined && this.height !== undefined) {
         if (cx < range.minCx || cx > range.maxCx || cy < range.minCy || cy > range.maxCy) {
-          throw new Error(
-            `Chunk (${cx}, ${cy}) outside layer chunk range ` +
-            `[${range.minCx}..${range.maxCx}, ${range.minCy}..${range.maxCy}].`,
-          );
+          throw new Error(`Chunk (${cx}, ${cy}) outside layer chunk range ` + `[${range.minCx}..${range.maxCx}, ${range.minCy}..${range.maxCy}].`);
         }
         // Compute the actual tile dimensions for this chunk (edge chunks may be smaller).
         const startTx = cx * this.chunkWidth;
@@ -505,15 +492,10 @@ export class TileLayer {
     }
     const tilesetIndex = this.tilesets.indexOf(tile.tileset);
     if (tilesetIndex === -1) {
-      throw new Error(
-        `Tileset "${tile.tileset.name}" is not available to layer "${this.name}".`,
-      );
+      throw new Error(`Tileset "${tile.tileset.name}" is not available to layer "${this.name}".`);
     }
     if (tile.localTileId < 0 || tile.localTileId >= tile.tileset.tileCount) {
-      throw new Error(
-        `localTileId ${tile.localTileId} out of range for tileset "${tile.tileset.name}" ` +
-        `(max ${tile.tileset.tileCount - 1}).`,
-      );
+      throw new Error(`localTileId ${tile.localTileId} out of range for tileset "${tile.tileset.name}" ` + `(max ${tile.tileset.tileCount - 1}).`);
     }
     return packTile(tilesetIndex, tile.localTileId, tile.transform);
   }
@@ -529,9 +511,7 @@ export class TileLayer {
     validateInteger(tx, 'tx');
     validateInteger(ty, 'ty');
     if (!this.inBounds(tx, ty)) {
-      const boundsMsg = this.width !== undefined && this.height !== undefined
-        ? `[0..${this.width - 1}, 0..${this.height - 1}]`
-        : '[unbounded]';
+      const boundsMsg = this.width !== undefined && this.height !== undefined ? `[0..${this.width - 1}, 0..${this.height - 1}]` : '[unbounded]';
       throw new Error(`setTileAt (${tx}, ${ty}) out of bounds ${boundsMsg}.`);
     }
     const packed = this._validateTileRef(tile);
@@ -554,9 +534,7 @@ export class TileLayer {
     validateInteger(tx, 'tx');
     validateInteger(ty, 'ty');
     if (!this.inBounds(tx, ty)) {
-      const boundsMsg = this.width !== undefined && this.height !== undefined
-        ? `[0..${this.width - 1}, 0..${this.height - 1}]`
-        : '[unbounded]';
+      const boundsMsg = this.width !== undefined && this.height !== undefined ? `[0..${this.width - 1}, 0..${this.height - 1}]` : '[unbounded]';
       throw new Error(`clearTileAt (${tx}, ${ty}) out of bounds ${boundsMsg}.`);
     }
     const { cx, cy } = tileToChunkCoord(tx, ty, this.chunkWidth, this.chunkHeight);
@@ -574,9 +552,7 @@ export class TileLayer {
    * Fill a rectangular region with a tile.
    * @advanced
    */
-  public fillRect(
-    x: number, y: number, w: number, h: number, tile: ResolvedTile,
-  ): void {
+  public fillRect(x: number, y: number, w: number, h: number, tile: ResolvedTile): void {
     this._checkDestroyed();
     const packed = this._validateTileRef(tile);
     let changed = false;
@@ -623,9 +599,7 @@ export class TileLayer {
    * Yields (tx, ty, resolvedTile) tuples. Skips empty cells.
    * @advanced
    */
-  public *tilesInRect(
-    x: number, y: number, w: number, h: number,
-  ): Generator<{ tx: number; ty: number; tile: ResolvedTile }> {
+  public *tilesInRect(x: number, y: number, w: number, h: number): Generator<{ tx: number; ty: number; tile: ResolvedTile }> {
     const startCx = Math.floor(x / this.chunkWidth);
     const endCx = Math.floor((x + w - 1) / this.chunkWidth);
     const startCy = Math.floor(y / this.chunkHeight);
@@ -639,9 +613,9 @@ export class TileLayer {
         const chunkStartTx = cx * this.chunkWidth;
         const chunkStartTy = cy * this.chunkHeight;
         const minLx = Math.max(0, x - chunkStartTx);
-        const maxLx = Math.min(chunk.width - 1, (x + w - 1) - chunkStartTx);
+        const maxLx = Math.min(chunk.width - 1, x + w - 1 - chunkStartTx);
         const minLy = Math.max(0, y - chunkStartTy);
-        const maxLy = Math.min(chunk.height - 1, (y + h - 1) - chunkStartTy);
+        const maxLy = Math.min(chunk.height - 1, y + h - 1 - chunkStartTy);
 
         for (let ly = minLy; ly <= maxLy; ly++) {
           for (let lx = minLx; lx <= maxLx; lx++) {

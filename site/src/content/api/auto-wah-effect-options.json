@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for AutoWahEffect."
-      ],
+      "paragraphs": ["Construction options for AutoWahEffect."],
       "importLine": "import { AutoWahEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

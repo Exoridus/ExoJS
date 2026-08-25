@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Minimal interface consumed by layoutText. Both TextStyle and the BMFont adapter satisfy this structurally."
-      ],
+      "paragraphs": ["Minimal interface consumed by layoutText. Both TextStyle and the BMFont adapter satisfy this structurally."],
       "importLine": "import { TextLayoutStyle } from '@codexo/exojs'",
       "sourceLink": null
     },

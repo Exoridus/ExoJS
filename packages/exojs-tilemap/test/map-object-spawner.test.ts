@@ -46,14 +46,11 @@ function mapWith(...layers: readonly LayerSpec[]): TileMap {
     height: 4,
     tileWidth: 16,
     tileHeight: 16,
-    objectLayers: layers.map(
-      layer => new ObjectLayer({ id: layer.id, name: layer.name, objects: layer.objects.map(object) }),
-    ),
+    objectLayers: layers.map(layer => new ObjectLayer({ id: layer.id, name: layer.name, objects: layer.objects.map(object) })),
   });
 }
 
 class Thing implements Destroyable {
-
   public destroyed = false;
 
   public constructor(
@@ -69,7 +66,6 @@ class Thing implements Destroyable {
 
 /** A spawn result whose teardown fails, for the guarded-teardown paths. */
 class BrittleThing extends Thing {
-
   public override destroy(): never {
     throw new Error('teardown exploded');
   }
@@ -81,7 +77,14 @@ const tick = (): Promise<void> => new Promise<void>(resolve => setTimeout(resolv
 
 describe('MapObjectSpawner identification', () => {
   it('dispatches on the object kind by default', async () => {
-    const map = mapWith({ id: 1, name: 'entities', objects: [{ id: 1, type: 'Enemy' }, { id: 2, type: 'Chest' }] });
+    const map = mapWith({
+      id: 1,
+      name: 'entities',
+      objects: [
+        { id: 1, type: 'Enemy' },
+        { id: 2, type: 'Chest' },
+      ],
+    });
     const spawner = new MapObjectSpawner<void, Thing>({
       Enemy: () => new Thing('enemy'),
       Chest: () => new Thing('chest'),
@@ -96,7 +99,10 @@ describe('MapObjectSpawner identification', () => {
     const map = mapWith({
       id: 1,
       name: 'entities',
-      objects: [{ id: 1, type: 'Enemy', name: 'boss' }, { id: 2, type: 'Enemy', name: 'grunt' }],
+      objects: [
+        { id: 1, type: 'Enemy', name: 'boss' },
+        { id: 2, type: 'Enemy', name: 'grunt' },
+      ],
     });
     const spawner = new MapObjectSpawner<void, Thing>(
       { 'Enemy:boss': () => new Thing('boss'), 'Enemy:grunt': () => new Thing('grunt') },
@@ -110,23 +116,15 @@ describe('MapObjectSpawner identification', () => {
 
   it('treats a null from identify as unknown', async () => {
     const map = mapWith({ id: 1, name: 'entities', objects: [{ id: 1, type: 'Enemy' }] });
-    const spawner = new MapObjectSpawner<void, Thing>(
-      { Enemy: () => new Thing('enemy') },
-      { identify: () => null, unknown: 'error' },
-    );
+    const spawner = new MapObjectSpawner<void, Thing>({ Enemy: () => new Thing('enemy') }, { identify: () => null, unknown: 'error' });
 
     await expect(spawner.spawn(map, undefined)).rejects.toMatchObject({ reason: 'unknown-kind', kind: 'Enemy' });
   });
 
   it('passes the spawn context to identify', async () => {
     const map = mapWith({ id: 1, name: 'entities', objects: [{ id: 1, type: 'Enemy' }] });
-    const identify = vi.fn((_object: MapObjectDescriptor, context: { hard: boolean }) =>
-      context.hard ? 'Enemy:hard' : 'Enemy',
-    );
-    const spawner = new MapObjectSpawner<{ hard: boolean }, Thing>(
-      { Enemy: () => new Thing('normal'), 'Enemy:hard': () => new Thing('hard') },
-      { identify },
-    );
+    const identify = vi.fn((_object: MapObjectDescriptor, context: { hard: boolean }) => (context.hard ? 'Enemy:hard' : 'Enemy'));
+    const spawner = new MapObjectSpawner<{ hard: boolean }, Thing>({ Enemy: () => new Thing('normal'), 'Enemy:hard': () => new Thing('hard') }, { identify });
 
     const session = await spawner.spawn(map, { hard: true });
 
@@ -186,7 +184,14 @@ describe('MapObjectSpawner unknown objects', () => {
 
 describe('MapObjectSpawner factories', () => {
   it('accepts synchronous and asynchronous factories side by side', async () => {
-    const map = mapWith({ id: 1, name: 'entities', objects: [{ id: 1, type: 'Sync' }, { id: 2, type: 'Async' }] });
+    const map = mapWith({
+      id: 1,
+      name: 'entities',
+      objects: [
+        { id: 1, type: 'Sync' },
+        { id: 2, type: 'Async' },
+      ],
+    });
     const spawner = new MapObjectSpawner<void, Thing>({
       Sync: () => new Thing('sync'),
       Async: async () => {
@@ -201,7 +206,14 @@ describe('MapObjectSpawner factories', () => {
   });
 
   it('creates nothing for a factory that returns null', async () => {
-    const map = mapWith({ id: 1, name: 'entities', objects: [{ id: 1, type: 'Enemy' }, { id: 2, type: 'Enemy' }] });
+    const map = mapWith({
+      id: 1,
+      name: 'entities',
+      objects: [
+        { id: 1, type: 'Enemy' },
+        { id: 2, type: 'Enemy' },
+      ],
+    });
     const spawner = new MapObjectSpawner<void, Thing>({
       Enemy: descriptor => (descriptor.id === '1' ? new Thing('kept') : null),
     });
@@ -214,12 +226,19 @@ describe('MapObjectSpawner factories', () => {
 
   it('spawns in layer order then object order regardless of async resolution order', async () => {
     const map = mapWith(
-      { id: 1, name: 'a', objects: [{ id: 1, type: 'Slow' }, { id: 2, type: 'Fast' }] },
+      {
+        id: 1,
+        name: 'a',
+        objects: [
+          { id: 1, type: 'Slow' },
+          { id: 2, type: 'Fast' },
+        ],
+      },
       { id: 2, name: 'b', objects: [{ id: 3, type: 'Fast' }] },
     );
     const spawner = new MapObjectSpawner<void, Thing>({
       Fast: descriptor => new Thing(`fast-${descriptor.id}`),
-      Slow: async (descriptor) => {
+      Slow: async descriptor => {
         await tick();
         await tick();
         return new Thing(`slow-${descriptor.id}`);
@@ -235,7 +254,7 @@ describe('MapObjectSpawner factories', () => {
     const map = mapWith({ id: 9, name: 'entities', objects: [{ id: 1, type: 'Enemy', sourceId: 'abc' }] });
     const seen: MapObjectDescriptor[] = [];
     const spawner = new MapObjectSpawner<void, Thing>({
-      Enemy: (descriptor) => {
+      Enemy: descriptor => {
         seen.push(descriptor);
         return new Thing('enemy');
       },
@@ -256,7 +275,10 @@ describe('MapSpawnSession', () => {
     const map = mapWith({
       id: 1,
       name: 'entities',
-      objects: [{ id: 1, type: 'Enemy', sourceId: 'boss-iid' }, { id: 2, type: 'Enemy' }],
+      objects: [
+        { id: 1, type: 'Enemy', sourceId: 'boss-iid' },
+        { id: 2, type: 'Enemy' },
+      ],
     });
     const spawner = new MapObjectSpawner<void, Thing>({ Enemy: descriptor => new Thing(descriptor.id) });
 
@@ -274,7 +296,11 @@ describe('MapSpawnSession', () => {
     const map = mapWith({
       id: 1,
       name: 'entities',
-      objects: [{ id: 1, type: 'Enemy' }, { id: 2, type: 'Enemy' }, { id: 3, type: 'Enemy' }],
+      objects: [
+        { id: 1, type: 'Enemy' },
+        { id: 2, type: 'Enemy' },
+        { id: 3, type: 'Enemy' },
+      ],
     });
     const spawner = new MapObjectSpawner<void, Thing>({ Enemy: descriptor => new Thing(descriptor.id, log) });
 
@@ -291,7 +317,11 @@ describe('MapSpawnSession', () => {
     const map = mapWith({
       id: 1,
       name: 'entities',
-      objects: [{ id: 1, type: 'Enemy' }, { id: 2, type: 'Brittle' }, { id: 3, type: 'Enemy' }],
+      objects: [
+        { id: 1, type: 'Enemy' },
+        { id: 2, type: 'Brittle' },
+        { id: 3, type: 'Enemy' },
+      ],
     });
     const spawner = new MapObjectSpawner<void, Thing>({
       Enemy: descriptor => new Thing(descriptor.id, log),
@@ -335,7 +365,11 @@ describe('MapObjectSpawner atomicity', () => {
     const map = mapWith({
       id: 1,
       name: 'entities',
-      objects: [{ id: 1, type: 'Enemy' }, { id: 2, type: 'Enemy' }, { id: 3, type: 'Bomb' }],
+      objects: [
+        { id: 1, type: 'Enemy' },
+        { id: 2, type: 'Enemy' },
+        { id: 3, type: 'Bomb' },
+      ],
     });
     const boom = new Error('factory exploded');
     const spawner = new MapObjectSpawner<void, Thing>({
@@ -358,7 +392,11 @@ describe('MapObjectSpawner atomicity', () => {
     const map = mapWith({
       id: 1,
       name: 'entities',
-      objects: [{ id: 1, type: 'Enemy' }, { id: 2, type: 'Brittle' }, { id: 3, type: 'Bomb' }],
+      objects: [
+        { id: 1, type: 'Enemy' },
+        { id: 2, type: 'Brittle' },
+        { id: 3, type: 'Bomb' },
+      ],
     });
     const boom = new Error('factory exploded');
     const spawner = new MapObjectSpawner<void, Thing>({
@@ -416,12 +454,16 @@ describe('MapObjectSpawner cancellation', () => {
     const map = mapWith({
       id: 1,
       name: 'entities',
-      objects: [{ id: 1, type: 'Enemy' }, { id: 2, type: 'Slow' }, { id: 3, type: 'Enemy' }],
+      objects: [
+        { id: 1, type: 'Enemy' },
+        { id: 2, type: 'Slow' },
+        { id: 3, type: 'Enemy' },
+      ],
     });
     const third = vi.fn(() => new Thing('3', log));
     const spawner = new MapObjectSpawner<void, Thing>({
       Enemy: descriptor => (descriptor.id === '3' ? third() : new Thing(descriptor.id, log)),
-      Slow: async (descriptor) => {
+      Slow: async descriptor => {
         controller.abort();
         await tick();
         return new Thing(descriptor.id, log);

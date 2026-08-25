@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A voice whose playhead can be read and moved."
-      ],
+      "paragraphs": ["A voice whose playhead can be read and moved."],
       "importLine": "import { Seekable } from '@codexo/exojs'",
       "sourceLink": null
     },

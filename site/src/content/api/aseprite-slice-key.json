@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Bounds of a named slice at a specific frame."
-      ],
+      "paragraphs": ["Bounds of a named slice at a specific frame."],
       "importLine": "import { AsepriteSliceKey } from '@codexo/exojs-aseprite'",
       "sourceLink": null
     },

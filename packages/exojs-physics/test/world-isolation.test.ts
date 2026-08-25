@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { CollisionEvent } from '../src/index';
-import { BoxShape, PhysicsBody, physicsBuildInfo,PhysicsWorld } from '../src/index';
+import { BoxShape, PhysicsBody, physicsBuildInfo, PhysicsWorld } from '../src/index';
 import { colliderAt } from './support';
 
 const DT = 1 / 60;

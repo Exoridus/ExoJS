@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The inclusive range of chunk coordinates that intersect a bounded TileLayer. `null` for an unbounded layer (no range limit)."
-      ],
+      "paragraphs": ["The inclusive range of chunk coordinates that intersect a bounded TileLayer. `null` for an unbounded layer (no range limit)."],
       "importLine": "import { ChunkRange } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

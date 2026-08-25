@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A layer instance within a level."
-      ],
+      "paragraphs": ["A layer instance within a level."],
       "importLine": "import { LdtkLayerInstance } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

@@ -125,10 +125,7 @@ interface PendingRequest {
  * your deployment sets one.
  * @advanced
  */
-export function createWorkerSampledChunkSource(
-  layer: TileLayer,
-  options: WorkerSampledChunkSourceOptions,
-): ChunkSource & { destroy(): void } {
+export function createWorkerSampledChunkSource(layer: TileLayer, options: WorkerSampledChunkSourceOptions): ChunkSource & { destroy(): void } {
   const mapValueToTile = options.mapValueToTile.bind(options);
 
   const blob = new Blob([options.workerSource], { type: 'application/javascript' });

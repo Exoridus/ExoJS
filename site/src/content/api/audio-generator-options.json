@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for AudioGenerator."
-      ],
+      "paragraphs": ["Construction options for AudioGenerator."],
       "importLine": "import { AudioGeneratorOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

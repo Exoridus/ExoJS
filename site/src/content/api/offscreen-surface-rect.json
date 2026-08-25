@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Where the surface is displayed, in the coordinate space the forwarded pointer events use."
-      ],
+      "paragraphs": ["Where the surface is displayed, in the coordinate space the forwarded pointer events use."],
       "importLine": "import { OffscreenSurfaceRect } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "What a MapLevelProvider is given for one level load."
-      ],
+      "paragraphs": ["What a MapLevelProvider is given for one level load."],
       "importLine": "import { MapLevelLoadContext } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

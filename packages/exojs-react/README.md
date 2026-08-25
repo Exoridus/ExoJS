@@ -33,10 +33,7 @@ import { TitleScene, GameScene } from './scenes';
 
 function Game() {
   return (
-    <ExoCanvas
-      options={{ canvas: { width: 1280, height: 720 }, clearColor: someColor }}
-      style={{ width: 1280, height: 720 }}
-    >
+    <ExoCanvas options={{ canvas: { width: 1280, height: 720 }, clearColor: someColor }} style={{ width: 1280, height: 720 }}>
       <Scenes active="game" transition={{ type: 'fade', duration: 300 }}>
         <Scene name="title" component={TitleScene} />
         <Scene name="game" component={GameScene}>
@@ -70,17 +67,17 @@ function Game() {
 
 ## API
 
-| Export | Kind | Purpose |
-|---|---|---|
-| `ExoCanvas` | component | Batteries-included canvas host (wrapper div + canvas + context). Accepts `onReady`/`onError`. |
-| `useExoApplication(options?, onReady?, onError?)` | hook | Headless: owns the `Application`, returns `{ app, canvasRef }`. `onError` mirrors `Application.onError`. |
-| `useExoApp()` | hook | The `Application` from the nearest `<ExoCanvas>`/provider. Throws if absent. |
-| `useExoContext()` | hook | Like `useExoApp` but returns `Application \| null` (no throw). |
-| `ExoContext` | context | The underlying context (advanced / testing). |
-| `useScene(SceneClass, deps?)` | hook | Instantiate + activate a single scene; returns it once live. Load failures route to `app.onError`. |
-| `Scenes` / `Scene` | components | Declarative scene switch over the one-active-scene model. Load failures route to `app.onError`. |
-| `useActiveScene()` | hook | The active scene instance from the nearest `<Scenes>`. |
-| `useSignal(signal, getSnapshot)` | hook | Subscribes to an engine `Signal` and re-renders on every dispatch (e.g. `app.onFrame`). |
+| Export                                            | Kind       | Purpose                                                                                                  |
+| ------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------- |
+| `ExoCanvas`                                       | component  | Batteries-included canvas host (wrapper div + canvas + context). Accepts `onReady`/`onError`.            |
+| `useExoApplication(options?, onReady?, onError?)` | hook       | Headless: owns the `Application`, returns `{ app, canvasRef }`. `onError` mirrors `Application.onError`. |
+| `useExoApp()`                                     | hook       | The `Application` from the nearest `<ExoCanvas>`/provider. Throws if absent.                             |
+| `useExoContext()`                                 | hook       | Like `useExoApp` but returns `Application \| null` (no throw).                                           |
+| `ExoContext`                                      | context    | The underlying context (advanced / testing).                                                             |
+| `useScene(SceneClass, deps?)`                     | hook       | Instantiate + activate a single scene; returns it once live. Load failures route to `app.onError`.       |
+| `Scenes` / `Scene`                                | components | Declarative scene switch over the one-active-scene model. Load failures route to `app.onError`.          |
+| `useActiveScene()`                                | hook       | The active scene instance from the nearest `<Scenes>`.                                                   |
+| `useSignal(signal, getSnapshot)`                  | hook       | Subscribes to an engine `Signal` and re-renders on every dispatch (e.g. `app.onFrame`).                  |
 
 ### Reactivity model
 

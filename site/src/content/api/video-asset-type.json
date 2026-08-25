@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Streaming video backed by a `<video>` element, usable as a texture source."
-      ],
+      "paragraphs": ["Streaming video backed by a `<video>` element, usable as a texture source."],
       "importLine": "import { VideoAssetType } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options accepted by an asset of the built-in `music` type."
-      ],
+      "paragraphs": ["Options accepted by an asset of the built-in `music` type."],
       "importLine": "import { MusicAssetOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "CSV and TSV tables, parsed into rows of raw field strings."
-      ],
+      "paragraphs": ["CSV and TSV tables, parsed into rows of raw field strings."],
       "importLine": "import { CsvAssetType } from '@codexo/exojs'",
       "sourceLink": null
     },

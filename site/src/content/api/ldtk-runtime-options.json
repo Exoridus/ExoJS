@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for LdtkProject.createRuntime."
-      ],
+      "paragraphs": ["Options for LdtkProject.createRuntime."],
       "importLine": "import { LdtkRuntimeOptions } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

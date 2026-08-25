@@ -221,12 +221,12 @@ export class ImageLayerNode extends Container {
     const originY = this.y;
 
     if (
-      bounds.x === this._covViewX
-      && bounds.y === this._covViewY
-      && bounds.width === this._covViewWidth
-      && bounds.height === this._covViewHeight
-      && originX === this._covOriginX
-      && originY === this._covOriginY
+      bounds.x === this._covViewX &&
+      bounds.y === this._covViewY &&
+      bounds.width === this._covViewWidth &&
+      bounds.height === this._covViewHeight &&
+      originX === this._covOriginX &&
+      originY === this._covOriginY
     ) {
       return;
     }

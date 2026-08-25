@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for LimiterEffect."
-      ],
+      "paragraphs": ["Construction options for LimiterEffect."],
       "importLine": "import { LimiterEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

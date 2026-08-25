@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Listener flags the input pipeline needs when it subscribes to a platform event."
-      ],
+      "paragraphs": ["Listener flags the input pipeline needs when it subscribes to a platform event."],
       "importLine": "import { PlatformListenerOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

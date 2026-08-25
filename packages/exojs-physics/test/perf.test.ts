@@ -32,9 +32,7 @@ const buildField = (columns: number, rows: number, worldOptions: { enableSleepin
   const floorTop = 1000;
   const width = columns * spacing + 200;
 
-  world.add(
-    new PhysicsBody({ type: 'static', position: { x: width / 2, y: floorTop + 20 }, colliders: [{ shape: new BoxShape(width, 40), friction: 0.5 }] }),
-  );
+  world.add(new PhysicsBody({ type: 'static', position: { x: width / 2, y: floorTop + 20 }, colliders: [{ shape: new BoxShape(width, 40), friction: 0.5 }] }));
 
   const bodies: PhysicsBody[] = [];
 
@@ -81,7 +79,9 @@ describe('physics dynamics performance', () => {
     // Steady-state step time.
     const msPerStep = stepTimes(world, 180);
 
-    console.log(`${msPerStep.toFixed(3)} ms/step · 1,000 bodies (${(1000 / msPerStep).toFixed(0)} body-steps/ms · ${(16.67 / msPerStep).toFixed(0)}× headroom at 60fps)`);
+    console.log(
+      `${msPerStep.toFixed(3)} ms/step · 1,000 bodies (${(1000 / msPerStep).toFixed(0)} body-steps/ms · ${(16.67 / msPerStep).toFixed(0)}× headroom at 60fps)`,
+    );
 
     // Sanity: nothing exploded.
     for (const body of bodies) {

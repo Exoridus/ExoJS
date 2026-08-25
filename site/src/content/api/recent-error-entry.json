@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "One entry of the bounded Application.recentErrors ring buffer - a JSON-friendly snapshot of an engine error (feeds future debug dumps)."
-      ],
+      "paragraphs": ["One entry of the bounded Application.recentErrors ring buffer - a JSON-friendly snapshot of an engine error (feeds future debug dumps)."],
       "importLine": "import { RecentErrorEntry } from '@codexo/exojs'",
       "sourceLink": null
     },

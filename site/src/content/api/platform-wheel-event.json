@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A scroll gesture. `deltaMode` selects the unit the deltas are expressed in."
-      ],
+      "paragraphs": ["A scroll gesture. `deltaMode` selects the unit the deltas are expressed in."],
       "importLine": "import { PlatformWheelEvent } from '@codexo/exojs'",
       "sourceLink": null
     },

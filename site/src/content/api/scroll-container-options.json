@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for ScrollContainer."
-      ],
+      "paragraphs": ["Options for ScrollContainer."],
       "importLine": "import { ScrollContainerOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

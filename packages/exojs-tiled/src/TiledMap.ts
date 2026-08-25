@@ -1,16 +1,32 @@
 import { type Texture, TextureRegion } from '@codexo/exojs';
-import type { ChunkPayload, ChunkSource, ObjectPoint, ResolvedTile, TextStyle, TileAnimationFrame, TileDefinition, TileMapObject, TileProperties, TilePropertyValue, TileTransform } from '@codexo/exojs-tilemap';
+import type {
+  ChunkPayload,
+  ChunkSource,
+  ObjectPoint,
+  ResolvedTile,
+  TextStyle,
+  TileAnimationFrame,
+  TileDefinition,
+  TileMapObject,
+  TileProperties,
+  TilePropertyValue,
+  TileTransform,
+} from '@codexo/exojs-tilemap';
 import { ImageLayer, ObjectLayer, packTile, TileLayer, TileMap, TilePropertyKind, TileSet } from '@codexo/exojs-tilemap';
 
-import type { TiledChunkData, TiledClassPropertyValueData, TiledMapData, TiledObjectData, TiledOrientation, TiledPropertyData, TiledRenderOrder, TiledTileData } from './data';
-import {
-  maskTiledGid,
-  TILED_FLIPPED_DIAGONALLY_FLAG,
-  TILED_FLIPPED_HORIZONTALLY_FLAG,
-  TILED_FLIPPED_VERTICALLY_FLAG,
-} from './gid';
+import type {
+  TiledChunkData,
+  TiledClassPropertyValueData,
+  TiledMapData,
+  TiledObjectData,
+  TiledOrientation,
+  TiledPropertyData,
+  TiledRenderOrder,
+  TiledTileData,
+} from './data';
+import { maskTiledGid, TILED_FLIPPED_DIAGONALLY_FLAG, TILED_FLIPPED_HORIZONTALLY_FLAG, TILED_FLIPPED_VERTICALLY_FLAG } from './gid';
 import { resolveTiledObjectAlignment, tiledObjectAnchorOffset } from './objectAlignment';
-import { createTiledLayer, TiledGroupLayer, TiledImageLayer, type TiledLayer,TiledObjectLayer, TiledTileLayer } from './TiledLayer';
+import { createTiledLayer, TiledGroupLayer, TiledImageLayer, type TiledLayer, TiledObjectLayer, TiledTileLayer } from './TiledLayer';
 import type { TiledObject } from './TiledObject';
 import type { TiledTileset } from './TiledTileset';
 import { resolveTiledUrl } from './url';
@@ -30,7 +46,6 @@ import { TiledFormatError } from './validate';
  * {@link TiledFormatError} on failure.
  */
 export class TiledMap {
-
   /** Resolved URL this map was loaded from. */
   public readonly source: string;
   /** The validated raw map data this instance was built from. */
@@ -57,12 +72,7 @@ export class TiledMap {
   private readonly _imageTextures: ReadonlyMap<number, Texture>;
   private readonly _chunkSources = new Map<number, ChunkSource>();
 
-  public constructor(
-    source: string,
-    data: TiledMapData,
-    tilesets: readonly TiledTileset[],
-    imageTextures: ReadonlyMap<number, Texture> = new Map(),
-  ) {
+  public constructor(source: string, data: TiledMapData, tilesets: readonly TiledTileset[], imageTextures: ReadonlyMap<number, Texture> = new Map()) {
     this.source = source;
     this.data = data;
     this.orientation = data.orientation;
@@ -145,11 +155,7 @@ export class TiledMap {
     // faithfully rather than silently producing misplaced (isometric/
     // staggered/hexagonal) geometry.
     if (this.orientation !== 'orthogonal') {
-      throw new TiledFormatError(
-        this.source,
-        'orientation',
-        `toTileMap() supports only orthogonal maps in this release, got "${this.orientation}"`,
-      );
+      throw new TiledFormatError(this.source, 'orientation', `toTileMap() supports only orthogonal maps in this release, got "${this.orientation}"`);
     }
 
     // Build runtime tilesets. Every tileset must resolve to an atlas texture:
@@ -172,15 +178,13 @@ export class TiledMap {
           throw new TiledFormatError(
             this.source,
             `tilesets/${tiledTs.name}`,
-            `tileset "${tiledTs.name}" is a collection-of-images tileset; ` +
-            `toTileMap() requires atlas tilesets in this release`,
+            `tileset "${tiledTs.name}" is a collection-of-images tileset; ` + `toTileMap() requires atlas tilesets in this release`,
           );
         }
         throw new TiledFormatError(
           this.source,
           `tilesets/${tiledTs.name}`,
-          `tileset "${tiledTs.name}" has no image; an atlas tileset needs an ` +
-          `"image" that resolves to a loaded texture`,
+          `tileset "${tiledTs.name}" has no image; an atlas tileset needs an ` + `"image" that resolves to a loaded texture`,
         );
       }
       const tw = tiledTs.imageWidth ?? tiledTs.texture.width;
@@ -256,23 +260,25 @@ export class TiledMap {
         } else if (layer instanceof TiledObjectLayer) {
           runtimeObjectLayers.push(convertObjectLayer(layer, this.tilesets, indexToRuntime, this.orientation, group));
         } else if (layer instanceof TiledImageLayer) {
-          runtimeImageLayers.push(new ImageLayer({
-            id: layer.id,
-            name: layer.name,
-            class: layer.class,
-            image: resolveTiledUrl(layer.image, this.source),
-            texture: this._imageTextures.get(layer.id) ?? null,
-            visible: group.visible && layer.visible,
-            opacity: group.opacity * layer.opacity,
-            offsetX: group.offsetX + layer.offsetX,
-            offsetY: group.offsetY + layer.offsetY,
-            parallaxX: group.parallaxX * layer.parallaxX,
-            parallaxY: group.parallaxY * layer.parallaxY,
-            tintColor: multiplyTiledTint(group.tintColor, parseTiledColor(layer.tintColor)),
-            repeatX: layer.repeatX,
-            repeatY: layer.repeatY,
-            properties: convertProperties(layer.properties),
-          }));
+          runtimeImageLayers.push(
+            new ImageLayer({
+              id: layer.id,
+              name: layer.name,
+              class: layer.class,
+              image: resolveTiledUrl(layer.image, this.source),
+              texture: this._imageTextures.get(layer.id) ?? null,
+              visible: group.visible && layer.visible,
+              opacity: group.opacity * layer.opacity,
+              offsetX: group.offsetX + layer.offsetX,
+              offsetY: group.offsetY + layer.offsetY,
+              parallaxX: group.parallaxX * layer.parallaxX,
+              parallaxY: group.parallaxY * layer.parallaxY,
+              tintColor: multiplyTiledTint(group.tintColor, parseTiledColor(layer.tintColor)),
+              repeatX: layer.repeatX,
+              repeatY: layer.repeatY,
+              properties: convertProperties(layer.properties),
+            }),
+          );
           order.push(layer.id);
         }
       }
@@ -342,17 +348,13 @@ function findTilesetIndexForGid(baseGid: number, tiledTilesets: readonly TiledTi
  * Resolve a raw (flag-bearing) Tiled GID to a runtime {@link ResolvedTile}, or
  * `null` for an empty cell or a GID no tileset covers.
  */
-function resolveGid(
-  rawGid: number,
-  tiledTilesets: readonly TiledTileset[],
-  indexToRuntime: ReadonlyArray<TileSet | null>,
-): ResolvedTile | null {
+function resolveGid(rawGid: number, tiledTilesets: readonly TiledTileset[], indexToRuntime: ReadonlyArray<TileSet | null>): ResolvedTile | null {
   if (rawGid === 0) return null;
   const baseGid = maskTiledGid(rawGid);
   const transform: TileTransform = {
-    flipX: (rawGid >>> 0 & TILED_FLIPPED_HORIZONTALLY_FLAG) !== 0,
-    flipY: (rawGid >>> 0 & TILED_FLIPPED_VERTICALLY_FLAG) !== 0,
-    diagonal: (rawGid >>> 0 & TILED_FLIPPED_DIAGONALLY_FLAG) !== 0,
+    flipX: ((rawGid >>> 0) & TILED_FLIPPED_HORIZONTALLY_FLAG) !== 0,
+    flipY: ((rawGid >>> 0) & TILED_FLIPPED_VERTICALLY_FLAG) !== 0,
+    diagonal: ((rawGid >>> 0) & TILED_FLIPPED_DIAGONALLY_FLAG) !== 0,
   };
   const tsIdx = findTilesetIndexForGid(baseGid, tiledTilesets);
   if (tsIdx === -1) return null;
@@ -719,9 +721,7 @@ function buildTileDefinitions(tiles: readonly TiledTileData[], tileCount: number
 
     let collision: readonly TileMapObject[] | undefined;
     if (tile.objectgroup && tile.objectgroup.objects.length > 0) {
-      const shapes = tile.objectgroup.objects
-        .map(obj => convertCollisionObject(obj))
-        .filter((obj): obj is TileMapObject => obj !== null);
+      const shapes = tile.objectgroup.objects.map(obj => convertCollisionObject(obj)).filter((obj): obj is TileMapObject => obj !== null);
       if (shapes.length > 0) collision = shapes;
     }
 
@@ -837,10 +837,7 @@ const tiledClassNameProperty = 'tiledClassName';
 function convertClassPropertyValue(value: TiledClassPropertyValueData, propertytype?: string): TileProperties {
   const out: Record<string, TilePropertyValue> = {};
   for (const [name, member] of Object.entries(value)) {
-    out[name] =
-      typeof member === 'string' || typeof member === 'number' || typeof member === 'boolean'
-        ? member
-        : convertClassPropertyValue(member);
+    out[name] = typeof member === 'string' || typeof member === 'number' || typeof member === 'boolean' ? member : convertClassPropertyValue(member);
   }
   if (propertytype !== undefined) {
     out[tiledClassNameProperty] = propertytype;

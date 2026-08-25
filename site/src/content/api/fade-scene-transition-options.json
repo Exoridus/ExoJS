@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for FadeSceneTransition."
-      ],
+      "paragraphs": ["Options for FadeSceneTransition."],
       "importLine": "import { FadeSceneTransitionOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

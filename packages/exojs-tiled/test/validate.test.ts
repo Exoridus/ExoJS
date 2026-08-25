@@ -85,11 +85,7 @@ describe('validateTiledPropertyData', () => {
   });
 
   it('parses a class property with nested members and propertytype', () => {
-    const result = validateTiledPropertyData(
-      { name: 'stats', type: 'class', propertytype: 'Stats', value: { hp: 10, regen: { rate: 0.5 } } },
-      SOURCE,
-      '',
-    );
+    const result = validateTiledPropertyData({ name: 'stats', type: 'class', propertytype: 'Stats', value: { hp: 10, regen: { rate: 0.5 } } }, SOURCE, '');
     expect(result).toEqual({
       name: 'stats',
       type: 'class',
@@ -150,7 +146,11 @@ describe('validateTiledObjectData', () => {
   });
 
   it('parses polygon and polyline point arrays', () => {
-    const points = [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }];
+    const points = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 10 },
+    ];
     expect(validateTiledObjectData({ ...base, polygon: points }, SOURCE, '').polygon).toEqual(points);
     expect(validateTiledObjectData({ ...base, polyline: points }, SOURCE, '').polyline).toEqual(points);
   });
@@ -175,7 +175,9 @@ describe('validateTiledObjectData', () => {
 
   it('throws on an unknown text alignment value', () => {
     expect(() => validateTiledObjectData({ ...base, text: { text: 'Hello', halign: 'middle' } }, SOURCE, '')).toThrow(/unknown horizontal alignment "middle"/);
-    expect(() => validateTiledObjectData({ ...base, text: { text: 'Hello', valign: 'baseline' } }, SOURCE, '')).toThrow(/unknown vertical alignment "baseline"/);
+    expect(() => validateTiledObjectData({ ...base, text: { text: 'Hello', valign: 'baseline' } }, SOURCE, '')).toThrow(
+      /unknown vertical alignment "baseline"/,
+    );
   });
 
   it('parses a tile object referencing a gid', () => {
@@ -203,27 +205,25 @@ describe('validateTiledLayerData — tile layers', () => {
   });
 
   it('throws when both "data" and "chunks" are present', () => {
-    expect(() =>
-      validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: [1], chunks: [] }), SOURCE, 'layers[0]'),
-    ).toThrow(/has both "data" and "chunks"/);
-  });
-
-  it('throws when neither "data" nor "chunks" is present', () => {
-    expect(() => validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1 }), SOURCE, 'layers[0]')).toThrow(
-      /has neither "data" nor "chunks"/,
+    expect(() => validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: [1], chunks: [] }), SOURCE, 'layers[0]')).toThrow(
+      /has both "data" and "chunks"/,
     );
   });
 
+  it('throws when neither "data" nor "chunks" is present', () => {
+    expect(() => validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1 }), SOURCE, 'layers[0]')).toThrow(/has neither "data" nor "chunks"/);
+  });
+
   it('throws on compressed tile layer data', () => {
-    expect(() =>
-      validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: [1], compression: 'zlib' }), SOURCE, 'layers[0]'),
-    ).toThrow(/compressed tile layer data is not supported/);
+    expect(() => validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: [1], compression: 'zlib' }), SOURCE, 'layers[0]')).toThrow(
+      /compressed tile layer data is not supported/,
+    );
   });
 
   it('throws on an unsupported encoding', () => {
-    expect(() =>
-      validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: 'AAAA', encoding: 'base64' }), SOURCE, 'layers[0]'),
-    ).toThrow(/unsupported tile layer encoding "base64"/);
+    expect(() => validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, data: 'AAAA', encoding: 'base64' }), SOURCE, 'layers[0]')).toThrow(
+      /unsupported tile layer encoding "base64"/,
+    );
   });
 
   it('accepts the "csv" encoding', () => {
@@ -333,7 +333,14 @@ describe('validateTiledTileData', () => {
 
   it('parses animation frames and properties', () => {
     const result = validateTiledTileData(
-      { id: 1, animation: [{ tileid: 1, duration: 100 }, { tileid: 2, duration: 100 }], properties: [{ name: 'solid', type: 'bool', value: true }] },
+      {
+        id: 1,
+        animation: [
+          { tileid: 1, duration: 100 },
+          { tileid: 2, duration: 100 },
+        ],
+        properties: [{ name: 'solid', type: 'bool', value: true }],
+      },
       SOURCE,
       'tiles[1]',
     );
@@ -359,11 +366,7 @@ describe('validateTiledTilesetRefData', () => {
   });
 
   it('parses an embedded tileset reference', () => {
-    const result = validateTiledTilesetRefData(
-      { firstgid: 1, name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2 },
-      SOURCE,
-      'tilesets[0]',
-    );
+    const result = validateTiledTilesetRefData({ firstgid: 1, name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2 }, SOURCE, 'tilesets[0]');
     expect(result).toMatchObject({ firstgid: 1, name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2 });
   });
 
@@ -387,16 +390,25 @@ describe('validateTiledTilesetFileData', () => {
   });
 
   it('parses wangsets with colors and wangtiles', () => {
-    const result = validateTiledTilesetFileData({
-      name: 'terrain', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2,
-      wangsets: [{
-        name: 'ground',
-        type: 'corner',
-        tile: -1,
-        colors: [{ name: 'grass', color: '#00ff00', tile: 0, probability: 1 }],
-        wangtiles: [{ tileid: 0, wangid: [0, 1, 0, 1, 0, 1, 0, 1] }],
-      }],
-    }, 'terrain.tsj');
+    const result = validateTiledTilesetFileData(
+      {
+        name: 'terrain',
+        tilewidth: 16,
+        tileheight: 16,
+        tilecount: 4,
+        columns: 2,
+        wangsets: [
+          {
+            name: 'ground',
+            type: 'corner',
+            tile: -1,
+            colors: [{ name: 'grass', color: '#00ff00', tile: 0, probability: 1 }],
+            wangtiles: [{ tileid: 0, wangid: [0, 1, 0, 1, 0, 1, 0, 1] }],
+          },
+        ],
+      },
+      'terrain.tsj',
+    );
     expect(result.wangsets).toHaveLength(1);
     expect(result.wangsets?.[0]).toMatchObject({ name: 'ground', type: 'corner', tile: -1 });
     expect(result.wangsets?.[0].colors[0]).toEqual({ name: 'grass', color: '#00ff00', tile: 0, probability: 1 });

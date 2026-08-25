@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "SVG markup rasterised into an `HTMLImageElement`."
-      ],
+      "paragraphs": ["SVG markup rasterised into an `HTMLImageElement`."],
       "importLine": "import { SvgAssetType } from '@codexo/exojs'",
       "sourceLink": null
     },

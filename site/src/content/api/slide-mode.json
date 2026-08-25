@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The three visual shapes a slide can take - see SlideSceneTransition for details."
-      ],
+      "paragraphs": ["The three visual shapes a slide can take - see SlideSceneTransition for details."],
       "importLine": "import { SlideMode } from '@codexo/exojs'",
       "sourceLink": null
     },

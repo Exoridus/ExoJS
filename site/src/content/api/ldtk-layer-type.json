@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Discriminant string for a layer instance type."
-      ],
+      "paragraphs": ["Discriminant string for a layer instance type."],
       "importLine": "import { LdtkLayerType } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

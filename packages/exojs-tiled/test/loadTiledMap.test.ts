@@ -100,7 +100,9 @@ describe('loadTiledMap — collection-of-images tileset', () => {
     'collection-tileset.tmj': loadFixture('collection-tileset.tmj'),
   });
 
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it('calls loader.load for each per-tile image', async () => {
     await loadMap('collection-tileset.tmj');
@@ -130,12 +132,27 @@ describe('loadTiledMap — collection-of-images tileset', () => {
 describe('loadTiledMap — image layer nested inside a group layer', () => {
   const { loadMap, loaderLoad } = makeContext({
     'nested-image.tmj': {
-      type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
-      width: 1, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
-      layers: [{
-        id: 1, name: 'Group', type: 'group', visible: true, x: 0, y: 0, opacity: 1,
-        layers: [{ id: 2, name: 'Bg', type: 'imagelayer', visible: true, x: 0, y: 0, opacity: 1, image: 'bg.png' }],
-      }],
+      type: 'map',
+      version: '1.10',
+      orientation: 'orthogonal',
+      renderorder: 'right-down',
+      width: 1,
+      height: 1,
+      tilewidth: 16,
+      tileheight: 16,
+      infinite: false,
+      layers: [
+        {
+          id: 1,
+          name: 'Group',
+          type: 'group',
+          visible: true,
+          x: 0,
+          y: 0,
+          opacity: 1,
+          layers: [{ id: 2, name: 'Bg', type: 'imagelayer', visible: true, x: 0, y: 0, opacity: 1, image: 'bg.png' }],
+        },
+      ],
       tilesets: [],
     },
   });
@@ -165,8 +182,15 @@ describe('loadTiledMap — error propagation', () => {
     // Minimal map with GIDs 1-2 but a tileset covering only GID 1
     const { loadMap } = makeContext({
       'narrow.tmj': {
-        type: 'map', version: '1.10', orientation: 'orthogonal', renderorder: 'right-down',
-        width: 2, height: 1, tilewidth: 16, tileheight: 16, infinite: false,
+        type: 'map',
+        version: '1.10',
+        orientation: 'orthogonal',
+        renderorder: 'right-down',
+        width: 2,
+        height: 1,
+        tilewidth: 16,
+        tileheight: 16,
+        infinite: false,
         layers: [{ id: 1, name: 'Base', type: 'tilelayer', visible: true, x: 0, y: 0, width: 2, height: 1, opacity: 1, data: [1, 2] }],
         tilesets: [{ firstgid: 1, name: 'narrow', tilewidth: 16, tileheight: 16, tilecount: 1, columns: 1 }],
       },

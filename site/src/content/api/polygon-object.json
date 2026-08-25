@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A closed polygon; `points` are relative to the object origin."
-      ],
+      "paragraphs": ["A closed polygon; `points` are relative to the object origin."],
       "importLine": "import { PolygonObject } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

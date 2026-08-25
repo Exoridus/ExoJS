@@ -352,7 +352,9 @@ const runPhysicsDomain = async (args: Map<string, string>): Promise<void> => {
   }
 
   console.log('\n=== Provenance ===');
-  console.log(`  node=${data.provenance.host.node} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)}`);
+  console.log(
+    `  node=${data.provenance.host.node} cpu="${data.provenance.host.cpu}" (${String(data.provenance.host.cpuCount)} logical) os=${data.provenance.host.os} engine=${data.provenance.engineVersion} fixedDelta=${String(data.provenance.fixedDelta)}`,
+  );
 
   writePhysicsReport(data, outDir);
 

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for PhaserEffect."
-      ],
+      "paragraphs": ["Construction options for PhaserEffect."],
       "importLine": "import { PhaserEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

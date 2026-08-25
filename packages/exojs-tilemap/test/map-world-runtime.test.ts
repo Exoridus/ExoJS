@@ -90,7 +90,6 @@ function levelMap(id: string, objectType?: string): TileMap {
 }
 
 class Thing implements Destroyable {
-
   public destroyed = false;
 
   public constructor(private readonly _log: string[]) {}
@@ -175,7 +174,7 @@ describe('MapWorldRuntime loading', () => {
     const runtime = new MapWorldRuntime({
       world,
       scope: fakeScope('root'),
-      load: (context) => {
+      load: context => {
         expect((context.scope as unknown as FakeScope).name).toBe('level:cave');
         expect(context.signal.aborted).toBe(false);
         expect(context.level.id).toBe('cave');

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A single catalog field input: a bare path string, an `Asset.type(...)` descriptor, or an explicit config."
-      ],
+      "paragraphs": ["A single catalog field input: a bare path string, an `Asset.type(...)` descriptor, or an explicit config."],
       "importLine": "import { CatalogEntry } from '@codexo/exojs'",
       "sourceLink": null
     },

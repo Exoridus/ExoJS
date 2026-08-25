@@ -27,12 +27,7 @@ function bytesToGids(bytes: Uint8Array, source: string, path: string): number[] 
 }
 
 /** Decode one base64 `data` string into a GID array, applying any compression. */
-async function decodeBase64Gids(
-  data: string,
-  compression: unknown,
-  source: string,
-  path: string,
-): Promise<number[]> {
+async function decodeBase64Gids(data: string, compression: unknown, source: string, path: string): Promise<number[]> {
   let bytes = Codec.decodeBase64(data);
 
   if (compression === 'gzip') {
@@ -40,11 +35,7 @@ async function decodeBase64Gids(
   } else if (compression === 'zlib') {
     bytes = await Codec.decompress(bytes, 'deflate');
   } else if (compression === 'zstd') {
-    throw new TiledFormatError(
-      source,
-      path,
-      'zstd-compressed tile data is not supported (no native decoder; re-export with gzip/zlib or uncompressed)',
-    );
+    throw new TiledFormatError(source, path, 'zstd-compressed tile data is not supported (no native decoder; re-export with gzip/zlib or uncompressed)');
   } else if (compression !== undefined && compression !== '') {
     throw new TiledFormatError(source, path, `unsupported tile layer compression ${JSON.stringify(compression)}`);
   }

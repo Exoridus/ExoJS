@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 const NEVER_UNSUBSCRIBE = (): void => {
-    // Nothing was subscribed to - see useClientValue.
+  // Nothing was subscribed to - see useClientValue.
 };
 
 const subscribeToFixedValue = (): (() => void) => NEVER_UNSUBSCRIBE;
@@ -20,13 +20,13 @@ const subscribeToFixedValue = (): (() => void) => NEVER_UNSUBSCRIBE;
  * @returns `serverValue` on the server, the value `read` returns on the client.
  */
 export function useClientValue<T>(read: () => T, serverValue: T): T {
-    return useSyncExternalStore(subscribeToFixedValue, read, () => serverValue);
+  return useSyncExternalStore(subscribeToFixedValue, read, () => serverValue);
 }
 
 export function cx(...parts: Array<string | false | null | undefined>): string {
-    return parts.filter((part): part is string => Boolean(part)).join(' ');
+  return parts.filter((part): part is string => Boolean(part)).join(' ');
 }
 
 export function css(styles: Record<string, string>, name: string): string {
-    return styles[name] ?? name;
+  return styles[name] ?? name;
 }

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A single animation frame in the Aseprite JSON export."
-      ],
+      "paragraphs": ["A single animation frame in the Aseprite JSON export."],
       "importLine": "import { AsepriteFrameData } from '@codexo/exojs-aseprite'",
       "sourceLink": null
     },

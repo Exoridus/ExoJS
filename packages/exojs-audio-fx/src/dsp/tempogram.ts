@@ -208,13 +208,7 @@ export function parabolicPeakOffset(yPrev: number, yMid: number, yNext: number):
  * @param sampleRate Audio sample rate in Hz.
  * @param topK       Number of peaks to return (default 3).
  */
-export function findTempoPeaks(
-  acf: Float32Array,
-  minLag: number,
-  hopSize: number,
-  sampleRate: number,
-  topK = 3,
-): TempoCandidateResult[] {
+export function findTempoPeaks(acf: Float32Array, minLag: number, hopSize: number, sampleRate: number, topK = 3): TempoCandidateResult[] {
   const peaks: TempoCandidateResult[] = [];
   const last = acf.length - 1;
 
@@ -279,7 +273,7 @@ export function scoreTempoHypotheses(
   // Super-harmonics above this BPM are subdivisions, not competing beats: they do not penalise.
   const superHarmonicMaxBpm = maxBpm * (1 + candidateEdgeTolerance);
 
-  const scored = peaks.map((p) => {
+  const scored = peaks.map(p => {
     const lag = p.lag;
     const aF = acfAtLag(acf, minLag, lag);
     const aHalf = acfAtLag(acf, minLag, lag * 2); // f/2 (slower sub-harmonic)
@@ -328,7 +322,7 @@ export function computeTempoCandidates(
   const peaks = findTempoPeaks(acf, acfMinLag, hopSize, sampleRate, acf.length);
   const loBpm = minBpm * (1 - candidateEdgeTolerance);
   const hiBpm = maxBpm * (1 + candidateEdgeTolerance);
-  const inRange = peaks.filter((p) => p.bpm >= loBpm && p.bpm <= hiBpm);
+  const inRange = peaks.filter(p => p.bpm >= loBpm && p.bpm <= hiBpm);
   const scored = scoreTempoHypotheses(inRange, acf, acfMinLag, options);
   return scored.slice(0, topK);
 }
@@ -352,4 +346,3 @@ export function isOctaveRelated(bpm: number, reference: number): boolean {
     Math.abs(r - 3 / 2) < 0.06
   );
 }
-

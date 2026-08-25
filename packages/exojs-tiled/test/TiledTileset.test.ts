@@ -81,11 +81,11 @@ describe('TiledTileset resources', () => {
 
   it('maps source, imageUrl, and texture from resources', () => {
     const texture = new Texture();
-    const ts = new TiledTileset(
-      { ...BASE_DATA, image: 'tiles.png', imagewidth: 64, imageheight: 64 },
-      1,
-      { source: 'tilesets/tiles.tsj', imageUrl: 'tilesets/tiles.png', texture },
-    );
+    const ts = new TiledTileset({ ...BASE_DATA, image: 'tiles.png', imagewidth: 64, imageheight: 64 }, 1, {
+      source: 'tilesets/tiles.tsj',
+      imageUrl: 'tilesets/tiles.png',
+      texture,
+    });
     expect(ts.source).toBe('tilesets/tiles.tsj');
     expect(ts.imageUrl).toBe('tilesets/tiles.png');
     expect(ts.texture).toBe(texture);
@@ -94,7 +94,10 @@ describe('TiledTileset resources', () => {
   it('maps per-tile tileTextures from resources', () => {
     const t0 = new Texture();
     const t1 = new Texture();
-    const tileTextures = new Map([[0, t0], [1, t1]]);
+    const tileTextures = new Map([
+      [0, t0],
+      [1, t1],
+    ]);
     const ts = new TiledTileset({ ...BASE_DATA, columns: 0 }, 1, { tileTextures });
     expect(ts.tileTextures.get(0)).toBe(t0);
     expect(ts.tileTextures.get(1)).toBe(t1);
@@ -128,10 +131,7 @@ describe('TiledTileset.getTile', () => {
 });
 
 describe('TiledTileset.getProperty', () => {
-  const ts = new TiledTileset(
-    { ...BASE_DATA, properties: [{ name: 'kind', type: 'string', value: 'terrain', propertytype: undefined }] },
-    1,
-  );
+  const ts = new TiledTileset({ ...BASE_DATA, properties: [{ name: 'kind', type: 'string', value: 'terrain', propertytype: undefined }] }, 1);
 
   it('returns the property with matching name', () => {
     expect(ts.getProperty('kind')).toMatchObject({ name: 'kind', value: 'terrain' });

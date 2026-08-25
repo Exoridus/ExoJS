@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Source-space or destination-space per-edge insets."
-      ],
+      "paragraphs": ["Source-space or destination-space per-edge insets."],
       "importLine": "import { NineSliceInsets } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A positioned host event with no pointer identity of its own, such as a context-menu request."
-      ],
+      "paragraphs": ["A positioned host event with no pointer identity of its own, such as a context-menu request."],
       "importLine": "import { PlatformPositionalEvent } from '@codexo/exojs'",
       "sourceLink": null
     },

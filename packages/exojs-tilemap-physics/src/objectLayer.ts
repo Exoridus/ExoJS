@@ -31,11 +31,7 @@ export interface ObjectCollider {
  * skipped, as is any object the decomposition rejects - with a warning, not an
  * exception.
  */
-export const buildObjectLayerColliders = (
-  world: PhysicsWorld,
-  layer: ObjectLayer,
-  options: ObjectColliderOptions = {},
-): ObjectCollider[] => {
+export const buildObjectLayerColliders = (world: PhysicsWorld, layer: ObjectLayer, options: ObjectColliderOptions = {}): ObjectCollider[] => {
   const defaults = resolveDefaults(options);
   const accept = options.accept;
   const built: ObjectCollider[] = [];

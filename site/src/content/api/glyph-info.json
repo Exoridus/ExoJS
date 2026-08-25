@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Cached glyph data stored in an atlas page after rasterization."
-      ],
+      "paragraphs": ["Cached glyph data stored in an atlas page after rasterization."],
       "importLine": "import { GlyphInfo } from '@codexo/exojs'",
       "sourceLink": null
     },

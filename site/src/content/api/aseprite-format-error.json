@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Thrown when an Aseprite JSON document does not match the expected shape. `source` is the URL of the file being parsed."
-      ],
+      "paragraphs": ["Thrown when an Aseprite JSON document does not match the expected shape. `source` is the URL of the file being parsed."],
       "importLine": "import { AsepriteFormatError } from '@codexo/exojs-aseprite'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for an AssetCacheError."
-      ],
+      "paragraphs": ["Construction options for an AssetCacheError."],
       "importLine": "import { AssetCacheErrorOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

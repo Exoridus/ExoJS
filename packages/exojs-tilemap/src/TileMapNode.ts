@@ -167,10 +167,7 @@ export class TileMapNode extends Container {
 
   private _buildLayerNodes(): void {
     for (const layer of this._map.renderableLayers) {
-      const node =
-        layer instanceof ImageLayer
-          ? new ImageLayerNode(layer)
-          : new TileLayerNode(layer, { cullable: this._cullChunks });
+      const node = layer instanceof ImageLayer ? new ImageLayerNode(layer) : new TileLayerNode(layer, { cullable: this._cullChunks });
 
       if (this._pixelSnapMode !== PixelSnapMode.None) {
         node.pixelSnapMode = this._pixelSnapMode;

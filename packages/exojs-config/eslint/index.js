@@ -24,7 +24,7 @@ export function createImportBoundaries(opts = {}) {
   ];
   if (internalDirs.length > 0) {
     patterns.push({
-      group: internalDirs.map((d) => `${d}/*`),
+      group: internalDirs.map(d => `${d}/*`),
       message: "Package-internal imports use the '#' prefix — e.g. '#core/X' instead of 'core/X'.",
     });
   }
@@ -38,4 +38,17 @@ export function createImportBoundaries(opts = {}) {
 }
 
 /** The Core engine's top-level source directories (for the bare-path ban). */
-export const coreInternalDirs = ['audio', 'core', 'input', 'math', 'animation', 'extensions', 'debug', 'particles', 'physics', 'rendering', 'resources', 'vendor'];
+export const coreInternalDirs = [
+  'audio',
+  'core',
+  'input',
+  'math',
+  'animation',
+  'extensions',
+  'debug',
+  'particles',
+  'physics',
+  'rendering',
+  'resources',
+  'vendor',
+];

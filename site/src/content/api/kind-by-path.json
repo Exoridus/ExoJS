@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The asset type inferred from a path literal, or `never` when unregistered."
-      ],
+      "paragraphs": ["The asset type inferred from a path literal, or `never` when unregistered."],
       "importLine": "import { KindByPath } from '@codexo/exojs'",
       "sourceLink": null
     },

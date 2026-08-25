@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Horizontal progress / health bar. ProgressBar.value is the fill fraction in `[0, 1]`; setting it redraws only the fill."
-      ],
+      "paragraphs": ["Horizontal progress / health bar. ProgressBar.value is the fill fraction in `[0, 1]`; setting it redraws only the fill."],
       "importLine": "import { ProgressBar } from '@codexo/exojs'",
       "sourceLink": null
     },

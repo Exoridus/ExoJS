@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The scheduler phases a System can be registered for, in dispatch order."
-      ],
+      "paragraphs": ["The scheduler phases a System can be registered for, in dispatch order."],
       "importLine": "import { SystemPhase } from '@codexo/exojs'",
       "sourceLink": null
     },

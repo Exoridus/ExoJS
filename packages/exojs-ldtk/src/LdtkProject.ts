@@ -77,7 +77,6 @@ export interface LdtkRuntimeOptions {
  * ```
  */
 export class LdtkProject {
-
   /** Resolved URL this project was loaded from. */
   public readonly source: string;
   /** The raw parsed LDtk document. Externalized levels still carry `layerInstances: null`. */
@@ -144,9 +143,7 @@ export class LdtkProject {
     const entry = this._entries[context.level.index];
 
     if (entry === undefined) {
-      throw new Error(
-        `LdtkProject: level "${context.level.id}" has index ${context.level.index}, which is outside "${this.source}".`,
-      );
+      throw new Error(`LdtkProject: level "${context.level.id}" has index ${context.level.index}, which is outside "${this.source}".`);
     }
 
     const level = await this._resolveLevel(entry.level, context.scope);

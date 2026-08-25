@@ -59,7 +59,13 @@ export interface BundleInlineModuleResult {
 }
 
 /** Bundles `entryPoint` and its entire import graph into one JavaScript string. */
-export function bundleInlineModule({ entryPoint, format = 'iife', target = 'es2022', minify = false, define }: BundleInlineModuleOptions): BundleInlineModuleResult {
+export function bundleInlineModule({
+  entryPoint,
+  format = 'iife',
+  target = 'es2022',
+  minify = false,
+  define,
+}: BundleInlineModuleOptions): BundleInlineModuleResult {
   // esbuild writes each contributing file's path into the bundle as a comment,
   // relative to its working directory - which defaults to `process.cwd()`. The
   // emitted string would then differ byte for byte depending on where the build

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for autoTile and refreshCell."
-      ],
+      "paragraphs": ["Options for autoTile and refreshCell."],
       "importLine": "import { AutoTileOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

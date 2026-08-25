@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options shared by the streaming media factories."
-      ],
+      "paragraphs": ["Options shared by the streaming media factories."],
       "importLine": "import { MediaAssetOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

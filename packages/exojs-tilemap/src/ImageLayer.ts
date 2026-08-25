@@ -108,8 +108,6 @@ export class ImageLayer {
     this.tintColor = options.tintColor ?? null;
     this.repeatX = options.repeatX ?? false;
     this.repeatY = options.repeatY ?? false;
-    this.properties = options.properties
-      ? Object.freeze({ ...options.properties })
-      : Object.freeze({});
+    this.properties = options.properties ? Object.freeze({ ...options.properties }) : Object.freeze({});
   }
 }

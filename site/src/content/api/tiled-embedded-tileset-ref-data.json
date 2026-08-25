@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A map's `tilesets[]` entry with the tileset embedded inline."
-      ],
+      "paragraphs": ["A map's `tilesets[]` entry with the tileset embedded inline."],
       "importLine": "import { TiledEmbeddedTilesetRefData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Any abstract or concrete SceneNode constructor usable as a serialization key."
-      ],
+      "paragraphs": ["Any abstract or concrete SceneNode constructor usable as a serialization key."],
       "importLine": "import { SceneNodeConstructor } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for LowpassFilter."
-      ],
+      "paragraphs": ["Construction options for LowpassFilter."],
       "importLine": "import { LowpassFilterOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

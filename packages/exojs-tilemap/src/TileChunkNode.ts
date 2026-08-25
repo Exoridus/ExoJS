@@ -77,10 +77,7 @@ export class TileChunkNode extends Drawable {
     this._pixelWidth = chunk.width * tileWidth;
     this._pixelHeight = chunk.height * tileHeight;
 
-    this.setPosition(
-      chunk.cx * chunkWidthTiles * tileWidth,
-      chunk.cy * chunkHeightTiles * tileHeight,
-    );
+    this.setPosition(chunk.cx * chunkWidthTiles * tileWidth, chunk.cy * chunkHeightTiles * tileHeight);
 
     // `loadedChunks()` always yields the concrete `TileChunk` behind the
     // readonly view (see TileLayer); the guard is defensive only.

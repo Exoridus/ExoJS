@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A decoded raster image: an ImageBitmap where the environment supports one."
-      ],
+      "paragraphs": ["A decoded raster image: an ImageBitmap where the environment supports one."],
       "importLine": "import { DecodedImage } from '@codexo/exojs'",
       "sourceLink": null
     },

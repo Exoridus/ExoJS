@@ -79,14 +79,9 @@ interface CellRun {
 }
 
 const cellKey = (spec: TimerProbeSpec): string =>
-  [
-    spec.backend,
-    `${spec.nodeCount}n`,
-    spec.config,
-    spec.mode,
-    spec.drainAfterWarmup ? 'drained' : 'undrained',
-    spec.timestampQueries ? 'ts' : 'no-ts',
-  ].join(' ');
+  [spec.backend, `${spec.nodeCount}n`, spec.config, spec.mode, spec.drainAfterWarmup ? 'drained' : 'undrained', spec.timestampQueries ? 'ts' : 'no-ts'].join(
+    ' ',
+  );
 
 const median = (values: readonly number[]): number => {
   const sorted = [...values].sort((a, b) => a - b);
@@ -209,7 +204,8 @@ const buildSpecs = (): TimerProbeSpec[] => {
 };
 
 const runCell = async (spec: TimerProbeSpec, baseUrl: string): Promise<{ result: TimerProbeResult; adapter: string }> => {
-  const flags = spec.backend === 'webgpu' ? [...WEBGPU_LAUNCH_FLAGS, ...(spec.timestampQueries && !args.includes('--quantized') ? TIMESTAMP_FLAGS : [])] : LAUNCH_FLAGS;
+  const flags =
+    spec.backend === 'webgpu' ? [...WEBGPU_LAUNCH_FLAGS, ...(spec.timestampQueries && !args.includes('--quantized') ? TIMESTAMP_FLAGS : [])] : LAUNCH_FLAGS;
   const browser = await chromium.launch({ channel: 'chromium', headless: true, args: [...flags] });
 
   try {
@@ -262,7 +258,9 @@ const formatSummary = (runs: readonly CellRun[]): string => {
     ];
 
     for (const row of rows) {
-      lines.push(`| ${run.key} | ${run.repeat} | ${run.adapter} | ${row.model} | ${row.n} | ${row.median.toFixed(2)} | ${row.p95.toFixed(2)} | ${row.max.toFixed(2)} |`);
+      lines.push(
+        `| ${run.key} | ${run.repeat} | ${run.adapter} | ${row.model} | ${row.n} | ${row.median.toFixed(2)} | ${row.p95.toFixed(2)} | ${row.max.toFixed(2)} |`,
+      );
     }
   }
 
@@ -316,8 +314,12 @@ const formatSummary = (runs: readonly CellRun[]): string => {
       lines.push(`- \`performance.now()\` min non-zero delta: ${controls.nowMinDeltaMs.toFixed(4)} ms; crossOriginIsolated=${controls.crossOriginIsolated}`);
       lines.push(`- clock delta histogram (ms, count): ${controls.nowDeltaHistogram.map(([delta, count]) => `${delta}×${count}`).join(' ')}`);
       lines.push(`- microtask latency: median ${median(controls.microtaskMs).toFixed(4)} ms, max ${max(controls.microtaskMs).toFixed(4)} ms`);
-      lines.push(`- idle-queue onSubmittedWorkDone: median ${median(controls.idleQueueMs).toFixed(3)} ms, p95 ${percentile(controls.idleQueueMs, 95).toFixed(3)} ms, max ${max(controls.idleQueueMs).toFixed(3)} ms`);
-      lines.push(`- empty-submit completion: median ${median(controls.emptySubmitMs).toFixed(3)} ms, p95 ${percentile(controls.emptySubmitMs, 95).toFixed(3)} ms, max ${max(controls.emptySubmitMs).toFixed(3)} ms`);
+      lines.push(
+        `- idle-queue onSubmittedWorkDone: median ${median(controls.idleQueueMs).toFixed(3)} ms, p95 ${percentile(controls.idleQueueMs, 95).toFixed(3)} ms, max ${max(controls.idleQueueMs).toFixed(3)} ms`,
+      );
+      lines.push(
+        `- empty-submit completion: median ${median(controls.emptySubmitMs).toFixed(3)} ms, p95 ${percentile(controls.emptySubmitMs, 95).toFixed(3)} ms, max ${max(controls.emptySubmitMs).toFixed(3)} ms`,
+      );
       lines.push(`- idle rAF cadence: median ${median(controls.rafIdleDeltaMs).toFixed(2)} ms`);
       lines.push(`- adapter: ${JSON.stringify(controls.adapterInfo)}; timestamp features: ${controls.features.join(', ') || 'none'}`);
       lines.push('');
@@ -350,7 +352,10 @@ const main = async (): Promise<void> => {
         const series = evaluateModels(result.frames);
         const controls = result.controls;
 
-        const controlLine = controls === null ? '' : `  idleQ ${median(controls.idleQueueMs).toFixed(3)}  empty ${median(controls.emptySubmitMs).toFixed(3)}  raf ${median(controls.rafIdleDeltaMs).toFixed(2)}`;
+        const controlLine =
+          controls === null
+            ? ''
+            : `  idleQ ${median(controls.idleQueueMs).toFixed(3)}  empty ${median(controls.emptySubmitMs).toFixed(3)}  raf ${median(controls.rafIdleDeltaMs).toFixed(2)}`;
 
         console.log(
           `A ${median(series.raw).toFixed(2)}/${percentile(series.raw, 95).toFixed(2)}  B ${median(series.busy).toFixed(2)}/${percentile(series.busy, 95).toFixed(2)}  ` +
@@ -368,7 +373,9 @@ const main = async (): Promise<void> => {
 
   mkdirSync(directory, { recursive: true });
 
-  const jsonl = runs.flatMap(run => run.result.frames.map(frame => JSON.stringify({ cell: run.key, repeat: run.repeat, adapter: run.adapter, ...frame }))).join('\n');
+  const jsonl = runs
+    .flatMap(run => run.result.frames.map(frame => JSON.stringify({ cell: run.key, repeat: run.repeat, adapter: run.adapter, ...frame })))
+    .join('\n');
 
   writeFileSync(resolve(directory, 'frames.jsonl'), `${jsonl}\n`);
   writeFileSync(

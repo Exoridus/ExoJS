@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Load lifecycle of a seamless asset handle. Directly constructed assets are `'ready'`; a catalog leaf awaiting adoption is `'idle'`."
-      ],
+      "paragraphs": ["Load lifecycle of a seamless asset handle. Directly constructed assets are `'ready'`; a catalog leaf awaiting adoption is `'idle'`."],
       "importLine": "import { LoadStateValue } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -9,7 +9,7 @@ const TEMPLATES = ['minimal', 'game-starter', 'audio-reactive'] as const;
 type TemplateName = (typeof TEMPLATES)[number];
 
 const TEMPLATE_DESCRIPTIONS: Record<TemplateName, string> = {
-  'minimal': 'smallest TypeScript ExoJS app with one Scene and one visible object',
+  minimal: 'smallest TypeScript ExoJS app with one Scene and one visible object',
   'game-starter': 'keyboard-controlled game loop starter with Scene structure',
   'audio-reactive': 'AudioAnalyser-driven shapes and animations',
 };

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for ReverbEffect."
-      ],
+      "paragraphs": ["Construction options for ReverbEffect."],
       "importLine": "import { ReverbEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

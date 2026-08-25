@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Web fonts (WOFF, WOFF2, TTF, OTF) parsed into a loaded `FontFace`."
-      ],
+      "paragraphs": ["Web fonts (WOFF, WOFF2, TTF, OTF) parsed into a loaded `FontFace`."],
       "importLine": "import { FontAssetType } from '@codexo/exojs'",
       "sourceLink": null
     },

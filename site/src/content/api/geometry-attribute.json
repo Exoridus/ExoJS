@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Descriptor for one attribute in an interleaved vertex layout. Offsets and stride are expressed in bytes."
-      ],
+      "paragraphs": ["Descriptor for one attribute in an interleaved vertex layout. Offsets and stride are expressed in bytes."],
       "importLine": "import { GeometryAttribute } from '@codexo/exojs'",
       "sourceLink": null
     },

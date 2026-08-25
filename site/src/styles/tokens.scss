@@ -1,149 +1,149 @@
 :root {
-    --f-sans: 'Space Grotesk', system-ui, sans-serif;
-    --f-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --f-sans: 'Space Grotesk', system-ui, sans-serif;
+  --f-mono: 'JetBrains Mono', ui-monospace, monospace;
 
-    --text-xs: 0.75rem;
-    --text-sm: 0.875rem;
-    --text-md: 1rem;
-    --text-lg: 1.125rem;
-    --text-xl: 1.375rem;
-    --text-2xl: 1.75rem;
-    --text-3xl: 2.25rem;
-    --leading-tight: 1.2;
-    --leading-normal: 1.6;
-    --leading-relaxed: 1.7;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+  --leading-tight: 1.2;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.7;
 
-    --s-1: 4px;
-    --s-2: 8px;
-    --s-3: 12px;
-    --s-4: 16px;
-    --s-5: 20px;
-    --s-6: 24px;
-    --s-7: 32px;
-    --s-8: 40px;
-    --s-9: 56px;
-    --s-10: 72px;
-    --s-11: 96px;
-    --s-12: 128px;
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+  --s-9: 56px;
+  --s-10: 72px;
+  --s-11: 96px;
+  --s-12: 128px;
 
-    --r-1: 4px;
-    --r-2: 6px;
-    --r-3: 10px;
-    --r-4: 14px;
-    --r-5: 20px;
-    --r-pill: 999px;
+  --r-1: 4px;
+  --r-2: 6px;
+  --r-3: 10px;
+  --r-4: 14px;
+  --r-5: 20px;
+  --r-pill: 999px;
 
-    --radius-control: var(--r-2);
-    --radius-card: var(--r-4);
-    --radius-panel: var(--r-4);
-    --radius-inline: var(--r-1);
+  --radius-control: var(--r-2);
+  --radius-card: var(--r-4);
+  --radius-panel: var(--r-4);
+  --radius-inline: var(--r-1);
 
-    --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
-    --shadow-md: 0 12px 40px -12px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.3);
-    --shadow-card: var(--shadow-md);
+  --shadow-sm: 0 1px 0 rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 12px 40px -12px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.3);
+  --shadow-card: var(--shadow-md);
 
-    --color-accent: oklch(85% 0.17 142);
-    --color-accent-contrast: oklch(18% 0.04 142);
-    --color-accent-soft: oklch(85% 0.17 142 / 0.14);
-    --color-accent-border: oklch(85% 0.17 142 / 0.32);
-    --focus-ring: var(--color-accent-border);
-    --focus-ring-shadow: color-mix(in oklab, var(--color-accent-border), transparent 35%);
+  --color-accent: oklch(85% 0.17 142);
+  --color-accent-contrast: oklch(18% 0.04 142);
+  --color-accent-soft: oklch(85% 0.17 142 / 0.14);
+  --color-accent-border: oklch(85% 0.17 142 / 0.32);
+  --focus-ring: var(--color-accent-border);
+  --focus-ring-shadow: color-mix(in oklab, var(--color-accent-border), transparent 35%);
 
-    --accent: var(--color-accent);
-    --accent-fg: var(--color-accent-contrast);
-    --accent-soft: var(--color-accent-soft);
-    --accent-line: var(--color-accent-border);
-    --shadow-1: var(--shadow-sm);
-    --shadow-2: var(--shadow-md);
-    --transition-fast: 160ms cubic-bezier(0.2, 0.6, 0.2, 1);
+  --accent: var(--color-accent);
+  --accent-fg: var(--color-accent-contrast);
+  --accent-soft: var(--color-accent-soft);
+  --accent-line: var(--color-accent-border);
+  --shadow-1: var(--shadow-sm);
+  --shadow-2: var(--shadow-md);
+  --transition-fast: 160ms cubic-bezier(0.2, 0.6, 0.2, 1);
 
-    // Semantic colours — fixed across every accent theme. These carry meaning
-    // (companion/callout states, API-kind badges), so they must never be
-    // re-tinted by the user-selectable UI accent, and they never enter the
-    // wordmark/mark (which stays lime). cyan/mint match the live Callout
-    // values; violet/amber/rose/sky are the API-kind badge palette.
-    --cyan: oklch(80% 0.1 195); // info / hint / pitfall / debug — companion #52D9D4
-    --mint: oklch(78% 0.12 162); // success — #62D29A
-    --amber: oklch(82% 0.14 70); // warning
-    --rose: oklch(74% 0.16 20); // error / broken / enum-kind
-    --sky: oklch(78% 0.13 230); // property-kind
-    --violet: oklch(75% 0.16 290); // method-kind
+  // Semantic colours — fixed across every accent theme. These carry meaning
+  // (companion/callout states, API-kind badges), so they must never be
+  // re-tinted by the user-selectable UI accent, and they never enter the
+  // wordmark/mark (which stays lime). cyan/mint match the live Callout
+  // values; violet/amber/rose/sky are the API-kind badge palette.
+  --cyan: oklch(80% 0.1 195); // info / hint / pitfall / debug — companion #52D9D4
+  --mint: oklch(78% 0.12 162); // success — #62D29A
+  --amber: oklch(82% 0.14 70); // warning
+  --rose: oklch(74% 0.16 20); // error / broken / enum-kind
+  --sky: oklch(78% 0.13 230); // property-kind
+  --violet: oklch(75% 0.16 290); // method-kind
 }
 
 html[data-theme='dark'] {
-    --color-bg: oklch(17% 0.012 245);
-    --color-surface: oklch(20.5% 0.013 245);
-    --color-surface-2: oklch(23.5% 0.014 245);
-    --color-panel: var(--color-surface-2);
-    --color-input: oklch(20% 0.012 245);
-    --color-card: var(--color-surface);
-    --color-code-bg: oklch(15% 0.012 245);
-    --color-inline-code-bg: color-mix(in oklab, var(--color-surface), transparent 12%);
+  --color-bg: oklch(17% 0.012 245);
+  --color-surface: oklch(20.5% 0.013 245);
+  --color-surface-2: oklch(23.5% 0.014 245);
+  --color-panel: var(--color-surface-2);
+  --color-input: oklch(20% 0.012 245);
+  --color-card: var(--color-surface);
+  --color-code-bg: oklch(15% 0.012 245);
+  --color-inline-code-bg: color-mix(in oklab, var(--color-surface), transparent 12%);
 
-    --color-border: oklch(30% 0.014 245);
-    --color-border-soft: oklch(26% 0.013 245);
+  --color-border: oklch(30% 0.014 245);
+  --color-border-soft: oklch(26% 0.013 245);
 
-    --color-text: oklch(95% 0.005 245);
-    --color-text-muted: oklch(75% 0.012 245);
-    --color-text-faint: oklch(68% 0.012 245);
+  --color-text: oklch(95% 0.005 245);
+  --color-text-muted: oklch(75% 0.012 245);
+  --color-text-faint: oklch(68% 0.012 245);
 
-    --grid-dot: oklch(40% 0.014 245 / 0.45);
-    --grid-line: oklch(30% 0.014 245 / 0.6);
+  --grid-dot: oklch(40% 0.014 245 / 0.45);
+  --grid-line: oklch(30% 0.014 245 / 0.6);
 
-    --bg-canvas: var(--color-bg);
-    --bg-elevated: var(--color-surface);
-    --bg-panel: var(--color-panel);
-    --bg-input: var(--color-input);
-    --bg-code: var(--color-code-bg);
+  --bg-canvas: var(--color-bg);
+  --bg-elevated: var(--color-surface);
+  --bg-panel: var(--color-panel);
+  --bg-input: var(--color-input);
+  --bg-code: var(--color-code-bg);
 
-    --line: var(--color-border);
-    --line-soft: var(--color-border-soft);
+  --line: var(--color-border);
+  --line-soft: var(--color-border-soft);
 
-    --fg: var(--color-text);
-    --fg-muted: var(--color-text-muted);
-    --fg-faint: var(--color-text-faint);
+  --fg: var(--color-text);
+  --fg-muted: var(--color-text-muted);
+  --fg-faint: var(--color-text-faint);
 }
 
 html[data-theme='light'] {
-    --color-bg: oklch(98.5% 0.005 95);
-    --color-surface: oklch(100% 0 0);
-    --color-surface-2: oklch(96.5% 0.008 95);
-    --color-panel: var(--color-surface-2);
-    --color-input: oklch(100% 0 0);
-    --color-card: var(--color-surface);
-    --color-code-bg: oklch(20% 0.012 245);
-    --color-inline-code-bg: color-mix(in oklab, var(--color-surface-2), transparent 15%);
+  --color-bg: oklch(98.5% 0.005 95);
+  --color-surface: oklch(100% 0 0);
+  --color-surface-2: oklch(96.5% 0.008 95);
+  --color-panel: var(--color-surface-2);
+  --color-input: oklch(100% 0 0);
+  --color-card: var(--color-surface);
+  --color-code-bg: oklch(20% 0.012 245);
+  --color-inline-code-bg: color-mix(in oklab, var(--color-surface-2), transparent 15%);
 
-    --color-border: oklch(88% 0.008 95);
-    --color-border-soft: oklch(92% 0.006 95);
+  --color-border: oklch(88% 0.008 95);
+  --color-border-soft: oklch(92% 0.006 95);
 
-    --color-text: oklch(20% 0.012 245);
-    --color-text-muted: oklch(40% 0.012 245);
-    --color-text-faint: oklch(45% 0.012 245);
+  --color-text: oklch(20% 0.012 245);
+  --color-text-muted: oklch(40% 0.012 245);
+  --color-text-faint: oklch(45% 0.012 245);
 
-    --grid-dot: oklch(75% 0.012 245 / 0.7);
-    --grid-line: oklch(85% 0.01 245 / 0.7);
+  --grid-dot: oklch(75% 0.012 245 / 0.7);
+  --grid-line: oklch(85% 0.01 245 / 0.7);
 
-    --color-accent: oklch(54% 0.18 142);
-    --color-accent-contrast: oklch(99% 0.01 142);
-    --color-accent-soft: oklch(54% 0.18 142 / 0.1);
-    --color-accent-border: oklch(54% 0.18 142 / 0.3);
+  --color-accent: oklch(54% 0.18 142);
+  --color-accent-contrast: oklch(99% 0.01 142);
+  --color-accent-soft: oklch(54% 0.18 142 / 0.1);
+  --color-accent-border: oklch(54% 0.18 142 / 0.3);
 
-    --bg-canvas: var(--color-bg);
-    --bg-elevated: var(--color-surface);
-    --bg-panel: var(--color-panel);
-    --bg-input: var(--color-input);
-    --bg-code: var(--color-code-bg);
+  --bg-canvas: var(--color-bg);
+  --bg-elevated: var(--color-surface);
+  --bg-panel: var(--color-panel);
+  --bg-input: var(--color-input);
+  --bg-code: var(--color-code-bg);
 
-    --line: var(--color-border);
-    --line-soft: var(--color-border-soft);
+  --line: var(--color-border);
+  --line-soft: var(--color-border-soft);
 
-    --fg: var(--color-text);
-    --fg-muted: var(--color-text-muted);
-    --fg-faint: var(--color-text-faint);
+  --fg: var(--color-text);
+  --fg-muted: var(--color-text-muted);
+  --fg-faint: var(--color-text-faint);
 
-    --accent: var(--color-accent);
-    --accent-fg: var(--color-accent-contrast);
-    --accent-soft: var(--color-accent-soft);
-    --accent-line: var(--color-accent-border);
+  --accent: var(--color-accent);
+  --accent-fg: var(--color-accent-contrast);
+  --accent-soft: var(--color-accent-soft);
+  --accent-line: var(--color-accent-border);
 }

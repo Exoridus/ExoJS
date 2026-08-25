@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The two identities a request resolves to, as reported by Loader.identify."
-      ],
+      "paragraphs": ["The two identities a request resolves to, as reported by Loader.identify."],
       "importLine": "import { AssetIdentity } from '@codexo/exojs'",
       "sourceLink": null
     },

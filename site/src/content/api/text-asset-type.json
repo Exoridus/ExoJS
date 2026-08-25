@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "UTF-8 text files, handed over as a string."
-      ],
+      "paragraphs": ["UTF-8 text files, handed over as a string."],
       "importLine": "import { TextAssetType } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Construction options for PingPongDelayEffect."
-      ],
+      "paragraphs": ["Construction options for PingPongDelayEffect."],
       "importLine": "import { PingPongDelayEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "One alternative of a serialized VectorAction binding."
-      ],
+      "paragraphs": ["One alternative of a serialized VectorAction binding."],
       "importLine": "import { SerializedVectorEntry } from '@codexo/exojs'",
       "sourceLink": null
     },

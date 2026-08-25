@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The normalized record dispatched to every LogSink."
-      ],
+      "paragraphs": ["The normalized record dispatched to every LogSink."],
       "importLine": "import { LogEntry } from '@codexo/exojs'",
       "sourceLink": null
     },

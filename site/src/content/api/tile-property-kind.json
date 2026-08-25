@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Structured-value discriminant for TilePropertyValue."
-      ],
+      "paragraphs": ["Structured-value discriminant for TilePropertyValue."],
       "importLine": "import { TilePropertyKind } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

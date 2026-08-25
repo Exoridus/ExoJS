@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for createParticlesExtension."
-      ],
+      "paragraphs": ["Options for createParticlesExtension."],
       "importLine": "import { ParticlesExtensionOptions } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

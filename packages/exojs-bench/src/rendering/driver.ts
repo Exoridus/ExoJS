@@ -119,7 +119,12 @@ const driverSideOnly = (): never => {
   throw new Error('Adapter lifecycle runs in the harness page, not in the driver process.');
 };
 
-const capabilityDescriptor = (engine: string, config: string, backends: readonly Backend[], coversArchetype?: (spec: ArchetypeSpec) => boolean): EngineAdapter => ({
+const capabilityDescriptor = (
+  engine: string,
+  config: string,
+  backends: readonly Backend[],
+  coversArchetype?: (spec: ArchetypeSpec) => boolean,
+): EngineAdapter => ({
   engine,
   config,
   supports: (backend: Backend): boolean => backends.includes(backend),
@@ -335,7 +340,6 @@ const applyFilter = (cells: readonly CellSpec[], filter: Partial<CellSpec>): Cel
 
   return cells.filter(cell => entries.every(([key, value]) => cell[key as keyof CellSpec] === value));
 };
-
 
 /**
  * Callback invoked the instant a cell finishes measuring, BEFORE the run
@@ -755,7 +759,15 @@ export const profileCell = async (options: {
 
       return {
         spec,
-        provenance: { adapter, backend: spec.backend, flags, headless: true, engineVersion, timestamp: new Date().toISOString(), software: isSoftwareRenderer(adapter) },
+        provenance: {
+          adapter,
+          backend: spec.backend,
+          flags,
+          headless: true,
+          engineVersion,
+          timestamp: new Date().toISOString(),
+          software: isSoftwareRenderer(adapter),
+        },
         frames,
         wallMs,
         totalSelfMs,

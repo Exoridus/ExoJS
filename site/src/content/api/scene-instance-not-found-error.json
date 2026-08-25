@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Thrown when `unload(Target, { instance: kind })` targets a specific kind of activation that does not exist for `Target`."
-      ],
+      "paragraphs": ["Thrown when `unload(Target, { instance: kind })` targets a specific kind of activation that does not exist for `Target`."],
       "importLine": "import { SceneInstanceNotFoundError } from '@codexo/exojs'",
       "sourceLink": null
     },

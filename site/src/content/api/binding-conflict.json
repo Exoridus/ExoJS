@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "One channel bound by more than one action of the same map."
-      ],
+      "paragraphs": ["One channel bound by more than one action of the same map."],
       "importLine": "import { BindingConflict } from '@codexo/exojs'",
       "sourceLink": null
     },

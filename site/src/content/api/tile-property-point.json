@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A 2D point-valued tile property (e.g. an LDtk `Point` field)."
-      ],
+      "paragraphs": ["A 2D point-valued tile property (e.g. an LDtk `Point` field)."],
       "importLine": "import { TilePropertyPoint } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

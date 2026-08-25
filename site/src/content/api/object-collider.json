@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "One static body built from one object, paired with its source."
-      ],
+      "paragraphs": ["One static body built from one object, paired with its source."],
       "importLine": "import { ObjectCollider } from '@codexo/exojs-tilemap-physics'",
       "sourceLink": null
     },

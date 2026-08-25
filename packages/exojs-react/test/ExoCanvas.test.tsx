@@ -29,9 +29,7 @@ beforeEach(() => {
 
 describe('<ExoCanvas>', () => {
   it('renders a positioned wrapper div containing exactly one canvas', () => {
-    const { container, getByTestId } = render(
-      <ExoCanvas data-testid="host" options={{ canvas: { width: 800, height: 600 } }} />,
-    );
+    const { container, getByTestId } = render(<ExoCanvas data-testid="host" options={{ canvas: { width: 800, height: 600 } }} />);
 
     const host = getByTestId('host');
     expect(host.tagName).toBe('DIV');
@@ -43,9 +41,7 @@ describe('<ExoCanvas>', () => {
   });
 
   it('forwards arbitrary div props (className, data-*) and merges style onto the wrapper', () => {
-    const { getByTestId } = render(
-      <ExoCanvas data-testid="host" className="game-host" style={{ width: 640, background: 'black' }} />,
-    );
+    const { getByTestId } = render(<ExoCanvas data-testid="host" className="game-host" style={{ width: 640, background: 'black' }} />);
 
     const host = getByTestId('host');
     expect(host.className).toBe('game-host');
@@ -62,9 +58,7 @@ describe('<ExoCanvas>', () => {
       // index signature for `data-*` keys, so the literal needs a cast to prove
       // the runtime forwarding this test asserts.
       <ExoCanvas
-        canvasProps={
-          { className: 'pixelated', 'data-role': 'surface', style: { imageRendering: 'pixelated' } } as NonNullable<ExoCanvasProps['canvasProps']>
-        }
+        canvasProps={{ className: 'pixelated', 'data-role': 'surface', style: { imageRendering: 'pixelated' } } as NonNullable<ExoCanvasProps['canvasProps']>}
       />,
     );
 

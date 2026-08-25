@@ -18,10 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "How a scalable sprite fills its destination span.",
-        "Shared by NineSliceSprite edges/center and RepeatingSprite."
-      ],
+      "paragraphs": ["How a scalable sprite fills its destination span.", "Shared by NineSliceSprite edges/center and RepeatingSprite."],
       "importLine": "import { RepeatMode } from '@codexo/exojs'",
       "sourceLink": null
     },

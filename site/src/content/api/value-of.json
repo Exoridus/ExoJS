@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Type-level extractor of an object's value type, equivalent to `T[keyof T]`."
-      ],
+      "paragraphs": ["Type-level extractor of an object's value type, equivalent to `T[keyof T]`."],
       "importLine": "import { ValueOf } from '@codexo/exojs'",
       "sourceLink": null
     },

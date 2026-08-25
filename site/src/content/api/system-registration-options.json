@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options accepted by SystemRegistry.add."
-      ],
+      "paragraphs": ["Options accepted by SystemRegistry.add."],
       "importLine": "import { SystemRegistrationOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -8,9 +8,7 @@ import { makeLayer, makeTileset, place, shape, TILE } from './helpers';
 const world = (): PhysicsWorld => new PhysicsWorld({ gravity: { x: 0, y: 0 } });
 
 /** Classify a fixed set of cells, counting how often the source is sampled. */
-const countingSource = (
-  claimed: ReadonlyMap<string, string>,
-): { source: TileCellSource; samples: () => number } => {
+const countingSource = (claimed: ReadonlyMap<string, string>): { source: TileCellSource; samples: () => number } => {
   let samples = 0;
 
   return {
@@ -85,7 +83,12 @@ describe('TileColliderStreamer — cell source', () => {
   it('rebuilds exactly the block a chunk appears in, keeping both sources', () => {
     const tileset = makeTileset({ 0: [shape({ type: 'Tile' })] });
     const layer = makeLayer(tileset, { width: 8, height: 8 });
-    const counting = countingSource(cellMap([[0, 0, 'Solid'], [4, 0, 'Solid']]));
+    const counting = countingSource(
+      cellMap([
+        [0, 0, 'Solid'],
+        [4, 0, 'Solid'],
+      ]),
+    );
     const streamer = new TileColliderStreamer(world(), layer, { cells: counting.source });
 
     streamer.sync();

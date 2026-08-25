@@ -1,5 +1,5 @@
 import type { AssetFactory } from '@codexo/exojs';
-import { type AssetRequest,AssetType } from '@codexo/exojs';
+import { type AssetRequest, AssetType } from '@codexo/exojs';
 import { TileMap } from '@codexo/exojs-tilemap';
 
 import { resolveTiledOptions, type TiledLoadOptions } from './tiledOptions';

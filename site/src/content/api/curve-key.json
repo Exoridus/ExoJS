@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A keyframe in a Curve: value `v` at lifetime ratio `t` in `[0, 1]`."
-      ],
+      "paragraphs": ["A keyframe in a Curve: value `v` at lifetime ratio `t` in `[0, 1]`."],
       "importLine": "import { CurveKey } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

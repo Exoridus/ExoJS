@@ -6,8 +6,8 @@ import type { Example } from './types';
 export const FEATURED_FILTER = 'start-here' as const;
 
 export interface ExampleSearchFilter {
-    query: string;
-    activeFilter: string | null;
+  query: string;
+  activeFilter: string | null;
 }
 
 /**
@@ -20,33 +20,30 @@ export interface ExampleSearchFilter {
  * Search is case-insensitive substring match across title, description, path,
  * section, tags, and capabilities. Filter and search are AND-combined.
  */
-export function filterExamples(
-    examples: ReadonlyArray<Example>,
-    { query, activeFilter }: ExampleSearchFilter,
-): Array<Example> {
-    const q = query.trim().toLowerCase();
-    const filter = activeFilter === 'all' ? null : activeFilter;
+export function filterExamples(examples: ReadonlyArray<Example>, { query, activeFilter }: ExampleSearchFilter): Array<Example> {
+  const q = query.trim().toLowerCase();
+  const filter = activeFilter === 'all' ? null : activeFilter;
 
-    return examples.filter(example => {
-        if (filter === FEATURED_FILTER) {
-            if (!example.featured) return false;
-        } else if (filter) {
-            const inTags = (example.tags ?? []).includes(filter);
-            const inCaps = (example.capabilities ?? []).includes(filter as Example['capabilities'] extends Array<infer C> ? C : never);
-            if (!inTags && !inCaps) return false;
-        }
+  return examples.filter(example => {
+    if (filter === FEATURED_FILTER) {
+      if (!example.featured) return false;
+    } else if (filter) {
+      const inTags = (example.tags ?? []).includes(filter);
+      const inCaps = (example.capabilities ?? []).includes(filter as Example['capabilities'] extends Array<infer C> ? C : never);
+      if (!inTags && !inCaps) return false;
+    }
 
-        if (q) {
-            return (
-                example.title.toLowerCase().includes(q) ||
-                example.description.toLowerCase().includes(q) ||
-                example.path.toLowerCase().includes(q) ||
-                example.section.toLowerCase().includes(q) ||
-                (example.tags ?? []).some(tag => tag.toLowerCase().includes(q)) ||
-                (example.capabilities ?? []).some(cap => cap.toLowerCase().includes(q))
-            );
-        }
+    if (q) {
+      return (
+        example.title.toLowerCase().includes(q) ||
+        example.description.toLowerCase().includes(q) ||
+        example.path.toLowerCase().includes(q) ||
+        example.section.toLowerCase().includes(q) ||
+        (example.tags ?? []).some(tag => tag.toLowerCase().includes(q)) ||
+        (example.capabilities ?? []).some(cap => cap.toLowerCase().includes(q))
+      );
+    }
 
-        return true;
-    });
+    return true;
+  });
 }

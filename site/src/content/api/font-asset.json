@@ -18,10 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Dispatch token for font loading.",
-        "`loader.load(Asset.type('font', 'font.woff2', { family: 'MyFont' }))` returns `Promise<FontFace>`."
-      ],
+      "paragraphs": ["Dispatch token for font loading.", "`loader.load(Asset.type('font', 'font.woff2', { family: 'MyFont' }))` returns `Promise<FontFace>`."],
       "importLine": "import { FontAsset } from '@codexo/exojs'",
       "sourceLink": null
     },

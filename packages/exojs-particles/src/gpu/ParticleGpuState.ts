@@ -5,10 +5,10 @@ import type { Texture } from '@codexo/exojs';
 import type { ComputeBindGroupEntry } from '@codexo/exojs/renderer-sdk';
 import { fillShaderSource, reflectComputeBindings, WebGpuComputePipeline, WebGpuStorageBuffer, WebGpuUniformBuffer } from '@codexo/exojs/renderer-sdk';
 
-import type { UpdateModule } from "#modules/UpdateModule";
-import type { WgslContribution, WgslUniformField } from "#modules/WgslContribution";
-import { wgslUniformByteSize } from "#modules/WgslContribution";
-import type { ParticleSystem } from "#ParticleSystem";
+import type { UpdateModule } from '#modules/UpdateModule';
+import type { WgslContribution, WgslUniformField } from '#modules/WgslContribution';
+import { wgslUniformByteSize } from '#modules/WgslContribution';
+import type { ParticleSystem } from '#ParticleSystem';
 
 import particleSimulateWgsl from './wgsl/particle-simulate.wgsl';
 
@@ -164,7 +164,14 @@ export class ParticleGpuState {
   private _reportsDeaths = false;
   private _destroyed = false;
 
-  public constructor(device: GPUDevice, capacity: number, modules: readonly UpdateModule[], frames: readonly Rectangle[], texture: Texture, reportsDeaths = false) {
+  public constructor(
+    device: GPUDevice,
+    capacity: number,
+    modules: readonly UpdateModule[],
+    frames: readonly Rectangle[],
+    texture: Texture,
+    reportsDeaths = false,
+  ) {
     this.device = device;
     this.capacity = capacity;
 

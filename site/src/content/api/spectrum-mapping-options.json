@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Mapping options for AudioAnalyser.getSpectrumMel and AudioAnalyser.getSpectrumLog."
-      ],
+      "paragraphs": ["Mapping options for AudioAnalyser.getSpectrumMel and AudioAnalyser.getSpectrumLog."],
       "importLine": "import { SpectrumMappingOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

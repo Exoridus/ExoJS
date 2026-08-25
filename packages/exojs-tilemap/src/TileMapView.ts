@@ -274,10 +274,7 @@ export class TileMapView {
     }
 
     if (matches.length > 1) {
-      throw new Error(
-        `TileMapView image layer name "${name}" is ambiguous ` +
-          `(${matches.length} image layers share it); reference it by id instead.`,
-      );
+      throw new Error(`TileMapView image layer name "${name}" is ambiguous ` + `(${matches.length} image layers share it); reference it by id instead.`);
     }
 
     return this._imageLayerNodeById.get(matches[0]!.id);
@@ -292,9 +289,7 @@ export class TileMapView {
 
     if (!band) {
       throw new Error(
-        `TileMapView has no band named "${name}". Defined bands: ${
-          this._bands.length > 0 ? this._bands.map(b => `"${b.name}"`).join(', ') : '(none)'
-        }.`,
+        `TileMapView has no band named "${name}". Defined bands: ${this._bands.length > 0 ? this._bands.map(b => `"${b.name}"`).join(', ') : '(none)'}.`,
       );
     }
 
@@ -482,10 +477,7 @@ export class TileMapView {
       const existing = this._nodeFor(layer);
 
       if (existing && this._nodeBand.has(existing)) {
-        throw new Error(
-          `TileMapView layer ${layer.id} is assigned to multiple bands ` +
-            `("${this._nodeBand.get(existing)!.name}" and "${name}").`,
-        );
+        throw new Error(`TileMapView layer ${layer.id} is assigned to multiple bands ` + `("${this._nodeBand.get(existing)!.name}" and "${name}").`);
       }
 
       members.add(layer);
@@ -532,9 +524,7 @@ export class TileMapView {
       const layer = tileLayer ?? imageLayer;
 
       if (!layer) {
-        throw new Error(
-          `TileMapView band "${bandName}": no layer with id ${selector} in map "${this._map.name}".`,
-        );
+        throw new Error(`TileMapView band "${bandName}": no layer with id ${selector} in map "${this._map.name}".`);
       }
 
       return layer;
@@ -546,15 +536,12 @@ export class TileMapView {
     ];
 
     if (matches.length === 0) {
-      throw new Error(
-        `TileMapView band "${bandName}": no layer named "${selector}" in map "${this._map.name}".`,
-      );
+      throw new Error(`TileMapView band "${bandName}": no layer named "${selector}" in map "${this._map.name}".`);
     }
 
     if (matches.length > 1) {
       throw new Error(
-        `TileMapView band "${bandName}": layer name "${selector}" is ambiguous ` +
-          `(${matches.length} layers share it); reference it by id instead.`,
+        `TileMapView band "${bandName}": layer name "${selector}" is ambiguous ` + `(${matches.length} layers share it); reference it by id instead.`,
       );
     }
 
@@ -573,10 +560,7 @@ export class TileMapView {
   }
 
   /** Assign a freshly created node to the first band that selects its layer. */
-  private _assignNewNode(
-    node: TileLayerNode | ImageLayerNode,
-    layer: TileLayer | ImageLayer,
-  ): void {
+  private _assignNewNode(node: TileLayerNode | ImageLayerNode, layer: TileLayer | ImageLayer): void {
     for (const def of this._bandDefs) {
       if (this._definitionSelects(def, layer)) {
         const band = this._bandByName.get(def.name)!;
@@ -602,8 +586,7 @@ export class TileMapView {
         }
       } else if (selector === layer.name) {
         const sameName =
-          this._map.layers.filter(other => other.name === selector).length +
-          this._map.imageLayers.filter(other => other.name === selector).length;
+          this._map.layers.filter(other => other.name === selector).length + this._map.imageLayers.filter(other => other.name === selector).length;
 
         if (sameName === 1) {
           return true;
@@ -616,10 +599,7 @@ export class TileMapView {
 
   /** Whether an id currently belongs to both a tile layer and an image layer. */
   private _isCrossKindId(id: number): boolean {
-    return (
-      this._map.getTileLayerById(id) !== undefined &&
-      this._map.imageLayers.some(layer => layer.id === id)
-    );
+    return this._map.getTileLayerById(id) !== undefined && this._map.imageLayers.some(layer => layer.id === id);
   }
 
   /** Detach + destroy a tile node, dropping it from bands and registries. */

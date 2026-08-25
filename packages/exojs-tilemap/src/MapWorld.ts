@@ -101,7 +101,6 @@ const EMPTY_BOUNDS: MapBounds = Object.freeze({ x: 0, y: 0, width: 0, height: 0 
  * ```
  */
 export class MapWorld {
-
   /** World name; empty when the source format does not name it. */
   public readonly name: string;
   /** The world's levels, in source document order. */
@@ -210,12 +209,7 @@ export class MapWorld {
 
     for (const level of this.levels) {
       const b = level.bounds;
-      if (
-        b.x < bounds.x + bounds.width &&
-        bounds.x < b.x + b.width &&
-        b.y < bounds.y + bounds.height &&
-        bounds.y < b.y + b.height
-      ) {
+      if (b.x < bounds.x + bounds.width && bounds.x < b.x + b.width && b.y < bounds.y + bounds.height && bounds.y < b.y + b.height) {
         out.push(level);
       }
     }

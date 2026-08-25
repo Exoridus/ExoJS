@@ -46,7 +46,7 @@ const probe = (kind: ShapeType): AnyShape => {
 };
 
 describe('queryPoint across the shape set', () => {
-  it.each(solids)('reports %s for a point inside it', (kind) => {
+  it.each(solids)('reports %s for a point inside it', kind => {
     const world = new PhysicsWorld();
     const collider = colliderAt(world, probe(kind), { x: 0, y: 0 });
 
@@ -54,11 +54,15 @@ describe('queryPoint across the shape set', () => {
     expect(world.queryPoint({ x: 0, y: halfHeight[kind]! + 1 })).toEqual([]);
   });
 
-  it.each(boundaries)('never reports %s, however close the point is', (kind) => {
+  it.each(boundaries)('never reports %s, however close the point is', kind => {
     const world = new PhysicsWorld();
     colliderAt(world, probe(kind), { x: 0, y: 0 });
 
-    for (const point of [{ x: 0, y: 0 }, { x: 0, y: 1e-9 }, { x: -5, y: 0 }]) {
+    for (const point of [
+      { x: 0, y: 0 },
+      { x: 0, y: 1e-9 },
+      { x: -5, y: 0 },
+    ]) {
       expect(world.queryPoint(point)).toEqual([]);
     }
   });
@@ -73,7 +77,7 @@ describe('queryPoint across the shape set', () => {
 });
 
 describe('queryAabb and forEachAabbHit across the shape set', () => {
-  it.each(kinds)('finds %s exactly once', (kind) => {
+  it.each(kinds)('finds %s exactly once', kind => {
     const world = new PhysicsWorld();
     const collider = colliderAt(world, probe(kind), { x: 0, y: 0 });
     const bounds = { minX: -50, minY: -50, maxX: 50, maxY: 50 };
@@ -81,7 +85,7 @@ describe('queryAabb and forEachAabbHit across the shape set', () => {
 
     expect(world.queryAabb(bounds)).toEqual([collider]);
 
-    world.forEachAabbHit(bounds, undefined, (hit) => visited.push(hit));
+    world.forEachAabbHit(bounds, undefined, hit => visited.push(hit));
 
     expect(visited).toEqual([collider]);
   });
@@ -94,14 +98,14 @@ describe('queryAabb and forEachAabbHit across the shape set', () => {
 
     expect(world.queryAabb(bounds)).toEqual([chain]);
 
-    world.forEachAabbHit(bounds, undefined, (hit) => visited.push(hit));
+    world.forEachAabbHit(bounds, undefined, hit => visited.push(hit));
 
     expect(visited).toEqual([chain]);
   });
 });
 
 describe('rayCast across the shape set', () => {
-  it.each(kinds)('hits %s and reports a normal facing the ray', (kind) => {
+  it.each(kinds)('hits %s and reports a normal facing the ray', kind => {
     const world = new PhysicsWorld();
     const collider = colliderAt(world, probe(kind), { x: 0, y: 0 });
     const hit = world.rayCast({ x: 0, y: -50 }, { x: 0, y: 1 });
@@ -142,7 +146,7 @@ describe('rayCast across the shape set', () => {
     const hits = world.rayCastAll({ x: -10, y: -25 }, { x: 1, y: 0 });
 
     expect(hits).toHaveLength(2);
-    expect(hits.map((hit) => hit.collider)).toEqual([chain, chain]);
+    expect(hits.map(hit => hit.collider)).toEqual([chain, chain]);
     expect(hits[0]!.distance).toBeCloseTo(35, 6);
     expect(hits[1]!.distance).toBeCloseTo(85, 6);
     expect(world.rayCast({ x: -10, y: -25 }, { x: 1, y: 0 })!.distance).toBeCloseTo(35, 6);
@@ -165,7 +169,7 @@ describe('rayCast across the shape set', () => {
 });
 
 describe('overlapShape across the shape set', () => {
-  const cases = kinds.flatMap((collider) => kinds.map((query) => ({ collider, query })));
+  const cases = kinds.flatMap(collider => kinds.map(query => ({ collider, query })));
 
   it.each(cases)('tests a $query probe against a $collider collider', ({ collider: colliderKind, query: queryKind }) => {
     const world = new PhysicsWorld();

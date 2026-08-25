@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Side discriminant for a MapLevelNeighbour."
-      ],
+      "paragraphs": ["Side discriminant for a MapLevelNeighbour."],
       "importLine": "import { MapLevelSide } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

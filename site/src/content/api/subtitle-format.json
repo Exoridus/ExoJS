@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "The two subtitle formats the built-in `subtitle` type reads."
-      ],
+      "paragraphs": ["The two subtitle formats the built-in `subtitle` type reads."],
       "importLine": "import { SubtitleFormat } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "What a CachePolicyResolver is told about the acquisition it is choosing a policy for."
-      ],
+      "paragraphs": ["What a CachePolicyResolver is told about the acquisition it is choosing a policy for."],
       "importLine": "import { CachePolicyResolutionContext } from '@codexo/exojs'",
       "sourceLink": null
     },

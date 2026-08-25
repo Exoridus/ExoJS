@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A constructed action map together with its actions."
-      ],
+      "paragraphs": ["A constructed action map together with its actions."],
       "importLine": "import { ActionMap } from '@codexo/exojs'",
       "sourceLink": null
     },

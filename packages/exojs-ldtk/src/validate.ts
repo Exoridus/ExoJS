@@ -144,12 +144,7 @@ function optionalBoolean(obj: Record<string, unknown>, key: string, source: stri
   if (obj[key] !== undefined) expectBoolean(obj[key], source, joinPath(path, key));
 }
 
-function eachEntry(
-  value: unknown,
-  source: string,
-  path: string,
-  visit: (item: unknown, itemPath: string) => void,
-): void {
+function eachEntry(value: unknown, source: string, path: string, visit: (item: unknown, itemPath: string) => void): void {
   const array = expectArray(value, source, path);
   for (let i = 0; i < array.length; i++) {
     visit(array[i], joinPath(path, i));
@@ -211,21 +206,15 @@ function validateLayerDef(raw: unknown, source: string, path: string): void {
   optionalBoolean(def, 'parallaxScaling', source, path);
 
   if (def.intGridValues !== undefined) {
-    eachEntry(def.intGridValues, source, joinPath(path, 'intGridValues'), (item, itemPath) =>
-      validateIntGridValueDef(item, source, itemPath),
-    );
+    eachEntry(def.intGridValues, source, joinPath(path, 'intGridValues'), (item, itemPath) => validateIntGridValueDef(item, source, itemPath));
   }
 }
 
 function validateDefs(raw: unknown, source: string, path: string): void {
   const defs = expectObject(raw, source, path);
 
-  eachEntry(defs.tilesets, source, joinPath(path, 'tilesets'), (item, itemPath) =>
-    validateTilesetDef(item, source, itemPath),
-  );
-  eachEntry(defs.layers, source, joinPath(path, 'layers'), (item, itemPath) =>
-    validateLayerDef(item, source, itemPath),
-  );
+  eachEntry(defs.tilesets, source, joinPath(path, 'tilesets'), (item, itemPath) => validateTilesetDef(item, source, itemPath));
+  eachEntry(defs.layers, source, joinPath(path, 'layers'), (item, itemPath) => validateLayerDef(item, source, itemPath));
 }
 
 // ── Instances ────────────────────────────────────────────────────────────────
@@ -373,14 +362,10 @@ function validateLayerInstance(raw: unknown, source: string, path: string): void
     validateTiles(layer.autoLayerTiles, source, joinPath(path, 'autoLayerTiles'));
   }
   if (layer.entityInstances !== undefined) {
-    eachEntry(layer.entityInstances, source, joinPath(path, 'entityInstances'), (item, itemPath) =>
-      validateEntityInstance(item, source, itemPath),
-    );
+    eachEntry(layer.entityInstances, source, joinPath(path, 'entityInstances'), (item, itemPath) => validateEntityInstance(item, source, itemPath));
   }
   if (layer.intGridCsv !== undefined) {
-    eachEntry(layer.intGridCsv, source, joinPath(path, 'intGridCsv'), (item, itemPath) =>
-      expectNumber(item, source, itemPath),
-    );
+    eachEntry(layer.intGridCsv, source, joinPath(path, 'intGridCsv'), (item, itemPath) => expectNumber(item, source, itemPath));
   }
   optionalNumber(layer, 'pxOffsetX', source, path);
   optionalNumber(layer, 'pxOffsetY', source, path);
@@ -417,9 +402,7 @@ function validateLevel(raw: unknown, source: string, path: string): void {
   // loader resolves those before conversion.
   const layerInstancesPath = joinPath(path, 'layerInstances');
   if (level.layerInstances !== null) {
-    eachEntry(level.layerInstances, source, layerInstancesPath, (item, itemPath) =>
-      validateLayerInstance(item, source, itemPath),
-    );
+    eachEntry(level.layerInstances, source, layerInstancesPath, (item, itemPath) => validateLayerInstance(item, source, itemPath));
   }
 }
 
@@ -439,9 +422,7 @@ function validateWorld(raw: unknown, source: string, path: string): void {
     }
   }
 
-  eachEntry(world.levels, source, joinPath(path, 'levels'), (item, itemPath) =>
-    validateLevel(item, source, itemPath),
-  );
+  eachEntry(world.levels, source, joinPath(path, 'levels'), (item, itemPath) => validateLevel(item, source, itemPath));
 }
 
 // ── Entry points ─────────────────────────────────────────────────────────────

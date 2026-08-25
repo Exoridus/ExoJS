@@ -78,7 +78,11 @@ const link = (name: string): void => {
  */
 const extractTarball = (tarball: string, destination: string): void => {
   const archive = gunzipSync(readFileSync(tarball));
-  const field = (header: Buffer, start: number, length: number): string => header.subarray(start, start + length).toString('utf8').replace(/\0.*$/s, '');
+  const field = (header: Buffer, start: number, length: number): string =>
+    header
+      .subarray(start, start + length)
+      .toString('utf8')
+      .replace(/\0.*$/s, '');
 
   for (let offset = 0; offset + 512 <= archive.length; ) {
     const header = archive.subarray(offset, offset + 512);
@@ -108,7 +112,11 @@ const extractTarball = (tarball: string, destination: string): void => {
 const treeFiles = (root: string): string[] =>
   readdirSync(root, { withFileTypes: true, recursive: true })
     .filter(entry => entry.isFile())
-    .map(entry => join(entry.parentPath, entry.name).slice(root.length + 1).replaceAll('\\', '/'));
+    .map(entry =>
+      join(entry.parentPath, entry.name)
+        .slice(root.length + 1)
+        .replaceAll('\\', '/'),
+    );
 
 beforeAll(() => {
   staging = mkdtempSync(join(tmpdir(), 'exojs-build-pack-'));
@@ -199,7 +207,15 @@ beforeAll(() => {
     join(consumer, 'tsconfig.workers.json'),
     `${JSON.stringify(
       {
-        compilerOptions: { target: 'es2022', module: 'esnext', moduleResolution: 'bundler', lib: ['es2022', 'webworker'], types: [], strict: true, noEmit: true },
+        compilerOptions: {
+          target: 'es2022',
+          module: 'esnext',
+          moduleResolution: 'bundler',
+          lib: ['es2022', 'webworker'],
+          types: [],
+          strict: true,
+          noEmit: true,
+        },
         include: ['**/*.worker.ts', 'worker-example/shared.ts'],
       },
       null,

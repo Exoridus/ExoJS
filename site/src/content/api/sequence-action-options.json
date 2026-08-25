@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Options for SequenceAction - the options every action shares, plus pattern timing and restart behavior."
-      ],
+      "paragraphs": ["Options for SequenceAction - the options every action shares, plus pattern timing and restart behavior."],
       "importLine": "import { SequenceActionOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

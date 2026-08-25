@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "Sources a ButtonAction accepts: one channel, or several interchangeable ones."
-      ],
+      "paragraphs": ["Sources a ButtonAction accepts: one channel, or several interchangeable ones."],
       "importLine": "import { ButtonBinding } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,9 +18,7 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": [
-        "A named animation range defined via Aseprite frame tags. `from` and `to` are inclusive zero-based frame indices."
-      ],
+      "paragraphs": ["A named animation range defined via Aseprite frame tags. `from` and `to` are inclusive zero-based frame indices."],
       "importLine": "import { AsepriteFrameTag } from '@codexo/exojs-aseprite'",
       "sourceLink": null
     },
