@@ -147,7 +147,11 @@ function debugBundled(minify: boolean): RolldownOptions {
 function modules(): RolldownOptions {
   return {
     ...shared,
-    input: ['src/index.ts', 'src/debug/index.ts', 'src/extensions/index.ts', 'src/renderer-sdk.ts'],
+    // `src/extensions/index.ts` is deliberately absent: it exports nothing but
+    // types, so bundling it produced an empty chunk. Its declaration still comes
+    // from the separate `tsc --emitDeclarationOnly` pass, which is all the
+    // `./extensions` subpath resolves to.
+    input: ['src/index.ts', 'src/debug/index.ts', 'src/renderer-sdk.ts'],
     resolve: { conditionNames: sourceConditions, mainFields: ['module', 'browser', 'main'] },
     plugins: [...shaderAndWorkletPlugins(false), ...codecovBundlePlugin('exo-esm-modules')],
     output: {
