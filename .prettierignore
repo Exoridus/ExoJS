@@ -1,7 +1,6 @@
 dist
 node_modules
 coverage
-src/vendor
 
 # Vendored third-party asset data and its notices - copied in, not authored here.
 examples/assets/**
@@ -11,5 +10,4 @@ examples/shared/assets-global.d.ts
 site/**
 packages/**
 *.min.*
-package-lock.json
 pnpm-lock.yaml

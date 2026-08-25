@@ -304,7 +304,6 @@ export default defineConfig([
       // Security
       ...security.configs.recommended.rules,
       'security/detect-object-injection': 'off',
-      'security/detect-non-literal-fs-filename': 'off',
       'security/detect-non-literal-regexp': 'off',
       'security/detect-possible-timing-attacks': 'off',
       'security/detect-bidi-characters': 'error',
@@ -398,7 +397,6 @@ export default defineConfig([
       '@typescript-eslint/consistent-type-assertions': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       'no-console': 'off',
-      'max-lines': 'off',
     },
   },
 
@@ -427,7 +425,6 @@ export default defineConfig([
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
@@ -444,7 +441,6 @@ export default defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/switch-exhaustiveness-check': 'off',
       complexity: 'off',
     },
   },
@@ -458,7 +454,6 @@ export default defineConfig([
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/no-unsafe-enum-comparison': 'off',
-      '@typescript-eslint/switch-exhaustiveness-check': 'off',
       complexity: 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
       '@typescript-eslint/no-empty-function': 'off',
@@ -484,7 +479,6 @@ export default defineConfig([
   {
     files: ['src/assets/AssetResidency.ts'],
     rules: {
-      '@typescript-eslint/no-unsafe-assignment': 'off',
       complexity: 'off',
     },
   },
@@ -496,14 +490,6 @@ export default defineConfig([
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       complexity: 'off',
-    },
-  },
-
-  {
-    files: ['src/rendering/video/Video.ts', 'src/rendering/filters/WebGpuShaderFilter.ts'],
-    rules: {
-      '@typescript-eslint/no-unused-vars': 'off',
-      'unused-imports/no-unused-vars': 'off',
     },
   },
 
@@ -616,7 +602,6 @@ export default defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off',
     },
   },
 
@@ -775,17 +760,6 @@ export default defineConfig([
     },
   },
 
-  // An AudioWorklet processor ships to the audio thread as one self-contained
-  // source file - it cannot import other modules at runtime - so its body
-  // cannot be split across files the way `max-lines` assumes. The limit
-  // measures something these files cannot act on.
-  {
-    files: ['packages/exojs-audio-fx/src/worklets/*.worklet.ts'],
-    rules: {
-      'max-lines': 'off',
-    },
-  },
-
   // LDtk marks its runtime-computed fields with a `__` prefix (`__identifier`,
   // `__type`, ...). These types mirror an external file format verbatim, so the
   // prefix is data, not a naming choice we get to make.
@@ -873,7 +847,6 @@ export default defineConfig([
       //   unbound-method 236 - `expect(obj.method)` reads the method by design.
       // Revisit any of them by flipping it on and re-measuring, not by
       // reasoning about it.
-      '@typescript-eslint/no-misused-promises': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
@@ -881,7 +854,6 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/unbound-method': 'off',
-      '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
       '@typescript-eslint/no-empty-function': 'off',
