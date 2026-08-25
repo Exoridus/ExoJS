@@ -20,38 +20,41 @@ struct Uniforms { uTime:f32, _pad0:vec3<f32> };
     return textureSample(uTexture,uSampler,uv);
 }`;
 class CustomFragmentShaderScene extends Scene {
-    time = 0;
-    filter;
-    sprite;
-    hud;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0 } });
-        this.sprite = new Sprite(this.loader.get(HUE_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
-        this.sprite.filters = [this.filter];
-        this.hud = mountControls({
-            title: 'Custom Fragment Shader',
-            status: 'A time-driven sine warp drives the sprite UVs each frame.',
-            hint: 'One ShaderFilter carries both the GLSL and the WGSL source; uTime updates per frame.',
-        });
-    }
-    update(delta) {
-        this.time += delta.seconds;
-        this.filter.setUniform('uTime', this.time);
-    }
-    draw(context) {
-        context.render(this.sprite);
-    }
+  time = 0;
+  filter;
+  sprite;
+  hud;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0 } });
+    this.sprite = new Sprite(this.loader.get(HUE_RAMP))
+      .setAnchor(0.5)
+      .setScale(4)
+      .setPosition(width / 2, height / 2);
+    this.sprite.filters = [this.filter];
+    this.hud = mountControls({
+      title: 'Custom Fragment Shader',
+      status: 'A time-driven sine warp drives the sprite UVs each frame.',
+      hint: 'One ShaderFilter carries both the GLSL and the WGSL source; uTime updates per frame.',
+    });
+  }
+  update(delta) {
+    this.time += delta.seconds;
+    this.filter.setUniform('uTime', this.time);
+  }
+  draw(context) {
+    context.render(this.sprite);
+  }
 }
 const app = new Application({
-    scenes: { CustomFragmentShaderScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
+  scenes: { CustomFragmentShaderScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
 });
 app.start(CustomFragmentShaderScene);

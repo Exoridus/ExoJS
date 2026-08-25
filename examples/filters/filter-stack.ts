@@ -1,7 +1,15 @@
-import { Application, BlurFilter, Color, ColorMatrixFilter, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
+import {
+  Application,
+  BlurFilter,
+  Color,
+  ColorMatrixFilter,
+  FixedResolutionCanvasSizing,
+  type RenderingContext,
+  Scene,
+  ShaderFilter,
+  Sprite,
+} from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
-
-
 
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;
 
@@ -11,90 +19,93 @@ void main(){ vec4 c=texture(uTexture,vUv); fragColor=vec4(c.rgb*vec3(1.0,0.9,1.2
 const wgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler; @fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ let c=textureSample(uTexture,uSampler,vUv); return vec4<f32>(c.rgb*vec3<f32>(1.0,0.9,1.2),c.a);} `;
 
 class FilterStackScene extends Scene {
-    private sprite!: Sprite;
-    private blur!: BlurFilter;
-    private tint!: ColorMatrixFilter;
-    private custom!: ShaderFilter;
-    // The filter chain is applied in this fixed order; each entry can be toggled.
-    private active = { blur: true, tint: true, custom: true };
-    private hud!: ReturnType<typeof mountControls>;
-    private panel!: ReturnType<typeof mountControlPanel>;
+  private sprite!: Sprite;
+  private blur!: BlurFilter;
+  private tint!: ColorMatrixFilter;
+  private custom!: ShaderFilter;
+  // The filter chain is applied in this fixed order; each entry can be toggled.
+  private active = { blur: true, tint: true, custom: true };
+  private hud!: ReturnType<typeof mountControls>;
+  private panel!: ReturnType<typeof mountControlPanel>;
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
 
-        this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
-        this.blur = new BlurFilter({ radius: 4, quality: 2 });
-        this.tint = new ColorMatrixFilter().tint(new Color(140, 210, 255));
-        this.custom = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
+    this.sprite = new Sprite(this.loader.get(PRIMARY_RAMP))
+      .setAnchor(0.5)
+      .setScale(4)
+      .setPosition(width / 2, height / 2);
+    this.blur = new BlurFilter({ radius: 4, quality: 2 });
+    this.tint = new ColorMatrixFilter().tint(new Color(140, 210, 255));
+    this.custom = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
+    this.rebuild();
+
+    this.hud = mountControls({
+      title: 'Filter Stack',
+      controls: [{ keys: 'Blur / Tint / Custom', action: 'toggle each layer independently' }],
+      status: this.statusText(),
+      hint: 'Filters compose in order: Blur → Tint → Custom. Toggle any subset.',
+    });
+
+    this.panel = mountControlPanel({ title: 'Layers' });
+    this.panel.addToggle({
+      label: 'Blur',
+      value: this.active.blur,
+      onChange: on => {
+        this.active.blur = on;
         this.rebuild();
+      },
+    });
+    this.panel.addToggle({
+      label: 'Tint',
+      value: this.active.tint,
+      onChange: on => {
+        this.active.tint = on;
+        this.rebuild();
+      },
+    });
+    this.panel.addToggle({
+      label: 'Custom',
+      value: this.active.custom,
+      onChange: on => {
+        this.active.custom = on;
+        this.rebuild();
+      },
+    });
+  }
 
-        this.hud = mountControls({
-            title: 'Filter Stack',
-            controls: [{ keys: 'Blur / Tint / Custom', action: 'toggle each layer independently' }],
-            status: this.statusText(),
-            hint: 'Filters compose in order: Blur → Tint → Custom. Toggle any subset.',
-        });
+  private rebuild(): void {
+    const filters = [];
 
-        this.panel = mountControlPanel({ title: 'Layers' });
-        this.panel.addToggle({
-            label: 'Blur',
-            value: this.active.blur,
-            onChange: on => {
-                this.active.blur = on;
-                this.rebuild();
-            },
-        });
-        this.panel.addToggle({
-            label: 'Tint',
-            value: this.active.tint,
-            onChange: on => {
-                this.active.tint = on;
-                this.rebuild();
-            },
-        });
-        this.panel.addToggle({
-            label: 'Custom',
-            value: this.active.custom,
-            onChange: on => {
-                this.active.custom = on;
-                this.rebuild();
-            },
-        });
-    }
+    if (this.active.blur) filters.push(this.blur);
+    if (this.active.tint) filters.push(this.tint);
+    if (this.active.custom) filters.push(this.custom);
 
-    private rebuild(): void {
-        const filters = [];
+    this.sprite.filters = filters;
+    this.hud?.setStatus(this.statusText());
+  }
 
-        if (this.active.blur) filters.push(this.blur);
-        if (this.active.tint) filters.push(this.tint);
-        if (this.active.custom) filters.push(this.custom);
+  private statusText(): string {
+    const labels = [this.active.blur && 'Blur', this.active.tint && 'Tint', this.active.custom && 'Custom'].filter(Boolean);
 
-        this.sprite.filters = filters;
-        this.hud?.setStatus(this.statusText());
-    }
+    return labels.length > 0 ? `Active: ${labels.join(' → ')}` : 'Active: none (original sprite)';
+  }
 
-    private statusText(): string {
-        const labels = [this.active.blur && 'Blur', this.active.tint && 'Tint', this.active.custom && 'Custom'].filter(Boolean);
-
-        return labels.length > 0 ? `Active: ${labels.join(' → ')}` : 'Active: none (original sprite)';
-    }
-
-    override draw(context: RenderingContext): void {
-        context.render(this.sprite);
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.sprite);
+  }
 }
 
 const app = new Application({
-    scenes: { FilterStackScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
+  scenes: { FilterStackScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
 });
 
 app.start(FilterStackScene);

@@ -2,8 +2,6 @@ import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, Scene
 import type { RenderingContext, Spatializable, Voice } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-
-
 // Spatial parameters tuned to the canvas so attenuation is visible across the
 // wide 1280px canvas. These mirror the Web Audio `linear` model (see
 // DistanceModel in src/audio/Sound.ts) so the on-screen readout matches what
@@ -14,140 +12,140 @@ const ROLLOFF = 1;
 const SOURCE_RADIUS = 24;
 
 function linearAttenuation(distance: number): number {
-    if (distance <= REF_DISTANCE) return 1;
-    const t = (distance - REF_DISTANCE) / (MAX_DISTANCE - REF_DISTANCE);
-    return Math.max(0, 1 - ROLLOFF * t);
+  if (distance <= REF_DISTANCE) return 1;
+  const t = (distance - REF_DISTANCE) / (MAX_DISTANCE - REF_DISTANCE);
+  return Math.max(0, 1 - ROLLOFF * t);
 }
 
 class ListenerAndSourceScene extends Scene {
-    private sound!: Sound;
-    private voice: (Voice & Spatializable) | null = null;
-    private readonly source = { x: 0, y: 0 };
-    private dragging = false;
-    private listener!: { x: number; y: number };
-    private graphics!: Graphics;
-    private label!: Text;
-    private tapPrompt!: Text;
-    private hud!: ReturnType<typeof mountControls>;
+  private sound!: Sound;
+  private voice: (Voice & Spatializable) | null = null;
+  private readonly source = { x: 0, y: 0 };
+  private dragging = false;
+  private listener!: { x: number; y: number };
+  private graphics!: Graphics;
+  private label!: Text;
+  private tapPrompt!: Text;
+  private hud!: ReturnType<typeof mountControls>;
 
-    override async load(): Promise<void> {
-        const app = this.app;
-        const { width, height } = app;
+  override async load(): Promise<void> {
+    const app = this.app;
+    const { width, height } = app;
 
-        // A continuous music loop, not a one-shot: spatialization is only
-        // audible while there is sustained signal to pan/attenuate. The derived
-        // Sound below reads .audioBuffer synchronously, so await load() instead
-        // of the deferred get() (whose placeholder audioBuffer is null until fill).
-        const source = await this.loader.load(Asset.type('sound', 'audio/demo-loop-main.ogg'));
-        this.sound = new Sound(source.audioBuffer);
-        this.listener = { x: width / 2, y: height / 2 };
-        app.audio.listener.target = this.listener;
+    // A continuous music loop, not a one-shot: spatialization is only
+    // audible while there is sustained signal to pan/attenuate. The derived
+    // Sound below reads .audioBuffer synchronously, so await load() instead
+    // of the deferred get() (whose placeholder audioBuffer is null until fill).
+    const source = await this.loader.load(Asset.type('sound', 'audio/demo-loop-main.ogg'));
+    this.sound = new Sound(source.audioBuffer);
+    this.listener = { x: width / 2, y: height / 2 };
+    app.audio.listener.target = this.listener;
 
-        this.graphics = new Graphics();
-        this.label = new Text('', { fillColor: Color.white, fontSize: 17 });
-        this.label.setPosition(20, 20);
+    this.graphics = new Graphics();
+    this.label = new Text('', { fillColor: Color.white, fontSize: 17 });
+    this.label.setPosition(20, 20);
 
-        // Shown while the browser still blocks audio (`app.audio.locked`); the
-        // first click or keypress unlocks it and the loop starts.
-        this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
-            .setAnchor(0.5, 0.5)
-            .setPosition(width / 2, height - 48);
+    // Shown while the browser still blocks audio (`app.audio.locked`); the
+    // first click or keypress unlocks it and the loop starts.
+    this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height - 48);
 
-        this.hud = mountControls({
-            title: 'Listener and Source',
-            controls: [{ keys: 'Drag', action: 'move the red source around the listener' }],
-            status: 'Click or press any key to start…',
-            hint: 'The green dot is the listener. Drag the red source — volume falls off with distance.',
-        });
+    this.hud = mountControls({
+      title: 'Listener and Source',
+      controls: [{ keys: 'Drag', action: 'move the red source around the listener' }],
+      status: 'Click or press any key to start…',
+      hint: 'The green dot is the listener. Drag the red source — volume falls off with distance.',
+    });
 
-        this.source.x = width / 2 + 220;
-        this.source.y = height / 2;
+    this.source.x = width / 2 + 220;
+    this.source.y = height / 2;
 
-        app.input.onPointerDown.add(pointer => {
-            const dx = pointer.x - this.source.x;
-            const dy = pointer.y - this.source.y;
-            // Generous grab radius so the source is easy to pick up.
-            if (dx * dx + dy * dy < SOURCE_RADIUS * SOURCE_RADIUS * 4) this.dragging = true;
-        });
-        app.input.onPointerMove.add(pointer => {
-            if (!this.dragging) return;
-            this.source.x = pointer.x;
-            this.source.y = pointer.y;
-            if (this.voice) this.voice.position = this.source;
-        });
-        app.input.onPointerUp.add(() => {
-            this.dragging = false;
-        });
+    app.input.onPointerDown.add(pointer => {
+      const dx = pointer.x - this.source.x;
+      const dy = pointer.y - this.source.y;
+      // Generous grab radius so the source is easy to pick up.
+      if (dx * dx + dy * dy < SOURCE_RADIUS * SOURCE_RADIUS * 4) this.dragging = true;
+    });
+    app.input.onPointerMove.add(pointer => {
+      if (!this.dragging) return;
+      this.source.x = pointer.x;
+      this.source.y = pointer.y;
+      if (this.voice) this.voice.position = this.source;
+    });
+    app.input.onPointerUp.add(() => {
+      this.dragging = false;
+    });
 
-        // A Sound played while audio is still locked is a no-op: a suspended
-        // AudioContext's clock stands still, so nothing can be scheduled
-        // honestly. Start the loop from the unlock gesture instead. Subscribing
-        // is safe even if audio unlocked earlier - onUnlock replays.
-        // play() returns the narrow Voice interface; Sound voices are spatializable.
-        app.audio.onUnlock.add(() => {
-            this.voice = app.audio.play(this.sound, {
-                loop: true,
-                volume: 1,
-                position: this.source,
-                distanceModel: 'linear',
-                refDistance: REF_DISTANCE,
-                maxDistance: MAX_DISTANCE,
-                rolloffFactor: ROLLOFF,
-            }) as Voice & Spatializable;
-            this.hud.setStatus('Drag the red source to move it');
-        });
+    // A Sound played while audio is still locked is a no-op: a suspended
+    // AudioContext's clock stands still, so nothing can be scheduled
+    // honestly. Start the loop from the unlock gesture instead. Subscribing
+    // is safe even if audio unlocked earlier - onUnlock replays.
+    // play() returns the narrow Voice interface; Sound voices are spatializable.
+    app.audio.onUnlock.add(() => {
+      this.voice = app.audio.play(this.sound, {
+        loop: true,
+        volume: 1,
+        position: this.source,
+        distanceModel: 'linear',
+        refDistance: REF_DISTANCE,
+        maxDistance: MAX_DISTANCE,
+        rolloffFactor: ROLLOFF,
+      }) as Voice & Spatializable;
+      this.hud.setStatus('Drag the red source to move it');
+    });
+  }
+
+  override draw(context: RenderingContext): void {
+    const app = this.app;
+    const source = this.source;
+    const dx = source.x - this.listener.x;
+    const dy = source.y - this.listener.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const volume = linearAttenuation(dist);
+    // Horizontal offset maps to stereo pan (left of listener = left ear).
+    const pan = Math.max(-1, Math.min(1, dx / MAX_DISTANCE));
+    const panText = pan < -0.05 ? `L ${Math.abs(pan).toFixed(2)}` : pan > 0.05 ? `R ${pan.toFixed(2)}` : 'center';
+    this.label.text = `distance: ${dist.toFixed(0)} px   volume: ${(volume * 100).toFixed(0)}%   pan: ${panText}`;
+
+    this.graphics.clear();
+
+    // Reference + max distance rings around the listener.
+    this.graphics.fillColor = new Color(50, 60, 60);
+    this.graphics.drawCircle(this.listener.x, this.listener.y, MAX_DISTANCE);
+    this.graphics.fillColor = new Color(0, 0, 0);
+    this.graphics.drawCircle(this.listener.x, this.listener.y, MAX_DISTANCE - 2);
+
+    // Listener.
+    this.graphics.fillColor = new Color(120, 255, 160);
+    this.graphics.drawCircle(this.listener.x, this.listener.y, 14);
+
+    // Source - brightness tracks attenuation so volume reads visually too.
+    const glow = Math.floor(80 + volume * 175);
+    this.graphics.fillColor = new Color(glow, Math.floor(80 + volume * 60), Math.floor(80 + volume * 60));
+    this.graphics.drawCircle(source.x, source.y, SOURCE_RADIUS);
+
+    context.render(this.graphics);
+    context.render(this.label);
+
+    if (app.audio.locked) {
+      context.render(this.tapPrompt);
     }
-
-    override draw(context: RenderingContext): void {
-        const app = this.app;
-        const source = this.source;
-        const dx = source.x - this.listener.x;
-        const dy = source.y - this.listener.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const volume = linearAttenuation(dist);
-        // Horizontal offset maps to stereo pan (left of listener = left ear).
-        const pan = Math.max(-1, Math.min(1, dx / MAX_DISTANCE));
-        const panText = pan < -0.05 ? `L ${Math.abs(pan).toFixed(2)}` : pan > 0.05 ? `R ${pan.toFixed(2)}` : 'center';
-        this.label.text = `distance: ${dist.toFixed(0)} px   volume: ${(volume * 100).toFixed(0)}%   pan: ${panText}`;
-
-        this.graphics.clear();
-
-        // Reference + max distance rings around the listener.
-        this.graphics.fillColor = new Color(50, 60, 60);
-        this.graphics.drawCircle(this.listener.x, this.listener.y, MAX_DISTANCE);
-        this.graphics.fillColor = new Color(0, 0, 0);
-        this.graphics.drawCircle(this.listener.x, this.listener.y, MAX_DISTANCE - 2);
-
-        // Listener.
-        this.graphics.fillColor = new Color(120, 255, 160);
-        this.graphics.drawCircle(this.listener.x, this.listener.y, 14);
-
-        // Source - brightness tracks attenuation so volume reads visually too.
-        const glow = Math.floor(80 + volume * 175);
-        this.graphics.fillColor = new Color(glow, Math.floor(80 + volume * 60), Math.floor(80 + volume * 60));
-        this.graphics.drawCircle(source.x, source.y, SOURCE_RADIUS);
-
-        context.render(this.graphics);
-        context.render(this.label);
-
-        if (app.audio.locked) {
-            context.render(this.tapPrompt);
-        }
-    }
+  }
 }
 
 const app = new Application({
-    scenes: { ListenerAndSourceScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { ListenerAndSourceScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 
 app.start(ListenerAndSourceScene);

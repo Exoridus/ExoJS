@@ -1,46 +1,46 @@
 // Auto-generated from resize-and-dpr.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite, Text } from '@codexo/exojs';
 class ResizeScene extends Scene {
-    sprite;
-    info;
-    init() {
-        this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
-        this.sprite.setAnchor(0.5);
-        this.info = new Text('', { fillColor: Color.white, fontSize: 16 });
-        this.info.setAnchor(0.5, 0);
-        this.layout();
-    }
-    update() {
-        this.layout();
-    }
-    draw(context) {
-        context.render(this.sprite);
-        context.render(this.info);
-    }
-    // #region guide:layout
-    layout() {
-        const app = this.app;
-        const { width, height } = app;
-        const dpr = Math.max(1, window.devicePixelRatio || 1);
-        this.sprite.setPosition(width / 2, height / 2);
-        this.info.setPosition(width / 2, 12);
-        this.info.text = `${width}x${height} @ DPR ${dpr.toFixed(2)}`;
-    }
+  sprite;
+  info;
+  init() {
+    this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
+    this.sprite.setAnchor(0.5);
+    this.info = new Text('', { fillColor: Color.white, fontSize: 16 });
+    this.info.setAnchor(0.5, 0);
+    this.layout();
+  }
+  update() {
+    this.layout();
+  }
+  draw(context) {
+    context.render(this.sprite);
+    context.render(this.info);
+  }
+  // #region guide:layout
+  layout() {
+    const app = this.app;
+    const { width, height } = app;
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+    this.sprite.setPosition(width / 2, height / 2);
+    this.info.setPosition(width / 2, 12);
+    this.info.text = `${width}x${height} @ DPR ${dpr.toFixed(2)}`;
+  }
 }
 // #region guide:app-setup
 const app = new Application({
-    scenes: { ResizeScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-        pixelRatio: window.devicePixelRatio || 1,
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { ResizeScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+    pixelRatio: window.devicePixelRatio || 1,
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 // #endregion guide:app-setup
 document.body.style.margin = '0';
@@ -50,7 +50,7 @@ document.body.style.margin = '0';
 // `ResponsiveCanvasSizing` as the `canvas.sizing` option and let it track the
 // parent element instead.)
 window.addEventListener('resize', () => {
-    app.resize(window.innerWidth, window.innerHeight);
+  app.resize(window.innerWidth, window.innerHeight);
 });
 app.resize(window.innerWidth, window.innerHeight);
 // #endregion guide:resize

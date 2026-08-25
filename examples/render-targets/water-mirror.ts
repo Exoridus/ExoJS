@@ -1,6 +1,17 @@
-import { Application, CallbackRenderPass, Color, FixedResolutionCanvasSizing, type RenderingContext, RenderNodePass, RenderPipeline, RenderTexture, Scene, ShaderFilter, Sprite, type Time } from '@codexo/exojs';
-
-
+import {
+  Application,
+  CallbackRenderPass,
+  Color,
+  FixedResolutionCanvasSizing,
+  type RenderingContext,
+  RenderNodePass,
+  RenderPipeline,
+  RenderTexture,
+  Scene,
+  ShaderFilter,
+  Sprite,
+  type Time,
+} from '@codexo/exojs';
 
 const glsl = `#version 300 es
 precision mediump float; uniform sampler2D uTexture; uniform float uTime; in vec2 vUv; out vec4 fragColor;
@@ -16,75 +27,78 @@ struct Uniforms { uTime:f32, _pad0:vec3<f32> };
 }`;
 
 class WaterMirrorScene extends Scene {
-    private rt!: RenderTexture;
-    private source!: Sprite;
-    private mirror!: Sprite;
-    private filter!: ShaderFilter;
-    private pipeline!: RenderPipeline;
-    private time = 0;
+  private rt!: RenderTexture;
+  private source!: Sprite;
+  private mirror!: Sprite;
+  private filter!: ShaderFilter;
+  private pipeline!: RenderPipeline;
+  private time = 0;
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
-        const half = height / 2;
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
+    const half = height / 2;
 
-        this.rt = new RenderTexture(width, half);
-        this.source = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, half / 2).setScale(2.6);
-        // Flip the captured top half down into the bottom half for the mirrored reflection.
-        this.mirror = new Sprite(this.rt).setPosition(0, height).setScale(1, -1);
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0 } });
-        this.mirror.filters = [this.filter];
+    this.rt = new RenderTexture(width, half);
+    this.source = new Sprite(this.loader.get('image/ship-a.png'))
+      .setAnchor(0.5)
+      .setPosition(width / 2, half / 2)
+      .setScale(2.6);
+    // Flip the captured top half down into the bottom half for the mirrored reflection.
+    this.mirror = new Sprite(this.rt).setPosition(0, height).setScale(1, -1);
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0 } });
+    this.mirror.filters = [this.filter];
 
-        // Capture the source into a target (camera view → a callback), then composite the source and
-        // its filtered, flipped mirror to the screen.
-        this.pipeline = new RenderPipeline()
-            .addPass(
-                new CallbackRenderPass(
-                    (context) => {
-                        context.backend.clear();
-                        context.render(this.source);
-                    },
-                    { target: this.rt },
-                ),
-            )
-            .addPass(new RenderNodePass(this.source, { clear: new Color(18, 24, 36) }))
-            .addPass(new RenderNodePass(this.mirror));
-    }
+    // Capture the source into a target (camera view → a callback), then composite the source and
+    // its filtered, flipped mirror to the screen.
+    this.pipeline = new RenderPipeline()
+      .addPass(
+        new CallbackRenderPass(
+          context => {
+            context.backend.clear();
+            context.render(this.source);
+          },
+          { target: this.rt },
+        ),
+      )
+      .addPass(new RenderNodePass(this.source, { clear: new Color(18, 24, 36) }))
+      .addPass(new RenderNodePass(this.mirror));
+  }
 
-    override update(delta: Time): void {
-        const app = this.app;
-        const { width, height } = app;
-        const quarter = height / 4;
-        this.time += delta.seconds;
-        this.source.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.3), quarter + Math.sin(this.time * 1.3) * (quarter * 0.55));
-        this.filter.setUniform('uTime', this.time);
-    }
+  override update(delta: Time): void {
+    const app = this.app;
+    const { width, height } = app;
+    const quarter = height / 4;
+    this.time += delta.seconds;
+    this.source.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.3), quarter + Math.sin(this.time * 1.3) * (quarter * 0.55));
+    this.filter.setUniform('uTime', this.time);
+  }
 
-    override draw(context: RenderingContext): void {
-        this.pipeline.execute(context);
-    }
+  override draw(context: RenderingContext): void {
+    this.pipeline.execute(context);
+  }
 
-    override destroy(): void {
-        // Pipeline cascades destroy() to its passes; the caller-owned target and shader filter are freed here.
-        this.pipeline.destroy();
-        this.rt.destroy();
-        this.filter.destroy();
-        super.destroy();
-    }
+  override destroy(): void {
+    // Pipeline cascades destroy() to its passes; the caller-owned target and shader filter are freed here.
+    this.pipeline.destroy();
+    this.rt.destroy();
+    this.filter.destroy();
+    super.destroy();
+  }
 }
 
 const app = new Application({
-    scenes: { WaterMirrorScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { WaterMirrorScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 
 app.start(WaterMirrorScene);

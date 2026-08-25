@@ -1,59 +1,57 @@
 // Auto-generated from signal-bus-inspector.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Signal, Text, Time, Timer } from '@codexo/exojs';
 class SignalBusInspectorScene extends Scene {
-    signals;
-    text;
-    tick;
-    listenerA;
-    listenerB;
-    init() {
-        this.signals = {
-            spawn: new Signal(),
-            damage: new Signal(),
-            score: new Signal(),
-        };
-        // lineHeight is a multiplier on fontSize (28/19 ≈ 1.47), not pixels.
-        this.text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 1.47 });
-        this.text.setPosition(40, 70);
-        this.tick = new Timer(Time.fromSeconds(1), true);
-        this.listenerA = () => undefined;
-        this.listenerB = () => undefined;
-        this.signals.spawn.add(this.listenerA);
-        this.signals.damage.add(this.listenerA);
-        this.signals.damage.add(this.listenerB);
-        this.signals.score.add(this.listenerA);
+  signals;
+  text;
+  tick;
+  listenerA;
+  listenerB;
+  init() {
+    this.signals = {
+      spawn: new Signal(),
+      damage: new Signal(),
+      score: new Signal(),
+    };
+    // lineHeight is a multiplier on fontSize (28/19 ≈ 1.47), not pixels.
+    this.text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 1.47 });
+    this.text.setPosition(40, 70);
+    this.tick = new Timer(Time.fromSeconds(1), true);
+    this.listenerA = () => undefined;
+    this.listenerB = () => undefined;
+    this.signals.spawn.add(this.listenerA);
+    this.signals.damage.add(this.listenerA);
+    this.signals.damage.add(this.listenerB);
+    this.signals.score.add(this.listenerA);
+  }
+  update() {
+    if (this.tick.expired) {
+      if (Math.random() > 0.5) this.signals.spawn.add(this.listenerB);
+      else this.signals.spawn.remove(this.listenerB);
+      this.signals.spawn.dispatch();
+      this.signals.damage.dispatch();
+      this.signals.score.dispatch();
+      this.tick.restart();
     }
-    update() {
-        if (this.tick.expired) {
-            if (Math.random() > 0.5)
-                this.signals.spawn.add(this.listenerB);
-            else
-                this.signals.spawn.remove(this.listenerB);
-            this.signals.spawn.dispatch();
-            this.signals.damage.dispatch();
-            this.signals.score.dispatch();
-            this.tick.restart();
-        }
-    }
-    draw(context) {
-        this.text.text =
-            `Manual Signal Inspector\n\nspawn listeners: ${this.signals.spawn.count}\n` +
-                `damage listeners: ${this.signals.damage.count}\n` +
-                `score listeners: ${this.signals.score.count}`;
-        context.render(this.text);
-    }
+  }
+  draw(context) {
+    this.text.text =
+      `Manual Signal Inspector\n\nspawn listeners: ${this.signals.spawn.count}\n` +
+      `damage listeners: ${this.signals.damage.count}\n` +
+      `score listeners: ${this.signals.score.count}`;
+    context.render(this.text);
+  }
 }
 const app = new Application({
-    scenes: { SignalBusInspectorScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { SignalBusInspectorScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 app.start(SignalBusInspectorScene);

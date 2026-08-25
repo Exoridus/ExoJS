@@ -21,61 +21,61 @@ fn hash(p:vec2<f32>) -> f32 { return fract(sin(dot(p,vec2<f32>(12.9898,78.233)))
     return vec4<f32>((c.rgb+vec3<f32>(n))*vig,c.a);
 }`;
 class NoiseVignetteScene extends Scene {
-    time = 0;
-    intensity = 1;
-    filter;
-    sprite;
-    hud;
-    panel;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
-        // Fill the whole 16:9 frame so the post effect covers the viewport.
-        const texture = this.loader.get(UV_GRID);
-        this.sprite = new Sprite(texture).setAnchor(0.5).setPosition(width / 2, height / 2);
-        this.sprite.width = width;
-        this.sprite.height = height;
-        this.sprite.filters = [this.filter];
-        this.hud = mountControls({
-            title: 'Noise + Vignette',
-            controls: [{ keys: 'Intensity', action: 'scale film grain + vignette together' }],
-            status: this.statusText(),
-            hint: 'A single-pass filter adds animated grain and a radial vignette across the frame.',
-        });
-        this.panel = mountControlPanel({ title: 'Grade' });
-        this.panel.addSlider({
-            label: 'Intensity',
-            min: 0,
-            max: 1,
-            step: 0.01,
-            value: this.intensity,
-            onChange: value => {
-                this.intensity = value;
-                this.filter.setUniform('uIntensity', value);
-                this.hud.setStatus(this.statusText());
-            },
-        });
-    }
-    statusText() {
-        return this.intensity === 0 ? 'Intensity: 0% (clean frame)' : `Intensity: ${Math.round(this.intensity * 100)}%`;
-    }
-    update(delta) {
-        this.time += delta.seconds;
-        this.filter.setUniform('uTime', this.time);
-    }
-    draw(context) {
-        context.render(this.sprite);
-    }
+  time = 0;
+  intensity = 1;
+  filter;
+  sprite;
+  hud;
+  panel;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
+    // Fill the whole 16:9 frame so the post effect covers the viewport.
+    const texture = this.loader.get(UV_GRID);
+    this.sprite = new Sprite(texture).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.sprite.width = width;
+    this.sprite.height = height;
+    this.sprite.filters = [this.filter];
+    this.hud = mountControls({
+      title: 'Noise + Vignette',
+      controls: [{ keys: 'Intensity', action: 'scale film grain + vignette together' }],
+      status: this.statusText(),
+      hint: 'A single-pass filter adds animated grain and a radial vignette across the frame.',
+    });
+    this.panel = mountControlPanel({ title: 'Grade' });
+    this.panel.addSlider({
+      label: 'Intensity',
+      min: 0,
+      max: 1,
+      step: 0.01,
+      value: this.intensity,
+      onChange: value => {
+        this.intensity = value;
+        this.filter.setUniform('uIntensity', value);
+        this.hud.setStatus(this.statusText());
+      },
+    });
+  }
+  statusText() {
+    return this.intensity === 0 ? 'Intensity: 0% (clean frame)' : `Intensity: ${Math.round(this.intensity * 100)}%`;
+  }
+  update(delta) {
+    this.time += delta.seconds;
+    this.filter.setUniform('uTime', this.time);
+  }
+  draw(context) {
+    context.render(this.sprite);
+  }
 }
 const app = new Application({
-    scenes: { NoiseVignetteScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
+  scenes: { NoiseVignetteScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
 });
 app.start(NoiseVignetteScene);

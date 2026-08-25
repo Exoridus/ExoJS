@@ -1,29 +1,29 @@
 // Auto-generated from tween-with-yoyo.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
 class TweenWithYoyoScene extends Scene {
-    sprite;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
-        app.tweens.create(this.sprite.scale).to({ x: 1.5, y: 1.5 }, 0.8).yoyo(true).repeat(-1).start();
-        app.tweens.create(this.sprite).to({ rotation: 20 }, 0.8).yoyo(true).repeat(-1).start();
-    }
-    draw(context) {
-        context.render(this.sprite);
-    }
+  sprite;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setPosition(width / 2, height / 2);
+    app.tweens.create(this.sprite.scale).to({ x: 1.5, y: 1.5 }, 0.8).yoyo(true).repeat(-1).start();
+    app.tweens.create(this.sprite).to({ rotation: 20 }, 0.8).yoyo(true).repeat(-1).start();
+  }
+  draw(context) {
+    context.render(this.sprite);
+  }
 }
 const app = new Application({
-    scenes: { TweenWithYoyoScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { TweenWithYoyoScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 app.start(TweenWithYoyoScene);

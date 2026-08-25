@@ -23,147 +23,145 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 // one tileset: "Level_Harbor" and "Level_Lighthouse", each with a Ground
 // tile layer, a Walls IntGrid layer (Wall / Water), and an Entities layer.
 
-
-
 class LdtkWorldImportScene extends Scene {
-    private world!: LdtkMap;
-    private content = new Container();
-    private hud!: ReturnType<typeof mountControls>;
-    private showIntGrid = true;
+  private world!: LdtkMap;
+  private content = new Container();
+  private hud!: ReturnType<typeof mountControls>;
+  private showIntGrid = true;
 
-    override async load(): Promise<void> {
-        // The .ldtk source must be an absolute URL: @codexo/exojs-ldtk resolves
-        // tileset relPaths with `new URL(relPath, source)`, which throws for a
-        // relative `source` (unlike the Tiled adapter's relative-base-aware
-        // resolver). Resolve against the page URL until the adapter handles
-        // relative bases itself.
-        const worldUrl = new URL('assets/json/maps/harbor-world.ldtk', window.location.href).href;
+  override async load(): Promise<void> {
+    // The .ldtk source must be an absolute URL: @codexo/exojs-ldtk resolves
+    // tileset relPaths with `new URL(relPath, source)`, which throws for a
+    // relative `source` (unlike the Tiled adapter's relative-base-aware
+    // resolver). Resolve against the page URL until the adapter handles
+    // relative bases itself.
+    const worldUrl = new URL('assets/json/maps/harbor-world.ldtk', window.location.href).href;
 
-        this.world = await this.loader.load(Asset.type('ldtkMap', worldUrl));
+    this.world = await this.loader.load(Asset.type('ldtkMap', worldUrl));
 
-        this.hud = mountControls({
-            title: 'LDtk World Import',
-            controls: [{ keys: 'panel', action: 'switch level / toggle the IntGrid overlay' }],
-            status: `${this.world.levels.length} levels loaded`,
-            hint: 'Coloured squares come from getLdtkIntGridValueAt() — the raw Walls IntGrid cell values, resolved to their LDtk-authored name + colour.',
-        });
+    this.hud = mountControls({
+      title: 'LDtk World Import',
+      controls: [{ keys: 'panel', action: 'switch level / toggle the IntGrid overlay' }],
+      status: `${this.world.levels.length} levels loaded`,
+      hint: 'Coloured squares come from getLdtkIntGridValueAt() — the raw Walls IntGrid cell values, resolved to their LDtk-authored name + colour.',
+    });
 
-        const panel = mountControlPanel({ title: 'LDtk' });
-        panel.addCycle({
-            label: 'Level',
-            options: this.world.levels.map(level => level.name),
-            index: 0,
-            onChange: index => this.showLevel(index),
-        });
-        panel.addToggle({
-            label: 'IntGrid overlay',
-            value: true,
-            onChange: on => {
-                this.showIntGrid = on;
-                this.showLevel(this.currentLevelIndex);
-            },
-        });
+    const panel = mountControlPanel({ title: 'LDtk' });
+    panel.addCycle({
+      label: 'Level',
+      options: this.world.levels.map(level => level.name),
+      index: 0,
+      onChange: index => this.showLevel(index),
+    });
+    panel.addToggle({
+      label: 'IntGrid overlay',
+      value: true,
+      onChange: on => {
+        this.showIntGrid = on;
+        this.showLevel(this.currentLevelIndex);
+      },
+    });
 
-        this.showLevel(0);
+    this.showLevel(0);
+  }
+
+  private currentLevelIndex = 0;
+
+  private showLevel(index: number): void {
+    this.currentLevelIndex = index;
+    this.content.removeChildren();
+
+    const level = this.world.levels[index];
+
+    if (!level) {
+      return;
     }
 
-    private currentLevelIndex = 0;
+    const mapNode = new TileMapNode(level);
+    this.content.addChild(mapNode);
 
-    private showLevel(index: number): void {
-        this.currentLevelIndex = index;
-        this.content.removeChildren();
-
-        const level = this.world.levels[index];
-
-        if (!level) {
-            return;
-        }
-
-        const mapNode = new TileMapNode(level);
-        this.content.addChild(mapNode);
-
-        if (this.showIntGrid) {
-            this.content.addChild(this.buildIntGridOverlay(level));
-        }
-
-        this.content.addChild(this.buildEntityLabels(level));
-
-        const entities = level.getObjectLayer('Entities');
-
-        this.hud.setStatus(`${level.name}: ${entities?.objects.length ?? 0} entities, ${level.width}x${level.height} tiles`);
+    if (this.showIntGrid) {
+      this.content.addChild(this.buildIntGridOverlay(level));
     }
 
-    /** Tint every IntGrid cell using its LDtk-authored name + colour (Wall / Water). */
-    private buildIntGridOverlay(level: import('@codexo/exojs-tilemap').TileMap): Graphics {
-        const overlay = new Graphics();
-        const walls = level.layers.find(layer => layer.name === 'Walls');
+    this.content.addChild(this.buildEntityLabels(level));
 
-        if (!walls || walls.width === undefined || walls.height === undefined) {
-            return overlay;
-        }
+    const entities = level.getObjectLayer('Entities');
 
-        for (let ty = 0; ty < walls.height; ty++) {
-            for (let tx = 0; tx < walls.width; tx++) {
-                const value = getLdtkIntGridValueAt(walls, tx, ty);
+    this.hud.setStatus(`${level.name}: ${entities?.objects.length ?? 0} entities, ${level.width}x${level.height} tiles`);
+  }
 
-                if (!value) {
-                    continue;
-                }
+  /** Tint every IntGrid cell using its LDtk-authored name + colour (Wall / Water). */
+  private buildIntGridOverlay(level: import('@codexo/exojs-tilemap').TileMap): Graphics {
+    const overlay = new Graphics();
+    const walls = level.layers.find(layer => layer.name === 'Walls');
 
-                const color = hexToColor(value.color, 0.45);
-
-                overlay.fillColor = color;
-                overlay.drawRectangle(tx * walls.tileWidth, ty * walls.tileHeight, walls.tileWidth, walls.tileHeight);
-            }
-        }
-
-        return overlay;
+    if (!walls || walls.width === undefined || walls.height === undefined) {
+      return overlay;
     }
 
-    /** One small label per entity, naming it and its first custom field. */
-    private buildEntityLabels(level: import('@codexo/exojs-tilemap').TileMap): Container {
-        const labels = new Container();
-        const entities = level.getObjectLayer('Entities');
+    for (let ty = 0; ty < walls.height; ty++) {
+      for (let tx = 0; tx < walls.width; tx++) {
+        const value = getLdtkIntGridValueAt(walls, tx, ty);
 
-        for (const entity of entities?.objects ?? []) {
-            const fieldSummary = Object.entries(entity.properties)
-                .map(([key, value]) => `${key}=${String(value)}`)
-                .join(', ');
-
-            const label = new Text(fieldSummary ? `${entity.name} (${fieldSummary})` : entity.name, { fillColor: Color.white, fontSize: 12 });
-
-            label.setAnchor(0.5, 1);
-            label.setPosition(entity.x + entity.width / 2, entity.y - 4);
-            labels.addChild(label);
+        if (!value) {
+          continue;
         }
 
-        return labels;
+        const color = hexToColor(value.color, 0.45);
+
+        overlay.fillColor = color;
+        overlay.drawRectangle(tx * walls.tileWidth, ty * walls.tileHeight, walls.tileWidth, walls.tileHeight);
+      }
     }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.content);
+    return overlay;
+  }
+
+  /** One small label per entity, naming it and its first custom field. */
+  private buildEntityLabels(level: import('@codexo/exojs-tilemap').TileMap): Container {
+    const labels = new Container();
+    const entities = level.getObjectLayer('Entities');
+
+    for (const entity of entities?.objects ?? []) {
+      const fieldSummary = Object.entries(entity.properties)
+        .map(([key, value]) => `${key}=${String(value)}`)
+        .join(', ');
+
+      const label = new Text(fieldSummary ? `${entity.name} (${fieldSummary})` : entity.name, { fillColor: Color.white, fontSize: 12 });
+
+      label.setAnchor(0.5, 1);
+      label.setPosition(entity.x + entity.width / 2, entity.y - 4);
+      labels.addChild(label);
     }
+
+    return labels;
+  }
+
+  override draw(context: RenderingContext): void {
+    context.render(this.content);
+  }
 }
 
 /** Parse an LDtk `"#rrggbb"` colour string into an engine `Color` with the given alpha. */
 function hexToColor(hex: string, alpha: number): Color {
-    const value = Number.parseInt(hex.replace('#', ''), 16);
+  const value = Number.parseInt(hex.replace('#', ''), 16);
 
-    return new Color((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff, alpha);
+  return new Color((value >> 16) & 0xff, (value >> 8) & 0xff, value & 0xff, alpha);
 }
 
 const app = new Application({
-    scenes: { LdtkWorldImportScene },
-    canvas: {
-        width: 640,
-        height: 448,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: new Color(18, 22, 30),
-    // ldtkExtension depends on tilemapExtension, so registering it alone is
-    // enough for both loading (.ldtk) and rendering (TileMapNode).
-    extensions: [ldtkExtension],
+  scenes: { LdtkWorldImportScene },
+  canvas: {
+    width: 640,
+    height: 448,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: new Color(18, 22, 30),
+  // ldtkExtension depends on tilemapExtension, so registering it alone is
+  // enough for both loading (.ldtk) and rendering (TileMapNode).
+  extensions: [ldtkExtension],
 });
 
 app.start(LdtkWorldImportScene);

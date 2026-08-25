@@ -1,7 +1,5 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite, Text } from '@codexo/exojs';
 
-
-
 const glsl = `#version 300 es
 precision mediump float; uniform float uProgress; in vec2 vUv; out vec4 fragColor;
 void main(){ vec2 p=vUv-0.5; float r=length(p); float a=atan(p.y,p.x); float t=(a+3.1415926)/(6.2831852);
@@ -18,47 +16,50 @@ struct Uniforms { uProgress:f32, _pad0:vec3<f32> };
 }`;
 
 class LoadingProgressWithShaderScene extends Scene {
-    private progress!: { v: number };
-    private label!: Text;
-    private ring!: Sprite;
-    private filter!: ShaderFilter;
+  private progress!: { v: number };
+  private label!: Text;
+  private ring!: Sprite;
+  private filter!: ShaderFilter;
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
 
-        this.progress = { v: 0 };
-        this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
-        this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
-        this.ring = new Sprite(this.loader.get('image/uv-grid-256.png')).setAnchor(0.5).setScale(2.4).setPosition(width / 2, height / 2);
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uProgress: 0 } });
-        this.ring.filters = [this.filter];
-        app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
-    }
+    this.progress = { v: 0 };
+    this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
+    this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
+    this.ring = new Sprite(this.loader.get('image/uv-grid-256.png'))
+      .setAnchor(0.5)
+      .setScale(2.4)
+      .setPosition(width / 2, height / 2);
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uProgress: 0 } });
+    this.ring.filters = [this.filter];
+    app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
+  }
 
-    override update(): void {
-        this.filter.setUniform('uProgress', this.progress.v);
-        this.label.text = `${(this.progress.v * 100) | 0}%`;
-    }
+  override update(): void {
+    this.filter.setUniform('uProgress', this.progress.v);
+    this.label.text = `${(this.progress.v * 100) | 0}%`;
+  }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.ring);
-        context.render(this.label);
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.ring);
+    context.render(this.label);
+  }
 }
 
 const app = new Application({
-    scenes: { LoadingProgressWithShaderScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: new Color(14, 18, 28),
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { LoadingProgressWithShaderScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: new Color(14, 18, 28),
+  loader: {
+    basePath: 'assets/',
+  },
 });
 
 app.start(LoadingProgressWithShaderScene);

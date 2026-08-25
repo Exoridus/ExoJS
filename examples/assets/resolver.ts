@@ -4,7 +4,10 @@ export function createAssetUrl(path: string, baseUrl: string = '/assets/'): stri
     return `${normalizedBase}${normalizedPath}`;
 }
 
-export function resolveAssetCatalog<T extends Record<string, unknown>>(catalog: T, baseUrl: string = '/assets/'): { [K in keyof T]: T[K] extends string ? string : T[K] extends Record<string, unknown> ? ReturnType<typeof resolveAssetCatalog<T[K]>> : T[K] } {
+export function resolveAssetCatalog<T extends Record<string, unknown>>(
+    catalog: T,
+    baseUrl: string = '/assets/',
+): { [K in keyof T]: T[K] extends string ? string : T[K] extends Record<string, unknown> ? ReturnType<typeof resolveAssetCatalog<T[K]>> : T[K] } {
     const resolved = {} as Record<string, unknown>;
 
     for (const [key, value] of Object.entries(catalog)) {

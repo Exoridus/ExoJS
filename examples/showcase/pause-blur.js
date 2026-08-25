@@ -11,74 +11,75 @@ const PAUSE_FADE_SECONDS = 0.35;
  * animates while the scene is frozen.
  */
 class GameScene extends Scene {
-    sprite;
-    time = 0;
-    frozen = false;
-    blur = new BlurFilter({ radius: 0, quality: 2 });
-    pausePanel;
-    pauseLabel;
-    hud;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.sprite = new Sprite(this.loader.get('image/ship-a.png')).setAnchor(0.5).setScale(2).setPosition(width / 2, height / 2);
-        this.addChild(this.sprite);
-        // Pause overlay on the UI layer, hidden until paused.
-        this.pausePanel = new Panel({ width: 420, height: 140, cornerRadius: 18, color: new Color(0, 0, 0, 0.6) });
-        this.pausePanel.anchorIn(this.ui, 'center');
-        this.pausePanel.visible = false;
-        this.ui.addChild(this.pausePanel);
-        this.pauseLabel = new Label('PAUSED', { fontSize: 56, fontWeight: 'bold' });
-        this.pauseLabel.anchorIn(this.ui, 'center');
-        this.pauseLabel.visible = false;
-        this.ui.addChild(this.pauseLabel);
-        this.hud = mountControls({
-            title: 'Pause Blur',
-            controls: [{ keys: 'Esc / Click', action: 'pause / resume' }],
-            hint: 'Press Esc or click to pause — the scene blurs up behind the menu.',
-        });
-        this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause());
-        // Same toggle on click/tap so the pause works without a keyboard.
-        app.input.onPointerTap.add(() => this.togglePause());
+  sprite;
+  time = 0;
+  frozen = false;
+  blur = new BlurFilter({ radius: 0, quality: 2 });
+  pausePanel;
+  pauseLabel;
+  hud;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.sprite = new Sprite(this.loader.get('image/ship-a.png'))
+      .setAnchor(0.5)
+      .setScale(2)
+      .setPosition(width / 2, height / 2);
+    this.addChild(this.sprite);
+    // Pause overlay on the UI layer, hidden until paused.
+    this.pausePanel = new Panel({ width: 420, height: 140, cornerRadius: 18, color: new Color(0, 0, 0, 0.6) });
+    this.pausePanel.anchorIn(this.ui, 'center');
+    this.pausePanel.visible = false;
+    this.ui.addChild(this.pausePanel);
+    this.pauseLabel = new Label('PAUSED', { fontSize: 56, fontWeight: 'bold' });
+    this.pauseLabel.anchorIn(this.ui, 'center');
+    this.pauseLabel.visible = false;
+    this.ui.addChild(this.pauseLabel);
+    this.hud = mountControls({
+      title: 'Pause Blur',
+      controls: [{ keys: 'Esc / Click', action: 'pause / resume' }],
+      hint: 'Press Esc or click to pause — the scene blurs up behind the menu.',
+    });
+    this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause());
+    // Same toggle on click/tap so the pause works without a keyboard.
+    app.input.onPointerTap.add(() => this.togglePause());
+  }
+  update(delta) {
+    if (this.frozen) return;
+    this.time += delta.seconds;
+    this.sprite.setRotation(this.time * 80);
+  }
+  draw(context) {
+    context.render(this.root);
+  }
+  destroy() {
+    this.root.clearFilters();
+    super.destroy();
+  }
+  togglePause() {
+    this.frozen = !this.frozen;
+    this.pausePanel.visible = this.frozen;
+    this.pauseLabel.visible = this.frozen;
+    if (this.frozen) {
+      this.blur.radius = 0;
+      this.root.filters = [this.blur];
+      this.tweens.create(this.blur).to({ radius: PAUSE_BLUR_RADIUS }, PAUSE_FADE_SECONDS).start();
+    } else {
+      this.root.clearFilters();
     }
-    update(delta) {
-        if (this.frozen)
-            return;
-        this.time += delta.seconds;
-        this.sprite.setRotation(this.time * 80);
-    }
-    draw(context) {
-        context.render(this.root);
-    }
-    destroy() {
-        this.root.clearFilters();
-        super.destroy();
-    }
-    togglePause() {
-        this.frozen = !this.frozen;
-        this.pausePanel.visible = this.frozen;
-        this.pauseLabel.visible = this.frozen;
-        if (this.frozen) {
-            this.blur.radius = 0;
-            this.root.filters = [this.blur];
-            this.tweens.create(this.blur).to({ radius: PAUSE_BLUR_RADIUS }, PAUSE_FADE_SECONDS).start();
-        }
-        else {
-            this.root.clearFilters();
-        }
-    }
+  }
 }
 const app = new Application({
-    scenes: { GameScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: new Color(20, 24, 34),
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { GameScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: new Color(20, 24, 34),
+  loader: {
+    basePath: 'assets/',
+  },
 });
 void app.start(GameScene);

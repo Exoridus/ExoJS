@@ -42,59 +42,77 @@ fn gridLine(p: vec2<f32>, s: f32, w: f32) -> f32 {
     return vec4<f32>(col, 1.0);
 }`;
 class InfiniteGridScene extends Scene {
-    view;
-    move = { x: 0, y: 0, zoom: 0 };
-    sprite;
-    filter;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.view = new View(0, 0, width, height);
-        this.sprite = new Sprite(this.loader.get('image/uv-grid-256.png'));
-        this.sprite.width = width;
-        this.sprite.height = height;
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } });
-        this.sprite.filters = [this.filter];
-        this.inputs.onActive(Keyboard.A, () => { this.move.x = -1; });
-        this.inputs.onStop(Keyboard.A, () => { if (this.move.x < 0)
-            this.move.x = 0; });
-        this.inputs.onActive(Keyboard.D, () => { this.move.x = 1; });
-        this.inputs.onStop(Keyboard.D, () => { if (this.move.x > 0)
-            this.move.x = 0; });
-        this.inputs.onActive(Keyboard.W, () => { this.move.y = -1; });
-        this.inputs.onStop(Keyboard.W, () => { if (this.move.y < 0)
-            this.move.y = 0; });
-        this.inputs.onActive(Keyboard.S, () => { this.move.y = 1; });
-        this.inputs.onStop(Keyboard.S, () => { if (this.move.y > 0)
-            this.move.y = 0; });
-        this.inputs.onActive(Keyboard.Q, () => { this.move.zoom = -1; });
-        this.inputs.onStop(Keyboard.Q, () => { if (this.move.zoom < 0)
-            this.move.zoom = 0; });
-        this.inputs.onActive(Keyboard.E, () => { this.move.zoom = 1; });
-        this.inputs.onStop(Keyboard.E, () => { if (this.move.zoom > 0)
-            this.move.zoom = 0; });
-    }
-    update(delta) {
-        this.view.move(this.move.x * 340 * delta.seconds, this.move.y * 340 * delta.seconds);
-        this.view.setZoom(Math.max(0.2, this.view.zoomLevel + this.move.zoom * delta.seconds));
-        this.filter.setUniform('uCenter', [this.view.center.x, this.view.center.y]);
-        this.filter.setUniform('uViewSize', [this.view.width, this.view.height]);
-    }
-    draw(context) {
-        context.render(this.sprite);
-    }
+  view;
+  move = { x: 0, y: 0, zoom: 0 };
+  sprite;
+  filter;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.view = new View(0, 0, width, height);
+    this.sprite = new Sprite(this.loader.get('image/uv-grid-256.png'));
+    this.sprite.width = width;
+    this.sprite.height = height;
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uCenter: [0, 0], uViewSize: [width, height] } });
+    this.sprite.filters = [this.filter];
+    this.inputs.onActive(Keyboard.A, () => {
+      this.move.x = -1;
+    });
+    this.inputs.onStop(Keyboard.A, () => {
+      if (this.move.x < 0) this.move.x = 0;
+    });
+    this.inputs.onActive(Keyboard.D, () => {
+      this.move.x = 1;
+    });
+    this.inputs.onStop(Keyboard.D, () => {
+      if (this.move.x > 0) this.move.x = 0;
+    });
+    this.inputs.onActive(Keyboard.W, () => {
+      this.move.y = -1;
+    });
+    this.inputs.onStop(Keyboard.W, () => {
+      if (this.move.y < 0) this.move.y = 0;
+    });
+    this.inputs.onActive(Keyboard.S, () => {
+      this.move.y = 1;
+    });
+    this.inputs.onStop(Keyboard.S, () => {
+      if (this.move.y > 0) this.move.y = 0;
+    });
+    this.inputs.onActive(Keyboard.Q, () => {
+      this.move.zoom = -1;
+    });
+    this.inputs.onStop(Keyboard.Q, () => {
+      if (this.move.zoom < 0) this.move.zoom = 0;
+    });
+    this.inputs.onActive(Keyboard.E, () => {
+      this.move.zoom = 1;
+    });
+    this.inputs.onStop(Keyboard.E, () => {
+      if (this.move.zoom > 0) this.move.zoom = 0;
+    });
+  }
+  update(delta) {
+    this.view.move(this.move.x * 340 * delta.seconds, this.move.y * 340 * delta.seconds);
+    this.view.setZoom(Math.max(0.2, this.view.zoomLevel + this.move.zoom * delta.seconds));
+    this.filter.setUniform('uCenter', [this.view.center.x, this.view.center.y]);
+    this.filter.setUniform('uViewSize', [this.view.width, this.view.height]);
+  }
+  draw(context) {
+    context.render(this.sprite);
+  }
 }
 const app = new Application({
-    scenes: { InfiniteGridScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { InfiniteGridScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 app.start(InfiniteGridScene);

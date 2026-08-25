@@ -1,8 +1,6 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite, type Time } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-
-
 const HUE_RAMP = assets.technical.color.hueRamp;
 
 const glsl = `#version 300 es
@@ -24,45 +22,48 @@ struct Uniforms { uTime:f32, _pad0:vec3<f32> };
 }`;
 
 class CustomFragmentShaderScene extends Scene {
-    private time = 0;
-    private filter!: ShaderFilter;
-    private sprite!: Sprite;
-    private hud!: ReturnType<typeof mountControls>;
+  private time = 0;
+  private filter!: ShaderFilter;
+  private sprite!: Sprite;
+  private hud!: ReturnType<typeof mountControls>;
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
 
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0 } });
-        this.sprite = new Sprite(this.loader.get(HUE_RAMP)).setAnchor(0.5).setScale(4).setPosition(width / 2, height / 2);
-        this.sprite.filters = [this.filter];
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0 } });
+    this.sprite = new Sprite(this.loader.get(HUE_RAMP))
+      .setAnchor(0.5)
+      .setScale(4)
+      .setPosition(width / 2, height / 2);
+    this.sprite.filters = [this.filter];
 
-        this.hud = mountControls({
-            title: 'Custom Fragment Shader',
-            status: 'A time-driven sine warp drives the sprite UVs each frame.',
-            hint: 'One ShaderFilter carries both the GLSL and the WGSL source; uTime updates per frame.',
-        });
-    }
+    this.hud = mountControls({
+      title: 'Custom Fragment Shader',
+      status: 'A time-driven sine warp drives the sprite UVs each frame.',
+      hint: 'One ShaderFilter carries both the GLSL and the WGSL source; uTime updates per frame.',
+    });
+  }
 
-    override update(delta: Time): void {
-        this.time += delta.seconds;
-        this.filter.setUniform('uTime', this.time);
-    }
+  override update(delta: Time): void {
+    this.time += delta.seconds;
+    this.filter.setUniform('uTime', this.time);
+  }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.sprite);
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.sprite);
+  }
 }
 
 const app = new Application({
-    scenes: { CustomFragmentShaderScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
+  scenes: { CustomFragmentShaderScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
 });
 
 app.start(CustomFragmentShaderScene);

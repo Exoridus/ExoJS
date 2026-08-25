@@ -21,118 +21,114 @@ import { mountControls } from '@examples/runtime';
 const TILE = 64;
 const MOVE_SPEED = 480;
 
-
-
 class TiledInfiniteMapScene extends Scene {
-    private camera!: View;
-    private mapNode!: TileMapNode;
-    private groundStreamer!: ChunkStreamer;
-    private propsStreamer!: ChunkStreamer;
-    private moveX = 0;
-    private moveY = 0;
-    private hudTimer = 0;
-    private hud!: ReturnType<typeof mountControls>;
+  private camera!: View;
+  private mapNode!: TileMapNode;
+  private groundStreamer!: ChunkStreamer;
+  private propsStreamer!: ChunkStreamer;
+  private moveX = 0;
+  private moveY = 0;
+  private hudTimer = 0;
+  private hud!: ReturnType<typeof mountControls>;
 
-    override async load(): Promise<void> {
-        const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/drift-fields.tmj'));
-        const runtimeMap = source.toTileMap();
+  override async load(): Promise<void> {
+    const source = await this.loader.load(Asset.type('tiledSource', 'json/maps/drift-fields.tmj'));
+    const runtimeMap = source.toTileMap();
 
-        this.mapNode = new TileMapNode(runtimeMap);
+    this.mapNode = new TileMapNode(runtimeMap);
 
-        const ground = runtimeMap.getTileLayer('Ground');
-        const props = runtimeMap.getTileLayer('Props');
+    const ground = runtimeMap.getTileLayer('Ground');
+    const props = runtimeMap.getTileLayer('Props');
 
-        if (!ground || !props) {
-            throw new Error('drift-fields.tmj is missing its "Ground" or "Props" tile layer');
-        }
-
-        // getChunkSource is a side effect of the toTileMap() call above - it
-        // returns undefined for a finite (data-based) layer, and one
-        // ChunkSource per chunked ("infinite") layer otherwise.
-        const groundSource = source.getChunkSource(ground.id);
-        const propsSource = source.getChunkSource(props.id);
-
-        if (!groundSource || !propsSource) {
-            throw new Error('drift-fields.tmj\'s "Ground"/"Props" layers are not chunked — is "infinite" true?');
-        }
-
-        const { width, height } = app;
-
-        // Free camera: moved directly by WASD, not following any actor - no
-        // setBounds, since an unbounded map has no edges to clamp to.
-        this.camera = new View(0, 0, width, height);
-
-        this.groundStreamer = new ChunkStreamer(ground, groundSource, this.camera);
-        this.propsStreamer = new ChunkStreamer(props, propsSource, this.camera);
-
-        this.setupInput();
-        this.setupHud();
+    if (!ground || !props) {
+      throw new Error('drift-fields.tmj is missing its "Ground" or "Props" tile layer');
     }
 
-    private setupInput(): void {
-        this.inputs.onActive(Keyboard.A, () => (this.moveX = -1));
-        this.inputs.onStop(Keyboard.A, () => {
-            if (this.moveX < 0) this.moveX = 0;
-        });
-        this.inputs.onActive(Keyboard.D, () => (this.moveX = 1));
-        this.inputs.onStop(Keyboard.D, () => {
-            if (this.moveX > 0) this.moveX = 0;
-        });
-        this.inputs.onActive(Keyboard.W, () => (this.moveY = -1));
-        this.inputs.onStop(Keyboard.W, () => {
-            if (this.moveY < 0) this.moveY = 0;
-        });
-        this.inputs.onActive(Keyboard.S, () => (this.moveY = 1));
-        this.inputs.onStop(Keyboard.S, () => {
-            if (this.moveY > 0) this.moveY = 0;
-        });
+    // getChunkSource is a side effect of the toTileMap() call above - it
+    // returns undefined for a finite (data-based) layer, and one
+    // ChunkSource per chunked ("infinite") layer otherwise.
+    const groundSource = source.getChunkSource(ground.id);
+    const propsSource = source.getChunkSource(props.id);
+
+    if (!groundSource || !propsSource) {
+      throw new Error('drift-fields.tmj\'s "Ground"/"Props" layers are not chunked — is "infinite" true?');
     }
 
-    private setupHud(): void {
-        this.hud = mountControls({
-            title: 'Tiled Infinite Map Streaming',
-            controls: [{ keys: 'WASD', action: 'fly the free camera across the streamed map' }],
-            status: '',
-            hint: '"Ground" and "Props" each stream through their own ChunkStreamer, sourced from TiledMap.getChunkSource(layer.id) — Tiled\'s on-disk 16x16 chunks are re-sliced onto the runtime chunk grid on demand, one requested chunk at a time.',
-        });
+    const { width, height } = app;
+
+    // Free camera: moved directly by WASD, not following any actor - no
+    // setBounds, since an unbounded map has no edges to clamp to.
+    this.camera = new View(0, 0, width, height);
+
+    this.groundStreamer = new ChunkStreamer(ground, groundSource, this.camera);
+    this.propsStreamer = new ChunkStreamer(props, propsSource, this.camera);
+
+    this.setupInput();
+    this.setupHud();
+  }
+
+  private setupInput(): void {
+    this.inputs.onActive(Keyboard.A, () => (this.moveX = -1));
+    this.inputs.onStop(Keyboard.A, () => {
+      if (this.moveX < 0) this.moveX = 0;
+    });
+    this.inputs.onActive(Keyboard.D, () => (this.moveX = 1));
+    this.inputs.onStop(Keyboard.D, () => {
+      if (this.moveX > 0) this.moveX = 0;
+    });
+    this.inputs.onActive(Keyboard.W, () => (this.moveY = -1));
+    this.inputs.onStop(Keyboard.W, () => {
+      if (this.moveY < 0) this.moveY = 0;
+    });
+    this.inputs.onActive(Keyboard.S, () => (this.moveY = 1));
+    this.inputs.onStop(Keyboard.S, () => {
+      if (this.moveY > 0) this.moveY = 0;
+    });
+  }
+
+  private setupHud(): void {
+    this.hud = mountControls({
+      title: 'Tiled Infinite Map Streaming',
+      controls: [{ keys: 'WASD', action: 'fly the free camera across the streamed map' }],
+      status: '',
+      hint: '"Ground" and "Props" each stream through their own ChunkStreamer, sourced from TiledMap.getChunkSource(layer.id) — Tiled\'s on-disk 16x16 chunks are re-sliced onto the runtime chunk grid on demand, one requested chunk at a time.',
+    });
+  }
+
+  override update(delta: Time): void {
+    if (this.moveX !== 0 || this.moveY !== 0) {
+      const length = Math.hypot(this.moveX, this.moveY) || 1;
+
+      this.camera.move((this.moveX / length) * MOVE_SPEED * delta.seconds, (this.moveY / length) * MOVE_SPEED * delta.seconds);
     }
 
-    override update(delta: Time): void {
-        if (this.moveX !== 0 || this.moveY !== 0) {
-            const length = Math.hypot(this.moveX, this.moveY) || 1;
+    this.groundStreamer.update();
+    this.propsStreamer.update();
 
-            this.camera.move((this.moveX / length) * MOVE_SPEED * delta.seconds, (this.moveY / length) * MOVE_SPEED * delta.seconds);
-        }
-
-        this.groundStreamer.update();
-        this.propsStreamer.update();
-
-        this.hudTimer += delta.seconds;
-        if (this.hudTimer >= 0.25) {
-            this.hudTimer = 0;
-            const tx = Math.floor(this.camera.center.x / TILE);
-            const ty = Math.floor(this.camera.center.y / TILE);
-            this.hud.setStatus(
-                `ground ${this.groundStreamer.residentCount} chunks · props ${this.propsStreamer.residentCount} chunks · tile ${tx}, ${ty}`,
-            );
-        }
+    this.hudTimer += delta.seconds;
+    if (this.hudTimer >= 0.25) {
+      this.hudTimer = 0;
+      const tx = Math.floor(this.camera.center.x / TILE);
+      const ty = Math.floor(this.camera.center.y / TILE);
+      this.hud.setStatus(`ground ${this.groundStreamer.residentCount} chunks · props ${this.propsStreamer.residentCount} chunks · tile ${tx}, ${ty}`);
     }
+  }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.mapNode, { view: this.camera });
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.mapNode, { view: this.camera });
+  }
 }
 
 const app = new Application({
-    scenes: { TiledInfiniteMapScene },
-    canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
-    clearColor: new Color(38, 82, 128), // deep-water blue behind unauthored/unloaded chunks
-    // tiledExtension depends on tilemapExtension, so registering it alone is
-    // enough for both loading (.tmj) and rendering (TileMapNode).
-    extensions: [tiledExtension],
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { TiledInfiniteMapScene },
+  canvas: { width: 1280, height: 720, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
+  clearColor: new Color(38, 82, 128), // deep-water blue behind unauthored/unloaded chunks
+  // tiledExtension depends on tilemapExtension, so registering it alone is
+  // enough for both loading (.tmj) and rendering (TileMapNode).
+  extensions: [tiledExtension],
+  loader: {
+    basePath: 'assets/',
+  },
 });
 
 app.start(TiledInfiniteMapScene);

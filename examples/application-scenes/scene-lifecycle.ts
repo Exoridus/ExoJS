@@ -16,73 +16,73 @@ import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext,
 // point for cross-cutting concerns (audio cues, analytics, HUD toggles) that
 // shouldn't live inside `init`/`destroy` themselves.
 class LifecycleScene extends Scene {
-    private events!: string[];
-    private counter = 0;
-    private drawCount = 0;
-    private timer!: Timer;
-    private text!: Text;
+  private events!: string[];
+  private counter = 0;
+  private drawCount = 0;
+  private timer!: Timer;
+  private text!: Text;
 
-    override async load(): Promise<void> {
-        // This scene is procedural - nothing to fetch - but a real scene would
-        // resolve its assets here before touching the scene graph, e.g.:
-        //   const data = (await this.loader.load(Asset.type('json', 'level.json'))) as LevelData;
-        this.events = ['load'];
+  override async load(): Promise<void> {
+    // This scene is procedural - nothing to fetch - but a real scene would
+    // resolve its assets here before touching the scene graph, e.g.:
+    //   const data = (await this.loader.load(Asset.type('json', 'level.json'))) as LevelData;
+    this.events = ['load'];
+  }
+
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
+
+    this.events.push('init');
+
+    this.onActivate.add(() => {
+      this.events.push('onActivate');
+    });
+
+    this.onSuspend.add(() => {
+      this.events.push('onSuspend');
+    });
+
+    this.timer = new Timer(Time.fromSeconds(1), true);
+
+    this.text = new Text('', { fillColor: Color.white, fontSize: 18 });
+    this.text.setAnchor(0.5);
+    this.text.setPosition(width / 2, height / 2);
+  }
+
+  override update(): void {
+    if (this.timer.expired) {
+      this.counter++;
+      this.events.push(`update ${this.counter}`);
+      this.timer.restart();
     }
+  }
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
+  override draw(context: RenderingContext): void {
+    this.drawCount++;
+    this.text.text = [...this.events.slice(-8), `draw ${this.drawCount}`].join('\n');
+    context.render(this.text);
+  }
 
-        this.events.push('init');
-
-        this.onActivate.add(() => {
-            this.events.push('onActivate');
-        });
-
-        this.onSuspend.add(() => {
-            this.events.push('onSuspend');
-        });
-
-        this.timer = new Timer(Time.fromSeconds(1), true);
-
-        this.text = new Text('', { fillColor: Color.white, fontSize: 18 });
-        this.text.setAnchor(0.5);
-        this.text.setPosition(width / 2, height / 2);
-    }
-
-    override update(): void {
-        if (this.timer.expired) {
-            this.counter++;
-            this.events.push(`update ${this.counter}`);
-            this.timer.restart();
-        }
-    }
-
-    override draw(context: RenderingContext): void {
-        this.drawCount++;
-        this.text.text = [...this.events.slice(-8), `draw ${this.drawCount}`].join('\n');
-        context.render(this.text);
-    }
-
-    override destroy(): void {
-        // destroy() is the final teardown hook - no separate unload() step
-        // needed here since this scene holds no scene-private assets.
-        this.events.push('destroy');
-    }
+  override destroy(): void {
+    // destroy() is the final teardown hook - no separate unload() step
+    // needed here since this scene holds no scene-private assets.
+    this.events.push('destroy');
+  }
 }
 
 const app = new Application({
-    scenes: { LifecycleScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { LifecycleScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 
 app.start(LifecycleScene);

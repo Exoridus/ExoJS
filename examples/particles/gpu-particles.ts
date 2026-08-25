@@ -1,70 +1,61 @@
 import { Application, Color, FixedResolutionCanvasSizing, RenderBackendType, type RenderingContext, Scene, type Time, Vector } from '@codexo/exojs';
-import {
-    AlphaFadeOverLifetime,
-    ApplyForce,
-    ConeDirection,
-    Constant,
-    particlesExtension,
-    ParticleSystem,
-    Range,
-    RateSpawn,
-} from '@codexo/exojs-particles';
+import { AlphaFadeOverLifetime, ApplyForce, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 
 class GpuParticlesScene extends Scene {
-    private system!: ParticleSystem;
-    private hud!: ReturnType<typeof mountControls>;
+  private system!: ParticleSystem;
+  private hud!: ReturnType<typeof mountControls>;
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
 
-        this.system = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: CAPACITY });
-        this.systems.add(this.system);
-        this.system.setPosition(width / 2, height - 80);
-        this.system.addSpawnModule(
-            new RateSpawn({
-                rate: new Constant(RATE),
-                lifetime: new Range(2.6, 3.8),
-                velocity: new ConeDirection(-Math.PI / 2, Math.PI / 4, 120, 340),
-                scale: new Constant(new Vector(0.22, 0.22)),
-            }),
-        );
-        this.system.addUpdateModule(new ApplyForce(0, 320));
-        this.system.addUpdateModule(new AlphaFadeOverLifetime());
+    this.system = new ParticleSystem(this.loader.get('image/particle-light.png'), { capacity: CAPACITY });
+    this.systems.add(this.system);
+    this.system.setPosition(width / 2, height - 80);
+    this.system.addSpawnModule(
+      new RateSpawn({
+        rate: new Constant(RATE),
+        lifetime: new Range(2.6, 3.8),
+        velocity: new ConeDirection(-Math.PI / 2, Math.PI / 4, 120, 340),
+        scale: new Constant(new Vector(0.22, 0.22)),
+      }),
+    );
+    this.system.addUpdateModule(new ApplyForce(0, 320));
+    this.system.addUpdateModule(new AlphaFadeOverLifetime());
 
-        this.hud = mountControls({
-            title: 'GPU Particles',
-            hint: isWebGpu
-                ? 'WebGPU compute simulation — hundreds of thousands of particles, no CPU per-particle work.'
-                : 'WebGL2 CPU fallback — a smaller budget keeps the CPU integrator smooth.',
-        });
-    }
+    this.hud = mountControls({
+      title: 'GPU Particles',
+      hint: isWebGpu
+        ? 'WebGPU compute simulation — hundreds of thousands of particles, no CPU per-particle work.'
+        : 'WebGL2 CPU fallback — a smaller budget keeps the CPU integrator smooth.',
+    });
+  }
 
-    override update(_delta: Time): void {
-        const backend = this.system.gpuMode ? 'WebGPU (GPU compute)' : 'WebGL2 (CPU fallback)';
+  override update(_delta: Time): void {
+    const backend = this.system.gpuMode ? 'WebGPU (GPU compute)' : 'WebGL2 (CPU fallback)';
 
-        this.hud.setStatus(`${this.system.aliveCount.toLocaleString()} live / ${CAPACITY.toLocaleString()} cap · ${backend}`);
-    }
+    this.hud.setStatus(`${this.system.aliveCount.toLocaleString()} live / ${CAPACITY.toLocaleString()} cap · ${backend}`);
+  }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.system);
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.system);
+  }
 }
 
 const app = new Application({
-    scenes: { GpuParticlesScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
-    extensions: [particlesExtension],
+  scenes: { GpuParticlesScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
+  extensions: [particlesExtension],
 });
 
 // WebGPU runs the whole simulation on a compute shader, so it sustains hundreds

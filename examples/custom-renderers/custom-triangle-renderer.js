@@ -27,123 +27,123 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 }
 `;
 class CustomTriangleRenderer {
-    renderManager;
-    device;
-    pipeline;
-    vertexBuffer;
-    constructor(backend) {
-        if (!(backend instanceof WebGpuBackend)) {
-            throw new Error('This example requires ExoJS to provide a WebGpuBackend.');
-        }
-        this.renderManager = backend;
-        this.device = backend.device;
-        this.pipeline = this.createPipeline();
-        this.vertexBuffer = this.createVertexBuffer();
+  renderManager;
+  device;
+  pipeline;
+  vertexBuffer;
+  constructor(backend) {
+    if (!(backend instanceof WebGpuBackend)) {
+      throw new Error('This example requires ExoJS to provide a WebGpuBackend.');
     }
-    draw() {
-        const encoder = this.device.createCommandEncoder();
-        const pass = encoder.beginRenderPass({
-            colorAttachments: [
-                {
-                    view: this.renderManager.context.getCurrentTexture().createView(),
-                    clearValue: {
-                        r: 0.05,
-                        g: 0.06,
-                        b: 0.09,
-                        a: 1.0,
-                    },
-                    loadOp: 'clear',
-                    storeOp: 'store',
-                },
+    this.renderManager = backend;
+    this.device = backend.device;
+    this.pipeline = this.createPipeline();
+    this.vertexBuffer = this.createVertexBuffer();
+  }
+  draw() {
+    const encoder = this.device.createCommandEncoder();
+    const pass = encoder.beginRenderPass({
+      colorAttachments: [
+        {
+          view: this.renderManager.context.getCurrentTexture().createView(),
+          clearValue: {
+            r: 0.05,
+            g: 0.06,
+            b: 0.09,
+            a: 1.0,
+          },
+          loadOp: 'clear',
+          storeOp: 'store',
+        },
+      ],
+    });
+    pass.setPipeline(this.pipeline);
+    pass.setVertexBuffer(0, this.vertexBuffer);
+    pass.draw(3);
+    pass.end();
+    this.device.queue.submit([encoder.finish()]);
+    return this;
+  }
+  destroy() {
+    this.vertexBuffer.destroy();
+  }
+  createPipeline() {
+    const shaderModule = this.device.createShaderModule({
+      code: SHADER_SOURCE,
+    });
+    return this.device.createRenderPipeline({
+      layout: 'auto',
+      vertex: {
+        module: shaderModule,
+        entryPoint: 'vertexMain',
+        buffers: [
+          {
+            arrayStride: 5 * Float32Array.BYTES_PER_ELEMENT,
+            attributes: [
+              {
+                shaderLocation: 0,
+                offset: 0,
+                format: 'float32x2',
+              },
+              {
+                shaderLocation: 1,
+                offset: 2 * Float32Array.BYTES_PER_ELEMENT,
+                format: 'float32x3',
+              },
             ],
-        });
-        pass.setPipeline(this.pipeline);
-        pass.setVertexBuffer(0, this.vertexBuffer);
-        pass.draw(3);
-        pass.end();
-        this.device.queue.submit([encoder.finish()]);
-        return this;
-    }
-    destroy() {
-        this.vertexBuffer.destroy();
-    }
-    createPipeline() {
-        const shaderModule = this.device.createShaderModule({
-            code: SHADER_SOURCE,
-        });
-        return this.device.createRenderPipeline({
-            layout: 'auto',
-            vertex: {
-                module: shaderModule,
-                entryPoint: 'vertexMain',
-                buffers: [
-                    {
-                        arrayStride: 5 * Float32Array.BYTES_PER_ELEMENT,
-                        attributes: [
-                            {
-                                shaderLocation: 0,
-                                offset: 0,
-                                format: 'float32x2',
-                            },
-                            {
-                                shaderLocation: 1,
-                                offset: 2 * Float32Array.BYTES_PER_ELEMENT,
-                                format: 'float32x3',
-                            },
-                        ],
-                    },
-                ],
-            },
-            fragment: {
-                module: shaderModule,
-                entryPoint: 'fragmentMain',
-                targets: [
-                    {
-                        format: this.renderManager.format,
-                    },
-                ],
-            },
-            primitive: {
-                topology: 'triangle-list',
-            },
-        });
-    }
-    createVertexBuffer() {
-        const buffer = this.device.createBuffer({
-            size: TRIANGLE_VERTICES.byteLength,
-            usage: GPUBufferUsage.VERTEX,
-            mappedAtCreation: true,
-        });
-        new Float32Array(buffer.getMappedRange()).set(TRIANGLE_VERTICES);
-        buffer.unmap();
-        return buffer;
-    }
+          },
+        ],
+      },
+      fragment: {
+        module: shaderModule,
+        entryPoint: 'fragmentMain',
+        targets: [
+          {
+            format: this.renderManager.format,
+          },
+        ],
+      },
+      primitive: {
+        topology: 'triangle-list',
+      },
+    });
+  }
+  createVertexBuffer() {
+    const buffer = this.device.createBuffer({
+      size: TRIANGLE_VERTICES.byteLength,
+      usage: GPUBufferUsage.VERTEX,
+      mappedAtCreation: true,
+    });
+    new Float32Array(buffer.getMappedRange()).set(TRIANGLE_VERTICES);
+    buffer.unmap();
+    return buffer;
+  }
 }
 class CustomTriangleRendererScene extends Scene {
-    triangleRenderer;
-    init() {
-        const app = this.app;
-        this.triangleRenderer = new CustomTriangleRenderer(app.backend);
-    }
-    draw() {
-        this.triangleRenderer.draw();
-    }
-    destroy() {
-        this.triangleRenderer?.destroy();
-    }
+  triangleRenderer;
+  init() {
+    const app = this.app;
+    this.triangleRenderer = new CustomTriangleRenderer(app.backend);
+  }
+  draw() {
+    this.triangleRenderer.draw();
+  }
+  destroy() {
+    this.triangleRenderer?.destroy();
+  }
 }
 const app = new Application({
-    scenes: { CustomTriangleRendererScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    backend: { type: 'webgpu' },
+  scenes: { CustomTriangleRendererScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  backend: { type: 'webgpu' },
 });
 app.start(CustomTriangleRendererScene).catch(() => {
-    app.element?.remove();
-    app.destroy();
+  app.element?.remove();
+  app.destroy();
 });

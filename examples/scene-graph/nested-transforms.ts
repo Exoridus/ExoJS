@@ -1,63 +1,61 @@
 import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Time } from '@codexo/exojs';
 
-
-
 class NestedTransformsScene extends Scene {
-    private sun!: Graphics;
-    private planetOrbit!: Container;
-    private planet!: Graphics;
-    private moonOrbit!: Container;
-    private moon!: Graphics;
+  private sun!: Graphics;
+  private planetOrbit!: Container;
+  private planet!: Graphics;
+  private moonOrbit!: Container;
+  private moon!: Graphics;
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
 
-        this.sun = new Graphics();
-        this.sun.fillColor = new Color(255, 220, 90);
-        this.sun.drawCircle(0, 0, 30);
+    this.sun = new Graphics();
+    this.sun.fillColor = new Color(255, 220, 90);
+    this.sun.drawCircle(0, 0, 30);
 
-        this.planetOrbit = new Container().setPosition(width / 2, height / 2);
-        this.planet = new Graphics();
-        this.planet.fillColor = new Color(120, 190, 255);
-        this.planet.drawCircle(0, 0, 16);
-        this.planet.setPosition(220, 0);
+    this.planetOrbit = new Container().setPosition(width / 2, height / 2);
+    this.planet = new Graphics();
+    this.planet.fillColor = new Color(120, 190, 255);
+    this.planet.drawCircle(0, 0, 16);
+    this.planet.setPosition(220, 0);
 
-        this.moonOrbit = new Container().setPosition(220, 0);
-        this.moon = new Graphics();
-        this.moon.fillColor = new Color(220, 220, 220);
-        this.moon.drawCircle(0, 0, 8);
-        this.moon.setPosition(44, 0);
+    this.moonOrbit = new Container().setPosition(220, 0);
+    this.moon = new Graphics();
+    this.moon.fillColor = new Color(220, 220, 220);
+    this.moon.drawCircle(0, 0, 8);
+    this.moon.setPosition(44, 0);
 
-        this.planetOrbit.addChild(this.sun);
-        this.planetOrbit.addChild(this.planet);
-        this.planetOrbit.addChild(this.moonOrbit);
-        this.moonOrbit.addChild(this.moon);
-    }
+    this.planetOrbit.addChild(this.sun);
+    this.planetOrbit.addChild(this.planet);
+    this.planetOrbit.addChild(this.moonOrbit);
+    this.moonOrbit.addChild(this.moon);
+  }
 
-    override update(delta: Time): void {
-        this.planetOrbit.rotate(delta.seconds * 30);
-        this.planet.rotate(delta.seconds * 120);
-        this.moonOrbit.rotate(delta.seconds * 180);
-    }
+  override update(delta: Time): void {
+    this.planetOrbit.rotate(delta.seconds * 30);
+    this.planet.rotate(delta.seconds * 120);
+    this.moonOrbit.rotate(delta.seconds * 180);
+  }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.planetOrbit);
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.planetOrbit);
+  }
 }
 
 const app = new Application({
-    scenes: { NestedTransformsScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { NestedTransformsScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 
 app.start(NestedTransformsScene);

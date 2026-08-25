@@ -1,51 +1,51 @@
 // Auto-generated from picture-in-picture.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sprite, View } from '@codexo/exojs';
 class PictureInPictureScene extends Scene {
-    mainView;
-    pipView;
-    sprite;
-    velocity = 220;
-    frame;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
-        this.mainView = new View(0, 0, width, height);
-        this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
-        // Zoom < 1 zooms OUT (a larger visible world area maps into the same
-        // small viewport) - a minimap needs to show more of the scene than the
-        // main view, not less, so the tracked sprite reads as a small icon.
-        this.pipView.setZoom(0.4);
-        this.sprite.setAnchor(0.5).setPosition(-280, 0);
-        this.frame = new Graphics();
-        this.frame.lineWidth = 3;
-        this.frame.lineColor = Color.white;
-        this.frame.drawRectangle(width * 0.68, height * 0.04, width * 0.28, height * 0.28);
+  mainView;
+  pipView;
+  sprite;
+  velocity = 220;
+  frame;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
+    this.mainView = new View(0, 0, width, height);
+    this.pipView = new View(0, 0, width * 0.3, height * 0.3).setViewport(0.68, 0.04, 0.28, 0.28);
+    // Zoom < 1 zooms OUT (a larger visible world area maps into the same
+    // small viewport) - a minimap needs to show more of the scene than the
+    // main view, not less, so the tracked sprite reads as a small icon.
+    this.pipView.setZoom(0.4);
+    this.sprite.setAnchor(0.5).setPosition(-280, 0);
+    this.frame = new Graphics();
+    this.frame.lineWidth = 3;
+    this.frame.lineColor = Color.white;
+    this.frame.drawRectangle(width * 0.68, height * 0.04, width * 0.28, height * 0.28);
+  }
+  update(delta) {
+    this.sprite.move(this.velocity * delta.seconds, 0);
+    if (this.sprite.position.x > 320 || this.sprite.position.x < -320) {
+      this.velocity *= -1;
     }
-    update(delta) {
-        this.sprite.move(this.velocity * delta.seconds, 0);
-        if (this.sprite.position.x > 320 || this.sprite.position.x < -320) {
-            this.velocity *= -1;
-        }
-        this.pipView.follow(this.sprite, { lerp: 1 });
-    }
-    draw(context) {
-        context.render(this.sprite, { view: this.mainView });
-        context.render(this.sprite, { view: this.pipView });
-        context.render(this.frame, { view: context.screenView });
-    }
+    this.pipView.follow(this.sprite, { lerp: 1 });
+  }
+  draw(context) {
+    context.render(this.sprite, { view: this.mainView });
+    context.render(this.sprite, { view: this.pipView });
+    context.render(this.frame, { view: context.screenView });
+  }
 }
 const app = new Application({
-    scenes: { PictureInPictureScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { PictureInPictureScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 app.start(PictureInPictureScene);
