@@ -28,7 +28,7 @@
 
 import { execSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { LOCKSTEP_PACKAGES } from './lockstep-packages.ts';
@@ -230,7 +230,3 @@ Next steps:
   2. Watch the Release CI workflow on GitHub.
   3. Verify: npm view @codexo/exojs version  (should show ${version})
 `);
-
-function dirname(path: string): string {
-  return path.replace(/[\\/][^\\/]*$/, '');
-}
