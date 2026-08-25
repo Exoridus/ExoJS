@@ -6,7 +6,11 @@
 // type-checked by `astro check` and are not linted here.
 //
 // ESLint resolves the config nearest to the file being linted, so this file
-// governs `site/` whether the run starts here or at the repository root.
+// governs `site/` whether the run starts here or at the repository root. The
+// repository's `lint:site` delegates to the site's own `lint` script rather
+// than globbing into `site/` from the root: the scope then lives once, in the
+// `ignores` entry below, instead of in a root glob that has to be kept in step
+// with it.
 import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/eslint/base';
 import { reactConfig } from '@codexo/exojs-config/eslint/react';
 import { defineConfig } from 'eslint/config';

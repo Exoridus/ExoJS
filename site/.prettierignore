@@ -1,6 +1,0 @@
-node_modules
-dist
-public
-**/*.d.ts
-**/*.js
-**/*.scss
