@@ -20,7 +20,6 @@
     "test/core/application-transition-startup.test.ts": 1,
     "test/core/perf.test.ts": 1,
     "test/core/scene-director.test.ts": 24,
-    "test/core/scene-loader-catalog.test.ts": 1,
     "test/core/scene-node-revision-invariants.test.ts": 1,
     "test/core/scene-node-revision.test.ts": 1,
     "test/core/scene-scope.test.ts": 4,

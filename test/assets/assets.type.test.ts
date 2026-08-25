@@ -38,15 +38,7 @@ describe('Assets.compose / Assets.extend types', () => {
     // Type-only: `expectTypeOf` never invokes, so no loader bindings are needed.
     const loadIt = (loader: Loader) => loader.load(composed);
 
-    // Loading resolves each leaf to its payload. The map itself arrives as a
-    // deferred `InferLoadedMap<...>` that no mapped type forces open, so the key
-    // set and each key are asserted individually - indexed access does resolve.
-    type Loaded = Awaited<ReturnType<typeof loadIt>>;
-
-    expectTypeOf<keyof Loaded>().toEqualTypeOf<'ship' | 'level' | 'tree'>();
-    expectTypeOf<Loaded['ship']>().toEqualTypeOf<Texture>();
-    expectTypeOf<Loaded['level']>().toEqualTypeOf<unknown>();
-    expectTypeOf<Loaded['tree']>().toEqualTypeOf<Texture>();
+    expectTypeOf(loadIt).returns.resolves.toEqualTypeOf<{ ship: Texture; level: unknown; tree: Texture }>();
   });
 
   // The `strict: false` counterpart lives in test/type-tests/assets-compose.type-test.ts;

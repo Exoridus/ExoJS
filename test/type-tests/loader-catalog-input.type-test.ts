@@ -75,12 +75,13 @@ type _ExplicitLeafConfig = Expect<Equal<typeof explicit.config, CatalogValueLeaf
 export const loads = async (): Promise<void> => {
   // The LOADED map, exactly: a resource type resolves to its resource, a value
   // type to its decoded payload (`unknown` for bare-path JSON) rather than to
-  // the `AssetRef` wrapper the catalog property holds.
+  // the `AssetRef` wrapper the catalog property holds. The map is the caller's,
+  // so the catalog definition's `readonly` keys do not carry into it.
   const bareResult = await loader.load(bare);
-  expectType<Equal<typeof bareResult, { readonly player: Texture; readonly config: unknown }>>();
+  expectType<Equal<typeof bareResult, { player: Texture; config: unknown }>>();
 
   const explicitResult = await loader.load(explicit);
-  expectType<Equal<typeof explicitResult, { readonly player: Texture; readonly config: LevelData }>>();
+  expectType<Equal<typeof explicitResult, { player: Texture; config: LevelData }>>();
 
   const mixedResult = await loader.load(mixed, { priority: LoadPriority.Background });
   expectType<Equal<typeof mixedResult.player, Texture>>();
@@ -102,7 +103,7 @@ export const loads = async (): Promise<void> => {
 
   // `SceneLoader` mirrors the same corrected surface, `LoadOptions` included.
   const sceneResult = await scene.loader.load(bare);
-  expectType<Equal<typeof sceneResult, { readonly player: Texture; readonly config: unknown }>>();
+  expectType<Equal<typeof sceneResult, { player: Texture; config: unknown }>>();
 
   const sceneComposed = await scene.loader.load(composed, { priority: LoadPriority.Background });
   expectType<Equal<typeof sceneComposed.tree, Texture>>();
