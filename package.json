@@ -63,6 +63,7 @@
       "default": "./dist/esm/*.js"
     }
   },
+  "prettier": "@codexo/exojs-config/prettier",
   "scripts": {
     "bootstrap": "pnpm install --frozen-lockfile --ignore-scripts && pnpm build:tooling",
     "build:tooling": "pnpm --filter @codexo/exojs-build build",

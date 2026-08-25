@@ -6,6 +6,7 @@
   "type": "module",
   "license": "MIT",
   "author": "Dieter Giesler",
+  "prettier": "@codexo/exojs-config/prettier",
   "scripts": {
     "examples:sync": "tsx scripts/sync-examples-static.ts",
     "vendor:sync:exo": "tsx scripts/sync-exo-vendor.ts",
