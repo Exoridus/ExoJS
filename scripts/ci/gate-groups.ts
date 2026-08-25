@@ -23,7 +23,7 @@ export const GATE_GROUPS = {
   sync: ['docs:api:check', 'examples:sync:check'],
   // `full-bundle:exports:check` reads every bundled package's built ESM barrel,
   // so it needs the same built dist this group's job already provides.
-  site: ['typecheck:site', 'full-bundle:exports:check'],
+  site: ['typecheck:site', 'typecheck:site-scripts', 'full-bundle:exports:check'],
 } as const satisfies Record<string, readonly string[]>;
 
 export type GateGroup = keyof typeof GATE_GROUPS;

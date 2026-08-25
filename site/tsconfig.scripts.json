@@ -1,0 +1,35 @@
+{
+  // Type-check for the site's own tooling: the API-reference generator, the
+  // vendor/example sync steps, the screenshot capture and the example smoke
+  // run.
+  //
+  // `tsconfig.json` covers `src` only, so until this config existed nothing
+  // type-checked `scripts/` - and because the tree sat outside every program,
+  // type-aware lint rules could not load against it either, which is why it
+  // was excluded from linting rather than merely unlinted.
+  //
+  // These are Node programs executed through `tsx`. They import each other and
+  // the repository's own scripts by their real `.ts` paths, hence
+  // `allowImportingTsExtensions` with `noEmit`, and they read the example
+  // catalog's plain `.js` modules, hence `allowJs`. `checkJs` stays off: that
+  // catalog is authored as example source, not as tooling.
+  //
+  // The generator reaches into `src/lib` for the schema the site pages consume,
+  // which transitively needs Astro's generated `astro:content` declarations.
+  // Those live in the gitignored `.astro/` cache, so this gate runs in the
+  // `site` group after `typecheck:site` has synced them - the include below is
+  // a glob rather than a path so a missing cache is an unresolved import, not a
+  // config error.
+  "extends": "@codexo/exojs-config/typescript/base.json",
+  "compilerOptions": {
+    "lib": ["es2023", "dom"],
+    "types": ["node"],
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "noEmit": true,
+    "noUncheckedIndexedAccess": false,
+    "exactOptionalPropertyTypes": false
+  },
+  "include": ["scripts/**/*.ts", ".astro/**/*.d.ts"]
+}

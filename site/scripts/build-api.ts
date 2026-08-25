@@ -2,7 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Application, ReflectionKind } from 'typedoc';
+import type { Comment, CommentDisplayPart, DeclarationReflection, ParameterReflection, ProjectReflection, SignatureReflection, SomeType } from 'typedoc';
 
+import type { ApiSubsystem } from '../src/lib/api-reference';
 import { apiSymbolSchema } from '../src/lib/api-schema';
 import type { ApiCounts, ApiMember, ApiSection, ApiToken, ApiSymbolData } from '../src/lib/api-schema';
 import { sortUnionMembers } from './sort-union-members';
@@ -14,27 +16,18 @@ const repoRoot = path.resolve(siteRoot, '..');
 const outputDir = path.resolve(siteRoot, 'src', 'content', 'api');
 const toPosix = (value: string): string => value.replaceAll('\\', '/');
 
-type Subsystem =
-  | 'animation'
-  | 'aseprite'
-  | 'assets'
-  | 'audio'
-  | 'core'
-  | 'debug'
-  | 'extensions'
-  | 'input'
-  | 'ldtk'
-  | 'math'
-  | 'particles'
-  | 'physics'
-  | 'rendering'
-  | 'tiled'
-  | 'tilemap'
-  | 'ui';
+// The subsystem set is owned by the site, not by the generator: the pages order
+// and label subsystems from `API_SUBSYSTEM_ORDER`, so a subsystem the generator
+// emits but that list does not know would render nowhere.
+type Subsystem = ApiSubsystem;
 type ApiKind = 'class' | 'enum' | 'interface' | 'type' | 'function' | 'namespace' | 'variable';
 type ApiTier = 'stable' | 'advanced';
 
-const SUBSYSTEMS: ReadonlyArray<Subsystem> = [
+// Only the core subsystems that correspond to a `src/<subsystem>/` directory -
+// this list is what `guessSubsystem` scans a source path against. The extension
+// packages carry an explicit `subsystemOverride` instead and are deliberately
+// absent.
+const SUBSYSTEMS: readonly Subsystem[] = [
   'animation',
   'aseprite',
   'assets',
@@ -68,7 +61,7 @@ interface ExtensionPackage {
   sourceMarker: string;
 }
 
-const EXTENSION_PACKAGES: ReadonlyArray<ExtensionPackage> = [
+const EXTENSION_PACKAGES: readonly ExtensionPackage[] = [
   {
     importPath: '@codexo/exojs-particles',
     subsystem: 'particles',
@@ -167,9 +160,9 @@ const guessSubsystem = (sourcePath: string): Subsystem => {
   return 'core';
 };
 
-const renderComment = (comment: any): string => {
+const renderComment = (comment: Comment | undefined): string => {
   const summary = (comment?.summary ?? [])
-    .map((part: any) => part?.text ?? '')
+    .map((part: CommentDisplayPart) => part.text)
     .join('')
     .trim();
   return summary;
@@ -214,7 +207,7 @@ const joinTokenGroups = (groups: ApiToken[][], separator: string): ApiToken[] =>
  * byte), but every reference name is its own `type` token so the page can turn
  * documented ones into cross-links. Intrinsics/literals are keywords.
  */
-const tokenizeType = (type: any): ApiToken[] => {
+const tokenizeType = (type: SomeType | undefined): ApiToken[] => {
   if (!type) return [keyword('unknown')];
   switch (type.type) {
     case 'intrinsic':
@@ -248,7 +241,7 @@ const tokenizeType = (type: any): ApiToken[] => {
       const signature = declaration?.signatures?.[0];
       if (signature) {
         const tokens: ApiToken[] = [punct('(')];
-        (signature.parameters ?? []).forEach((parameter: any, index: number) => {
+        (signature.parameters ?? []).forEach((parameter: ParameterReflection, index: number) => {
           if (index > 0) tokens.push(punct(', '));
           tokens.push({ text: parameter.name, kind: 'param' });
           if (parameter.flags?.isOptional) tokens.push(punct('?'));
@@ -259,7 +252,7 @@ const tokenizeType = (type: any): ApiToken[] => {
       }
       if (declaration?.children?.length) {
         const tokens: ApiToken[] = [punct('{ ')];
-        declaration.children.forEach((child: any, index: number) => {
+        declaration.children.forEach((child: DeclarationReflection, index: number) => {
           if (index > 0) tokens.push(punct('; '));
           tokens.push({ text: child.name, kind: 'name' });
           if (child.flags?.isOptional) tokens.push(punct('?'));
@@ -289,11 +282,14 @@ const tokenizeType = (type: any): ApiToken[] => {
     case 'indexedAccess':
       return [...tokenizeType(type.objectType), punct('['), ...tokenizeType(type.indexType), punct(']')];
     default:
-      return [type.name ? typeToken(type.name) : keyword(type.type ?? 'unknown')];
+      // Kinds this walker has no dedicated rendering for (mapped, template
+      // literal, predicate, ...). Named ones still read better as their name
+      // than as the kind tag.
+      return 'name' in type && typeof type.name === 'string' ? [typeToken(type.name)] : [keyword(type.type)];
   }
 };
 
-const renderType = (type: any): string => tokensToText(tokenizeType(type));
+const renderType = (type: SomeType | undefined): string => tokensToText(tokenizeType(type));
 
 interface ExtractedParam {
   name: string;
@@ -301,19 +297,19 @@ interface ExtractedParam {
   optional: boolean;
 }
 
-const extractParams = (signature: any): ExtractedParam[] =>
-  (signature.parameters ?? []).map((parameter: any) => ({
+const extractParams = (signature: SignatureReflection): ExtractedParam[] =>
+  (signature.parameters ?? []).map((parameter: ParameterReflection) => ({
     name: parameter.name,
     type: renderType(parameter.type),
     optional: Boolean(parameter.flags?.isOptional),
   }));
 
 /** Tokenized `name(params): Return` for a constructor/method signature. */
-const tokenizeSignature = (name: string, signature: any, optional = false): ApiToken[] => {
+const tokenizeSignature = (name: string, signature: SignatureReflection, optional = false): ApiToken[] => {
   const tokens: ApiToken[] = [name === 'new' ? keyword('new') : { text: name, kind: 'name' }];
   if (optional) tokens.push(punct('?'));
   tokens.push(punct('('));
-  (signature.parameters ?? []).forEach((parameter: any, index: number) => {
+  (signature.parameters ?? []).forEach((parameter: ParameterReflection, index: number) => {
     if (index > 0) tokens.push(punct(', '));
     tokens.push({ text: parameter.name, kind: 'param' });
     if (parameter.flags?.isOptional) tokens.push(punct('?'));
@@ -324,16 +320,24 @@ const tokenizeSignature = (name: string, signature: any, optional = false): ApiT
 };
 
 /** Tokenized `name: Type` for a property/event member (optional adds `?`). */
-const tokenizeValue = (name: string, type: any, optional = false): ApiToken[] => [
+const tokenizeValue = (name: string, type: SomeType | undefined, optional = false): ApiToken[] => [
   { text: name, kind: 'name' },
   ...(optional ? [punct('?')] : []),
   punct(': '),
   ...tokenizeType(type),
 ];
 
-const resolvePropertyType = (member: any): any => member.type ?? member.getSignature?.type;
+const resolvePropertyType = (member: DeclarationReflection): SomeType | undefined => member.type ?? member.getSignature?.type;
 
-const resolvePropertyComment = (member: any): any => member.comment ?? member.getSignature?.comment;
+const resolvePropertyComment = (member: DeclarationReflection): Comment | undefined => member.comment ?? member.getSignature?.comment;
+
+/**
+ * Members of an object-literal `const` - `export const MathUtils = { ... }`,
+ * whose TypeDoc type is an inline reflection carrying the literal's children.
+ * Empty for every other shape, which is what separates a namespace-like const
+ * from a plain one.
+ */
+const objectLiteralMembers = (type: SomeType | undefined): DeclarationReflection[] => (type?.type === 'reflection' ? (type.declaration.children ?? []) : []);
 
 /**
  * A member's JSDoc summary as a single-line description for the row cell.
@@ -341,14 +345,14 @@ const resolvePropertyComment = (member: any): any => member.comment ?? member.ge
  * (they would render as literal text inside the description cell). No MDX
  * escaping is needed - the value is stored in JSON and rendered as text.
  */
-const toMemberDescription = (comment: any): string => {
+const toMemberDescription = (comment: Comment | undefined): string => {
   const raw = renderComment(comment);
   if (!raw) return '';
   return toSingleLine(raw).replaceAll('`', '');
 };
 
 /** A constructor/method member: structured params + a concrete return type. */
-const buildCallableMember = (name: string, signature: any, fallbackComment: any, optional = false): ApiMember => {
+const buildCallableMember = (name: string, signature: SignatureReflection, fallbackComment: Comment | undefined, optional = false): ApiMember => {
   const tokens = tokenizeSignature(name, signature, optional);
   return {
     name,
@@ -361,7 +365,7 @@ const buildCallableMember = (name: string, signature: any, fallbackComment: any,
 };
 
 /** A property/event member: no params, no return type. Takes the raw type node. */
-const buildValueMember = (name: string, typeNode: any, comment: any, optional = false): ApiMember => {
+const buildValueMember = (name: string, typeNode: SomeType | undefined, comment: Comment | undefined, optional = false): ApiMember => {
   const tokens = tokenizeValue(name, typeNode, optional);
   return {
     name,
@@ -389,26 +393,32 @@ interface ReflectionBody {
   memberCount: number;
 }
 
-const renderClassMembers = (reflection: any): ReflectionBody => {
+const renderClassMembers = (reflection: DeclarationReflection): ReflectionBody => {
   const children = reflection.children ?? [];
-  const constructors = children.filter((child: any) => (child.kind & ReflectionKind.Constructor) > 0);
-  const methods = children.filter((child: any) => (child.kind & ReflectionKind.Method) > 0);
+  const constructors = children.filter((child: DeclarationReflection) => (child.kind & ReflectionKind.Constructor) > 0);
+  const methods = children.filter((child: DeclarationReflection) => (child.kind & ReflectionKind.Method) > 0);
   // Include both Property (1024) and Accessor (262144 - getter/setter) kinds so
   // TypeScript getters like currentScene, scenes, angle, length appear in docs.
-  const properties = children.filter((child: any) => !child.name.startsWith('_') && ((child.kind & ReflectionKind.Property) > 0 || (child.kind & 262144) > 0));
-  const events = properties.filter((property: any) => property.name.startsWith('on') && renderType(resolvePropertyType(property)).startsWith('Signal<'));
-  const plainProperties = properties.filter((property: any) => !events.includes(property));
+  const properties = children.filter(
+    (child: DeclarationReflection) => !child.name.startsWith('_') && ((child.kind & ReflectionKind.Property) > 0 || (child.kind & 262144) > 0),
+  );
+  const events = properties.filter(
+    (property: DeclarationReflection) => property.name.startsWith('on') && renderType(resolvePropertyType(property)).startsWith('Signal<'),
+  );
+  const plainProperties = properties.filter((property: DeclarationReflection) => !events.includes(property));
 
-  const constructorMembers = constructors.flatMap((ctor: any) =>
-    (ctor.signatures ?? []).map((signature: any) => buildCallableMember('new', signature, ctor.comment)),
+  const constructorMembers = constructors.flatMap((ctor: DeclarationReflection) =>
+    (ctor.signatures ?? []).map((signature: SignatureReflection) => buildCallableMember('new', signature, ctor.comment)),
   );
-  const methodMembers = methods.flatMap((method: any) =>
-    (method.signatures ?? []).map((signature: any) => buildCallableMember(method.name, signature, method.comment, Boolean(method.flags?.isOptional))),
+  const methodMembers = methods.flatMap((method: DeclarationReflection) =>
+    (method.signatures ?? []).map((signature: SignatureReflection) =>
+      buildCallableMember(method.name, signature, method.comment, Boolean(method.flags?.isOptional)),
+    ),
   );
-  const propertyMembers = plainProperties.map((property: any) =>
+  const propertyMembers = plainProperties.map((property: DeclarationReflection) =>
     buildValueMember(property.name, resolvePropertyType(property), resolvePropertyComment(property), Boolean(property.flags?.isOptional)),
   );
-  const eventMembers = events.map((event: any) =>
+  const eventMembers = events.map((event: DeclarationReflection) =>
     buildValueMember(event.name, resolvePropertyType(event), resolvePropertyComment(event), Boolean(event.flags?.isOptional)),
   );
 
@@ -438,14 +448,14 @@ const EMPTY_COUNTS: ApiCounts = { constructors: 0, methods: 0, properties: 0, ev
  * Sections for an object-literal `const` (MathUtils, Collision, ...): its
  * function members render as Methods, its value members as Properties.
  */
-const buildObjectSections = (declaration: any): ReflectionBody => {
-  const children = (declaration.children ?? []).filter((child: any) => !child.name.startsWith('_'));
-  const methods = children.filter((child: any) => (child.signatures?.length ?? 0) > 0);
-  const values = children.filter((child: any) => (child.signatures?.length ?? 0) === 0);
-  const methodMembers = methods.flatMap((method: any) =>
-    (method.signatures ?? []).map((signature: any) => buildCallableMember(method.name, signature, method.comment)),
+const buildObjectSections = (declarationMembers: readonly DeclarationReflection[]): ReflectionBody => {
+  const children = declarationMembers.filter((child: DeclarationReflection) => !child.name.startsWith('_'));
+  const methods = children.filter((child: DeclarationReflection) => (child.signatures?.length ?? 0) > 0);
+  const values = children.filter((child: DeclarationReflection) => (child.signatures?.length ?? 0) === 0);
+  const methodMembers = methods.flatMap((method: DeclarationReflection) =>
+    (method.signatures ?? []).map((signature: SignatureReflection) => buildCallableMember(method.name, signature, method.comment)),
   );
-  const valueMembers = values.map((value: any) =>
+  const valueMembers = values.map((value: DeclarationReflection) =>
     buildValueMember(value.name, value.type ?? value.getSignature?.type, value.comment, Boolean(value.flags?.isOptional)),
   );
   const sections: ApiSection[] = [];
@@ -458,12 +468,12 @@ const buildObjectSections = (declaration: any): ReflectionBody => {
   };
 };
 
-const renderReflectionBody = (reflection: any): ReflectionBody => {
+const renderReflectionBody = (reflection: DeclarationReflection): ReflectionBody => {
   if (isEnum(reflection.kind)) {
     // Enum members render as a bare name with no description, matching the
     // prior output - the signature is the member name itself.
     const members = (reflection.children ?? []).map(
-      (member: any): ApiMember => ({
+      (member: DeclarationReflection): ApiMember => ({
         name: member.name,
         signature: member.name,
         signatureTokens: [{ text: member.name, kind: 'name' }],
@@ -488,8 +498,8 @@ const renderReflectionBody = (reflection: any): ReflectionBody => {
   // Type aliases have no members; show their definition as a single tokenized
   // row so its component types cross-link like any other signature.
   // An object-literal const documents like a namespace of members.
-  if (isVariable(reflection.kind) && (reflection.type?.declaration?.children?.length ?? 0) > 0) {
-    return buildObjectSections(reflection.type.declaration);
+  if (isVariable(reflection.kind) && objectLiteralMembers(reflection.type).length > 0) {
+    return buildObjectSections(objectLiteralMembers(reflection.type));
   }
 
   if (isTypeAlias(reflection.kind)) {
@@ -521,7 +531,7 @@ const renderReflectionBody = (reflection: any): ReflectionBody => {
   return { sections: [], counts: EMPTY_COUNTS, memberCount: 0 };
 };
 
-const entryPointTitle = (reflection: any): string => {
+const entryPointTitle = (reflection: DeclarationReflection): string => {
   const sourcePath = normalizePath(reflection.sources?.[0]?.fileName ?? '');
   const subsystem = guessSubsystem(sourcePath);
   if (subsystem === 'debug') return '@codexo/exojs/debug';
@@ -537,7 +547,7 @@ const ensureCleanOutput = (): void => {
   fs.mkdirSync(outputDir, { recursive: true });
 };
 
-const MODIFIER_TAGS = [
+const MODIFIER_TAGS: `@${string}`[] = [
   '@stable',
   '@advanced',
   '@override',
@@ -562,10 +572,10 @@ interface EmitOptions {
   /** When set, only emit symbols whose source path contains this marker. */
   sourceMarker?: string;
   /** A same-named namespace reflection whose constants merge onto this page. */
-  mergeNamespace?: any;
+  mergeNamespace?: DeclarationReflection;
 }
 
-const emitReflection = (reflection: any, usedSlugs: Set<string>, options: EmitOptions): boolean => {
+const emitReflection = (reflection: DeclarationReflection, usedSlugs: Set<string>, options: EmitOptions): boolean => {
   // Documentable kinds plus object-literal variables (namespaces like
   // MathUtils), which build() routes here explicitly.
   if (!isDocumentableKind(reflection.kind) && !isVariable(reflection.kind)) return false;
@@ -671,8 +681,8 @@ const finalizeAndWrite = (data: ApiSymbolData, usedSlugs: Set<string>): boolean 
  * under per-module children; a single entry point flattens them onto the
  * project root.
  */
-const collectSymbols = (project: any): any[] => {
-  const out: any[] = [];
+const collectSymbols = (project: ProjectReflection): DeclarationReflection[] => {
+  const out: DeclarationReflection[] = [];
   for (const child of project.children ?? []) {
     if (isDocumentableKind(child.kind)) {
       out.push(child);
@@ -694,8 +704,8 @@ const isNamespace = (kind: ReflectionKind): boolean => (kind & ReflectionKind.Na
  * (GamepadButton.South, Pointer.X, ...); those constants are merged onto the
  * class page rather than emitted as a separate page.
  */
-const collectNamespaces = (project: any): any[] => {
-  const out: any[] = [];
+const collectNamespaces = (project: ProjectReflection): DeclarationReflection[] => {
+  const out: DeclarationReflection[] = [];
   for (const child of project.children ?? []) {
     if (isNamespace(child.kind)) {
       out.push(child);
@@ -712,17 +722,17 @@ const collectNamespaces = (project: any): any[] => {
  * A "Constants" section from a namespace's members (each a named constant with
  * its type and JSDoc), reusing the value-member shape used for properties.
  */
-const buildConstantsSection = (namespaceReflection: any): ApiSection | null => {
+const buildConstantsSection = (namespaceReflection: DeclarationReflection): ApiSection | null => {
   const members: ApiMember[] = (namespaceReflection.children ?? [])
-    .filter((child: any) => !child.name.startsWith('_'))
-    .map((child: any) => buildValueMember(child.name, child.type ?? child.getSignature?.type, child.comment));
+    .filter((child: DeclarationReflection) => !child.name.startsWith('_'))
+    .map((child: DeclarationReflection) => buildValueMember(child.name, child.type ?? child.getSignature?.type, child.comment));
   if (members.length === 0) return null;
   return { id: 'constants', title: 'Constants', members, paragraphs: [], importLine: null, sourceLink: null };
 };
 
 /** Collect top-level free function + variable reflections (flattened). */
-const collectExtras = (project: any): any[] => {
-  const out: any[] = [];
+const collectExtras = (project: ProjectReflection): DeclarationReflection[] => {
+  const out: DeclarationReflection[] = [];
   for (const child of project.children ?? []) {
     if (isFunction(child.kind) || isVariable(child.kind)) {
       out.push(child);
@@ -741,8 +751,8 @@ const collectExtras = (project: any): any[] => {
  * merges), so they are documented without spawning dozens of thin pages.
  */
 const emitFunctionsPage = (
-  functions: any[],
-  simpleVars: any[],
+  functions: DeclarationReflection[],
+  simpleVars: DeclarationReflection[],
   importPath: string,
   subsystem: Subsystem,
   pageSymbol: string,
@@ -751,10 +761,10 @@ const emitFunctionsPage = (
   if (functions.length === 0 && simpleVars.length === 0) return false;
 
   const functionMembers = functions
-    .flatMap((fn: any) => (fn.signatures ?? []).map((signature: any) => buildCallableMember(fn.name, signature, fn.comment)))
+    .flatMap((fn: DeclarationReflection) => (fn.signatures ?? []).map((signature: SignatureReflection) => buildCallableMember(fn.name, signature, fn.comment)))
     .sort((a, b) => a.name.localeCompare(b.name));
   const constMembers = simpleVars
-    .map((v: any) => buildValueMember(v.name, v.type ?? v.getSignature?.type, v.comment))
+    .map((v: DeclarationReflection) => buildValueMember(v.name, v.type ?? v.getSignature?.type, v.comment))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   const sections: ApiSection[] = [
@@ -787,7 +797,7 @@ const emitFunctionsPage = (
   return finalizeAndWrite(data, usedSlugs);
 };
 
-const convertEntryPoints = async (entryPoints: ReadonlyArray<string>, tsconfig: string): Promise<any> => {
+const convertEntryPoints = async (entryPoints: readonly string[], tsconfig: string): Promise<ProjectReflection> => {
   const app = await Application.bootstrapWithPlugins({
     entryPoints: entryPoints.map(entry => toPosix(path.resolve(repoRoot, entry))),
     tsconfig: toPosix(path.resolve(repoRoot, tsconfig)),
@@ -814,10 +824,10 @@ const build = async (): Promise<void> => {
 
   // 1. Core (+ debug and extensions subpaths).
   const coreProject = await convertEntryPoints(['src/index.ts', 'src/debug/index.ts', 'src/extensions/index.ts'], 'tsconfig.json');
-  const coreNamespaces = new Map<string, any>(collectNamespaces(coreProject).map((ns: any) => [ns.name, ns]));
+  const coreNamespaces = new Map<string, DeclarationReflection>(collectNamespaces(coreProject).map((ns: DeclarationReflection) => [ns.name, ns]));
   let coreCount = 0;
   const coreDocumentable = collectSymbols(coreProject);
-  const coreNames = new Set<string>(coreDocumentable.map((r: any) => r.name));
+  const coreNames = new Set<string>(coreDocumentable.map((r: DeclarationReflection) => r.name));
   for (const reflection of coreDocumentable) {
     if (emitReflection(reflection, usedSlugs, { mergeNamespace: coreNamespaces.get(reflection.name) })) coreCount += 1;
   }
@@ -825,10 +835,10 @@ const build = async (): Promise<void> => {
   // Free functions, object-literal namespaces (MathUtils, ...) and simple
   // constants. Names that clash with a documented class/interface/type are a
   // merge partner already handled above, so they are skipped here.
-  const coreExtras = collectExtras(coreProject).filter((e: any) => !coreNames.has(e.name));
-  const coreObjectVars = coreExtras.filter((e: any) => isVariable(e.kind) && (e.type?.declaration?.children?.length ?? 0) > 0);
-  const coreSimpleVars = coreExtras.filter((e: any) => isVariable(e.kind) && (e.type?.declaration?.children?.length ?? 0) === 0);
-  const coreFunctions = coreExtras.filter((e: any) => isFunction(e.kind));
+  const coreExtras = collectExtras(coreProject).filter((e: DeclarationReflection) => !coreNames.has(e.name));
+  const coreObjectVars = coreExtras.filter((e: DeclarationReflection) => isVariable(e.kind) && objectLiteralMembers(e.type).length > 0);
+  const coreSimpleVars = coreExtras.filter((e: DeclarationReflection) => isVariable(e.kind) && objectLiteralMembers(e.type).length === 0);
+  const coreFunctions = coreExtras.filter((e: DeclarationReflection) => isFunction(e.kind));
   for (const objectVar of coreObjectVars) {
     if (emitReflection(objectVar, usedSlugs, {})) coreCount += 1;
   }
@@ -839,13 +849,13 @@ const build = async (): Promise<void> => {
   }
 
   // 2. Official extension packages - each as its own discoverable surface.
-  const packageCounts: Array<{ importPath: string; count: number }> = [];
+  const packageCounts: { importPath: string; count: number }[] = [];
   for (const pkg of EXTENSION_PACKAGES) {
     const project = await convertEntryPoints([pkg.entryPoint], pkg.tsconfig);
-    const namespaces = new Map<string, any>(collectNamespaces(project).map((ns: any) => [ns.name, ns]));
+    const namespaces = new Map<string, DeclarationReflection>(collectNamespaces(project).map((ns: DeclarationReflection) => [ns.name, ns]));
     let count = 0;
     const documentable = collectSymbols(project);
-    const names = new Set<string>(documentable.map((r: any) => r.name));
+    const names = new Set<string>(documentable.map((r: DeclarationReflection) => r.name));
     for (const reflection of documentable) {
       if (
         emitReflection(reflection, usedSlugs, {
@@ -861,10 +871,12 @@ const build = async (): Promise<void> => {
 
     // The package's own free functions/variables (packages re-export core,
     // so filter to this package's source and drop merge-partner names).
-    const ownExtras = collectExtras(project).filter((e: any) => !names.has(e.name) && normalizePath(e.sources?.[0]?.fileName ?? '').includes(pkg.sourceMarker));
-    const objectVars = ownExtras.filter((e: any) => isVariable(e.kind) && (e.type?.declaration?.children?.length ?? 0) > 0);
-    const simpleVars = ownExtras.filter((e: any) => isVariable(e.kind) && (e.type?.declaration?.children?.length ?? 0) === 0);
-    const functions = ownExtras.filter((e: any) => isFunction(e.kind));
+    const ownExtras = collectExtras(project).filter(
+      (e: DeclarationReflection) => !names.has(e.name) && normalizePath(e.sources?.[0]?.fileName ?? '').includes(pkg.sourceMarker),
+    );
+    const objectVars = ownExtras.filter((e: DeclarationReflection) => isVariable(e.kind) && objectLiteralMembers(e.type).length > 0);
+    const simpleVars = ownExtras.filter((e: DeclarationReflection) => isVariable(e.kind) && objectLiteralMembers(e.type).length === 0);
+    const functions = ownExtras.filter((e: DeclarationReflection) => isFunction(e.kind));
     for (const objectVar of objectVars) {
       if (emitReflection(objectVar, usedSlugs, { importPathOverride: pkg.importPath, subsystemOverride: pkg.subsystem })) count += 1;
     }

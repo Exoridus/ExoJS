@@ -5,28 +5,28 @@ import { chromium, type BrowserContext, type Page } from 'playwright';
 
 type Theme = 'dark' | 'light';
 
-type ViewportSpec = {
+interface ViewportSpec {
   key: string;
   width: number;
   height: number;
-};
+}
 
-type Task = {
+interface Task {
   route: string;
   theme: Theme;
   viewport: ViewportSpec;
-};
+}
 
-type CaptureSuccess = {
+interface CaptureSuccess {
   task: Task;
   files: string[];
   durationMs: number;
-};
+}
 
-type CaptureFailure = {
+interface CaptureFailure {
   task: Task;
   error: string;
-};
+}
 
 const DEFAULT_ROUTES = [
   '/en/',
@@ -50,18 +50,18 @@ const DEFAULT_STABLE_DELAY_MS = 300;
 const DEFAULT_NAVIGATION_TIMEOUT_MS = 45_000;
 const DEFAULT_BASE_URL = 'http://localhost:4321/ExoJS/';
 
-function sleep(ms: number): Promise<void> {
+const sleep = (ms: number): Promise<void> => {
   return new Promise(resolveSleep => setTimeout(resolveSleep, ms));
-}
+};
 
-function normalizeRoute(route: string): string {
+const normalizeRoute = (route: string): string => {
   const trimmed = route.trim();
   if (!trimmed) return '/';
   if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) return trimmed;
   return trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-}
+};
 
-function routeToFileSlug(route: string): string {
+const routeToFileSlug = (route: string): string => {
   const normalized = normalizeRoute(route);
   if (normalized === '/' || normalized === '') return 'root';
 
@@ -73,9 +73,9 @@ function routeToFileSlug(route: string): string {
   if (!queryPart) return cleanedPath || 'root';
   const cleanedQuery = queryPart.replace(/[^a-zA-Z0-9_-]/g, '-');
   return `${cleanedPath || 'root'}__q_${cleanedQuery}`;
-}
+};
 
-function parseViewport(value: string, index: number): ViewportSpec {
+const parseViewport = (value: string, index: number): ViewportSpec => {
   const match = /^(\d+)x(\d+)$/i.exec(value.trim());
   if (!match) {
     throw new Error(`Invalid viewport "${value}". Use WIDTHxHEIGHT, e.g. 1440x1000.`);
@@ -92,17 +92,17 @@ function parseViewport(value: string, index: number): ViewportSpec {
     width,
     height,
   };
-}
+};
 
-function toLabelOrTimestamp(label?: string): string {
+const toLabelOrTimestamp = (label?: string): string => {
   if (label && label.trim().length > 0) {
     return label.trim().replace(/[^a-zA-Z0-9._-]/g, '-');
   }
 
   return new Date().toISOString().replace(/[:]/g, '-').replace(/\..+$/, '');
-}
+};
 
-function parseThemes(rawValue: string | undefined): Theme[] {
+const parseThemes = (rawValue: string | undefined): Theme[] => {
   if (!rawValue) return DEFAULT_THEMES;
   const values = rawValue
     .split(',')
@@ -120,9 +120,9 @@ function parseThemes(rawValue: string | undefined): Theme[] {
 
   if (themes.length === 0) return DEFAULT_THEMES;
   return Array.from(new Set(themes));
-}
+};
 
-async function waitForServer(baseUrl: string, timeoutMs: number): Promise<void> {
+const waitForServer = async (baseUrl: string, timeoutMs: number): Promise<void> => {
   const deadline = Date.now() + timeoutMs;
   let lastError = '';
 
@@ -138,9 +138,9 @@ async function waitForServer(baseUrl: string, timeoutMs: number): Promise<void> 
   }
 
   throw new Error(`Could not reach preview server at ${baseUrl}. Last error: ${lastError || 'unknown error'}.`);
-}
+};
 
-async function applyStabilization(page: Page): Promise<void> {
+const applyStabilization = async (page: Page): Promise<void> => {
   await page.addStyleTag({
     content: `
 *,
@@ -154,9 +154,9 @@ async function applyStabilization(page: Page): Promise<void> {
 }
 `,
   });
-}
+};
 
-async function waitForVisualReady(page: Page, delayMs: number): Promise<void> {
+const waitForVisualReady = async (page: Page, delayMs: number): Promise<void> => {
   await page.evaluate(async () => {
     if ('fonts' in document && document.fonts?.ready) {
       await document.fonts.ready;
@@ -170,9 +170,9 @@ async function waitForVisualReady(page: Page, delayMs: number): Promise<void> {
   if (delayMs > 0) {
     await sleep(delayMs);
   }
-}
+};
 
-async function captureRoutePanels(page: Page, outputDir: string, filePrefix: string, maxPanelHeight: number, viewport: ViewportSpec): Promise<string[]> {
+const captureRoutePanels = async (page: Page, outputDir: string, filePrefix: string, maxPanelHeight: number, viewport: ViewportSpec): Promise<string[]> => {
   const readDimensions = async () =>
     page.evaluate(() => {
       const doc = document.documentElement;
@@ -235,16 +235,16 @@ async function captureRoutePanels(page: Page, outputDir: string, filePrefix: str
   }
 
   return files;
-}
+};
 
-function buildTaskUrl(baseUrl: string, route: string): string {
+const buildTaskUrl = (baseUrl: string, route: string): string => {
   const normalizedRoute = normalizeRoute(route);
   if (normalizedRoute.startsWith('http://') || normalizedRoute.startsWith('https://')) return normalizedRoute;
   const routeWithoutLeadingSlash = normalizedRoute.replace(/^\/+/, '');
   return new URL(routeWithoutLeadingSlash, baseUrl).toString();
-}
+};
 
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   const parsed = parseArgs({
     args: process.argv.slice(2),
     options: {
@@ -458,6 +458,6 @@ Options:
     console.error(`[screenshots] ${failures.length} capture(s) failed.`);
     process.exitCode = 1;
   }
-}
+};
 
 await main();

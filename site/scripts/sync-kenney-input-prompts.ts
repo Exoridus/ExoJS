@@ -13,9 +13,7 @@ const sourceRoot = process.env.KENNEY_INPUT_PROMPTS_DIR
 const targetImageDir = path.resolve(projectRoot, '..', 'examples', 'assets', 'image');
 const targetJsonDir = path.resolve(projectRoot, '..', 'examples', 'assets', 'json');
 
-interface Attributes {
-  [key: string]: string;
-}
+type Attributes = Record<string, string>;
 
 interface SpriteFrame {
   frame: { x: number; y: number; w: number; h: number };

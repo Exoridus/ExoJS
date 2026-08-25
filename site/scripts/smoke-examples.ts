@@ -92,16 +92,16 @@ const RECOVERABLE = [
   'no webgl support',
 ];
 
-function isRecoverable(message: string): boolean {
+const isRecoverable = (message: string): boolean => {
   const normalized = message.toLowerCase();
   return RECOVERABLE.some(pattern => normalized.includes(pattern));
-}
+};
 
 // Collapse multi-line compiler/runtime messages to a single line so they fit a
 // markdown bullet / table cell.
-function oneLine(message: string): string {
+const oneLine = (message: string): string => {
   return message.replace(/\s+/g, ' ').trim();
-}
+};
 
 interface CatalogEntry {
   slug: string;
@@ -123,7 +123,7 @@ interface Result {
   note: string;
 }
 
-function startServer(root: string): Promise<{ port: number; server: Server }> {
+const startServer = (root: string): Promise<{ port: number; server: Server }> => {
   const server = createServer((req, res) => {
     try {
       const urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
@@ -160,11 +160,11 @@ function startServer(root: string): Promise<{ port: number; server: Server }> {
       resolvePromise({ port, server });
     });
   });
-}
+};
 
-function captureErrors(): void {
+const captureErrors = (): void => {
   interface SmokeWindow {
-    __SMOKE_ERRORS__?: Array<{ message: string }>;
+    __SMOKE_ERRORS__?: { message: string }[];
   }
   const w = window as unknown as SmokeWindow;
   w.__SMOKE_ERRORS__ = [];
@@ -176,9 +176,9 @@ function captureErrors(): void {
     const reason = event.reason as { message?: string } | undefined;
     w.__SMOKE_ERRORS__!.push({ message: reason?.message ?? String(event.reason) });
   });
-}
+};
 
-async function detectWebGpu(browser: Browser, baseUrl: string): Promise<boolean> {
+const detectWebGpu = async (browser: Browser, baseUrl: string): Promise<boolean> => {
   // Navigate to a real origin rather than about:blank - some Chromium builds
   // refuse to expose navigator.gpu on opaque origins.
   const page = await browser.newPage();
@@ -198,9 +198,9 @@ async function detectWebGpu(browser: Browser, baseUrl: string): Promise<boolean>
   } finally {
     await page.close();
   }
-}
+};
 
-async function runExample(
+const runExample = async (
   browser: Browser,
   baseUrl: string,
   entry: CatalogEntry & { category: string },
@@ -208,7 +208,7 @@ async function runExample(
   webgpuAvailable: boolean,
   timeoutMs: number,
   colorScheme: 'light' | 'dark' = 'light',
-): Promise<Result> {
+): Promise<Result> => {
   const capabilities = entry.capabilities ?? [];
   const result: Result = {
     path: entry.path,
@@ -250,7 +250,11 @@ async function runExample(
         // Install the global typed asset catalog (resolved paths) before the
         // example evaluates - examples use the `assets` global, not an import.
         try {
-          const catalog = (await import('./assets/catalog.js')) as { assets?: unknown };
+          // Resolved by the page against the served example tree, which has no
+          // counterpart on this machine's disk - the specifier is widened so it
+          // is a runtime import rather than one this program tries to resolve.
+          const catalogSpecifier = './assets/catalog.js';
+          const catalog = (await import(catalogSpecifier)) as { assets?: unknown };
           w.assets = catalog.assets ?? {};
         } catch {
           w.assets = {};
@@ -278,7 +282,7 @@ async function runExample(
     await page.waitForTimeout(1100);
 
     const errors = await page.evaluate(() => {
-      const w = window as unknown as { __SMOKE_ERRORS__?: Array<{ message: string }> };
+      const w = window as unknown as { __SMOKE_ERRORS__?: { message: string }[] };
       return (w.__SMOKE_ERRORS__ ?? []).map(error => error.message);
     });
     const hasCanvas = await page.evaluate(() => !!document.querySelector('canvas'));
@@ -303,9 +307,9 @@ async function runExample(
   }
 
   return result;
-}
+};
 
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   const { values } = parseArgs({
     args: process.argv.slice(2),
     options: {
@@ -416,16 +420,16 @@ async function main(): Promise<void> {
   if (counts.failed > 0) {
     process.exitCode = 1;
   }
-}
+};
 
-async function writeReport(
+const writeReport = async (
   results: Result[],
   counts: Record<string, number>,
   webgpuAvailable: boolean,
-  browserName: string = 'chromium',
-  colorScheme: string = 'light',
-  headless: boolean = true,
-): Promise<void> {
+  browserName = 'chromium',
+  colorScheme = 'light',
+  headless = true,
+): Promise<void> => {
   const icon: Record<Status, string> = { passed: '✅', failed: '❌', skipped: '⏭️', warned: '⚠️' };
   const lines: string[] = [];
   const mode = headless ? 'headless' : 'headed';
@@ -484,6 +488,6 @@ async function writeReport(
 
   await mkdir(dirname(reportPath), { recursive: true });
   await writeFile(reportPath, lines.join('\n'), 'utf8');
-}
+};
 
 await main();
