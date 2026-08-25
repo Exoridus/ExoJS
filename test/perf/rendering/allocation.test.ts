@@ -36,7 +36,7 @@ import { createWebGl2Harness } from './harness';
  * V8 settled into - both need one scene per process. That is
  * `run-allocation-cell.ts`:
  *
- *   node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.mjs --import tsx/esm \
+ *   node --conditions=@codexo/exojs-source --import ./scripts/glsl-register.ts --import tsx/esm \
  *     test/perf/rendering/run-allocation-cell.ts --id "mesh/1000" --profile
  *
  * Never mix its numbers with this gate's inside one table; {@link BASELINE_KB}

@@ -23,12 +23,11 @@
   // here. Converting it to TypeScript is not required for that and would cost
   // more than it buys - ESLint and Prettier load it directly at runtime.
   //
-  // The three remaining `scripts/**/*.mjs` are in the program for the same
-  // reason, and stay `.mjs` for a hard one rather than a preference: the CI
-  // detector job runs `select-lanes.mjs` with the runner's ambient node before
-  // any install, and `--import` registers the GLSL loader pair BEFORE
-  // `tsx/esm`, so nothing can compile TypeScript at the point either runs.
-  // `checkJs` gives them the same checking a `.ts` file would get.
+  // `scripts/ci/select-lanes.mjs` is in the program for the same reason, and
+  // stays `.mjs` for a hard one rather than a preference: the CI detector job
+  // runs it with the runner's ambient node before any install, so it must be
+  // executable with no toolchain at all. `checkJs` gives it the same checking
+  // a `.ts` file would get.
   "extends": "@codexo/exojs-config/typescript/base.json",
   "compilerOptions": {
     "lib": ["es2023"],

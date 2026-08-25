@@ -9,7 +9,7 @@
  *
  * SOURCE-ACCURATE. The `perf:renderers:alloc` script passes
  * `--conditions=@codexo/exojs-source` (so the `#*` imports resolve to `src`, NOT to a
- * `dist` build) and `--import ./scripts/glsl-register.mjs` - a node ESM loader
+ * `dist` build) and `--import ./scripts/glsl-register.ts` - a node ESM loader
  * hook that loads `.vert`/`.frag` as source text (the node/tsx counterpart of the
  * vitest `realShaderPlugin`) and installs the `__DEV__`/`__VERSION__`/
  * `__REVISION__` build-constant globals. Those two pieces plus the DOM shims in

@@ -17,17 +17,18 @@
  *     internal `#*` imports still resolve to `src` via the `@codexo/exojs-source`
  *     condition (passed on the node command line).
  *
- * Pair with `--conditions=@codexo/exojs-source`. Entrypoint: `scripts/glsl-register.mjs`.
+ * Pair with `--conditions=@codexo/exojs-source`. Entrypoint: `scripts/glsl-register.ts`.
  *
- * Stays `.mjs`: node loads it as a module hook, and `--import` registers it
- * BEFORE `tsx/esm`, so nothing can compile TypeScript at the point it runs.
- * `@ts-check` plus the hook types below give it the same checking a `.ts` file
- * would get.
+ * Node loads this file on the hooks thread and strips its types itself, which
+ * is the only reason it can be TypeScript: `tsx/esm` never reaches a module
+ * that arrives through `--import` or `register()`. Keep the syntax erasable
+ * (no enums, no parameter properties) - there is no compiler here.
  */
-// @ts-check
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+import type { LoadHook, ResolveHook } from 'node:module';
 
 const repoRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
@@ -47,11 +48,9 @@ const packageAliases = new Map([
 
 const SHADER_EXTENSIONS = ['.vert', '.frag', '.wgsl'];
 
-/** @param {string} specifier */
-const isShaderSource = specifier => SHADER_EXTENSIONS.some(extension => specifier.endsWith(extension));
+const isShaderSource = (specifier: string): boolean => SHADER_EXTENSIONS.some(extension => specifier.endsWith(extension));
 
-/** @type {import('node:module').ResolveHook} */
-export const resolve = async (specifier, context, nextResolve) => {
+export const resolve: ResolveHook = async (specifier, context, nextResolve) => {
   const alias = packageAliases.get(specifier);
 
   if (alias !== undefined) {
@@ -67,8 +66,7 @@ export const resolve = async (specifier, context, nextResolve) => {
   return result;
 };
 
-/** @type {import('node:module').LoadHook} */
-export const load = async (url, context, nextLoad) => {
+export const load: LoadHook = async (url, context, nextLoad) => {
   if (context.format === 'shader-source' || isShaderSource(url)) {
     const source = await readFile(fileURLToPath(url), 'utf8');
 

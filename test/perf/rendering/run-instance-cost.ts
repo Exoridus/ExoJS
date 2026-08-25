@@ -94,7 +94,7 @@ if (type === undefined) {
         '--max-old-space-size=8192',
         '--conditions=@codexo/exojs-source',
         '--import',
-        './scripts/glsl-register.mjs',
+        './scripts/glsl-register.ts',
         '--import',
         'tsx/esm',
         'test/perf/rendering/run-instance-cost.ts',

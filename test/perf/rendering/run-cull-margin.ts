@@ -40,7 +40,7 @@ const out = resolve(flag('out') ?? '.workspace/output/cull-margin');
 
 const here = dirname(fileURLToPath(import.meta.url));
 const cell = resolve(here, 'run-cull-margin-cell.ts');
-const nodeArgs = ['--expose-gc', '--max-old-space-size=8192', '--conditions=@codexo/source', '--import', './scripts/glsl-register.mjs', '--import', 'tsx/esm'];
+const nodeArgs = ['--expose-gc', '--max-old-space-size=8192', '--conditions=@codexo/source', '--import', './scripts/glsl-register.ts', '--import', 'tsx/esm'];
 
 interface CellResult {
   margin: number;
