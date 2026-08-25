@@ -50,7 +50,7 @@ class TempoTrackingScene extends Scene {
     this.onset = this.detector.onsetStrength;
     // Follow the loudest recent onset for the auto-gain reference, then bleed
     // it off so the bar stays responsive as the material changes.
-    this.onsetPeak = Math.max(this.onset, this.onsetPeak * (1 - delta.seconds * 0.4));
+    this.onsetPeak = Math.max(this.onset, this.onsetPeak * (1 - delta * 0.4));
   }
   draw(context) {
     const app = this.app;

@@ -49,7 +49,7 @@ The detector runs its own FFT inside the worklet processor. No `AudioAnalyser` i
 Two read-only getters give you the detector's current tempo estimate:
 
 ```ts
-update(delta: Time) {
+update(delta: Seconds) {
     const bpm = this.detector.tempo;           // 0 before lock-in
     const confidence = this.detector.confidence; // 0..1
 }

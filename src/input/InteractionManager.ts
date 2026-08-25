@@ -3,7 +3,7 @@ import { logger } from '#core/logging';
 import { SceneState } from '#core/SceneState';
 import type { Signal } from '#core/Signal';
 import type { InteractionHooks, Stage } from '#core/Stage';
-import type { Duration } from '#core/Time';
+import type { Seconds } from '#core/units';
 import { DynamicAabbTree } from '#math/DynamicAabbTree';
 import { Matrix } from '#math/Matrix';
 import type { PointLike } from '#math/PointLike';
@@ -591,7 +591,7 @@ export class InteractionManager implements InteractionHooks {
    * pair be a single system: `order` alone could not express "B runs after A
    * even when A throws".
    */
-  public preUpdate(_delta: Duration): void {
+  public preUpdate(_delta: Seconds): void {
     try {
       this._dispatchFrame();
     } finally {

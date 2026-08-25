@@ -7,7 +7,7 @@ import {
   Scene,
   Spritesheet,
   type SpritesheetData,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -70,12 +70,12 @@ class SpritesheetFramesScene extends Scene {
     this.hud.setStatus(`Frame: ${frames[this.frameIndex]}  (${this.frameIndex + 1}/${frames.length})`);
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     if (!this.playing) {
       return;
     }
 
-    this.elapsed += delta.seconds;
+    this.elapsed += delta;
 
     const frameDuration = 1 / this.fps;
 

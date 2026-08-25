@@ -40,7 +40,7 @@ class CustomFragmentShaderScene extends Scene {
     });
   }
   update(delta) {
-    this.time += delta.seconds;
+    this.time += delta;
     this.filter.setUniform('uTime', this.time);
   }
   draw(context) {

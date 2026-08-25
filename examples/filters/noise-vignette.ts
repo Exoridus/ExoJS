@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite, type Seconds } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // A detailed full-frame texture so grain + vignette read as a screen-wide post
@@ -70,8 +70,8 @@ class NoiseVignetteScene extends Scene {
     return this.intensity === 0 ? 'Intensity: 0% (clean frame)' : `Intensity: ${Math.round(this.intensity * 100)}%`;
   }
 
-  override update(delta: Time): void {
-    this.time += delta.seconds;
+  override update(delta: Seconds): void {
+    this.time += delta;
     this.filter.setUniform('uTime', this.time);
   }
 

@@ -7,7 +7,7 @@ import {
   type RenderingContext,
   Scene,
   Sprite,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 
 class GradientScene extends Scene {
@@ -46,11 +46,11 @@ class GradientScene extends Scene {
     this.orb.setOrigin(0.5).setPosition(centerX, centerY);
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
-    this.background.rotate(delta.seconds * 8);
-    this.orb.rotate(-delta.seconds * 30);
-    this.orb.setScale(1 + Math.sin(app.activeTime.seconds * 2) * 0.07);
+    this.background.rotate(delta * 8);
+    this.orb.rotate(-delta * 30);
+    this.orb.setScale(1 + Math.sin(app.activeSeconds * 2) * 0.07);
   }
 
   override draw(context: RenderingContext): void {

@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Mesh, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Mesh, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 
 class MeshTriangleScene extends Scene {
   private triangle!: Mesh;
@@ -15,8 +15,8 @@ class MeshTriangleScene extends Scene {
     this.triangle.setPosition((width / 2) | 0, (height / 2) | 0);
   }
 
-  override update(delta: Time): void {
-    this.triangle.rotate(delta.seconds * 60);
+  override update(delta: Seconds): void {
+    this.triangle.rotate(delta * 60);
   }
 
   override draw(context: RenderingContext): void {

@@ -63,7 +63,7 @@ class MinimapWithMaskScene extends Scene {
   }
   // #endregion guide:minimap-setup
   update(delta) {
-    this.time += delta.seconds;
+    this.time += delta;
   }
   drawWorld(backend) {
     const app = this.app;

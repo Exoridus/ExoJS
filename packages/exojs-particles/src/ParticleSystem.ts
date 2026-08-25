@@ -1,6 +1,6 @@
 ﻿/// <reference types="@webgpu/types" />
 
-import type { Duration } from '@codexo/exojs';
+import type { Seconds } from '@codexo/exojs';
 import { Rectangle } from '@codexo/exojs';
 import { Drawable } from '@codexo/exojs';
 import { logger } from '@codexo/exojs';
@@ -690,12 +690,12 @@ export class ParticleSystem extends Drawable implements ParticleEmitter {
   }
 
   /** Per-frame entry point. Routes to CPU or GPU pipeline based on auto-detection at first call. */
-  public update(delta: Duration): this {
+  public update(delta: Seconds): this {
     if (!this._compiled) {
       this._compile();
     }
 
-    const dt = delta.seconds;
+    const dt = delta;
 
     // 1. Emit (CPU writes storage in both modes).
     for (let i = 0; i < this._spawnModules.length; i++) {

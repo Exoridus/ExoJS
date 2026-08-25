@@ -1,4 +1,4 @@
-import type { Duration } from '#core/Time';
+import type { Seconds } from '#core/units';
 import type { AnimatedSprite } from '#rendering/sprite/AnimatedSprite';
 
 /**
@@ -64,12 +64,12 @@ export class AnimationManager {
    * teardown. Iterates a snapshot so playback callbacks that register or
    * deregister sprites do not corrupt the loop.
    */
-  public preUpdate(delta: Duration): void {
+  public preUpdate(delta: Seconds): void {
     if (this._destroyed || this._sprites.size === 0) {
       return;
     }
 
-    const deltaSeconds = delta.seconds;
+    const deltaSeconds = delta;
 
     for (const sprite of [...this._sprites]) {
       if (sprite.destroyed) {

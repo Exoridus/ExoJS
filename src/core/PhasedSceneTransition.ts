@@ -11,7 +11,7 @@ import {
   type SceneTransitionRequirements,
   type SceneTransitionSession,
 } from './SceneTransition';
-import type { Duration } from './Time';
+import type { Seconds } from './units';
 
 /**
  * Per-phase render-resource requirements for one phase (`enter` or `exit`)
@@ -48,7 +48,7 @@ export function mergeSceneTransitionRequirements(a: SceneTransitionPhaseRequirem
 
 /** Construction options for {@link PhasedSceneTransition} and its subclasses. */
 export interface PhasedSceneTransitionOptions {
-  /** Duration of *each* phase (enter and exit run this long independently), in milliseconds. Default `220`. */
+  /** Seconds of *each* phase (enter and exit run this long independently), in milliseconds. Default `220`. */
   readonly duration?: number;
   /** Applied to both phases' `progress` to produce `easedProgress`. Default {@link Ease.linear}. */
   readonly easing?: EasingFunction;
@@ -220,7 +220,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     return this._phaseState === 'enter' || this._phaseState === 'done' ? this._enterPhase.placement : this._exitPhase.placement;
   }
 
-  public update(delta: Duration): void {
+  public update(delta: Seconds): void {
     if (this._phaseState === 'done') {
       return;
     }
@@ -241,7 +241,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
 
     const activePhase = this._phaseState === 'exit' ? this._exitPhase : this._enterPhase;
 
-    this._elapsedMs = Math.min(activePhase.duration, this._elapsedMs + Math.max(0, delta.milliseconds));
+    this._elapsedMs = Math.min(activePhase.duration, this._elapsedMs + Math.max(0, delta * 1000));
 
     if (this._elapsedMs >= activePhase.duration) {
       if (this._phaseState === 'exit') {

@@ -10,7 +10,7 @@ import {
   Scene,
   ShaderFilter,
   Sprite,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 
 const glsl = `#version 300 es
@@ -65,11 +65,11 @@ class WaterMirrorScene extends Scene {
       .addPass(new RenderNodePass(this.mirror));
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
     const quarter = height / 4;
-    this.time += delta.seconds;
+    this.time += delta;
     this.source.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.3), quarter + Math.sin(this.time * 1.3) * (quarter * 0.55));
     this.filter.setUniform('uTime', this.time);
   }

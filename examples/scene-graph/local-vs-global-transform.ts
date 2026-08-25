@@ -1,4 +1,4 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Text, type Seconds } from '@codexo/exojs';
 
 class LocalVsGlobalTransformScene extends Scene {
   private parent!: Container;
@@ -31,8 +31,8 @@ class LocalVsGlobalTransformScene extends Scene {
     this.globalLabel.setPosition((width * 3) / 4 - 50, height / 2 - 220);
   }
 
-  override update(delta: Time): void {
-    this.parent.rotate(delta.seconds * 60);
+  override update(delta: Seconds): void {
+    this.parent.rotate(delta * 60);
   }
 
   override draw(context: RenderingContext): void {

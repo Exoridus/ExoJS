@@ -13,7 +13,7 @@ import {
   Scene,
   type Sound,
   Text,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 import {
   AudioAnalyser,
@@ -365,8 +365,8 @@ class EffectChainsScene extends Scene {
     this.flash = 1;
   }
 
-  override update(time: Time): void {
-    this.flash = Math.max(0, this.flash - time.seconds * 2.5);
+  override update(time: Seconds): void {
+    this.flash = Math.max(0, this.flash - time * 2.5);
     this.tapPrompt.visible = this.app.audio.locked;
 
     const chain = CHAINS[this.index]!;

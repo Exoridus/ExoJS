@@ -5,6 +5,7 @@ import { AudioManager } from '#audio/AudioManager';
 import type { Pausable } from '#audio/Playable';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
+import { Time } from '#core/units';
 
 const createAudioBufferStub = (duration = 10): AudioBuffer => ({ duration }) as AudioBuffer;
 
@@ -246,7 +247,7 @@ describe('SoundVoice — Pausable', () => {
     retired.playbackRate.setTargetAtTime.mockClear();
 
     setCurrentTime(0.1);
-    manager.preUpdate({ seconds: 0.1 } as never);
+    manager.preUpdate(Time.seconds(0.1));
 
     expect(retired.playbackRate.setTargetAtTime).not.toHaveBeenCalled();
     expect(factory.sources).toHaveLength(1);

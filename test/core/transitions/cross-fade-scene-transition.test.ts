@@ -1,7 +1,7 @@
 import { Ease } from '#animation/Easing';
 import type { SceneTransitionContext, SceneTransitionEnvironment, SceneTransitionFrame } from '#core/SceneTransition';
-import { Time } from '#core/Time';
 import { CrossFadeSceneTransition } from '#core/transitions/CrossFadeSceneTransition';
+import { Time } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { Sprite } from '#rendering/sprite/Sprite';
 
@@ -72,7 +72,7 @@ describe('CrossFadeSceneTransition', () => {
     };
     const session = crossFade.beginSession(environment);
 
-    session.update(new Time(1000));
+    session.update(Time.toSeconds(Time.milliseconds(1000)));
 
     expect(session.done).toBe(false);
   });
@@ -109,7 +109,7 @@ describe('CrossFadeSceneTransition', () => {
     const environment = makeEnvironment();
     const session = crossFade.beginSession(environment); // commit() already ran synchronously
 
-    session.update(new Time(40));
+    session.update(Time.toSeconds(Time.milliseconds(40)));
 
     const render = vi.fn();
     const rendering = stubRendering(render);
@@ -138,10 +138,10 @@ describe('CrossFadeSceneTransition', () => {
     const environment = makeEnvironment();
     const session = crossFade.beginSession(environment);
 
-    session.update(new Time(60));
+    session.update(Time.toSeconds(Time.milliseconds(60)));
     expect(session.done).toBe(false);
 
-    session.update(new Time(60));
+    session.update(Time.toSeconds(Time.milliseconds(60)));
     expect(session.done).toBe(true);
   });
 
@@ -150,7 +150,7 @@ describe('CrossFadeSceneTransition', () => {
     const environment = makeEnvironment();
     const session = crossFade.beginSession(environment);
 
-    session.update(new Time(0));
+    session.update(Time.toSeconds(Time.milliseconds(0)));
 
     expect(session.done).toBe(true);
   });

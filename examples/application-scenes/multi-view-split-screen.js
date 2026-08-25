@@ -84,7 +84,7 @@ class SplitScreenScene extends Scene {
     });
   }
   update(delta) {
-    const speed = 300 * delta.seconds;
+    const speed = 300 * delta;
     this.leftPlayer.move((this.move.d - this.move.a) * speed, (this.move.s - this.move.w) * speed);
     this.rightPlayer.move((this.move.right - this.move.left) * speed, (this.move.down - this.move.up) * speed);
     this.leftView.setCenter(this.leftPlayer.position.x, this.leftPlayer.position.y);

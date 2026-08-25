@@ -47,7 +47,7 @@ class RetainedContainerScene extends Scene {
     });
   }
   update(delta) {
-    this.elapsed += delta.seconds;
+    this.elapsed += delta;
   }
   draw(context) {
     const app = this.app;

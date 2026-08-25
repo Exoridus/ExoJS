@@ -46,7 +46,7 @@ class GameScene extends Scene {
   }
   update(delta) {
     if (this.frozen) return;
-    this.time += delta.seconds;
+    this.time += delta;
     this.sprite.setRotation(this.time * 80);
   }
   draw(context) {

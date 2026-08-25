@@ -22,8 +22,8 @@ class GameScene extends Scene {
     this.ui.addChild(this.health);
   }
   update(delta) {
-    this.angle += delta.seconds * 90;
-    this.time += delta.seconds;
+    this.angle += delta * 90;
+    this.time += delta;
     this.health.value = (Math.sin(this.time) + 1) / 2;
   }
   draw(context) {

@@ -5,7 +5,7 @@ import { Scene } from '#core/Scene';
 import { SceneScope } from '#core/SceneScope';
 import { SceneState } from '#core/SceneState';
 import { Signal } from '#core/Signal';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 
 /** Minimal Application stand-in covering every touchpoint SceneScope activation/teardown reaches. */
 const createAppStub = (): Application =>
@@ -128,13 +128,13 @@ describe('SceneScope', () => {
       await scope.prepare(undefined);
       expect(scope.state).toBe(SceneState.Ready);
 
-      scope.update(new Time(16));
+      scope.update(Time.toSeconds(Time.milliseconds(16)));
       expect(update).not.toHaveBeenCalled(); // still Ready
 
       scope.activate();
       expect(scope.state).toBe(SceneState.Active);
 
-      scope.update(new Time(16));
+      scope.update(Time.toSeconds(Time.milliseconds(16)));
       expect(update).toHaveBeenCalledTimes(1);
     });
 
@@ -410,7 +410,7 @@ describe('SceneScope', () => {
 
       await scope.destroy();
 
-      scope.update(new Time(16));
+      scope.update(Time.toSeconds(Time.milliseconds(16)));
       expect(update).not.toHaveBeenCalled();
     });
   });
@@ -537,8 +537,8 @@ describe('SceneScope', () => {
 
       scope.suspend();
 
-      scope.fixedUpdate(new Time(16));
-      scope.update(new Time(16));
+      scope.fixedUpdate(Time.toSeconds(Time.milliseconds(16)));
+      scope.update(Time.toSeconds(Time.milliseconds(16)));
       scope.draw({} as never);
 
       expect(update).not.toHaveBeenCalled();

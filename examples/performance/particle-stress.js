@@ -132,7 +132,7 @@ class ParticleStressScene extends Scene {
   }
   update(_delta) {
     const app = this.app;
-    const time = app.activeTime.seconds;
+    const time = app.activeSeconds;
     for (let i = 0; i < this.particleSystems.length; i++) {
       const entry = this.particleSystems[i];
       const wave = time + i * 1.2;

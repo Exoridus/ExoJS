@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import { Scene } from '#core/Scene';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 
 // SceneDirector is fully mocked in this file's harness (see
 // loadApplicationHarness) - its change() is a plain vi.fn() that never
@@ -254,9 +254,9 @@ describe('Application', () => {
     rawApp['_frameClock'] = frameClock;
     rawApp['_fixed'] = { advance: () => 0, alpha: 0 };
     // Object.create() bypasses the constructor, so the real field
-    // initializer (`= new Time()`) never runs - stand in with a real Time so
+    // initializer (`= Time.seconds(0)`) never runs - stand in with a real Time so
     // the frame path stays type-honest.
-    rawApp['_frameDelta'] = new Time();
+    rawApp['_frameDelta'] = Time.seconds(0);
     rawApp['_updateHandler'] = vi.fn();
     rawApp['_frameCount'] = 0;
     rawApp['onFrame'] = { dispatch: vi.fn() };

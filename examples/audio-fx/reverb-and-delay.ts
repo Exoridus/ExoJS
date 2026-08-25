@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sound, Text, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sound, Text, type Seconds } from '@codexo/exojs';
 import { DelayEffect, ReverbEffect } from '@codexo/exojs-audio-fx';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -119,8 +119,8 @@ class ReverbAndDelayScene extends Scene {
     this.hud.setStatus('Click anywhere to trigger the impact');
   }
 
-  override update(delta: Time): void {
-    this.flash = Math.max(0, this.flash - delta.seconds * 2.2);
+  override update(delta: Seconds): void {
+    this.flash = Math.max(0, this.flash - delta * 2.2);
   }
 
   override draw(context: RenderingContext): void {

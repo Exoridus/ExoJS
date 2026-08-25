@@ -2,8 +2,8 @@ import { Ease } from '#animation/Easing';
 import { Color } from '#core/Color';
 import type { SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/PhasedSceneTransition';
 import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/SceneTransition';
-import { Time } from '#core/Time';
 import { FadeSceneTransition } from '#core/transitions/FadeSceneTransition';
+import { Time } from '#core/units';
 import type { Matrix } from '#math/Matrix';
 import { QuadGeometry } from '#rendering/geometry/QuadGeometry';
 
@@ -170,8 +170,8 @@ describe('FadeSceneTransition', () => {
     // shared one Color/Matrix/QuadGeometry on the definition, the second
     // render() call would clobber the first's tint alpha before A's draw
     // call actually reads it back.
-    sessionA.update(new Time(50));
-    sessionB.update(new Time(10));
+    sessionA.update(Time.toSeconds(Time.milliseconds(50)));
+    sessionB.update(Time.toSeconds(Time.milliseconds(10)));
 
     const drawGeometryA = vi.fn();
     const drawGeometryB = vi.fn();

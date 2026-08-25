@@ -24,7 +24,7 @@ init() {
     this.player = new Sprite(this.loader.get('image/hero.png'));
 }
 
-update(delta: Time) {
+update(delta: Seconds) {
     // ... move player based on input ...
 
     // Camera follows player
@@ -39,9 +39,9 @@ draw(context: RenderingContext) {
 For smooth following, lerp the camera center instead of snapping:
 
 ```ts
-update(delta: Time) {
-    this._cameraX += (this.player.x - this._cameraX) * 5 * delta.seconds;
-    this._cameraY += (this.player.y - this._cameraY) * 5 * delta.seconds;
+update(delta: Seconds) {
+    this._cameraX += (this.player.x - this._cameraX) * 5 * delta;
+    this._cameraY += (this.player.y - this._cameraY) * 5 * delta;
     this._view.setCenter(this._cameraX, this._cameraY);
 }
 ```

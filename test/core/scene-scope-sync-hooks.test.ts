@@ -35,7 +35,7 @@ import { Scene } from '#core/Scene';
 import { SceneScope } from '#core/SceneScope';
 import { Signal } from '#core/Signal';
 import { SystemRegistry } from '#core/SystemRegistry';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 
 import { createBuildDefines, resolveVersion } from '../../packages/exojs-config/build-defines/index.js';
 import { devGatedPureFuncs } from '../build-defines/dev-pure-funcs';
@@ -186,9 +186,9 @@ describe('synchronous hook contract', () => {
       });
       const scope = await activate(scene);
 
-      expect(() => scope.fixedUpdate(new Time(16))).toThrow(/AsyncFixedScene\.fixedUpdate\(\) returned a Promise/);
-      expect(() => scope.fixedUpdate(new Time(16))).toThrow(/must be synchronous/);
-      expect(() => scope.fixedUpdate(new Time(16))).toThrow(/load\(\)/);
+      expect(() => scope.fixedUpdate(Time.toSeconds(Time.milliseconds(16)))).toThrow(/AsyncFixedScene\.fixedUpdate\(\) returned a Promise/);
+      expect(() => scope.fixedUpdate(Time.toSeconds(Time.milliseconds(16)))).toThrow(/must be synchronous/);
+      expect(() => scope.fixedUpdate(Time.toSeconds(Time.milliseconds(16)))).toThrow(/load\(\)/);
     });
 
     test('an async update() override throws, naming the scene and the hook', async () => {
@@ -201,7 +201,7 @@ describe('synchronous hook contract', () => {
       });
       const scope = await activate(scene);
 
-      expect(() => scope.update(new Time(16))).toThrow(/AsyncUpdateScene\.update\(\) returned a Promise/);
+      expect(() => scope.update(Time.toSeconds(Time.milliseconds(16)))).toThrow(/AsyncUpdateScene\.update\(\) returned a Promise/);
     });
 
     test('an async draw() override throws, naming the scene and the hook', async () => {
@@ -225,7 +225,7 @@ describe('synchronous hook contract', () => {
       });
       const scope = await activate(scene);
 
-      expect(() => scope.update(new Time(16))).toThrow(/must be synchronous/);
+      expect(() => scope.update(Time.toSeconds(Time.milliseconds(16)))).toThrow(/must be synchronous/);
       await flushMicrotasks();
     });
 
@@ -240,8 +240,8 @@ describe('synchronous hook contract', () => {
 
       scope.systems.add(system);
 
-      scope.fixedUpdate(new Time(16));
-      scope.update(new Time(16));
+      scope.fixedUpdate(Time.toSeconds(Time.milliseconds(16)));
+      scope.update(Time.toSeconds(Time.milliseconds(16)));
       scope.draw({} as never);
 
       expect(fixedUpdate).toHaveBeenCalledTimes(1);
@@ -260,7 +260,7 @@ describe('synchronous hook contract', () => {
       });
       const scope = await activate(scene);
 
-      expect(() => scope.update(new Time(16))).not.toThrow();
+      expect(() => scope.update(Time.toSeconds(Time.milliseconds(16)))).not.toThrow();
     });
   });
 
@@ -276,8 +276,8 @@ describe('synchronous hook contract', () => {
 
       registry.add(new AsyncSystem() as never);
 
-      expect(() => registry._update(new Time(16))).toThrow(/AsyncSystem\.update\(\) returned a Promise/);
-      expect(() => registry._update(new Time(16))).toThrow(/must be synchronous/);
+      expect(() => registry._update(Time.toSeconds(Time.milliseconds(16)))).toThrow(/AsyncSystem\.update\(\) returned a Promise/);
+      expect(() => registry._update(Time.toSeconds(Time.milliseconds(16)))).toThrow(/must be synchronous/);
     });
 
     test('an async fixedUpdate() phase throws', () => {
@@ -291,7 +291,7 @@ describe('synchronous hook contract', () => {
 
       registry.add(new AsyncFixedSystem() as never);
 
-      expect(() => registry._fixedUpdate(new Time(16))).toThrow(/AsyncFixedSystem\.fixedUpdate\(\) returned a Promise/);
+      expect(() => registry._fixedUpdate(Time.toSeconds(Time.milliseconds(16)))).toThrow(/AsyncFixedSystem\.fixedUpdate\(\) returned a Promise/);
     });
 
     test('an async draw() phase throws', () => {
@@ -317,7 +317,7 @@ describe('synchronous hook contract', () => {
         },
       } as never);
 
-      expect(() => registry._update(new Time(16))).toThrow(/System\.update\(\) returned a Promise/);
+      expect(() => registry._update(Time.toSeconds(Time.milliseconds(16)))).toThrow(/System\.update\(\) returned a Promise/);
     });
 
     test('synchronous system phases are unaffected', () => {
@@ -326,7 +326,7 @@ describe('synchronous hook contract', () => {
 
       registry.add(system);
 
-      expect(() => registry._update(new Time(16))).not.toThrow();
+      expect(() => registry._update(Time.toSeconds(Time.milliseconds(16)))).not.toThrow();
       expect(system.update).toHaveBeenCalledTimes(1);
     });
   });

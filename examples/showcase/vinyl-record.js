@@ -43,8 +43,8 @@ class VinylRecordScene extends Scene {
     const energy = this.analyser.getRms();
     const targetRpm = energy > 0.02 ? 30 + energy * 260 : 0;
     // Ease toward the target so the disc spins up and slows down smoothly.
-    this.rpm += (targetRpm - this.rpm) * Math.min(1, delta.seconds * 4);
-    this.angle += delta.seconds * (this.rpm / 60) * 360;
+    this.rpm += (targetRpm - this.rpm) * Math.min(1, delta * 4);
+    this.angle += delta * (this.rpm / 60) * 360;
     if (this.musicVoice) {
       this.hud.setStatus(`${this.rpm | 0} rpm`);
     }

@@ -56,8 +56,8 @@ init() {
     this.inputs.onStop(Keyboard.S,    () => { this.move.down  = 0; });
 }
 
-update(delta: Time) {
-    const speed = 280 * delta.seconds;
+update(delta: Seconds) {
+    const speed = 280 * delta;
     const dx = (this.move.right - this.move.left) * speed;
     const dy = (this.move.down - this.move.up) * speed;
     this.sprite.move(dx, dy);
@@ -122,7 +122,7 @@ _rebindJump() {
     this.jumpDirty = false;
 }
 
-update(delta: Time) {
+update(delta: Seconds) {
     this._rebindJump();
     // ... apply jumpVelocity ...
 }
@@ -224,7 +224,7 @@ Scene-scoped bindings from `this.inputs` are cleaned up when the scene unloads, 
 </Callout>
 
 ```ts
-import { GamepadAxis, GamepadButton, Keyboard, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { GamepadAxis, GamepadButton, Keyboard, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
 
 class PlayerScene extends Scene {
     private sprite!: Sprite;
@@ -286,7 +286,7 @@ class PlayerScene extends Scene {
         });
     }
 
-    update(delta: Time) {
+    update(delta: Seconds) {
         // Best input wins: prefer the device with the larger magnitude
         const keyX = this.keys.right - this.keys.left;
         const keyY = this.keys.down - this.keys.up;
@@ -294,11 +294,11 @@ class PlayerScene extends Scene {
         const moveX = Math.abs(this.stick.x) > Math.abs(keyX) ? this.stick.x : keyX;
         const moveY = Math.abs(this.stick.y) > Math.abs(keyY) ? this.stick.y : keyY;
 
-        this.sprite.move(moveX * 260 * delta.seconds, moveY * 260 * delta.seconds);
+        this.sprite.move(moveX * 260 * delta, moveY * 260 * delta);
 
         // Jump physics (same impulse source for both devices)
-        this.sprite.move(0, this.jumpImpulse * delta.seconds);
-        this.jumpImpulse = Math.min(0, this.jumpImpulse + 800 * delta.seconds);
+        this.sprite.move(0, this.jumpImpulse * delta);
+        this.jumpImpulse = Math.min(0, this.jumpImpulse + 800 * delta);
     }
 
     draw(context: RenderingContext) {
@@ -341,7 +341,7 @@ init() {
     // Consume actions once in update, then reset
 }
 
-update(delta: Time) {
+update(delta: Seconds) {
     if (this.actions.pause) {
         this.togglePause();       // pauses/resumes via app.scenes + shows/hides the pause overlay on scene.ui
         this.actions.pause = 0;
@@ -352,7 +352,7 @@ update(delta: Time) {
     }
     this.actions.jump = 0;
 
-    this.player.move(this.move.x * 260 * delta.seconds, this.move.y * 260 * delta.seconds);
+    this.player.move(this.move.x * 260 * delta, this.move.y * 260 * delta);
 }
 ```
 

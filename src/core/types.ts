@@ -4,14 +4,6 @@ import type { Rectangle } from '#math/Rectangle';
 export type TypedArray = Int8Array | Uint8Array | Int16Array | Uint16Array | Int32Array | Uint32Array | Uint8ClampedArray | Float32Array | Float64Array;
 
 /**
- * Multiplier converting a unit-typed time value to milliseconds. Pair with
- * {@link Time.set} / {@link Time.add} as the `factor` argument; canonical
- * values are exposed on the `Time` class as `Time.milliseconds`,
- * `Time.seconds`, `Time.minutes`, `Time.hours`.
- */
-export type TimeInterval = 1 | 1000 | 60000 | 3600000;
-
-/**
  * Type-level mapper that rebuilds `Enum` with every value retyped to `Type`.
  * Useful for "table-driven" lookups keyed by an enum.
  */
@@ -25,7 +17,7 @@ export type ValueOf<T> = T[keyof T];
  * {@link Scene.init}, the frame hooks {@link Scene.fixedUpdate} /
  * {@link Scene.update} / {@link Scene.draw}, and the {@link SystemMethods}
  * phases. Write these overrides exactly as before - a body that returns
- * nothing satisfies `Synchronous`, `override update(delta: Time): void`
+ * nothing satisfies `Synchronous`, `override update(delta: Seconds): void`
  * remains the idiomatic annotation, and the engine's fluent
  * `update(delta): this` convention still fits.
  *
@@ -84,7 +76,7 @@ export interface PlaybackOptions {
 /**
  * Structural interface for value types that support a deep clone and an
  * in-place copy from a same-type source. Implemented by {@link Color},
- * {@link Time}, {@link Vector}, {@link Matrix}, {@link Rectangle}, and
+ * {@link Vector}, {@link Matrix}, {@link Rectangle}, and
  * other ExoJS value classes.
  *
  * `T` is the cloned type and must be named explicitly - TypeScript cannot

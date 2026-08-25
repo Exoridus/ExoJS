@@ -222,13 +222,13 @@ The context is a snapshot, not a view into the system: it is the same on both ba
 `ParticleSystem` is a `Drawable` — it renders itself when you call `context.render(system)` in `draw`. Call `system.update(delta)` in your scene's `update`:
 
 ```ts
-import { type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 import { ParticleSystem } from '@codexo/exojs-particles';
 
 class ParticleScene extends Scene {
     private system!: ParticleSystem;
 
-    override update(delta: Time): void {
+    override update(delta: Seconds): void {
         this.system.update(delta);
     }
 

@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Text, type Time, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Text, type Seconds, View } from '@codexo/exojs';
 
 class CameraViewScene extends Scene {
   private camera!: View;
@@ -67,9 +67,9 @@ class CameraViewScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
-    this.camera.move(this.moveX * 420 * delta.seconds, this.moveY * 420 * delta.seconds);
-    this.camera.setZoom(Math.max(0.25, this.camera.zoomLevel + this.zoom * 0.75 * delta.seconds));
+  override update(delta: Seconds): void {
+    this.camera.move(this.moveX * 420 * delta, this.moveY * 420 * delta);
+    this.camera.setZoom(Math.max(0.25, this.camera.zoomLevel + this.zoom * 0.75 * delta));
   }
 
   override draw(context: RenderingContext): void {

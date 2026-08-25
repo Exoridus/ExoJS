@@ -4,6 +4,7 @@
  * HitTestLayer tests (0.7.5).
  */
 import { Signal } from '#core/Signal';
+import { Time } from '#core/units';
 import { HitTestLayer } from '#debug/HitTestLayer';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -343,7 +344,7 @@ describe('HitTestLayer', () => {
 
   test('update() does not throw', () => {
     const layer = new HitTestLayer(makeApp());
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     expect(() => layer.update(fakeTime)).not.toThrow();
   });

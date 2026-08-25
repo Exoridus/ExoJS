@@ -27,9 +27,9 @@ class GraphicsPrimitivesScene extends Scene {
   }
   update(delta) {
     const app = this.app;
-    this.sceneRoot.rotate(delta.seconds * 9);
-    this.star.rotate(delta.seconds * 60);
-    this.circle.y = Math.sin(app.activeTime.seconds * 2) * 18;
+    this.sceneRoot.rotate(delta * 9);
+    this.star.rotate(delta * 60);
+    this.circle.y = Math.sin(app.activeSeconds * 2) * 18;
   }
   draw(context) {
     context.render(this.sceneRoot);

@@ -45,7 +45,7 @@ class LowBandCameraShakeScene extends Scene {
     const amplitude = low > 0.04 ? low * 28 : 0;
     this.view.shake(amplitude, 90, { decay: true, frequency: 22 });
     // Advance the shake oscillation (the View only animates when updated).
-    this.view.update(delta.milliseconds);
+    this.view.update(delta * 1000);
     if (this.musicVoice) {
       this.hud.setStatus(`bass ${(low * 100) | 0}%`);
     }

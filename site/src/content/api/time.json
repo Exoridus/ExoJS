@@ -1,16 +1,16 @@
 {
   "title": "Time",
-  "description": "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime). Arithmetic mutates in place, so an instance reached by more than one owner is a shared mutable value. The canonical constants (Time.zero, Time.oneMillisecond, Time.oneSecond, Time.oneMinute, Time.oneHour) are process-wide and therefore typed as Duration: the mutators are not reachable on them. The TimeInterval multipliers used by the `factor` parameter (`Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`) are plain numbers.",
+  "description": "Constructors for the engine's time units. Grouped rather than exported loose because `seconds`, `minutes` and `hours` are names application code is likely to want for its own variables. ```ts const cooldown = new Timer(Time.seconds(1.5), true); scene.onFixedFrame.add(step => body.x += speed * step); ```",
   "symbol": "Time",
-  "kind": "class",
+  "kind": "namespace",
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 33,
+  "memberCount": 6,
   "counts": {
-    "constructors": 1,
-    "methods": 19,
-    "properties": 13,
+    "constructors": 0,
+    "methods": 0,
+    "properties": 6,
     "events": 0
   },
   "sections": [
@@ -19,1029 +19,11 @@
       "title": "Import",
       "members": [],
       "paragraphs": [
-        "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime).",
-        "Arithmetic mutates in place, so an instance reached by more than one owner is a shared mutable value. The canonical constants (Time.zero, Time.oneMillisecond, Time.oneSecond, Time.oneMinute, Time.oneHour) are process-wide and therefore typed as Duration: the mutators are not reachable on them.",
-        "The TimeInterval multipliers used by the `factor` parameter (`Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`) are plain numbers."
+        "Constructors for the engine's time units.",
+        "Grouped rather than exported loose because `seconds`, `minutes` and `hours` are names application code is likely to want for its own variables.",
+        "```ts const cooldown = new Timer(Time.seconds(1.5), true); scene.onFixedFrame.add(step => body.x += speed * step); ```"
       ],
       "importLine": "import { Time } from '@codexo/exojs'",
-      "sourceLink": null
-    },
-    {
-      "id": "constructors",
-      "title": "Constructors",
-      "members": [
-        {
-          "name": "new",
-          "signature": "new(time: number, factor: TimeInterval): Time",
-          "signatureTokens": [
-            {
-              "text": "new",
-              "kind": "keyword"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "time",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "factor",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TimeInterval",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "time",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "factor",
-              "type": "TimeInterval",
-              "optional": false
-            }
-          ],
-          "returnType": "Time",
-          "description": ""
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
-      "sourceLink": null
-    },
-    {
-      "id": "methods",
-      "title": "Methods",
-      "members": [
-        {
-          "name": "add",
-          "signature": "add(value: number, factor: TimeInterval): this",
-          "signatureTokens": [
-            {
-              "text": "add",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "value",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "factor",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TimeInterval",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "value",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "factor",
-              "type": "TimeInterval",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Add value * factor milliseconds in place. Mutates this instance."
-        },
-        {
-          "name": "addTime",
-          "signature": "addTime(time: Time): this",
-          "signatureTokens": [
-            {
-              "text": "addTime",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "time",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "time",
-              "type": "Time",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Add another Time value in place. Mutates this instance."
-        },
-        {
-          "name": "clone",
-          "signature": "clone(): this",
-          "signatureTokens": [
-            {
-              "text": "clone",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "copy",
-          "signature": "copy(time: Duration): this",
-          "signatureTokens": [
-            {
-              "text": "copy",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "time",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Duration",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "time",
-              "type": "Duration",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "destroy",
-          "signature": "destroy(): void",
-          "signatureTokens": [
-            {
-              "text": "destroy",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "void",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": "void",
-          "description": ""
-        },
-        {
-          "name": "equals",
-          "signature": "equals(__namedParameters: Partial<Duration>): boolean",
-          "signatureTokens": [
-            {
-              "text": "equals",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "__namedParameters",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Partial",
-              "kind": "type"
-            },
-            {
-              "text": "<",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Duration",
-              "kind": "type"
-            },
-            {
-              "text": ">",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "__namedParameters",
-              "type": "Partial<Duration>",
-              "optional": false
-            }
-          ],
-          "returnType": "boolean",
-          "description": ""
-        },
-        {
-          "name": "greaterThan",
-          "signature": "greaterThan(time: Duration): boolean",
-          "signatureTokens": [
-            {
-              "text": "greaterThan",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "time",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Duration",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "time",
-              "type": "Duration",
-              "optional": false
-            }
-          ],
-          "returnType": "boolean",
-          "description": ""
-        },
-        {
-          "name": "lessThan",
-          "signature": "lessThan(time: Duration): boolean",
-          "signatureTokens": [
-            {
-              "text": "lessThan",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "time",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Duration",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "boolean",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "time",
-              "type": "Duration",
-              "optional": false
-            }
-          ],
-          "returnType": "boolean",
-          "description": ""
-        },
-        {
-          "name": "set",
-          "signature": "set(time: number, factor: TimeInterval): this",
-          "signatureTokens": [
-            {
-              "text": "set",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "time",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "factor",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TimeInterval",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "time",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "factor",
-              "type": "TimeInterval",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Replace the stored duration with time * factor milliseconds. Pair with Time.seconds, Time.minutes, or Time.hours as the factor to construct from non-millisecond units."
-        },
-        {
-          "name": "setHours",
-          "signature": "setHours(hours: number): this",
-          "signatureTokens": [
-            {
-              "text": "setHours",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "hours",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "hours",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "setMilliseconds",
-          "signature": "setMilliseconds(milliseconds: number): this",
-          "signatureTokens": [
-            {
-              "text": "setMilliseconds",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "milliseconds",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "milliseconds",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "setMinutes",
-          "signature": "setMinutes(minutes: number): this",
-          "signatureTokens": [
-            {
-              "text": "setMinutes",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "minutes",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "minutes",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "setSeconds",
-          "signature": "setSeconds(seconds: number): this",
-          "signatureTokens": [
-            {
-              "text": "setSeconds",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "seconds",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "seconds",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": ""
-        },
-        {
-          "name": "subtract",
-          "signature": "subtract(value: number, factor: TimeInterval): this",
-          "signatureTokens": [
-            {
-              "text": "subtract",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "value",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ", ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "factor",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "TimeInterval",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "value",
-              "type": "number",
-              "optional": false
-            },
-            {
-              "name": "factor",
-              "type": "TimeInterval",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Subtract value * factor milliseconds in place. Mutates this instance."
-        },
-        {
-          "name": "subtractTime",
-          "signature": "subtractTime(time: Time): this",
-          "signatureTokens": [
-            {
-              "text": "subtractTime",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "time",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "this",
-              "kind": "keyword"
-            }
-          ],
-          "params": [
-            {
-              "name": "time",
-              "type": "Time",
-              "optional": false
-            }
-          ],
-          "returnType": "this",
-          "description": "Subtract another Time value in place. Mutates this instance."
-        },
-        {
-          "name": "fromHours",
-          "signature": "fromHours(value: number): Time",
-          "signatureTokens": [
-            {
-              "text": "fromHours",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "value",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "value",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "Time",
-          "description": "Construct a Time from an hour count."
-        },
-        {
-          "name": "fromMilliseconds",
-          "signature": "fromMilliseconds(value: number): Time",
-          "signatureTokens": [
-            {
-              "text": "fromMilliseconds",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "value",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "value",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "Time",
-          "description": "Construct a Time from a millisecond count."
-        },
-        {
-          "name": "fromMinutes",
-          "signature": "fromMinutes(value: number): Time",
-          "signatureTokens": [
-            {
-              "text": "fromMinutes",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "value",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "value",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "Time",
-          "description": "Construct a Time from a minute count."
-        },
-        {
-          "name": "fromSeconds",
-          "signature": "fromSeconds(value: number): Time",
-          "signatureTokens": [
-            {
-              "text": "fromSeconds",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "value",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            }
-          ],
-          "params": [
-            {
-              "name": "value",
-              "type": "number",
-              "optional": false
-            }
-          ],
-          "returnType": "Time",
-          "description": "Construct a Time from a second count."
-        }
-      ],
-      "paragraphs": [],
-      "importLine": null,
       "sourceLink": null
     },
     {
@@ -1050,7 +32,7 @@
       "members": [
         {
           "name": "hours",
-          "signature": "hours: TimeInterval",
+          "signature": "hours: (value: number) => Seconds",
           "signatureTokens": [
             {
               "text": "hours",
@@ -1061,17 +43,37 @@
               "kind": "punctuation"
             },
             {
-              "text": "TimeInterval",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "An hour count as the equivalent Seconds."
         },
         {
           "name": "milliseconds",
-          "signature": "milliseconds: TimeInterval",
+          "signature": "milliseconds: (value: number) => Milliseconds",
           "signatureTokens": [
             {
               "text": "milliseconds",
@@ -1082,17 +84,37 @@
               "kind": "punctuation"
             },
             {
-              "text": "TimeInterval",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Milliseconds",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Label a plain number as Milliseconds."
         },
         {
           "name": "minutes",
-          "signature": "minutes: TimeInterval",
+          "signature": "minutes: (value: number) => Seconds",
           "signatureTokens": [
             {
               "text": "minutes",
@@ -1103,101 +125,37 @@
               "kind": "punctuation"
             },
             {
-              "text": "TimeInterval",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "oneHour",
-          "signature": "oneHour: Duration",
-          "signatureTokens": [
+              "text": "(",
+              "kind": "punctuation"
+            },
             {
-              "text": "oneHour",
-              "kind": "name"
+              "text": "value",
+              "kind": "param"
             },
             {
               "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Canonical one-hour duration. Shared process-wide; copy it to obtain a duration you own."
-        },
-        {
-          "name": "oneMillisecond",
-          "signature": "oneMillisecond: Duration",
-          "signatureTokens": [
-            {
-              "text": "oneMillisecond",
-              "kind": "name"
+              "text": "number",
+              "kind": "keyword"
             },
             {
-              "text": ": ",
+              "text": ") => ",
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "Seconds",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Canonical one-millisecond duration. Shared process-wide; copy it to obtain a duration you own."
-        },
-        {
-          "name": "oneMinute",
-          "signature": "oneMinute: Duration",
-          "signatureTokens": [
-            {
-              "text": "oneMinute",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Duration",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Canonical one-minute duration. Shared process-wide; copy it to obtain a duration you own."
-        },
-        {
-          "name": "oneSecond",
-          "signature": "oneSecond: Duration",
-          "signatureTokens": [
-            {
-              "text": "oneSecond",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Duration",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": "Canonical one-second duration. Shared process-wide; copy it to obtain a duration you own."
+          "description": "A minute count as the equivalent Seconds."
         },
         {
           "name": "seconds",
-          "signature": "seconds: TimeInterval",
+          "signature": "seconds: (value: number) => Seconds",
           "signatureTokens": [
             {
               "text": "seconds",
@@ -1208,20 +166,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "TimeInterval",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "number",
+              "kind": "keyword"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
+          "description": "Label a plain number as Seconds."
         },
         {
-          "name": "zero",
-          "signature": "zero: Duration",
+          "name": "toMilliseconds",
+          "signature": "toMilliseconds: (value: Seconds) => Milliseconds",
           "signatureTokens": [
             {
-              "text": "zero",
+              "text": "toMilliseconds",
               "kind": "name"
             },
             {
@@ -1229,20 +207,40 @@
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "(",
+              "kind": "punctuation"
+            },
+            {
+              "text": "value",
+              "kind": "param"
+            },
+            {
+              "text": ": ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Seconds",
+              "kind": "type"
+            },
+            {
+              "text": ") => ",
+              "kind": "punctuation"
+            },
+            {
+              "text": "Milliseconds",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Canonical zero duration. Shared process-wide; copy it to obtain a duration you own."
+          "description": "Convert a second length to Milliseconds."
         },
         {
-          "name": "hours",
-          "signature": "hours: number",
+          "name": "toSeconds",
+          "signature": "toSeconds: (value: Milliseconds) => Seconds",
           "signatureTokens": [
             {
-              "text": "hours",
+              "text": "toSeconds",
               "kind": "name"
             },
             {
@@ -1250,76 +248,33 @@
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "milliseconds",
-          "signature": "milliseconds: number",
-          "signatureTokens": [
+              "text": "(",
+              "kind": "punctuation"
+            },
             {
-              "text": "milliseconds",
-              "kind": "name"
+              "text": "value",
+              "kind": "param"
             },
             {
               "text": ": ",
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "minutes",
-          "signature": "minutes: number",
-          "signatureTokens": [
-            {
-              "text": "minutes",
-              "kind": "name"
+              "text": "Milliseconds",
+              "kind": "type"
             },
             {
-              "text": ": ",
+              "text": ") => ",
               "kind": "punctuation"
             },
             {
-              "text": "number",
-              "kind": "keyword"
+              "text": "Seconds",
+              "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": ""
-        },
-        {
-          "name": "seconds",
-          "signature": "seconds: number",
-          "signatureTokens": [
-            {
-              "text": "seconds",
-              "kind": "name"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "number",
-              "kind": "keyword"
-            }
-          ],
-          "params": [],
-          "returnType": null,
-          "description": ""
+          "description": "Convert a millisecond length to Seconds."
         }
       ],
       "paragraphs": [],
@@ -1333,11 +288,11 @@
       "paragraphs": [],
       "importLine": null,
       "sourceLink": {
-        "label": "src/core/Time.ts",
-        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Time.ts"
+        "label": "src/core/units.ts",
+        "href": "https://github.com/Exoridus/ExoJS/blob/main/src/core/units.ts"
       }
     }
   ],
-  "sourcePath": "src/core/Time.ts",
-  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/Time.ts"
+  "sourcePath": "src/core/units.ts",
+  "sourceUrl": "https://github.com/Exoridus/ExoJS/blob/main/src/core/units.ts"
 }

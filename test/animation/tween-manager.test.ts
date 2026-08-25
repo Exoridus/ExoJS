@@ -1,10 +1,10 @@
 ﻿import { Tween } from '#animation/Tween';
 import { TweenManager } from '#animation/TweenManager';
 import { TweenState } from '#animation/types';
-import { Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 
 /** TweenManager.update() takes a Time; tests express their deltas in seconds. */
-const sec = (seconds: number): Time => new Time(seconds, Time.seconds);
+const sec = (seconds: number): Seconds => Time.seconds(seconds);
 const makeTarget = () => ({ x: 0, y: 0 });
 /** Number of tweens the manager currently holds a reference to. */
 const trackedCount = (manager: TweenManager): number => (manager as unknown as { _tweens: unknown[] })._tweens.length;

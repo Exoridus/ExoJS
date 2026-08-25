@@ -1,4 +1,15 @@
-import { Application, Asset, BlendModes, Color, FixedResolutionCanvasSizing, type RenderingContext, ScaleModes, Scene, Sprite, type Time } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  BlendModes,
+  Color,
+  FixedResolutionCanvasSizing,
+  type RenderingContext,
+  ScaleModes,
+  Scene,
+  Sprite,
+  type Seconds,
+} from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
@@ -102,7 +113,7 @@ class BlendmodesScene extends Scene {
     this.hud.setStatus(`${name}  (${this.index + 1}/${BLEND_MODES.length})`);
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
     const offset = (Math.cos(this.ticker * 1.4) * 0.5 + 0.5) * (width * 0.22);
@@ -110,7 +121,7 @@ class BlendmodesScene extends Scene {
     this.left.setPosition(width / 2 - offset, height / 2);
     this.right.setPosition(width / 2 + offset, height / 2);
 
-    this.ticker += delta.seconds;
+    this.ticker += delta;
   }
 
   override draw(context: RenderingContext): void {

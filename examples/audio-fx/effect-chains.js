@@ -298,7 +298,7 @@ class EffectChainsScene extends Scene {
     this.flash = 1;
   }
   update(time) {
-    this.flash = Math.max(0, this.flash - time.seconds * 2.5);
+    this.flash = Math.max(0, this.flash - time * 2.5);
     this.tapPrompt.visible = this.app.audio.locked;
     const chain = CHAINS[this.index];
     if (this.app.audio.locked) {

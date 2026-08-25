@@ -28,7 +28,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { Texture } from '#rendering/texture/Texture';
@@ -311,7 +311,7 @@ describe('WebGPU particle single-pass frame', () => {
         return;
       }
 
-      gpuSystem.update(Time.zero.clone().set(16));
+      gpuSystem.update(Time.toSeconds(Time.milliseconds(16)));
 
       expect(gpuSystem.gpuMode).toBe(true);
 

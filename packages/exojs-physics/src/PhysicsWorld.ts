@@ -1,4 +1,4 @@
-import type { AabbLike, Duration, PointLike, SceneNode } from '@codexo/exojs';
+import type { AabbLike, PointLike, SceneNode, Seconds } from '@codexo/exojs';
 import { logger, Signal, Vector } from '@codexo/exojs';
 
 import { aabbOverlap, createAabb } from './Aabb';
@@ -670,7 +670,7 @@ export class PhysicsWorld implements BodyOwner {
    * simulation stays deterministic but runs at the wrong wall-clock speed
    * relative to real time.
    */
-  public fixedUpdate(_step: Duration): void {
+  public fixedUpdate(_step: Seconds): void {
     this._assertAlive();
 
     const subStepCount = this.subStepCount;
@@ -695,7 +695,7 @@ export class PhysicsWorld implements BodyOwner {
    * to be drawn. Only does work while {@link interpolation} is on - otherwise
    * {@link fixedUpdate} has already snapped them to the latest fixed state.
    */
-  public update(_delta: Duration): void {
+  public update(_delta: Seconds): void {
     this._assertAlive();
 
     if (this.interpolation) {

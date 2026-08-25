@@ -46,14 +46,14 @@ class MultiTextureStressScene extends Scene {
   }
   update(delta) {
     const app = this.app;
-    const time = app.activeTime.seconds;
+    const time = app.activeSeconds;
     this.spriteLayer.rotation = Math.sin(time * 0.45) * 5;
     for (const entry of this.sprites) {
       const localPhase = time + entry.phase;
       const scale = entry.baseScale + Math.sin(localPhase * 1.9) * 0.09;
       entry.sprite.x = entry.offsetX + Math.sin(localPhase * 1.35) * entry.driftX;
       entry.sprite.y = entry.offsetY + Math.cos(localPhase * 1.55) * entry.driftY;
-      entry.sprite.rotation += delta.seconds * entry.rotationSpeed;
+      entry.sprite.rotation += delta * entry.rotationSpeed;
       entry.sprite.setScale(scale);
     }
   }

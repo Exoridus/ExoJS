@@ -11,7 +11,7 @@ import {
   Keyboard,
   type RenderingContext,
   Scene,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
@@ -117,7 +117,7 @@ class KeyRebindingScene extends Scene {
     this.hud.setHint(this.rebindRequested ? 'Press any key to assign jump…' : 'Binding restored from localStorage on reload.');
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     // Arm on the RELEASE of J, so the J keydown itself is not captured as
     // the new binding in the same frame.
     if (this.controls.rebind.released && !this.rebindRequested) {
@@ -130,8 +130,8 @@ class KeyRebindingScene extends Scene {
     }
 
     // Simple gravity so the rebound jump is visible.
-    this.jumpVelocity = Math.min(900, this.jumpVelocity + 1800 * delta.seconds);
-    this.heroY += this.jumpVelocity * delta.seconds;
+    this.jumpVelocity = Math.min(900, this.jumpVelocity + 1800 * delta);
+    this.heroY += this.jumpVelocity * delta;
 
     if (this.heroY > this.groundY) {
       this.heroY = this.groundY;

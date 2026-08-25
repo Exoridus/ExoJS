@@ -1,4 +1,4 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 
 class GraphicsPrimitivesScene extends Scene {
   private sceneRoot!: Container;
@@ -33,11 +33,11 @@ class GraphicsPrimitivesScene extends Scene {
     this.sceneRoot.addChild(this.panel, this.circle, this.diamond, this.star);
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
-    this.sceneRoot.rotate(delta.seconds * 9);
-    this.star.rotate(delta.seconds * 60);
-    this.circle.y = Math.sin(app.activeTime.seconds * 2) * 18;
+    this.sceneRoot.rotate(delta * 9);
+    this.star.rotate(delta * 60);
+    this.circle.y = Math.sin(app.activeSeconds * 2) * 18;
   }
 
   override draw(context: RenderingContext): void {

@@ -9,7 +9,7 @@ import { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneTransition, type SceneTransitionEnvironment, type SceneTransitionRequirements, type SceneTransitionSession } from '#core/SceneTransition';
 import { ConcurrentSceneNavigationError } from '#core/SceneTypes';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 
 vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   WebGl2Backend: vi.fn().mockImplementation(function () {
@@ -313,7 +313,7 @@ describe('Application.stop() unloads the active scene regardless of an in-flight
       transition.environment?.commit();
       // `_checkCommitRequested` runs the commit off the session's own
       // update()/render() ticks; drive one by hand.
-      app.scenes._updateTransition(new Time(16));
+      app.scenes._updateTransition(Time.toSeconds(Time.milliseconds(16)));
       await settle();
 
       expect(app.scenes.currentScene).toBeInstanceOf(GameScene);

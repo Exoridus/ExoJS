@@ -9,7 +9,7 @@ import {
   Scene,
   Sprite,
   Texture,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
@@ -64,8 +64,8 @@ class RetainedContainerScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
-    this.elapsed += delta.seconds;
+  override update(delta: Seconds): void {
+    this.elapsed += delta;
   }
 
   override draw(context: RenderingContext): void {

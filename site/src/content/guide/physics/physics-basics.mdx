@@ -164,7 +164,7 @@ constant `delta` — exactly what a stable simulation wants. Leave camera, UI an
 visual work in `update`; put `world.step(...)` in `fixedUpdate`:
 
 ```ts
-import { Scene, type Time } from '@codexo/exojs';
+import { Scene, type Seconds } from '@codexo/exojs';
 import { BoxShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 
 class GameScene extends Scene {
@@ -180,8 +180,8 @@ class GameScene extends Scene {
     );
   }
 
-  public override fixedUpdate(delta: Time): void {
-    this.world.step(delta.seconds);
+  public override fixedUpdate(delta: Seconds): void {
+    this.world.step(delta);
   }
 }
 ```
@@ -195,7 +195,7 @@ const app = new Application({ fixedTimeStep: 1 / 60 });
 ```
 
 <Callout type="hint" title="Step in `fixedUpdate`, not `update`">
-Stepping inside `update` works — pass `delta.seconds` the same way — but `fixedUpdate` runs with a constant delta, which keeps the simulation deterministic regardless of display refresh rate.
+Stepping inside `update` works — pass `delta` the same way — but `fixedUpdate` runs with a constant delta, which keeps the simulation deterministic regardless of display refresh rate.
 </Callout>
 
 ### Fixed timestep vs. the variable render loop
@@ -210,7 +210,7 @@ fraction into the next call. That means both of these are correct:
   fixed-timestep accumulator already turns the browser's variable
   `requestAnimationFrame` delta into a constant-rate hook, so `world.step`
   typically consumes exactly one sub-step per call here.
-- **`update(delta)`** — passing the *raw*, variable per-frame `delta.seconds`
+- **`update(delta)`** — passing the *raw*, variable per-frame `delta`
   straight from the render loop also works: `world.step`'s own accumulator
   still produces the right number of fixed sub-steps (`0`, `1`, or several on
   a slow frame), so the simulation stays frame-rate independent either way.
@@ -219,11 +219,11 @@ fraction into the next call. That means both of these are correct:
   you; you only need to feed it a delta, fixed or not.
 
 ```ts no-check
-public override update(delta: Time): void {
+public override update(delta: Seconds): void {
   // Also valid: world.step owns its own accumulator, so a raw variable delta
   // from requestAnimationFrame still yields deterministic, frame-rate
   // independent physics — you don't have to build your own accumulator.
-  this.world.step(delta.seconds);
+  this.world.step(delta);
 }
 ```
 
@@ -339,7 +339,7 @@ Putting it together — a static floor, a dynamic ball bound to a sprite, steppe
 `fixedUpdate`:
 
 ```ts
-import { type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
 import { BoxShape, CircleShape, PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
 
 class DropScene extends Scene {
@@ -372,8 +372,8 @@ class DropScene extends Scene {
     });
   }
 
-  public override fixedUpdate(delta: Time): void {
-    this.world.step(delta.seconds);
+  public override fixedUpdate(delta: Seconds): void {
+    this.world.step(delta);
   }
 
   public override draw(context: RenderingContext): void {

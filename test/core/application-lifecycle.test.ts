@@ -296,9 +296,9 @@ describe('Application lifecycle / getters / sizing', () => {
       const { Application } = await loadHarness();
       const app = new Application({ backend: { type: 'webgl2' } });
 
-      expect(app.startupTime.seconds).toBeGreaterThanOrEqual(0);
-      expect(app.activeTime.seconds).toBe(0);
-      expect(app.frameTime.seconds).toBe(0);
+      expect(app.startupSeconds).toBeGreaterThanOrEqual(0);
+      expect(app.activeSeconds).toBe(0);
+      expect(app.frameSeconds).toBe(0);
       expect(app.frameCount).toBe(0);
       expect(app.frameAlpha).toBe(0);
       expect(app.fixedTimeStep).toBeCloseTo(1 / 60, 5);

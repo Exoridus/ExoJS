@@ -178,7 +178,7 @@ class TileChunksAndBandsScene extends Scene {
   update(delta) {
     if (this.moveX !== 0 || this.moveY !== 0) {
       const length = Math.hypot(this.moveX, this.moveY) || 1;
-      this.explorer.move((this.moveX / length) * MOVE_SPEED * delta.seconds, (this.moveY / length) * MOVE_SPEED * delta.seconds);
+      this.explorer.move((this.moveX / length) * MOVE_SPEED * delta, (this.moveY / length) * MOVE_SPEED * delta);
       this.explorer.x = Math.min(Math.max(this.explorer.x, 0), MAP_WIDTH);
       this.explorer.y = Math.min(Math.max(this.explorer.y, 0), MAP_HEIGHT);
     }

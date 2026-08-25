@@ -3,7 +3,7 @@ import { Scene } from '#core/Scene';
 import { SceneScope } from '#core/SceneScope';
 import { Signal } from '#core/Signal';
 import type { System } from '#core/System';
-import { Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 
 // Scene-bound system registry: `scene.systems` is an ordinary SystemRegistry
 // owned by the scene's SceneScope (see system-registry.test.ts for its full
@@ -25,7 +25,7 @@ class MockSystem {
     private readonly _name?: string,
   ) {}
 
-  public update(_delta: Time): void {
+  public update(_delta: Seconds): void {
     this.updates++;
 
     if (this._log && this._name !== undefined) {
@@ -61,7 +61,7 @@ const makeAttachedScene = (): { scene: Scene; scope: SceneScope<void> } => {
 // drives `scene.systems` in practice.
 const tick = (scene: Scene): void => {
   scene.systems._beginFrame();
-  scene.systems._update(new Time(16));
+  scene.systems._update(Time.toSeconds(Time.milliseconds(16)));
   scene.systems._endFrame();
 };
 

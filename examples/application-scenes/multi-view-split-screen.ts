@@ -8,7 +8,7 @@ import {
   Scene,
   Sprite,
   Texture,
-  type Time,
+  type Seconds,
   View,
 } from '@codexo/exojs';
 
@@ -102,8 +102,8 @@ class SplitScreenScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
-    const speed = 300 * delta.seconds;
+  override update(delta: Seconds): void {
+    const speed = 300 * delta;
 
     this.leftPlayer.move((this.move.d - this.move.a) * speed, (this.move.s - this.move.w) * speed);
     this.rightPlayer.move((this.move.right - this.move.left) * speed, (this.move.down - this.move.up) * speed);

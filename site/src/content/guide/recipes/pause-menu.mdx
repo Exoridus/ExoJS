@@ -21,7 +21,7 @@ One scene, one UI layer. The pause overlay (a `Panel` + `Label`) lives on `scene
 ```ts
 import {
     Application, BlurFilter, Color, Keyboard, Label, Panel,
-    type RenderingContext, Scene, SceneAvailability, Sprite, type Time,
+    type RenderingContext, Scene, SceneAvailability, Sprite, type Seconds,
 } from '@codexo/exojs';
 
 class GameScene extends Scene {
@@ -57,7 +57,7 @@ class GameScene extends Scene {
         this.inputs.onTrigger(Keyboard.Escape, () => this.togglePause(), { when: SceneAvailability.Always });
     }
 
-    override update(_delta: Time): void {
+    override update(_delta: Seconds): void {
         // Not called while paused — the director skips update() + systems.
         // ... normal game logic ...
     }

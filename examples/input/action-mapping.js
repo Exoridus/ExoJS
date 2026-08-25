@@ -61,9 +61,9 @@ class ActionMappingScene extends Scene {
     if (this.actions.moveX !== 0 || this.actions.moveY !== 0) {
       this.lastDevice = Math.abs(this.stick.x) > Math.abs(keyX) || Math.abs(this.stick.y) > Math.abs(keyY) ? 'gamepad' : 'keyboard';
     }
-    this.sprite.move(this.actions.moveX * 260 * delta.seconds, this.actions.moveY * 260 * delta.seconds);
-    this.sprite.move(0, this.jumpImpulse * delta.seconds);
-    this.jumpImpulse = Math.min(0, this.jumpImpulse + 800 * delta.seconds);
+    this.sprite.move(this.actions.moveX * 260 * delta, this.actions.moveY * 260 * delta);
+    this.sprite.move(0, this.jumpImpulse * delta);
+    this.jumpImpulse = Math.min(0, this.jumpImpulse + 800 * delta);
     this.hud.setStatus(`Move ${this.actions.moveX.toFixed(2)}, ${this.actions.moveY.toFixed(2)} · Jump ${this.actions.jump ? 'active' : 'idle'}`);
     this.hud.setHint(`Driven by: ${this.lastDevice}`);
   }

@@ -1,7 +1,7 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { RenderTexture } from '#rendering/texture/RenderTexture';
 
-import type { Duration } from './Time';
+import type { Seconds } from './units';
 
 /**
  * What kind of navigation a {@link SceneTransitionSession} is running for.
@@ -80,7 +80,7 @@ export interface SceneTransitionFrame {
  */
 export interface SceneTransitionSession {
   /** Advance time-based progress. Called once per frame. */
-  update(delta: Duration): void;
+  update(delta: Seconds): void;
   /** Draw this transition session's own visual output - not the scene itself; it does not share the render-surface the scene draws to. */
   render(context: RenderingContext, frame: SceneTransitionFrame): void;
   /** `true` once this transition session has fully finished. Must never be `true` before {@link SceneTransitionEnvironment.committed} is also `true` - see {@link SceneTransitionLifecycleError}. */

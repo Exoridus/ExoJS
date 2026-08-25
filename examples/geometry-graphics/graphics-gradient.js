@@ -54,9 +54,9 @@ class GraphicsGradientScene extends Scene {
   }
   update(delta) {
     const app = this.app;
-    this.sceneRoot.rotate(delta.seconds * 8);
-    this.badge.rotate(delta.seconds * 60);
-    this.orb.setScale(1 + Math.sin(app.activeTime.seconds * 2) * 0.06);
+    this.sceneRoot.rotate(delta * 8);
+    this.badge.rotate(delta * 60);
+    this.orb.setScale(1 + Math.sin(app.activeSeconds * 2) * 0.06);
   }
   draw(context) {
     context.render(this.sceneRoot);

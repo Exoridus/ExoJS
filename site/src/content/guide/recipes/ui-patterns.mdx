@@ -38,10 +38,10 @@ init() {
     this.done = false;
 }
 
-update(delta: Time) {
+update(delta: Seconds) {
     if (this.done) return;
 
-    this.timer += delta.seconds;
+    this.timer += delta;
     const line = this.lines[this.lineIndex];
 
     while (this.timer > 0.035 && this.chars < line.length) {

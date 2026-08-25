@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sound, Sprite, Text, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sound, Sprite, Text, type Seconds } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 interface DialogLine {
@@ -118,10 +118,10 @@ class DialogSystemScene extends Scene {
     this.choicePrompt.visible = !visible && this.choicePrompt.text.length > 0;
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     if (!this.done && !this.awaitingChoice) {
-      this.timer += delta.seconds;
+      this.timer += delta;
       while (this.timer > 0.035 && this.chars < lines[this.lineIndex].text.length) {
         this.timer -= 0.035;
         this.chars++;

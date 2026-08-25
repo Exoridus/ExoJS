@@ -9,7 +9,7 @@ import {
   type SceneTransitionPhaseRequirements,
 } from '#core/PhasedSceneTransition';
 import type { SceneTransitionContext, SceneTransitionEnvironment, SceneTransitionFrame } from '#core/SceneTransition';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 
 const fakeContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };
 
@@ -140,12 +140,12 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
 
     expect(session.done).toBe(false);
 
-    session.update(new Time(50));
+    session.update(Time.toSeconds(Time.milliseconds(50)));
     session.render(fakeRenderingContext, fakeFrame);
     expect(environment.commitCalls).toBe(0);
     expect(phase.calls.at(-1)).toMatchObject({ phase: 'exit', progress: 0.5, presence: 0.5 });
 
-    session.update(new Time(60)); // elapsed clamps to 100 — exit phase finishes, commit() requested
+    session.update(Time.toSeconds(Time.milliseconds(60))); // elapsed clamps to 100 — exit phase finishes, commit() requested
     expect(environment.commitCalls).toBe(1);
     session.render(fakeRenderingContext, fakeFrame); // still holding at the exit end-state
     expect(phase.calls.at(-1)).toMatchObject({ phase: 'exit', progress: 1, presence: 0 });
@@ -154,11 +154,11 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
     // environment.committed flipped true synchronously inside this fake's commit() call, but the
     // session only observes it on the *next* update() - the switch is never processed reentrantly
     // from inside the callback that requested it.
-    session.update(new Time(0));
+    session.update(Time.toSeconds(Time.milliseconds(0)));
     session.render(fakeRenderingContext, fakeFrame);
     expect(phase.calls.at(-1)).toMatchObject({ phase: 'enter', progress: 0, presence: 0 });
 
-    session.update(new Time(100));
+    session.update(Time.toSeconds(Time.milliseconds(100)));
     expect(session.done).toBe(true);
     session.render(fakeRenderingContext, fakeFrame);
     expect(phase.calls.at(-1)).toMatchObject({ phase: 'enter', progress: 1, presence: 1 });
@@ -171,7 +171,7 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
     const session = phase.beginSession(new TestEnvironment());
 
     expect(session.placement).toBe('scene');
-    session.update(new Time(10));
+    session.update(Time.toSeconds(Time.milliseconds(10)));
     expect(session.placement).toBe('scene');
   });
 
@@ -180,10 +180,10 @@ describe('PhasedSceneTransition — single-instance session driving', () => {
     const environment = new TestEnvironment();
     const session = phase.beginSession(environment);
 
-    session.update(new Time(0)); // exit duration 0 — finishes immediately, requests commit
+    session.update(Time.toSeconds(Time.milliseconds(0))); // exit duration 0 — finishes immediately, requests commit
     expect(environment.commitCalls).toBe(1);
 
-    session.update(new Time(0)); // observes committed, switches to enter, which also finishes immediately
+    session.update(Time.toSeconds(Time.milliseconds(0))); // observes committed, switches to enter, which also finishes immediately
     expect(session.done).toBe(true);
   });
 });
@@ -216,11 +216,11 @@ describe('composePhasedSceneTransition', () => {
     const composed = composePhasedSceneTransition(exitPhase, enterPhase);
     const session = composed.beginSession(environment);
 
-    session.update(new Time(10));
+    session.update(Time.toSeconds(Time.milliseconds(10)));
     session.render(fakeRenderingContext, fakeFrame);
-    session.update(new Time(0)); // observes committed
+    session.update(Time.toSeconds(Time.milliseconds(0))); // observes committed
     session.render(fakeRenderingContext, fakeFrame);
-    session.update(new Time(10));
+    session.update(Time.toSeconds(Time.milliseconds(10)));
     session.render(fakeRenderingContext, fakeFrame);
 
     expect(session.done).toBe(true);
@@ -237,9 +237,9 @@ describe('composePhasedSceneTransition', () => {
     const session = composed.beginSession(new TestEnvironment());
 
     expect(session.placement).toBe('screen');
-    session.update(new Time(10)); // exit finishes, commit requested — still holding, still exit's placement
+    session.update(Time.toSeconds(Time.milliseconds(10))); // exit finishes, commit requested — still holding, still exit's placement
     expect(session.placement).toBe('screen');
-    session.update(new Time(0)); // switches to enter
+    session.update(Time.toSeconds(Time.milliseconds(0))); // switches to enter
     expect(session.placement).toBe('scene');
   });
 });

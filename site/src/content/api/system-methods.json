@@ -82,7 +82,7 @@
         },
         {
           "name": "fixedUpdate",
-          "signature": "fixedUpdate?(step: Duration): Synchronous",
+          "signature": "fixedUpdate?(step: Seconds): Synchronous",
           "signatureTokens": [
             {
               "text": "fixedUpdate",
@@ -105,7 +105,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "Seconds",
               "kind": "type"
             },
             {
@@ -124,7 +124,7 @@
           "params": [
             {
               "name": "step",
-              "type": "Duration",
+              "type": "Seconds",
               "optional": false
             }
           ],
@@ -133,7 +133,7 @@
         },
         {
           "name": "preUpdate",
-          "signature": "preUpdate?(delta: Duration): Synchronous",
+          "signature": "preUpdate?(delta: Seconds): Synchronous",
           "signatureTokens": [
             {
               "text": "preUpdate",
@@ -156,7 +156,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "Seconds",
               "kind": "type"
             },
             {
@@ -175,7 +175,7 @@
           "params": [
             {
               "name": "delta",
-              "type": "Duration",
+              "type": "Seconds",
               "optional": false
             }
           ],
@@ -184,7 +184,7 @@
         },
         {
           "name": "update",
-          "signature": "update?(delta: Duration): Synchronous",
+          "signature": "update?(delta: Seconds): Synchronous",
           "signatureTokens": [
             {
               "text": "update",
@@ -207,7 +207,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "Seconds",
               "kind": "type"
             },
             {
@@ -226,7 +226,7 @@
           "params": [
             {
               "name": "delta",
-              "type": "Duration",
+              "type": "Seconds",
               "optional": false
             }
           ],

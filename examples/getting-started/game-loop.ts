@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
 
 class GameLoopScene extends Scene {
   private sprite!: Sprite;
@@ -12,8 +12,8 @@ class GameLoopScene extends Scene {
     this.sprite.setPosition(width / 2, height / 2);
   }
 
-  override update(delta: Time): void {
-    this.sprite.rotate(delta.seconds * 120);
+  override update(delta: Seconds): void {
+    this.sprite.rotate(delta * 120);
   }
 
   override draw(context: RenderingContext): void {

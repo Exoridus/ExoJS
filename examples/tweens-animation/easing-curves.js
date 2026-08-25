@@ -76,7 +76,7 @@ class EasingCurvesScene extends Scene {
     return plotTop + plotHeight * (1 - Math.max(0, Math.min(1, norm)));
   }
   update(delta) {
-    this.t += this.direction * delta.seconds * 0.6;
+    this.t += this.direction * delta * 0.6;
     if (this.t >= 1) {
       this.t = 1;
       this.direction = -1;

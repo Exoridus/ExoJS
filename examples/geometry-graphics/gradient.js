@@ -34,9 +34,9 @@ class GradientScene extends Scene {
   }
   update(delta) {
     const app = this.app;
-    this.background.rotate(delta.seconds * 8);
-    this.orb.rotate(-delta.seconds * 30);
-    this.orb.setScale(1 + Math.sin(app.activeTime.seconds * 2) * 0.07);
+    this.background.rotate(delta * 8);
+    this.orb.rotate(-delta * 30);
+    this.orb.setScale(1 + Math.sin(app.activeSeconds * 2) * 0.07);
   }
   draw(context) {
     context.render(this.background);

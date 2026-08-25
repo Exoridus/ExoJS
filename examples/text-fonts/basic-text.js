@@ -1,13 +1,12 @@
 // Auto-generated from basic-text.ts - edit the .ts source, not this file.
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text, Time } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Scene, Text } from '@codexo/exojs';
 class BasicTextScene extends Scene {
-  time;
+  elapsed = 0;
   text;
   async load() {
     const app = this.app;
     await this.loader.load(Asset.type('font', 'font/Kenney Future.ttf', { family: 'Kenney Future' }));
     const { width, height } = app;
-    this.time = new Time();
     this.text = new Text('Hello World!', {
       align: 'left',
       fillColor: Color.white,
@@ -20,8 +19,9 @@ class BasicTextScene extends Scene {
     this.text.setAnchor(0.5, 0.5);
   }
   update(delta) {
-    this.text.text = `Hello World! ${this.time.addTime(delta).seconds | 0}`;
-    this.text.rotate(delta.seconds * 36);
+    this.elapsed += delta;
+    this.text.text = `Hello World! ${this.elapsed | 0}`;
+    this.text.rotate(delta * 36);
   }
   draw(context) {
     context.render(this.text);

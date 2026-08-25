@@ -56,7 +56,7 @@ class MeshDeformedGridScene extends Scene {
     this.mesh.setPosition((width / 2) | 0, (height / 2) | 0);
   }
   update(delta) {
-    this.time += delta.seconds;
+    this.time += delta;
     const verts = this.mesh.vertices;
     const rest = this.restVertices;
     const t = this.time;

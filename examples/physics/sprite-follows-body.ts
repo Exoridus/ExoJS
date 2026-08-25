@@ -9,7 +9,7 @@ import {
   Spritesheet,
   type SpritesheetData,
   SystemOrder,
-  type Time,
+  type Seconds,
   Vector,
 } from '@codexo/exojs';
 import { BoxShape, type PhysicsBody, PhysicsWorld } from '@codexo/exojs-physics';
@@ -90,7 +90,7 @@ class SpriteFollowsBodyScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
 
     const { width, height } = app;
@@ -98,7 +98,7 @@ class SpriteFollowsBodyScene extends Scene {
     const restingSpeed = Math.hypot(body.linearVelocityX, body.linearVelocityY);
 
     if (body.y > this.floorY - 60 && restingSpeed < 6) {
-      this.settled += delta.seconds;
+      this.settled += delta;
     } else {
       this.settled = 0;
     }

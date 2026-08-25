@@ -162,7 +162,7 @@
         },
         {
           "name": "update",
-          "signature": "update(_delta: Duration): void",
+          "signature": "update(_delta: Seconds): void",
           "signatureTokens": [
             {
               "text": "update",
@@ -181,7 +181,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "Seconds",
               "kind": "type"
             },
             {
@@ -200,7 +200,7 @@
           "params": [
             {
               "name": "_delta",
-              "type": "Duration",
+              "type": "Seconds",
               "optional": false
             }
           ],

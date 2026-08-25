@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Geometry, Matrix, RenderBatch, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Geometry, Matrix, RenderBatch, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Number of instances drawn in the batched field. The whole field is one
@@ -161,8 +161,8 @@ class ImmediateModeScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
-    this.elapsed += delta.seconds;
+  override update(delta: Seconds): void {
+    this.elapsed += delta;
   }
 
   override draw(context: RenderingContext): void {

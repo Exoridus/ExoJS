@@ -6,7 +6,7 @@ import type { Application } from '#core/Application';
 import { SceneTweens } from '#core/scene/SceneTweens';
 import { SceneAvailability } from '#core/SceneAvailability';
 import { SceneState } from '#core/SceneState';
-import { Time } from '#core/Time';
+import { type Seconds, Time } from '#core/units';
 
 const createAppStub = (createResult: unknown, sequencerResult?: unknown): Application =>
   ({
@@ -354,7 +354,7 @@ describe('SceneTweens — dormancy (create/add/createSequencer while not Active)
 });
 
 describe('SceneTweens — activation against a real TweenManager', () => {
-  const sec = (seconds: number): Time => new Time(seconds, Time.seconds);
+  const sec = (seconds: number): Seconds => Time.seconds(seconds);
   const trackedCount = (manager: TweenManager): number => (manager as unknown as { _tweens: unknown[] })._tweens.length;
   const createRealApp = (manager: TweenManager): Application => ({ tweens: manager }) as unknown as Application;
 

@@ -69,7 +69,7 @@ class RenderPipelineScene extends Scene {
   update(delta) {
     const app = this.app;
     const { width, height } = app;
-    this.time += delta.seconds;
+    this.time += delta;
     // `enabled` lives on the pass - flip it and the composer skips the step next frame.
     this.blurPass.enabled = Math.floor(this.time / 2.5) % 2 === 0;
     this.orb.clear();

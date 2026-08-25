@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Rectangle, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
 
 const ALPHA_RINGS = assets.technical.alpha.alphaGradientRings;
 
@@ -31,10 +31,10 @@ class MasksScene extends Scene {
     this.gfxSprite.mask = circle;
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
-    this.time += delta.seconds;
+    this.time += delta;
 
     const r = 80;
     this.rectMask.x = (width / 4 + Math.cos(this.time * 1.4) * r - 55) | 0;

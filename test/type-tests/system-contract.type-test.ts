@@ -4,7 +4,7 @@
 // `SystemRegistry.add()`'s generic inference keeps its own `this`. Compiled
 // by `tsconfig.type-tests.json` via `pnpm typecheck:type-tests`.
 
-import { type System, SystemRegistry, type Time } from '@codexo/exojs';
+import { type Seconds, type System, SystemRegistry } from '@codexo/exojs';
 
 // update-only object literal is accepted.
 const updateOnly: System = {
@@ -69,7 +69,7 @@ void withOrder;
 // `RequireAtLeastOne`), so a class cannot `implements` it directly - this
 // checks the structural assignment instead, which is what `add()` relies on.
 class MySystem {
-  public update(_delta: Time): void {
+  public update(_delta: Seconds): void {
     // noop
   }
 }

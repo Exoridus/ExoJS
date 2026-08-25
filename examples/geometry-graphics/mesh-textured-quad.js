@@ -16,7 +16,7 @@ class MeshTexturedQuadScene extends Scene {
     this.quad.setPosition((width / 2) | 0, (height / 2) | 0);
   }
   update(delta) {
-    this.quad.rotate(delta.seconds * 30);
+    this.quad.rotate(delta * 30);
   }
   draw(context) {
     context.render(this.quad);

@@ -70,11 +70,11 @@ A sprite's default anchor is its top-left corner. `setPosition(width / 2, height
 
 ## Adding motion
 
-Override `update` to advance state once per frame. The `delta` argument carries the elapsed time since the previous frame; multiplying transforms by `delta.seconds` makes motion frame-rate independent:
+Override `update` to advance state once per frame. The `delta` argument carries the elapsed time since the previous frame; multiplying transforms by `delta` makes motion frame-rate independent:
 
 ```ts
-update(delta: Time) {
-    this.sprite.rotate(120 * delta.seconds);
+update(delta: Seconds) {
+    this.sprite.rotate(120 * delta);
 }
 ```
 

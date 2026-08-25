@@ -60,8 +60,8 @@ class CameraViewScene extends Scene {
     });
   }
   update(delta) {
-    this.camera.move(this.moveX * 420 * delta.seconds, this.moveY * 420 * delta.seconds);
-    this.camera.setZoom(Math.max(0.25, this.camera.zoomLevel + this.zoom * 0.75 * delta.seconds));
+    this.camera.move(this.moveX * 420 * delta, this.moveY * 420 * delta);
+    this.camera.setZoom(Math.max(0.25, this.camera.zoomLevel + this.zoom * 0.75 * delta));
   }
   draw(context) {
     context.render(this.world, { view: this.camera });

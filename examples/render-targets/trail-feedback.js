@@ -63,7 +63,7 @@ class TrailFeedbackScene extends Scene {
   update(delta) {
     const app = this.app;
     const { width, height } = app;
-    this.time += delta.seconds;
+    this.time += delta;
     this.bunny.setPosition(width / 2 + Math.cos(this.time * 2.0) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
   }
   draw(context) {

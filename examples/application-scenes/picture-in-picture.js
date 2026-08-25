@@ -23,7 +23,7 @@ class PictureInPictureScene extends Scene {
     this.frame.drawRectangle(width * 0.68, height * 0.04, width * 0.28, height * 0.28);
   }
   update(delta) {
-    this.sprite.move(this.velocity * delta.seconds, 0);
+    this.sprite.move(this.velocity * delta, 0);
     if (this.sprite.position.x > 320 || this.sprite.position.x < -320) {
       this.velocity *= -1;
     }

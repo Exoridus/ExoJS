@@ -23,7 +23,7 @@ One analyser for frequency data, one beat detector for rhythm, one particle syst
 
 ```ts
 import { Asset, Application, AudioStream,
-    Scene, Texture, Time, RenderingContext, View, Vector, Color, Ease } from '@codexo/exojs';
+    Scene, Texture, type Seconds, RenderingContext, View, Vector, Color, Ease } from '@codexo/exojs';
 
 import { AudioAnalyser, BeatDetector, BeatInfo } from '@codexo/exojs-audio-fx';
 import {
@@ -82,8 +82,8 @@ class AudioReactiveScene extends Scene {
         });
     }
 
-    update(delta: Time) {
-        this.view.update(delta.milliseconds);
+    update(delta: Seconds) {
+        this.view.update((delta * 1000));
         this.particles.update(delta);
 
         // Continuous frequency → background tint
@@ -135,7 +135,7 @@ this.detector.onBeat.add((info: BeatInfo) => {
 For frequency-driven shake (low-end rumble instead of discrete hits), lerp the view center by the low-band energy in `update`:
 
 ```ts
-update(delta: Time) {
+update(delta: Seconds) {
     const { low } = this.analyser.getLowMidHigh();
     const shakeX = (Math.random() - 0.5) * low * 20;
     const shakeY = (Math.random() - 0.5) * low * 20;

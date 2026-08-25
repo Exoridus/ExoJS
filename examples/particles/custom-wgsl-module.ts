@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Time, Vector } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Vector } from '@codexo/exojs';
 import { Constant, type ParticleBatch, particlesExtension, ParticleSystem, RateSpawn, UpdateModule, type WgslContribution } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 
@@ -78,7 +78,7 @@ class CustomWgslModuleScene extends Scene {
     });
   }
 
-  override update(_delta: Time): void {
+  override update(_delta: Seconds): void {
     // gpuMode is only meaningful after the first update() compiled the
     // pipeline. Report it once it has settled.
     if (!this.reportedMode) {

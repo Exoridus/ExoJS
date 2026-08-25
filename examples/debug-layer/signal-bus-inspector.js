@@ -15,7 +15,7 @@ class SignalBusInspectorScene extends Scene {
     // lineHeight is a multiplier on fontSize (28/19 ≈ 1.47), not pixels.
     this.text = new Text('', { fillColor: Color.white, fontSize: 19, lineHeight: 1.47 });
     this.text.setPosition(40, 70);
-    this.tick = new Timer(Time.fromSeconds(1), true);
+    this.tick = new Timer(Time.seconds(1), true);
     this.listenerA = () => undefined;
     this.listenerB = () => undefined;
     this.signals.spawn.add(this.listenerA);

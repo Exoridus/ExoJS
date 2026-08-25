@@ -133,7 +133,7 @@ describe('Application — _frameLoopActive', () => {
     // waiting for start() to resolve) proves the clock started at
     // _startFrameLoop() time, alongside the rest of the state that must
     // clear/start together (the _activeClock one).
-    const activeTimeDuringLoading = app.activeTime.milliseconds;
+    const activeTimeDuringLoading = app.activeSeconds * 1000;
 
     expect(activeTimeDuringLoading).toBeGreaterThanOrEqual(0);
 

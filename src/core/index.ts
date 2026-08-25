@@ -91,7 +91,6 @@ export type { System, SystemMethods } from './System';
 export { SystemOrder } from './SystemOrder';
 export type { SystemPhase, SystemRegistrationOptions } from './SystemRegistry';
 export { SystemRegistry } from './SystemRegistry';
-export { type Duration, Time } from './Time';
 export { Timer } from './Timer';
 export { CrossFadeSceneTransition, type CrossFadeSceneTransitionOptions } from './transitions/CrossFadeSceneTransition';
 export { FadeSceneTransition, type FadeSceneTransitionOptions } from './transitions/FadeSceneTransition';
@@ -106,8 +105,8 @@ export type {
   StreamingLoadEvent,
   Synchronous,
   TextureSource,
-  TimeInterval,
   TypedArray,
   TypedEnum,
   ValueOf,
 } from './types';
+export { type Milliseconds, type Seconds, Time } from './units';

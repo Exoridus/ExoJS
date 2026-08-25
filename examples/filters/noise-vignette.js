@@ -61,7 +61,7 @@ class NoiseVignetteScene extends Scene {
     return this.intensity === 0 ? 'Intensity: 0% (clean frame)' : `Intensity: ${Math.round(this.intensity * 100)}%`;
   }
   update(delta) {
-    this.time += delta.seconds;
+    this.time += delta;
     this.filter.setUniform('uTime', this.time);
   }
   draw(context) {

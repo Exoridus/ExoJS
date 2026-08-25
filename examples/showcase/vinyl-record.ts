@@ -8,7 +8,7 @@ import {
   type RenderingContext,
   Scene,
   Text,
-  type Time,
+  type Seconds,
   type Voice,
 } from '@codexo/exojs';
 import { AudioAnalyser } from '@codexo/exojs-audio-fx';
@@ -55,15 +55,15 @@ class VinylRecordScene extends Scene {
     this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     // Spin speed is driven by live audio energy, not a constant fallback BPM.
     // Silence → energy 0 → the platter holds perfectly still.
     const energy = this.analyser.getRms();
     const targetRpm = energy > 0.02 ? 30 + energy * 260 : 0;
 
     // Ease toward the target so the disc spins up and slows down smoothly.
-    this.rpm += (targetRpm - this.rpm) * Math.min(1, delta.seconds * 4);
-    this.angle += delta.seconds * (this.rpm / 60) * 360;
+    this.rpm += (targetRpm - this.rpm) * Math.min(1, delta * 4);
+    this.angle += delta * (this.rpm / 60) * 360;
 
     if (this.musicVoice) {
       this.hud.setStatus(`${this.rpm | 0} rpm`);

@@ -62,7 +62,7 @@ class WaterMirrorScene extends Scene {
     const app = this.app;
     const { width, height } = app;
     const quarter = height / 4;
-    this.time += delta.seconds;
+    this.time += delta;
     this.source.setPosition(width / 2 + Math.cos(this.time * 1.7) * (width * 0.3), quarter + Math.sin(this.time * 1.3) * (quarter * 0.55));
     this.filter.setUniform('uTime', this.time);
   }

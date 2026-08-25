@@ -8,7 +8,7 @@ import {
   Scene,
   Sprite,
   Text,
-  type Time,
+  type Seconds,
   Vector,
 } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';
@@ -85,8 +85,8 @@ class BeatSyncPulseScene extends Scene {
     app.audio.play(this.music, { loop: true, volume: 0.8 });
   }
 
-  override update(delta: Time): void {
-    this.pulse = Math.max(0, this.pulse - delta.seconds * 1.2);
+  override update(delta: Seconds): void {
+    this.pulse = Math.max(0, this.pulse - delta * 1.2);
     this.sprite.setScale(1 + this.pulse);
   }
 

@@ -47,7 +47,7 @@ class ColourRampCyclingScene extends Scene {
     });
   }
   update(delta) {
-    this.offset = (this.offset + delta.seconds * 80) % RAMP_SIZE;
+    this.offset = (this.offset + delta * 80) % RAMP_SIZE;
     this.ramp.source = buildRampCanvas(Math.floor(this.offset));
   }
   draw(context) {

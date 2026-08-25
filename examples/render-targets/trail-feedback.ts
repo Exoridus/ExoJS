@@ -9,7 +9,7 @@ import {
   RenderTexture,
   Scene,
   Sprite,
-  type Time,
+  type Seconds,
 } from '@codexo/exojs';
 
 class TrailFeedbackScene extends Scene {
@@ -68,10 +68,10 @@ class TrailFeedbackScene extends Scene {
       .addPass(new RenderNodePass(showA, { clear: Color.black }));
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { width, height } = app;
-    this.time += delta.seconds;
+    this.time += delta;
     this.bunny.setPosition(width / 2 + Math.cos(this.time * 2.0) * (width * 0.36), height / 2 + Math.sin(this.time * 2.7) * (height * 0.34));
   }
 

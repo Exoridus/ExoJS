@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 class SpriteBasicsScene extends Scene {
@@ -25,9 +25,9 @@ class SpriteBasicsScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
-    this.elapsed += delta.seconds;
+    this.elapsed += delta;
 
     const { width, height } = app;
 
@@ -37,7 +37,7 @@ class SpriteBasicsScene extends Scene {
     this.ship.setPosition(width / 2 + driftX, height / 2 + driftY);
 
     // Rotation: a steady spin (degrees per second).
-    this.ship.rotate(delta.seconds * 90);
+    this.ship.rotate(delta * 90);
 
     // Scale: a slow breathing pulse between 2.4x and 3.6x.
     this.ship.setScale(3 + Math.sin(this.elapsed * 1.2) * 0.6);

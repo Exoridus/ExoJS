@@ -112,7 +112,7 @@ class ConvolutionRoomsScene extends Scene {
     this.flash = 1;
   }
   update(time) {
-    this.flash = Math.max(0, this.flash - time.seconds * 3);
+    this.flash = Math.max(0, this.flash - time * 3);
     this.tapPrompt.visible = this.app.audio.locked;
     this.hud.setStatus(this.app.audio.locked ? 'Click or press any key to start…' : `Room ${this.index + 1} of ${ROOMS.length}`);
     const { x, y, w, h } = this.pad;

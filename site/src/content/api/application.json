@@ -1157,11 +1157,11 @@
           "description": ""
         },
         {
-          "name": "activeTime",
-          "signature": "activeTime: Duration",
+          "name": "activeSeconds",
+          "signature": "activeSeconds: Seconds",
           "signatureTokens": [
             {
-              "text": "activeTime",
+              "text": "activeSeconds",
               "kind": "name"
             },
             {
@@ -1169,7 +1169,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "Seconds",
               "kind": "type"
             }
           ],
@@ -1388,11 +1388,11 @@
           "description": ""
         },
         {
-          "name": "frameTime",
-          "signature": "frameTime: Duration",
+          "name": "frameSeconds",
+          "signature": "frameSeconds: Seconds",
           "signatureTokens": [
             {
-              "text": "frameTime",
+              "text": "frameSeconds",
               "kind": "name"
             },
             {
@@ -1400,7 +1400,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "Seconds",
               "kind": "type"
             }
           ],
@@ -1534,11 +1534,11 @@
           "description": "The active sizing policy, or null when the canvas simply stays at the base resolution. Assigning swaps the strategy live: the outgoing policy is detached - its observers released and the CSS box it wrote cleared - the canvas returns to the base geometry, and only then is the new policy attached, so no remnant of the previous one survives the switch. Assigning the policy that is already active still detaches and re-attaches it, which is the supported way to make one re-read a host it cannot observe by itself. The application does not take ownership: a detached policy is left intact and can be attached again later."
         },
         {
-          "name": "startupTime",
-          "signature": "startupTime: Duration",
+          "name": "startupSeconds",
+          "signature": "startupSeconds: Seconds",
           "signatureTokens": [
             {
-              "text": "startupTime",
+              "text": "startupSeconds",
               "kind": "name"
             },
             {
@@ -1546,7 +1546,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "Seconds",
               "kind": "type"
             }
           ],
@@ -1763,7 +1763,7 @@
         },
         {
           "name": "onFixedFrame",
-          "signature": "onFixedFrame: Signal<[Duration]>",
+          "signature": "onFixedFrame: Signal<[Seconds]>",
           "signatureTokens": [
             {
               "text": "onFixedFrame",
@@ -1786,7 +1786,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "Seconds",
               "kind": "type"
             },
             {
@@ -1804,7 +1804,7 @@
         },
         {
           "name": "onFrame",
-          "signature": "onFrame: Signal<[Duration]>",
+          "signature": "onFrame: Signal<[Seconds]>",
           "signatureTokens": [
             {
               "text": "onFrame",
@@ -1827,7 +1827,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Duration",
+              "text": "Seconds",
               "kind": "type"
             },
             {

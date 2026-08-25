@@ -1,4 +1,15 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Rectangle, type RenderingContext, Scene, Sprite, Texture, type Time } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  Container,
+  FixedResolutionCanvasSizing,
+  Rectangle,
+  type RenderingContext,
+  Scene,
+  Sprite,
+  Texture,
+  type Seconds,
+} from '@codexo/exojs';
 
 const GRID_COLUMNS = 56;
 const GRID_ROWS = 30;
@@ -62,11 +73,11 @@ class SpriteStressScene extends Scene {
     }
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
-    const time = app.activeTime.seconds;
+    const time = app.activeSeconds;
 
-    this.spriteLayer.rotate(delta.seconds * 2.5);
+    this.spriteLayer.rotate(delta * 2.5);
 
     for (const entry of this.sprites) {
       const localPhase = time + entry.phase;
@@ -74,7 +85,7 @@ class SpriteStressScene extends Scene {
 
       entry.sprite.x = entry.offsetX + Math.sin(localPhase * 1.4) * entry.driftX;
       entry.sprite.y = entry.offsetY + Math.cos(localPhase * 1.7) * entry.driftY;
-      entry.sprite.rotation += delta.seconds * entry.rotationSpeed;
+      entry.sprite.rotation += delta * entry.rotationSpeed;
       entry.sprite.setScale(scale);
     }
   }

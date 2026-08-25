@@ -8,7 +8,7 @@ import {
   Scene,
   Sprite,
   Text,
-  type Time,
+  type Seconds,
   View,
   type Voice,
 } from '@codexo/exojs';
@@ -57,7 +57,7 @@ class LowBandCameraShakeScene extends Scene {
     this.musicVoice = app.audio.play(this.music, { loop: true, volume: 0.8 });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const low = this.analyser.getBandEnergy(20, 180);
 
     // No constant floor: amplitude is purely low-band energy, so a quiet
@@ -66,7 +66,7 @@ class LowBandCameraShakeScene extends Scene {
     this.view.shake(amplitude, 90, { decay: true, frequency: 22 });
 
     // Advance the shake oscillation (the View only animates when updated).
-    this.view.update(delta.milliseconds);
+    this.view.update(delta * 1000);
 
     if (this.musicVoice) {
       this.hud.setStatus(`bass ${(low * 100) | 0}%`);

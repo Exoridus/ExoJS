@@ -168,7 +168,7 @@ You can omit any of them. If your fragment shader ignores the texture and sample
 Anything you put in `MeshMaterial.uniforms` is set after the auto-binds. Mutate the `uniforms` map between frames to drive animated effects:
 
 ```ts
-update(delta: Time) {
+update(delta: Seconds) {
     this.waveMaterial.uniforms.u_time = this.clock.elapsedSeconds;
     this.waveMaterial.uniforms.u_waveAmp = 10 + this.detector.pulse * 15;
 }

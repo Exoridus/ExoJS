@@ -27,7 +27,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import { Time } from '#core/Time';
+import { Time } from '#core/units';
 import { materializeRendererBindings } from '#extensions/materialize';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
@@ -395,7 +395,7 @@ describe('WebGPU ParticleSystem — mesh on the GPU compute path', () => {
         return;
       }
 
-      system.update(Time.zero.clone().set(16));
+      system.update(Time.toSeconds(Time.milliseconds(16)));
 
       expect(system.gpuMode).toBe(true);
 

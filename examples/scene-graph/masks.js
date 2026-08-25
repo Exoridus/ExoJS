@@ -28,7 +28,7 @@ class MasksScene extends Scene {
   update(delta) {
     const app = this.app;
     const { width, height } = app;
-    this.time += delta.seconds;
+    this.time += delta;
     const r = 80;
     this.rectMask.x = (width / 4 + Math.cos(this.time * 1.4) * r - 55) | 0;
     this.rectMask.y = (height / 2 + Math.sin(this.time * 1.4) * r - 55) | 0;

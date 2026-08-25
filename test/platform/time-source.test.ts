@@ -6,8 +6,8 @@
  */
 
 import { Clock } from '#core/Clock';
-import { Time } from '#core/Time';
 import { Timer } from '#core/Timer';
+import { Time } from '#core/units';
 import type { TimeSource } from '#platform/PlatformAdapter';
 
 /** A time source the test moves by hand. */
@@ -99,7 +99,7 @@ describe('Clock time source', () => {
 
   it('passes a source through Timer to the clock underneath', () => {
     const time = createFakeTime();
-    const timer = new Timer(new Time(50), true, time);
+    const timer = new Timer(Time.toSeconds(Time.milliseconds(50)), true, time);
 
     time.advance(49);
     expect(timer.expired).toBe(false);

@@ -6,6 +6,7 @@ import {
   Random,
   type RenderingContext,
   Scene,
+  type Seconds,
   Size,
   Sprite,
   Texture,
@@ -27,7 +28,7 @@ import {
 import { mountControls } from '@examples/runtime';
 
 const random = new Random();
-const autoLaunchInterval = Time.fromSeconds(2.2);
+const autoLaunchInterval = Time.seconds(2.2);
 const tailDuration = 2.5;
 const particlesPerExplosion = 375;
 // Upward launch speed range (px/s, negative = up). Higher = higher apex.
@@ -146,8 +147,8 @@ class FireworksScene extends Scene {
     this.hud.setStatus(`Launched: ${this.launchCount} · in flight: ${this.rockets.length}`);
   }
 
-  override update(delta: Time): void {
-    const dt = delta.seconds;
+  override update(delta: Seconds): void {
+    const dt = delta;
 
     if (this.autoLaunchTimer.expired) {
       this.launchRocket(random.next(80, this.canvasSize.width - 80));

@@ -27,8 +27,8 @@ class PivotAndAnchorScene extends Scene {
     this.label.text = `mode: ${mode.name}`;
   }
   update(delta) {
-    this.timer += delta.seconds;
-    this.sprite.rotate(delta.seconds * 90);
+    this.timer += delta;
+    this.sprite.rotate(delta * 90);
     if (this.timer > 1.8) {
       this.timer = 0;
       this.mode = (this.mode + 1) % modes.length;

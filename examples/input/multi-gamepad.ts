@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, GamepadAxis, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, GamepadAxis, type RenderingContext, Scene, Sprite, Text, type Seconds } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150, 180, 255), new Color(255, 230, 140)];
@@ -70,13 +70,13 @@ class MultiGamepadScene extends Scene {
     this.hud.setStatus(lines.join(' · '));
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     for (const player of this.players) {
       if (!player.pad.connected) {
         continue;
       }
 
-      player.sprite.move(player.move.x * 260 * delta.seconds, player.move.y * 260 * delta.seconds);
+      player.sprite.move(player.move.x * 260 * delta, player.move.y * 260 * delta);
     }
   }
 

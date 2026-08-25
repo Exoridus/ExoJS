@@ -502,7 +502,7 @@ class AssetBrowserScene extends Scene {
     if (this.cat !== 'sprites' && this.cat !== 'spritesheets' && this.cat !== 'inputPrompts') return;
     const frames = this.currentFrameKeys();
     if (!frames.length) return;
-    this.frameTimer += delta.seconds;
+    this.frameTimer += delta;
     if (this.frameTimer >= 0.07) {
       this.frameTimer = 0;
       this.frameIdx = (this.frameIdx + 1) % frames.length;

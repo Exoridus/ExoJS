@@ -43,7 +43,7 @@ class LifecycleScene extends Scene {
       this.events.push('onSuspend');
     });
 
-    this.timer = new Timer(Time.fromSeconds(1), true);
+    this.timer = new Timer(Time.seconds(1), true);
 
     this.text = new Text('', { fillColor: Color.white, fontSize: 18 });
     this.text.setAnchor(0.5);

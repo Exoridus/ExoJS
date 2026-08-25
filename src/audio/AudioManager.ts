@@ -1,6 +1,6 @@
 import { logger } from '#core/logging';
 import { Signal } from '#core/Signal';
-import type { Duration } from '#core/Time';
+import type { Seconds } from '#core/units';
 
 import { getAudioContext, isAudioContextReady, onAudioContextReady } from './audio-context';
 import { AudioBus } from './AudioBus';
@@ -365,7 +365,7 @@ export class AudioManager {
   }
 
   /** {@link SystemMethods.preUpdate} phase, at {@link SystemOrder.CoreAudio}. The frame delta is unused here (hence `_delta`). */
-  public preUpdate(_delta: Duration): void {
+  public preUpdate(_delta: Seconds): void {
     this._syncLockState();
     this.listener._tick();
     // Tick spatial voices and prune ended ones.

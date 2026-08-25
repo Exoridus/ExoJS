@@ -1,4 +1,4 @@
-import type { Duration } from '#core/Time';
+import type { Seconds } from '#core/units';
 
 import { Tween } from './Tween';
 import { TweenSequencer } from './TweenSequencer';
@@ -204,20 +204,20 @@ export class TweenManager {
    * at {@link SystemOrder.CoreTweens}. Uses snapshots so callbacks that add or
    * remove tweens/tickers do not corrupt mid-iteration.
    */
-  public preUpdate(delta: Duration): void {
+  public preUpdate(delta: Seconds): void {
     if (this._destroyed) return;
 
-    const seconds = delta.seconds;
+    const deltaSeconds = delta;
     const tweens = fill(this._tweenCursor, this._tweens);
 
     for (const tween of tweens) {
-      tween.update(seconds);
+      tween.update(deltaSeconds);
     }
 
     const tickers = fill(this._tickerCursor, this._tickers);
 
     for (const ticker of tickers) {
-      ticker.update(seconds);
+      ticker.update(deltaSeconds);
     }
 
     // Dropped once the walk is done: holding the entries would keep a stopped

@@ -10,7 +10,7 @@ class GameLoopScene extends Scene {
     this.sprite.setPosition(width / 2, height / 2);
   }
   update(delta) {
-    this.sprite.rotate(delta.seconds * 120);
+    this.sprite.rotate(delta * 120);
   }
   draw(context) {
     context.render(this.sprite);

@@ -125,16 +125,16 @@ class PlayScene extends Scene {
   }
   update(delta) {
     const app = this.app;
-    this.elapsed += delta.seconds;
-    this.spawnTimer += delta.seconds;
+    this.elapsed += delta;
+    this.spawnTimer += delta;
     if (this.spawnTimer >= SPAWN_INTERVAL) {
       this.spawnTimer -= SPAWN_INTERVAL;
       this.spawnOrb();
     }
     const mag = Math.hypot(this.dx, this.dy) || 1;
     if (this.dx !== 0 || this.dy !== 0) {
-      this.px += (this.dx / mag) * PLAYER_SPEED * delta.seconds;
-      this.py += (this.dy / mag) * PLAYER_SPEED * delta.seconds;
+      this.px += (this.dx / mag) * PLAYER_SPEED * delta;
+      this.py += (this.dy / mag) * PLAYER_SPEED * delta;
     }
     this.px = Math.max(PLAYER_RADIUS, Math.min(CANVAS_WIDTH - PLAYER_RADIUS, this.px));
     this.py = Math.max(PLAYER_RADIUS, Math.min(CANVAS_HEIGHT - PLAYER_RADIUS, this.py));
@@ -143,7 +143,7 @@ class PlayScene extends Scene {
     let gameEnded = false;
     const survived = [];
     for (const orb of this.orbs) {
-      orb.gfx.move(orb.vx * delta.seconds, orb.vy * delta.seconds);
+      orb.gfx.move(orb.vx * delta, orb.vy * delta);
       if (gameEnded) {
         this.world.removeChild(orb.gfx);
         orb.gfx.destroy();

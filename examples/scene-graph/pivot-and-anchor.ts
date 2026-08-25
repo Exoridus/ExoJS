@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, Text, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, Text, type Seconds } from '@codexo/exojs';
 
 const modes = [
   { name: 'corner', anchor: [0, 0] as [number, number], origin: [0, 0] as [number, number] | null },
@@ -31,9 +31,9 @@ class PivotAndAnchorScene extends Scene {
     this.label.text = `mode: ${mode.name}`;
   }
 
-  override update(delta: Time): void {
-    this.timer += delta.seconds;
-    this.sprite.rotate(delta.seconds * 90);
+  override update(delta: Seconds): void {
+    this.timer += delta;
+    this.sprite.rotate(delta * 90);
     if (this.timer > 1.8) {
       this.timer = 0;
       this.mode = (this.mode + 1) % modes.length;

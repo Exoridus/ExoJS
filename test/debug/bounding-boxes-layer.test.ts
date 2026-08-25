@@ -4,6 +4,7 @@
  * BoundingBoxesLayer tests (0.7.5).
  */
 import { Signal } from '#core/Signal';
+import { Time } from '#core/units';
 import { BoundingBoxesLayer } from '#debug/BoundingBoxesLayer';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
@@ -304,7 +305,7 @@ describe('BoundingBoxesLayer', () => {
 
   test('update() does not throw', () => {
     const layer = new BoundingBoxesLayer(makeApp());
-    const fakeTime = { milliseconds: 16, seconds: 0.016 } as import('#core/Time').Time;
+    const fakeTime = Time.toSeconds(Time.milliseconds(16));
 
     expect(() => layer.update(fakeTime)).not.toThrow();
   });

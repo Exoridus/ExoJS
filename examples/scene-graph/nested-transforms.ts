@@ -1,4 +1,4 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Time } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds } from '@codexo/exojs';
 
 class NestedTransformsScene extends Scene {
   private sun!: Graphics;
@@ -33,10 +33,10 @@ class NestedTransformsScene extends Scene {
     this.moonOrbit.addChild(this.moon);
   }
 
-  override update(delta: Time): void {
-    this.planetOrbit.rotate(delta.seconds * 30);
-    this.planet.rotate(delta.seconds * 120);
-    this.moonOrbit.rotate(delta.seconds * 180);
+  override update(delta: Seconds): void {
+    this.planetOrbit.rotate(delta * 30);
+    this.planet.rotate(delta * 120);
+    this.moonOrbit.rotate(delta * 180);
   }
 
   override draw(context: RenderingContext): void {

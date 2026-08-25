@@ -1,4 +1,4 @@
-import { Color, Rectangle, Spritesheet, Texture, Time } from '@codexo/exojs';
+import { Color, Rectangle, type Seconds, Spritesheet, Texture, Time } from '@codexo/exojs';
 
 import { Constant } from '../src/distributions/Constant';
 import { Range } from '../src/distributions/Range';
@@ -16,7 +16,7 @@ const makeTexture = (width = 16, height = 16): Texture => {
   return new Texture(canvas);
 };
 
-const tick = (s: number): Time => Time.fromSeconds(s);
+const tick = (s: number): Seconds => Time.seconds(s);
 
 describe('ParticleSystem construction shapes', () => {
   test('no texture falls back to the default and uses the default capacity', () => {

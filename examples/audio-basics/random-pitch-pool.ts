@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Sound, Text, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Sound, Text, type Seconds } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const DETUNE_RANGE = 200; // ± cents
@@ -65,15 +65,15 @@ class RandomPitchPoolScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
-    this.flash = Math.max(0, this.flash - delta.seconds * 4);
+    this.flash = Math.max(0, this.flash - delta * 4);
 
     // A Sound played before the AudioContext unlocks on the first gesture
     // is a no-op, so skip firing while audio is still locked.
     if (!this.active || app.audio.locked) return;
 
-    this.timer += delta.seconds;
+    this.timer += delta;
     while (this.timer > FIRE_INTERVAL) {
       this.timer -= FIRE_INTERVAL;
       this.lastCents = Math.random() * (DETUNE_RANGE * 2) - DETUNE_RANGE;

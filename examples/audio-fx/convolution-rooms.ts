@@ -1,4 +1,15 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, type Sound, Text, type Time } from '@codexo/exojs';
+import {
+  Application,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  type Sound,
+  Text,
+  type Seconds,
+} from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';
 
@@ -127,8 +138,8 @@ class ConvolutionRoomsScene extends Scene {
     this.flash = 1;
   }
 
-  override update(time: Time): void {
-    this.flash = Math.max(0, this.flash - time.seconds * 3);
+  override update(time: Seconds): void {
+    this.flash = Math.max(0, this.flash - time * 3);
     this.tapPrompt.visible = this.app.audio.locked;
     this.hud.setStatus(this.app.audio.locked ? 'Click or press any key to start…' : `Room ${this.index + 1} of ${ROOMS.length}`);
 

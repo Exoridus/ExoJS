@@ -70,7 +70,7 @@ class SpriteFollowsBodyScene extends Scene {
     const body = this.actorBody;
     const restingSpeed = Math.hypot(body.linearVelocityX, body.linearVelocityY);
     if (body.y > this.floorY - 60 && restingSpeed < 6) {
-      this.settled += delta.seconds;
+      this.settled += delta;
     } else {
       this.settled = 0;
     }

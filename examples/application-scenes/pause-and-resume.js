@@ -29,7 +29,7 @@ class PauseResumeScene extends Scene {
     this.label.text = this.app.scenes.paused ? 'Paused (draw running)' : 'Running';
   }
   update(delta) {
-    this.sprite.rotate(delta.seconds * 180);
+    this.sprite.rotate(delta * 180);
   }
   draw(context) {
     context.render(this.sprite);

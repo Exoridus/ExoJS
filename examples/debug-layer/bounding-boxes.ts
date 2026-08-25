@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
 import { DebugOverlay } from '@codexo/exojs/debug';
 
 class BoundingBoxesScene extends Scene {
@@ -23,11 +23,11 @@ class BoundingBoxesScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     const app = this.app;
     const { height } = app;
 
-    this.time += delta.seconds;
+    this.time += delta;
     for (const { sprite, speed } of this.sprites) {
       sprite.setRotation(this.time * 35 * speed);
       sprite.setPosition(sprite.position.x, height / 2 + Math.sin(this.time * speed) * 100);

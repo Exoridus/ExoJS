@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Texture, type Time } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Texture, type Seconds } from '@codexo/exojs';
 import {
   AlphaFadeOverLifetime,
   ApplyForce,
@@ -146,9 +146,9 @@ class ParticleStressScene extends Scene {
     return { instance: system, baseX: config.x, baseY: config.y };
   }
 
-  override update(_delta: Time): void {
+  override update(_delta: Seconds): void {
     const app = this.app;
-    const time = app.activeTime.seconds;
+    const time = app.activeSeconds;
 
     for (let i = 0; i < this.particleSystems.length; i++) {
       const entry = this.particleSystems[i];

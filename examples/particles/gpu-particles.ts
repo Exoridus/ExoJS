@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, RenderBackendType, type RenderingContext, Scene, type Time, Vector } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, RenderBackendType, type RenderingContext, Scene, type Seconds, Vector } from '@codexo/exojs';
 import { AlphaFadeOverLifetime, ApplyForce, ConeDirection, Constant, particlesExtension, ParticleSystem, Range, RateSpawn } from '@codexo/exojs-particles';
 import { mountControls } from '@examples/runtime';
 
@@ -32,7 +32,7 @@ class GpuParticlesScene extends Scene {
     });
   }
 
-  override update(_delta: Time): void {
+  override update(_delta: Seconds): void {
     const backend = this.system.gpuMode ? 'WebGPU (GPU compute)' : 'WebGL2 (CPU fallback)';
 
     this.hud.setStatus(`${this.system.aliveCount.toLocaleString()} live / ${CAPACITY.toLocaleString()} cap · ${backend}`);

@@ -7,7 +7,7 @@ import {
   type SceneTransitionRequirements,
   type SceneTransitionSession,
 } from '#core/SceneTransition';
-import type { Time } from '#core/Time';
+import type { Seconds } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 
 class NoopSession implements SceneTransitionSession {
@@ -15,7 +15,7 @@ class NoopSession implements SceneTransitionSession {
   public placement: 'scene' | 'screen' = 'screen';
   public destroyCallCount = 0;
 
-  public update(_delta: Time): void {}
+  public update(_delta: Seconds): void {}
   public render(_context: RenderingContext, _frame: SceneTransitionFrame): void {}
   public destroy(): void {
     this.destroyCallCount++;

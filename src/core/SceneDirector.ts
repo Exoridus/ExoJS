@@ -41,7 +41,7 @@ import {
   validateSceneRegistry,
 } from './SceneTypes';
 import { Signal } from './Signal';
-import type { Duration } from './Time';
+import type { Seconds } from './units';
 
 export type {
   SceneTransitionContext,
@@ -920,7 +920,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * {@link SceneDirector.update}. No drawing or transition advance happens
    * here - those are per-frame, not per fixed step.
    */
-  public fixedUpdate(step: Duration): this {
+  public fixedUpdate(step: Seconds): this {
     this._activeScope?.fixedUpdate(step);
 
     return this;
@@ -934,13 +934,13 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * active, regardless of state. Drawing is a separate call - see
    * {@link SceneDirector.draw}.
    */
-  public preUpdate(delta: Duration): this {
+  public preUpdate(delta: Seconds): this {
     this._activeScope?.preUpdate(delta);
 
     return this;
   }
 
-  public update(delta: Duration): this {
+  public update(delta: Seconds): this {
     const scope = this._activeScope;
 
     if (scope !== null) {
@@ -987,7 +987,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
    * `done`. Called once per frame by {@link Application.update}. No-op when
    * no session is active.
    */
-  public _updateTransition(delta: Duration): void {
+  public _updateTransition(delta: Seconds): void {
     const session = this._activeSession;
 
     if (session === null) {

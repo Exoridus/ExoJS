@@ -1,7 +1,7 @@
 import type { SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/PhasedSceneTransition';
 import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/SceneTransition';
-import { Time } from '#core/Time';
 import { SlideSceneTransition } from '#core/transitions/SlideSceneTransition';
+import { Time } from '#core/units';
 import type { Sprite } from '#rendering/sprite/Sprite';
 
 // Exposes the protected authoring hooks through public wrappers - same
@@ -150,7 +150,7 @@ describe('SlideSceneTransition', () => {
       const rendering = stubRendering(render);
       const currentTexture = { current: true } as never;
 
-      session.update(new Time(1));
+      session.update(Time.toSeconds(Time.milliseconds(1)));
       session.render(rendering, { outgoing: null, current: currentTexture, committed: false });
 
       // Exactly the phase's own slide draw - no extra identity-composite
@@ -188,8 +188,8 @@ describe('SlideSceneTransition', () => {
 
       // Drive past exit (100ms) - requests commit - then one more update()
       // to observe `committed` and switch into the enter phase.
-      session.update(new Time(100));
-      session.update(new Time(1));
+      session.update(Time.toSeconds(Time.milliseconds(100)));
+      session.update(Time.toSeconds(Time.milliseconds(1)));
 
       session.render(rendering, { outgoing: null, current: currentTexture, committed: true });
 
@@ -231,7 +231,7 @@ describe('SlideSceneTransition', () => {
       const rendering = stubRendering(render);
       const currentTexture = { current: true } as never;
 
-      session.update(new Time(1));
+      session.update(Time.toSeconds(Time.milliseconds(1)));
       session.render(rendering, { outgoing: null, current: currentTexture, committed: false });
 
       // cover mode's exit() is an intentional no-op (the outgoing scene

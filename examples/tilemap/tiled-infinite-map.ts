@@ -1,4 +1,4 @@
-import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Time, View } from '@codexo/exojs';
+import { Application, Asset, Color, FixedResolutionCanvasSizing, Keyboard, type RenderingContext, Scene, type Seconds, View } from '@codexo/exojs';
 import { tiledExtension } from '@codexo/exojs-tiled';
 import { ChunkStreamer, TileMapNode } from '@codexo/exojs-tilemap';
 import { mountControls } from '@examples/runtime';
@@ -95,17 +95,17 @@ class TiledInfiniteMapScene extends Scene {
     });
   }
 
-  override update(delta: Time): void {
+  override update(delta: Seconds): void {
     if (this.moveX !== 0 || this.moveY !== 0) {
       const length = Math.hypot(this.moveX, this.moveY) || 1;
 
-      this.camera.move((this.moveX / length) * MOVE_SPEED * delta.seconds, (this.moveY / length) * MOVE_SPEED * delta.seconds);
+      this.camera.move((this.moveX / length) * MOVE_SPEED * delta, (this.moveY / length) * MOVE_SPEED * delta);
     }
 
     this.groundStreamer.update();
     this.propsStreamer.update();
 
-    this.hudTimer += delta.seconds;
+    this.hudTimer += delta;
     if (this.hudTimer >= 0.25) {
       this.hudTimer = 0;
       const tx = Math.floor(this.camera.center.x / TILE);
