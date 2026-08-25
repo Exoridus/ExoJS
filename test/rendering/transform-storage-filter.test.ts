@@ -248,7 +248,11 @@ describe('render-group upload records transform write stats', () => {
     const t1 = new NonConsumingDrawable(10, 20, new Color());
     const t2 = new NonConsumingDrawable(30, 40, new Color());
     const t3 = new NonConsumingDrawable(50, 60, new Color());
-    const scope = createGroupScopeDouble([drawEntry(createDrawCommand(t1, 0, 1, 1)), drawEntry(createDrawCommand(t2, 1, 1, 1)), drawEntry(createDrawCommand(t3, 2, 1, 1))]);
+    const scope = createGroupScopeDouble([
+      drawEntry(createDrawCommand(t1, 0, 1, 1)),
+      drawEntry(createDrawCommand(t2, 1, 1, 1)),
+      drawEntry(createDrawCommand(t3, 2, 1, 1)),
+    ]);
 
     const { buffer } = playFiltered(scope);
 

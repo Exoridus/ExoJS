@@ -1,7 +1,7 @@
 import type { ActionMapOwner } from '#input/actions/ActionMap';
 import { ActionMap } from '#input/actions/ActionMap';
-import { ChordAction,type ChordBinding } from '#input/actions/ChordAction';
-import { SequenceAction,type SequenceBinding } from '#input/actions/SequenceAction';
+import { ChordAction, type ChordBinding } from '#input/actions/ChordAction';
+import { SequenceAction, type SequenceBinding } from '#input/actions/SequenceAction';
 import type { ActionSample, ChannelEvent } from '#input/actions/types';
 import { Gamepad } from '#input/Gamepad';
 import { GamepadButton } from '#input/GamepadButton';

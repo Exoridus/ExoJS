@@ -644,10 +644,7 @@ describe('render plan', () => {
     });
 
     const { backend } = createRuntime();
-    const plan = createRenderPlanDouble(
-      backend.view,
-      createGroupScopeDouble([createDraw(a, { pk: 100, bk: 100 }), createDraw(b, { pk: 100, bk: 100 })]),
-    );
+    const plan = createRenderPlanDouble(backend.view, createGroupScopeDouble([createDraw(a, { pk: 100, bk: 100 }), createDraw(b, { pk: 100, bk: 100 })]));
 
     RenderPlanOptimizer.optimize(plan);
 

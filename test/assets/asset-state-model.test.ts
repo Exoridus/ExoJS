@@ -69,7 +69,6 @@ class StubHandle {
   }
 }
 
-
 /**
  * `new Asset({...})` types its `type` against the registered `AssetDefinitions`
  * keys, and `stub` is deliberately not one - the walk installs it on the loader
