@@ -514,7 +514,7 @@
         },
         {
           "name": "rotate",
-          "signature": "rotate(angle: number, centerX: number, centerY: number): Matrix",
+          "signature": "rotate(angle: number, centerX: number, centerY: number): this",
           "signatureTokens": [
             {
               "text": "rotate",
@@ -577,8 +577,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Matrix",
-              "kind": "type"
+              "text": "this",
+              "kind": "keyword"
             }
           ],
           "params": [
@@ -598,12 +598,12 @@
               "optional": false
             }
           ],
-          "returnType": "Matrix",
+          "returnType": "this",
           "description": "Apply a rotation of angle **degrees** around (centerX, centerY) to this matrix. Mutates in place and returns this for chaining."
         },
         {
           "name": "scale",
-          "signature": "scale(scaleX: number, scaleY: number, centerX: number, centerY: number): Matrix",
+          "signature": "scale(scaleX: number, scaleY: number, centerX: number, centerY: number): this",
           "signatureTokens": [
             {
               "text": "scale",
@@ -682,8 +682,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Matrix",
-              "kind": "type"
+              "text": "this",
+              "kind": "keyword"
             }
           ],
           "params": [
@@ -708,7 +708,7 @@
               "optional": false
             }
           ],
-          "returnType": "Matrix",
+          "returnType": "this",
           "description": "Apply a scale of (scaleX, scaleY) around (centerX, centerY) to this matrix. Mutates in place and returns this for chaining."
         },
         {
@@ -975,7 +975,7 @@
         },
         {
           "name": "translate",
-          "signature": "translate(x: number, y: number): Matrix",
+          "signature": "translate(x: number, y: number): this",
           "signatureTokens": [
             {
               "text": "translate",
@@ -1022,8 +1022,8 @@
               "kind": "punctuation"
             },
             {
-              "text": "Matrix",
-              "kind": "type"
+              "text": "this",
+              "kind": "keyword"
             }
           ],
           "params": [
@@ -1038,7 +1038,7 @@
               "optional": false
             }
           ],
-          "returnType": "Matrix",
+          "returnType": "this",
           "description": "Apply a translation of (x, y) to this matrix. Mutates in place and returns this for chaining."
         }
       ],
