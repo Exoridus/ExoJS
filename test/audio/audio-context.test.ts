@@ -1,3 +1,4 @@
+import { mutable } from '../support/mutable';
 /**
  * Focused unit tests for `src/audio/audio-context.ts` - the lazy singleton
  * AudioContext/OfflineAudioContext, and the `onAudioContextReady` unlock
@@ -260,7 +261,7 @@ describe('audio/audio-context — interaction-gesture unlock lifecycle', () => {
 
     // Directly resolve readiness without going through a DOM event (document
     // is gone) - dispatch acts on the already-registered handlers.
-    ctx.state = 'running';
+    mutable(ctx).state = 'running';
     onAudioContextReady.dispatch(ctx);
 
     // No throw despite `document` being unavailable at cleanup time.

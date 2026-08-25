@@ -3,6 +3,8 @@ import type { MockInstance } from 'vitest';
 import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { BiquadEffect } from '#audio/BiquadEffect';
 
+import { mutable } from '../support/mutable';
+
 interface MockParam {
   value: number;
   setValueAtTime: MockInstance;
@@ -121,7 +123,7 @@ describe('BiquadEffect', () => {
   test('inputNode/outputNode throw and setters no-op safely before the node exists', () => {
     const ctx = getAudioContext();
     const originalState = ctx.state;
-    ctx.state = 'suspended';
+    mutable(ctx).state = 'suspended';
 
     const fx = new BiquadEffect({ frequency: 300 });
 
@@ -142,7 +144,7 @@ describe('BiquadEffect', () => {
     expect(fx.gain).toBe(2);
     expect(fx.detune).toBe(10);
 
-    ctx.state = originalState;
+    mutable(ctx).state = originalState;
     fx.destroy();
   });
 
@@ -150,12 +152,12 @@ describe('BiquadEffect', () => {
     const spy = setupBiquadSpy();
     const ctx = getAudioContext();
     const originalState = ctx.state;
-    ctx.state = 'suspended';
+    mutable(ctx).state = 'suspended';
 
     const fx = new BiquadEffect({ frequency: 750 });
     expect(spy.nodes.length).toBe(0);
 
-    ctx.state = originalState;
+    mutable(ctx).state = originalState;
     onAudioContextReady.dispatch(ctx);
 
     expect(spy.nodes.length).toBe(1);

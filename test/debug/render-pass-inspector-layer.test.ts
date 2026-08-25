@@ -3,13 +3,19 @@
 import { Signal } from '#core/Signal';
 import { RenderPassInspectorLayer } from '#debug/RenderPassInspectorLayer';
 import type { RenderingContext } from '#rendering/RenderingContext';
-import { RenderPass } from '#rendering/RenderPass';
+import { RenderPass, type RenderPassOptions } from '#rendering/RenderPass';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 import type { GlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import { resetDefaultGlyphAtlasPool } from '#rendering/text/GlyphAtlasPool';
 import type { Text } from '#rendering/text/Text';
 
 class TestPass extends RenderPass {
+  // `RenderPass` keeps its constructor `protected` so passes are authored as
+  // subclasses; a double the spec instantiates has to widen it.
+  public constructor(options?: RenderPassOptions) {
+    super(options);
+  }
+
   public override execute(_context: RenderingContext): void {
     // no-op - the inspector never runs the pass, only lists it.
   }

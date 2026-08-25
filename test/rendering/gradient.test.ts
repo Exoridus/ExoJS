@@ -4,6 +4,8 @@ import { RadialGradient } from '#rendering/gradient/RadialGradient';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { TextureFormat } from '#rendering/types';
 
+import { mutable } from '../support/mutable';
+
 describe('Gradient toTexture()', () => {
   test('requires at least 2 stops', () => {
     expect(() => new LinearGradient([{ offset: 0, color: Color.white }])).toThrow('Gradient requires at least 2 color stops.');
@@ -167,7 +169,7 @@ describe('Gradient value-object semantics', () => {
     expect(linear.end).toEqual([1, 0]);
 
     // Mutating a returned tuple must not affect the gradient.
-    linear.start[0] = 99;
+    mutable(linear.start)[0] = 99;
     expect(linear.start).toEqual([0, 0]);
 
     const radial = new RadialGradient(

@@ -53,6 +53,10 @@ describe('RenderPass (base)', () => {
 
   test('resize and destroy are no-ops by default', () => {
     const pass = new (class extends RenderPass {
+      public constructor() {
+        super();
+      }
+
       public override execute(): void {
         // no-op
       }

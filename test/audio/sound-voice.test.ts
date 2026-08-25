@@ -6,6 +6,7 @@ import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 
 import { frameDelta } from '../support/frame-delta';
+import { mutable } from '../support/mutable';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -291,15 +292,15 @@ describe('SoundVoice — capabilities', () => {
     const ctx = getAudioContext();
 
     // Forward elapsed time past the span: pos % span is already >= 0.
-    ctx.currentTime = 5; // elapsed = 5, 5 % 2 = 1
+    mutable(ctx).currentTime = 5; // elapsed = 5, 5 % 2 = 1
     expect(voice.time).toBeCloseTo(1);
 
     // A negative pos (elapsed goes "backward" of the start time) forces the
     // `pos < 0` correction branch: -5 % 2 === -1 in JS, then +span => 1.
-    ctx.currentTime = -5;
+    mutable(ctx).currentTime = -5;
     expect(voice.time).toBeCloseTo(1);
 
-    ctx.currentTime = 0;
+    mutable(ctx).currentTime = 0;
     factory.restore();
     sound.destroy();
   });

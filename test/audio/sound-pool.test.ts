@@ -15,6 +15,8 @@ import { AudioManager } from '#audio/AudioManager';
 import type { Pausable, Voice } from '#audio/Playable';
 import { Sound, SoundPoolStrategy } from '#audio/Sound';
 
+import { mutable } from '../support/mutable';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -284,11 +286,11 @@ describe('Sound — LeastRecentlyUsed eviction while the audio context is not re
 
     const ctx = getAudioContext();
     const originalState = ctx.state;
-    ctx.state = 'suspended';
+    mutable(ctx).state = 'suspended';
 
     sound.setPoolSize(1); // trims with the context not ready
 
-    ctx.state = originalState;
+    mutable(ctx).state = originalState;
 
     expect(factory.sources.length).toBe(2);
     expect(factory.sources[0].stop).toHaveBeenCalledTimes(1);

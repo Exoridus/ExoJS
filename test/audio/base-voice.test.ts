@@ -18,6 +18,8 @@ import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 
+import { mutable } from '../support/mutable';
+
 const createAudioBufferStub = (duration = 2): AudioBuffer => ({ duration }) as AudioBuffer;
 
 interface MockBufferSource {
@@ -537,10 +539,10 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     // and only the (one-shot) ready signal ever gives it one - so it stays that
     // way even after the context itself runs again.
     const originalState = ctx.state;
-    ctx.state = 'suspended';
+    mutable(ctx).state = 'suspended';
     const bus = new AudioBus('deferred', { parent: null });
     expect(bus._getInputNode()).toBeNull();
-    ctx.state = originalState;
+    mutable(ctx).state = originalState;
 
     const sound = new Sound(createAudioBufferStub());
     const output = captureVoiceOutput();
@@ -576,9 +578,9 @@ describe('BaseVoice — deferred bus connect while the bus is not yet set up', (
     const ctx = getAudioContext();
 
     const originalState = ctx.state;
-    ctx.state = 'suspended';
+    mutable(ctx).state = 'suspended';
     const bus = new AudioBus('deferred-accumulation', { parent: null });
-    ctx.state = originalState;
+    mutable(ctx).state = originalState;
 
     const pendingCount = (): number => (bus as unknown as { _pendingSetup: unknown[] | null })._pendingSetup?.length ?? 0;
     const signalCountBefore = onAudioContextReady.count;

@@ -1,6 +1,8 @@
 ﻿import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { LowpassFilter } from '#audio/filters/LowpassFilter';
 
+import { mutable } from '../../support/mutable';
+
 describe('LowpassFilter', () => {
   describe('construction', () => {
     it('creates a filter node on construction when AudioContext is running', () => {
@@ -137,7 +139,7 @@ describe('LowpassFilter', () => {
     it('defers setup: getters throw and setters no-op safely until the context becomes ready', () => {
       const ctx = getAudioContext();
       const originalState = ctx.state;
-      ctx.state = 'suspended';
+      mutable(ctx).state = 'suspended';
 
       const filter = new LowpassFilter({ frequency: 400 });
 
@@ -149,7 +151,7 @@ describe('LowpassFilter', () => {
       expect(filter.frequency).toBe(600);
       expect(filter.resonance).toBe(3);
 
-      ctx.state = originalState;
+      mutable(ctx).state = originalState;
       filter.destroy();
     });
 
@@ -157,12 +159,12 @@ describe('LowpassFilter', () => {
       const ctx = getAudioContext();
       const spy = vi.spyOn(ctx, 'createBiquadFilter');
       const originalState = ctx.state;
-      ctx.state = 'suspended';
+      mutable(ctx).state = 'suspended';
 
       const filter = new LowpassFilter({ frequency: 600 });
       expect(spy).not.toHaveBeenCalled();
 
-      ctx.state = originalState;
+      mutable(ctx).state = originalState;
       onAudioContextReady.dispatch(ctx);
 
       expect(spy).toHaveBeenCalledTimes(1);

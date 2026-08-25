@@ -1,6 +1,8 @@
 ﻿import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { HighpassFilter } from '#audio/filters/HighpassFilter';
 
+import { mutable } from '../../support/mutable';
+
 describe('HighpassFilter', () => {
   describe('construction', () => {
     it('creates a filter node on construction when AudioContext is running', () => {
@@ -128,7 +130,7 @@ describe('HighpassFilter', () => {
     it('defers setup: getters throw and setters no-op safely until the context becomes ready', () => {
       const ctx = getAudioContext();
       const originalState = ctx.state;
-      ctx.state = 'suspended';
+      mutable(ctx).state = 'suspended';
 
       const filter = new HighpassFilter({ frequency: 400 });
 
@@ -140,7 +142,7 @@ describe('HighpassFilter', () => {
       expect(filter.frequency).toBe(600);
       expect(filter.resonance).toBe(3);
 
-      ctx.state = originalState;
+      mutable(ctx).state = originalState;
       filter.destroy();
     });
 
@@ -148,12 +150,12 @@ describe('HighpassFilter', () => {
       const ctx = getAudioContext();
       const spy = vi.spyOn(ctx, 'createBiquadFilter');
       const originalState = ctx.state;
-      ctx.state = 'suspended';
+      mutable(ctx).state = 'suspended';
 
       const filter = new HighpassFilter({ frequency: 600 });
       expect(spy).not.toHaveBeenCalled();
 
-      ctx.state = originalState;
+      mutable(ctx).state = originalState;
       onAudioContextReady.dispatch(ctx);
 
       expect(spy).toHaveBeenCalledTimes(1);
