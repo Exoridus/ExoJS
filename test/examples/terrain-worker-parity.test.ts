@@ -32,7 +32,7 @@ interface ChunkReply {
 }
 
 /** Evaluates the bundled worker source against a stand-in `self` and returns it. */
-function startWorker(): { scope: WorkerScope; replies: ChunkReply[] } {
+const startWorker = (): { scope: WorkerScope; replies: ChunkReply[] } => {
   const replies: ChunkReply[] = [];
   const scope: WorkerScope = {
     onmessage: null,
@@ -45,7 +45,7 @@ function startWorker(): { scope: WorkerScope; replies: ChunkReply[] } {
   new Function('self', terrainWorkerSource).call(undefined, scope);
 
   return { scope, replies };
-}
+};
 
 const send = (scope: WorkerScope, data: unknown): void => {
   expect(scope.onmessage, 'worker never installed an onmessage handler').not.toBeNull();

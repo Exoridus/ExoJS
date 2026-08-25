@@ -9,7 +9,7 @@ import { planRepeat } from '#rendering/texture/repeat';
  * Helper: assert that the last segment's destination end equals the total
  * destination length (within tolerance).
  */
-function expectExactDestinationBoundary(plan: RepeatPlan, destinationLength: number): void {
+const expectExactDestinationBoundary = (plan: RepeatPlan, destinationLength: number): void => {
   if (plan.segments.length > 0) {
     const last = plan.segments[plan.segments.length - 1];
     const end = last.destinationStart + last.destinationLength;
@@ -18,18 +18,18 @@ function expectExactDestinationBoundary(plan: RepeatPlan, destinationLength: num
     expect(plan.destinationLength).toBe(0);
     expect(destinationLength).toBe(0);
   }
-}
+};
 
 /**
  * Helper: assert that segments are contiguous and non-overlapping.
  */
-function expectContiguous(plan: RepeatPlan): void {
+const expectContiguous = (plan: RepeatPlan): void => {
   for (let i = 1; i < plan.segments.length; i++) {
     const prev = plan.segments[i - 1];
     const curr = plan.segments[i];
     expect(curr.destinationStart).toBeCloseTo(prev.destinationStart + prev.destinationLength, 10);
   }
-}
+};
 
 // =============================================================================
 // Stretch mode

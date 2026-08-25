@@ -9,11 +9,11 @@ import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling loader tests). */
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 

@@ -72,7 +72,7 @@ class ShelfPacker {
 
 type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
-function makeCtx(width: number, height: number): { canvas: HTMLCanvasElement | OffscreenCanvas; ctx: Ctx2D } {
+const makeCtx = (width: number, height: number): { canvas: HTMLCanvasElement | OffscreenCanvas; ctx: Ctx2D } => {
   if (typeof OffscreenCanvas !== 'undefined') {
     const canvas = new OffscreenCanvas(width, height);
     const ctx = canvas.getContext('2d')!;
@@ -86,7 +86,7 @@ function makeCtx(width: number, height: number): { canvas: HTMLCanvasElement | O
   const ctx = canvas.getContext('2d');
   if (!ctx) throw new Error('GlyphAtlas: could not obtain canvas 2D context.');
   return { canvas, ctx };
-}
+};
 
 /**
  * A single texture page within a {@link GlyphAtlas}. Glyphs are packed into

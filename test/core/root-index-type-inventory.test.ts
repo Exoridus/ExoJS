@@ -70,7 +70,7 @@ describe('root index type-level export inventory', () => {
   });
 });
 
-function classifySymbol(sym: ts.Symbol): string {
+const classifySymbol = (sym: ts.Symbol): string => {
   const f = sym.flags;
   // Class covers both abstract and concrete classes; both produce runtime values.
   if (f & ts.SymbolFlags.Class) return 'class';
@@ -84,4 +84,4 @@ function classifySymbol(sym: ts.Symbol): string {
     return 'variable';
   }
   return 'unknown';
-}
+};

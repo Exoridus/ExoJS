@@ -115,11 +115,11 @@ const textSerializer: NodeSerializer<Text> = {
  * framework.
  * @internal
  */
-export function registerCoreSerializers(registry: SerializationRegistry): void {
+export const registerCoreSerializers = (registry: SerializationRegistry): void => {
   registry.register('Container', Container, containerSerializer);
   registry.register('Sprite', Sprite, spriteSerializer);
   registry.register('Text', Text, textSerializer);
 
   registerRenderingSerializers(registry);
   registerUiSerializers(registry);
-}
+};

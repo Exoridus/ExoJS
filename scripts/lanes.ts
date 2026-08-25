@@ -114,7 +114,7 @@ const readFlag = (argv: readonly string[], flag: string): string | undefined => 
   return index === -1 ? undefined : argv[index + 1];
 };
 
-function main(): void {
+const main = (): void => {
   const argv = process.argv.slice(2);
   const run = argv.includes('--run');
   const quick = argv.includes('--quick');
@@ -166,7 +166,7 @@ function main(): void {
   }
 
   process.stdout.write('\nlanes: all selected lanes passed.\n');
-}
+};
 
 // Only run the CLI when executed directly, never when imported by the parity test.
 const invokedPath = process.argv[1];

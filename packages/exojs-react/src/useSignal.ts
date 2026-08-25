@@ -27,7 +27,7 @@ import { useCallback, useSyncExternalStore } from 'react';
  * @param getSnapshot - Reads the current value. Called on mount and again after
  *   every dispatch of `signal`.
  */
-export function useSignal<Args extends unknown[], T>(signal: Signal<Args> | null | undefined, getSnapshot: () => T): T {
+export const useSignal = <Args extends unknown[], T>(signal: Signal<Args> | null | undefined, getSnapshot: () => T): T => {
   const subscribe = useCallback(
     (onStoreChange: () => void): (() => void) => {
       if (!signal) {
@@ -47,4 +47,4 @@ export function useSignal<Args extends unknown[], T>(signal: Signal<Args> | null
   );
 
   return useSyncExternalStore(subscribe, getSnapshot);
-}
+};

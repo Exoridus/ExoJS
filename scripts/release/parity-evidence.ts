@@ -47,7 +47,7 @@ export interface EvidenceDocument {
   rows: EvidenceRow[];
 }
 
-export function parseEvidence(json: string): EvidenceDocument {
+export const parseEvidence = (json: string): EvidenceDocument => {
   const parsed: unknown = JSON.parse(json);
 
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
@@ -65,11 +65,11 @@ export function parseEvidence(json: string): EvidenceDocument {
   }
 
   return { stamps, rows };
-}
+};
 
-export function readEvidence(repoRoot: string): EvidenceDocument {
+export const readEvidence = (repoRoot: string): EvidenceDocument => {
   return parseEvidence(readFileSync(`${repoRoot}/${EVIDENCE_PATH}`, 'utf8'));
-}
+};
 
 /**
  * Why the evidence cannot be claimed for `head`, one line per guaranteed
@@ -78,7 +78,7 @@ export function readEvidence(repoRoot: string): EvidenceDocument {
  * `head` is HEAD as it stands *before* the release script creates its bump
  * commit - that is the tree the measurement ran against.
  */
-export function staleEvidenceReasons(doc: EvidenceDocument, head: string): string[] {
+export const staleEvidenceReasons = (doc: EvidenceDocument, head: string): string[] => {
   const reasons: string[] = [];
 
   for (const browser of GUARANTEED_BROWSERS) {
@@ -100,7 +100,7 @@ export function staleEvidenceReasons(doc: EvidenceDocument, head: string): strin
   }
 
   return reasons;
-}
+};
 
 /**
  * Stamps the release onto every guaranteed browser, returning a new document.
@@ -112,7 +112,7 @@ export function staleEvidenceReasons(doc: EvidenceDocument, head: string): strin
  * Non-guaranteed browsers are left untouched - stamping them would extend the
  * claim to rows nobody promised to keep current.
  */
-export function stampRelease(doc: EvidenceDocument, version: string): EvidenceDocument {
+export const stampRelease = (doc: EvidenceDocument, version: string): EvidenceDocument => {
   const stamps: Record<string, EvidenceStamp> = {};
 
   for (const [browser, stamp] of Object.entries(doc.stamps)) {
@@ -120,8 +120,8 @@ export function stampRelease(doc: EvidenceDocument, version: string): EvidenceDo
   }
 
   return { stamps, rows: doc.rows };
-}
+};
 
-export function writeEvidence(repoRoot: string, doc: EvidenceDocument): void {
+export const writeEvidence = (repoRoot: string, doc: EvidenceDocument): void => {
   writeFileSync(`${repoRoot}/${EVIDENCE_PATH}`, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
-}
+};

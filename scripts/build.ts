@@ -62,11 +62,11 @@ const extensionSourcePlugin: Plugin = {
 // site) warn about missing source files on every module. Re-anchor every
 // `src/...` source to its real location relative to its map file.
 const ESCAPED_SOURCE = /^(?:\.\.[\\/])+(src[\\/].*)$/;
-function sourcemapPathTransform(relativeSourcePath: string, sourcemapPath: string): string {
+const sourcemapPathTransform = (relativeSourcePath: string, sourcemapPath: string): string => {
   const match = ESCAPED_SOURCE.exec(relativeSourcePath);
   if (!match) return relativeSourcePath;
   return relativePath(dirname(sourcemapPath), resolvePath(rootDir, match[1])).replaceAll('\\', '/');
-}
+};
 
 // Rolldown derives a preserveModules chunk name by dropping the module path's
 // final extension, so `color-matrix.frag` and `color-matrix.wgsl` both want
@@ -76,30 +76,30 @@ function sourcemapPathTransform(relativeSourcePath: string, sourcemapPath: strin
 // `facadeModuleId` restores that for the shader files; every other module
 // keeps the default `[name]`.
 const SHADER_EXTENSION = /\.(?:vert|frag|wgsl)$/;
-function preservedModuleNaming(info: { facadeModuleId: string | null }): string {
+const preservedModuleNaming = (info: { facadeModuleId: string | null }): string => {
   const id = info.facadeModuleId;
   if (id && SHADER_EXTENSION.test(id)) {
     return `${relativePath(resolvePath(rootDir, 'src'), id).replaceAll('\\', '/')}.js`;
   }
   return '[name].js';
-}
+};
 
 // Codecov Bundle Analysis: uploads per-bundle module stats when a token is
 // present (CI passes CODECOV_TOKEN via secrets: inherit). A plain local
 // `pnpm build` has no token and stays fully offline.
-function codecovBundlePlugin(bundleName: string): Plugin[] {
+const codecovBundlePlugin = (bundleName: string): Plugin[] => {
   return process.env.CODECOV_TOKEN
     ? [codecovRollupPlugin({ enableBundleAnalysis: true, bundleName, uploadToken: process.env.CODECOV_TOKEN, telemetry: false }) as Plugin]
     : [];
-}
+};
 
 // Shader text (`.vert`/`.frag`/`.wgsl`) ships verbatim inside the bundle -
 // minification never descends into a string literal - so the outputs that
 // minify get the comment-stripped variant and the readable ones keep the
 // source as authored.
-function shaderAndWorkletPlugins(minify: boolean): Plugin[] {
+const shaderAndWorkletPlugins = (minify: boolean): Plugin[] => {
   return [createShaderPlugin({ minify }), createWorkletPlugin({ minify })];
-}
+};
 
 // No `pure_funcs`-equivalent config needed here: once `__DEV__` is replaced by
 // `false`, Rolldown's own dead-code elimination already removes calls to the
@@ -115,16 +115,16 @@ const shared = {
   resolve: { conditionNames: sourceConditions, mainFields: ['browser', 'module', 'main'] },
 };
 
-function bundled(minify: boolean): RolldownOptions {
+const bundled = (minify: boolean): RolldownOptions => {
   return {
     ...shared,
     input: 'src/index.ts',
     plugins: [...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin('exo-esm')],
     output: { file: 'dist/exo.esm.js', format: 'es', sourcemap: true, minify },
   };
-}
+};
 
-function debugBundled(minify: boolean): RolldownOptions {
+const debugBundled = (minify: boolean): RolldownOptions => {
   return {
     ...shared,
     input: 'src/debug/index.ts',
@@ -142,9 +142,9 @@ function debugBundled(minify: boolean): RolldownOptions {
       paths: (id: string) => (id.startsWith('#') ? '@codexo/exojs' : id),
     },
   };
-}
+};
 
-function modules(): RolldownOptions {
+const modules = (): RolldownOptions => {
   return {
     ...shared,
     // `src/extensions/index.ts` is deliberately absent: it exports nothing but
@@ -172,18 +172,18 @@ function modules(): RolldownOptions {
       minify: false,
     },
   };
-}
+};
 
-function iife(minify: boolean): RolldownOptions {
+const iife = (minify: boolean): RolldownOptions => {
   return {
     ...shared,
     input: 'src/index.ts',
     plugins: [...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin(minify ? 'exo-iife-min' : 'exo-iife')],
     output: { file: minify ? 'dist/exo.iife.min.js' : 'dist/exo.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
   };
-}
+};
 
-function fullBundle(minify: boolean): RolldownOptions {
+const fullBundle = (minify: boolean): RolldownOptions => {
   return {
     cwd: rootDir,
     input: 'scripts/exo-full.entry.ts',
@@ -192,15 +192,15 @@ function fullBundle(minify: boolean): RolldownOptions {
     plugins: [extensionSourcePlugin, ...shaderAndWorkletPlugins(minify), ...codecovBundlePlugin(minify ? 'exo-full-iife-min' : 'exo-full-iife')],
     output: { file: minify ? 'dist/exo.full.iife.min.js' : 'dist/exo.full.iife.js', format: 'iife', name: 'Exo', sourcemap: true, minify },
   };
-}
+};
 
-async function runJob(options: RolldownOptions): Promise<void> {
+const runJob = async (options: RolldownOptions): Promise<void> => {
   const bundle = await rolldown(options);
   await bundle.write(options.output as OutputOptions);
   await bundle.close();
-}
+};
 
-async function emitDeclarations(): Promise<void> {
+const emitDeclarations = async (): Promise<void> => {
   const tsc = resolvePath(rootDir, 'node_modules/typescript/bin/tsc');
   const result = spawnSync(
     process.execPath,
@@ -210,7 +210,7 @@ async function emitDeclarations(): Promise<void> {
   if (result.status !== 0) {
     throw new Error(`declaration emit failed (tsc exit ${result.status})`);
   }
-}
+};
 
 if (watchMode) {
   const jobs = [bundled(false), debugBundled(false), modules(), iife(false)];

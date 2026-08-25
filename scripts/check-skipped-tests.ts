@@ -50,17 +50,17 @@ interface Baseline {
   files: Record<string, number>;
 }
 
-function fail(message: string): never {
+const fail = (message: string): never => {
   console.error(message);
   process.exit(1);
-}
+};
 
 /**
  * Explicit report paths from the CLI, or every `*.junit.xml` under
  * `test-results/` sorted for determinism - one file per lane in CI (see the
  * `skip-budget` job), or whichever lanes a local run happened to produce.
  */
-function reportPaths(): string[] {
+const reportPaths = (): string[] => {
   const explicit = process.argv.slice(2).filter(arg => !arg.startsWith('--'));
 
   if (explicit.length > 0) {
@@ -77,9 +77,9 @@ function reportPaths(): string[] {
   } catch {
     return [];
   }
-}
+};
 
-function readBaseline(): Baseline {
+const readBaseline = (): Baseline => {
   try {
     const parsed = JSON.parse(readFileSync(BASELINE_PATH, 'utf8')) as Partial<Baseline>;
 
@@ -87,13 +87,13 @@ function readBaseline(): Baseline {
   } catch {
     return { note: BASELINE_NOTE, files: {} };
   }
-}
+};
 
-function writeBaseline(files: Record<string, number>): void {
+const writeBaseline = (files: Record<string, number>): void => {
   const sorted = Object.fromEntries(Object.entries(files).sort(([a], [b]) => a.localeCompare(b)));
 
   writeFileSync(BASELINE_PATH, `${JSON.stringify({ note: BASELINE_NOTE, files: sorted }, null, 2)}\n`, 'utf8');
-}
+};
 
 /**
  * Sums the `skipped` attribute per suite file. Vitest emits one `<testsuite>`
@@ -101,7 +101,7 @@ function writeBaseline(files: Record<string, number>): void {
  * separate CI lanes reading their own JUnit report - contributes twice, which
  * is what we want to budget for: one global count per file across everything.
  */
-function readSkips(xml: string): Record<string, number> {
+const readSkips = (xml: string): Record<string, number> => {
   const skips: Record<string, number> = {};
 
   for (const [, attributes] of xml.matchAll(/<testsuite\s([^>]*)>/g)) {
@@ -114,9 +114,9 @@ function readSkips(xml: string): Record<string, number> {
   }
 
   return skips;
-}
+};
 
-function mergeSkips(perFile: readonly Record<string, number>[]): Record<string, number> {
+const mergeSkips = (perFile: readonly Record<string, number>[]): Record<string, number> => {
   const merged: Record<string, number> = {};
 
   for (const skips of perFile) {
@@ -126,7 +126,7 @@ function mergeSkips(perFile: readonly Record<string, number>[]): Record<string, 
   }
 
   return merged;
-}
+};
 
 const paths = reportPaths();
 

@@ -82,24 +82,24 @@ afterEach(() => {
 // BitmapText fixture (no canvas involved at all - metrics come from BMFont data).
 // ---------------------------------------------------------------------------
 
-function makeBmFontData(): BmFontData {
+const makeBmFontData = (): BmFontData => {
   const chars = new Map([
     [72, { x: 0, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }], // H
     [105, { x: 8, y: 0, width: 4, height: 12, xOffset: 0, yOffset: 2, xAdvance: 6, page: 0 }], // i
   ]);
   return { pages: ['font_0.png'], chars, kernings: new Map(), lineHeight: 16, base: 12 };
-}
+};
 
-function makeBmFont(): BmFont {
+const makeBmFont = (): BmFont => {
   return new BmFont(makeBmFontData(), [{ width: 64, height: 64 } as unknown as Texture]);
-}
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
 /** Builds a Text node with a distinctive, fully-populated style + transform so every packed field is non-degenerate and no two fields share a value. */
-function buildStyledText(): Text {
+const buildStyledText = (): Text => {
   const text = new Text('Hi', {
     fontSize: 16,
     pixelRatio: 2.5,
@@ -122,7 +122,7 @@ function buildStyledText(): Text {
   text.pixelSnapMode = PixelSnapMode.Geometry;
 
   return text;
-}
+};
 
 describe('shared text node-data packer', () => {
   test('layout constants', () => {

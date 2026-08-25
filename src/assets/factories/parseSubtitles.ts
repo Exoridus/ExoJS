@@ -218,9 +218,7 @@ const parseSrt = (source: string): VTTCue[] => {
  * reads as WebVTT, which is the format a served subtitle track defaults to.
  * @internal
  */
-export function subtitleFormatOf(locator: string): SubtitleFormat {
-  return (locator.split('?')[0] ?? locator).toLowerCase().endsWith('.srt') ? 'srt' : 'vtt';
-}
+export const subtitleFormatOf = (locator: string): SubtitleFormat => ((locator.split('?')[0] ?? locator).toLowerCase().endsWith('.srt') ? 'srt' : 'vtt');
 
 /**
  * Parses WebVTT or SubRip text into an ordered array of `VTTCue`s.
@@ -230,6 +228,4 @@ export function subtitleFormatOf(locator: string): SubtitleFormat {
  * has no way to express.
  * @internal
  */
-export function parseSubtitles({ fmt, text }: SubtitleSource): VTTCue[] {
-  return fmt === 'srt' ? parseSrt(text) : parseVtt(text);
-}
+export const parseSubtitles = ({ fmt, text }: SubtitleSource): VTTCue[] => (fmt === 'srt' ? parseSrt(text) : parseVtt(text));

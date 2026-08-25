@@ -195,7 +195,7 @@ export class GamepadAxis {
  * there is no step at the edge, capping the radius at 1 so a magnitude beyond
  * the rim shortens to the unit circle instead of amplifying the component.
  */
-function applyDeadzone(component: number, magnitude: number, threshold: number): number {
+const applyDeadzone = (component: number, magnitude: number, threshold: number): number => {
   // Capped before the comparison, not after: a square-gated stick reports a
   // radius up to sqrt(2), and `threshold` may itself be 1 (nothing passes).
   const radius = Math.min(magnitude, 1);
@@ -205,7 +205,7 @@ function applyDeadzone(component: number, magnitude: number, threshold: number):
   }
 
   return (component / magnitude) * ((radius - threshold) / (1 - threshold));
-}
+};
 
 const axis = (offset: number): GamepadAxisChannel => (ChannelOffset.Gamepads + offset) as GamepadAxisChannel;
 

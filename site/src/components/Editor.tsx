@@ -40,7 +40,7 @@ export interface EditorProps {
   onToggleSidebar(): void;
 }
 
-export function Editor({
+export const Editor = ({
   activeExample,
   catalogLoadError,
   ref,
@@ -49,7 +49,7 @@ export function Editor({
   sidebarOpen,
   sidebarToggleRef,
   onToggleSidebar,
-}: EditorProps): JSX.Element {
+}: EditorProps): JSX.Element => {
   const [sourceCode, setSourceCode] = useState<string | null>(null);
   const [originalSourceCode, setOriginalSourceCode] = useState<string | null>(null);
   const [executionCode, setExecutionCode] = useState<string | null>(null);
@@ -331,17 +331,17 @@ export function Editor({
       </section>
     </section>
   );
-}
+};
 
-function getDisplayPath(example: Example | null): string | null {
+const getDisplayPath = (example: Example | null): string | null => {
   if (!example) return null;
   if (example.language === 'typescript') {
     return example.path.replace(/\.js$/, '.ts');
   }
   return example.path;
-}
+};
 
-function renderErrors(errors: PreviewErrorEntry[]): JSX.Element | null {
+const renderErrors = (errors: PreviewErrorEntry[]): JSX.Element | null => {
   if (errors.length === 0) return null;
   return (
     <details className={css(styles, 'error-panel')}>
@@ -359,4 +359,4 @@ function renderErrors(errors: PreviewErrorEntry[]): JSX.Element | null {
       </div>
     </details>
   );
-}
+};

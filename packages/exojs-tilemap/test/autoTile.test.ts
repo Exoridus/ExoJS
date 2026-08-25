@@ -10,7 +10,7 @@ import { WangSet } from '../src/WangSet';
 
 // ── Test helpers ──────────────────────────────────────────────────────────
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return {
     destroyed: false,
     destroy: () => {},
@@ -19,18 +19,18 @@ function fakeTexture(): Texture {
     uid: 0,
     width: 512,
   } as unknown as Texture;
-}
+};
 
-function fakeRegion(): TextureRegion {
+const fakeRegion = (): TextureRegion => {
   return new TextureRegion(fakeTexture(), { height: 512, width: 512, x: 0, y: 0 });
-}
+};
 
 /**
  * Create a TileSet with 256 tiles (16×16 grid in a 512×512 atlas).
  * localTileIds 0-255 are all valid, which conveniently covers the full
  * blob bitmask range (0-255) when using an identity blobMap.
  */
-function makeTileset256(name = 'ts'): TileSet {
+const makeTileset256 = (name = 'ts'): TileSet => {
   return new TileSet({
     columns: 16,
     name,
@@ -39,9 +39,9 @@ function makeTileset256(name = 'ts'): TileSet {
     tileWidth: 32,
     texture: fakeRegion(),
   });
-}
+};
 
-function makeLayer(ts: TileSet, w = 3, h = 3): TileLayer {
+const makeLayer = (ts: TileSet, w = 3, h = 3): TileLayer => {
   return new TileLayer({
     height: h,
     id: 0,
@@ -51,22 +51,22 @@ function makeLayer(ts: TileSet, w = 3, h = 3): TileLayer {
     tilesets: [ts],
     width: w,
   });
-}
+};
 
 /**
  * A blobMap that maps every bitmask to itself (identity).
  * After autoTile, `layer.getTileAt(x,y).localTileId` equals the computed mask,
  * making assertions straightforward.
  */
-function identityBlobMap(): Map<number, number> {
+const identityBlobMap = (): Map<number, number> => {
   const m = new Map<number, number>();
   for (let i = 0; i <= 255; i++) m.set(i, i);
   return m;
-}
+};
 
-function setTile(layer: TileLayer, ts: TileSet, tx: number, ty: number, localTileId = 0): void {
+const setTile = (layer: TileLayer, ts: TileSet, tx: number, ty: number, localTileId = 0): void => {
   layer.setTileAt(tx, ty, { localTileId, tileset: ts, transform: TILE_TRANSFORM_IDENTITY });
-}
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Test 1: Blob mask - corner bits require adjacent cardinals to be set

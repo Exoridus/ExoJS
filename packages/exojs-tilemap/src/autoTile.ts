@@ -34,14 +34,14 @@ export interface AutoTileOptions {
  * Compute a 4-bit edge bitmask for the cell at `(tx, ty)`.
  * Top=1, Right=2, Bottom=4, Left=8.
  */
-function computeEdgeMask(tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): number {
+const computeEdgeMask = (tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): number => {
   let mask = 0;
   if (inGroup(tx, ty - 1)) mask |= 1;
   if (inGroup(tx + 1, ty)) mask |= 2;
   if (inGroup(tx, ty + 1)) mask |= 4;
   if (inGroup(tx - 1, ty)) mask |= 8;
   return mask;
-}
+};
 
 /**
  * Compute an 8-bit blob bitmask for the cell at `(tx, ty)` using the
@@ -55,7 +55,7 @@ function computeEdgeMask(tx: number, ty: number, inGroup: (nx: number, ny: numbe
  * 32 | 64 | 128
  * ```
  */
-function computeBlobMask(tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): number {
+const computeBlobMask = (tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): number => {
   const top = inGroup(tx, ty - 1);
   const right = inGroup(tx + 1, ty);
   const bottom = inGroup(tx, ty + 1);
@@ -71,19 +71,18 @@ function computeBlobMask(tx: number, ty: number, inGroup: (nx: number, ny: numbe
   if (bottom && left && inGroup(tx - 1, ty + 1)) mask |= 32;
   if (bottom && right && inGroup(tx + 1, ty + 1)) mask |= 128;
   return mask;
-}
+};
 
 /** Compute the mask for a cell given the Wang mode and a membership predicate. */
-function computeMask(wangSet: WangSet, tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): number {
-  return wangSet.type === 'edge' ? computeEdgeMask(tx, ty, inGroup) : computeBlobMask(tx, ty, inGroup);
-}
+const computeMask = (wangSet: WangSet, tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): number =>
+  wangSet.type === 'edge' ? computeEdgeMask(tx, ty, inGroup) : computeBlobMask(tx, ty, inGroup);
 
 /**
  * Apply the variant computed for cell `(tx, ty)` to `layer`, preserving the
  * cell's current orientation transform. No-op if the mask has no mapping or
  * the target tileset is missing.
  */
-function applyVariant(layer: TileLayer, wangSet: WangSet, tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): void {
+const applyVariant = (layer: TileLayer, wangSet: WangSet, tx: number, ty: number, inGroup: (nx: number, ny: number) => boolean): void => {
   const newLocalTileId = wangSet.getTileId(computeMask(wangSet, tx, ty, inGroup));
   if (newLocalTileId === undefined) return;
 
@@ -97,7 +96,7 @@ function applyVariant(layer: TileLayer, wangSet: WangSet, tx: number, ty: number
     tileset,
     transform: existing ? existing.transform : TILE_TRANSFORM_IDENTITY,
   });
-}
+};
 
 // ── Public API ────────────────────────────────────────────────────────────
 
@@ -135,7 +134,7 @@ function applyVariant(layer: TileLayer, wangSet: WangSet, tx: number, ty: number
  * "whole layer" to sweep. Use {@link refreshCell} to autotile an unbounded
  * layer incrementally, one edited cell at a time.
  */
-export function autoTile(layer: TileLayer, wangSet: WangSet, options?: AutoTileOptions): void {
+export const autoTile = (layer: TileLayer, wangSet: WangSet, options?: AutoTileOptions): void => {
   const matchFn = options?.matchFn;
   const wrapBorder = options?.wrapBorder ?? true;
   const w = layer.width;
@@ -190,7 +189,7 @@ export function autoTile(layer: TileLayer, wangSet: WangSet, options?: AutoTileO
       applyVariant(layer, wangSet, tx, ty, isInGroup);
     }
   }
-}
+};
 
 /**
  * Incrementally re-autotile a single cell and its eight neighbours after an
@@ -216,7 +215,7 @@ export function autoTile(layer: TileLayer, wangSet: WangSet, options?: AutoTileO
  * @param wangSet The Wang set to resolve variants from.
  * @param options Membership / border options (shared with {@link autoTile}).
  */
-export function refreshCell(layer: TileLayer, x: number, y: number, wangSet: WangSet, options?: AutoTileOptions): void {
+export const refreshCell = (layer: TileLayer, x: number, y: number, wangSet: WangSet, options?: AutoTileOptions): void => {
   const matchFn = options?.matchFn;
   const wrapBorder = options?.wrapBorder ?? true;
   const w = layer.width;
@@ -242,4 +241,4 @@ export function refreshCell(layer: TileLayer, x: number, y: number, wangSet: Wan
       applyVariant(layer, wangSet, tx, ty, isInGroup);
     }
   }
-}
+};

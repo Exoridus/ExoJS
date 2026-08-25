@@ -45,11 +45,9 @@ export interface TextureRegionOptions {
   readonly extrusion?: number | TextureRegionInsets;
 }
 
-function isFinite(value: number): boolean {
-  return typeof value === 'number' && Number.isFinite(value);
-}
+const isFinite = (value: number): boolean => typeof value === 'number' && Number.isFinite(value);
 
-function normalizeExtrusion(extrusion: number | TextureRegionInsets | undefined): Readonly<TextureRegionInsets> {
+const normalizeExtrusion = (extrusion: number | TextureRegionInsets | undefined): Readonly<TextureRegionInsets> => {
   if (extrusion === undefined) {
     return Object.freeze({
       left: 0,
@@ -76,9 +74,9 @@ function normalizeExtrusion(extrusion: number | TextureRegionInsets | undefined)
     right: extrusion.right,
     bottom: extrusion.bottom,
   });
-}
+};
 
-function validateExtrusion(
+const validateExtrusion = (
   extrusion: TextureRegionInsets,
   x: number,
   y: number,
@@ -86,7 +84,7 @@ function validateExtrusion(
   height: number,
   textureWidth: number,
   textureHeight: number,
-): void {
+): void => {
   const { left, top, right, bottom } = extrusion;
 
   if (!isFinite(left) || !isFinite(top) || !isFinite(right) || !isFinite(bottom)) {
@@ -103,9 +101,9 @@ function validateExtrusion(
         `right=${right} (>${textureWidth - (x + width)}), bottom=${bottom} (>${textureHeight - (y + height)}).`,
     );
   }
-}
+};
 
-function validateOptions(options: TextureRegionOptions, textureWidth: number, textureHeight: number): void {
+const validateOptions = (options: TextureRegionOptions, textureWidth: number, textureHeight: number): void => {
   const { x, y, width, height } = options;
 
   if (!isFinite(x) || !isFinite(y) || !isFinite(width) || !isFinite(height)) {
@@ -135,7 +133,7 @@ function validateOptions(options: TextureRegionOptions, textureWidth: number, te
   if (y + height > textureHeight) {
     throw new Error(`TextureRegion bottom edge (${y + height}) exceeds texture height (${textureHeight}).`);
   }
-}
+};
 
 /**
  * An immutable descriptor for a rectangular sub-region of a {@link Texture}.

@@ -87,9 +87,9 @@ afterAll(() => {
 });
 
 /** Every reported line for one fixture, so an assertion names the case it failed on. */
-function findingsFor(name: string): string[] {
+const findingsFor = (name: string): string[] => {
   return report.split('\n').filter(line => line.includes(`${FIXTURE_DIRECTORY}/${name}.ts:`));
-}
+};
 
 describe('source hygiene: session vocabulary', () => {
   it('scans the fixtures at all', () => {

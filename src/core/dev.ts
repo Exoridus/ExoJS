@@ -29,6 +29,11 @@
 // New callers: prefer category 1 for simple checks. For anything that
 // allocates objects, calls functions, or formats strings use category 2.
 
+// An assertion signature is only honoured on a function declaration or on a
+// constant with an explicit type annotation, so the narrowing guards below name
+// their signature rather than inferring it.
+type AssertCondition = (condition: boolean, message?: string) => asserts condition;
+
 /**
  * Assert `condition` at dev/test time. Throws with `[ExoJS] message` when the
  * condition is falsy in a dev build. No-op in production builds.
@@ -38,23 +43,23 @@
  * template literal: arguments are evaluated before the (stripped) body runs, so
  * an interpolated message still allocates in production.
  */
-export function assert(condition: boolean, message?: string): asserts condition {
+export const assert: AssertCondition = (condition, message) => {
   if (__DEV__ && !condition) {
     throw new Error(`[ExoJS] ${message ?? 'assertion failed'}`);
   }
-}
+};
 
 /**
  * Assert that `value` is neither `null` nor `undefined`. Returns the value so
  * it can be used inline in an expression. No-op in production builds (returns
  * the value cast to `T` without checking). `message` is optional.
  */
-export function assertDefined<T>(value: T | null | undefined, message?: string): T {
+export const assertDefined = <T>(value: T | null | undefined, message?: string): T => {
   if (__DEV__ && (value === null || value === undefined)) {
     throw new Error(`[ExoJS] ${message ?? 'expected a defined value'}`);
   }
   return value as T;
-}
+};
 
 /**
  * Enforce a public-contract invariant. Always-on: throws with `[ExoJS]
@@ -64,8 +69,8 @@ export function assertDefined<T>(value: T | null | undefined, message?: string):
  * against corrupt state or misuse the type system cannot express, where
  * silently continuing would be worse than throwing.
  */
-export function invariant(condition: boolean, message?: string): asserts condition {
+export const invariant: AssertCondition = (condition, message) => {
   if (!condition) {
     throw new Error(`[ExoJS] ${message ?? 'invariant violated'}`);
   }
-}
+};

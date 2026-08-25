@@ -60,21 +60,19 @@ export interface MapObjectDescriptor {
  * Exposed for code that spawns from a hand-picked object rather than from a
  * whole map; {@link mapObjectDescriptors} covers the common case.
  */
-export function mapObjectDescriptor(object: TileMapObject, layer: ObjectLayer): MapObjectDescriptor {
-  return {
-    id: object.sourceId ?? String(object.id),
-    kind: object.type === '' ? null : object.type,
-    name: object.name,
-    x: object.x,
-    y: object.y,
-    width: object.width,
-    height: object.height,
-    rotation: object.rotation,
-    properties: object.properties,
-    layer,
-    object,
-  };
-}
+export const mapObjectDescriptor = (object: TileMapObject, layer: ObjectLayer): MapObjectDescriptor => ({
+  id: object.sourceId ?? String(object.id),
+  kind: object.type === '' ? null : object.type,
+  name: object.name,
+  x: object.x,
+  y: object.y,
+  width: object.width,
+  height: object.height,
+  rotation: object.rotation,
+  properties: object.properties,
+  layer,
+  object,
+});
 
 /**
  * Every object of `map`, in a defined order: object-layer order first, then
@@ -83,10 +81,10 @@ export function mapObjectDescriptor(object: TileMapObject, layer: ObjectLayer): 
  * This is the order a {@link import('./MapObjectSpawner').MapObjectSpawner}
  * spawns in, so the same map always produces the same sequence.
  */
-export function* mapObjectDescriptors(map: TileMap): Generator<MapObjectDescriptor> {
+export const mapObjectDescriptors = function* (map: TileMap): Generator<MapObjectDescriptor> {
   for (const layer of map.objectLayers) {
     for (const object of layer.objects) {
       yield mapObjectDescriptor(object, layer);
     }
   }
-}
+};

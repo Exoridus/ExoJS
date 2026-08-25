@@ -38,7 +38,7 @@ export const textNodeDataFloats = textNodeDataTexels * 4;
  * texels when a node moves, without touching the rest of its packed style.
  * @internal
  */
-export function packTextNodeTransform(target: Float32Array, base: number, node: Text | BitmapText): void {
+export const packTextNodeTransform = (target: Float32Array, base: number, node: Text | BitmapText): void => {
   // In-bounds: `toArray(false)` returns the fixed 9-element mat3 column-major array.
   const m = node.getGlobalTransform().toArray(false); // col-major: [a,c,0, b,d,0, tx,ty,1]
 
@@ -50,7 +50,7 @@ export function packTextNodeTransform(target: Float32Array, base: number, node: 
   target[base + 5] = m[4]!; // d
   target[base + 6] = m[5]!; // 0
   target[base + 7] = m[7]!; // ty
-}
+};
 
 /**
  * Packs one node's full 10-texel (40-float) row - world transform, snap-mode
@@ -63,7 +63,7 @@ export function packTextNodeTransform(target: Float32Array, base: number, node: 
  * only has one implementation to test and keep the two backends in sync.
  * @internal
  */
-export function packTextNodeData(target: Float32Array, base: number, node: Text | BitmapText): void {
+export const packTextNodeData = (target: Float32Array, base: number, node: Text | BitmapText): void => {
   const style = node.style;
 
   // Transform (texels 0-1)
@@ -145,4 +145,4 @@ export function packTextNodeData(target: Float32Array, base: number, node: Text 
   target[base + 37] = ink.y;
   target[base + 38] = ink.width;
   target[base + 39] = ink.height;
-}
+};

@@ -53,7 +53,7 @@ const EXPECTED_JOB_FOR_GROUP = {
 } as const satisfies Record<GateGroup, string>;
 
 /** Extracts the `jobs.<jobName>` block's raw YAML text (up to the next top-level job key or EOF). */
-function extractJobBlock(source: string, jobName: string): string {
+const extractJobBlock = (source: string, jobName: string): string => {
   const headerRe = new RegExp(`\\n {2}${jobName}:\\n`);
   const startMatch = headerRe.exec(source);
   if (!startMatch) {
@@ -64,10 +64,10 @@ function extractJobBlock(source: string, jobName: string): string {
   const nextJobMatch = /\n {2}[a-zA-Z][\w-]*:\n/.exec(rest);
 
   return nextJobMatch ? rest.slice(0, nextJobMatch.index) : rest;
-}
+};
 
 /** The job names listed in `jobs.required-ci.needs`, as an exact-match array. */
-function extractRequiredCiNeeds(source: string): string[] {
+const extractRequiredCiNeeds = (source: string): string[] => {
   const block = extractJobBlock(source, 'required-ci');
   const needsMatch = /needs:\s*\[([\s\S]*?)\]/.exec(block);
   if (!needsMatch) {
@@ -78,7 +78,7 @@ function extractRequiredCiNeeds(source: string): string[] {
     .split(',')
     .map(entry => entry.trim())
     .filter(entry => entry.length > 0);
-}
+};
 
 describe('CI gate jobs cover every gate group', () => {
   it.each(groupNames)('group `%s` is invoked by a CI job', group => {

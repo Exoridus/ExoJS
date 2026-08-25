@@ -51,13 +51,13 @@ export interface BaselineDiff {
 }
 
 /** True when the diff is clean and the gate should pass. */
-export function isBaselineClean(diff: BaselineDiff): boolean {
+export const isBaselineClean = (diff: BaselineDiff): boolean => {
   return diff.regressions.length === 0 && diff.improvements.length === 0;
-}
+};
 
-function byFile(a: BaselineDelta, b: BaselineDelta): number {
+const byFile = (a: BaselineDelta, b: BaselineDelta): number => {
   return a.file.localeCompare(b.file);
-}
+};
 
 /**
  * Compares the counts observed in this run against the recorded budget.
@@ -71,11 +71,11 @@ function byFile(a: BaselineDelta, b: BaselineDelta): number {
  *                    the other folders' files, and their absence from `actual`
  *                    must not read as "went to zero".
  */
-export function diffPartialBaseline(
+export const diffPartialBaseline = (
   baseline: PartialBaseline,
   actual: ReadonlyMap<string, number>,
   inScope: (file: string) => boolean = () => true,
-): BaselineDiff {
+): BaselineDiff => {
   const regressions: BaselineDelta[] = [];
   const improvements: BaselineDelta[] = [];
 
@@ -95,18 +95,18 @@ export function diffPartialBaseline(
   }
 
   return { regressions: regressions.sort(byFile), improvements: improvements.sort(byFile) };
-}
+};
 
 /**
  * Produces the next baseline: observed counts for every file this run visited,
  * recorded counts preserved for every file it did not (folder-filtered runs).
  * Zero-count files are dropped so the file only ever lists real debt.
  */
-export function mergePartialBaseline(
+export const mergePartialBaseline = (
   baseline: PartialBaseline,
   actual: ReadonlyMap<string, number>,
   inScope: (file: string) => boolean = () => true,
-): PartialBaseline {
+): PartialBaseline => {
   const merged: Record<string, number> = {};
 
   for (const [file, count] of Object.entries(baseline.files)) {
@@ -121,9 +121,9 @@ export function mergePartialBaseline(
   for (const file of Object.keys(merged).sort()) files[file] = merged[file];
 
   return { note: baseline.note, files };
-}
+};
 
-function formatRows(deltas: readonly BaselineDelta[]): string {
+const formatRows = (deltas: readonly BaselineDelta[]): string => {
   const width = deltas.reduce((max, d) => Math.max(max, d.file.length), 0);
 
   return deltas
@@ -133,7 +133,7 @@ function formatRows(deltas: readonly BaselineDelta[]): string {
       return `    ${d.file.padEnd(width)}  ${d.baseline} -> ${d.actual}  (${sign}${d.actual - d.baseline})`;
     })
     .join('\n');
-}
+};
 
 /**
  * The failure report. Both directions are reported together when both are
@@ -143,7 +143,7 @@ function formatRows(deltas: readonly BaselineDelta[]): string {
  *                       "commit this" instruction.
  * @param updateCommand - The pnpm script that rewrites the baseline.
  */
-export function formatBaselineFailure(diff: BaselineDiff, baselinePath: string, updateCommand: string): string {
+export const formatBaselineFailure = (diff: BaselineDiff, baselinePath: string, updateCommand: string): string => {
   const sections: string[] = [];
 
   if (diff.regressions.length > 0) {
@@ -191,10 +191,10 @@ export function formatBaselineFailure(diff: BaselineDiff, baselinePath: string, 
   }
 
   return sections.join('\n\n');
-}
+};
 
 /** Reads the baseline, tolerating a missing file (treated as "no budget anywhere"). */
-export function readPartialBaseline(path: string, fallbackNote: string): PartialBaseline {
+export const readPartialBaseline = (path: string, fallbackNote: string): PartialBaseline => {
   try {
     const parsed = JSON.parse(readFileSync(path, 'utf8')) as Partial<PartialBaseline>;
 
@@ -202,9 +202,9 @@ export function readPartialBaseline(path: string, fallbackNote: string): Partial
   } catch {
     return { note: fallbackNote, files: {} };
   }
-}
+};
 
 /** Writes the baseline with the repository's JSON formatting (2 spaces, trailing newline). */
-export function writePartialBaseline(path: string, baseline: PartialBaseline): void {
+export const writePartialBaseline = (path: string, baseline: PartialBaseline): void => {
   writeFileSync(path, `${JSON.stringify(baseline, null, 2)}\n`);
-}
+};

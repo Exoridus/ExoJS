@@ -161,11 +161,11 @@ export const defaultSerializationRegistry = new SerializationRegistry();
  * });
  * ```
  */
-export function registerSerializer<T extends SceneNode>(
+export const registerSerializer = <T extends SceneNode>(
   typeName: string,
   ctor: SceneNodeConstructor<T>,
   serializer: NodeSerializer<T>,
   registry: SerializationRegistry = defaultSerializationRegistry,
-): void {
+): void => {
   registry.register(typeName, ctor, serializer);
-}
+};

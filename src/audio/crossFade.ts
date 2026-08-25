@@ -29,7 +29,7 @@ export interface CrossFadeOptions {
  *
  * Returns a Promise that resolves once `durationMs` elapses.
  */
-export async function crossFade(from: Voice, to: Voice, durationMs: number, options: CrossFadeOptions = {}): Promise<void> {
+export const crossFade = async (from: Voice, to: Voice, durationMs: number, options: CrossFadeOptions = {}): Promise<void> => {
   const target = clamp(options.toVolume ?? 1, 0, 1);
   const stopAfter = options.stopAfter ?? true;
 
@@ -44,4 +44,4 @@ export async function crossFade(from: Voice, to: Voice, durationMs: number, opti
   return new Promise<void>(resolve => {
     setTimeout(resolve, Math.max(0, durationMs));
   });
-}
+};

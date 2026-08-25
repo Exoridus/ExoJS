@@ -8,15 +8,15 @@ import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 
-function mockFetch(json: unknown): void {
+const mockFetch = (json: unknown): void => {
   global.fetch = vi.fn(
     async (): Promise<Response> =>
       ({
@@ -28,7 +28,7 @@ function mockFetch(json: unknown): void {
         arrayBuffer: async () => new ArrayBuffer(8),
       }) as unknown as Response,
   ) as typeof fetch;
-}
+};
 
 describe('load(catalog) return value', () => {
   afterEach(() => {

@@ -129,7 +129,7 @@ interface IndexedNode {
  * and the chain up is bounded by the scene's depth, while a downward walk
  * would visit the whole subtree.
  */
-function isSelfOrDescendant(node: RenderNode, root: RenderNode): boolean {
+const isSelfOrDescendant = (node: RenderNode, root: RenderNode): boolean => {
   let current: RenderNode | null = node;
 
   while (current !== null) {
@@ -141,7 +141,7 @@ function isSelfOrDescendant(node: RenderNode, root: RenderNode): boolean {
   }
 
   return false;
-}
+};
 
 // ---------------------------------------------------------------------------
 

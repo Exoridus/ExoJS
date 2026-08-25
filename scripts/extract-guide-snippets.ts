@@ -122,11 +122,11 @@ const BASELINE_NOTE =
 const UPDATE_BASELINE = process.argv.includes('--update-baseline');
 
 /** Whether a guide-relative MDX path belongs to a folder this run visited. */
-function isInScope(rel: string): boolean {
+const isInScope = (rel: string): boolean => {
   if (FOLDER_FILTER.length === 0) return true;
 
   return FOLDER_FILTER.includes(rel.split('/')[0]);
-}
+};
 
 const CHECKED_LANGS = new Set(['ts', 'tsx', 'typescript', 'js', 'javascript']);
 
@@ -298,7 +298,7 @@ const RESERVED_OR_GLOBAL = new Set([
 
 // Collects all top-level declared names (const/let/var/function/class) in
 // a body, excluding import bindings.
-function topLevelDeclaredNames(body: string): Set<string> {
+const topLevelDeclaredNames = (body: string): Set<string> => {
   const names = new Set<string>();
   for (const line of body.split('\n')) {
     const m = line.match(/^(?:const|let|var)\s+(\{[^}]+\}|\[?[\w$]+)/);
@@ -310,7 +310,7 @@ function topLevelDeclaredNames(body: string): Set<string> {
     if (fm) names.add(fm[1]);
   }
   return names;
-}
+};
 
 /**
  * Returns true when a code block is self-contained enough to be written to a
@@ -326,7 +326,7 @@ function topLevelDeclaredNames(body: string): Set<string> {
  *   4. It does NOT reference common lifecycle/context variables (like `loader`,
  *      `delta`, `texture`) that are never declared within the snippet itself.
  */
-function isStandaloneSnippet(body: string): boolean {
+const isStandaloneSnippet = (body: string): boolean => {
   if (!/^import\s/m.test(body)) return false;
 
   const firstCodeLine = firstRealCodeLine(body);
@@ -356,34 +356,34 @@ function isStandaloneSnippet(body: string): boolean {
   }
 
   return true;
-}
+};
 
-function firstRealCodeLine(body: string): string | undefined {
+const firstRealCodeLine = (body: string): string | undefined => {
   return body
     .split('\n')
     .map(l => l.trimStart())
     .find(l => l && !l.startsWith('import ') && !l.startsWith('//') && !l.startsWith('/*') && !l.startsWith('*'));
-}
+};
 
 /** A method-declaration-shaped first line (`update(delta) {`), as opposed to
  * a control-flow fragment shaped the same way (`if (x) {`) or a bare `this.`
  * statement. */
-function isGenuineMethodDeclLine(firstCodeLine: string): boolean {
+const isGenuineMethodDeclLine = (firstCodeLine: string): boolean => {
   if (TOPLEVEL_KEYWORD_RE.test(firstCodeLine)) return false;
   const m = firstCodeLine.match(/^(?:async\s+|override\s+)?([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\(/);
   return m !== null && !CONTROL_KEYWORDS.has(m[1]);
-}
+};
 
 /** True when a no-import block is shaped like a bare class-method body or a
  * `this.*` / control-flow fragment shown without its enclosing class - the
  * gap this fix closes (see file header). */
-function isBareWrappable(firstCodeLine: string): boolean {
+const isBareWrappable = (firstCodeLine: string): boolean => {
   if (TOPLEVEL_KEYWORD_RE.test(firstCodeLine)) return false;
   if (BARE_METHOD_RE.test(firstCodeLine)) return true; // genuine method OR control-flow fragment
   return firstCodeLine.startsWith('this.');
-}
+};
 
-function walkFiles(dir: string, predicate: (name: string) => boolean): string[] {
+const walkFiles = (dir: string, predicate: (name: string) => boolean): string[] => {
   const results: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const full = join(dir, entry.name);
@@ -394,7 +394,7 @@ function walkFiles(dir: string, predicate: (name: string) => boolean): string[] 
     }
   }
   return results;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Core export names - a static scan of src/**/*.ts for `export`ed names, used
@@ -404,7 +404,7 @@ function walkFiles(dir: string, predicate: (name: string) => boolean): string[] 
 // extension-package types like `BeatDetector` and guide-local placeholder
 // class names like `GameScene` that were never real exports).
 // ---------------------------------------------------------------------------
-function computeCoreExportNames(): Set<string> {
+const computeCoreExportNames = (): Set<string> => {
   const names = new Set<string>();
   const files = walkFiles(SRC_DIR, name => name.endsWith('.ts') && !name.endsWith('.test.ts') && !name.endsWith('.spec.ts'));
   for (const file of files) {
@@ -424,7 +424,7 @@ function computeCoreExportNames(): Set<string> {
     }
   }
   return names;
-}
+};
 
 // ---------------------------------------------------------------------------
 // SourceSnippet anchor resolution - finds a real, fully-typed class embedded
@@ -433,7 +433,7 @@ function computeCoreExportNames(): Set<string> {
 // ---------------------------------------------------------------------------
 const SOURCE_SNIPPET_TAG_RE = /<SourceSnippet\s+([^>]*?)\/>/gs;
 
-function parseSourceSnippetRefs(mdxContent: string): { source: string; region: string }[] {
+const parseSourceSnippetRefs = (mdxContent: string): { source: string; region: string }[] => {
   const refs: { source: string; region: string }[] = [];
   for (const m of mdxContent.matchAll(SOURCE_SNIPPET_TAG_RE)) {
     const attrs = m[1];
@@ -442,7 +442,7 @@ function parseSourceSnippetRefs(mdxContent: string): { source: string; region: s
     if (source && region) refs.push({ source, region });
   }
   return refs;
-}
+};
 
 const REGION_OPEN_RE = /^[ \t]*\/\/ #region guide:(.+)$/;
 const REGION_CLOSE_RE = /^[ \t]*\/\/ #endregion guide:(.+)$/;
@@ -452,7 +452,7 @@ const REGION_CLOSE_RE = /^[ \t]*\/\/ #endregion guide:(.+)$/;
  * site's module graph). Returns null instead of throwing on any failure -
  * a guide build error there is loud and separate; here we just skip the
  * anchor and fall back to the synthetic shell. */
-function tryExtractSnippetRegion(filePath: string, region: string): string | null {
+const tryExtractSnippetRegion = (filePath: string, region: string): string | null => {
   try {
     const source = readFileSync(join(REPO_ROOT, filePath), 'utf8');
     const lines = source.split('\n');
@@ -482,24 +482,24 @@ function tryExtractSnippetRegion(filePath: string, region: string): string | nul
   } catch {
     return null;
   }
-}
+};
 
 /** Strips leading import/comment lines and checks whether what remains is a
  * single `class X extends Y { ... }` spanning the whole text. Returns the
  * bare class text (imports stripped) or null if the shape doesn't match. */
-function extractAnchorClass(regionText: string): string | null {
+const extractAnchorClass = (regionText: string): string | null => {
   const withoutLeading = regionText.replace(/^(?:[ \t]*(?:\/\/[^\n]*|import\s[\s\S]*?;)[ \t]*\n)+/, '');
   const trimmed = withoutLeading.trim();
   if (/^(?:export\s+)?class\s+[A-Za-z_$][\w$]*\s+extends\s+[\w.$]+/.test(trimmed) && trimmed.endsWith('}')) {
     return trimmed;
   }
   return null;
-}
+};
 
 /** Import lines of the referenced source file, filtered to specifiers the
  * guide-typecheck tsconfig can actually resolve (`@codexo/...`). Names bound
  * by dropped imports simply fall through to the `var x;` any-fallback. */
-function collectFileImportLines(filePath: string): string[] {
+const collectFileImportLines = (filePath: string): string[] => {
   try {
     const content = readFileSync(join(REPO_ROOT, filePath), 'utf8');
     const matches = content.match(/^import\s[\s\S]*?;\s*$/gm) ?? [];
@@ -507,10 +507,10 @@ function collectFileImportLines(filePath: string): string[] {
   } catch {
     return [];
   }
-}
+};
 
 /** All top-level `class X extends Y { ... }` declarations in a source file. */
-function collectFileClasses(filePath: string): string[] {
+const collectFileClasses = (filePath: string): string[] => {
   try {
     const content = readFileSync(join(REPO_ROOT, filePath), 'utf8');
     const sourceFile = ts.createSourceFile(filePath, content, ts.ScriptTarget.ES2022, true);
@@ -524,7 +524,7 @@ function collectFileClasses(filePath: string): string[] {
   } catch {
     return [];
   }
-}
+};
 
 interface Anchor {
   /** The class text (e.g. `class HelloWorldScene extends Scene { ... }`), imports stripped. */
@@ -547,7 +547,7 @@ interface Anchor {
  * Returns null when the page embeds no class at all - those pages get the
  * synthetic shell instead.
  */
-function findAnchor(mdxContent: string, thisRefs: Set<string>): Anchor | null {
+const findAnchor = (mdxContent: string, thisRefs: Set<string>): Anchor | null => {
   const candidates: Anchor[] = [];
   const seenFiles = new Set<string>();
   for (const ref of parseSourceSnippetRefs(mdxContent)) {
@@ -578,7 +578,7 @@ function findAnchor(mdxContent: string, thisRefs: Set<string>): Anchor | null {
     }
   }
   return best;
-}
+};
 
 // ---------------------------------------------------------------------------
 // BARE block → synthetic member text
@@ -593,7 +593,7 @@ let bareMemberCounter = 0;
  * anything) and keeping `async` and the original parameter list intact.
  * The original name is recorded in `methodNames` so `this.originalName(...)`
  * calls from other bare blocks on the same page still resolve. */
-function renameMethodChunk(chunk: string, methodNames: Set<string>): string {
+const renameMethodChunk = (chunk: string, methodNames: Set<string>): string => {
   const name = `__block${bareMemberCounter++}`;
   const lines = chunk.split('\n');
   const firstLineIdx = lines.findIndex(l => l.trim().length > 0 && !l.trimStart().startsWith('//'));
@@ -606,15 +606,15 @@ function renameMethodChunk(chunk: string, methodNames: Set<string>): string {
     },
   );
   return lines.join('\n');
-}
+};
 
 /** Wraps a bare `this.*`/control-flow fragment body in a synthetic
  * zero-argument method so it becomes a valid class member. Free identifiers
  * it references are resolved separately via a fallback `var` declaration. */
-function wrapFragment(body: string): string {
+const wrapFragment = (body: string): string => {
   const name = `__block${bareMemberCounter++}`;
   return `${name}() {\n${body}\n}`;
-}
+};
 
 /**
  * Splits a "genuine method declaration" block into one chunk per sibling
@@ -628,18 +628,18 @@ function wrapFragment(body: string): string {
  * multiple lines, nested braces, comments, etc. - none of which a
  * brace-depth or blank-line heuristic can fully get right).
  */
-function splitSiblingMethods(body: string): string[] {
+const splitSiblingMethods = (body: string): string[] => {
   const wrapped = `class __Probe {\n${body}\n}`;
   const sourceFile = ts.createSourceFile('__probe.ts', wrapped, ts.ScriptTarget.ES2022, true);
   const classDecl = sourceFile.statements.find(ts.isClassDeclaration);
   if (!classDecl || classDecl.members.length === 0) return [body];
   return classDecl.members.map(member => wrapped.slice(member.pos, member.end).trim()).filter(Boolean);
-}
+};
 
 /** Converts one BARE block's body into one-or-more synthetic class-member
  * texts, ready to be joined into a class body. Original method names of
  * renamed chunks are recorded in `methodNames`. */
-function bareBlockToMembers(body: string, methodNames: Set<string>): string[] {
+const bareBlockToMembers = (body: string, methodNames: Set<string>): string[] => {
   const firstCodeLine = firstRealCodeLine(body);
   if (firstCodeLine && isGenuineMethodDeclLine(firstCodeLine)) {
     return splitSiblingMethods(body).map(chunk =>
@@ -647,7 +647,7 @@ function bareBlockToMembers(body: string, methodNames: Set<string>): string[] {
     );
   }
   return [wrapFragment(body)];
-}
+};
 
 // ---------------------------------------------------------------------------
 // Identifier scanning helpers
@@ -659,14 +659,14 @@ function bareBlockToMembers(body: string, methodNames: Set<string>): string[] {
  * theory - harmless here, since the result is only used for name scans that
  * tolerate both false negatives (an extra unused `var`) and rare false
  * positives (a missing one shows up as a clear compile error). */
-function stripStringsAndComments(text: string): string {
+const stripStringsAndComments = (text: string): string => {
   return text
     .replace(/`(?:\\.|[^`\\])*`/g, '``')
     .replace(/'(?:\\.|[^'\\\n])*'/g, "''")
     .replace(/"(?:\\.|[^"\\\n])*"/g, '""')
     .replace(/\/\*[\s\S]*?\*\//g, ' ')
     .replace(/\/\/[^\n]*/g, ' ');
-}
+};
 
 // ---------------------------------------------------------------------------
 // Free-identifier resolution (import-for-real vs `var x;` any-fallback)
@@ -677,11 +677,11 @@ const FREE_IDENTIFIER_RE = /(?<![.\w$])([A-Za-z_$][\w$]*)/g;
 /** The `any`-fallback declaration(s) for one unresolved free identifier.
  * PascalCase names may be used in type position too (`orb: OrbData`), so
  * they get a merging `type X = any;` alongside the value declaration. */
-function anyFallbackDecl(name: string): string[] {
+const anyFallbackDecl = (name: string): string[] => {
   return /^[A-Z]/.test(name) ? [`var ${name}: any;`, `type ${name} = any;`] : [`var ${name}: any;`];
-}
+};
 
-function collectFreeIdentifiers(memberTexts: string[]): Set<string> {
+const collectFreeIdentifiers = (memberTexts: string[]): Set<string> => {
   const combined = stripStringsAndComments(memberTexts.join('\n'));
   const found = new Set<string>();
   for (const m of combined.matchAll(FREE_IDENTIFIER_RE)) {
@@ -689,7 +689,7 @@ function collectFreeIdentifiers(memberTexts: string[]): Set<string> {
     if (!RESERVED_OR_GLOBAL.has(name) && !/^__block\d+$/.test(name)) found.add(name);
   }
   return found;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Page-wide field mining
@@ -708,7 +708,7 @@ function collectFreeIdentifiers(memberTexts: string[]): Set<string> {
 // on the page - the `this.bunny` class of staleness - is deliberately NOT
 // mined and stays a hard error.
 // ---------------------------------------------------------------------------
-function mineAssignedFields(blockBodies: string[]): Set<string> {
+const mineAssignedFields = (blockBodies: string[]): Set<string> => {
   const mined = new Set<string>();
   for (const body of blockBodies) {
     const text = stripStringsAndComments(body);
@@ -722,15 +722,15 @@ function mineAssignedFields(blockBodies: string[]): Set<string> {
     }
   }
   return mined;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 
-function walkMdx(dir: string): string[] {
+const walkMdx = (dir: string): string[] => {
   return walkFiles(dir, name => name.endsWith('.mdx') || name.endsWith('.md'));
-}
+};
 
 // Clean and recreate output directory.
 rmSync(OUT_DIR, { recursive: true, force: true });

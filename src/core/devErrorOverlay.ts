@@ -38,7 +38,7 @@ const bannerBaseStyle = [
  * update the existing banner in place and increment a visible `×N` counter.
  * @internal
  */
-export function showDevErrorOverlay(canvas: HTMLCanvasElement, message: string, options?: { fatal?: boolean }): void {
+export const showDevErrorOverlay = (canvas: HTMLCanvasElement, message: string, options?: { fatal?: boolean }): void => {
   if (!__DEV__ || typeof document === 'undefined') {
     return;
   }
@@ -118,14 +118,14 @@ export function showDevErrorOverlay(canvas: HTMLCanvasElement, message: string, 
   if (rest.length > 0) {
     banner.append(document.createTextNode(rest));
   }
-}
+};
 
 /**
  * Remove the banner for `canvas` if present. Idempotent - safe to call when no
  * banner exists. No-op in production builds and when `document` is unavailable.
  * @internal
  */
-export function hideDevErrorOverlay(canvas: HTMLCanvasElement): void {
+export const hideDevErrorOverlay = (canvas: HTMLCanvasElement): void => {
   if (!__DEV__ || typeof document === 'undefined') {
     return;
   }
@@ -137,4 +137,4 @@ export function hideDevErrorOverlay(canvas: HTMLCanvasElement): void {
     banners.delete(canvas);
     bannerCounts.delete(banner);
   }
-}
+};

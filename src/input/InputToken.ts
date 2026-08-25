@@ -294,7 +294,7 @@ const tokensByChannel = ((): ReadonlyMap<number, InputToken> => {
  * a raw offset into a reserved or custom-mapping channel slot has no stable
  * public name and therefore cannot be persisted.
  */
-export function inputToken(channel: InputChannel): InputToken {
+export const inputToken = (channel: InputChannel): InputToken => {
   const token = tokensByChannel.get(channel);
 
   if (token === undefined) {
@@ -304,7 +304,7 @@ export function inputToken(channel: InputChannel): InputToken {
   }
 
   return token;
-}
+};
 
 /**
  * Channel `token` names, or `null` when no control carries that token.
@@ -318,11 +318,7 @@ export function inputToken(channel: InputChannel): InputToken {
  * Gamepad tokens resolve to slot-0-relative channels; the owning
  * {@link ActionMap} rebases them onto its own pad.
  */
-export function inputChannelFromToken(token: string): InputChannel | null {
-  return channelsByToken.get(token) ?? null;
-}
+export const inputChannelFromToken = (token: string): InputChannel | null => channelsByToken.get(token) ?? null;
 
 /** Every token this build understands, in canonical order. @internal */
-export function inputTokens(): IterableIterator<InputToken> {
-  return channelsByToken.keys();
-}
+export const inputTokens = (): IterableIterator<InputToken> => channelsByToken.keys();

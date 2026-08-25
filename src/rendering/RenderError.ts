@@ -70,7 +70,7 @@ const excerptRadius = 2;
  * Handles ANGLE/Mesa GLSL (`ERROR: 0:<line>:` / `WARNING: 0:<line>:`) first and,
  * when none match, WGSL-style `:<line>:<col>` positions.
  */
-function parseErrorLineNumbers(log: string): number[] {
+const parseErrorLineNumbers = (log: string): number[] => {
   const numbers = new Set<number>();
 
   // GLSL info logs: `ERROR: 0:12: 'foo' : syntax error`. The first integer is
@@ -97,10 +97,10 @@ function parseErrorLineNumbers(log: string): number[] {
   }
 
   return [...numbers].filter(value => Number.isFinite(value) && value > 0).sort((a, b) => a - b);
-}
+};
 
 /** Build a numbered `±excerptRadius` source excerpt around a 1-based failing line. */
-function buildExcerpt(sourceLines: readonly string[], lineNumber: number): string | null {
+const buildExcerpt = (sourceLines: readonly string[], lineNumber: number): string | null => {
   const index = lineNumber - 1;
 
   if (index < 0 || index >= sourceLines.length) {
@@ -121,7 +121,7 @@ function buildExcerpt(sourceLines: readonly string[], lineNumber: number): strin
   }
 
   return rows.join('\n');
-}
+};
 
 /**
  * Format a driver info log against its shader source: parses `ERROR: 0:<line>:`
@@ -130,7 +130,7 @@ function buildExcerpt(sourceLines: readonly string[], lineNumber: number): strin
  * Falls back to the raw log verbatim when no line references parse (or none of
  * them land inside `source`).
  */
-export function formatShaderError(source: string, infoLog: string): string {
+export const formatShaderError = (source: string, infoLog: string): string => {
   const log = infoLog.trim();
   const lineNumbers = parseErrorLineNumbers(log);
 
@@ -154,4 +154,4 @@ export function formatShaderError(source: string, infoLog: string): string {
   }
 
   return `${log}\n\n${excerpts.join('\n\n')}`;
-}
+};

@@ -130,7 +130,7 @@ export class TiledGroupLayer extends TiledLayer {
 }
 
 /** Constructs the appropriate {@link TiledLayer} subclass for `data.type`. */
-export function createTiledLayer(data: TiledLayerData): TiledLayer {
+export const createTiledLayer = (data: TiledLayerData): TiledLayer => {
   switch (data.type) {
     case 'tilelayer':
       return new TiledTileLayer(data);
@@ -141,4 +141,4 @@ export function createTiledLayer(data: TiledLayerData): TiledLayer {
     case 'group':
       return new TiledGroupLayer(data);
   }
-}
+};

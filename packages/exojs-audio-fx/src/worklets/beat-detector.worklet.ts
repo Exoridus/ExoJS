@@ -68,7 +68,7 @@ interface BeatDetectorProcessorOptions {
 // ---- Utility ----
 // Sorts arr[0..n-1] in-place using insertion sort. Avoids creating a subarray view so
 // the hot path (_detectOnset, ~93 calls/s) produces zero per-call GC pressure.
-function partialSort(arr: Float32Array, n: number): void {
+const partialSort = (arr: Float32Array, n: number): void => {
   for (let i = 1; i < n; i++) {
     const v = arr[i]!;
     let j = i - 1;
@@ -78,7 +78,7 @@ function partialSort(arr: Float32Array, n: number): void {
     }
     arr[j + 1] = v;
   }
-}
+};
 
 // ---- Onset peak-picker: adaptive normalization + noise gate + refractory ----
 // The raw spectral flux is normalised against a running median/MAD baseline so that

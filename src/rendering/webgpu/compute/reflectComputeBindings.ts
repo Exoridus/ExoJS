@@ -27,7 +27,7 @@ import type { ComputeBinding } from './WebGpuComputePipeline';
  * which never nests comments; a hand-authored shader that does would need manual
  * `ComputeBinding[][]` instead.
  */
-export function reflectComputeBindings(wgsl: string, options?: { nonFilteringResources?: ReadonlySet<string> }): ComputeBinding[][] {
+export const reflectComputeBindings = (wgsl: string, options?: { nonFilteringResources?: ReadonlySet<string> }): ComputeBinding[][] => {
   const nonFiltering = options?.nonFilteringResources ?? new Set<string>();
   const source = stripComments(wgsl);
   const groups: ComputeBinding[][] = [];
@@ -69,7 +69,7 @@ export function reflectComputeBindings(wgsl: string, options?: { nonFilteringRes
   }
 
   return Array.from({ length: groups.length }, (_, i) => [...(groups[i] ?? [])].sort((a, b) => a.binding - b.binding));
-}
+};
 
 const samplerTypeFor = (comparison: boolean, nonFiltering: boolean): GPUSamplerBindingType => {
   if (comparison) return 'comparison';

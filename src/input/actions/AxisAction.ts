@@ -27,7 +27,7 @@ interface ResolvedAxisBinding {
   readonly positive: readonly number[];
 }
 
-function resolveAxisBinding(binding: AxisBinding, slot: GamepadSlot): ResolvedAxisBinding {
+const resolveAxisBinding = (binding: AxisBinding, slot: GamepadSlot): ResolvedAxisBinding => {
   const rebase = (channels: readonly number[]): readonly number[] => channels.map(channel => resolveGamepadSlotChannel(channel, slot));
 
   if (typeof binding === 'number') {
@@ -39,9 +39,9 @@ function resolveAxisBinding(binding: AxisBinding, slot: GamepadSlot): ResolvedAx
     negative: rebase(toChannels(binding.negative)),
     positive: rebase(toChannels(binding.positive)),
   };
-}
+};
 
-function evaluateAxis(buffer: Float32Array, binding: ResolvedAxisBinding): number {
+const evaluateAxis = (buffer: Float32Array, binding: ResolvedAxisBinding): number => {
   if (binding.direct.length > 0) {
     return sampleStrongest(buffer, binding.direct);
   }
@@ -50,17 +50,17 @@ function evaluateAxis(buffer: Float32Array, binding: ResolvedAxisBinding): numbe
   const negative = Math.abs(sampleStrongest(buffer, binding.negative));
 
   return positive - negative;
-}
+};
 
-function serializeEntry(binding: ResolvedAxisBinding): SerializedAxisEntry {
+const serializeEntry = (binding: ResolvedAxisBinding): SerializedAxisEntry => {
   if (binding.direct.length > 0) {
     return { direct: tokensFromChannels(binding.direct)[0]! };
   }
 
   return { negative: tokensFromChannels(binding.negative), positive: tokensFromChannels(binding.positive) };
-}
+};
 
-function deserializeEntry(entry: unknown): AxisBinding {
+const deserializeEntry = (entry: unknown): AxisBinding => {
   if (entry === null || typeof entry !== 'object') {
     throw new Error('AxisAction: every serialized binding entry must be an object.');
   }
@@ -81,7 +81,7 @@ function deserializeEntry(entry: unknown): AxisBinding {
   }
 
   return composite as AxisBinding;
-}
+};
 
 /**
  * A named signed axis in -1..1, fed by a stick, by two opposing button groups,

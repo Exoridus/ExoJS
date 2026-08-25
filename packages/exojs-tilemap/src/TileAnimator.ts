@@ -203,7 +203,7 @@ export class TileAnimator {
  * Find the frame index whose cumulative window contains time `t` (0 ≤ t < total).
  * `cumulative[i]` is the end time of frame `i`; the last entry equals the total.
  */
-function frameIndexAt(cumulative: readonly number[], t: number): number {
+const frameIndexAt = (cumulative: readonly number[], t: number): number => {
   for (let i = 0; i < cumulative.length; i++) {
     const end = cumulative[i];
     if (end !== undefined && t < end) {
@@ -211,4 +211,4 @@ function frameIndexAt(cumulative: readonly number[], t: number): number {
     }
   }
   return cumulative.length - 1;
-}
+};

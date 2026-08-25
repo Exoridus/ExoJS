@@ -4,6 +4,4 @@
  * through this, so `.PNG`, `png` and `..png` are one key.
  * @internal
  */
-export function normalizeExtension(extension: string): string {
-  return extension.replace(/^\.+/, '').toLowerCase();
-}
+export const normalizeExtension = (extension: string): string => extension.replace(/^\.+/, '').toLowerCase();

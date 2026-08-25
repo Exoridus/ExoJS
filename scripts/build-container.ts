@@ -44,7 +44,7 @@ interface ContainerManifest {
   assets: ManifestAsset[];
 }
 
-function main(): void {
+const main = (): void => {
   const manifestPath = process.argv[2];
 
   if (!manifestPath) {
@@ -78,6 +78,6 @@ function main(): void {
   writeFileSync(outputPath, new Uint8Array(container));
 
   console.log(`Wrote ${inputs.length} asset(s) → ${outputPath} (${container.byteLength} bytes)`);
-}
+};
 
 main();

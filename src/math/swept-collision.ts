@@ -33,7 +33,7 @@ export interface SweptHit {
  * normal of the deepest-penetration axis, allowing callers to handle the
  * "I'm already inside" situation without a separate discrete test.
  */
-export function sweepRectangle(moving: Rectangle, deltaX: number, deltaY: number, target: Rectangle): SweptHit | null {
+export const sweepRectangle = (moving: Rectangle, deltaX: number, deltaY: number, target: Rectangle): SweptHit | null => {
   const movMinX = moving.x;
   const movMaxX = moving.x + moving.width;
   const movMinY = moving.y;
@@ -110,7 +110,7 @@ export function sweepRectangle(moving: Rectangle, deltaX: number, deltaY: number
   }
 
   return { t, x: hitX, y: hitY, normalX, normalY };
-}
+};
 
 // ---------------------------------------------------------------------------
 // sweepCircleVsRectangle - full Minkowski rounded-rectangle formulation
@@ -135,7 +135,7 @@ export function sweepRectangle(moving: Rectangle, deltaX: number, deltaY: number
  * Already-overlapping case: returns `t = 0` with the normal of the
  * minimum-penetration axis.
  */
-export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, deltaY: number, target: Rectangle): SweptHit | null {
+export const sweepCircleVsRectangle = (moving: CircleLike, deltaX: number, deltaY: number, target: Rectangle): SweptHit | null => {
   const r = moving.radius;
   const cx = moving.x;
   const cy = moving.y;
@@ -244,7 +244,7 @@ export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, delta
   if (bestT > 1) return null;
 
   return { t: bestT, x: cx + deltaX * bestT, y: cy + deltaY * bestT, normalX: bestNx, normalY: bestNy };
-}
+};
 
 // ---------------------------------------------------------------------------
 // sweepCircleVsCircle - quadratic equation
@@ -259,7 +259,7 @@ export function sweepCircleVsRectangle(moving: CircleLike, deltaX: number, delta
  * Already-overlapping case: returns `{ t: 0 }` with the normal pointing from
  * target → moving (or an arbitrary normal if both centres coincide).
  */
-export function sweepCircleVsCircle(moving: CircleLike, deltaX: number, deltaY: number, target: CircleLike): SweptHit | null {
+export const sweepCircleVsCircle = (moving: CircleLike, deltaX: number, deltaY: number, target: CircleLike): SweptHit | null => {
   const dx = moving.x - target.x;
   const dy = moving.y - target.y;
   const r = moving.radius + target.radius;
@@ -302,7 +302,7 @@ export function sweepCircleVsCircle(moving: CircleLike, deltaX: number, deltaY: 
   const normalY = (hitY - target.y) / r;
 
   return { t, x: hitX, y: hitY, normalX, normalY };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Batch helpers - sweep a shape against multiple targets
@@ -316,7 +316,7 @@ export function sweepCircleVsCircle(moving: CircleLike, deltaX: number, deltaY: 
  * moving rectangle is computed once; targets whose AABB does not overlap the
  * swept AABB are skipped.
  */
-export function sweepRectangleAgainst(moving: Rectangle, deltaX: number, deltaY: number, targets: readonly Rectangle[]): SweptHit | null {
+export const sweepRectangleAgainst = (moving: Rectangle, deltaX: number, deltaY: number, targets: readonly Rectangle[]): SweptHit | null => {
   if (targets.length === 0) {
     return null;
   }
@@ -343,7 +343,7 @@ export function sweepRectangleAgainst(moving: Rectangle, deltaX: number, deltaY:
   }
 
   return earliest;
-}
+};
 
 /**
  * Returns the earliest `SweptHit` against an array of circle targets, or
@@ -352,7 +352,7 @@ export function sweepRectangleAgainst(moving: Rectangle, deltaX: number, deltaY:
  * Optimisation: the swept AABB of the moving circle is computed once and used
  * to skip targets that cannot possibly be reached.
  */
-export function sweepCircleAgainst(moving: CircleLike, deltaX: number, deltaY: number, targets: readonly CircleLike[]): SweptHit | null {
+export const sweepCircleAgainst = (moving: CircleLike, deltaX: number, deltaY: number, targets: readonly CircleLike[]): SweptHit | null => {
   if (targets.length === 0) {
     return null;
   }
@@ -384,7 +384,7 @@ export function sweepCircleAgainst(moving: CircleLike, deltaX: number, deltaY: n
   }
 
   return earliest;
-}
+};
 
 // ---------------------------------------------------------------------------
 // substepSweep - generic fallback iterator
@@ -402,7 +402,7 @@ export function sweepCircleAgainst(moving: CircleLike, deltaX: number, deltaY: n
  * Always yields at least 2 snapshots (t=0 and t=1), even for zero-length
  * deltas.
  */
-export function* substepSweep(
+export const substepSweep = function* (
   fromX: number,
   fromY: number,
   deltaX: number,
@@ -417,7 +417,7 @@ export function* substepSweep(
 
     yield { x: fromX + deltaX * t, y: fromY + deltaY * t, t };
   }
-}
+};
 
 /**
  * Swept (continuous) collision queries, grouped as a namespace so the public

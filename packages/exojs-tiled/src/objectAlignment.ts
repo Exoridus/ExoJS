@@ -29,13 +29,13 @@ export const TILED_OBJECT_ALIGNMENTS: readonly TiledObjectAlignment[] = [
  * orientation, including staggered and hexagonal.
  * @advanced
  */
-export function resolveTiledObjectAlignment(alignment: TiledObjectAlignment | undefined, orientation: TiledOrientation): TiledResolvedObjectAlignment {
+export const resolveTiledObjectAlignment = (alignment: TiledObjectAlignment | undefined, orientation: TiledOrientation): TiledResolvedObjectAlignment => {
   if (alignment !== undefined && alignment !== 'unspecified') {
     return alignment;
   }
 
   return orientation === 'isometric' ? 'bottom' : 'bottomleft';
-}
+};
 
 /**
  * Offset of a tile object's stored `x`/`y` anchor from the top-left corner of
@@ -45,7 +45,7 @@ export function resolveTiledObjectAlignment(alignment: TiledObjectAlignment | un
  * `cornerX = object.x - offset.x`.
  * @advanced
  */
-export function tiledObjectAnchorOffset(alignment: TiledResolvedObjectAlignment, width: number, height: number): { readonly x: number; readonly y: number } {
+export const tiledObjectAnchorOffset = (alignment: TiledResolvedObjectAlignment, width: number, height: number): { readonly x: number; readonly y: number } => {
   switch (alignment) {
     case 'topleft':
       return { x: 0, y: 0 };
@@ -66,4 +66,4 @@ export function tiledObjectAnchorOffset(alignment: TiledResolvedObjectAlignment,
     case 'bottomright':
       return { x: width, y: height };
   }
-}
+};

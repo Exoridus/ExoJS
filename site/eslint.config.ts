@@ -31,6 +31,16 @@ export default defineConfig([
   // TypeScript program.
   ...nodeToolingConfig({ files: ['*.config.{ts,mjs,js}'] }),
 
+  // Function style is a repository-wide convention. The engine and the
+  // extension packages get it from the shared correctness rules; the site has
+  // its own config, so it carries the rule itself.
+  {
+    files: ['src/**/*.{ts,tsx}', '*.config.{ts,mjs,js}'],
+    rules: {
+      'func-style': ['error', 'expression'],
+    },
+  },
+
   // Prettier compatibility: keep this last
   prettier,
 ]);

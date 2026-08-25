@@ -3167,15 +3167,12 @@ interface WebGpuDataTextureFormatInfo {
  * side, which is what the Safari external-image workaround needs. Both canvas
  * kinds qualify; an image, bitmap or video frame does not.
  */
-function isCanvasTextureSource(source: TextureSource): source is HTMLCanvasElement | OffscreenCanvas {
-  return (
-    (typeof HTMLCanvasElement !== 'undefined' && source instanceof HTMLCanvasElement) ||
-    (typeof OffscreenCanvas !== 'undefined' && source instanceof OffscreenCanvas)
-  );
-}
+const isCanvasTextureSource = (source: TextureSource): source is HTMLCanvasElement | OffscreenCanvas =>
+  (typeof HTMLCanvasElement !== 'undefined' && source instanceof HTMLCanvasElement) ||
+  (typeof OffscreenCanvas !== 'undefined' && source instanceof OffscreenCanvas);
 
 /** Map a {@link RenderTexture} color format to its WebGPU render-target format. */
-function webgpuColorTextureFormat(format: ColorTextureFormat): GPUTextureFormat {
+const webgpuColorTextureFormat = (format: ColorTextureFormat): GPUTextureFormat => {
   switch (format) {
     case TextureFormat.Rgba8:
       return 'rgba8unorm';
@@ -3184,9 +3181,9 @@ function webgpuColorTextureFormat(format: ColorTextureFormat): GPUTextureFormat 
     case TextureFormat.Rgba32F:
       return 'rgba32float';
   }
-}
+};
 
-function webgpuDataTextureFormat(format: DataTextureFormat): WebGpuDataTextureFormatInfo {
+const webgpuDataTextureFormat = (format: DataTextureFormat): WebGpuDataTextureFormatInfo => {
   switch (format) {
     case TextureFormat.R8:
       return { gpuFormat: 'r8unorm', bytesPerPixel: 1, channels: 1 };
@@ -3197,4 +3194,4 @@ function webgpuDataTextureFormat(format: DataTextureFormat): WebGpuDataTextureFo
     case TextureFormat.Rgba32F:
       return { gpuFormat: 'rgba32float', bytesPerPixel: 16, channels: 4 };
   }
-}
+};

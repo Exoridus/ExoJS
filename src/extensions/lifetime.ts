@@ -14,7 +14,7 @@ import type { Extension, ExtensionDisposer } from './Extension';
  * strand the four before it.
  * @internal
  */
-export function installExtensions(app: Application, extensions: readonly Extension[], disposers: ExtensionDisposer[]): void {
+export const installExtensions = (app: Application, extensions: readonly Extension[], disposers: ExtensionDisposer[]): void => {
   for (const extension of extensions) {
     const disposer = extension.install?.(app);
 
@@ -22,7 +22,7 @@ export function installExtensions(app: Application, extensions: readonly Extensi
       disposers.push(disposer);
     }
   }
-}
+};
 
 /**
  * Run and drop every disposer in `disposers`, in reverse installation order.
@@ -39,7 +39,7 @@ export function installExtensions(app: Application, extensions: readonly Extensi
  * expect rather than a remote one.
  * @internal
  */
-export function disposeExtensions(disposers: ExtensionDisposer[]): void {
+export const disposeExtensions = (disposers: ExtensionDisposer[]): void => {
   while (disposers.length > 0) {
     try {
       disposers.pop()?.();
@@ -50,4 +50,4 @@ export function disposeExtensions(disposers: ExtensionDisposer[]): void {
       });
     }
   }
-}
+};

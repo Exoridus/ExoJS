@@ -15,17 +15,17 @@ import { TileSet } from '../src/TileSet';
  * Narrow a band's layer-node union to the tile-layer case: these fixtures build
  * tile layers only, so an image-layer node means the fixture drifted.
  */
-function asTileLayerNode(node: ImageLayerNode | TileLayerNode): TileLayerNode {
+const asTileLayerNode = (node: ImageLayerNode | TileLayerNode): TileLayerNode => {
   if (!(node instanceof TileLayerNode)) {
     throw new Error('expected a TileLayerNode');
   }
   return node;
-}
+};
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── helpers (conventions shared with nodes.test.ts / view.test.ts) ─────
 
-function fakeTexture(width = 512, height = 512): Texture {
+const fakeTexture = (width = 512, height = 512): Texture => {
   return {
     width,
     height,
@@ -35,9 +35,9 @@ function fakeTexture(width = 512, height = 512): Texture {
     destroy: vi.fn(),
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function makeTileset(name = 'tiles'): TileSet {
+const makeTileset = (name = 'tiles'): TileSet => {
   return new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
@@ -45,7 +45,7 @@ function makeTileset(name = 'tiles'): TileSet {
     tileHeight: 32,
     tileCount: 16,
   });
-}
+};
 
 interface BoundaryLayerOpts {
   readonly id?: number;
@@ -59,7 +59,7 @@ interface BoundaryLayerOpts {
  * the chunk-x boundary: chunks (0,0) and (1,0) are non-empty and loaded, and
  * the tiles at x = 31 / x = 32 are direct neighbours across the seam.
  */
-function makeBoundaryLayer(tileset: TileSet, opts: BoundaryLayerOpts = {}): TileLayer {
+const makeBoundaryLayer = (tileset: TileSet, opts: BoundaryLayerOpts = {}): TileLayer => {
   const layer = new TileLayer({
     id: opts.id ?? 1,
     name: opts.name ?? 'ground',
@@ -79,15 +79,15 @@ function makeBoundaryLayer(tileset: TileSet, opts: BoundaryLayerOpts = {}): Tile
   layer.setTileAt(39, 7, ref);
 
   return layer;
-}
+};
 
 /** An empty 4×4 layer - constructible, but produces zero chunk nodes. */
-function makeEmptyLayer(tileset: TileSet, id = 1, name = 'empty'): TileLayer {
+const makeEmptyLayer = (tileset: TileSet, id = 1, name = 'empty'): TileLayer => {
   return new TileLayer({ id, name, width: 4, height: 4, tileWidth: 32, tileHeight: 32, tilesets: [tileset] });
-}
+};
 
 /** A 40×8 map with two boundary-spanning layers: background (1), ground (2). */
-function makeBoundaryMap(): { map: TileMap; tileset: TileSet } {
+const makeBoundaryMap = (): { map: TileMap; tileset: TileSet } => {
   const tileset = makeTileset();
   const map = new TileMap({
     name: 'world',
@@ -99,12 +99,12 @@ function makeBoundaryMap(): { map: TileMap; tileset: TileSet } {
     layers: [makeBoundaryLayer(tileset, { id: 1, name: 'background' }), makeBoundaryLayer(tileset, { id: 2, name: 'ground' })],
   });
   return { map, tileset };
-}
+};
 
 /** The pixel-snap mode of every chunk drawable, in build order. */
-function chunkModes(node: TileLayerNode): PixelSnapMode[] {
+const chunkModes = (node: TileLayerNode): PixelSnapMode[] => {
   return node.chunkNodes.map(chunk => chunk.pixelSnapMode);
-}
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 // Defaults

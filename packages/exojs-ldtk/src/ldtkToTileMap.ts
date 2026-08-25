@@ -50,14 +50,14 @@ export interface LdtkToTileMapOptions {
  * the latter case every converted level's `TileMap.properties` is additionally
  * tagged with its owning world's iid under the reserved `ldtkWorldIid` key.
  */
-export function ldtkToTileMap(data: LdtkData, options?: LdtkToTileMapOptions): LdtkMap {
+export const ldtkToTileMap = (data: LdtkData, options?: LdtkToTileMapOptions): LdtkMap => {
   const source = options?.source ?? '';
   const tilesets = options?.tilesets ?? new Map<number, TileSet>();
 
   const levels = getLdtkLevelEntries(data).map((entry, levelIndex) => convertLevel(entry.level, entry.worldIid, levelIndex, data, tilesets));
 
   return new LdtkMap(source, data, levels);
-}
+};
 
 // ── Level conversion ──────────────────────────────────────────────────────────
 
@@ -68,17 +68,15 @@ export function ldtkToTileMap(data: LdtkData, options?: LdtkToTileMapOptions): L
  * `.ldtkl` payload merged in first, or the result is an empty map.
  * @internal
  */
-export function ldtkLevelToTileMap(
+export const ldtkLevelToTileMap = (
   level: LdtkLevel,
   worldIid: string | undefined,
   levelIndex: number,
   data: LdtkData,
   tilesets: ReadonlyMap<number, TileSet>,
-): TileMap {
-  return convertLevel(level, worldIid, levelIndex, data, tilesets);
-}
+): TileMap => convertLevel(level, worldIid, levelIndex, data, tilesets);
 
-function convertLevel(level: LdtkLevel, worldIid: string | undefined, levelIndex: number, data: LdtkData, tilesets: ReadonlyMap<number, TileSet>): TileMap {
+const convertLevel = (level: LdtkLevel, worldIid: string | undefined, levelIndex: number, data: LdtkData, tilesets: ReadonlyMap<number, TileSet>): TileMap => {
   // Derive map-level tile size from the first non-entity layer, or fall back.
   const gridSize = pickLevelGridSize(level, data.defaultGridSize ?? 16);
   const mapWidth = Math.max(1, Math.ceil(level.pxWid / gridSize));
@@ -126,7 +124,7 @@ function convertLevel(level: LdtkLevel, worldIid: string | undefined, levelIndex
     objectLayers: runtimeObjectLayers,
     properties: buildLdtkLevelProperties(level, worldIid),
   });
-}
+};
 
 /**
  * The property bag a level contributes to its runtime representation - user
@@ -136,27 +134,25 @@ function convertLevel(level: LdtkLevel, worldIid: string | undefined, levelIndex
  * multi-world support existed.
  * @internal
  */
-export function buildLdtkLevelProperties(level: LdtkLevel, worldIid: string | undefined): TileProperties {
-  return {
-    ...convertFieldInstances(level.fieldInstances ?? []),
-    ldtkUid: level.uid,
-    ldtkIid: level.iid,
-    worldX: level.worldX,
-    worldY: level.worldY,
-    ...(worldIid !== undefined && { ldtkWorldIid: worldIid }),
-  };
-}
+export const buildLdtkLevelProperties = (level: LdtkLevel, worldIid: string | undefined): TileProperties => ({
+  ...convertFieldInstances(level.fieldInstances ?? []),
+  ldtkUid: level.uid,
+  ldtkIid: level.iid,
+  worldX: level.worldX,
+  worldY: level.worldY,
+  ...(worldIid !== undefined && { ldtkWorldIid: worldIid }),
+});
 
 // ── Helpers: per-layer-type level conversion ─────────────────────────────────
 
 /** Convert a `Tiles`/`AutoLayer` LDtk layer instance into a runtime {@link TileLayer}. */
-function convertTilesOrAutoLayer(
+const convertTilesOrAutoLayer = (
   layerInst: LdtkLayerInstance,
   layerId: number,
   runtimeTilesets: readonly TileSet[],
   tilesets: ReadonlyMap<number, TileSet>,
   parallax: LdtkLayerParallax,
-): TileLayer {
+): TileLayer => {
   const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets, parallax);
   const tiles = layerInst.__type === 'Tiles' ? (layerInst.gridTiles ?? []) : (layerInst.autoLayerTiles ?? []);
   const tsUid = layerInst.__tilesetDefUid;
@@ -165,17 +161,17 @@ function convertTilesOrAutoLayer(
     if (rts) populateTileLayer(rLayer, tiles, rts, layerInst.__gridSize);
   }
   return rLayer;
-}
+};
 
 /** Convert an `IntGrid` LDtk layer instance into a runtime {@link TileLayer}. */
-function convertIntGridLayer(
+const convertIntGridLayer = (
   layerInst: LdtkLayerInstance,
   layerId: number,
   runtimeTilesets: readonly TileSet[],
   tilesets: ReadonlyMap<number, TileSet>,
   data: LdtkData,
   parallax: LdtkLayerParallax,
-): TileLayer {
+): TileLayer => {
   const intGridProperties = buildIntGridProperties(layerInst, data);
   const rLayer = makeTileLayer(layerInst, layerId, runtimeTilesets, parallax, intGridProperties);
   // IntGrid layers may carry auto-tiles when "Auto-layer" rules are
@@ -188,16 +184,16 @@ function convertIntGridLayer(
     if (rts) populateTileLayer(rLayer, autoTiles, rts, layerInst.__gridSize);
   }
   return rLayer;
-}
+};
 
 /** Convert an `Entities` LDtk layer instance into a runtime {@link ObjectLayer}. */
-function convertEntitiesLayer(
+const convertEntitiesLayer = (
   layerInst: LdtkLayerInstance,
   layerId: number,
   levelIndex: number,
   entityCounter: number,
   parallax: LdtkLayerParallax,
-): ObjectLayer {
+): ObjectLayer => {
   const objects = convertEntityLayer(layerInst, layerInst.__gridSize, levelIndex, entityCounter);
   return new ObjectLayer({
     id: layerId,
@@ -211,18 +207,18 @@ function convertEntitiesLayer(
     parallaxScale: parallax.parallaxScale,
     objects,
   });
-}
+};
 
 // ── Helpers: TileLayer ────────────────────────────────────────────────────────
 
-function makeTileLayer(
+const makeTileLayer = (
   layerInst: LdtkLayerInstance,
   layerId: number,
   tilesets: readonly TileSet[],
   parallax: LdtkLayerParallax,
   properties?: TileProperties,
-): TileLayer {
-  return new TileLayer({
+): TileLayer =>
+  new TileLayer({
     id: layerId,
     name: layerInst.__identifier,
     width: layerInst.__cWid,
@@ -239,9 +235,8 @@ function makeTileLayer(
     parallaxScale: parallax.parallaxScale,
     ...(properties && { properties }),
   });
-}
 
-function populateTileLayer(layer: TileLayer, tiles: readonly LdtkTileData[], tileset: TileSet, gridSize: number): void {
+const populateTileLayer = (layer: TileLayer, tiles: readonly LdtkTileData[], tileset: TileSet, gridSize: number): void => {
   for (const tile of tiles) {
     const tx = Math.floor(tile.px[0] / gridSize);
     const ty = Math.floor(tile.px[1] / gridSize);
@@ -261,7 +256,7 @@ function populateTileLayer(layer: TileLayer, tiles: readonly LdtkTileData[], til
       },
     });
   }
-}
+};
 
 // ── Helpers: IntGrid ──────────────────────────────────────────────────────────
 
@@ -293,7 +288,7 @@ export const ldtkIntGridValuesProperty = 'ldtkIntGridValues';
  * `properties`-bag mechanism the Tiled adapter already uses for per-layer
  * metadata, just serialized to fit its scalar-only value type.
  */
-function buildIntGridProperties(layerInst: LdtkLayerInstance, data: LdtkData): TileProperties | undefined {
+const buildIntGridProperties = (layerInst: LdtkLayerInstance, data: LdtkData): TileProperties | undefined => {
   const csv = layerInst.intGridCsv;
   if (!csv || csv.length === 0) return undefined;
 
@@ -304,7 +299,7 @@ function buildIntGridProperties(layerInst: LdtkLayerInstance, data: LdtkData): T
     [ldtkIntGridCsvProperty]: JSON.stringify(csv),
     [ldtkIntGridValuesProperty]: JSON.stringify(values),
   });
-}
+};
 
 /** Parsed, cached form of a `TileLayer`'s {@link ldtkIntGridCsvProperty} / {@link ldtkIntGridValuesProperty}. */
 interface ParsedIntGridData {
@@ -329,7 +324,7 @@ const intGridCache = new WeakMap<TileLayer, ParsedIntGridData>();
  * data attached to `layer`, or `undefined` when `layer` carries no such data
  * (not converted from an IntGrid layer instance).
  */
-function getParsedIntGridData(layer: TileLayer): ParsedIntGridData | undefined {
+const getParsedIntGridData = (layer: TileLayer): ParsedIntGridData | undefined => {
   const cached = intGridCache.get(layer);
   if (cached) return cached;
 
@@ -343,7 +338,7 @@ function getParsedIntGridData(layer: TileLayer): ParsedIntGridData | undefined {
   };
   intGridCache.set(layer, parsed);
   return parsed;
-}
+};
 
 /**
  * Look up the named/coloured {@link LdtkIntGridValueDef} at a tile coordinate
@@ -358,7 +353,7 @@ function getParsedIntGridData(layer: TileLayer): ParsedIntGridData | undefined {
  * layer and cached (see {@link getParsedIntGridData}) - safe to call from a
  * hot path (e.g. per-cell or per-frame collision/classification checks).
  */
-export function getLdtkIntGridValueAt(layer: TileLayer, x: number, y: number): LdtkIntGridValueDef | undefined {
+export const getLdtkIntGridValueAt = (layer: TileLayer, x: number, y: number): LdtkIntGridValueDef | undefined => {
   // `inBounds()` is unconditionally true for an unbounded layer (it has no
   // fixed grid to be out of), but the flat IntGrid CSV this function reads
   // is inherently a bounded-grid concept - LDtk itself only ever produces
@@ -373,7 +368,7 @@ export function getLdtkIntGridValueAt(layer: TileLayer, x: number, y: number): L
   if (raw === undefined || raw === 0) return undefined;
 
   return parsed.values.find(v => v.value === raw);
-}
+};
 
 /**
  * Per-cell collision classification for a `TileLayer` converted from an LDtk
@@ -394,7 +389,7 @@ export function getLdtkIntGridValueAt(layer: TileLayer, x: number, y: number): L
  * const geometry = buildTileCollisionGeometry(layer, { cells: createLdtkIntGridCellSource(layer) });
  * ```
  */
-export function createLdtkIntGridCellSource(layer: TileLayer): TileCellSource | undefined {
+export const createLdtkIntGridCellSource = (layer: TileLayer): TileCellSource | undefined => {
   const parsed = getParsedIntGridData(layer);
   const width = layer.width;
 
@@ -417,11 +412,11 @@ export function createLdtkIntGridCellSource(layer: TileLayer): TileCellSource | 
 
     return identifiers.get(raw) ?? String(raw);
   };
-}
+};
 
 // ── Helpers: ObjectLayer ──────────────────────────────────────────────────────
 
-function convertEntityLayer(layerInst: LdtkLayerInstance, _gridSize: number, levelIndex: number, baseCounter: number): TileMapObject[] {
+const convertEntityLayer = (layerInst: LdtkLayerInstance, _gridSize: number, levelIndex: number, baseCounter: number): TileMapObject[] => {
   const instances = layerInst.entityInstances ?? [];
   const objects: TileMapObject[] = [];
 
@@ -434,9 +429,9 @@ function convertEntityLayer(layerInst: LdtkLayerInstance, _gridSize: number, lev
   }
 
   return objects;
-}
+};
 
-function convertEntity(entity: LdtkEntityInstance, id: number): TileMapObject {
+const convertEntity = (entity: LdtkEntityInstance, id: number): TileMapObject => {
   // entity.px is the pivot-adjusted anchor, not the bounding box's top-left
   // corner - undo the pivot offset to recover the corner TileMapObject expects.
   const x = entity.px[0] - entity.width * entity.__pivot[0];
@@ -459,7 +454,7 @@ function convertEntity(entity: LdtkEntityInstance, id: number): TileMapObject {
     properties: convertFieldInstances(entity.fieldInstances),
     source: entity,
   };
-}
+};
 
 /**
  * Project LDtk field instances to a flat {@link TileProperties} bag.
@@ -470,7 +465,7 @@ function convertEntity(entity: LdtkEntityInstance, id: number): TileMapObject {
  * omitted from the bag entirely, matching the property-absent case rather
  * than a present-but-null value.
  */
-function convertFieldInstances(fields: readonly LdtkFieldInstance[]): TileProperties {
+const convertFieldInstances = (fields: readonly LdtkFieldInstance[]): TileProperties => {
   if (fields.length === 0) return Object.freeze({});
   const out: Record<string, TilePropertyValue> = {};
   for (const field of fields) {
@@ -480,19 +475,18 @@ function convertFieldInstances(fields: readonly LdtkFieldInstance[]): TileProper
     }
   }
   return Object.freeze(out);
-}
+};
 
 /**
  * Type guard narrowing to the `Array<T>` member of {@link LdtkFieldInstance}.
  * `String.prototype.startsWith` alone does not narrow a template-literal
  * union member for the compiler; a predicate on `field` itself does.
  */
-function isLdtkArrayField(field: LdtkFieldInstance): field is Extract<LdtkFieldInstance, { readonly __type: `Array<${string}>` }> {
-  return field.__type.startsWith('Array<');
-}
+const isLdtkArrayField = (field: LdtkFieldInstance): field is Extract<LdtkFieldInstance, { readonly __type: `Array<${string}>` }> =>
+  field.__type.startsWith('Array<');
 
 /** Convert one {@link LdtkFieldInstance} to its canonical {@link TilePropertyValue}, or `undefined` for a `null` (unset) field. */
-function convertField(field: LdtkFieldInstance): TilePropertyValue | undefined {
+const convertField = (field: LdtkFieldInstance): TilePropertyValue | undefined => {
   switch (field.__type) {
     case 'Int':
     case 'Float':
@@ -527,7 +521,7 @@ function convertField(field: LdtkFieldInstance): TilePropertyValue | undefined {
   const _exhaustive: never = field;
   void _exhaustive;
   throw new Error(`convertFieldInstances: unrecognised LDtk field type "${(field as LdtkFieldInstance).__type}".`);
-}
+};
 
 /**
  * Map a single raw LDtk field value (or array element) to its canonical
@@ -536,7 +530,7 @@ function convertField(field: LdtkFieldInstance): TilePropertyValue | undefined {
  * conversion (`typeName` is the `T` extracted from an `Array<T>` field).
  * Returns `undefined` for a `null` value or an unrecognised `typeName`.
  */
-function mapLdtkFieldValue(typeName: string, value: unknown): TilePropertyValue | undefined {
+const mapLdtkFieldValue = (typeName: string, value: unknown): TilePropertyValue | undefined => {
   if (value === null || value === undefined) return undefined;
 
   switch (typeName) {
@@ -577,11 +571,11 @@ function mapLdtkFieldValue(typeName: string, value: unknown): TilePropertyValue 
       // compiler-exhaustive (element types are plain runtime strings).
       return undefined;
   }
-}
+};
 
 // ── Helpers: grid size ────────────────────────────────────────────────────────
 
-function pickLevelGridSize(level: LdtkLevel, fallback: number): number {
+const pickLevelGridSize = (level: LdtkLevel, fallback: number): number => {
   const instances = level.layerInstances ?? [];
   for (const layer of instances) {
     if (layer.__type !== 'Entities' && layer.__gridSize > 0) {
@@ -589,7 +583,7 @@ function pickLevelGridSize(level: LdtkLevel, fallback: number): number {
     }
   }
   return fallback;
-}
+};
 
 // Re-export identity transform constant for convenience (tree-shake friendly).
 export { TILE_TRANSFORM_IDENTITY };

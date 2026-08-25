@@ -12,7 +12,7 @@ import { dominantFreq, renderWorklet, rms, SAMPLE_RATE, tail } from './_audio-ha
 describe('PitchShift worklet — real Web Audio', () => {
   const INPUT = 440;
 
-  async function shiftedFreq(pitch: number): Promise<number> {
+  const shiftedFreq = async (pitch: number): Promise<number> => {
     const out = await renderWorklet({
       source: pitchShiftWorkletSource,
       processorName: 'exojs-pitch-shift',
@@ -22,7 +22,7 @@ describe('PitchShift worklet — real Web Audio', () => {
       durationSeconds: 2,
     });
     return dominantFreq(tail(out, 1.0));
-  }
+  };
 
   it('pitch=1.0 keeps the input frequency', async () => {
     const f = await shiftedFreq(1.0);

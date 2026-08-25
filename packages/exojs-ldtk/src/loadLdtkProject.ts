@@ -19,7 +19,7 @@ import { validateLdtkData } from './validate';
  * embed-atlas tileset (`relPath = null`) is skipped with a warning instead.
  * @internal
  */
-export async function loadLdtkProject(context: AssetFactoryContext): Promise<LdtkProject> {
+export const loadLdtkProject = async (context: AssetFactoryContext): Promise<LdtkProject> => {
   const source = context.source;
   const data = validateLdtkData(await context.dependencies.load(Asset.type('json', source)), source);
 
@@ -32,4 +32,4 @@ export async function loadLdtkProject(context: AssetFactoryContext): Promise<Ldt
   }
 
   return new LdtkProject(source, data, tilesets);
-}
+};

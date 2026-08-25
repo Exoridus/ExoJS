@@ -126,14 +126,14 @@ const claimedActions = new WeakSet<Action>();
  * earlier one permanently - and incorrectly - marked claimed for a map that
  * was never actually built.
  */
-function assertClaimable(action: Action, name: string, pending: ReadonlySet<Action>): void {
+const assertClaimable = (action: Action, name: string, pending: ReadonlySet<Action>): void => {
   if (claimedActions.has(action) || pending.has(action)) {
     throw new Error(
       `ActionMap: the action bound to "${name}" already belongs to another ActionMap (or is used twice, or under another name, in this one). ` +
         'Each Action instance belongs to exactly one ActionMap for its whole lifetime — construct a separate instance per map instead.',
     );
   }
-}
+};
 
 /**
  * A named group of actions updated as a unit. The actions are exposed directly

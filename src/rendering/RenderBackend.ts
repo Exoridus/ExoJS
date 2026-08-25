@@ -206,6 +206,5 @@ export interface RenderBackend {
  * collapse to the logical-pixel default here rather than mint an unusable
  * cache entry several layers down.
  */
-export function sanitizeSurfacePixelRatio(pixelRatio: number | undefined): number {
-  return pixelRatio !== undefined && Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;
-}
+export const sanitizeSurfacePixelRatio = (pixelRatio: number | undefined): number =>
+  pixelRatio !== undefined && Number.isFinite(pixelRatio) && pixelRatio > 0 ? pixelRatio : 1;

@@ -15,11 +15,11 @@ import { RendererRegistry } from '#rendering/RendererRegistry';
 
 class FakeDrawable extends Drawable {}
 
-function extension(id: string, deps?: readonly Extension[]): Extension {
+const extension = (id: string, deps?: readonly Extension[]): Extension => {
   return { id, dependencies: deps };
-}
+};
 
-function createStubBackend(): RenderBackend {
+const createStubBackend = (): RenderBackend => {
   const registry = new RendererRegistry<RenderBackend>();
   return {
     backendType: RenderBackendType.WebGl2,
@@ -45,11 +45,11 @@ function createStubBackend(): RenderBackend {
     flush: () => undefined,
     destroy: () => undefined,
   } as unknown as RenderBackend;
-}
+};
 
-function ids(snapshot: ReturnType<typeof buildSnapshot>): string[] {
+const ids = (snapshot: ReturnType<typeof buildSnapshot>): string[] => {
   return snapshot.extensions.map(e => e.id);
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -382,9 +382,9 @@ describe('Extension dependency graph', () => {
 // ---------------------------------------------------------------------------
 
 describe('Per-application selection', () => {
-  function ids(snapshot: ReturnType<typeof buildSnapshot>): string[] {
+  const ids = (snapshot: ReturnType<typeof buildSnapshot>): string[] => {
     return snapshot.extensions.map(e => e.id);
-  }
+  };
 
   it('a dependency is pulled in without being selected', () => {
     const tilemap = extension('tilemap');

@@ -39,11 +39,11 @@ afterAll(() => {
   rmSync(TMP_DIR, { recursive: true, force: true });
 });
 
-function writeFixture(name: string, content: string): string {
+const writeFixture = (name: string, content: string): string => {
   const abs = join(TMP_DIR, name);
   writeFileSync(abs, content, 'utf8');
   return `${TMP_REL}/${name}`;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests

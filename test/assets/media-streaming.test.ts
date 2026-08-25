@@ -10,12 +10,12 @@ import type { Video } from '#rendering/video/Video';
 
 const VIDEO_BYTES = new Uint8Array([0x1a, 0x45, 0xdf, 0xa3]);
 
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader({ basePath: '/assets/' });
   materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 const originalCreateElement = document.createElement.bind(document);
@@ -23,7 +23,7 @@ const originalCreateElement = document.createElement.bind(document);
 let capturedMedia: HTMLMediaElement[];
 
 /** The element the factory created last, once it exists. */
-async function nextMedia(): Promise<HTMLMediaElement> {
+const nextMedia = async (): Promise<HTMLMediaElement> => {
   return vi.waitFor(() => {
     const element = capturedMedia.at(-1);
 
@@ -31,18 +31,18 @@ async function nextMedia(): Promise<HTMLMediaElement> {
 
     return element;
   });
-}
+};
 
 /** Drives a media load to its `canplay` readiness and returns the element it used. */
-async function reachReadiness(): Promise<HTMLMediaElement> {
+const reachReadiness = async (): Promise<HTMLMediaElement> => {
   const element = await nextMedia();
 
   element.dispatchEvent(new Event('canplay'));
 
   return element;
-}
+};
 
-function mockFetch(body: ArrayBuffer = VIDEO_BYTES.buffer as ArrayBuffer): ReturnType<typeof vi.fn> {
+const mockFetch = (body: ArrayBuffer = VIDEO_BYTES.buffer as ArrayBuffer): ReturnType<typeof vi.fn> => {
   const spy = vi.fn(
     async (): Promise<Response> =>
       ({
@@ -57,7 +57,7 @@ function mockFetch(body: ArrayBuffer = VIDEO_BYTES.buffer as ArrayBuffer): Retur
   global.fetch = spy as unknown as typeof fetch;
 
   return spy;
-}
+};
 
 beforeEach(() => {
   capturedMedia = [];

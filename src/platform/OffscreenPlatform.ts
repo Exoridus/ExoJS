@@ -313,7 +313,7 @@ export class OffscreenPlatform implements PlatformAdapter {
   }
 }
 
-function subscribe(registry: Map<string, Set<Listener>>, type: string, listener: Listener): PlatformSubscription {
+const subscribe = (registry: Map<string, Set<Listener>>, type: string, listener: Listener): PlatformSubscription => {
   let listeners = registry.get(type);
 
   if (listeners === undefined) {
@@ -332,9 +332,9 @@ function subscribe(registry: Map<string, Set<Listener>>, type: string, listener:
       registry.delete(type);
     }
   });
-}
+};
 
-function once(undo: () => void): PlatformSubscription {
+const once = (undo: () => void): PlatformSubscription => {
   let done = false;
 
   return (): void => {
@@ -345,4 +345,4 @@ function once(undo: () => void): PlatformSubscription {
     done = true;
     undo();
   };
-}
+};

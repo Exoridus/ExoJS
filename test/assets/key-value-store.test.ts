@@ -44,7 +44,7 @@ import { MemoryStore } from '#assets/MemoryStore';
 import { WebStorageStore } from '#assets/WebStorageStore';
 
 /** Minimal synchronous in-memory `Storage` stand-in for WebStorageStore tests. */
-function createWebStorage(): Storage {
+const createWebStorage = (): Storage => {
   const map = new Map<string, string>();
 
   return {
@@ -67,7 +67,7 @@ function createWebStorage(): Storage {
       map.set(key, value);
     },
   } as Storage;
-}
+};
 
 const backends: ReadonlyArray<{ name: string; create: () => KeyValueStore }> = [
   { name: 'MemoryStore', create: () => new MemoryStore() },

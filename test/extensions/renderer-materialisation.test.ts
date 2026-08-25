@@ -9,13 +9,13 @@ import type { Renderer } from '#rendering/Renderer';
 import { RendererRegistry } from '#rendering/RendererRegistry';
 
 // Minimal stub renderer
-function createStubRenderer(): Renderer<RenderBackend> & {
+const createStubRenderer = (): Renderer<RenderBackend> & {
   connect: ReturnType<typeof vi.fn>;
   disconnect: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
   render: ReturnType<typeof vi.fn>;
   flush: ReturnType<typeof vi.fn>;
-} {
+} => {
   return {
     connect: vi.fn(),
     disconnect: vi.fn(),
@@ -29,10 +29,10 @@ function createStubRenderer(): Renderer<RenderBackend> & {
     render: ReturnType<typeof vi.fn>;
     flush: ReturnType<typeof vi.fn>;
   };
-}
+};
 
 // Stub backend
-function createStubBackend(): RenderBackend & { rendererRegistry: RendererRegistry<RenderBackend> } {
+const createStubBackend = (): RenderBackend & { rendererRegistry: RendererRegistry<RenderBackend> } => {
   const registry = new RendererRegistry<RenderBackend>();
   return {
     backendType: RenderBackendType.WebGl2,
@@ -58,7 +58,7 @@ function createStubBackend(): RenderBackend & { rendererRegistry: RendererRegist
     flush: vi.fn(),
     destroy: vi.fn(),
   } as unknown as RenderBackend & { rendererRegistry: RendererRegistry<RenderBackend> };
-}
+};
 
 class CustomDrawableA extends Drawable {}
 class CustomDrawableB extends Drawable {}

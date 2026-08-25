@@ -107,27 +107,27 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
 // ---------------------------------------------------------------------------
 
 /** Force the Application into Running state without calling start(). */
-function forceRunning(app: Application): void {
+const forceRunning = (app: Application): void => {
   const record = app as unknown as Record<string, unknown>;
 
   record['_state'] = ApplicationState.Running;
   record['_frameLoopActive'] = true;
-}
+};
 
 /** Access the private _frameClock. */
-function frameClock(app: Application): import('#core/Clock').Clock {
+const frameClock = (app: Application): import('#core/Clock').Clock => {
   return (app as unknown as Record<string, unknown>)['_frameClock'] as import('#core/Clock').Clock;
-}
+};
 
 /**
  * Make the next `app.update()` see exactly `ms` of frame-to-frame time: the
  * loop derives its delta from the host frame timestamp, so pinning the host
  * clock one gap ahead of the last frame is all a fixed delta needs.
  */
-function mockFrameElapsed(app: Application, ms: number): MockInstance {
+const mockFrameElapsed = (app: Application, ms: number): MockInstance => {
   const previous = (app as unknown as Record<string, unknown>)['_lastFrameTimestamp'] as number;
   return vi.spyOn(app.platform, 'now').mockReturnValue(previous + ms);
-}
+};
 
 // ---------------------------------------------------------------------------
 // Suite
@@ -346,7 +346,7 @@ describe('Application.update() — loop timing', () => {
      * so a frame's own processing cost and the wait that follows it can be
      * charged separately.
      */
-    function installVirtualHostClock(target: Application): { advance: (ms: number) => void } {
+    const installVirtualHostClock = (target: Application): { advance: (ms: number) => void } => {
       let nowMs = 0;
 
       vi.spyOn(target.platform, 'now').mockImplementation(() => nowMs);
@@ -357,7 +357,7 @@ describe('Application.update() — loop timing', () => {
           nowMs += ms;
         },
       };
-    }
+    };
 
     test('a frame that spends CPU time still reports the full frame-to-frame gap on the next frame', () => {
       const timeline = installVirtualHostClock(app);

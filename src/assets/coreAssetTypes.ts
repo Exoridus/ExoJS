@@ -56,9 +56,7 @@ const byExtension = new Map<string, AssetTypeName>(
 );
 
 /** The built-in type a file suffix names, or `undefined`. @internal */
-export function builtinTypeForExtension(extension: string): AssetTypeName | undefined {
-  return byExtension.get(normalizeExtension(extension));
-}
+export const builtinTypeForExtension = (extension: string): AssetTypeName | undefined => byExtension.get(normalizeExtension(extension));
 
 /**
  * The built-in type a whole path names, matching the basename's dot-suffixes
@@ -66,7 +64,7 @@ export function builtinTypeForExtension(extension: string): AssetTypeName | unde
  * Query and fragment are ignored.
  * @internal
  */
-export function builtinTypeForPath(path: string): AssetTypeName | undefined {
+export const builtinTypeForPath = (path: string): AssetTypeName | undefined => {
   const [withoutQueryHash = ''] = path.split(/[?#]/, 1);
   const basename = withoutQueryHash.split('/').pop() ?? '';
   const parts = basename.split('.');
@@ -80,9 +78,7 @@ export function builtinTypeForPath(path: string): AssetTypeName | undefined {
   }
 
   return undefined;
-}
+};
 
 /** What a built-in type hands out as a catalog leaf, or `undefined` for a name no built-in claims. @internal */
-export function builtinLeaf(type: string): AssetLeaf<unknown> | undefined {
-  return byId.get(type)?.leaf as AssetLeaf<unknown> | undefined;
-}
+export const builtinLeaf = (type: string): AssetLeaf<unknown> | undefined => byId.get(type)?.leaf as AssetLeaf<unknown> | undefined;

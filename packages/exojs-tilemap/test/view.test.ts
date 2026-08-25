@@ -18,16 +18,16 @@ import { TILE_TRANSFORM_IDENTITY } from '../src/types';
  * Narrow a band's layer-node union to the tile-layer case: these fixtures build
  * tile layers only, so an image-layer node means the fixture drifted.
  */
-function asTileLayerNode(node: ImageLayerNode | TileLayerNode): TileLayerNode {
+const asTileLayerNode = (node: ImageLayerNode | TileLayerNode): TileLayerNode => {
   if (!(node instanceof TileLayerNode)) {
     throw new Error('expected a TileLayerNode');
   }
   return node;
-}
+};
 
 // ── helpers (conventions shared with nodes.test.ts) ────────────────────
 
-function fakeTexture(width = 512, height = 512): Texture {
+const fakeTexture = (width = 512, height = 512): Texture => {
   return {
     width,
     height,
@@ -37,9 +37,9 @@ function fakeTexture(width = 512, height = 512): Texture {
     destroy: vi.fn(),
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function makeTileset(name = 'tiles'): TileSet {
+const makeTileset = (name = 'tiles'): TileSet => {
   return new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
@@ -47,7 +47,7 @@ function makeTileset(name = 'tiles'): TileSet {
     tileHeight: 32,
     tileCount: 16,
   });
-}
+};
 
 interface LayerOpts {
   readonly id?: number;
@@ -60,7 +60,7 @@ interface LayerOpts {
   readonly offsetY?: number;
 }
 
-function makeLayer(tileset: TileSet, opts: LayerOpts = {}): TileLayer {
+const makeLayer = (tileset: TileSet, opts: LayerOpts = {}): TileLayer => {
   const layer = new TileLayer({
     id: opts.id ?? 1,
     name: opts.name ?? 'ground',
@@ -75,18 +75,18 @@ function makeLayer(tileset: TileSet, opts: LayerOpts = {}): TileLayer {
     ...(opts.offsetY === undefined ? {} : { offsetY: opts.offsetY }),
   });
   return layer;
-}
+};
 
-function makeImageLayer(opts: Partial<ImageLayerOptions> = {}): ImageLayer {
+const makeImageLayer = (opts: Partial<ImageLayerOptions> = {}): ImageLayer => {
   return new ImageLayer({
     id: opts.id ?? 100,
     image: opts.image ?? 'bg.png',
     texture: opts.texture === undefined ? fakeTexture() : opts.texture,
     ...opts,
   });
-}
+};
 
-function fillLayer(layer: TileLayer, tileset: TileSet): TileLayer {
+const fillLayer = (layer: TileLayer, tileset: TileSet): TileLayer => {
   // Only finite layers can be filled exhaustively; an infinite one would make
   // the sweep silently do nothing.
   if (layer.width === undefined || layer.height === undefined) {
@@ -98,10 +98,10 @@ function fillLayer(layer: TileLayer, tileset: TileSet): TileLayer {
     }
   }
   return layer;
-}
+};
 
 /** A 4×4 map with three filled layers: background (1), ground (2), roofs (3). */
-function makeWorldMap(): { map: TileMap; tileset: TileSet } {
+const makeWorldMap = (): { map: TileMap; tileset: TileSet } => {
   const tileset = makeTileset();
   const map = new TileMap({
     name: 'world',
@@ -117,20 +117,20 @@ function makeWorldMap(): { map: TileMap; tileset: TileSet } {
     ],
   });
   return { map, tileset };
-}
+};
 
 /**
  * A realistic composition: two bands parented under an application world root
  * with an app-owned actor container interleaved between them.
  */
-function makeScene(): {
+const makeScene = (): {
   map: TileMap;
   tileset: TileSet;
   view: TileMapView;
   worldRoot: Container;
   actors: Container;
   hero: Container;
-} {
+} => {
   const { map, tileset } = makeWorldMap();
   const view = map.createView({ bands: { ground: ['background', 'ground'], roof: ['roofs'] } });
 
@@ -142,7 +142,7 @@ function makeScene(): {
   worldRoot.addChild(view.band('ground'), actors, view.band('roof'));
 
   return { map, tileset, view, worldRoot, actors, hero };
-}
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 // TileMapView - construction / default view
@@ -682,12 +682,14 @@ describe('TileMapView refreshLayers', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapView across multiple maps', () => {
-  function makeStage(name: string): {
+  const makeStage = (
+    name: string,
+  ): {
     map: TileMap;
     view: TileMapView;
     band: TileMapBand;
     worldRoot: Container;
-  } {
+  } => {
     const tileset = makeTileset();
     const map = new TileMap({
       name,
@@ -704,7 +706,7 @@ describe('TileMapView across multiple maps', () => {
     worldRoot.addChild(view.band('main'));
 
     return { map, view, band: view.band('main'), worldRoot };
-  }
+  };
 
   it('destroying one view leaves the other view intact', () => {
     const a = makeStage('a');
@@ -753,7 +755,7 @@ describe('TileMapView across multiple maps', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapView image layer nodes', () => {
-  function makeImageMap(imageLayers: readonly ImageLayer[]): { map: TileMap; tileset: TileSet } {
+  const makeImageMap = (imageLayers: readonly ImageLayer[]): { map: TileMap; tileset: TileSet } => {
     const tileset = makeTileset();
     const map = new TileMap({
       name: 'imaged',
@@ -767,7 +769,7 @@ describe('TileMapView image layer nodes', () => {
     });
 
     return { map, tileset };
-  }
+  };
 
   it('creates one ImageLayerNode per image layer, in insertion order', () => {
     const bg = makeImageLayer({ id: 10, name: 'bg' });
@@ -870,13 +872,13 @@ describe('TileMapView image layer nodes', () => {
 
 describe('TileMapView heterogeneous bands', () => {
   /** ground (1) → bg image (2) → overlay (3), interleaved via documentOrder. */
-  function makeInterleavedMap(): {
+  const makeInterleavedMap = (): {
     map: TileMap;
     tileset: TileSet;
     ground: TileLayer;
     overlay: TileLayer;
     bg: ImageLayer;
-  } {
+  } => {
     const tileset = makeTileset();
     const ground = fillLayer(makeLayer(tileset, { id: 1, name: 'ground' }), tileset);
     const overlay = fillLayer(makeLayer(tileset, { id: 3, name: 'overlay' }), tileset);
@@ -894,7 +896,7 @@ describe('TileMapView heterogeneous bands', () => {
     });
 
     return { map, tileset, ground, overlay, bg };
-  }
+  };
 
   it('stacks mixed tile/image members in map document order, not definition order', () => {
     const { map, bg } = makeInterleavedMap();
@@ -1097,13 +1099,13 @@ describe('TileMapView heterogeneous bands', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapBand transform', () => {
-  function makeTransformScene(): {
+  const makeTransformScene = (): {
     view: TileMapView;
     band: TileMapBand;
     node: TileLayerNode;
     worldRoot: Container;
     actors: Container;
-  } {
+  } => {
     const tileset = makeTileset();
     const map = new TileMap({
       name: 'm',
@@ -1122,7 +1124,7 @@ describe('TileMapBand transform', () => {
     worldRoot.addChild(band, actors);
 
     return { view, band, node: view.getLayerNodeById(1)!, worldRoot, actors };
-  }
+  };
 
   it('translating a band moves its tile-layer subtree in world space', () => {
     const { band, node } = makeTransformScene();
@@ -1172,7 +1174,7 @@ describe('TileMapBand transform', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapBand bounds', () => {
-  function makeBoundsScene(layerOpts: readonly LayerOpts[], definition: TileMapBandDefinition): { map: TileMap; view: TileMapView; band: TileMapBand } {
+  const makeBoundsScene = (layerOpts: readonly LayerOpts[], definition: TileMapBandDefinition): { map: TileMap; view: TileMapView; band: TileMapBand } => {
     const tileset = makeTileset();
     const map = new TileMap({
       name: 'bounds',
@@ -1186,7 +1188,7 @@ describe('TileMapBand bounds', () => {
     const view = map.createView({ bands: { band: definition } });
 
     return { map, view, band: view.band('band') };
-  }
+  };
 
   it('an empty band collapses to a degenerate rect at its transformed origin', () => {
     const { band } = makeBoundsScene([], []);

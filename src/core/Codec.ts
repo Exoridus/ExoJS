@@ -20,7 +20,7 @@ export type DecompressFormat = 'gzip' | 'deflate' | 'deflate-raw';
  *
  * @throws If the input is not valid base64.
  */
-function decodeBase64(input: string): Uint8Array {
+const decodeBase64 = (input: string): Uint8Array => {
   const clean = input.replaceAll(/\s+/g, '');
   const binary = atob(clean);
   const length = binary.length;
@@ -29,7 +29,7 @@ function decodeBase64(input: string): Uint8Array {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
-}
+};
 
 /**
  * Decompress a byte buffer using the native `DecompressionStream`.
@@ -40,7 +40,7 @@ function decodeBase64(input: string): Uint8Array {
  *
  * @throws If the platform lacks `DecompressionStream`, or the data is corrupt.
  */
-async function decompress(bytes: Uint8Array, format: DecompressFormat): Promise<Uint8Array> {
+const decompress = async (bytes: Uint8Array, format: DecompressFormat): Promise<Uint8Array> => {
   if (typeof DecompressionStream === 'undefined') {
     throw new Error('Codec.decompress requires the native DecompressionStream API.');
   }
@@ -72,7 +72,7 @@ async function decompress(bytes: Uint8Array, format: DecompressFormat): Promise<
     offset += chunk.length;
   }
   return out;
-}
+};
 
 /**
  * Binary codec facade, grouped as a namespace so the public API carries no

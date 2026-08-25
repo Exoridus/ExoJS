@@ -132,7 +132,7 @@ const GENERATED_BANNER_LINES = 5;
 const isGenerated = (text: string): boolean => GENERATED_BANNER.test(text.split('\n', GENERATED_BANNER_LINES).join('\n'));
 
 /** Every string and template literal in `source`, with its 1-based line. */
-function collectLiterals(source: ts.SourceFile): { text: string; line: number }[] {
+const collectLiterals = (source: ts.SourceFile): { text: string; line: number }[] => {
   const literals: { text: string; line: number }[] = [];
 
   const visit = (node: ts.Node): void => {
@@ -150,9 +150,9 @@ function collectLiterals(source: ts.SourceFile): { text: string; line: number }[
   visit(source);
 
   return literals;
-}
+};
 
-async function collectFiles(root: string): Promise<string[]> {
+const collectFiles = async (root: string): Promise<string[]> => {
   const absoluteRoot = resolve(REPO_ROOT, root);
   const found: string[] = [];
 
@@ -179,7 +179,7 @@ async function collectFiles(root: string): Promise<string[]> {
   }
 
   return found;
-}
+};
 
 interface Violation {
   readonly file: string;
@@ -187,7 +187,7 @@ interface Violation {
   readonly kind: SourceKind;
 }
 
-function checkFile(absolutePath: string): Violation[] {
+const checkFile = (absolutePath: string): Violation[] => {
   const file = relative(REPO_ROOT, absolutePath).split(sep).join('/');
 
   if (isAllowed(file)) return [];
@@ -212,9 +212,9 @@ function checkFile(absolutePath: string): Violation[] {
   }
 
   return violations;
-}
+};
 
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   const requested = process.argv.slice(2);
   const roots = requested.length > 0 ? requested : SCAN_ROOTS;
 
@@ -235,6 +235,6 @@ async function main(): Promise<void> {
   }
 
   console.log(`\x1b[32m${files.length} file(s) checked, no executable source in string literals.\x1b[0m`);
-}
+};
 
 await main();

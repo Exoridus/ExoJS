@@ -372,7 +372,7 @@ const videoSerializer: NodeSerializer<Video> = {
  * Register the rendering-package node serializers on `registry`.
  * @internal
  */
-export function registerRenderingSerializers(registry: SerializationRegistry): void {
+export const registerRenderingSerializers = (registry: SerializationRegistry): void => {
   registry.register('Mesh', Mesh, meshSerializer);
   registry.register('Graphics', Graphics, graphicsSerializer);
   registry.register('NineSliceSprite', NineSliceSprite, nineSliceSerializer);
@@ -380,4 +380,4 @@ export function registerRenderingSerializers(registry: SerializationRegistry): v
   registry.register('AnimatedSprite', AnimatedSprite, animatedSpriteSerializer);
   registry.register('BitmapText', BitmapText, bitmapTextSerializer);
   registry.register('Video', Video, videoSerializer);
-}
+};

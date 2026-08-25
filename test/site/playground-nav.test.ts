@@ -5,7 +5,7 @@ import { EXAMPLES_CATALOG } from '../../site/src/lib/examples-catalog';
 import { buildPlaygroundNavModel, isExampleRouteActive, normalizeExamplePath } from '../../site/src/lib/playground-nav';
 import type { Example } from '../../site/src/lib/types';
 
-function ex(section: string, slug: string, extra: Partial<Example> = {}): Example {
+const ex = (section: string, slug: string, extra: Partial<Example> = {}): Example => {
   return {
     section,
     slug,
@@ -15,15 +15,15 @@ function ex(section: string, slug: string, extra: Partial<Example> = {}): Exampl
     backend: 'core',
     ...extra,
   };
-}
+};
 
 // A flat list synthesised from the real catalog, exactly how the live store
 // hands examples to the nav (each entry once, carrying its `section`).
-function catalogExamples(): Example[] {
+const catalogExamples = (): Example[] => {
   return Object.entries(EXAMPLES_CATALOG).flatMap(([section, entries]) =>
     entries.map(entry => ex(section, entry.slug, { path: entry.path, title: entry.title })),
   );
-}
+};
 
 describe('normalizeExamplePath', () => {
   it('strips a .js suffix', () => {

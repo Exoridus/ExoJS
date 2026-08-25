@@ -80,15 +80,13 @@ export interface ContainerInput {
   readonly options?: unknown;
 }
 
-function toUint8(bytes: ArrayBuffer | Uint8Array): Uint8Array {
-  return bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-}
+const toUint8 = (bytes: ArrayBuffer | Uint8Array): Uint8Array => (bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes));
 
 /**
  * Pack assets into a container `ArrayBuffer`. The inverse of
  * {@link parseContainer}; used by the build tooling and the roundtrip test.
  */
-export function encodeContainer(inputs: readonly ContainerInput[]): ArrayBuffer {
+export const encodeContainer = (inputs: readonly ContainerInput[]): ArrayBuffer => {
   const slices: Uint8Array[] = [];
   const index: ContainerEntry[] = [];
   let offset = 0;
@@ -130,13 +128,17 @@ export function encodeContainer(inputs: readonly ContainerInput[]): ArrayBuffer 
   }
 
   return buffer;
-}
+};
 
-function fail(detail: string): never {
+// A `never` return only ends control flow for the caller when the callee is a
+// function declaration or a constant with an explicit type annotation.
+type Fail = (detail: string) => never;
+
+const fail: Fail = detail => {
   throw new Error(`Invalid asset container: ${detail}.`);
-}
+};
 
-function readEntry(value: unknown, i: number, dataLength: number): ContainerEntry {
+const readEntry = (value: unknown, i: number, dataLength: number): ContainerEntry => {
   if (typeof value !== 'object' || value === null) {
     fail(`index entry ${i} is not an object`);
   }
@@ -159,14 +161,14 @@ function readEntry(value: unknown, i: number, dataLength: number): ContainerEntr
     ...(typeof mime === 'string' && { mime }),
     ...(record.options !== undefined && { options: record.options }),
   };
-}
+};
 
 /**
  * Parse and validate a container's header and index. Throws (never returns
  * partial/garbage data) on a bad magic, unsupported version, truncated buffer,
  * malformed index, or an entry whose slice runs past the data section.
  */
-export function parseContainer(buffer: ArrayBuffer): ParsedContainer {
+export const parseContainer = (buffer: ArrayBuffer): ParsedContainer => {
   if (buffer.byteLength < CONTAINER_HEADER_SIZE) {
     fail(`buffer too small for a ${CONTAINER_HEADER_SIZE}-byte header (got ${buffer.byteLength})`);
   }
@@ -209,4 +211,4 @@ export function parseContainer(buffer: ArrayBuffer): ParsedContainer {
   const entries = parsed.map((entry, i) => readEntry(entry, i, dataLength));
 
   return { version, entries, dataStart };
-}
+};

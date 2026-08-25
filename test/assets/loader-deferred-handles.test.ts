@@ -7,12 +7,12 @@ import { Texture } from '#rendering/texture/Texture';
 import { createBuiltinLeaf } from './builtin-leaf';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling suites). */
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   const owner = loader.createScope({ name: 'owner' });
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 
@@ -29,25 +29,25 @@ const mockFetchImage = (): void => {
 };
 
 /** Typed introspection over the private deferred registry. */
-function deferredHandles(loader: Loader, key: string): WeakHandleSet | undefined {
+const deferredHandles = (loader: Loader, key: string): WeakHandleSet | undefined => {
   return (loader as unknown as { _residency: { _deferred: Map<string, { handles: WeakHandleSet }> } })._residency._deferred.get(key)?.handles;
-}
-function deferredHas(loader: Loader, key: string): boolean {
+};
+const deferredHas = (loader: Loader, key: string): boolean => {
   return (loader as unknown as { _residency: { _deferred: Map<string, unknown> } })._residency._deferred.has(key);
-}
-function evictedHas(loader: Loader, key: string): boolean {
+};
+const evictedHas = (loader: Loader, key: string): boolean => {
   return (loader as unknown as { _residency: { _evicted: Set<string> } })._residency._evicted.has(key);
-}
-function keyOf(loader: Loader, source: string): string {
+};
+const keyOf = (loader: Loader, source: string): string => {
   return (loader as unknown as { _canonicalize(t: unknown, s: string): { key: string } })._canonicalize(Texture, source).key;
-}
+};
 
 /**
  * Real major GC + macrotask hops so reclaimed WeakRefs settle. `--expose-gc` comes
  * from the shared vitest project factory, so an absent `gc` is a config regression
  * to surface rather than a reason to skip.
  */
-async function forceGc(): Promise<void> {
+const forceGc = async (): Promise<void> => {
   const gc = (globalThis as { gc?: () => void }).gc;
 
   if (!gc) throw new Error('globalThis.gc is unavailable — the test project must pass --expose-gc to the fork pool');
@@ -56,7 +56,7 @@ async function forceGc(): Promise<void> {
     gc();
     await new Promise(resolve => setTimeout(resolve, 0));
   }
-}
+};
 
 describe('deferred handle bookkeeping (audit A4 / A5)', () => {
   beforeEach(() => {

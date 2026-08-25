@@ -7,11 +7,11 @@ import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts). */
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 
@@ -36,24 +36,24 @@ interface ResidencyInternals {
   unloadAll(type?: unknown): void;
 }
 
-function residencyOf(loader: Loader): ResidencyInternals {
+const residencyOf = (loader: Loader): ResidencyInternals => {
   return (loader as unknown as { _residency: ResidencyInternals })._residency;
-}
-function claimSize(loader: Loader): number {
+};
+const claimSize = (loader: Loader): number => {
   return residencyOf(loader)._claims.size;
-}
-function deferredSize(loader: Loader): number {
+};
+const deferredSize = (loader: Loader): number => {
   return residencyOf(loader)._deferred.size;
-}
-function refSize(loader: Loader): number {
+};
+const refSize = (loader: Loader): number => {
   return residencyOf(loader)._refs.size;
-}
-function keyOf(loader: Loader, type: unknown, source: string): string {
+};
+const keyOf = (loader: Loader, type: unknown, source: string): string => {
   return (loader as unknown as { _canonicalize(t: unknown, s: string): { key: string } })._canonicalize(type, source).key;
-}
-function scopesFor(loader: Loader, type: unknown, source: string): Set<LoaderScope> | undefined {
+};
+const scopesFor = (loader: Loader, type: unknown, source: string): Set<LoaderScope> | undefined => {
   return residencyOf(loader)._claims.get(keyOf(loader, type, source))?.scopes;
-}
+};
 
 describe('LoaderScope.release() scope safety', () => {
   beforeEach(() => {

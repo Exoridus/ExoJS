@@ -23,12 +23,10 @@ import type { WebGpuBackend } from './WebGpuBackend';
  */
 
 /** Whether a uniform value is a bound texture rather than a scalar/vector. */
-export function isTextureUniform(value: UniformValue): value is Texture | RenderTexture {
-  return isTextureUniformValue(value);
-}
+export const isTextureUniform = (value: UniformValue): value is Texture | RenderTexture => isTextureUniformValue(value);
 
 /** Scalar/vector/matrix uniforms (texture values excluded) in declaration order. */
-export function collectScalarUniforms(material: Material): Array<Exclude<UniformValue, Texture | RenderTexture>> {
+export const collectScalarUniforms = (material: Material): Array<Exclude<UniformValue, Texture | RenderTexture>> => {
   const result: Array<Exclude<UniformValue, Texture | RenderTexture>> = [];
 
   for (const name of material._bindingSchema.scalarUniformNames) {
@@ -36,7 +34,7 @@ export function collectScalarUniforms(material: Material): Array<Exclude<Uniform
   }
 
   return result;
-}
+};
 
 /**
  * Texture bindings claimed by the material, in a stable order: texture-valued
@@ -44,7 +42,7 @@ export function collectScalarUniforms(material: Material): Array<Exclude<Uniform
  * `textures` map (declaration order). The WGSL source must declare its
  * `@group(2)` texture/sampler pairs in this same order.
  */
-export function collectTextureBindings(material: Material): Array<Texture | RenderTexture> {
+export const collectTextureBindings = (material: Material): Array<Texture | RenderTexture> => {
   const result: Array<Texture | RenderTexture> = [];
 
   for (const name of material._bindingSchema.textureUniformNames) {
@@ -56,7 +54,7 @@ export function collectTextureBindings(material: Material): Array<Texture | Rend
   }
 
   return result;
-}
+};
 
 /**
  * Persistent, per-material cache for a custom material's `@group(2)` resources.
@@ -117,7 +115,7 @@ export interface UserUniformResources {
  * caller needs {@link UserUniformUpload.staleBuffer} to see that before
  * {@link applyUserUniformUpload} frees it.
  */
-export function planUserUniformUpload(material: Material, resources: UserUniformResources, device: GPUDevice, label: string): UserUniformUpload {
+export const planUserUniformUpload = (material: Material, resources: UserUniformResources, device: GPUDevice, label: string): UserUniformUpload => {
   const scalarValues = collectScalarUniforms(material);
   // Always keep a UBO (even if empty) since binding 0 of the user layout is
   // fixed, with WebGPU's 16-byte minimum as the floor.
@@ -146,10 +144,10 @@ export function planUserUniformUpload(material: Material, resources: UserUniform
     byteLength,
     staleBuffer,
   };
-}
+};
 
 /** Free the outgrown buffer and upload the packed bytes, once the pass is settled. */
-export function applyUserUniformUpload(upload: UserUniformUpload, resources: UserUniformResources, device: GPUDevice): void {
+export const applyUserUniformUpload = (upload: UserUniformUpload, resources: UserUniformResources, device: GPUDevice): void => {
   upload.staleBuffer?.destroy();
 
   if (upload.writes) {
@@ -157,38 +155,34 @@ export function applyUserUniformUpload(upload: UserUniformUpload, resources: Use
 
     device.queue.writeBuffer(upload.buffer, 0, data.buffer, data.byteOffset, upload.byteLength);
   }
-}
+};
 
 /** Fresh, empty {@link UserUniformState} for a newly created material resource bundle. */
-export function createUserUniformState(): UserUniformState {
-  return {
-    data: new Float32Array(0),
-    floatCount: -1,
-    bindGroup: null,
-    bindGroupBuffer: null,
-    bindGroupViews: [],
-    bindGroupSamplers: [],
-  };
-}
+export const createUserUniformState = (): UserUniformState => ({
+  data: new Float32Array(0),
+  floatCount: -1,
+  bindGroup: null,
+  bindGroupBuffer: null,
+  bindGroupViews: [],
+  bindGroupSamplers: [],
+});
 
 /** Drop every cached handle so a device-loss teardown never keeps stale GPU objects. */
-export function resetUserUniformState(state: UserUniformState): void {
+export const resetUserUniformState = (state: UserUniformState): void => {
   state.data = new Float32Array(0);
   state.floatCount = -1;
   state.bindGroup = null;
   state.bindGroupBuffer = null;
   state.bindGroupViews = [];
   state.bindGroupSamplers = [];
-}
+};
 
 /**
  * Bytes required to hold `scalarCount` material uniforms - each occupies one
  * `≤vec4` 16-byte slot, with a minimum of one slot to satisfy WebGPU's minimum
  * uniform-buffer size.
  */
-export function userUniformBufferBytes(scalarCount: number): number {
-  return Math.max(scalarCount, 1) * 16;
-}
+export const userUniformBufferBytes = (scalarCount: number): number => Math.max(scalarCount, 1) * 16;
 
 /**
  * Pack `scalarValues` into `state.data` (reused across frames) and report
@@ -200,11 +194,11 @@ export function userUniformBufferBytes(scalarCount: number): number {
  * undefined contents) always reports changed. On `true`, the caller uploads
  * `state.data` over `[0, {@link userUniformBufferBytes}(scalarValues.length))`.
  */
-export function packUserUniforms(
+export const packUserUniforms = (
   scalarValues: ReadonlyArray<Exclude<UniformValue, Texture | RenderTexture>>,
   state: UserUniformState,
   forceWrite: boolean,
-): boolean {
+): boolean => {
   const slotCount = Math.max(scalarValues.length, 1);
   const floatCount = slotCount * 4;
 
@@ -269,7 +263,7 @@ export function packUserUniforms(
   state.floatCount = floatCount;
 
   return changed;
-}
+};
 
 /**
  * Build (or reuse) the custom material's `@group(2)` bind group: the user UBO
@@ -279,7 +273,7 @@ export function packUserUniforms(
  * view/sampler are unchanged - a static material then creates zero bind groups
  * per frame while a texture swap/resize rebuilds exactly once.
  */
-export function resolveUserUniformBindGroup(
+export const resolveUserUniformBindGroup = (
   device: GPUDevice,
   backend: WebGpuBackend,
   material: Material,
@@ -287,7 +281,7 @@ export function resolveUserUniformBindGroup(
   label: string,
   uniformBuffer: GPUBuffer,
   state: UserUniformState,
-): GPUBindGroup {
+): GPUBindGroup => {
   const textures = collectTextureBindings(material);
   const views: GPUTextureView[] = [];
   const samplers: GPUSampler[] = [];
@@ -328,9 +322,9 @@ export function resolveUserUniformBindGroup(
   state.bindGroupSamplers = samplers;
 
   return group;
-}
+};
 
-function sameReferences(a: readonly unknown[], b: readonly unknown[]): boolean {
+const sameReferences = (a: readonly unknown[], b: readonly unknown[]): boolean => {
   if (a.length !== b.length) {
     return false;
   }
@@ -342,4 +336,4 @@ function sameReferences(a: readonly unknown[], b: readonly unknown[]): boolean {
   }
 
   return true;
-}
+};

@@ -68,7 +68,7 @@ class RawWorldAssetType extends AssetType<string, string, undefined, string> {
 
 const payload = '{"name":"level-1"}';
 
-function mockFetch(): ReturnType<typeof vi.fn> {
+const mockFetch = (): ReturnType<typeof vi.fn> => {
   const fetchMock = vi.fn(async () => ({ ok: true, status: 200, statusText: 'OK', text: async () => payload }) as unknown as Response) as unknown as ReturnType<
     typeof vi.fn
   >;
@@ -76,16 +76,16 @@ function mockFetch(): ReturnType<typeof vi.fn> {
   global.fetch = fetchMock as unknown as typeof fetch;
 
   return fetchMock;
-}
+};
 
 /** A loader with `worldType` installed, sharing `cache` with any other loader given the same one. */
-function createLoader(cache: AssetCache, ...types: Array<AssetType<never, never, never, never>>): Loader {
+const createLoader = (cache: AssetCache, ...types: Array<AssetType<never, never, never, never>>): Loader => {
   const loader = new Loader({ basePath: 'https://assets.test/', cache });
 
   materializeAssetTypes(loader, types as never[]);
 
   return loader;
-}
+};
 
 describe('a runtime-installed asset type', () => {
   const originalFetch = global.fetch;

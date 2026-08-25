@@ -41,7 +41,7 @@ interface DrawPlanDepthHooks {
  * `playRenderTree`.
  * @internal
  */
-export function drawDrawableDirect(drawable: Drawable, backend: RenderBackend): void {
+export const drawDrawableDirect = (drawable: Drawable, backend: RenderBackend): void => {
   const hooks = backend as RenderBackend & DrawPlanDepthHooks;
 
   hooks._beginDrawPlan?.(1);
@@ -51,4 +51,4 @@ export function drawDrawableDirect(drawable: Drawable, backend: RenderBackend): 
   } finally {
     hooks._endDrawPlan?.();
   }
-}
+};

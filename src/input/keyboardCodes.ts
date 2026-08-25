@@ -181,9 +181,7 @@ const channelsByCode = new Map<string, Keyboard>([
  * }
  * ```
  */
-export function keyboardChannelFromCode(code: string): Keyboard | undefined {
-  return channelsByCode.get(code);
-}
+export const keyboardChannelFromCode = (code: string): Keyboard | undefined => channelsByCode.get(code);
 
 /**
  * A modifier's side-specific channel's aggregate and sibling - the two facts
@@ -223,6 +221,4 @@ const modifierChannelInfo = new Map<Keyboard, ModifierChannelInfo>([
  * `channel` is not a side-specific modifier channel (every non-modifier key,
  * and the aggregate channels themselves). @internal
  */
-export function keyboardModifierChannelInfo(channel: Keyboard): ModifierChannelInfo | undefined {
-  return modifierChannelInfo.get(channel);
-}
+export const keyboardModifierChannelInfo = (channel: Keyboard): ModifierChannelInfo | undefined => modifierChannelInfo.get(channel);

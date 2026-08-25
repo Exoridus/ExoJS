@@ -238,9 +238,8 @@ export interface ObjectQuery {
  * {@link TilePropertyValue}.
  * @internal
  */
-function isTilePropertyObjectRef(value: TilePropertyValue): value is TilePropertyObjectRef {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) && (value as { kind?: unknown }).kind === TilePropertyKind.ObjectRef;
-}
+const isTilePropertyObjectRef = (value: TilePropertyValue): value is TilePropertyObjectRef =>
+  typeof value === 'object' && value !== null && !Array.isArray(value) && (value as { kind?: unknown }).kind === TilePropertyKind.ObjectRef;
 
 /**
  * Equality used by {@link ObjectLayer.query}'s `value` filter.
@@ -254,11 +253,11 @@ function isTilePropertyObjectRef(value: TilePropertyValue): value is TilePropert
  * (presence-only) for those.
  * @internal
  */
-function tilePropertyValueEquals(a: TilePropertyValue, b: TilePropertyValue): boolean {
+const tilePropertyValueEquals = (a: TilePropertyValue, b: TilePropertyValue): boolean => {
   if (a === b) return true;
   if (isTilePropertyObjectRef(a) && isTilePropertyObjectRef(b)) return a.id === b.id;
   return false;
-}
+};
 
 /** Construction options for an {@link ObjectLayer}. */
 export interface ObjectLayerOptions {

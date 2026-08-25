@@ -72,7 +72,7 @@ type _ExplicitLeafConfig = Expect<Equal<typeof explicit.config, CatalogValueLeaf
 
 // --- loading them -----------------------------------------------------------
 
-export async function loads(): Promise<void> {
+export const loads = async (): Promise<void> => {
   // The LOADED map, exactly: a resource type resolves to its resource, a value
   // type to its decoded payload (`unknown` for bare-path JSON) rather than to
   // the `AssetRef` wrapper the catalog property holds.
@@ -112,11 +112,11 @@ export async function loads(): Promise<void> {
   expectType<Equal<typeof held.player, CatalogResourceLeaf<Texture>>>();
   loader.createScope().release(bare);
   scene.loader.get(composed);
-}
+};
 
 // --- the neighbouring overloads are untouched -------------------------------
 
-export async function neighbours(): Promise<void> {
+export const neighbours = async (): Promise<void> => {
   // Single descriptor.
   const single = await loader.load(Asset.type('texture', 'sprites/one.png'));
   expectType<Equal<typeof single, Texture>>();
@@ -133,13 +133,13 @@ export async function neighbours(): Promise<void> {
   // Bare path.
   const path = await loader.load('sprites/solo.png');
   expectType<Equal<typeof path, Texture>>();
-}
+};
 
 // --- negative: a plain record is not a catalog ------------------------------
 
 declare const plainRecord: { player: 'sprites/player.png'; config: 'data/config.json' };
 
-export function negatives(): void {
+export const negatives = (): void => {
   // @ts-expect-error - a definition RECORD is not a materialized `Assets`
   // catalog; the catalog overload takes `Assets.from(...)` output, not the
   // record it was built from.
@@ -150,6 +150,6 @@ export function negatives(): void {
 
   // @ts-expect-error - an arbitrary object matches no loader input either.
   loader.load({ nope: 1 });
-}
+};
 
 export type { _BareLeafConfig, _BareLeafPlayer, _ExplicitLeafConfig };

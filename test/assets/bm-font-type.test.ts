@@ -148,7 +148,7 @@ char id=90   x=70   y=57   width=13  height=18  xoffset=0  yoffset=9   xadvance=
 // ---------------------------------------------------------------------------
 
 /** A dependency scope that records what the font asked for and hands back a blank texture. */
-function recordingScope(requested: string[]): AssetDependencyScope {
+const recordingScope = (requested: string[]): AssetDependencyScope => {
   return {
     load: vi.fn(async (asset: unknown) => {
       requested.push((asset as { _config: { source: string } })._config.source);
@@ -156,7 +156,7 @@ function recordingScope(requested: string[]): AssetDependencyScope {
       return new Texture(null);
     }),
   } as unknown as AssetDependencyScope;
-}
+};
 
 describe('bmFontType', () => {
   test('decodes the descriptor text into parsed font data', async () => {

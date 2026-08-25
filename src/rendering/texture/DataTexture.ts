@@ -295,6 +295,4 @@ export class DataTexture<F extends DataTextureFormat = DataTextureFormat> extend
   }
 }
 
-function isFloatFormat(format: DataTextureFormat): boolean {
-  return format === TextureFormat.R32F || format === TextureFormat.Rgba32F;
-}
+const isFloatFormat = (format: DataTextureFormat): boolean => format === TextureFormat.R32F || format === TextureFormat.Rgba32F;

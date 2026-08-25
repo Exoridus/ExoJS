@@ -67,11 +67,11 @@ const quadIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
 // Sampler address mode helper
 // ---------------------------------------------------------------------------
 
-function repeatModeToAddressMode(mode: RepeatMode): GPUAddressMode {
+const repeatModeToAddressMode = (mode: RepeatMode): GPUAddressMode => {
   if (mode === 'repeat') return 'repeat';
   if (mode === 'mirror-repeat') return 'mirror-repeat';
   return 'clamp-to-edge';
-}
+};
 
 /** Instanced renderer for {@link RepeatingSprite} using WebGPU. */
 export class WebGpuRepeatingSpriteRenderer extends AbstractWebGpuRenderer<RepeatingSprite> implements WebGpuRetainedBatchReplayer {

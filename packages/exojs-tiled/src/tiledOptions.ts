@@ -27,8 +27,6 @@ export interface TiledLoadOptions {
  * unknown fields. There is intentionally no `strict` toggle - a permissive
  * parse mode is a potential v0.14 follow-up, not part of v0.13.
  */
-export function resolveTiledOptions(options: TiledLoadOptions | undefined): { format: 'tiled' } {
-  return {
-    format: options?.format ?? 'tiled',
-  };
-}
+export const resolveTiledOptions = (options: TiledLoadOptions | undefined): { format: 'tiled' } => ({
+  format: options?.format ?? 'tiled',
+});

@@ -22,12 +22,11 @@ export interface WorkerPluginOptions {
 }
 
 /** Inlines `*.worker.ts?worker` imports as bundled Web Worker source strings. */
-export function createWorkerPlugin({ minify = false }: WorkerPluginOptions = {}): InlineSourcePlugin {
-  return createInlineModulePlugin({
+export const createWorkerPlugin = ({ minify = false }: WorkerPluginOptions = {}): InlineSourcePlugin =>
+  createInlineModulePlugin({
     name: 'exojs-worker-transform',
     query: '?worker',
     format: 'iife',
     target: 'es2022',
     minify,
   });
-}

@@ -281,7 +281,7 @@ const uiRootSerializer: NodeSerializer<UIRoot> = {
  * Register the UI widget node serializers on `registry`.
  * @internal
  */
-export function registerUiSerializers(registry: SerializationRegistry): void {
+export const registerUiSerializers = (registry: SerializationRegistry): void => {
   registry.register('Label', Label, labelSerializer);
   registry.register('Panel', Panel, panelSerializer);
   registry.register('Button', Button, buttonSerializer);
@@ -289,4 +289,4 @@ export function registerUiSerializers(registry: SerializationRegistry): void {
   registry.register('ScrollContainer', ScrollContainer, scrollContainerSerializer);
   registry.register('Stack', Stack, stackSerializer);
   registry.register('UIRoot', UIRoot, uiRootSerializer);
-}
+};

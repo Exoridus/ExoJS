@@ -16,7 +16,7 @@ interface VocoderRenderOptions {
   durationSeconds: number;
 }
 
-async function renderVocoder(opts: VocoderRenderOptions): Promise<Float32Array> {
+const renderVocoder = async (opts: VocoderRenderOptions): Promise<Float32Array> => {
   const sr = SAMPLE_RATE;
   const ctx = new OfflineAudioContext(1, Math.floor(opts.durationSeconds * sr), sr);
 
@@ -46,9 +46,9 @@ async function renderVocoder(opts: VocoderRenderOptions): Promise<Float32Array> 
 
   const rendered = await ctx.startRendering();
   return rendered.getChannelData(0).slice();
-}
+};
 
-function magnitudeAt(buf: Float32Array, freq: number): number {
+const magnitudeAt = (buf: Float32Array, freq: number): number => {
   let re = 0;
   let im = 0;
   const omega = (2 * Math.PI * freq) / SAMPLE_RATE;
@@ -57,7 +57,7 @@ function magnitudeAt(buf: Float32Array, freq: number): number {
     im -= buf[i] * Math.sin(omega * i);
   }
   return Math.sqrt(re * re + im * im) / buf.length;
-}
+};
 
 describe('Vocoder worklet — real Web Audio', () => {
   it('make-up gain keeps the output audible (not the old -23.8 dB shortfall)', async () => {

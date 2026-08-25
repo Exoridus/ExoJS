@@ -261,11 +261,11 @@ export type PreloadArgs<Data> = [Data] extends [void] ? [options?: PreloadOption
  * value.
  * @internal
  */
-export function resolvePreloadArgs(args: readonly unknown[]): { data: unknown } {
+export const resolvePreloadArgs = (args: readonly unknown[]): { data: unknown } => {
   const options = args[0] as { data?: unknown } | undefined;
 
   return { data: options?.data };
-}
+};
 
 /**
  * Thrown (dev builds only) when `ApplicationOptions.scenes` registers the
@@ -449,7 +449,10 @@ const isSceneRegistrationDescriptor = (value: unknown): value is { scene: AnySce
  * key, in either form. Dev builds only; production builds skip validation.
  * @internal
  */
-export function validateSceneRegistry(scenes: Record<string, SceneRegistration<AnySceneConstructor>> | undefined, sceneBase: typeof Scene): SceneRegistryIndex {
+export const validateSceneRegistry = (
+  scenes: Record<string, SceneRegistration<AnySceneConstructor>> | undefined,
+  sceneBase: typeof Scene,
+): SceneRegistryIndex => {
   const byConstructor = new Map<AnySceneConstructor, string>();
   const byKey = new Map<string, AnySceneConstructor>();
   const defaultTransitions = new Map<AnySceneConstructor, SceneTransitionSelection>();
@@ -486,4 +489,4 @@ export function validateSceneRegistry(scenes: Record<string, SceneRegistration<A
   }
 
   return { byConstructor, byKey, defaultTransitions };
-}
+};

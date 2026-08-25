@@ -43,23 +43,23 @@ const FORBIDDEN_PATTERNS = [
 let passed = 0;
 let failed = 0;
 
-function ok(msg: string): void {
+const ok = (msg: string): void => {
   console.log(`  ✓ ${msg}`);
   passed++;
-}
+};
 
-function fail(msg: string): void {
+const fail = (msg: string): void => {
   console.error(`  ✗ ${msg}`);
   failed++;
-}
+};
 
-function check(condition: boolean, okMsg: string, failMsg: string): void {
+const check = (condition: boolean, okMsg: string, failMsg: string): void => {
   if (condition) {
     ok(okMsg);
   } else {
     fail(failMsg);
   }
-}
+};
 
 console.log('\n=== verify:create-exo-app ===\n');
 

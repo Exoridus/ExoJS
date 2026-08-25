@@ -18,11 +18,11 @@ export type { TextPageQuads };
  * `Infinity`. Not clamped: a silently corrected ratio would rasterize an atlas
  * the caller never asked for and hide the typo that produced it.
  */
-function assertPixelRatio(value: number): number {
+const assertPixelRatio = (value: number): number => {
   assert(Number.isFinite(value) && value > 0, `Text pixelRatio must be a positive finite number (got ${value}).`);
 
   return value;
-}
+};
 
 /**
  * Construction options for a {@link Text} node - a flat merge of visual

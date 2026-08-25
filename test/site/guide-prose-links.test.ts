@@ -36,7 +36,7 @@ const PART_SLUGS = new Set(GUIDE_PARTS.map(part => part.slug));
 // and enums only), so their option-page links were dropped.
 const REMOVED_API_SLUGS = ['mesh-shader', 'canvas-application-options', 'loader-options', 'rendering-application-options', 'input-application-options'];
 
-function walkMdx(dir: string): string[] {
+const walkMdx = (dir: string): string[] => {
   const out: string[] = [];
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
@@ -44,7 +44,7 @@ function walkMdx(dir: string): string[] {
     else if (full.endsWith('.mdx') || full.endsWith('.md')) out.push(full);
   }
   return out;
-}
+};
 
 const guideFiles = walkMdx(GUIDE_DIR);
 const rel = (file: string): string => file.slice(GUIDE_DIR.length + 1).replace(/\\/g, '/');
@@ -54,7 +54,7 @@ const rel = (file: string): string => file.slice(GUIDE_DIR.length + 1).replace(/
  * `null` for external, protocol-relative, anchor-only, or non-rootabsolute links
  * (none of which this test resolves).
  */
-function normalizeInternal(href: string): string | null {
+const normalizeInternal = (href: string): string | null => {
   let h = href.trim();
   // Drop an optional markdown link title: [x](/path "Title").
   const space = h.search(/\s/);
@@ -74,7 +74,7 @@ function normalizeInternal(href: string): string | null {
     .replace(/^(en|de)\//, '')
     .replace(/\/+$/, '');
   return path;
-}
+};
 
 interface Resolution {
   kind: 'api' | 'guide' | 'other';
@@ -82,7 +82,7 @@ interface Resolution {
   target: string;
 }
 
-function resolveInternal(path: string): Resolution {
+const resolveInternal = (path: string): Resolution => {
   const seg = path.split('/');
   if (seg[0] === 'api') {
     const slug = seg.slice(1).join('/');
@@ -96,7 +96,7 @@ function resolveInternal(path: string): Resolution {
   }
   // Playground and other internal routes are validated by their own embeds.
   return { kind: 'other', ok: true, target: path };
-}
+};
 
 const MD_LINK_RE = /\]\(([^)]+)\)/g;
 const NEXTSTEP_HREF_RE = /<NextStep\b[\s\S]*?\shref=["']([^"']+)["']/g;
@@ -104,7 +104,7 @@ const TRYIT_TAG_RE = /<TryIt\b[\s\S]*?\/>/g;
 const STRING_LITERAL_RE = /['"]([^'"]+)['"]/g;
 
 /** Collect every internal (api|guide) link in a file with its raw form. */
-function collectLinks(body: string): Array<{ raw: string; path: string; res: Resolution }> {
+const collectLinks = (body: string): Array<{ raw: string; path: string; res: Resolution }> => {
   const found: Array<{ raw: string; path: string; res: Resolution }> = [];
   const add = (raw: string): void => {
     const path = normalizeInternal(raw);
@@ -117,7 +117,7 @@ function collectLinks(body: string): Array<{ raw: string; path: string; res: Res
   for (const m of body.matchAll(MD_LINK_RE)) add(m[1]);
   for (const m of body.matchAll(NEXTSTEP_HREF_RE)) add(m[1]);
   return found;
-}
+};
 
 const exampleExists = (ref: string): boolean => {
   const slash = ref.indexOf('/');
@@ -127,7 +127,7 @@ const exampleExists = (ref: string): boolean => {
   return (EXAMPLES_CATALOG[category] ?? []).some(entry => entry.slug === slug);
 };
 
-function collectTryItRefs(body: string): { api: string[]; examples: string[] } {
+const collectTryItRefs = (body: string): { api: string[]; examples: string[] } => {
   const api: string[] = [];
   const examples: string[] = [];
   for (const tag of body.matchAll(TRYIT_TAG_RE)) {
@@ -138,7 +138,7 @@ function collectTryItRefs(body: string): { api: string[]; examples: string[] } {
     if (exArr) for (const s of exArr[1].matchAll(STRING_LITERAL_RE)) examples.push(s[1]);
   }
   return { api, examples };
-}
+};
 
 describe('guide prose links', () => {
   it('actually collects internal links (guards against a vacuous regex)', () => {

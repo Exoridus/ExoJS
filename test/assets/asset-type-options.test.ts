@@ -38,12 +38,12 @@ interface ResolvedExampleOptions {
   readonly strict: boolean;
 }
 
-function resolveExampleOptions(opts: ExampleLoadOptions | undefined): ResolvedExampleOptions {
+const resolveExampleOptions = (opts: ExampleLoadOptions | undefined): ResolvedExampleOptions => {
   return {
     format: opts?.format ?? 'example',
     strict: opts?.strict ?? true,
   };
-}
+};
 
 /** A type that acquires nothing, so these cases exercise identity and options alone. */
 abstract class SourcelessAssetType<Resource, Options> extends AssetType<void, Resource, Options> {
@@ -161,10 +161,10 @@ describe('option-driven identity', () => {
   });
 
   /** `example`: identity covers format + strict, and never trace. */
-  function exampleType(
+  const exampleType = (
     id: string,
     onCreate: (options: ResolvedExampleOptions, context: AssetFactoryContext<ExampleLoadOptions>) => void,
-  ): AssetType<void, ExampleAsset, ExampleLoadOptions> {
+  ): AssetType<void, ExampleAsset, ExampleLoadOptions> => {
     class Example extends SourcelessAssetType<ExampleAsset, ExampleLoadOptions> {
       public readonly id = id;
       public override readonly _token = ExampleAsset;
@@ -187,7 +187,7 @@ describe('option-driven identity', () => {
     }
 
     return new Example();
-  }
+  };
 
   it('one source and one set of identity-relevant options is one load', async () => {
     let loadCount = 0;

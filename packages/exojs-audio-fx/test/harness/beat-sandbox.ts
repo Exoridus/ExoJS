@@ -97,7 +97,7 @@ let _processorCtor: BeatProcessorCtor | null = null;
  * After this call all globals are restored; only the returned class retains a
  * reference to the stub AudioWorkletProcessor via its prototype chain.
  */
-export function buildBeatProcessor(): BeatProcessorCtor {
+export const buildBeatProcessor = (): BeatProcessorCtor => {
   let klass: BeatProcessorCtor | null = null;
   const g = globalThis as Record<string, unknown>;
 
@@ -141,7 +141,7 @@ export function buildBeatProcessor(): BeatProcessorCtor {
 
   if (!klass) throw new Error('registerProcessor was not called — worklet source malformed');
   return klass;
-}
+};
 
 /**
  * Run the BeatDetectorProcessor on `samples` and return every port.postMessage
@@ -156,13 +156,13 @@ export function buildBeatProcessor(): BeatProcessorCtor {
  * @param options.processorOptions  Forwarded to the worklet constructor.
  * @param options.blockSize         Samples per process() call. Default 128.
  */
-export function runDetector(
+export const runDetector = (
   samples: Float32Array,
   options: {
     processorOptions?: Record<string, unknown>;
     blockSize?: number;
   } = {},
-): { messages: WorkletMessage[] } {
+): { messages: WorkletMessage[] } => {
   const { blockSize = 128, processorOptions = {} } = options;
 
   // Build (or reuse cached) processor class
@@ -198,4 +198,4 @@ export function runDetector(
   g['currentFrame'] = prevCF;
 
   return { messages };
-}
+};

@@ -6,12 +6,12 @@ import { materializeAssetTypes } from '#extensions/materialize';
 import { BmFont } from '#rendering/text/BmFont';
 import type { Texture } from '#rendering/texture/Texture';
 
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader({ basePath: '/' });
   materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 
@@ -22,7 +22,7 @@ chars count=0
 `;
 
 /** Counts requests per resolved URL, serving `.fnt` as text and everything else as bytes. */
-function mockFetch(): Map<string, number> {
+const mockFetch = (): Map<string, number> => {
   const calls = new Map<string, number>();
 
   global.fetch = vi.fn(async (input: RequestInfo | URL): Promise<Response> => {
@@ -41,7 +41,7 @@ function mockFetch(): Map<string, number> {
   }) as unknown as typeof fetch;
 
   return calls;
-}
+};
 
 beforeEach(() => {
   vi.stubGlobal(

@@ -5,11 +5,11 @@ import { TiledMap } from '../src/TiledMap';
 import { TiledFormatError } from '../src/validate';
 import { loadFixture, makeTiledContext } from './type-context';
 
-function makeContext(fixtures: Record<string, unknown>) {
+const makeContext = (fixtures: Record<string, unknown>) => {
   const { loadSource, load, textureLoad } = makeTiledContext(fixtures);
 
   return { loadMap: loadSource, load, loaderLoad: textureLoad };
-}
+};
 
 // ── Tests ──────────────────────────────────────────────────────────────────────
 

@@ -21,11 +21,11 @@ const swallow = (): void => {
  * plain object literal, a null-prototype object, or an anonymous class
  * expression.
  */
-export function hookOwnerName(owner: object, fallback: string): string {
+export const hookOwnerName = (owner: object, fallback: string): string => {
   const name = (owner as { constructor?: { name?: string } }).constructor?.name;
 
   return name === undefined || name === '' || name === 'Object' ? fallback : name;
-}
+};
 
 /**
  * Throw when a hook that must be synchronous returned a thenable. `subject` is
@@ -36,7 +36,7 @@ export function hookOwnerName(owner: object, fallback: string): string {
  * so a well-behaved hook costs one comparison per dispatch and never reaches
  * this function.
  */
-export function requireSynchronousHook(result: unknown, subject: string, remedy: string): void {
+export const requireSynchronousHook = (result: unknown, subject: string, remedy: string): void => {
   if (result === null || typeof result !== 'object' || typeof (result as PromiseLike<unknown>).then !== 'function') {
     return;
   }
@@ -47,4 +47,4 @@ export function requireSynchronousHook(result: unknown, subject: string, remedy:
   void Promise.resolve(result as PromiseLike<unknown>).catch(swallow);
 
   throw new Error(`[ExoJS] ${subject} returned a Promise, but it must be synchronous. ${remedy}`);
-}
+};

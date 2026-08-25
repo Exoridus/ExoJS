@@ -35,11 +35,11 @@ const hasNavigator = typeof navigator !== 'undefined';
 const workerGlobalScope = Reflect.get(globalThis, 'WorkerGlobalScope') as (abstract new () => object) | undefined;
 const hasWorkerScope = workerGlobalScope !== undefined && globalThis instanceof workerGlobalScope;
 
-function detectRealm(): HostRealm {
+const detectRealm = (): HostRealm => {
   if (hasWindow && hasDocument) return 'window';
   if (hasWorkerScope) return 'worker';
   return 'unknown';
-}
+};
 
 const realm: HostRealm = detectRealm();
 
@@ -198,7 +198,7 @@ export class Capabilities {
  * there is a document, an `OffscreenCanvas` otherwise. `null` when the realm
  * offers neither.
  */
-function createProbeSurface(offscreenOnly = false): RenderSurface | null {
+const createProbeSurface = (offscreenOnly = false): RenderSurface | null => {
   if (!offscreenOnly && hasDocument) {
     return document.createElement('canvas');
   }
@@ -208,7 +208,7 @@ function createProbeSurface(offscreenOnly = false): RenderSurface | null {
   }
 
   return new OffscreenCanvas(1, 1);
-}
+};
 
 /**
  * Whether `surface` hands out a WebGL2 context, releasing it again.
@@ -218,7 +218,7 @@ function createProbeSurface(offscreenOnly = false): RenderSurface | null {
  * context is one slot the application can no longer use. Two probes run here,
  * which without this would cost two of them.
  */
-function acquiresWebGl2(surface: RenderSurface): boolean {
+const acquiresWebGl2 = (surface: RenderSurface): boolean => {
   const gl = getWebGl2Context(surface);
 
   if (gl === null) {
@@ -228,9 +228,9 @@ function acquiresWebGl2(surface: RenderSurface): boolean {
   gl.getExtension('WEBGL_lose_context')?.loseContext();
 
   return true;
-}
+};
 
-function probeWebGl2(): boolean {
+const probeWebGl2 = (): boolean => {
   try {
     const surface = createProbeSurface();
 
@@ -238,9 +238,9 @@ function probeWebGl2(): boolean {
   } catch {
     return false;
   }
-}
+};
 
-function probeOffscreenWebGl2(): boolean {
+const probeOffscreenWebGl2 = (): boolean => {
   try {
     const surface = createProbeSurface(true);
 
@@ -248,13 +248,11 @@ function probeOffscreenWebGl2(): boolean {
   } catch {
     return false;
   }
-}
+};
 
-function probeWebGpuApiSurface(): boolean {
-  return hasNavigator && 'gpu' in navigator;
-}
+const probeWebGpuApiSurface = (): boolean => hasNavigator && 'gpu' in navigator;
 
-async function probeWebGpu(): Promise<[GPUAdapter | null, GPUAdapterInfo | null]> {
+const probeWebGpu = async (): Promise<[GPUAdapter | null, GPUAdapterInfo | null]> => {
   if (!probeWebGpuApiSurface()) return [null, null];
 
   const gpu = (navigator as Navigator & { gpu?: GPU }).gpu;
@@ -291,71 +289,57 @@ async function probeWebGpu(): Promise<[GPUAdapter | null, GPUAdapterInfo | null]
   } catch {
     return [null, null];
   }
-}
+};
 
 // Pointer and keyboard are document-scoped: a worker can construct neither the
 // event nor a target to receive it, so a realm without a document has no input
 // of its own regardless of which constructors happen to be defined in it.
-function probePointer(): boolean {
-  return hasWindow && 'PointerEvent' in globalThis;
-}
+const probePointer = (): boolean => hasWindow && 'PointerEvent' in globalThis;
 
-function probeKeyboard(): boolean {
-  return hasWindow && 'KeyboardEvent' in globalThis;
-}
+const probeKeyboard = (): boolean => hasWindow && 'KeyboardEvent' in globalThis;
 
-function probeGamepad(): boolean {
-  return hasNavigator && typeof navigator.getGamepads === 'function';
-}
+const probeGamepad = (): boolean => hasNavigator && typeof navigator.getGamepads === 'function';
 
-function probeTouchSupported(): boolean {
+const probeTouchSupported = (): boolean => {
   if (!hasWindow) return false;
   if ('ontouchstart' in globalThis) return true;
   if (probeMaxTouchPoints() > 0) return true;
   return false;
-}
+};
 
-function probeMaxTouchPoints(): number {
+const probeMaxTouchPoints = (): number => {
   if (!hasNavigator) return 0;
   const points = navigator.maxTouchPoints;
   return typeof points === 'number' ? points : 0;
-}
+};
 
 // `AudioContext` is window-scoped by specification - a worker cannot construct
 // one even where the identifier resolves.
-function probeAudio(): boolean {
+const probeAudio = (): boolean => {
   if (!hasWindow) return false;
   const w = globalThis as typeof globalThis & { webkitAudioContext?: unknown };
   return w.AudioContext !== undefined || w.webkitAudioContext !== undefined;
-}
+};
 
-function probeFullscreen(): boolean {
+const probeFullscreen = (): boolean => {
   if (!hasDocument) return false;
   const el = document.documentElement as HTMLElement & { webkitRequestFullscreen?: unknown };
   return typeof el.requestFullscreen === 'function' || typeof el.webkitRequestFullscreen === 'function';
-}
+};
 
-function probeVibration(): boolean {
-  return hasNavigator && typeof navigator.vibrate === 'function';
-}
+const probeVibration = (): boolean => hasNavigator && typeof navigator.vibrate === 'function';
 
-function probeImageBitmap(): boolean {
-  return typeof createImageBitmap === 'function';
-}
+const probeImageBitmap = (): boolean => typeof createImageBitmap === 'function';
 
-function probeDeviceMemory(): number {
+const probeDeviceMemory = (): number => {
   if (!hasNavigator) return 0;
   const mem = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
   return typeof mem === 'number' ? mem : 0;
-}
+};
 
 // Both are realm globals rather than window properties: a dedicated worker has
 // `OffscreenCanvas` and can spawn nested workers, and reading them off `window`
 // would report "unsupported" for the one realm that most needs them.
-function probeOffscreenCanvas(): boolean {
-  return typeof OffscreenCanvas !== 'undefined';
-}
+const probeOffscreenCanvas = (): boolean => typeof OffscreenCanvas !== 'undefined';
 
-function probeWebWorkers(): boolean {
-  return typeof Worker === 'function';
-}
+const probeWebWorkers = (): boolean => typeof Worker === 'function';

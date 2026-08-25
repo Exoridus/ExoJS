@@ -56,7 +56,7 @@ interface BufferedSpatialWrites {
  * needed. Mirrors how `BaseVoice` stores its own spatial points: the caller's
  * object is never retained.
  */
-function copyPoint(target: Vector | null, value: Vector | { x: number; y: number } | null): Vector | null {
+const copyPoint = (target: Vector | null, value: Vector | { x: number; y: number } | null): Vector | null => {
   if (value === null) {
     target?.destroy();
 
@@ -70,7 +70,7 @@ function copyPoint(target: Vector | null, value: Vector | { x: number; y: number
   target.set(value.x, value.y);
 
   return target;
-}
+};
 
 /**
  * Stand-in {@link Voice} returned by {@link SceneAudio.play} while the owning

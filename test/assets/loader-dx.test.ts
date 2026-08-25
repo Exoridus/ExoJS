@@ -26,40 +26,40 @@ class DxNonLeafResource {
   public constructor(public readonly raw: string) {}
 }
 
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 
-function mockFetchImage(): void {
+const mockFetchImage = (): void => {
   global.fetch = vi.fn(
     async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => new ArrayBuffer(8) }) as unknown as Response,
   );
-}
+};
 
-function mockFetch404(): void {
+const mockFetch404 = (): void => {
   global.fetch = vi.fn(async (): Promise<Response> => ({ ok: false, status: 404, statusText: 'Not Found' }) as Response);
-}
+};
 
-function mockFetchText(text = 'raw'): void {
+const mockFetchText = (text = 'raw'): void => {
   global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => text }) as unknown as Response);
-}
+};
 
 interface Deferred<T> {
   readonly promise: Promise<T>;
   resolve(value: T): void;
 }
 
-function deferred<T>(): Deferred<T> {
+const deferred = <T>(): Deferred<T> => {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>(res => {
     resolve = res;
   });
   return { promise, resolve };
-}
+};
 
 afterEach(() => {
   global.fetch = originalFetch;

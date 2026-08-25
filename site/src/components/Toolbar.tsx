@@ -8,11 +8,11 @@ export interface ToolbarProps {
   title: string;
 }
 
-export function Toolbar({ children, title }: ToolbarProps): JSX.Element {
+export const Toolbar = ({ children, title }: ToolbarProps): JSX.Element => {
   return (
     <div className={css(styles, 'root')}>
       <div className={css(styles, 'title')}>{title}</div>
       {children}
     </div>
   );
-}
+};

@@ -9,13 +9,13 @@ export interface IndexedDbFailureContext {
 }
 
 /** Wrap an arbitrary IndexedDB failure as an {@link AssetCacheError}, leaving an already-typed one alone. */
-function asCacheError(context: IndexedDbFailureContext, cause: unknown): AssetCacheError {
+const asCacheError = (context: IndexedDbFailureContext, cause: unknown): AssetCacheError => {
   if (cause instanceof AssetCacheError) {
     return cause;
   }
 
   return new AssetCacheError({ ...context, cause });
-}
+};
 
 /**
  * Open `name` at `version`, running `upgrade` when the schema has to change.
@@ -25,11 +25,11 @@ function asCacheError(context: IndexedDbFailureContext, cause: unknown): AssetCa
  * executor if the rejection is to stay typed.
  * @internal
  */
-export function openIndexedDb(
+export const openIndexedDb = (
   name: string,
   version: number,
   upgrade: (database: IDBDatabase, transaction: IDBTransaction, oldVersion: number, newVersion: number) => void,
-): Promise<IDBDatabase> {
+): Promise<IDBDatabase> => {
   const failure: IndexedDbFailureContext = { operation: 'connect', message: `The database "${name}" could not be opened.` };
   let request: IDBOpenDBRequest;
 
@@ -67,15 +67,14 @@ export function openIndexedDb(
       reject(new AssetCacheError({ ...failure, message: `Opening the database "${name}" is blocked by another connection holding an older version.` })),
     );
   });
-}
+};
 
 /** Resolve with an IndexedDB request's result, or reject with a typed failure. @internal */
-export function requestResult<T>(request: IDBRequest<T>, failure: IndexedDbFailureContext): Promise<T> {
-  return new Promise((resolve, reject) => {
+export const requestResult = <T>(request: IDBRequest<T>, failure: IndexedDbFailureContext): Promise<T> =>
+  new Promise((resolve, reject) => {
     request.addEventListener('success', () => resolve(request.result));
     request.addEventListener('error', () => reject(asCacheError(failure, request.error ?? undefined)));
   });
-}
 
 /**
  * Resolve once `transaction` has COMMITTED.
@@ -86,12 +85,11 @@ export function requestResult<T>(request: IDBRequest<T>, failure: IndexedDbFailu
  * write and then miss reading it back.
  * @internal
  */
-export function transactionComplete(transaction: IDBTransaction, failure: IndexedDbFailureContext): Promise<void> {
-  return new Promise((resolve, reject) => {
+export const transactionComplete = (transaction: IDBTransaction, failure: IndexedDbFailureContext): Promise<void> =>
+  new Promise((resolve, reject) => {
     transaction.addEventListener('complete', () => resolve());
     transaction.addEventListener('error', () => reject(asCacheError(failure, transaction.error ?? undefined)));
     transaction.addEventListener('abort', () =>
       reject(asCacheError({ ...failure, message: `${failure.message} The transaction was aborted.` }, transaction.error ?? undefined)),
     );
   });
-}

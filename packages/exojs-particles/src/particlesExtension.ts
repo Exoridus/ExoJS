@@ -20,22 +20,20 @@ export interface ParticlesExtensionOptions {
   readonly batchSize?: number;
 }
 
-function buildParticlesRendererBinding(batchSize: number): RendererBinding {
-  return {
-    targets: [ParticleSystem],
-    create(backend: RenderBackend) {
-      if (backend.backendType === RenderBackendType.WebGl2) {
-        return new WebGl2ParticleRenderer(batchSize);
-      }
+const buildParticlesRendererBinding = (batchSize: number): RendererBinding => ({
+  targets: [ParticleSystem],
+  create(backend: RenderBackend) {
+    if (backend.backendType === RenderBackendType.WebGl2) {
+      return new WebGl2ParticleRenderer(batchSize);
+    }
 
-      if (backend.backendType === RenderBackendType.WebGpu) {
-        return new WebGpuParticleRenderer();
-      }
+    if (backend.backendType === RenderBackendType.WebGpu) {
+      return new WebGpuParticleRenderer();
+    }
 
-      throw new Error(`Unsupported render backend: ${String(backend.backendType satisfies never)}`);
-    },
-  };
-}
+    throw new Error(`Unsupported render backend: ${String(backend.backendType satisfies never)}`);
+  },
+});
 
 /**
  * Default immutable Particles extension descriptor.
@@ -58,11 +56,11 @@ export const particlesExtension: Extension = Object.freeze({
  * const app = new Application({ extensions: [ext] });
  * ```
  */
-export function createParticlesExtension(options: ParticlesExtensionOptions = {}): Extension {
+export const createParticlesExtension = (options: ParticlesExtensionOptions = {}): Extension => {
   const batchSize = options.batchSize ?? 8192;
 
   return {
     id: '@codexo/exojs-particles',
     renderers: [buildParticlesRendererBinding(batchSize)],
   };
-}
+};

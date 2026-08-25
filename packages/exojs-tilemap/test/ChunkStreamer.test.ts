@@ -11,7 +11,7 @@ import { tileToChunkCoord } from '../src/types';
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return {
     width: 512,
     height: 512,
@@ -20,9 +20,9 @@ function fakeTexture(): Texture {
     destroy: vi.fn(),
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function makeTileset(): TileSet {
+const makeTileset = (): TileSet => {
   return new TileSet({
     name: 'tiles',
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
@@ -30,9 +30,9 @@ function makeTileset(): TileSet {
     tileHeight: 32,
     tileCount: 16,
   });
-}
+};
 
-function makeUnboundedLayer(tileset: TileSet, chunkSize = 4, tileSize = 16): TileLayer {
+const makeUnboundedLayer = (tileset: TileSet, chunkSize = 4, tileSize = 16): TileLayer => {
   return new TileLayer({
     id: 0,
     name: 'l',
@@ -42,10 +42,10 @@ function makeUnboundedLayer(tileset: TileSet, chunkSize = 4, tileSize = 16): Til
     chunkWidth: chunkSize,
     chunkHeight: chunkSize,
   });
-}
+};
 
 /** Always returns a valid (all-empty-tile) payload for any coordinate. */
-function makeAlwaysAvailableSource(chunkSize = 4): ChunkSource {
+const makeAlwaysAvailableSource = (chunkSize = 4): ChunkSource => {
   return {
     getChunk: (): ChunkPayload => ({
       width: chunkSize,
@@ -53,17 +53,17 @@ function makeAlwaysAvailableSource(chunkSize = 4): ChunkSource {
       tiles: new Uint32Array(chunkSize * chunkSize),
     }),
   };
-}
+};
 
 /** Computes the expected wanted chunk range using the same public helpers ChunkStreamer uses internally. */
-function expectedCoreRange(layer: TileLayer, view: View): { minCx: number; minCy: number; maxCx: number; maxCy: number } {
+const expectedCoreRange = (layer: TileLayer, view: View): { minCx: number; minCy: number; maxCx: number; maxCy: number } => {
   const bounds = view.getBounds();
   const topLeftTile = layer.pixelToTile(bounds.left, bounds.top);
   const bottomRightTile = layer.pixelToTile(bounds.right, bounds.bottom);
   const topLeftChunk = tileToChunkCoord(topLeftTile.tx, topLeftTile.ty, layer.chunkWidth, layer.chunkHeight);
   const bottomRightChunk = tileToChunkCoord(bottomRightTile.tx, bottomRightTile.ty, layer.chunkWidth, layer.chunkHeight);
   return { minCx: topLeftChunk.cx, minCy: topLeftChunk.cy, maxCx: bottomRightChunk.cx, maxCy: bottomRightChunk.cy };
-}
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 

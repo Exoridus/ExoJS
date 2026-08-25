@@ -7,11 +7,11 @@ import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts). */
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 interface PendingFetch {
   readonly url: string;
@@ -24,7 +24,7 @@ interface PendingFetch {
  * captured so a test can inspect the `AbortSignal` it was handed and settle it
  * explicitly. Rejects exactly like the platform does when its signal aborts.
  */
-function mockPendingFetch(): PendingFetch[] {
+const mockPendingFetch = (): PendingFetch[] => {
   const calls: PendingFetch[] = [];
 
   global.fetch = vi.fn(
@@ -47,14 +47,14 @@ function mockPendingFetch(): PendingFetch[] {
   ) as unknown as typeof fetch;
 
   return calls;
-}
+};
 
 /** Lets every pending microtask queued by the loader pipeline run. */
-async function flush(): Promise<void> {
+const flush = async (): Promise<void> => {
   for (let i = 0; i < 5; i++) {
     await Promise.resolve();
   }
-}
+};
 
 const originalFetch = global.fetch;
 

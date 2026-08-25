@@ -6,7 +6,7 @@ import { BlendModes } from '#rendering/types';
  * Returns the GPUBlendState for a given ExoJS blend mode.
  * Shared by all WebGPU renderers to avoid duplication.
  */
-export function getWebGpuBlendState(blendMode: BlendModes): GPUBlendState {
+export const getWebGpuBlendState = (blendMode: BlendModes): GPUBlendState => {
   switch (blendMode) {
     case BlendModes.Additive:
       return {
@@ -79,4 +79,4 @@ export function getWebGpuBlendState(blendMode: BlendModes): GPUBlendState {
         },
       };
   }
-}
+};

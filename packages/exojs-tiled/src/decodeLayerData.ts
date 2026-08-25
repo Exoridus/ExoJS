@@ -13,7 +13,7 @@ import { Codec } from '@codexo/exojs';
 import { TiledFormatError } from './validate';
 
 /** Read a little-endian Uint32 GID array out of a decoded byte buffer. */
-function bytesToGids(bytes: Uint8Array, source: string, path: string): number[] {
+const bytesToGids = (bytes: Uint8Array, source: string, path: string): number[] => {
   if (bytes.length % 4 !== 0) {
     throw new TiledFormatError(source, path, `decoded tile data length ${bytes.length} is not a multiple of 4`);
   }
@@ -24,10 +24,10 @@ function bytesToGids(bytes: Uint8Array, source: string, path: string): number[] 
     gids[i] = view.getUint32(i * 4, true); // Tiled writes little-endian.
   }
   return gids;
-}
+};
 
 /** Decode one base64 `data` string into a GID array, applying any compression. */
-async function decodeBase64Gids(data: string, compression: unknown, source: string, path: string): Promise<number[]> {
+const decodeBase64Gids = async (data: string, compression: unknown, source: string, path: string): Promise<number[]> => {
   let bytes = Codec.decodeBase64(data);
 
   if (compression === 'gzip') {
@@ -41,10 +41,10 @@ async function decodeBase64Gids(data: string, compression: unknown, source: stri
   }
 
   return bytesToGids(bytes, source, path);
-}
+};
 
 /** Decode a single tile layer's `data` and/or `chunks[].data` in place. */
-async function decodeTileLayer(layer: Record<string, unknown>, source: string, path: string): Promise<void> {
+const decodeTileLayer = async (layer: Record<string, unknown>, source: string, path: string): Promise<void> => {
   if (layer.encoding !== 'base64') {
     return; // CSV / plain array — nothing to decode.
   }
@@ -69,10 +69,10 @@ async function decodeTileLayer(layer: Record<string, unknown>, source: string, p
   // downstream validation treats it like a CSV layer.
   delete layer.encoding;
   delete layer.compression;
-}
+};
 
 /** Recursively decode every tile layer under a `layers` array (groups nest). */
-async function decodeLayers(layers: unknown, source: string, path: string): Promise<void> {
+const decodeLayers = async (layers: unknown, source: string, path: string): Promise<void> => {
   if (!Array.isArray(layers)) {
     return;
   }
@@ -88,7 +88,7 @@ async function decodeLayers(layers: unknown, source: string, path: string): Prom
       }
     }),
   );
-}
+};
 
 /**
  * Decode any base64/compressed tile-layer data in a raw Tiled map document into
@@ -98,9 +98,9 @@ async function decodeLayers(layers: unknown, source: string, path: string): Prom
  * @throws {TiledFormatError} On zstd/unknown compression or malformed data.
  * @internal
  */
-export async function decodeTiledLayerData(raw: unknown, source: string): Promise<unknown> {
+export const decodeTiledLayerData = async (raw: unknown, source: string): Promise<unknown> => {
   if (typeof raw === 'object' && raw !== null) {
     await decodeLayers((raw as Record<string, unknown>).layers, source, 'layers');
   }
   return raw;
-}
+};

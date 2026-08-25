@@ -20,14 +20,14 @@ interface PackageInfo {
   peer?: string;
 }
 
-function readPackage(relPath: string): PackageInfo {
+const readPackage = (relPath: string): PackageInfo => {
   const pkg = JSON.parse(readFileSync(resolve(rootDir, relPath), 'utf8')) as {
     name: string;
     version: string;
     peerDependencies?: Record<string, string>;
   };
   return { name: pkg.name, version: pkg.version, peer: pkg.peerDependencies?.['@codexo/exojs'] };
-}
+};
 
 const corePkg = readPackage('package.json');
 const extensionPkgs = EXTENSION_PACKAGES.map(p => readPackage(`${p.dir}/package.json`));

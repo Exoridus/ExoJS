@@ -147,9 +147,7 @@ const catalogProvenance = new WeakMap<AnyAssets, AssetsProvenance>();
  * anything that needs to introspect composition goes through here.
  * @internal
  */
-export function _readProvenance(catalog: AnyAssets): AssetsProvenance | undefined {
-  return catalogProvenance.get(catalog);
-}
+export const _readProvenance = (catalog: AnyAssets): AssetsProvenance | undefined => catalogProvenance.get(catalog);
 
 // ---------------------------------------------------------------------------
 // Internal implementation
@@ -163,7 +161,7 @@ export function _readProvenance(catalog: AnyAssets): AssetsProvenance | undefine
  * built-in claims throws a guiding error. An already-constructed `Asset`
  * contributes its `_config`; a plain config passes through unchanged.
  */
-export function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
+export const _normalizeEntry = (value: CatalogEntry): AnyAssetConfig => {
   if (typeof value === 'string') {
     const type = builtinTypeForPath(value);
 
@@ -180,7 +178,7 @@ export function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
   }
 
   return value instanceof AssetImpl ? value._config : (value as AnyAssetConfig);
-}
+};
 
 /**
  * Materialize one catalog entry into its meta-stamped handle-hybrid leaf.
@@ -189,13 +187,13 @@ export function _normalizeEntry(value: CatalogEntry): AnyAssetConfig {
  * resolvable by name here. A type an application installs of its own is reached
  * through the descriptor its own `asset(...)` minted, which carries it.
  */
-function createEntryLeaf(value: CatalogEntry): object {
+const createEntryLeaf = (value: CatalogEntry): object => {
   const { type, source, ...rest } = _normalizeEntry(value);
   const opts = Object.keys(rest).length > 0 ? rest : undefined;
   const leaf = value instanceof AssetImpl ? (value._assetType?.leaf ?? builtinLeaf(type)) : builtinLeaf(type);
 
   return createLeaf(leaf, type, source, opts);
-}
+};
 
 /**
  * Property names an `Assets` container owns itself, and which a catalog key may
@@ -205,13 +203,13 @@ const RESERVED_ASSETS_KEYS: Record<string, string> = {
   entries: 'that name is reserved for the spread-composition helper',
 };
 
-function assertUnreservedKey(key: string): void {
+const assertUnreservedKey = (key: string): void => {
   const reason = RESERVED_ASSETS_KEYS[key];
 
   if (reason !== undefined) {
     throw new Error(`An Assets container may not define an asset named "${key}": ${reason}.`);
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Dev-mode typo guard
@@ -266,14 +264,14 @@ export class AssetsImpl<M extends Record<string, CatalogEntry>> {
  * `keyOrigins` carries the origins inherited from the input catalogs; any key
  * without one is declared HERE and is stamped with this instance.
  */
-function installCatalog<M extends Record<string, CatalogEntry>>(
+const installCatalog = <M extends Record<string, CatalogEntry>>(
   instance: AssetsImpl<M>,
   leaves: Record<string, object>,
   kind: AssetsProvenance['kind'],
   sources: readonly AnyAssets[],
   overrides: readonly string[],
   keyOrigins: Map<string, AnyAssets>,
-): Assets<M> {
+): Assets<M> => {
   for (const [key, leaf] of Object.entries(leaves)) {
     Object.defineProperty(instance, key, {
       value: leaf,
@@ -331,31 +329,33 @@ function installCatalog<M extends Record<string, CatalogEntry>>(
   catalogProvenance.set(catalog, Object.freeze({ kind, sources, overrides, keyOrigins }) satisfies AssetsProvenance);
 
   return catalog;
-}
+};
 
 /** Build a catalog from ALREADY materialized leaves, bypassing entry normalization. */
-function adoptCatalog(
+const adoptCatalog = (
   leaves: Record<string, object>,
   kind: AssetsProvenance['kind'],
   sources: readonly AnyAssets[],
   overrides: readonly string[],
   keyOrigins: Map<string, AnyAssets>,
-): AnyAssets {
+): AnyAssets => {
   const instance = Object.create(AssetsImpl.prototype) as AssetsImpl<Record<string, CatalogEntry>>;
 
   return installCatalog(instance, leaves, kind, sources, overrides, keyOrigins);
-}
+};
 
 /** The catalog a key was originally declared by - itself, for a `from()` catalog. */
-function originOf(catalog: AnyAssets, key: string): AnyAssets {
-  return catalogProvenance.get(catalog)?.keyOrigins.get(key) ?? catalog;
-}
+const originOf = (catalog: AnyAssets, key: string): AnyAssets => catalogProvenance.get(catalog)?.keyOrigins.get(key) ?? catalog;
 
-function assertIsCatalog(value: unknown, context: string): asserts value is AnyAssets {
+// An assertion signature is only honoured on a function declaration or on a
+// constant with an explicit type annotation.
+type AssertIsCatalog = (value: unknown, context: string) => asserts value is AnyAssets;
+
+const assertIsCatalog: AssertIsCatalog = (value, context) => {
   if (!(value instanceof AssetsImpl)) {
     throw new Error(`${context} expects an Assets catalog (Assets.from(...), Assets.compose(...) or Assets.extend(...)).`);
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Public type & constructor facade

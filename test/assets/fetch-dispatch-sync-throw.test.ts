@@ -4,11 +4,11 @@ import { Loader, LoadPriority } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
 
 /** Loader with every built-in asset type installed. */
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 
@@ -29,13 +29,13 @@ const mockFetchImage = (): void => {
  * before `.finally()` is attached, the seamless handle stays stuck in
  * `'loading'`, and the background queue's active counter never decrements.
  */
-function breakDispatch(loader: Loader): void {
+const breakDispatch = (loader: Loader): void => {
   const decoder = (loader as unknown as { _decoder: { _dispatchFetch: unknown } })._decoder;
 
   decoder._dispatchFetch = (): never => {
     throw new Error('synchronous dispatch failure');
   };
-}
+};
 
 describe('a synchronous throw out of the fetch dispatch', () => {
   beforeEach(() => {

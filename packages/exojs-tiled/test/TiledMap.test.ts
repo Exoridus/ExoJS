@@ -50,9 +50,9 @@ const RAW_MINIMAL = {
 const MINIMAL_DATA = validateTiledMapData(RAW_MINIMAL, 'minimal.tmj');
 const TILESET = new TiledTileset({ name: 'tiles', tilewidth: 16, tileheight: 16, tilecount: 4, columns: 2 }, 1);
 
-function makeMap(overrides: { tilesets?: TiledTileset[]; source?: string } = {}): TiledMap {
+const makeMap = (overrides: { tilesets?: TiledTileset[]; source?: string } = {}): TiledMap => {
   return new TiledMap(overrides.source ?? 'minimal.tmj', MINIMAL_DATA, overrides.tilesets ?? [TILESET]);
-}
+};
 
 describe('TiledMap constructor — field mapping', () => {
   const map = makeMap();
@@ -215,14 +215,14 @@ describe('TiledMap.destroy', () => {
 // ── TiledMap.toTileMap() ─────────────────────────────────────────────────────
 
 /** Build a Texture stub with given pixel dimensions (required by TextureRegion). */
-function makeTexture(width: number, height: number): Texture {
+const makeTexture = (width: number, height: number): Texture => {
   const t = new Texture();
   t.width = width;
   t.height = height;
   return t;
-}
+};
 
-function makeTilesetWithTexture(name: string, tileCount: number, columns: number, firstGid: number): TiledTileset {
+const makeTilesetWithTexture = (name: string, tileCount: number, columns: number, firstGid: number): TiledTileset => {
   const w = columns * 16;
   const h = Math.ceil(tileCount / columns) * 16;
   return new TiledTileset(
@@ -230,13 +230,13 @@ function makeTilesetWithTexture(name: string, tileCount: number, columns: number
     firstGid,
     { imageUrl: `${name}.png`, texture: makeTexture(w, h) },
   );
-}
+};
 
 const ATLAS_TILESET = makeTilesetWithTexture('tiles', 4, 2, 1);
 
-function makeAtlasMap(): TiledMap {
+const makeAtlasMap = (): TiledMap => {
   return new TiledMap('atlas.tmj', MINIMAL_DATA, [ATLAS_TILESET]);
-}
+};
 
 describe('TiledMap.toTileMap — basic conversion', () => {
   it('returns a TileMap instance', () => {
@@ -300,7 +300,7 @@ describe('TiledMap.toTileMap — basic conversion', () => {
 
 describe('TiledMap.toTileMap — flip flag decoding', () => {
   // Build a 1×1 map with a single GID that has flip flags set.
-  function makeFlippedMap(rawGid: number): TiledMap {
+  const makeFlippedMap = (rawGid: number): TiledMap => {
     const ts = makeTilesetWithTexture('ts', 4, 2, 1);
     const data = validateTiledMapData(
       {
@@ -319,7 +319,7 @@ describe('TiledMap.toTileMap — flip flag decoding', () => {
       'flip.tmj',
     );
     return new TiledMap('flip.tmj', data, [ts]);
-  }
+  };
 
   it('horizontal flip flag sets flipX=true, others false', () => {
     const { transform } = makeFlippedMap(0x80000001).toTileMap().layers[0]!.getTileAt(0, 0)!;
@@ -376,7 +376,7 @@ describe('TiledMap.toTileMap — multi-tileset', () => {
 });
 
 describe('TiledMap.toTileMap — object/class property conversion', () => {
-  function makeObjectPropsMap(properties: readonly { name: string; type: string; value: unknown; propertytype?: string }[]): TileMap {
+  const makeObjectPropsMap = (properties: readonly { name: string; type: string; value: unknown; propertytype?: string }[]): TileMap => {
     const data = validateTiledMapData(
       {
         type: 'map',
@@ -419,7 +419,7 @@ describe('TiledMap.toTileMap — object/class property conversion', () => {
       'objprops.tmj',
     );
     return new TiledMap('objprops.tmj', data, []).toTileMap();
-  }
+  };
 
   it('maps an object-typed property to a TilePropertyObjectRef by numeric id', () => {
     const tm = makeObjectPropsMap([{ name: 'target', type: 'object', value: 42 }]);
@@ -563,7 +563,7 @@ describe('TiledMap.toTileMap — error cases', () => {
 // ── Object-kind conversion breadth (ellipse/polygon/polyline/dropped-tile) ──────
 
 describe('TiledMap.toTileMap — object kind conversion', () => {
-  function makeObjectKindMap(objectOverrides: Record<string, unknown>): TileMap {
+  const makeObjectKindMap = (objectOverrides: Record<string, unknown>): TileMap => {
     const data = validateTiledMapData(
       {
         type: 'map',
@@ -592,7 +592,7 @@ describe('TiledMap.toTileMap — object kind conversion', () => {
       'objkind.tmj',
     );
     return new TiledMap('objkind.tmj', data, []).toTileMap();
-  }
+  };
 
   it('maps an ellipse object to kind "ellipse"', () => {
     const obj = makeObjectKindMap({ ellipse: true }).objectLayers[0]!.objects[0]!;
@@ -662,7 +662,7 @@ describe('TiledMap.toTileMap — tile object anchoring (objectalignment)', () =>
   // Tiled stores a tile object's x/y at its tileset alignment anchor, not at the
   // bounding box's top-left corner. The converted TileMapObject must expose the
   // corner, like every other object kind.
-  function makeTileObjectMap(objectAlignment?: string): TileMap {
+  const makeTileObjectMap = (objectAlignment?: string): TileMap => {
     const tilesetData = {
       firstgid: 1,
       name: 'tiles',
@@ -708,7 +708,7 @@ describe('TiledMap.toTileMap — tile object anchoring (objectalignment)', () =>
       'align.tmj',
     );
     return new TiledMap('align.tmj', data, [ts]).toTileMap();
-  }
+  };
 
   it('anchors a tile object bottom-left by default on an orthogonal map', () => {
     const chest = makeTileObjectMap().objectLayers[0]!.getObjectByName('chest')!;
@@ -765,7 +765,7 @@ describe('TiledMap.toTileMap — tile object anchoring (objectalignment)', () =>
 // ── Text-object TextStyle field breadth ─────────────────────────────────────────
 
 describe('TiledMap.toTileMap — text object style conversion', () => {
-  function makeTextObjectMap(textData: Record<string, unknown>): TileMap {
+  const makeTextObjectMap = (textData: Record<string, unknown>): TileMap => {
     const data = validateTiledMapData(
       {
         type: 'map',
@@ -794,7 +794,7 @@ describe('TiledMap.toTileMap — text object style conversion', () => {
       'text.tmj',
     );
     return new TiledMap('text.tmj', data, []).toTileMap();
-  }
+  };
 
   it('omits optional TextStyle fields entirely when absent from the source text object', () => {
     const obj = makeTextObjectMap({ text: 'plain' }).objectLayers[0]!.objects[0]!;
@@ -1025,7 +1025,7 @@ describe('TiledMap.toTileMap — property conversion edge cases', () => {
 // state. TiledMap's own constructor does not re-run validate.ts, so these are
 // legitimate (if unusual) call shapes for a caller that skips loadTiledMap.
 
-function makeBareMapData(overrides: Partial<TiledMapData> & { layers: TiledMapData['layers'] }): TiledMapData {
+const makeBareMapData = (overrides: Partial<TiledMapData> & { layers: TiledMapData['layers'] }): TiledMapData => {
   return {
     type: 'map',
     version: '1.10',
@@ -1040,7 +1040,7 @@ function makeBareMapData(overrides: Partial<TiledMapData> & { layers: TiledMapDa
     properties: [],
     ...overrides,
   };
-}
+};
 
 describe('TiledMap — defensive coverage of otherwise-unreachable branches', () => {
   it('tolerates an explicit undefined entry in the tilesets array (sort() never invokes the comparator on it)', () => {

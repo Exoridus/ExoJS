@@ -14,7 +14,7 @@ interface SampleDriver {
   frame(now?: number): void;
 }
 
-function createSample(): SampleDriver {
+const createSample = (): SampleDriver => {
   const values = new Float32Array(ChannelSize.Container);
   const batches: Array<{ channels: ChannelEvent[]; sequence: number; timestamp: number }> = [];
   const sample: ActionSample = { values, batches, frameId: 1, timestamp: 0 };
@@ -39,7 +39,7 @@ function createSample(): SampleDriver {
       if (now !== undefined) sample.timestamp = now;
     },
   };
-}
+};
 
 /**
  * Presents a pattern the way a caller who assembled it at runtime does -

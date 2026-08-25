@@ -33,13 +33,10 @@ const DEFAULT_LOAD_RADIUS = 1;
 const DEFAULT_UNLOAD_RADIUS = 2;
 const DEFAULT_MAX_CHUNK_LOADS_PER_FRAME = 8;
 
-function chunkKey(cx: number, cy: number): string {
-  return `${cx},${cy}`;
-}
+const chunkKey = (cx: number, cy: number): string => `${cx},${cy}`;
 
-function isThenable(value: unknown): value is Promise<ChunkPayload | null> {
-  return value !== null && typeof value === 'object' && typeof (value as { then?: unknown }).then === 'function';
-}
+const isThenable = (value: unknown): value is Promise<ChunkPayload | null> =>
+  value !== null && typeof value === 'object' && typeof (value as { then?: unknown }).then === 'function';
 
 /**
  * Drives {@link TileLayer._adoptChunk}/{@link TileLayer._evictChunk} calls

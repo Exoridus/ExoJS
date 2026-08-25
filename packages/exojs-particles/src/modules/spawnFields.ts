@@ -31,7 +31,7 @@ export interface ParticleSpawnFields {
  * allocates nothing per particle.
  * @internal
  */
-export function fillParticle(particle: ParticleWriter, fields: ParticleSpawnFields, vector: Vector, color: Color): void {
+export const fillParticle = (particle: ParticleWriter, fields: ParticleSpawnFields, vector: Vector, color: Color): void => {
   if (fields.lifetime) {
     particle.lifetime = fields.lifetime.sample();
   }
@@ -66,4 +66,4 @@ export function fillParticle(particle: ParticleWriter, fields: ParticleSpawnFiel
   if (fields.textureIndex) {
     particle.frame = fields.textureIndex.sample();
   }
-}
+};

@@ -23,7 +23,7 @@ import { useExoContext } from './ExoContext';
  * }
  * ```
  */
-export function useExoApp(): Application {
+export const useExoApp = (): Application => {
   const app = useExoContext();
 
   if (app === null) {
@@ -31,4 +31,4 @@ export function useExoApp(): Application {
   }
 
   return app;
-}
+};

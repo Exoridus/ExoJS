@@ -26,7 +26,7 @@ export abstract class AudioEffect {
  * disconnects/reconnects effects (`AudioBus`, `BaseVoice`) throw on one still
  * mid-setup.
  */
-export function isEffectReady(effect: AudioEffect): boolean {
+export const isEffectReady = (effect: AudioEffect): boolean => {
   try {
     void effect.inputNode;
     void effect.outputNode;
@@ -34,4 +34,4 @@ export function isEffectReady(effect: AudioEffect): boolean {
   } catch {
     return false;
   }
-}
+};

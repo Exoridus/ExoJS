@@ -67,7 +67,7 @@ export interface RepeatPlan {
  * Throws unconditionally - these are user/programming errors, not dev-only
  * assertions.
  */
-function validateInputs(sourceLength: number, destinationLength: number): void {
+const validateInputs = (sourceLength: number, destinationLength: number): void => {
   if (!Number.isFinite(sourceLength) || !Number.isFinite(destinationLength)) {
     throw new Error(`RepeatPlanner: sourceLength and destinationLength must be finite numbers (got ${sourceLength}, ${destinationLength}).`);
   }
@@ -79,9 +79,9 @@ function validateInputs(sourceLength: number, destinationLength: number): void {
   if (destinationLength < 0) {
     throw new Error(`RepeatPlanner: destinationLength must be non-negative (got ${destinationLength}).`);
   }
-}
+};
 
-function buildStretchPlan(destinationLength: number, sourceLength: number): RepeatPlan {
+const buildStretchPlan = (destinationLength: number, sourceLength: number): RepeatPlan => {
   if (destinationLength === 0) {
     return {
       destinationLength: 0,
@@ -103,9 +103,9 @@ function buildStretchPlan(destinationLength: number, sourceLength: number): Repe
     sourceLength,
     segments: [segment],
   };
-}
+};
 
-function buildClipPlan(destinationLength: number, sourceLength: number, mirror: boolean): RepeatPlan {
+const buildClipPlan = (destinationLength: number, sourceLength: number, mirror: boolean): RepeatPlan => {
   if (destinationLength === 0) {
     return {
       destinationLength: 0,
@@ -143,9 +143,9 @@ function buildClipPlan(destinationLength: number, sourceLength: number, mirror: 
     sourceLength,
     segments,
   };
-}
+};
 
-function buildRoundPlan(destinationLength: number, sourceLength: number, mirror: boolean): RepeatPlan {
+const buildRoundPlan = (destinationLength: number, sourceLength: number, mirror: boolean): RepeatPlan => {
   if (destinationLength === 0) {
     return {
       destinationLength: 0,
@@ -179,7 +179,7 @@ function buildRoundPlan(destinationLength: number, sourceLength: number, mirror:
     sourceLength,
     segments,
   };
-}
+};
 
 /**
  * Compute a deterministic repeat plan for filling a destination span with a
@@ -217,7 +217,7 @@ function buildRoundPlan(destinationLength: number, sourceLength: number, mirror:
  * @throws When inputs are non-finite, negative, or zero-length source.
  * @advanced
  */
-export function planRepeat(sourceLength: number, destinationLength: number, mode: RepeatMode, fit: RepeatFit = 'round'): RepeatPlan {
+export const planRepeat = (sourceLength: number, destinationLength: number, mode: RepeatMode, fit: RepeatFit = 'round'): RepeatPlan => {
   validateInputs(sourceLength, destinationLength);
 
   switch (mode) {
@@ -244,4 +244,4 @@ export function planRepeat(sourceLength: number, destinationLength: number, mode
       throw new Error(`RepeatPlanner: unknown RepeatMode.`);
     }
   }
-}
+};

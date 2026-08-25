@@ -9,7 +9,7 @@ const MAX_LAG = Math.round(((60 / 50) * SAMPLE_RATE) / HOP_SIZE);
  * Generate a synthetic novelty curve that pulses at a given BPM.
  * Places an impulse at every beat position (rounded to nearest hop).
  */
-function syntheticNovelty(bpm: number, numHops: number): Float32Array {
+const syntheticNovelty = (bpm: number, numHops: number): Float32Array => {
   const hopRate = SAMPLE_RATE / HOP_SIZE; // hops per second
   const beatPeriodHops = hopRate / (bpm / 60); // hops between beats
   const flux = new Float32Array(numHops);
@@ -22,7 +22,7 @@ function syntheticNovelty(bpm: number, numHops: number): Float32Array {
     beatPos += beatPeriodHops;
   }
   return flux;
-}
+};
 
 /**
  * Novelty curve whose onsets are spread over a few hops, mimicking how a real ~6 ms
@@ -30,7 +30,7 @@ function syntheticNovelty(bpm: number, numHops: number): Float32Array {
  * the fundamental's correlation across adjacent integer lags at high BPM, which is a
  * test artifact, not detector behaviour - the spread shape is the realistic case.
  */
-function spreadNovelty(bpm: number, seconds: number): Float32Array {
+const spreadNovelty = (bpm: number, seconds: number): Float32Array => {
   const hopRate = SAMPLE_RATE / HOP_SIZE;
   const numHops = Math.round(seconds * hopRate);
   const periodHops = hopRate / (bpm / 60);
@@ -44,15 +44,15 @@ function spreadNovelty(bpm: number, seconds: number): Float32Array {
     }
   }
   return flux;
-}
+};
 
-function topBpm(bpm: number): number {
+const topBpm = (bpm: number): number => {
   const cands = computeTempoCandidates(spreadNovelty(bpm, 15), MIN_LAG, MAX_LAG, HOP_SIZE, SAMPLE_RATE, {
     minBpm: 50,
     maxBpm: 250,
   });
   return cands[0]!.bpm;
-}
+};
 
 /**
  * Novelty for a realistic kit pattern: an onset on EVERY subdivision (e.g. 8th-notes ride a
@@ -61,7 +61,7 @@ function topBpm(bpm: number): number {
  * subdivision, not a competing beat. The fundamental must still win over unrelated in-band
  * multiples (120 = ⅔, 90 = ½). Mirrors the `djMix` fixture's spectral-flux structure.
  */
-function subdividedNovelty(beatBpm: number, subdivisionsPerBeat: number, seconds: number): Float32Array {
+const subdividedNovelty = (beatBpm: number, subdivisionsPerBeat: number, seconds: number): Float32Array => {
   const hopRate = SAMPLE_RATE / HOP_SIZE;
   const numHops = Math.round(seconds * hopRate);
   const subPeriodHops = hopRate / ((beatBpm * subdivisionsPerBeat) / 60);
@@ -79,7 +79,7 @@ function subdividedNovelty(beatBpm: number, subdivisionsPerBeat: number, seconds
     sub++;
   }
   return flux;
-}
+};
 
 describe('computeACF', () => {
   it('returns array of length maxLag - minLag + 1', () => {

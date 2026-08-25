@@ -19,13 +19,13 @@ import { SingleEntryLayout } from '#assets/SingleEntryLayout';
 import { type CacheStoreDouble, createCacheStoreDouble } from './cache-test-doubles';
 
 /** A store whose every write fails, the way an exhausted quota does. */
-function createFullStore(id = 'full'): CacheStoreDouble {
+const createFullStore = (id = 'full'): CacheStoreDouble => {
   const store = createCacheStoreDouble(id);
 
   store.set.mockImplementation(() => Promise.reject(new Error('quota exceeded')));
 
   return store;
-}
+};
 
 /** The loader's own decoder - the object that builds the acquisition-scoped sink. */
 const decoderOf = (loader: Loader): AssetDecoder => (loader as unknown as { _decoder: AssetDecoder })._decoder;

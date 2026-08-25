@@ -61,7 +61,7 @@ export const affineMat4FloatCount = 16;
  * WebGL2 `Matrix.toArray(false)` upload. Returns `out` for chaining.
  * @internal
  */
-export function packAffineMat3Std140(matrix: Matrix, out: Float32Array, offset = 0): Float32Array {
+export const packAffineMat3Std140 = (matrix: Matrix, out: Float32Array, offset = 0): Float32Array => {
   // col0 = (a, c, e)
   out[offset + 0] = matrix.a;
   out[offset + 1] = matrix.c;
@@ -79,7 +79,7 @@ export function packAffineMat3Std140(matrix: Matrix, out: Float32Array, offset =
   out[offset + 11] = 0;
 
   return out;
-}
+};
 
 /**
  * Pack `matrix` as a WGSL `mat4x4<f32>` (16 floats / 64 bytes) into `out` at
@@ -88,7 +88,7 @@ export function packAffineMat3Std140(matrix: Matrix, out: Float32Array, offset =
  * `out` for chaining.
  * @internal
  */
-export function packAffineMat4(matrix: Matrix, out: Float32Array, offset = 0): Float32Array {
+export const packAffineMat4 = (matrix: Matrix, out: Float32Array, offset = 0): Float32Array => {
   // col0 = (a, c, 0, e)
   out[offset + 0] = matrix.a;
   out[offset + 1] = matrix.c;
@@ -111,7 +111,7 @@ export function packAffineMat4(matrix: Matrix, out: Float32Array, offset = 0): F
   out[offset + 15] = matrix.z;
 
   return out;
-}
+};
 
 /**
  * Whether `staged` - a group matrix just packed by one of the functions above -
@@ -127,7 +127,7 @@ export function packAffineMat4(matrix: Matrix, out: Float32Array, offset = 0): F
  * would otherwise split the single-submit frame for no visible difference.
  * @internal
  */
-export function packedGroupChanged(staged: Float32Array, written: Float32Array, writtenOffset: number): boolean {
+export const packedGroupChanged = (staged: Float32Array, written: Float32Array, writtenOffset: number): boolean => {
   for (let i = 0; i < staged.length; i++) {
     if (staged[i] !== written[writtenOffset + i]) {
       return true;
@@ -135,4 +135,4 @@ export function packedGroupChanged(staged: Float32Array, written: Float32Array, 
   }
 
   return false;
-}
+};

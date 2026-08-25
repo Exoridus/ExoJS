@@ -2,11 +2,9 @@ import { resolvePhasedSelection } from './PhasedSceneTransition';
 import { SceneTransition, type SceneTransitionOperation } from './SceneTransition';
 import type { SceneTransitionPhases, SceneTransitionSelection } from './SceneTypes';
 
-function isPhasesSelection(selection: SceneTransition | SceneTransitionPhases): selection is SceneTransitionPhases {
-  return !(selection instanceof SceneTransition);
-}
+const isPhasesSelection = (selection: SceneTransition | SceneTransitionPhases): selection is SceneTransitionPhases => !(selection instanceof SceneTransition);
 
-function resolveSelectionValue(selection: SceneTransitionSelection): SceneTransition | null {
+const resolveSelectionValue = (selection: SceneTransitionSelection): SceneTransition | null => {
   if (selection === false) {
     return null;
   }
@@ -16,7 +14,7 @@ function resolveSelectionValue(selection: SceneTransitionSelection): SceneTransi
   }
 
   return selection;
-}
+};
 
 /**
  * Resolve a navigation call's `transition` option against a target scene's
@@ -39,11 +37,11 @@ function resolveSelectionValue(selection: SceneTransitionSelection): SceneTransi
  * `{ enter, exit }` selection via {@link resolvePhasedSelection} if
  * needed) or `null` for "no transition."
  */
-export function resolveSceneTransitionSelection(
+export const resolveSceneTransitionSelection = (
   operation: SceneTransitionOperation,
   callSiteTransition: SceneTransitionSelection | undefined,
   registryDefault: SceneTransitionSelection | undefined,
-): SceneTransition | null {
+): SceneTransition | null => {
   if (callSiteTransition !== undefined) {
     return resolveSelectionValue(callSiteTransition);
   }
@@ -53,4 +51,4 @@ export function resolveSceneTransitionSelection(
   }
 
   return resolveSelectionValue(registryDefault);
-}
+};

@@ -48,12 +48,12 @@ const USAGE = `Usage: pnpm create:package <name> [--dep <pkg>]... [--description
   --description "..."  package.json description
   --no-offline-smoke   exclude from the offline external-consumer smoke (react is the precedent)`;
 
-function fail(message: string): never {
+const fail = (message: string): never => {
   process.stderr.write(`create:package: ${message}\n\n${USAGE}\n`);
   process.exit(1);
-}
+};
 
-function parseArgs(argv: readonly string[]): Options {
+const parseArgs = (argv: readonly string[]): Options => {
   let name: string | undefined;
   const deps: string[] = [];
   let description: string | undefined;
@@ -103,7 +103,7 @@ function parseArgs(argv: readonly string[]): Options {
   name = name.replace(/^@codexo\//, '').replace(/^exojs-/, '');
 
   return { name, deps, ...(description !== undefined ? { description } : {}), inOfflineSmoke };
-}
+};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

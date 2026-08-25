@@ -16,6 +16,4 @@ ExoContext.displayName = 'ExoContext';
  * component-level use - it throws an actionable error instead of returning
  * null.
  */
-export function useExoContext(): Application | null {
-  return useContext(ExoContext);
-}
+export const useExoContext = (): Application | null => useContext(ExoContext);

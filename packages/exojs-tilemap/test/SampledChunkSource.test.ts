@@ -14,14 +14,14 @@ import { TILE_TRANSFORM_IDENTITY, unpackTile } from '../src/types';
  * is declared as possibly async and possibly empty - narrow it here so the
  * assertions below read the payload directly.
  */
-function syncChunk(payload: ChunkPayload | null | Promise<ChunkPayload | null>): ChunkPayload {
+const syncChunk = (payload: ChunkPayload | null | Promise<ChunkPayload | null>): ChunkPayload => {
   if (payload === null || payload instanceof Promise) {
     throw new Error('SampledChunkSource.test: expected a synchronous, non-null chunk payload');
   }
   return payload;
-}
+};
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return {
     width: 512,
     height: 512,
@@ -30,9 +30,9 @@ function fakeTexture(): Texture {
     destroy: vi.fn(),
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function makeTileset(): TileSet {
+const makeTileset = (): TileSet => {
   return new TileSet({
     name: 'tiles',
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
@@ -40,9 +40,9 @@ function makeTileset(): TileSet {
     tileHeight: 32,
     tileCount: 16,
   });
-}
+};
 
-function makeUnboundedLayer(tileset: TileSet, chunkWidth = 4, chunkHeight = 4): TileLayer {
+const makeUnboundedLayer = (tileset: TileSet, chunkWidth = 4, chunkHeight = 4): TileLayer => {
   return new TileLayer({
     id: 0,
     name: 'l',
@@ -52,7 +52,7 @@ function makeUnboundedLayer(tileset: TileSet, chunkWidth = 4, chunkHeight = 4): 
     chunkWidth,
     chunkHeight,
   });
-}
+};
 
 describe('createSampledChunkSource', () => {
   it('composes a full chunk when every cell resolves to a tile', () => {

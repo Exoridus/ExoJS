@@ -424,19 +424,19 @@ const createCustomRenderer = <Target extends Drawable>(): Renderer<WebGpuBackend
  * Install core renderer bindings on a directly-constructed WebGpuBackend.
  * Core renderers are no longer registered in the backend constructor.
  */
-function installCoreRenderers(backend: WebGpuBackend, renderingOptions: RenderingApplicationOptions = {}): void {
+const installCoreRenderers = (backend: WebGpuBackend, renderingOptions: RenderingApplicationOptions = {}): void => {
   const bindings = buildCoreRendererBindings(renderingOptions);
   materializeRendererBindings(backend, bindings);
-}
+};
 
 /**
  * Install core + particle renderer bindings on a directly-constructed WebGpuBackend.
  */
-function installCoreAndParticleRenderers(backend: WebGpuBackend, renderingOptions: RenderingApplicationOptions = {}): void {
+const installCoreAndParticleRenderers = (backend: WebGpuBackend, renderingOptions: RenderingApplicationOptions = {}): void => {
   const coreBindings = buildCoreRendererBindings(renderingOptions);
   const particleBindings = particlesExtension.renderers ?? [];
   materializeRendererBindings(backend, [...coreBindings, ...particleBindings]);
-}
+};
 
 describe('WebGpuBackend', () => {
   test('flushes the active renderer when switching renderer types', async () => {

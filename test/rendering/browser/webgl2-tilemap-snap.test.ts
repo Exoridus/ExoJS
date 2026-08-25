@@ -72,7 +72,7 @@ const render = (backend: WebGl2Backend, node: RenderNode): void => {
  * Tile pitch is 16px; the canvas is 64px wide, leaving room for the seam at
  * screen x≈32 when the node is near the origin.
  */
-function buildSeamMap(texture: ReturnType<typeof createSolidTexture>): { map: TileMap; tileset: ReturnType<typeof makeTileset> } {
+const buildSeamMap = (texture: ReturnType<typeof createSolidTexture>): { map: TileMap; tileset: ReturnType<typeof makeTileset> } => {
   const tileset = makeTileset(texture);
   const layer = new TileLayer({
     id: 1,
@@ -101,7 +101,7 @@ function buildSeamMap(texture: ReturnType<typeof createSolidTexture>): { map: Ti
   });
 
   return { map, tileset };
-}
+};
 
 // ── pixel-snap seam tests ────────────────────────────────────────────────
 

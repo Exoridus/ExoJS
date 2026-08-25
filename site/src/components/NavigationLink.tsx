@@ -16,7 +16,7 @@ export interface NavigationLinkProps {
   onSelectExample(path: string): void;
 }
 
-export function NavigationLink({
+export const NavigationLink = ({
   active,
   description,
   href,
@@ -26,7 +26,7 @@ export function NavigationLink({
   unavailable,
   unavailableReason,
   onSelectExample,
-}: NavigationLinkProps): JSX.Element {
+}: NavigationLinkProps): JSX.Element => {
   const tooltip = unavailable ? `${title}\n${unavailableReason || 'Unavailable in this browser.'}` : description || title;
 
   const onClick = (event: MouseEvent<HTMLAnchorElement>): void => {
@@ -58,4 +58,4 @@ export function NavigationLink({
       {unavailable && <span className={cx(css(styles, 'badge'))}>Unavailable</span>}
     </a>
   );
-}
+};

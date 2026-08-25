@@ -103,7 +103,7 @@ let assetCompletionProviderRegistered = false;
 
 loader.config({ monaco });
 
-export function EditorCode({
+export const EditorCode = ({
   canReset,
   exampleTitle,
   language,
@@ -117,7 +117,7 @@ export function EditorCode({
   selectedVersionId,
   sourceCode,
   sourcePath,
-}: EditorCodeProps): JSX.Element {
+}: EditorCodeProps): JSX.Element => {
   const [editorValue, setEditorValue] = useState(sourceCode ?? '');
   const [showMenu, setShowMenu] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
@@ -425,22 +425,22 @@ export function EditorCode({
       </div>
     </section>
   );
-}
+};
 
-function getModelUrl(sourcePath: string | null, language: 'javascript' | 'typescript'): string {
+const getModelUrl = (sourcePath: string | null, language: 'javascript' | 'typescript'): string => {
   const defaultExt = language === 'typescript' ? '.ts' : '.js';
   const normalizedPath = (sourcePath ?? `examples/active-example${defaultExt}`).replace(/^\/+/, '');
   return `file:///${normalizedPath}`;
-}
+};
 
-function monacoSeverityToString(severity: number): EditorDiagnosticSeverity {
+const monacoSeverityToString = (severity: number): EditorDiagnosticSeverity => {
   if (severity >= 8) return 'error';
   if (severity >= 4) return 'warning';
   if (severity >= 2) return 'info';
   return 'hint';
-}
+};
 
-function monacoMarkerCodeToString(code: monaco.editor.IMarker['code']): string | undefined {
+const monacoMarkerCodeToString = (code: monaco.editor.IMarker['code']): string | undefined => {
   if (code === undefined || code === null) return undefined;
   if (typeof code === 'string') return code;
   if (typeof code === 'number') return String(code);
@@ -449,14 +449,14 @@ function monacoMarkerCodeToString(code: monaco.editor.IMarker['code']): string |
     if (typeof value === 'string' || typeof value === 'number') return String(value);
   }
   return undefined;
-}
+};
 
-function updateDiagnostics(
+const updateDiagnostics = (
   model: monaco.editor.ITextModel | null,
   selectedVersionId: string,
   typingsAppliedVersion: string | null,
   onDiagnostic: (diagnostics: ReadonlyArray<EditorDiagnostic>) => void,
-): void {
+): void => {
   if (!model || typingsAppliedVersion !== selectedVersionId) {
     onDiagnostic([]);
     return;
@@ -472,7 +472,7 @@ function updateDiagnostics(
     endColumn: marker.endColumn,
   }));
   onDiagnostic(diagnostics);
-}
+};
 
 // Emits JS for the editor's current TypeScript buffer via Monaco's TS worker.
 // Returns `null` (never the raw TS source) when emission isn't available yet -
@@ -480,7 +480,7 @@ function updateDiagnostics(
 // native parser SyntaxError (e.g. `private sprite!: Sprite` reads as two
 // adjacent identifiers), so callers must treat `null` as "not ready" and keep
 // the last successfully-compiled preview rather than swallow it into a crash.
-async function getExecutionCode(editor: monaco.editor.IStandaloneCodeEditor, language: 'javascript' | 'typescript'): Promise<string | null> {
+const getExecutionCode = async (editor: monaco.editor.IStandaloneCodeEditor, language: 'javascript' | 'typescript'): Promise<string | null> => {
   const model = editor.getModel();
   if (language !== 'typescript' || !model) return null;
 
@@ -505,21 +505,21 @@ async function getExecutionCode(editor: monaco.editor.IStandaloneCodeEditor, lan
   }
 
   return null;
-}
+};
 
-function configureMonacoOnce(): Promise<void> {
+const configureMonacoOnce = (): Promise<void> => {
   if (monacoConfiguredPromise) return monacoConfiguredPromise;
   configureLanguageDefaults();
   monacoConfiguredPromise = Promise.resolve();
   return monacoConfiguredPromise;
-}
+};
 
-async function ensureTypingsForVersion(
+const ensureTypingsForVersion = async (
   versionId: string,
   selectedVersionRef: RefObject<string>,
   typingsAppliedVersion: RefObject<string | null>,
   afterApply: () => void,
-): Promise<void> {
+): Promise<void> => {
   await configureMonacoOnce();
   if (!versionId) return;
 
@@ -531,16 +531,16 @@ async function ensureTypingsForVersion(
   tsApi.typescriptDefaults.setExtraLibs(libs);
   typingsAppliedVersion.current = versionId;
   afterApply();
-}
+};
 
-function getTypingsForVersion(versionId: string): Promise<ReadonlyArray<ExtraLib>> {
+const getTypingsForVersion = (versionId: string): Promise<ReadonlyArray<ExtraLib>> => {
   let pending = typingsCache.get(versionId);
   if (!pending) {
     pending = loadTypingsForVersion(versionId);
     typingsCache.set(versionId, pending);
   }
   return pending;
-}
+};
 
 // Extension packages whose declarations the editor registers alongside core, so
 // examples that import `@codexo/exojs-particles` & co. type-check instead of
@@ -556,26 +556,26 @@ const EXTENSION_PACKAGES: ReadonlyArray<{ baseUrl: string; packageName: string }
   { baseUrl: 'vendor/exojs-tilemap-physics/', packageName: '@codexo/exojs-tilemap-physics' },
 ];
 
-async function loadTypingsForVersion(versionId: string): Promise<ReadonlyArray<ExtraLib>> {
+const loadTypingsForVersion = async (versionId: string): Promise<ReadonlyArray<ExtraLib>> => {
   const [shared, exojs, extensions] = await Promise.all([loadSharedTypings(), loadVersionedExoJsTypings(versionId), loadExtensionTypings()]);
   return [...shared, ...exojs, ...extensions];
-}
+};
 
-async function loadExtensionTypings(): Promise<ReadonlyArray<ExtraLib>> {
+const loadExtensionTypings = async (): Promise<ReadonlyArray<ExtraLib>> => {
   const perPackage = await Promise.all(EXTENSION_PACKAGES.map(pkg => loadPackageTypingsFromBase(pkg.baseUrl, pkg.packageName)));
   return perPackage.flat();
-}
+};
 
-async function loadSharedTypings(): Promise<ReadonlyArray<ExtraLib>> {
+const loadSharedTypings = async (): Promise<ReadonlyArray<ExtraLib>> => {
   return Promise.all(
     SHARED_LIB_FILES.map(async file => ({
       content: await fetchTextFile(buildPublicUrl(file.path)),
       filePath: file.virtualPath,
     })),
   );
-}
+};
 
-async function loadVersionedExoJsTypings(versionId: string): Promise<ReadonlyArray<ExtraLib>> {
+const loadVersionedExoJsTypings = async (versionId: string): Promise<ReadonlyArray<ExtraLib>> => {
   if (versionId === CURRENT_VERSION_ID) {
     return loadPackageTypingsFromBase('vendor/exojs/', '@codexo/exojs');
   }
@@ -584,9 +584,9 @@ async function loadVersionedExoJsTypings(versionId: string): Promise<ReadonlyArr
   if (fromVersioned.length > 0) return fromVersioned;
   console.warn(`[EditorCode] Versioned typings missing for @codexo/exojs@${versionId}; falling back to flat vendor path.`);
   return loadPackageTypingsFromBase('vendor/exojs/', '@codexo/exojs');
-}
+};
 
-async function loadPackageTypingsFromBase(baseUrl: string, packageName: string): Promise<ReadonlyArray<ExtraLib>> {
+const loadPackageTypingsFromBase = async (baseUrl: string, packageName: string): Promise<ReadonlyArray<ExtraLib>> => {
   const libs: ExtraLib[] = [];
 
   try {
@@ -652,9 +652,9 @@ async function loadPackageTypingsFromBase(baseUrl: string, packageName: string):
   }
 
   return libs;
-}
+};
 
-async function fetchTypingsManifest(relativePath: string): Promise<ReadonlyArray<string> | null> {
+const fetchTypingsManifest = async (relativePath: string): Promise<ReadonlyArray<string> | null> => {
   try {
     const response = await fetch(buildPublicUrl(relativePath), { cache: 'no-cache' });
     if (!response.ok) return null;
@@ -664,9 +664,9 @@ async function fetchTypingsManifest(relativePath: string): Promise<ReadonlyArray
   } catch {
     return null;
   }
-}
+};
 
-function configureLanguageDefaults(): void {
+const configureLanguageDefaults = (): void => {
   const tsApi = (monaco.languages as unknown as { typescript: MonacoTypeScriptApi }).typescript;
   const sharedCompilerOptions = {
     allowJs: true,
@@ -714,9 +714,9 @@ function configureLanguageDefaults(): void {
     assetCompletionProviderRegistered = true;
     void registerAssetCompletionProvider();
   }
-}
+};
 
-async function registerAssetCompletionProvider(): Promise<void> {
+const registerAssetCompletionProvider = async (): Promise<void> => {
   let manifest: AssetManifest;
   try {
     const response = await fetch(buildPublicUrl('assets/assets.json'), { cache: 'no-cache' });
@@ -733,9 +733,9 @@ async function registerAssetCompletionProvider(): Promise<void> {
     triggerCharacters: ["'", '"'],
     provideCompletionItems: (model, position) => provideAssetCompletions(model, position, manifest),
   });
-}
+};
 
-function resolveAssetPaths(tokenName: string, manifest: AssetManifest): string[] {
+const resolveAssetPaths = (tokenName: string, manifest: AssetManifest): string[] => {
   let category: string | null = null;
   switch (tokenName) {
     case 'Texture':
@@ -761,9 +761,13 @@ function resolveAssetPaths(tokenName: string, manifest: AssetManifest): string[]
   }
   if (!category) return [];
   return (manifest[category] ?? []).map(file => `${category}/${file}`);
-}
+};
 
-function provideAssetCompletions(model: monaco.editor.ITextModel, position: monaco.Position, manifest: AssetManifest): monaco.languages.CompletionList | null {
+const provideAssetCompletions = (
+  model: monaco.editor.ITextModel,
+  position: monaco.Position,
+  manifest: AssetManifest,
+): monaco.languages.CompletionList | null => {
   const lineContent = model.getLineContent(position.lineNumber);
   const column = position.column - 1;
   let quoteChar = '';
@@ -825,10 +829,10 @@ function provideAssetCompletions(model: monaco.editor.ITextModel, position: mona
     })),
     incomplete: false,
   };
-}
+};
 
-async function fetchTextFile(url: string): Promise<string> {
+const fetchTextFile = async (url: string): Promise<string> => {
   const response = await fetch(url, { cache: 'no-cache' });
   if (!response.ok) throw new Error(`Failed to fetch editor support file at ${url}.`);
   return response.text();
-}
+};

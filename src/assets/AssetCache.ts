@@ -335,10 +335,10 @@ class RoutedCacheContext<T> implements CacheContext<T> {
 }
 
 /** Type an arbitrary store rejection, leaving one the store already typed alone. */
-function asCacheError(error: unknown, operation: AssetCacheOperation, store?: string, key?: string): AssetCacheError {
+const asCacheError = (error: unknown, operation: AssetCacheOperation, store?: string, key?: string): AssetCacheError => {
   if (error instanceof AssetCacheError) {
     return error;
   }
 
   return new AssetCacheError({ operation, message: 'A cache store failed.', store, key, cause: error });
-}
+};

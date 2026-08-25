@@ -41,7 +41,7 @@ interface FakeImageData {
   readonly data: Uint8ClampedArray;
 }
 
-function makeFullContext2d(): CanvasRenderingContext2D {
+const makeFullContext2d = (): CanvasRenderingContext2D => {
   return {
     fillStyle: '',
     fillRect: vi.fn(),
@@ -56,7 +56,7 @@ function makeFullContext2d(): CanvasRenderingContext2D {
     ),
     putImageData: vi.fn(),
   } as unknown as CanvasRenderingContext2D;
-}
+};
 
 let getContextSpy: MockInstance;
 
@@ -73,7 +73,7 @@ afterAll(() => {
 // filter test files - just enough surface for apply() to run end-to-end).
 // ---------------------------------------------------------------------------
 
-function makeWebGl2Backend(): RenderBackend & WebGl2Backend {
+const makeWebGl2Backend = (): RenderBackend & WebGl2Backend => {
   const root = new RenderTarget(64, 64, true);
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
@@ -219,9 +219,9 @@ function makeWebGl2Backend(): RenderBackend & WebGl2Backend {
       return this;
     }),
   } as unknown as RenderBackend & WebGl2Backend;
-}
+};
 
-function makeWebGpuEnv(): { device: GPUDevice; restore(): void } {
+const makeWebGpuEnv = (): { device: GPUDevice; restore(): void } => {
   const previousBufferUsage = Object.getOwnPropertyDescriptor(globalThis, 'GPUBufferUsage');
   const previousShaderStage = Object.getOwnPropertyDescriptor(globalThis, 'GPUShaderStage');
 
@@ -251,9 +251,9 @@ function makeWebGpuEnv(): { device: GPUDevice; restore(): void } {
       if (previousShaderStage) Object.defineProperty(globalThis, 'GPUShaderStage', previousShaderStage);
     },
   };
-}
+};
 
-function makeWebGpuBackend(device: GPUDevice): RenderBackend & WebGpuBackend {
+const makeWebGpuBackend = (device: GPUDevice): RenderBackend & WebGpuBackend => {
   const root = new RenderTarget(64, 64, true);
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
@@ -355,7 +355,7 @@ function makeWebGpuBackend(device: GPUDevice): RenderBackend & WebGpuBackend {
   (backend as unknown as { _passCoordinator: WebGpuPassCoordinator })._passCoordinator = new WebGpuPassCoordinator(backend as unknown as WebGpuPassBackend);
 
   return backend;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -448,9 +448,9 @@ describe('LutFilter construction and options', () => {
 });
 
 /** The backend-neutral shader filter LutFilter delegates to. */
-function shaderFilterOf(filter: LutFilter): ShaderFilter {
+const shaderFilterOf = (filter: LutFilter): ShaderFilter => {
   return (filter as unknown as { _shaderFilter: ShaderFilter })._shaderFilter;
-}
+};
 
 describe('LutFilter.setLut', () => {
   test('replaces the LUT texture', () => {

@@ -105,6 +105,5 @@ export enum PixelSnapMode {
  * reject JavaScript-invalid values atomically.
  * @internal
  */
-export function isPixelSnapMode(value: unknown): value is PixelSnapMode {
-  return value === PixelSnapMode.None || value === PixelSnapMode.Position || value === PixelSnapMode.Geometry;
-}
+export const isPixelSnapMode = (value: unknown): value is PixelSnapMode =>
+  value === PixelSnapMode.None || value === PixelSnapMode.Position || value === PixelSnapMode.Geometry;

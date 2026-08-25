@@ -17,7 +17,7 @@ import type { ActionOptions } from './types';
 export type ChordBinding = string | InputChord | InputAlternation;
 
 /** Weakest absolute value among `values` at `indices`, sign-preserving. `0` for an empty group. */
-function weakestAt(values: Float32Array, indices: readonly number[]): number {
+const weakestAt = (values: Float32Array, indices: readonly number[]): number => {
   if (indices.length === 0) {
     return 0;
   }
@@ -33,7 +33,7 @@ function weakestAt(values: Float32Array, indices: readonly number[]): number {
   }
 
   return weakest;
-}
+};
 
 /**
  * Button-like action active while every channel in a chord is held at once -

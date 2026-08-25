@@ -37,7 +37,7 @@ export interface ExampleBrowserProps {
   baseUrl: string;
 }
 
-export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
+export const ExampleBrowser = ({ baseUrl }: ExampleBrowserProps): JSX.Element => {
   const [examples, setExamples] = useState<ExamplesMap>(() => new Map());
   const [activeExample, setActiveExample] = useState<Example | null>(null);
   const [availableTags, setAvailableTags] = useState<string[]>([]);
@@ -363,4 +363,4 @@ export function ExampleBrowser({ baseUrl }: ExampleBrowserProps): JSX.Element {
       <ToastStack />
     </section>
   );
-}
+};

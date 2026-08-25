@@ -25,10 +25,10 @@ const rootDir = resolve(import.meta.dirname!, '..', '..');
  * these files, independent of whether the current import graph happens to
  * keep it reachable today.
  */
-function topLevelRegisterCallLines(relativePath: string): string[] {
+const topLevelRegisterCallLines = (relativePath: string): string[] => {
   const source = readFileSync(resolve(rootDir, relativePath), 'utf8');
   return source.split(/\r?\n/).filter(line => /^register\w*\(/.test(line));
-}
+};
 
 describe('no bare top-level register*() calls (sideEffects:false safety)', () => {
   it.each(['src/rendering/sprite/Sprite.ts', 'src/rendering/coreRendererBindings.ts', 'src/assets/coreAssetTypes.ts'] as const)(

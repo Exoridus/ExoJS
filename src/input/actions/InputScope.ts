@@ -103,9 +103,7 @@ export class InputScope {
 /**
  * The scope `map` currently belongs to, or `undefined`. @internal
  */
-export function scopeOfActionMap(map: AnyActionMap): InputScope | undefined {
-  return scopeByMap.get(map);
-}
+export const scopeOfActionMap = (map: AnyActionMap): InputScope | undefined => scopeByMap.get(map);
 
 /**
  * Which scope owns a given map.

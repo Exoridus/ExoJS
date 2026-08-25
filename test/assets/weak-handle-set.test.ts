@@ -5,7 +5,7 @@ import { WeakHandleSet } from '#assets/WeakHandleSet';
  * from the shared vitest project factory, so an absent `gc` is a config regression
  * to surface rather than a reason to skip.
  */
-async function forceGc(): Promise<void> {
+const forceGc = async (): Promise<void> => {
   const gc = (globalThis as { gc?: () => void }).gc;
 
   if (!gc) throw new Error('globalThis.gc is unavailable — the test project must pass --expose-gc to the fork pool');
@@ -14,7 +14,7 @@ async function forceGc(): Promise<void> {
     gc();
     await new Promise(resolve => setTimeout(resolve, 0));
   }
-}
+};
 
 describe('WeakHandleSet', () => {
   test('is empty on construction with no seed handle', () => {

@@ -103,39 +103,39 @@ export interface T7Stats {
 
 // ── Internal helpers ───────────────────────────────────────────────────────────
 
-function extractBeatMessages(msgs: WorkletMessage[]): BeatMessage[] {
+const extractBeatMessages = (msgs: WorkletMessage[]): BeatMessage[] => {
   return msgs.filter((m): m is BeatMessage => m.type === 'beat');
-}
+};
 
-function extractStateMessages(msgs: WorkletMessage[]): StateMessage[] {
+const extractStateMessages = (msgs: WorkletMessage[]): StateMessage[] => {
   return msgs.filter((m): m is StateMessage => m.type === 'state');
-}
+};
 
-function resolveConstantBpm(fixture: BeatFixture): number {
+const resolveConstantBpm = (fixture: BeatFixture): number => {
   if (typeof fixture.bpm === 'function') {
     const dur = fixture.samples.length / 48000;
     return fixture.bpm(dur / 2); // evaluate at midpoint
   }
   return fixture.bpm;
-}
+};
 
-function resolveBpmAt(fixture: BeatFixture, timeSec: number): number {
+const resolveBpmAt = (fixture: BeatFixture, timeSec: number): number => {
   if (typeof fixture.bpm === 'function') return fixture.bpm(timeSec);
   return fixture.bpm;
-}
+};
 
 /** Sorted percentile (index-based, no interpolation). */
-function percentile(sorted: number[], pct: number): number {
+const percentile = (sorted: number[], pct: number): number => {
   if (sorted.length === 0) return 0;
   const idx = Math.min(sorted.length - 1, Math.floor(pct * sorted.length));
   return sorted[idx];
-}
+};
 
-function median(sorted: number[]): number {
+const median = (sorted: number[]): number => {
   return percentile(sorted, 0.5);
-}
+};
 
-function pearson(xs: number[], ys: number[]): number {
+const pearson = (xs: number[], ys: number[]): number => {
   const n = xs.length;
   if (n < 2) return 0;
   const mx = xs.reduce((a, b) => a + b, 0) / n;
@@ -152,7 +152,7 @@ function pearson(xs: number[], ys: number[]): number {
   }
   const denom = Math.sqrt(dxSq * dySq);
   return denom === 0 ? 0 : num / denom;
-}
+};
 
 /**
  * Greedy one-to-one match: for each emitted beat, find the nearest unmatched
@@ -161,7 +161,7 @@ function pearson(xs: number[], ys: number[]): number {
  *   fpTimes - emitted beats with no GT match
  *   missTimes - GT onsets with no matched emitted beat
  */
-function greedyMatch(emittedTimes: number[], gtTimes: number[], windowSec: number): { offsets: number[]; fpTimes: number[]; missTimes: number[] } {
+const greedyMatch = (emittedTimes: number[], gtTimes: number[], windowSec: number): { offsets: number[]; fpTimes: number[]; missTimes: number[] } => {
   const sorted = [...emittedTimes].sort((a, b) => a - b);
   const gt = [...gtTimes].sort((a, b) => a - b);
   const usedGt = new Set<number>();
@@ -189,7 +189,7 @@ function greedyMatch(emittedTimes: number[], gtTimes: number[], windowSec: numbe
 
   const missTimes = gt.filter((_, i) => !usedGt.has(i));
   return { offsets, fpTimes, missTimes };
-}
+};
 
 // ── Public API ─────────────────────────────────────────────────────────────────
 
@@ -199,7 +199,7 @@ function greedyMatch(emittedTimes: number[], gtTimes: number[], windowSec: numbe
  * @param lockThresholdPct   BPM error threshold for "locked" state (default 3%).
  * @param lockConsecutiveK   Consecutive settled state messages required (default 3).
  */
-export function computeMetrics(
+export const computeMetrics = (
   messages: WorkletMessage[],
   fixture: BeatFixture,
   options: {
@@ -207,7 +207,7 @@ export function computeMetrics(
     lockConsecutiveK?: number;
     matchWindowFraction?: number; // fraction of IBI used as match window (default 0.5)
   } = {},
-): BeatMetrics {
+): BeatMetrics => {
   const { lockThresholdPct = 3, lockConsecutiveK = 3, matchWindowFraction = 0.5 } = options;
   const fixtureDurationSec = fixture.samples.length / 48000;
   const midBpm = resolveConstantBpm(fixture);
@@ -379,19 +379,19 @@ export function computeMetrics(
     detectionRate,
     t7,
   };
-}
+};
 
 // ── Formatting ─────────────────────────────────────────────────────────────────
 
-function fmt(n: number, dec = 1): string {
+const fmt = (n: number, dec = 1): string => {
   return n.toFixed(dec);
-}
+};
 
 /**
  * Human-readable metric table for console output and snapshot comparison.
  * Explicitly flags where the CURRENT detector fails.
  */
-export function formatMetrics(m: BeatMetrics): string {
+export const formatMetrics = (m: BeatMetrics): string => {
   const fails: string[] = [];
   const lines: string[] = [];
 
@@ -460,4 +460,4 @@ export function formatMetrics(m: BeatMetrics): string {
   }
 
   return lines.join('\n');
-}
+};

@@ -13,11 +13,11 @@ import { ScaleModes } from '#rendering/types';
 import { testAssetType } from './test-asset-type';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader.test.ts). */
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 

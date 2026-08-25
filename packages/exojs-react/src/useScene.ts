@@ -41,7 +41,7 @@ import { useExoApp } from './useExoApp';
  * }
  * ```
  */
-export function useScene<T extends Scene>(SceneClass: new () => T, deps: DependencyList = []): T | null {
+export const useScene = <T extends Scene>(SceneClass: new () => T, deps: DependencyList = []): T | null => {
   const app = useExoApp();
   const [scene, setScene] = useState<T | null>(null);
   // Bumped on every effect run so an async `apply()` can tell whether a newer
@@ -123,4 +123,4 @@ export function useScene<T extends Scene>(SceneClass: new () => T, deps: Depende
   }, [app, ...deps]);
 
   return scene;
-}
+};

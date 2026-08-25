@@ -14,7 +14,7 @@ import { isAbortError } from './SharedAbort';
  * and an envelope would rename it.
  * @internal
  */
-export async function fetchAsset(url: string, requestOptions: RequestInit): Promise<Response> {
+export const fetchAsset = async (url: string, requestOptions: RequestInit): Promise<Response> => {
   let response: Response;
 
   try {
@@ -40,4 +40,4 @@ export async function fetchAsset(url: string, requestOptions: RequestInit): Prom
   }
 
   return response;
-}
+};

@@ -39,7 +39,7 @@ const sparklineColor = new Color(0, 255, 255, 1);
 // -----------------------------------------------------------------------------
 
 /** Recursively count nodes under a RenderNode. */
-function countNodes(node: RenderNode): number {
+const countNodes = (node: RenderNode): number => {
   let count = 1;
   const container = node as Partial<{ children: RenderNode[] }>;
 
@@ -50,7 +50,7 @@ function countNodes(node: RenderNode): number {
   }
 
   return count;
-}
+};
 
 /**
  * Debug layer that renders a compact screen-space HUD (top-left) showing

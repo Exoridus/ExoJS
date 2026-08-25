@@ -836,19 +836,21 @@ export const CORE_ONBOARDING_PATHS: ReadonlyArray<string> = [
 ];
 
 /** Returns the chapters immediately before and after the given guide path. */
-export function getAdjacentChapters(path: string): {
+export const getAdjacentChapters = (
+  path: string,
+): {
   previous: GuideChapterMeta | null;
   next: GuideChapterMeta | null;
-} {
+} => {
   const index = GUIDE_CHAPTERS.findIndex(chapter => chapter.path === path);
   if (index === -1) return { previous: null, next: null };
   return {
     previous: index > 0 ? GUIDE_CHAPTERS[index - 1] : null,
     next: index < GUIDE_CHAPTERS.length - 1 ? GUIDE_CHAPTERS[index + 1] : null,
   };
-}
+};
 
 /** True when the value matches a known guide chapter path. */
-export function isGuidePath(path: string): boolean {
+export const isGuidePath = (path: string): boolean => {
   return GUIDE_CHAPTER_BY_PATH.has(path);
-}
+};

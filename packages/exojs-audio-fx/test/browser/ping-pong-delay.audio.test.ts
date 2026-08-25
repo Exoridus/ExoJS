@@ -39,7 +39,7 @@ interface PingPongRenderOptions {
  *   delayL → pannerL (pan = -1) → wetGain → destination
  *   delayR → pannerR (pan = +1) → wetGain
  */
-async function renderPingPong(opts: PingPongRenderOptions): Promise<{ left: Float32Array; right: Float32Array }> {
+const renderPingPong = async (opts: PingPongRenderOptions): Promise<{ left: Float32Array; right: Float32Array }> => {
   const sr = SAMPLE_RATE;
   const delayTime = opts.delayTime ?? 0.05;
   const feedback = opts.feedback ?? 0.7;
@@ -100,7 +100,7 @@ async function renderPingPong(opts: PingPongRenderOptions): Promise<{ left: Floa
     left: rendered.getChannelData(0).slice(),
     right: rendered.getChannelData(1).slice(),
   };
-}
+};
 
 describe('PingPongDelayEffect — acoustic contract (real Web Audio)', () => {
   it('left and right echo tails differ with asymmetric input (true ping-pong)', async () => {

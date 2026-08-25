@@ -59,13 +59,13 @@ export interface BundleInlineModuleResult {
 }
 
 /** Bundles `entryPoint` and its entire import graph into one JavaScript string. */
-export function bundleInlineModule({
+export const bundleInlineModule = ({
   entryPoint,
   format = 'iife',
   target = 'es2022',
   minify = false,
   define,
-}: BundleInlineModuleOptions): BundleInlineModuleResult {
+}: BundleInlineModuleOptions): BundleInlineModuleResult => {
   // esbuild writes each contributing file's path into the bundle as a comment,
   // relative to its working directory - which defaults to `process.cwd()`. The
   // emitted string would then differ byte for byte depending on where the build
@@ -103,7 +103,7 @@ export function bundleInlineModule({
   const inputs = Object.keys(result.metafile.inputs).map(input => resolve(workingDirectory, input));
 
   return { code: artifact.text, inputs };
-}
+};
 
 export interface InlineModulePluginOptions extends Omit<BundleInlineModuleOptions, 'entryPoint'> {
   /** Plugin name, as it appears in bundler diagnostics. */
@@ -121,7 +121,7 @@ export interface InlineModulePluginOptions extends Omit<BundleInlineModuleOption
  * the bundler, so a `.worklet.ts`/`.worker.ts` file can also be imported as an
  * ordinary module (by a test, say) without this plugin interfering.
  */
-export function createInlineModulePlugin(options: InlineModulePluginOptions): InlineSourcePlugin {
+export const createInlineModulePlugin = (options: InlineModulePluginOptions): InlineSourcePlugin => {
   const { name, query, ...bundleOptions } = options;
 
   return {
@@ -161,4 +161,4 @@ export function createInlineModulePlugin(options: InlineModulePluginOptions): In
       return `export default ${JSON.stringify(code)};`;
     },
   };
-}
+};

@@ -9,7 +9,7 @@ import { createWorkerSampledChunkSource } from '../../src/WorkerSampledChunkSour
 import sumSamplerWorkerSource from './fixtures/sum-sampler.worker.ts?worker';
 import { packSampleValue } from './fixtures/sum-sampler-math';
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return {
     width: 512,
     height: 512,
@@ -18,9 +18,9 @@ function fakeTexture(): Texture {
     destroy: vi.fn(),
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function makeTileset(): TileSet {
+const makeTileset = (): TileSet => {
   return new TileSet({
     name: 'tiles',
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
@@ -28,7 +28,7 @@ function makeTileset(): TileSet {
     tileHeight: 32,
     tileCount: 16,
   });
-}
+};
 
 describe('createWorkerSampledChunkSource — real Worker', () => {
   it('tiles installed via ChunkStreamer are readable through TileLayer.getTileAt', async () => {

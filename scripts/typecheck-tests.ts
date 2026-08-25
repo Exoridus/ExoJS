@@ -50,12 +50,12 @@ const FORMAT_HOST: ts.FormatDiagnosticsHost = {
   getNewLine: () => ts.sys.newLine,
 };
 
-function fail(message: string): never {
+const fail = (message: string): never => {
   console.error(message);
   process.exit(1);
-}
+};
 
-function readBaseline(): Baseline {
+const readBaseline = (): Baseline => {
   try {
     const parsed = JSON.parse(readFileSync(BASELINE_PATH, 'utf8')) as Partial<Baseline>;
 
@@ -63,13 +63,13 @@ function readBaseline(): Baseline {
   } catch {
     return { note: BASELINE_NOTE, files: {} };
   }
-}
+};
 
-function writeBaseline(files: Record<string, number>): void {
+const writeBaseline = (files: Record<string, number>): void => {
   const sorted = Object.fromEntries(Object.entries(files).sort(([a], [b]) => a.localeCompare(b)));
 
   writeFileSync(BASELINE_PATH, `${JSON.stringify({ note: BASELINE_NOTE, files: sorted }, null, 2)}\n`, 'utf8');
-}
+};
 
 const configFile = ts.readConfigFile(CONFIG_PATH, ts.sys.readFile);
 
@@ -90,7 +90,7 @@ if (parsed.errors.length > 0) {
 const program = ts.createProgram({ rootNames: parsed.fileNames, options: parsed.options });
 
 /** Repo-relative, forward-slashed path, or `null` for anything outside `test/`. */
-function testRelativePath(diagnostic: ts.Diagnostic): string | null {
+const testRelativePath = (diagnostic: ts.Diagnostic): string | null => {
   if (diagnostic.file === undefined) {
     return null;
   }
@@ -102,7 +102,7 @@ function testRelativePath(diagnostic: ts.Diagnostic): string | null {
   }
 
   return `test/${relativePath.split('\\').join('/')}`;
-}
+};
 
 const all = ts.getPreEmitDiagnostics(program);
 const configErrors = all.filter(diagnostic => diagnostic.file === undefined);

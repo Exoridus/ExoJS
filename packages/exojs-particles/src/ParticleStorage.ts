@@ -324,25 +324,23 @@ export class ParticleSlotWriter implements ParticleWriter {
   }
 }
 
-function createVectorWriter(xs: Float32Array, ys: Float32Array, slotOf: () => number): ParticleVectorWriter {
-  return {
-    get x(): number {
-      return xs[slotOf()]!;
-    },
-    set x(value: number) {
-      xs[slotOf()] = value;
-    },
-    get y(): number {
-      return ys[slotOf()]!;
-    },
-    set y(value: number) {
-      ys[slotOf()] = value;
-    },
-    set(x: number, y: number): void {
-      const slot = slotOf();
+const createVectorWriter = (xs: Float32Array, ys: Float32Array, slotOf: () => number): ParticleVectorWriter => ({
+  get x(): number {
+    return xs[slotOf()]!;
+  },
+  set x(value: number) {
+    xs[slotOf()] = value;
+  },
+  get y(): number {
+    return ys[slotOf()]!;
+  },
+  set y(value: number) {
+    ys[slotOf()] = value;
+  },
+  set(x: number, y: number): void {
+    const slot = slotOf();
 
-      xs[slot] = x;
-      ys[slot] = y;
-    },
-  };
-}
+    xs[slot] = x;
+    ys[slot] = y;
+  },
+});

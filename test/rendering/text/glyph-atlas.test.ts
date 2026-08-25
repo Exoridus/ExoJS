@@ -11,7 +11,7 @@ import { GlyphAtlas } from '#rendering/text/GlyphAtlas';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeMockCtx(overrides: Partial<CanvasRenderingContext2D> = {}): CanvasRenderingContext2D {
+const makeMockCtx = (overrides: Partial<CanvasRenderingContext2D> = {}): CanvasRenderingContext2D => {
   return {
     font: '',
     textBaseline: 'alphabetic',
@@ -30,14 +30,14 @@ function makeMockCtx(overrides: Partial<CanvasRenderingContext2D> = {}): CanvasR
     clearRect: vi.fn(),
     ...overrides,
   } as unknown as CanvasRenderingContext2D;
-}
+};
 
-function installMockCtx(ctx: CanvasRenderingContext2D): void {
+const installMockCtx = (ctx: CanvasRenderingContext2D): void => {
   Object.defineProperty(HTMLCanvasElement.prototype, 'getContext', {
     configurable: true,
     value: () => ctx,
   });
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests

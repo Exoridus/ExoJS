@@ -34,14 +34,14 @@ import { ScrollContainer } from '#ui/ScrollContainer';
 import { Stack } from '#ui/Stack';
 
 /** Build a canvas-backed texture with known dimensions (matches the unit-test convention). */
-function createTexture(width: number, height: number): Texture {
+const createTexture = (width: number, height: number): Texture => {
   const canvas = document.createElement('canvas');
 
   canvas.width = width;
   canvas.height = height;
 
   return new Texture(canvas);
-}
+};
 
 // Text uses GlyphAtlasPool internally; inject a mock pool so Text construction
 // works without a real canvas 2D context (mirrors test/rendering/text/text.test.ts).
@@ -85,7 +85,7 @@ afterEach(_resetDefaultSerializers);
  * serialization context calls - keeps the round-trip tests free of real asset
  * loading while exercising the exact asset-reference wiring.
  */
-function fakeLoader(entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader {
+const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader => {
   return {
     keyFor(resource: object) {
       const hit = entries.find(entry => entry.resource === resource);
@@ -98,7 +98,7 @@ function fakeLoader(entries: ReadonlyArray<{ type: Loadable; source: string; res
       return hit ? hit.resource : null;
     },
   } as unknown as Loader;
-}
+};
 
 describe('serialization — registry', () => {
   it('resolves a registered type by name and by node (prototype walk)', () => {

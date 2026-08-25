@@ -21,7 +21,7 @@ import { type CacheStoreDouble, createCacheStoreDouble, createRecordingPolicy } 
 
 const sourceKey = 'url:https://assets.test/level.world';
 
-function acquisition(overrides: Partial<CacheAcquisition<string>> = {}): CacheAcquisition<string> {
+const acquisition = (overrides: Partial<CacheAcquisition<string>> = {}): CacheAcquisition<string> => {
   return {
     namespace: 'com.example.world',
     sourceKey,
@@ -31,7 +31,7 @@ function acquisition(overrides: Partial<CacheAcquisition<string>> = {}): CacheAc
     report: () => undefined,
     ...overrides,
   };
-}
+};
 
 const recordKeyOf = (namespace: string, version = 1): string => serializeCacheRecordKey({ namespace, source: sourceKey, version, record: 'value' });
 

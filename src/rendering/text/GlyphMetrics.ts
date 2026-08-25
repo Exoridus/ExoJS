@@ -8,13 +8,13 @@ type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
  * Shared by {@link GlyphMetrics} and {@link GlyphAtlas} so a measurement and the
  * rasterization it describes can never disagree about the font they mean.
  */
-export function cssFontString(family: string, fontStyle: 'normal' | 'italic', fontWeight: string, size: number): string {
+export const cssFontString = (family: string, fontStyle: 'normal' | 'italic', fontWeight: string, size: number): string => {
   const style = fontStyle !== 'normal' ? `${fontStyle} ` : '';
 
   return `${style}${fontWeight} ${size}px ${family}`;
-}
+};
 
-function makeMeasureCtx(): Ctx2D {
+const makeMeasureCtx = (): Ctx2D => {
   if (typeof OffscreenCanvas !== 'undefined') {
     const ctx = new OffscreenCanvas(1, 1).getContext('2d');
     if (!ctx) throw new Error('GlyphMetrics: could not obtain OffscreenCanvas 2D context.');
@@ -26,7 +26,7 @@ function makeMeasureCtx(): Ctx2D {
   if (!ctx) throw new Error('GlyphMetrics: could not obtain canvas 2D context.');
 
   return ctx;
-}
+};
 
 /**
  * The LOGICAL typographic metrics of one font variant - advances and kerning,

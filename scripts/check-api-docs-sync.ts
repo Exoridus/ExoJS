@@ -12,11 +12,11 @@ const tmpDir = path.resolve(repoRoot, '.workspace', 'tmp-api-check');
 const green = (s: string): string => `\x1b[32m${s}\x1b[0m`;
 const red = (s: string): string => `\x1b[31m${s}\x1b[0m`;
 
-function run(cmd: string, cwd: string): void {
+const run = (cmd: string, cwd: string): void => {
   execSync(cmd, { cwd, stdio: 'pipe' });
-}
+};
 
-function copyDirContents(src: string, dst: string): void {
+const copyDirContents = (src: string, dst: string): void => {
   fs.mkdirSync(dst, { recursive: true });
   for (const entry of fs.readdirSync(src)) {
     const srcPath = path.join(src, entry);
@@ -25,9 +25,9 @@ function copyDirContents(src: string, dst: string): void {
       fs.copyFileSync(srcPath, dstPath);
     }
   }
-}
+};
 
-function collectFiles(dir: string): string[] {
+const collectFiles = (dir: string): string[] => {
   const out: string[] = [];
   if (!fs.existsSync(dir)) return out;
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -36,9 +36,9 @@ function collectFiles(dir: string): string[] {
     }
   }
   return out.sort();
-}
+};
 
-function compareDirectories(currentDir: string, generatedDir: string): boolean {
+const compareDirectories = (currentDir: string, generatedDir: string): boolean => {
   const filesCurrent = collectFiles(currentDir);
   const filesGenerated = collectFiles(generatedDir);
 
@@ -75,9 +75,9 @@ function compareDirectories(currentDir: string, generatedDir: string): boolean {
   }
 
   return true;
-}
+};
 
-function main(): void {
+const main = (): void => {
   console.log('Checking API doc synchronization...\n');
 
   // 1. Backup current API directory
@@ -123,6 +123,6 @@ function main(): void {
   } else {
     process.exit(1);
   }
-}
+};
 
 void main();

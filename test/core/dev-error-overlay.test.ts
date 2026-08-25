@@ -7,15 +7,15 @@
 
 import { hideDevErrorOverlay, showDevErrorOverlay } from '#core/devErrorOverlay';
 
-function overlayFor(canvas: HTMLCanvasElement): HTMLElement | null {
+const overlayFor = (canvas: HTMLCanvasElement): HTMLElement | null => {
   const host = canvas.parentElement ?? document.body;
 
   return host.querySelector('[data-exojs-error-overlay]');
-}
+};
 
-function overlayCount(): number {
+const overlayCount = (): number => {
   return document.querySelectorAll('[data-exojs-error-overlay]').length;
-}
+};
 
 describe('devErrorOverlay (contract 9)', () => {
   let host: HTMLDivElement;

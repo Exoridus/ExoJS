@@ -26,7 +26,7 @@ export interface LdtkLevelEntry {
  * goes through this function rather than re-deriving the single/multi-world
  * detection independently.
  */
-export function getLdtkLevelEntries(data: LdtkData): readonly LdtkLevelEntry[] {
+export const getLdtkLevelEntries = (data: LdtkData): readonly LdtkLevelEntry[] => {
   if (data.worlds && data.worlds.length > 0) {
     const entries: LdtkLevelEntry[] = [];
     for (const world of data.worlds) {
@@ -38,4 +38,4 @@ export function getLdtkLevelEntries(data: LdtkData): readonly LdtkLevelEntry[] {
   }
 
   return data.levels.map(level => ({ level, worldIid: undefined }));
-}
+};

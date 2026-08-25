@@ -19,13 +19,13 @@ const fakeLoader = {} as Loader;
 const fakeScope = { id: 1, kind: 'dependency' } as unknown as LoaderScope;
 
 /** A cache whose policy resolves to a canned value and records the contexts it saw. */
-function createFakeCache(resolveTo: () => unknown = () => 'resolved'): { cache: AssetCache; contexts: Array<CacheContext<unknown>> } {
+const createFakeCache = (resolveTo: () => unknown = () => 'resolved'): { cache: AssetCache; contexts: Array<CacheContext<unknown>> } => {
   const { policy, contexts } = createRecordingPolicy(context => Promise.resolve(resolveTo()) as ReturnType<typeof context.fetch>);
 
   return { cache: new AssetCache({ policy }), contexts };
-}
+};
 
-function createDecoder(overrides: { cache?: AssetCache | null; basePath?: string; ownsCache?: boolean } = {}) {
+const createDecoder = (overrides: { cache?: AssetCache | null; basePath?: string; ownsCache?: boolean } = {}) => {
   const typeRegistry = new AssetTypeRegistry();
   const storeResource = vi.fn((_asset: CanonicalAsset, resource: unknown) => resource);
 
@@ -48,7 +48,7 @@ function createDecoder(overrides: { cache?: AssetCache | null; basePath?: string
   });
 
   return { decoder, typeRegistry, storeResource, canonical };
-}
+};
 
 describe('AssetDecoder', () => {
   test('basePath/fetchOptions round-trip', () => {

@@ -175,7 +175,7 @@ export const determineMimeType = (arrayBuffer: ArrayBuffer): string => {
  * re-resolve the reference against the document base URL instead.
  * @internal
  */
-export function resolveSubAssetPath(ref: string, source: string): string {
+export const resolveSubAssetPath = (ref: string, source: string): string => {
   if (/^(?:[a-z][a-z\d+.-]*:|\/\/|\/)/i.test(ref)) {
     return ref;
   }
@@ -188,4 +188,4 @@ export function resolveSubAssetPath(ref: string, source: string): string {
 
     return source.startsWith('/') ? `/${resolved}` : resolved;
   }
-}
+};

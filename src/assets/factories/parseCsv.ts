@@ -13,7 +13,7 @@ export interface CsvAssetOptions {
  * row is a header is the caller's decision.
  * @internal
  */
-export function parseCsv(source: string, delimiter = ','): string[][] {
+export const parseCsv = (source: string, delimiter = ','): string[][] => {
   const rows: string[][] = [];
   const text = source.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
@@ -64,4 +64,4 @@ export function parseCsv(source: string, delimiter = ','): string[][] {
   }
 
   return rows;
-}
+};

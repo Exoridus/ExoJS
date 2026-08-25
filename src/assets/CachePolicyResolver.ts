@@ -60,6 +60,4 @@ export interface CachePolicyResolver {
 export type CachePolicySource = CachePolicy | CachePolicyResolver;
 
 /** Whether `source` chooses per acquisition rather than being one fixed policy. @internal */
-export function isPolicyResolver(source: CachePolicySource): source is CachePolicyResolver {
-  return typeof (source as CachePolicyResolver).policyFor === 'function';
-}
+export const isPolicyResolver = (source: CachePolicySource): source is CachePolicyResolver => typeof (source as CachePolicyResolver).policyFor === 'function';

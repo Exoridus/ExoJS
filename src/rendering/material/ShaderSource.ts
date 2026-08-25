@@ -210,11 +210,9 @@ const wgslUserUniformPattern = /@group\(\s*2\s*\)\s*@binding\(\s*\d+\s*\)\s*var(
  * regexes don't match commented-out declarations. Conservative: works
  * for both GLSL and WGSL syntax (both use `//` and block comments).
  */
-function stripComments(source: string): string {
-  return source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/\/\/[^\n]*/g, '');
-}
+const stripComments = (source: string): string => source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/\/\/[^\n]*/g, '');
 
-function parseGlslUniforms(vertex: string, fragment: string): Record<string, string> {
+const parseGlslUniforms = (vertex: string, fragment: string): Record<string, string> => {
   const result: Record<string, string> = {};
   for (const source of [vertex, fragment]) {
     const stripped = stripComments(source);
@@ -229,9 +227,9 @@ function parseGlslUniforms(vertex: string, fragment: string): Record<string, str
     }
   }
   return result;
-}
+};
 
-function parseWgslUniforms(source: string): Record<string, string> {
+const parseWgslUniforms = (source: string): Record<string, string> => {
   const result: Record<string, string> = {};
   const stripped = stripComments(source);
 
@@ -250,4 +248,4 @@ function parseWgslUniforms(source: string): Record<string, string> {
   }
 
   return result;
-}
+};

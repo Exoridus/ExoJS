@@ -3,9 +3,9 @@ import { Sound } from '#audio/Sound';
 import { logger, LogSeverity } from '#core/logging';
 import { Texture } from '#rendering/texture/Texture';
 
-function bufferStub(duration = 2): AudioBuffer {
+const bufferStub = (duration = 2): AudioBuffer => {
   return { duration } as AudioBuffer;
-}
+};
 
 describe('textureSeamlessAdapter', () => {
   test("createPlaceholder returns an empty 'loading' texture", () => {

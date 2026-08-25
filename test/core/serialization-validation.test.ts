@@ -36,7 +36,7 @@ afterEach(() => resetDefaultGlyphAtlasPool());
 afterEach(_resetDefaultSerializers);
 
 /** Minimal Loader stand-in exposing only `_peekResource`/`keyFor` for asset resolution. */
-function fakeLoader(entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader {
+const fakeLoader = (entries: ReadonlyArray<{ type: Loadable; source: string; resource: object }>): Loader => {
   return {
     _peekResource: (type: Loadable, source: string) => entries.find(e => e.type === type && e.source === source)?.resource ?? null,
     keyFor: (resource: object) => {
@@ -45,7 +45,7 @@ function fakeLoader(entries: ReadonlyArray<{ type: Loadable; source: string; res
       return entry ? { type: entry.type, source: entry.source } : null;
     },
   } as unknown as Loader;
-}
+};
 
 // A SerializedNode is an open bag; the helpers must tolerate arbitrary garbage
 // in any field. Cast through `unknown` so the tests can feed wrong-typed values.

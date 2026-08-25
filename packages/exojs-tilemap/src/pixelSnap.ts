@@ -10,7 +10,7 @@ import { PixelSnapMode } from '@codexo/exojs/renderer-sdk';
  * the public API surface.
  * @internal
  */
-export function assertPixelSnapMode(mode: PixelSnapMode): void {
+export const assertPixelSnapMode = (mode: PixelSnapMode): void => {
   // Widen first: the parameter type would otherwise narrow the third
   // comparison to a statically-false branch, but JavaScript callers can pass
   // anything.
@@ -19,4 +19,4 @@ export function assertPixelSnapMode(mode: PixelSnapMode): void {
   if (value !== PixelSnapMode.None && value !== PixelSnapMode.Position && value !== PixelSnapMode.Geometry) {
     throw new Error(`pixelSnapMode must be a PixelSnapMode enum value (got ${String(mode)}).`);
   }
-}
+};

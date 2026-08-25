@@ -51,15 +51,15 @@ vi.mock('#rendering/webgl2/WebGl2Backend', () => ({
   }),
 }));
 
-function frameLoopActive(app: Application): boolean {
+const frameLoopActive = (app: Application): boolean => {
   return (app as unknown as Record<string, unknown>)['_frameLoopActive'] as boolean;
-}
+};
 
-function sessionActive(app: Application): boolean {
+const sessionActive = (app: Application): boolean => {
   const scenes = app.scenes as unknown as Record<string, unknown>;
 
   return scenes['_activeSession'] !== null && scenes['_activeSession'] !== undefined;
-}
+};
 
 describe('Application — _frameLoopActive', () => {
   let rafSpy: MockInstance;

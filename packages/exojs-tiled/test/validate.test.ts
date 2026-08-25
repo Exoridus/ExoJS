@@ -15,7 +15,7 @@ import {
 
 const SOURCE = 'level.tmj';
 
-function baseLayer(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+const baseLayer = (overrides: Record<string, unknown> = {}): Record<string, unknown> => {
   return {
     id: 1,
     name: 'Layer',
@@ -25,7 +25,7 @@ function baseLayer(overrides: Record<string, unknown> = {}): Record<string, unkn
     y: 0,
     ...overrides,
   };
-}
+};
 
 describe('TiledFormatError', () => {
   it('formats the message with source and field path', () => {
@@ -277,9 +277,9 @@ describe('validateTiledLayerData — group layers', () => {
 });
 
 describe('checkTiledLayerInfiniteConsistency', () => {
-  function tileLayer(extra: Record<string, unknown>): import('../src/data').TiledLayerData {
+  const tileLayer = (extra: Record<string, unknown>): import('../src/data').TiledLayerData => {
     return validateTiledLayerData(baseLayer({ type: 'tilelayer', width: 1, height: 1, ...extra }), SOURCE, 'layers[0]');
-  }
+  };
 
   it('accepts a finite tile layer with "data" on a finite map', () => {
     expect(() => checkTiledLayerInfiniteConsistency([tileLayer({ data: [1] })], false, SOURCE, 'layers')).not.toThrow();

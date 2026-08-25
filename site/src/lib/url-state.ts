@@ -22,7 +22,7 @@ export interface WriteUrlOptions {
 // Parse the current hash into { version, example }.
 // Expected shape:  #/<version>/<example-path-without-js>
 // On any malformed or missing hash, both fields are null.
-export function readUrlState(): UrlState {
+export const readUrlState = (): UrlState => {
   const url = new URL(window.location.href);
   const queryVersion = url.searchParams.get('version');
   const queryExample = url.searchParams.get('example');
@@ -59,12 +59,12 @@ export function readUrlState(): UrlState {
   // Restore the .js extension that catalog paths carry.
   const example = slug.endsWith('.js') ? slug : `${slug}.js`;
   return { version, example };
-}
+};
 
 // Write version and/or example to the hash.  Partial updates are supported:
 // passing only `version` preserves the current example, and vice-versa.
 // Any legacy query-string params (?v=...&ex=...) are cleared on write.
-export function writeUrlState(state: Partial<UrlState>, options: WriteUrlOptions = {}): void {
+export const writeUrlState = (state: Partial<UrlState>, options: WriteUrlOptions = {}): void => {
   const current = readUrlState();
 
   const version = 'version' in state ? (state.version ?? null) : current.version;
@@ -80,39 +80,39 @@ export function writeUrlState(state: Partial<UrlState>, options: WriteUrlOptions
   } else {
     window.history.pushState(null, '', target);
   }
-}
+};
 
 // Build a shareable href for a navigation link.
 // Returns  #/<version>/<slug>  (no .js suffix, no %2F encoding).
-export function buildExampleHref(examplePath: string, versionId: string | null): string {
+export const buildExampleHref = (examplePath: string, versionId: string | null): string => {
   if (!versionId) return '#';
   const slug = examplePath.replace(/\.js$/, '');
   return `#/${versionId}/${slug}`;
-}
+};
 
 // Best-effort persistence of the user's last-picked version.  Defaults do not
 // get persisted - storage only records an explicit selection so wiping the
 // key returns users to the latest-stable default.
-export function loadStoredVersion(): string | null {
+export const loadStoredVersion = (): string | null => {
   try {
     return window.localStorage.getItem(VERSION_STORAGE_KEY);
   } catch {
     return null;
   }
-}
+};
 
-export function storeSelectedVersion(versionId: string): void {
+export const storeSelectedVersion = (versionId: string): void => {
   try {
     window.localStorage.setItem(VERSION_STORAGE_KEY, versionId);
   } catch {
     // Ignore storage errors (private mode, quota, disabled).
   }
-}
+};
 
 // Build the fragment string (without the leading '#').
 // An empty string means "no hash" (URL ends without #).
-function _buildFragment(version: string | null, example: string | null): string {
+const _buildFragment = (version: string | null, example: string | null): string => {
   if (!version) return '';
   const slug = example ? example.replace(/\.js$/, '') : null;
   return slug ? `/${version}/${slug}` : `/${version}`;
-}
+};

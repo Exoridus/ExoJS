@@ -24,7 +24,7 @@ export interface NavigationProps {
   onSelectExample(path: string): void;
 }
 
-export function Navigation({ activeExample, availableTags, examples, loaded, loadError, onSelectExample, selectedVersion }: NavigationProps): JSX.Element {
+export const Navigation = ({ activeExample, availableTags, examples, loaded, loadError, onSelectExample, selectedVersion }: NavigationProps): JSX.Element => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTagFilter, setActiveTagFilter] = useState<string | null>(null);
   const [showAllTags, setShowAllTags] = useState(false);
@@ -161,9 +161,9 @@ export function Navigation({ activeExample, availableTags, examples, loaded, loa
       </nav>
     </section>
   );
-}
+};
 
-function buildDefaultTags(allTags: string[], counts: Map<string, number>): string[] {
+const buildDefaultTags = (allTags: string[], counts: Map<string, number>): string[] => {
   const available = new Set(allTags);
   const ordered: string[] = ['all'];
 
@@ -185,9 +185,9 @@ function buildDefaultTags(allTags: string[], counts: Map<string, number>): strin
   }
 
   return ordered;
-}
+};
 
-function getTagCounts(examples: Example[]): Map<string, number> {
+const getTagCounts = (examples: Example[]): Map<string, number> => {
   const counts = new Map<string, number>();
   for (const example of examples) {
     for (const tag of example.tags ?? []) {
@@ -195,4 +195,4 @@ function getTagCounts(examples: Example[]): Map<string, number> {
     }
   }
   return counts;
-}
+};

@@ -39,7 +39,7 @@ const measured = {
 
 let fontHistory: string[] = [];
 
-function installMockCtx(): void {
+const installMockCtx = (): void => {
   const ctx = {
     _font: '',
     get font(): string {
@@ -62,7 +62,7 @@ function installMockCtx(): void {
     configurable: true,
     value: () => ctx,
   });
-}
+};
 
 beforeEach(() => {
   fontHistory = [];

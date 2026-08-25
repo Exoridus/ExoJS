@@ -38,132 +38,132 @@ export class LdtkFormatError extends Error {
 
 // ── Primitive helpers ────────────────────────────────────────────────────────
 
-function describeValue(value: unknown): string {
+const describeValue = (value: unknown): string => {
   if (value === null) return 'null';
   if (value === undefined) return 'undefined';
   if (Array.isArray(value)) return 'an array';
   return typeof value;
-}
+};
 
-function joinPath(path: string, key: string | number): string {
+const joinPath = (path: string, key: string | number): string => {
   if (typeof key === 'number') return `${path}[${key}]`;
   return path === '' ? key : `${path}.${key}`;
-}
+};
 
-function expectObject(value: unknown, source: string, path: string): Record<string, unknown> {
+const expectObject = (value: unknown, source: string, path: string): Record<string, unknown> => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new LdtkFormatError(source, path, `expected an object, got ${describeValue(value)}`);
   }
   return value as Record<string, unknown>;
-}
+};
 
-function expectArray(value: unknown, source: string, path: string): readonly unknown[] {
+const expectArray = (value: unknown, source: string, path: string): readonly unknown[] => {
   if (!Array.isArray(value)) {
     throw new LdtkFormatError(source, path, `expected an array, got ${describeValue(value)}`);
   }
   return value as readonly unknown[];
-}
+};
 
-function expectString(value: unknown, source: string, path: string): string {
+const expectString = (value: unknown, source: string, path: string): string => {
   if (typeof value !== 'string') {
     throw new LdtkFormatError(source, path, `expected a string, got ${describeValue(value)}`);
   }
   return value;
-}
+};
 
-function expectNumber(value: unknown, source: string, path: string): number {
+const expectNumber = (value: unknown, source: string, path: string): number => {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new LdtkFormatError(source, path, `expected a finite number, got ${describeValue(value)}`);
   }
   return value;
-}
+};
 
-function expectInteger(value: unknown, source: string, path: string): number {
+const expectInteger = (value: unknown, source: string, path: string): number => {
   const n = expectNumber(value, source, path);
   if (!Number.isInteger(n)) {
     throw new LdtkFormatError(source, path, `expected an integer, got ${n}`);
   }
   return n;
-}
+};
 
-function expectNonNegativeInteger(value: unknown, source: string, path: string): number {
+const expectNonNegativeInteger = (value: unknown, source: string, path: string): number => {
   const n = expectInteger(value, source, path);
   if (n < 0) {
     throw new LdtkFormatError(source, path, `expected a non-negative integer, got ${n}`);
   }
   return n;
-}
+};
 
-function expectPositiveInteger(value: unknown, source: string, path: string): number {
+const expectPositiveInteger = (value: unknown, source: string, path: string): number => {
   const n = expectInteger(value, source, path);
   if (n <= 0) {
     throw new LdtkFormatError(source, path, `expected a positive integer, got ${n}`);
   }
   return n;
-}
+};
 
-function expectBoolean(value: unknown, source: string, path: string): void {
+const expectBoolean = (value: unknown, source: string, path: string): void => {
   if (typeof value !== 'boolean') {
     throw new LdtkFormatError(source, path, `expected a boolean, got ${describeValue(value)}`);
   }
-}
+};
 
 /** `[x, y]` pixel/grid pairs (`px`, `src`, `__pivot`) are always two finite numbers. */
-function expectNumberPair(value: unknown, source: string, path: string): void {
+const expectNumberPair = (value: unknown, source: string, path: string): void => {
   const pair = expectArray(value, source, path);
   if (pair.length !== 2) {
     throw new LdtkFormatError(source, path, `expected a pair of numbers, got ${pair.length} entries`);
   }
   expectNumber(pair[0], source, joinPath(path, 0));
   expectNumber(pair[1], source, joinPath(path, 1));
-}
+};
 
-function optionalNumber(obj: Record<string, unknown>, key: string, source: string, path: string): void {
+const optionalNumber = (obj: Record<string, unknown>, key: string, source: string, path: string): void => {
   if (obj[key] !== undefined) expectNumber(obj[key], source, joinPath(path, key));
-}
+};
 
-function optionalNonNegativeInteger(obj: Record<string, unknown>, key: string, source: string, path: string): void {
+const optionalNonNegativeInteger = (obj: Record<string, unknown>, key: string, source: string, path: string): void => {
   if (obj[key] !== undefined) expectNonNegativeInteger(obj[key], source, joinPath(path, key));
-}
+};
 
 /**
  * LDtk writes an unset optional as an explicit `null` rather than omitting the
  * key, so a validator that only tolerates `undefined` rejects the files the
  * editor actually produces.
  */
-function nullableString(obj: Record<string, unknown>, key: string, source: string, path: string): void {
+const nullableString = (obj: Record<string, unknown>, key: string, source: string, path: string): void => {
   if (obj[key] !== undefined && obj[key] !== null) expectString(obj[key], source, joinPath(path, key));
-}
+};
 
 /** See {@link nullableString}. */
-function nullableInteger(obj: Record<string, unknown>, key: string, source: string, path: string): void {
+const nullableInteger = (obj: Record<string, unknown>, key: string, source: string, path: string): void => {
   if (obj[key] !== undefined && obj[key] !== null) expectInteger(obj[key], source, joinPath(path, key));
-}
+};
 
-function optionalBoolean(obj: Record<string, unknown>, key: string, source: string, path: string): void {
+const optionalBoolean = (obj: Record<string, unknown>, key: string, source: string, path: string): void => {
   if (obj[key] !== undefined) expectBoolean(obj[key], source, joinPath(path, key));
-}
+};
 
-function eachEntry(value: unknown, source: string, path: string, visit: (item: unknown, itemPath: string) => void): void {
+const eachEntry = (value: unknown, source: string, path: string, visit: (item: unknown, itemPath: string) => void): void => {
   const array = expectArray(value, source, path);
   for (let i = 0; i < array.length; i++) {
     visit(array[i], joinPath(path, i));
   }
-}
+};
 
 // ── Definitions ──────────────────────────────────────────────────────────────
 
 const LAYER_TYPES: readonly LdtkLayerType[] = ['Tiles', 'IntGrid', 'Entities', 'AutoLayer'];
 const WORLD_LAYOUTS: readonly LdtkWorldLayout[] = ['Free', 'GridVania', 'LinearHorizontal', 'LinearVertical'];
 
-function validateLayerType(value: unknown, source: string, path: string): void {
+const validateLayerType = (value: unknown, source: string, path: string): void => {
   const type = expectString(value, source, path);
   if (!LAYER_TYPES.includes(type as LdtkLayerType)) {
     throw new LdtkFormatError(source, path, `unknown layer type "${type}" (expected one of ${LAYER_TYPES.join(', ')})`);
   }
-}
+};
 
-function validateTilesetDef(raw: unknown, source: string, path: string): void {
+const validateTilesetDef = (raw: unknown, source: string, path: string): void => {
   const def = expectObject(raw, source, path);
 
   expectInteger(def.uid, source, joinPath(path, 'uid'));
@@ -181,18 +181,18 @@ function validateTilesetDef(raw: unknown, source: string, path: string): void {
   expectNonNegativeInteger(def.pxHei, source, joinPath(path, 'pxHei'));
   optionalNonNegativeInteger(def, 'spacing', source, path);
   optionalNonNegativeInteger(def, 'padding', source, path);
-}
+};
 
-function validateIntGridValueDef(raw: unknown, source: string, path: string): void {
+const validateIntGridValueDef = (raw: unknown, source: string, path: string): void => {
   const value = expectObject(raw, source, path);
 
   expectNumber(value.value, source, joinPath(path, 'value'));
   const identifierPath = joinPath(path, 'identifier');
   if (value.identifier !== null) expectString(value.identifier, source, identifierPath);
   expectString(value.color, source, joinPath(path, 'color'));
-}
+};
 
-function validateLayerDef(raw: unknown, source: string, path: string): void {
+const validateLayerDef = (raw: unknown, source: string, path: string): void => {
   const def = expectObject(raw, source, path);
 
   expectInteger(def.uid, source, joinPath(path, 'uid'));
@@ -208,14 +208,14 @@ function validateLayerDef(raw: unknown, source: string, path: string): void {
   if (def.intGridValues !== undefined) {
     eachEntry(def.intGridValues, source, joinPath(path, 'intGridValues'), (item, itemPath) => validateIntGridValueDef(item, source, itemPath));
   }
-}
+};
 
-function validateDefs(raw: unknown, source: string, path: string): void {
+const validateDefs = (raw: unknown, source: string, path: string): void => {
   const defs = expectObject(raw, source, path);
 
   eachEntry(defs.tilesets, source, joinPath(path, 'tilesets'), (item, itemPath) => validateTilesetDef(item, source, itemPath));
   eachEntry(defs.layers, source, joinPath(path, 'layers'), (item, itemPath) => validateLayerDef(item, source, itemPath));
-}
+};
 
 // ── Instances ────────────────────────────────────────────────────────────────
 
@@ -232,7 +232,7 @@ function validateDefs(raw: unknown, source: string, path: string): void {
  * `Array<T>` element type of one) is left unchecked: forward compatibility
  * matters more than rejecting a value the conversion already skips.
  */
-function validateFieldValue(typeName: string, value: unknown, source: string, path: string): void {
+const validateFieldValue = (typeName: string, value: unknown, source: string, path: string): void => {
   if (value === null || value === undefined) return;
 
   switch (typeName) {
@@ -294,13 +294,13 @@ function validateFieldValue(typeName: string, value: unknown, source: string, pa
         eachEntry(value, source, path, (item, itemPath) => validateFieldValue(elementType, item, source, itemPath));
       }
   }
-}
+};
 
 /**
  * A field instance is validated down to its identifier, declared type and the
  * shape of `__value` that type implies - see {@link validateFieldValue}.
  */
-function validateFieldInstance(raw: unknown, source: string, path: string): void {
+const validateFieldInstance = (raw: unknown, source: string, path: string): void => {
   const field = expectObject(raw, source, path);
 
   expectString(field.__identifier, source, joinPath(path, '__identifier'));
@@ -308,26 +308,26 @@ function validateFieldInstance(raw: unknown, source: string, path: string): void
   const typeName = expectString(field.__type, source, joinPath(path, '__type'));
 
   validateFieldValue(typeName, field.__value, source, joinPath(path, '__value'));
-}
+};
 
-function validateFieldInstances(value: unknown, source: string, path: string): void {
+const validateFieldInstances = (value: unknown, source: string, path: string): void => {
   eachEntry(value, source, path, (item, itemPath) => validateFieldInstance(item, source, itemPath));
-}
+};
 
-function validateTile(raw: unknown, source: string, path: string): void {
+const validateTile = (raw: unknown, source: string, path: string): void => {
   const tile = expectObject(raw, source, path);
 
   expectNumberPair(tile.px, source, joinPath(path, 'px'));
   expectNumberPair(tile.src, source, joinPath(path, 'src'));
   expectNumber(tile.f, source, joinPath(path, 'f'));
   expectNumber(tile.t, source, joinPath(path, 't'));
-}
+};
 
-function validateTiles(value: unknown, source: string, path: string): void {
+const validateTiles = (value: unknown, source: string, path: string): void => {
   eachEntry(value, source, path, (item, itemPath) => validateTile(item, source, itemPath));
-}
+};
 
-function validateEntityInstance(raw: unknown, source: string, path: string): void {
+const validateEntityInstance = (raw: unknown, source: string, path: string): void => {
   const entity = expectObject(raw, source, path);
 
   expectString(entity.__identifier, source, joinPath(path, '__identifier'));
@@ -339,9 +339,9 @@ function validateEntityInstance(raw: unknown, source: string, path: string): voi
   expectString(entity.iid, source, joinPath(path, 'iid'));
   expectInteger(entity.defUid, source, joinPath(path, 'defUid'));
   validateFieldInstances(entity.fieldInstances, source, joinPath(path, 'fieldInstances'));
-}
+};
 
-function validateLayerInstance(raw: unknown, source: string, path: string): void {
+const validateLayerInstance = (raw: unknown, source: string, path: string): void => {
   const layer = expectObject(raw, source, path);
 
   expectString(layer.__identifier, source, joinPath(path, '__identifier'));
@@ -370,9 +370,9 @@ function validateLayerInstance(raw: unknown, source: string, path: string): void
   optionalNumber(layer, 'pxOffsetX', source, path);
   optionalNumber(layer, 'pxOffsetY', source, path);
   optionalNumber(layer, 'opacity', source, path);
-}
+};
 
-function validateLevel(raw: unknown, source: string, path: string): void {
+const validateLevel = (raw: unknown, source: string, path: string): void => {
   const level = expectObject(raw, source, path);
 
   expectString(level.identifier, source, joinPath(path, 'identifier'));
@@ -404,9 +404,9 @@ function validateLevel(raw: unknown, source: string, path: string): void {
   if (level.layerInstances !== null) {
     eachEntry(level.layerInstances, source, layerInstancesPath, (item, itemPath) => validateLayerInstance(item, source, itemPath));
   }
-}
+};
 
-function validateWorld(raw: unknown, source: string, path: string): void {
+const validateWorld = (raw: unknown, source: string, path: string): void => {
   const world = expectObject(raw, source, path);
 
   expectString(world.identifier, source, joinPath(path, 'identifier'));
@@ -423,7 +423,7 @@ function validateWorld(raw: unknown, source: string, path: string): void {
   }
 
   eachEntry(world.levels, source, joinPath(path, 'levels'), (item, itemPath) => validateLevel(item, source, itemPath));
-}
+};
 
 // ── Entry points ─────────────────────────────────────────────────────────────
 
@@ -433,7 +433,7 @@ function validateWorld(raw: unknown, source: string, path: string): void {
  * URL and the property path of the offending value.
  * @internal
  */
-export function validateLdtkData(raw: unknown, source: string): LdtkData {
+export const validateLdtkData = (raw: unknown, source: string): LdtkData => {
   const root = expectObject(raw, source, '');
 
   expectString(root.jsonVersion, source, 'jsonVersion');
@@ -449,7 +449,7 @@ export function validateLdtkData(raw: unknown, source: string): LdtkData {
   }
 
   return raw as LdtkData;
-}
+};
 
 /**
  * Validate an external `.ldtkl` payload and return it typed as
@@ -457,8 +457,8 @@ export function validateLdtkData(raw: unknown, source: string): LdtkData {
  * the level object, since that object is the root of the `.ldtkl` file.
  * @internal
  */
-export function validateLdtkLevelData(raw: unknown, source: string): LdtkLevel {
+export const validateLdtkLevelData = (raw: unknown, source: string): LdtkLevel => {
   validateLevel(raw, source, '');
 
   return raw as LdtkLevel;
-}
+};

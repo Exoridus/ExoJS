@@ -30,9 +30,9 @@ type _ConfigValue = Expect<Equal<typeof catalog.config.value, Config>>;
 
 // resolved map from load(catalog) unwraps the ref to its value
 declare const loader: Loader;
-function loadIt() {
+const loadIt = () => {
   return loader.load(catalog);
-}
+};
 type LoadedMap = Awaited<ReturnType<typeof loadIt>>;
 type _ConfigResolved = Expect<Equal<LoadedMap['config'], Config>>;
 type _ShipResolved = Expect<Equal<LoadedMap['ship'], Texture>>;
@@ -42,12 +42,12 @@ type _ShipResolved = Expect<Equal<LoadedMap['ship'], Texture>>;
 // value kinds as the resource while runtime returned an AssetRef). Both come
 // back as MATERIALIZED leaves: `get(Asset.type(...))` mints them via `createLeaf`,
 // so the `_assetMeta` stamp - and with it single-leaf re-loadability - survives.
-function getConfig() {
+const getConfig = () => {
   return loader.get(Asset.type<Config>('json', 'config.json'));
-}
-function getShip() {
+};
+const getShip = () => {
   return loader.get(Asset.type('texture', 'ship.png'));
-}
+};
 type _GetConfigIsRef = Expect<Equal<ReturnType<typeof getConfig>, CatalogValueLeaf<Config>>>;
 type _GetShipIsTexture = Expect<Equal<ReturnType<typeof getShip>, CatalogResourceLeaf<Texture>>>;
 
@@ -56,12 +56,12 @@ const configRef: AssetRef<Config> = getConfig();
 const shipTexture: Texture = getShip();
 
 // ...and the leaf goes straight back into a single-leaf `load()`.
-function loadGotConfig() {
+const loadGotConfig = () => {
   return loader.load(getConfig());
-}
-function loadGotShip() {
+};
+const loadGotShip = () => {
   return loader.load(getShip());
-}
+};
 type _GotConfigLoads = Expect<Equal<ReturnType<typeof loadGotConfig>, LoadingQueue<Config>>>;
 type _GotShipLoads = Expect<Equal<ReturnType<typeof loadGotShip>, LoadingQueue<Texture>>>;
 

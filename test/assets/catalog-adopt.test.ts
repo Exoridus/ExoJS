@@ -14,12 +14,12 @@ import { ScaleModes } from '#rendering/types';
 import { createBuiltinLeaf } from './builtin-leaf';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts / asset-ref.test.ts). */
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   const owner = loader.createScope({ name: 'owner' });
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 
@@ -56,7 +56,7 @@ const mockFetchJson = (payload: unknown): void => {
  * across a failure→retry cycle so the call count can prove "exactly one new
  * fetch per retry, never zero, never two".
  */
-function togglableImageFetch(): { readonly fetchMock: ReturnType<typeof vi.fn>; succeed(): void } {
+const togglableImageFetch = (): { readonly fetchMock: ReturnType<typeof vi.fn>; succeed(): void } => {
   let ok = false;
   const fetchMock = vi.fn(
     async (): Promise<Response> =>
@@ -73,10 +73,10 @@ function togglableImageFetch(): { readonly fetchMock: ReturnType<typeof vi.fn>; 
       ok = true;
     },
   };
-}
+};
 
 /** Value-asset (json) twin of {@link togglableImageFetch}. */
-function togglableJsonFetch(payload: unknown): { readonly fetchMock: ReturnType<typeof vi.fn>; succeed(): void } {
+const togglableJsonFetch = (payload: unknown): { readonly fetchMock: ReturnType<typeof vi.fn>; succeed(): void } => {
   let ok = false;
   const fetchMock = vi.fn(
     async (): Promise<Response> =>
@@ -100,7 +100,7 @@ function togglableJsonFetch(payload: unknown): { readonly fetchMock: ReturnType<
       ok = true;
     },
   };
-}
+};
 
 /** Alias-keyed background-queue probe (mirrors load-background-option.test.ts). */
 const isQueued = (loader: Loader, alias: string): boolean =>

@@ -40,7 +40,7 @@ interface EntryBlock {
 }
 
 /** Parse the entry's re-export blocks in source order. */
-function parseEntry(source: string): EntryBlock[] {
+const parseEntry = (source: string): EntryBlock[] => {
   const blocks: EntryBlock[] = [];
   const star = /^export \* from '([^']+)';$/gm;
   const named = /^export \{([^}]*)\} from '([^']+)';$/gms;
@@ -64,15 +64,15 @@ function parseEntry(source: string): EntryBlock[] {
   }
 
   return blocks.sort((a, b) => (a as EntryBlock & { index: number }).index - (b as EntryBlock & { index: number }).index);
-}
+};
 
 /** Absolute path of a workspace package's built ESM barrel, or `null`. */
-function barrelPath(specifier: string): string | null {
+const barrelPath = (specifier: string): string | null => {
   const directory = specifier === '@codexo/exojs' ? ROOT : join(ROOT, 'packages', specifier.replace('@codexo/', ''));
   const barrel = join(directory, 'dist', 'esm', 'index.js');
 
   return existsSync(barrel) ? barrel : null;
-}
+};
 
 const blocks = parseEntry(readFileSync(ENTRY, 'utf8'));
 const missingBuilds: string[] = [];

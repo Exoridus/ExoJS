@@ -19,22 +19,20 @@ const tileRendererBatchSize = 4096;
  * {@link import('./TileLayerNode').TileLayerNode}, whose chunk children resolve
  * to this renderer through the registry prototype walk.
  */
-function buildTileChunkRendererBinding(batchSize: number): RendererBinding {
-  return {
-    targets: [TileChunkNode],
-    create(backend: RenderBackend) {
-      if (backend.backendType === RenderBackendType.WebGl2) {
-        return new WebGl2TileChunkRenderer(batchSize);
-      }
+const buildTileChunkRendererBinding = (batchSize: number): RendererBinding => ({
+  targets: [TileChunkNode],
+  create(backend: RenderBackend) {
+    if (backend.backendType === RenderBackendType.WebGl2) {
+      return new WebGl2TileChunkRenderer(batchSize);
+    }
 
-      if (backend.backendType === RenderBackendType.WebGpu) {
-        return new WebGpuTileChunkRenderer();
-      }
+    if (backend.backendType === RenderBackendType.WebGpu) {
+      return new WebGpuTileChunkRenderer();
+    }
 
-      throw new Error(`Unsupported render backend: ${String(backend.backendType satisfies never)}`);
-    },
-  };
-}
+    throw new Error(`Unsupported render backend: ${String(backend.backendType satisfies never)}`);
+  },
+});
 
 /**
  * Default immutable tilemap extension descriptor.

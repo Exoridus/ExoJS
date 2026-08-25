@@ -560,9 +560,9 @@ describe('Text — FontFace-first', () => {
     (globalThis as Record<string, unknown>).FontFace = origFontFace;
   });
 
-  function makeFace(family = 'TestFont'): FontFace {
+  const makeFace = (family = 'TestFont'): FontFace => {
     return new MockFontFace(family) as unknown as FontFace;
-  }
+  };
 
   test('font option registers face with document.fonts', async () => {
     const face = makeFace();

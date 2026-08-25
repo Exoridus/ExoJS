@@ -13,9 +13,7 @@ interface LinePlacement {
  * a glyph provider it would not use.
  * @internal
  */
-export function emptyTextLayout(): TextLayoutResult {
-  return { placements: [], advance: { width: 0, height: 0 }, ink: { x: 0, y: 0, width: 0, height: 0 } };
-}
+export const emptyTextLayout = (): TextLayoutResult => ({ placements: [], advance: { width: 0, height: 0 }, ink: { x: 0, y: 0, width: 0, height: 0 } });
 
 /**
  * Computes per-glyph quad placements for the given text, style, and layout
@@ -35,7 +33,7 @@ export function emptyTextLayout(): TextLayoutResult {
  * {@link TextLayoutResult} for why the advance and the ink are different
  * numbers. Text that places no glyph yields zeroes for both.
  */
-export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider): TextLayoutResult {
+export const layoutText = (text: string, style: TextLayoutStyle, layout: LayoutOptions, provider: GlyphProvider): TextLayoutResult => {
   if (text.length === 0) return emptyTextLayout();
 
   const { fontSize, lineHeight, leading, align } = style;
@@ -204,14 +202,14 @@ export function layoutText(text: string, style: TextLayoutStyle, layout: LayoutO
     advance: { width: maxLineWidth, height: allLines.length * computedLineHeight },
     ink: { x: inkMinX, y: inkMinY, width: inkMaxX - inkMinX, height: inkMaxY - inkMinY },
   };
-}
+};
 
 /**
  * Convert {@link GlyphPlacement} arrays into per-atlas-page quad geometry
  * ready for GPU upload. Zero-size placements (e.g. whitespace glyphs that
  * have no atlas entry) are skipped.
  */
-export function buildTextPageQuads(placements: readonly GlyphPlacement[]): TextPageQuads[] {
+export const buildTextPageQuads = (placements: readonly GlyphPlacement[]): TextPageQuads[] => {
   const byPage = new Map<number, GlyphPlacement[]>();
   for (const p of placements) {
     if (p.width <= 0 || p.height <= 0) continue; // skip invisible/whitespace quads
@@ -265,7 +263,7 @@ export function buildTextPageQuads(placements: readonly GlyphPlacement[]): TextP
   }
 
   return result;
-}
+};
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
@@ -276,11 +274,9 @@ const ELLIPSIS = '…';
  * Reverse a line by code point, so astral characters survive the round trip.
  * Combining marks and bidi runs are not reordered - see `layoutText`.
  */
-function _reverseGraphemes(line: string): string {
-  return [...line].reverse().join('');
-}
+const _reverseGraphemes = (line: string): string => [...line].reverse().join('');
 
-function _measureChars(chars: readonly string[], fontSize: number, provider: GlyphProvider, letterSpacing: number): number {
+const _measureChars = (chars: readonly string[], fontSize: number, provider: GlyphProvider, letterSpacing: number): number => {
   if (chars.length === 0) return 0;
   let width = 0;
   for (const char of chars) {
@@ -288,14 +284,14 @@ function _measureChars(chars: readonly string[], fontSize: number, provider: Gly
   }
   // The gap after the final glyph is not part of the line's ink extent.
   return width - letterSpacing;
-}
+};
 
 /**
  * Append an ellipsis to `line`, dropping trailing characters until the result
  * fits `maxWidth`. Without a `maxWidth` there is nothing to fit against, so the
  * ellipsis is simply appended.
  */
-function _ellipsize(line: string, fontSize: number, provider: GlyphProvider, maxWidth: number | undefined, letterSpacing: number): string {
+const _ellipsize = (line: string, fontSize: number, provider: GlyphProvider, maxWidth: number | undefined, letterSpacing: number): string => {
   if (maxWidth === undefined) return line + ELLIPSIS;
 
   const chars = [...line];
@@ -304,9 +300,9 @@ function _ellipsize(line: string, fontSize: number, provider: GlyphProvider, max
   }
 
   return chars.join('') + ELLIPSIS;
-}
+};
 
-function _applyWhiteSpace(text: string, mode: 'normal' | 'pre' | 'pre-line'): string {
+const _applyWhiteSpace = (text: string, mode: 'normal' | 'pre' | 'pre-line'): string => {
   if (mode === 'pre') return text;
   if (mode === 'normal') {
     return text.replaceAll('\n', ' ').replaceAll(/[ \t]+/g, ' ');
@@ -316,9 +312,9 @@ function _applyWhiteSpace(text: string, mode: 'normal' | 'pre' | 'pre-line'): st
     .split('\n')
     .map(line => line.replaceAll(/[ \t]+/g, ' '))
     .join('\n');
-}
+};
 
-function _wrapLine(line: string, fontSize: number, provider: GlyphProvider, maxWidth: number, letterSpacing: number, breakWords: boolean): string[] {
+const _wrapLine = (line: string, fontSize: number, provider: GlyphProvider, maxWidth: number, letterSpacing: number, breakWords: boolean): string[] => {
   if (line.length === 0) return [''];
 
   const words = line.split(' ');
@@ -375,4 +371,4 @@ function _wrapLine(line: string, fontSize: number, provider: GlyphProvider, maxW
 
   lines.push(current);
   return lines;
-}
+};

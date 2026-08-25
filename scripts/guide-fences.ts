@@ -32,17 +32,17 @@ const FENCE_RE = /^(?<indent>[ \t]*)```(?<lang>[a-zA-Z]+)?(?<meta>[^\n]*)?\n(?<b
  * genuinely empty line) is left as it is rather than being reported as a
  * malformed block.
  */
-function dedent(body: string, indent: string): string {
+const dedent = (body: string, indent: string): string => {
   if (indent === '') return body;
 
   return body
     .split('\n')
     .map(line => (line.startsWith(indent) ? line.slice(indent.length) : line))
     .join('\n');
-}
+};
 
 /** Every fenced code block in `content`, in source order. */
-export function parseFences(content: string): GuideFence[] {
+export const parseFences = (content: string): GuideFence[] => {
   const fences: GuideFence[] = [];
 
   for (const match of content.matchAll(FENCE_RE)) {
@@ -57,4 +57,4 @@ export function parseFences(content: string): GuideFence[] {
   }
 
   return fences;
-}
+};

@@ -11,7 +11,7 @@ import granularWorkletSource from '../../src/worklets/granular.worklet.ts?workle
 import { renderWorklet, rms, tail } from './_audio-harness';
 
 describe('Granular worklet — real Web Audio', () => {
-  async function granularRms(opts: { density: number; normalizeGain: boolean }): Promise<number> {
+  const granularRms = async (opts: { density: number; normalizeGain: boolean }): Promise<number> => {
     const out = await renderWorklet({
       source: granularWorkletSource,
       processorName: 'exojs-granular',
@@ -21,7 +21,7 @@ describe('Granular worklet — real Web Audio', () => {
       durationSeconds: 2,
     });
     return rms(tail(out, 1.0));
-  }
+  };
 
   it('renders non-trivial granular output', async () => {
     expect(await granularRms({ density: 100, normalizeGain: false })).toBeGreaterThan(0.05);

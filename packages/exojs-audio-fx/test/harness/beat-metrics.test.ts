@@ -20,7 +20,7 @@ const SAMPLE_RATE = 48000;
 
 // ── Helpers to build synthetic message logs ────────────────────────────────────
 
-function makeBeat(audioTime: number, tempo: number, audioTimeSec?: number, status: 'provisional' | 'locked' = 'locked'): BeatMessage {
+const makeBeat = (audioTime: number, tempo: number, audioTimeSec?: number, status: 'provisional' | 'locked' = 'locked'): BeatMessage => {
   return {
     type: 'beat',
     _audioTimeSec: audioTimeSec ?? audioTime,
@@ -33,9 +33,9 @@ function makeBeat(audioTime: number, tempo: number, audioTimeSec?: number, statu
     beatInBar: 1,
     status,
   };
-}
+};
 
-function makeState(tempo: number, timeSec: number, confidence = 0.8): StateMessage {
+const makeState = (tempo: number, timeSec: number, confidence = 0.8): StateMessage => {
   return {
     type: 'state',
     _audioTimeSec: timeSec,
@@ -54,9 +54,9 @@ function makeState(tempo: number, timeSec: number, confidence = 0.8): StateMessa
     nextBeatTime: timeSec + 60 / tempo,
     nextDownbeatTime: timeSec + 4 * (60 / tempo),
   };
-}
+};
 
-function makeFixture(beatTimesSec: number[], bpm: number, durationSec: number): BeatFixture {
+const makeFixture = (beatTimesSec: number[], bpm: number, durationSec: number): BeatFixture => {
   const totalSamples = Math.ceil(durationSec * SAMPLE_RATE);
   return {
     samples: new Float32Array(totalSamples),
@@ -64,7 +64,7 @@ function makeFixture(beatTimesSec: number[], bpm: number, durationSec: number): 
     bpm,
     label: `synthetic_${bpm}bpm`,
   };
-}
+};
 
 // ── Perfect log ───────────────────────────────────────────────────────────────
 

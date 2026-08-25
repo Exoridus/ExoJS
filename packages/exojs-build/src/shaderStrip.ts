@@ -47,7 +47,7 @@ export const isShaderId = (id: string): boolean => SHADER_EXTENSIONS.some(extens
  * in any form a shader uses, so a comment scanner needs no lexer state beyond
  * "inside a block comment".
  */
-export function stripShaderSource(source: string): string {
+export const stripShaderSource = (source: string): string => {
   const out: string[] = [];
   let inBlockComment = false;
 
@@ -85,4 +85,4 @@ export function stripShaderSource(source: string): string {
   }
 
   return out.join('\n');
-}
+};

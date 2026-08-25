@@ -170,7 +170,7 @@ export interface GlobalSearchPanelProps {
   onNavigate?: () => void;
 }
 
-export function GlobalSearchPanel({ baseUrl, onNavigate }: GlobalSearchPanelProps): JSX.Element {
+export const GlobalSearchPanel = ({ baseUrl, onNavigate }: GlobalSearchPanelProps): JSX.Element => {
   const { query, setQuery, hits, status } = useGlobalSearch(baseUrl);
   const [activeIndex, setActiveIndex] = useState(0);
   const [indexedHits, setIndexedHits] = useState(hits);
@@ -258,7 +258,7 @@ export function GlobalSearchPanel({ baseUrl, onNavigate }: GlobalSearchPanelProp
       )}
     </div>
   );
-}
+};
 
 export interface GlobalSearchProps {
   baseUrl: string;
@@ -266,7 +266,7 @@ export interface GlobalSearchProps {
 
 const getIsMac = (): boolean => /Mac|iP(ad|hone|od)/.test(window.navigator.platform);
 
-export function GlobalSearch({ baseUrl }: GlobalSearchProps): JSX.Element {
+export const GlobalSearch = ({ baseUrl }: GlobalSearchProps): JSX.Element => {
   const [open, setOpen] = useState(false);
   // The platform never changes after load - a read, not state.
   const isMac = useClientValue(getIsMac, false);
@@ -327,4 +327,4 @@ export function GlobalSearch({ baseUrl }: GlobalSearchProps): JSX.Element {
       </dialog>
     </>
   );
-}
+};

@@ -5,20 +5,20 @@ import { TiledFormatError } from '../src/validate';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
-function gidsToBytes(gids: readonly number[]): Uint8Array {
+const gidsToBytes = (gids: readonly number[]): Uint8Array => {
   const buffer = new ArrayBuffer(gids.length * 4);
   const view = new DataView(buffer);
   gids.forEach((g, i) => view.setUint32(i * 4, g, true)); // little-endian
   return new Uint8Array(buffer);
-}
+};
 
-function bytesToBase64(bytes: Uint8Array): string {
+const bytesToBase64 = (bytes: Uint8Array): string => {
   let binary = '';
   for (const b of bytes) binary += String.fromCharCode(b);
   return btoa(binary);
-}
+};
 
-async function compress(bytes: Uint8Array, format: 'gzip' | 'deflate'): Promise<Uint8Array> {
+const compress = async (bytes: Uint8Array, format: 'gzip' | 'deflate'): Promise<Uint8Array> => {
   const source = new ReadableStream<BufferSource>({
     start(controller) {
       controller.enqueue(bytes as BufferSource);
@@ -41,11 +41,11 @@ async function compress(bytes: Uint8Array, format: 'gzip' | 'deflate'): Promise<
     offset += chunk.length;
   }
   return out;
-}
+};
 
-function makeRawMap(layer: Record<string, unknown>): Record<string, unknown> {
+const makeRawMap = (layer: Record<string, unknown>): Record<string, unknown> => {
   return { type: 'map', layers: [layer] };
-}
+};
 
 const GIDS = [1, 2, 3, 0, 5, 8, 0, 1];
 

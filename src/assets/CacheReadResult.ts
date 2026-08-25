@@ -24,6 +24,4 @@ export const cacheMiss: CacheReadResult<never> = Object.freeze({ hit: false });
  * A hit carrying `value`.
  * @advanced
  */
-export function cacheHit<T>(value: T): CacheReadResult<T> {
-  return { hit: true, value };
-}
+export const cacheHit = <T>(value: T): CacheReadResult<T> => ({ hit: true, value });

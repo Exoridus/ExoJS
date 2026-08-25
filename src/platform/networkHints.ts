@@ -7,13 +7,13 @@ import type { NetworkHint, NetworkHintSource, PlatformSubscription } from './Pla
  * `'online'` for it would claim knowledge nobody has.
  * @internal
  */
-export function readBrowserNetworkHint(): NetworkHint {
+export const readBrowserNetworkHint = (): NetworkHint => {
   if (typeof navigator === 'undefined' || typeof navigator.onLine !== 'boolean') {
     return 'unknown';
   }
 
   return navigator.onLine ? 'online' : 'offline';
-}
+};
 
 /** A hint source that also owns the listeners it installed. @internal */
 export interface OwnedNetworkHintSource extends NetworkHintSource {
@@ -32,7 +32,7 @@ export interface OwnedNetworkHintSource extends NetworkHintSource {
  * Shared by {@link BrowserPlatform} and by a standalone {@link Connectivity},
  * so the two window listeners and the `navigator` read exist once.
  */
-export function browserNetworkHints(): OwnedNetworkHintSource {
+export const browserNetworkHints = (): OwnedNetworkHintSource => {
   const listeners = new Set<(hint: NetworkHint) => void>();
   let current = readBrowserNetworkHint();
 
@@ -89,4 +89,4 @@ export function browserNetworkHints(): OwnedNetworkHintSource {
       listeners.clear();
     },
   };
-}
+};

@@ -27,22 +27,22 @@ const ONE_SAMPLE_SEC = 1 / SAMPLE_RATE;
 
 // ── Utility ────────────────────────────────────────────────────────────────────
 
-function peakAmplitude(buf: Float32Array): number {
+const peakAmplitude = (buf: Float32Array): number => {
   let peak = 0;
   for (const v of buf) {
     const abs = Math.abs(v);
     if (abs > peak) peak = abs;
   }
   return peak;
-}
+};
 
-function arraysEqual(a: Float32Array, b: Float32Array): boolean {
+const arraysEqual = (a: Float32Array, b: Float32Array): boolean => {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i] !== b[i]) return false;
   }
   return true;
-}
+};
 
 // ── Clicktrack invariants ──────────────────────────────────────────────────────
 

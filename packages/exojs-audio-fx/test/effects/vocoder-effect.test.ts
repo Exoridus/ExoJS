@@ -8,9 +8,9 @@ import { VocoderEffect } from '../../src/effects/VocoderEffect';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeModulatorBus(): AudioBus {
+const makeModulatorBus = (): AudioBus => {
   return new AudioBus('modulator-test');
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests

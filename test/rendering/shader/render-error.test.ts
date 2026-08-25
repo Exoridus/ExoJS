@@ -31,7 +31,7 @@ const COMPILE_STATUS = 0x8b81;
 const LINK_STATUS = 0x8b82;
 
 /** Minimal WebGL2 mock covering the createWebGl2ShaderProgram surface. */
-function createMockGl(options: MockGlOptions = {}): WebGL2RenderingContext {
+const createMockGl = (options: MockGlOptions = {}): WebGL2RenderingContext => {
   const shaderTypes = new Map<object, number>();
 
   const gl = {
@@ -80,7 +80,7 @@ function createMockGl(options: MockGlOptions = {}): WebGL2RenderingContext {
   };
 
   return gl as unknown as WebGL2RenderingContext;
-}
+};
 
 const vertexSource = [
   '#version 300 es',

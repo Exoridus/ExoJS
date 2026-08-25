@@ -22,7 +22,7 @@ type TiledContext = AssetFactoryContext<TiledLoadOptions>;
  * concurrent and repeated loads of the same normalized URL and releases them
  * with the map.
  */
-async function loadTiledTilesetResources(data: TiledTilesetData, baseUrl: string, context: TiledContext, source?: string): Promise<TiledTilesetResources> {
+const loadTiledTilesetResources = async (data: TiledTilesetData, baseUrl: string, context: TiledContext, source?: string): Promise<TiledTilesetResources> => {
   let imageUrl: string | undefined;
   let texture: Texture | undefined;
 
@@ -48,14 +48,14 @@ async function loadTiledTilesetResources(data: TiledTilesetData, baseUrl: string
   }
 
   return { source, imageUrl, texture, tileTextures };
-}
+};
 
 /**
  * Resolves one `tilesets[]` entry of a `.tmj` file to a {@link TiledTileset}:
  * fetches and validates the external `.tsj` if `ref.source` is set, or uses
  * the embedded tileset data directly, then resolves and loads its image(s).
  */
-async function loadTiledTileset(ref: TiledTilesetRefData, mapSource: string, context: TiledContext): Promise<TiledTileset> {
+const loadTiledTileset = async (ref: TiledTilesetRefData, mapSource: string, context: TiledContext): Promise<TiledTileset> => {
   if ('source' in ref) {
     const tsjUrl = resolveTiledUrl(ref.source, mapSource);
     // An external tileset is an ordinary JSON asset: acquiring it through the
@@ -71,7 +71,7 @@ async function loadTiledTileset(ref: TiledTilesetRefData, mapSource: string, con
   const resources = await loadTiledTilesetResources(ref, mapSource, context);
 
   return new TiledTileset(ref, ref.firstgid, resources);
-}
+};
 
 /**
  * Recursively walks the layer tree and loads the image for every
@@ -79,7 +79,7 @@ async function loadTiledTileset(ref: TiledTilesetRefData, mapSource: string, con
  * {@link TiledMap.toTileMap} can attach the pre-loaded {@link Texture} to each
  * runtime image layer without performing additional I/O.
  */
-async function loadImageLayerTextures(layers: readonly TiledLayerData[], mapSource: string, context: TiledContext): Promise<Map<number, Texture>> {
+const loadImageLayerTextures = async (layers: readonly TiledLayerData[], mapSource: string, context: TiledContext): Promise<Map<number, Texture>> => {
   const result = new Map<number, Texture>();
 
   for (const layer of layers) {
@@ -96,7 +96,7 @@ async function loadImageLayerTextures(layers: readonly TiledLayerData[], mapSour
   }
 
   return result;
-}
+};
 
 /**
  * Assembles a validated Tiled document into a {@link TiledMap}: resolves every
@@ -104,7 +104,7 @@ async function loadImageLayerTextures(layers: readonly TiledLayerData[], mapSour
  * layer's texture, and validates the GIDs against the assembled tilesets.
  * @internal
  */
-export async function loadTiledMap(data: TiledMapData, context: TiledContext): Promise<TiledMap> {
+export const loadTiledMap = async (data: TiledMapData, context: TiledContext): Promise<TiledMap> => {
   const source = context.source;
   const [tilesets, imageTextures] = await Promise.all([
     Promise.all(data.tilesets.map(ref => loadTiledTileset(ref, source, context))),
@@ -112,4 +112,4 @@ export async function loadTiledMap(data: TiledMapData, context: TiledContext): P
   ]);
 
   return new TiledMap(source, data, tilesets, imageTextures);
-}
+};

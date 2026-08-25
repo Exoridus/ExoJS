@@ -270,12 +270,14 @@ const findAttribute = (attributes: readonly GeometryAttribute[], names: Set<stri
  * same flattening the `Mesh` constructor applies.
  * @internal
  */
-export function readGeometry(geometry: Geometry): {
+export const readGeometry = (
+  geometry: Geometry,
+): {
   vertices: Float32Array;
   uvs: Float32Array | null;
   colors: Uint32Array | null;
   indices: Uint16Array | null;
-} {
+} => {
   if (geometry.topology !== 'triangle-list') {
     throw new Error(`Mesh only supports triangle-list geometry (got "${geometry.topology}").`);
   }
@@ -330,10 +332,10 @@ export function readGeometry(geometry: Geometry): {
   const indices = readIndices(geometry.indices, vertexCount);
 
   return { vertices, uvs, colors, indices };
-}
+};
 
 /** Pack a geometry color attribute into the mesh's RGBA8 u32 representation. */
-function readPackedColor(view: DataView, offset: number, attribute: GeometryAttribute): number {
+const readPackedColor = (view: DataView, offset: number, attribute: GeometryAttribute): number => {
   if (attribute.type === 'u32' && attribute.size === 1) {
     return view.getUint32(offset, true) >>> 0;
   }
@@ -355,9 +357,9 @@ function readPackedColor(view: DataView, offset: number, attribute: GeometryAttr
   }
 
   throw new Error('Mesh geometry color attribute must be u8x4, u32x1, or f32x4.');
-}
+};
 
-function readIndices(indices: Uint16Array | Uint32Array | null, vertexCount: number): Uint16Array | null {
+const readIndices = (indices: Uint16Array | Uint32Array | null, vertexCount: number): Uint16Array | null => {
   if (indices === null) {
     return null;
   }
@@ -371,10 +373,10 @@ function readIndices(indices: Uint16Array | Uint32Array | null, vertexCount: num
   }
 
   return Uint16Array.from(indices);
-}
+};
 
-function clamp01(value: number): number {
+const clamp01 = (value: number): number => {
   if (value < 0) return 0;
   if (value > 1) return 1;
   return value;
-}
+};

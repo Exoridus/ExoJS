@@ -19,7 +19,7 @@ const SEVERITY_RANK: Record<EditorDiagnosticSeverity, number> = {
   hint: 0,
 };
 
-export function DiagnosticsStrip({ diagnostics, onDiagnosticJump }: DiagnosticsStripProps): JSX.Element {
+export const DiagnosticsStrip = ({ diagnostics, onDiagnosticJump }: DiagnosticsStripProps): JSX.Element => {
   const top = pickTopDiagnostic(diagnostics);
   const counts = countBySeverity(diagnostics);
 
@@ -68,9 +68,9 @@ export function DiagnosticsStrip({ diagnostics, onDiagnosticJump }: DiagnosticsS
       )}
     </div>
   );
-}
+};
 
-function countBySeverity(diagnostics: ReadonlyArray<EditorDiagnostic>): Record<EditorDiagnosticSeverity, number> {
+const countBySeverity = (diagnostics: ReadonlyArray<EditorDiagnostic>): Record<EditorDiagnosticSeverity, number> => {
   const counts: Record<EditorDiagnosticSeverity, number> = {
     error: 0,
     warning: 0,
@@ -81,9 +81,9 @@ function countBySeverity(diagnostics: ReadonlyArray<EditorDiagnostic>): Record<E
     counts[diagnostic.severity] += 1;
   }
   return counts;
-}
+};
 
-function pickTopDiagnostic(diagnostics: ReadonlyArray<EditorDiagnostic>): EditorDiagnostic | null {
+const pickTopDiagnostic = (diagnostics: ReadonlyArray<EditorDiagnostic>): EditorDiagnostic | null => {
   let top: EditorDiagnostic | null = null;
   for (const diagnostic of diagnostics) {
     if (!top || SEVERITY_RANK[diagnostic.severity] > SEVERITY_RANK[top.severity]) {
@@ -91,4 +91,4 @@ function pickTopDiagnostic(diagnostics: ReadonlyArray<EditorDiagnostic>): Editor
     }
   }
   return top;
-}
+};

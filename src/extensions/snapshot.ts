@@ -26,7 +26,7 @@ export { emptySnapshot as EMPTY_SNAPSHOT };
  * @param ext - the descriptor to freeze
  * @internal
  */
-export function freezeExtension(ext: Extension): void {
+export const freezeExtension = (ext: Extension): void => {
   if (!__DEV__) return;
 
   Object.freeze(ext);
@@ -71,7 +71,7 @@ export function freezeExtension(ext: Extension): void {
       Object.freeze(binding);
     }
   }
-}
+};
 
 /**
  * Flatten an ordered extension list into a snapshot using stable depth-first
@@ -80,7 +80,7 @@ export function freezeExtension(ext: Extension): void {
  * Binding-level conflicts are checked per Application at materialisation time.
  * @internal
  */
-export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
+export const buildSnapshot = (input: readonly Extension[]): ExtensionSnapshot => {
   if (input.length === 0) {
     return emptySnapshot;
   }
@@ -91,7 +91,7 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
   const stack: Extension[] = [];
   const ordered: Extension[] = [];
 
-  function visit(ext: Extension): void {
+  const visit = (ext: Extension): void => {
     // (1) Reserve ID + mismatch check FIRST - before dependency traversal.
     //     This catches nested same-id/different-object descriptors immediately.
     const existing = byId.get(ext.id);
@@ -132,7 +132,7 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
     if (__DEV__) {
       freezeExtension(ext);
     }
-  }
+  };
 
   for (const ext of input) visit(ext);
 
@@ -167,4 +167,4 @@ export function buildSnapshot(input: readonly Extension[]): ExtensionSnapshot {
     assets: Object.freeze(assets),
     serializers: Object.freeze(serializers),
   });
-}
+};

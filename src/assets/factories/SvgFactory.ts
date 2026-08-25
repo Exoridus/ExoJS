@@ -19,7 +19,7 @@ export interface SvgAssetOptions {
 const SVG_OPEN_TAG = '<svg';
 
 /** Replaces the root element's own width/height with the requested ones. */
-function resize(markup: string, width: number | undefined, height: number | undefined): string {
+const resize = (markup: string, width: number | undefined, height: number | undefined): string => {
   const start = markup.indexOf(SVG_OPEN_TAG);
   const tagEnd = start === -1 ? -1 : markup.indexOf('>', start);
 
@@ -34,7 +34,7 @@ function resize(markup: string, width: number | undefined, height: number | unde
   const requested = (width === undefined ? '' : ` width="${width}"`) + (height === undefined ? '' : ` height="${height}"`);
 
   return `${markup.slice(0, start)}${SVG_OPEN_TAG}${attributes}${requested}>${markup.slice(tagEnd + 1)}`;
-}
+};
 
 /**
  * Rasterises SVG markup into an {@link HTMLImageElement}.

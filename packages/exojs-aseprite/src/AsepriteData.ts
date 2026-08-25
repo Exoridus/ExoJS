@@ -119,6 +119,4 @@ export interface AsepriteHashData {
 export type AsepriteData = AsepriteArrayData | AsepriteHashData;
 
 /** Returns `true` when `data` is in array mode (frames is an array). */
-export function isAsepriteArrayData(data: AsepriteData): data is AsepriteArrayData {
-  return Array.isArray(data.frames);
-}
+export const isAsepriteArrayData = (data: AsepriteData): data is AsepriteArrayData => Array.isArray(data.frames);
