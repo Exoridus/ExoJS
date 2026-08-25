@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["XML documents, parsed by the browser's own `DOMParser`."],
+      "paragraphs": [
+        "XML documents, parsed by the browser's own `DOMParser`."
+      ],
       "importLine": "import { XmlAssetType } from '@codexo/exojs'",
       "sourceLink": null
     },

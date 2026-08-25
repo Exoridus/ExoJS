@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for Sound."],
+      "paragraphs": [
+        "Construction options for Sound."
+      ],
       "importLine": "import { SoundOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

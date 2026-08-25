@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options accepted by an asset of the built-in `font` type."],
+      "paragraphs": [
+        "Options accepted by an asset of the built-in `font` type."
+      ],
       "importLine": "import { FontAssetOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

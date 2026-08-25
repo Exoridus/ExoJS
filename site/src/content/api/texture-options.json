@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Full construction options of a texture: sampling state plus upload state."],
+      "paragraphs": [
+        "Full construction options of a texture: sampling state plus upload state."
+      ],
       "importLine": "import { TextureOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

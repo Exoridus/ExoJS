@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Anchor position of a widget within its container's box."],
+      "paragraphs": [
+        "Anchor position of a widget within its container's box."
+      ],
       "importLine": "import { WidgetAnchor } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A single point at `(x, y)`."],
+      "paragraphs": [
+        "A single point at `(x, y)`."
+      ],
       "importLine": "import { PointObject } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

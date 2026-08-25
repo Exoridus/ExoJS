@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Any abstract or concrete constructor that can be used as an asset type token with Loader.load and related methods."],
+      "paragraphs": [
+        "Any abstract or concrete constructor that can be used as an asset type token with Loader.load and related methods."
+      ],
       "importLine": "import { Loadable } from '@codexo/exojs'",
       "sourceLink": null
     },

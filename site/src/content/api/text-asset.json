@@ -18,7 +18,10 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Dispatch token for plain text loading.", "`loader.load(Asset.type('text', 'greeting.txt'))` returns `Promise<string>`."],
+      "paragraphs": [
+        "Dispatch token for plain text loading.",
+        "`loader.load(Asset.type('text', 'greeting.txt'))` returns `Promise<string>`."
+      ],
       "importLine": "import { TextAsset } from '@codexo/exojs'",
       "sourceLink": null
     },

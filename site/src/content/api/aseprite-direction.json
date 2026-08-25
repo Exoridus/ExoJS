@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Playback direction of an Aseprite frame tag animation."],
+      "paragraphs": [
+        "Playback direction of an Aseprite frame tag animation."
+      ],
       "importLine": "import { AsepriteDirection } from '@codexo/exojs-aseprite'",
       "sourceLink": null
     },

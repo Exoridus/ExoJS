@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options for Tooltip."],
+      "paragraphs": [
+        "Options for Tooltip."
+      ],
       "importLine": "import { TooltipOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

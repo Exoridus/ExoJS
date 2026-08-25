@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["What a codec is told about the acquisition it is decoding."],
+      "paragraphs": [
+        "What a codec is told about the acquisition it is decoding."
+      ],
       "importLine": "import { SourceCodecContext } from '@codexo/exojs'",
       "sourceLink": null
     },

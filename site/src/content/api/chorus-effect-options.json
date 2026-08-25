@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for ChorusEffect."],
+      "paragraphs": [
+        "Construction options for ChorusEffect."
+      ],
       "importLine": "import { ChorusEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

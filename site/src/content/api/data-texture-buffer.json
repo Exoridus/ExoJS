@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Buffer typed-array kind for a given format."],
+      "paragraphs": [
+        "Buffer typed-array kind for a given format."
+      ],
       "importLine": "import { DataTextureBuffer } from '@codexo/exojs'",
       "sourceLink": null
     },

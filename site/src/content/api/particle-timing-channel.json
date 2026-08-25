@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["The timing channel: seconds since spawn, and total seconds before expiry."],
+      "paragraphs": [
+        "The timing channel: seconds since spawn, and total seconds before expiry."
+      ],
       "importLine": "import { ParticleTimingChannel } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

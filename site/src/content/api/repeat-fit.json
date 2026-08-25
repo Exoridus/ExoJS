@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["How a `'repeat'` or `'mirror-repeat'` run fits its destination span exactly."],
+      "paragraphs": [
+        "How a `'repeat'` or `'mirror-repeat'` run fits its destination span exactly."
+      ],
       "importLine": "import { RepeatFit } from '@codexo/exojs'",
       "sourceLink": null
     },

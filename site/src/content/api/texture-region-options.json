@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options passed to the TextureRegion constructor."],
+      "paragraphs": [
+        "Options passed to the TextureRegion constructor."
+      ],
       "importLine": "import { TextureRegionOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

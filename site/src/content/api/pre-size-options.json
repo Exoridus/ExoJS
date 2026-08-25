@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Pre-sizing options for deferred texture handles - reserves placeholder dimensions to avoid a layout jump when the payload arrives."],
+      "paragraphs": [
+        "Pre-sizing options for deferred texture handles - reserves placeholder dimensions to avoid a layout jump when the payload arrives."
+      ],
       "importLine": "import { PreSizeOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

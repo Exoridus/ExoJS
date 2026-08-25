@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Controls text flow and overflow - separate from TextStyle which describes visual appearance. Pass to Text or layoutText."],
+      "paragraphs": [
+        "Controls text flow and overflow - separate from TextStyle which describes visual appearance. Pass to Text or layoutText."
+      ],
       "importLine": "import { LayoutOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

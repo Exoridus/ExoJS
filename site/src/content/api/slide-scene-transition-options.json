@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options for SlideSceneTransition."],
+      "paragraphs": [
+        "Options for SlideSceneTransition."
+      ],
       "importLine": "import { SlideSceneTransitionOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

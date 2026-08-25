@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction-time options for a TextStyle. All properties are optional; defaults match the TextStyle constructor."],
+      "paragraphs": [
+        "Construction-time options for a TextStyle. All properties are optional; defaults match the TextStyle constructor."
+      ],
       "importLine": "import { TextStyleOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

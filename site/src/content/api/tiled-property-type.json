@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["The `type` discriminant of a Tiled custom property."],
+      "paragraphs": [
+        "The `type` discriminant of a Tiled custom property."
+      ],
       "importLine": "import { TiledPropertyType } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

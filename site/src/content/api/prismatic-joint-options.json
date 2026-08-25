@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for a PrismaticJoint."],
+      "paragraphs": [
+        "Construction options for a PrismaticJoint."
+      ],
       "importLine": "import { PrismaticJointOptions } from '@codexo/exojs-physics'",
       "sourceLink": null
     },

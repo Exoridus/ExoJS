@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Fields shared by every layer type."],
+      "paragraphs": [
+        "Fields shared by every layer type."
+      ],
       "importLine": "import { TiledObjectLayerData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

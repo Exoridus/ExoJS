@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A chunk of tile data within an infinite tile layer."],
+      "paragraphs": [
+        "A chunk of tile data within an infinite tile layer."
+      ],
       "importLine": "import { TiledChunkData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

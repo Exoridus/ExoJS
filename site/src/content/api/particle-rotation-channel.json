@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["The rotation channel: current angle and the speed integrated into it each frame."],
+      "paragraphs": [
+        "The rotation channel: current angle and the speed integrated into it each frame."
+      ],
       "importLine": "import { ParticleRotationChannel } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

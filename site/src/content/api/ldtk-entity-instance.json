@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["An entity instance placed in an Entities layer."],
+      "paragraphs": [
+        "An entity instance placed in an Entities layer."
+      ],
       "importLine": "import { LdtkEntityInstance } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

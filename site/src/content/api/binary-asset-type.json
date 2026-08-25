@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Arbitrary binary files, handed over as the bytes that arrived."],
+      "paragraphs": [
+        "Arbitrary binary files, handed over as the bytes that arrived."
+      ],
       "importLine": "import { BinaryAssetType } from '@codexo/exojs'",
       "sourceLink": null
     },

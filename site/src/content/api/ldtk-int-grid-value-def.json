@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["An IntGrid value definition (maps a raw int to a named, coloured entry)."],
+      "paragraphs": [
+        "An IntGrid value definition (maps a raw int to a named, coloured entry)."
+      ],
       "importLine": "import { LdtkIntGridValueDef } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

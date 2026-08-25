@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A Tiled tileset, as the root of a standalone `.tsj` file or (minus `firstgid`) embedded inline in a map's `tilesets` array."],
+      "paragraphs": [
+        "A Tiled tileset, as the root of a standalone `.tsj` file or (minus `firstgid`) embedded inline in a map's `tilesets` array."
+      ],
       "importLine": "import { TiledTilesetData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

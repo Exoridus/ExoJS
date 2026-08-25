@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Discriminant for the concrete shape kinds supported in the MVP."],
+      "paragraphs": [
+        "Discriminant for the concrete shape kinds supported in the MVP."
+      ],
       "importLine": "import { ShapeType } from '@codexo/exojs-physics'",
       "sourceLink": null
     },

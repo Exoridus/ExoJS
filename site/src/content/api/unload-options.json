@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options passed to SceneDirector.unload."],
+      "paragraphs": [
+        "Options passed to SceneDirector.unload."
+      ],
       "importLine": "import { UnloadOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

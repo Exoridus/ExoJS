@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A 2D vector expressed in polar coordinates: `radius` (magnitude) and `phi` (angle in radians, measured from the positive X-axis)."],
+      "paragraphs": [
+        "A 2D vector expressed in polar coordinates: `radius` (magnitude) and `phi` (angle in radians, measured from the positive X-axis)."
+      ],
       "importLine": "import { PolarVector } from '@codexo/exojs'",
       "sourceLink": null
     },

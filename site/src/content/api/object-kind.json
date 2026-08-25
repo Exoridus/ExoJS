@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Geometry discriminant for a TileMapObject."],
+      "paragraphs": [
+        "Geometry discriminant for a TileMapObject."
+      ],
       "importLine": "import { ObjectKind } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

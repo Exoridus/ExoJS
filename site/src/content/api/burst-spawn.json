@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Discrete-burst spawner. Fires at scheduled times with a fixed count per burst. Useful for explosions, hit-impacts, level-up effects."],
+      "paragraphs": [
+        "Discrete-burst spawner. Fires at scheduled times with a fixed count per burst. Useful for explosions, hit-impacts, level-up effects."
+      ],
       "importLine": "import { BurstSpawn } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["What a TileColliderMaterialResolver is asked about."],
+      "paragraphs": [
+        "What a TileColliderMaterialResolver is asked about."
+      ],
       "importLine": "import { TileColliderContext } from '@codexo/exojs-tilemap-physics'",
       "sourceLink": null
     },

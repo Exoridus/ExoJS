@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options for a device that follows the standard layout with at most one extra button."],
+      "paragraphs": [
+        "Options for a device that follows the standard layout with at most one extra button."
+      ],
       "importLine": "import { StandardGamepadMappingOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

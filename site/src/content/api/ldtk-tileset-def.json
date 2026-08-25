@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Tileset definition from `defs.tilesets`."],
+      "paragraphs": [
+        "Tileset definition from `defs.tilesets`."
+      ],
       "importLine": "import { LdtkTilesetDef } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

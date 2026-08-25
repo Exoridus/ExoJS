@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A voice whose source can loop."],
+      "paragraphs": [
+        "A voice whose source can loop."
+      ],
       "importLine": "import { Loopable } from '@codexo/exojs'",
       "sourceLink": null
     },

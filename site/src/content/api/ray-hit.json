@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A single ray-cast intersection."],
+      "paragraphs": [
+        "A single ray-cast intersection."
+      ],
       "importLine": "import { RayHit } from '@codexo/exojs-physics'",
       "sourceLink": null
     },

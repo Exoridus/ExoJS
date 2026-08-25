@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Per-character metrics from a BMFont descriptor."],
+      "paragraphs": [
+        "Per-character metrics from a BMFont descriptor."
+      ],
       "importLine": "import { BmFontChar } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for a ChainShape."],
+      "paragraphs": [
+        "Construction options for a ChainShape."
+      ],
       "importLine": "import { ChainShapeOptions } from '@codexo/exojs-physics'",
       "sourceLink": null
     },

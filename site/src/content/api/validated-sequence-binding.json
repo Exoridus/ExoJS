@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["ValidatedChordBinding for SequenceAction, which allows `'>'` and therefore more than one step."],
+      "paragraphs": [
+        "ValidatedChordBinding for SequenceAction, which allows `'>'` and therefore more than one step."
+      ],
       "importLine": "import { ValidatedSequenceBinding } from '@codexo/exojs'",
       "sourceLink": null
     },

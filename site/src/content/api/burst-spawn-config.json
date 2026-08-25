@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Spawn configuration for BurstSpawn: the burst schedule plus the shared per-property fields."],
+      "paragraphs": [
+        "Spawn configuration for BurstSpawn: the burst schedule plus the shared per-property fields."
+      ],
       "importLine": "import { BurstSpawnConfig } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

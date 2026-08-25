@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A point in object-layer space (pixels, relative to the object)."],
+      "paragraphs": [
+        "A point in object-layer space (pixels, relative to the object)."
+      ],
       "importLine": "import { ObjectPoint } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

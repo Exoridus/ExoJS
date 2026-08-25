@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options for constructing a TileSet."],
+      "paragraphs": [
+        "Options for constructing a TileSet."
+      ],
       "importLine": "import { TileSetOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

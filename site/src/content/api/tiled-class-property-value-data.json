@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["The value of a `class`-typed custom property: a nested map of member name to value, recursively allowing further `class` members."],
+      "paragraphs": [
+        "The value of a `class`-typed custom property: a nested map of member name to value, recursively allowing further `class` members."
+      ],
       "importLine": "import { TiledClassPropertyValueData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A map's `tilesets[]` entry referencing an external `.tsj` file by relative path."],
+      "paragraphs": [
+        "A map's `tilesets[]` entry referencing an external `.tsj` file by relative path."
+      ],
       "importLine": "import { TiledExternalTilesetRefData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

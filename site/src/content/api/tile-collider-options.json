@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options for a TileColliderStreamer. All optional."],
+      "paragraphs": [
+        "Options for a TileColliderStreamer. All optional."
+      ],
       "importLine": "import { TileColliderOptions } from '@codexo/exojs-tilemap-physics'",
       "sourceLink": null
     },

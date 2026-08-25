@@ -18,7 +18,10 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Dispatch token for SVG loading.", "`loader.load(Asset.type('svg', 'icon.svg'))` returns `Promise<HTMLImageElement>`."],
+      "paragraphs": [
+        "Dispatch token for SVG loading.",
+        "`loader.load(Asset.type('svg', 'icon.svg'))` returns `Promise<HTMLImageElement>`."
+      ],
       "importLine": "import { SvgAsset } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Contract for objects that participate in collision detection. Implemented by all concrete shape classes as well as `SceneNode`."],
+      "paragraphs": [
+        "Contract for objects that participate in collision detection. Implemented by all concrete shape classes as well as `SceneNode`."
+      ],
       "importLine": "import { Collidable } from '@codexo/exojs'",
       "sourceLink": null
     },

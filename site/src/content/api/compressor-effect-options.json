@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for CompressorEffect. All values are clamped to their valid ranges on assignment."],
+      "paragraphs": [
+        "Construction options for CompressorEffect. All values are clamped to their valid ranges on assignment."
+      ],
       "importLine": "import { CompressorEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

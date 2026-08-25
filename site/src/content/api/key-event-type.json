@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Keyboard phase delivered to a focused node."],
+      "paragraphs": [
+        "Keyboard phase delivered to a focused node."
+      ],
       "importLine": "import { KeyEventType } from '@codexo/exojs'",
       "sourceLink": null
     },

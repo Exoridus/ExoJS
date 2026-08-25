@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Either shape a route accepts for its policy."],
+      "paragraphs": [
+        "Either shape a route accepts for its policy."
+      ],
       "importLine": "import { CachePolicySource } from '@codexo/exojs'",
       "sourceLink": null
     },

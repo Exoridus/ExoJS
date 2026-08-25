@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A level in the LDtk world."],
+      "paragraphs": [
+        "A level in the LDtk world."
+      ],
       "importLine": "import { LdtkLevel } from '@codexo/exojs-ldtk'",
       "sourceLink": null
     },

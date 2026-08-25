@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Thrown (dev builds only) when navigating to a constructor that is not present in `ApplicationOptions.scenes`."],
+      "paragraphs": [
+        "Thrown (dev builds only) when navigating to a constructor that is not present in `ApplicationOptions.scenes`."
+      ],
       "importLine": "import { UnregisteredSceneError } from '@codexo/exojs'",
       "sourceLink": null
     },

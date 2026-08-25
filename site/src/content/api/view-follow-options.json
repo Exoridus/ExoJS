@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options for View.follow."],
+      "paragraphs": [
+        "Options for View.follow."
+      ],
       "importLine": "import { ViewFollowOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

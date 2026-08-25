@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Discriminant identifying the concrete gradient kind (`gradient.type`)."],
+      "paragraphs": [
+        "Discriminant identifying the concrete gradient kind (`gradient.type`)."
+      ],
       "importLine": "import { GradientType } from '@codexo/exojs'",
       "sourceLink": null
     },

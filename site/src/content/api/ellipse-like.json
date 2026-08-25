@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Structural type for any object that describes an axis-aligned ellipse via a centre point and half-radii."],
+      "paragraphs": [
+        "Structural type for any object that describes an axis-aligned ellipse via a centre point and half-radii."
+      ],
       "importLine": "import { EllipseLike } from '@codexo/exojs'",
       "sourceLink": null
     },

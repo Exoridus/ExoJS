@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Per-call overrides for AudioManager.play."],
+      "paragraphs": [
+        "Per-call overrides for AudioManager.play."
+      ],
       "importLine": "import { SoundPlayOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

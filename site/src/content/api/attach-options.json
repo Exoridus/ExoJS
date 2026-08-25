@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["PhysicsWorld.attach convenience options: a body type plus a single collider, attached to a scene node in one call."],
+      "paragraphs": [
+        "PhysicsWorld.attach convenience options: a body type plus a single collider, attached to a scene node in one call."
+      ],
       "importLine": "import { AttachOptions } from '@codexo/exojs-physics'",
       "sourceLink": null
     },

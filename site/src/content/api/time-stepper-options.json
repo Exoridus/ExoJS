@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for TimeStepper."],
+      "paragraphs": [
+        "Construction options for TimeStepper."
+      ],
       "importLine": "import { TimeStepperOptions } from '@codexo/exojs-physics'",
       "sourceLink": null
     },

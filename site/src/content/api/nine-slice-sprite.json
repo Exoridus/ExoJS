@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A scalable nine-slice (9-patch) sprite. Corners stay pixel-perfect; edges/center fill by stretch, repeat, or mirror-repeat."],
+      "paragraphs": [
+        "A scalable nine-slice (9-patch) sprite. Corners stay pixel-perfect; edges/center fill by stretch, repeat, or mirror-repeat."
+      ],
       "importLine": "import { NineSliceSprite } from '@codexo/exojs'",
       "sourceLink": null
     },

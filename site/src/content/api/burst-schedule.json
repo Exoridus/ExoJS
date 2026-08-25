@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Burst trigger schedule. The module fires at `time` seconds (since registration), spawning `count` particles in one frame."],
+      "paragraphs": [
+        "Burst trigger schedule. The module fires at `time` seconds (since registration), spawning `count` particles in one frame."
+      ],
       "importLine": "import { BurstSchedule } from '@codexo/exojs-particles'",
       "sourceLink": null
     },

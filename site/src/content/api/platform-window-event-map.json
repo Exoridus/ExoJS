@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Events the input pipeline sources from the host window rather than the surface."],
+      "paragraphs": [
+        "Events the input pipeline sources from the host window rather than the surface."
+      ],
       "importLine": "import { PlatformWindowEventMap } from '@codexo/exojs'",
       "sourceLink": null
     },

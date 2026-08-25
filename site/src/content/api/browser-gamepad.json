@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Convenience alias for the non-null element type returned by `navigator.getGamepads()`."],
+      "paragraphs": [
+        "Convenience alias for the non-null element type returned by `navigator.getGamepads()`."
+      ],
       "importLine": "import { BrowserGamepad } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Collider settings shared by every generated collider unless overridden."],
+      "paragraphs": [
+        "Collider settings shared by every generated collider unless overridden."
+      ],
       "importLine": "import { ColliderDefaults } from '@codexo/exojs-tilemap-physics'",
       "sourceLink": null
     },

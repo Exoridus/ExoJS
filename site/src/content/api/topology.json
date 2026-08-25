@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Primitive topology used when drawing this geometry."],
+      "paragraphs": [
+        "Primitive topology used when drawing this geometry."
+      ],
       "importLine": "import { Topology } from '@codexo/exojs'",
       "sourceLink": null
     },

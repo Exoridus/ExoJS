@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Identity metadata for a connected gamepad. Populated from a ResolvedGamepadDefinition."],
+      "paragraphs": [
+        "Identity metadata for a connected gamepad. Populated from a ResolvedGamepadDefinition."
+      ],
       "importLine": "import { GamepadInfo } from '@codexo/exojs'",
       "sourceLink": null
     },

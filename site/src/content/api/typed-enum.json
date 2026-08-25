@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Type-level mapper that rebuilds `Enum` with every value retyped to `Type`. Useful for \"table-driven\" lookups keyed by an enum."],
+      "paragraphs": [
+        "Type-level mapper that rebuilds `Enum` with every value retyped to `Type`. Useful for \"table-driven\" lookups keyed by an enum."
+      ],
       "importLine": "import { TypedEnum } from '@codexo/exojs'",
       "sourceLink": null
     },

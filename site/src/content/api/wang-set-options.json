@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options for constructing a WangSet."],
+      "paragraphs": [
+        "Options for constructing a WangSet."
+      ],
       "importLine": "import { WangSetOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

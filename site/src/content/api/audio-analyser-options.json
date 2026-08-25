@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for AudioAnalyser."],
+      "paragraphs": [
+        "Construction options for AudioAnalyser."
+      ],
       "importLine": "import { AudioAnalyserOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

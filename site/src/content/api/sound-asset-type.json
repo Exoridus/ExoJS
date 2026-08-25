@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Short audio clips, fully decoded for low-latency playback."],
+      "paragraphs": [
+        "Short audio clips, fully decoded for low-latency playback."
+      ],
       "importLine": "import { SoundAssetType } from '@codexo/exojs'",
       "sourceLink": null
     },

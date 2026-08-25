@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["The edge the outgoing content exits toward - see SlideSceneTransitionOptions.direction."],
+      "paragraphs": [
+        "The edge the outgoing content exits toward - see SlideSceneTransitionOptions.direction."
+      ],
       "importLine": "import { SlideDirection } from '@codexo/exojs'",
       "sourceLink": null
     },

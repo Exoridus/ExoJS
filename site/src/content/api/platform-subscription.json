@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Undo function returned by every `PlatformAdapter` subscription. Calling it twice is a no-op."],
+      "paragraphs": [
+        "Undo function returned by every `PlatformAdapter` subscription. Calling it twice is a no-op."
+      ],
       "importLine": "import { PlatformSubscription } from '@codexo/exojs'",
       "sourceLink": null
     },

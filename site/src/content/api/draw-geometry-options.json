@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options for RenderingContext.drawGeometry."],
+      "paragraphs": [
+        "Options for RenderingContext.drawGeometry."
+      ],
       "importLine": "import { DrawGeometryOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Immutable metadata for one level of a MapWorld - everything needed to decide whether to load it, without loading it."],
+      "paragraphs": [
+        "Immutable metadata for one level of a MapWorld - everything needed to decide whether to load it, without loading it."
+      ],
       "importLine": "import { MapLevel } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Any action kind an ActionMap can hold."],
+      "paragraphs": [
+        "Any action kind an ActionMap can hold."
+      ],
       "importLine": "import { Action } from '@codexo/exojs'",
       "sourceLink": null
     },

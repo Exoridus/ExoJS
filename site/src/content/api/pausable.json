@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A voice that can be paused and resumed in place."],
+      "paragraphs": [
+        "A voice that can be paused and resumed in place."
+      ],
       "importLine": "import { Pausable } from '@codexo/exojs'",
       "sourceLink": null
     },

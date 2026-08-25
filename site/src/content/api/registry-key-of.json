@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Every string key registered in a `SceneRegistryShape` - the type of a valid `change()`/`restore()` key-based navigation target."],
+      "paragraphs": [
+        "Every string key registered in a `SceneRegistryShape` - the type of a valid `change()`/`restore()` key-based navigation target."
+      ],
       "importLine": "import { RegistryKeyOf } from '@codexo/exojs'",
       "sourceLink": null
     },

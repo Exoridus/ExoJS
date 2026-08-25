@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Per-frame context handed to PhasedSceneTransition.enter/ PhasedSceneTransition.exit."],
+      "paragraphs": [
+        "Per-frame context handed to PhasedSceneTransition.enter/ PhasedSceneTransition.exit."
+      ],
       "importLine": "import { SceneTransitionPhaseContext } from '@codexo/exojs'",
       "sourceLink": null
     },

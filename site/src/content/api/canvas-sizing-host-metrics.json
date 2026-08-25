@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["The size of the element a sizing policy tracks, in CSS pixels."],
+      "paragraphs": [
+        "The size of the element a sizing policy tracks, in CSS pixels."
+      ],
       "importLine": "import { CanvasSizingHostMetrics } from '@codexo/exojs'",
       "sourceLink": null
     },

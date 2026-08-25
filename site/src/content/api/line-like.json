@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Structural type for any object that describes a line segment via start and end coordinates."],
+      "paragraphs": [
+        "Structural type for any object that describes a line segment via start and end coordinates."
+      ],
       "importLine": "import { LineLike } from '@codexo/exojs'",
       "sourceLink": null
     },

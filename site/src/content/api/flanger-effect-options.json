@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for FlangerEffect."],
+      "paragraphs": [
+        "Construction options for FlangerEffect."
+      ],
       "importLine": "import { FlangerEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

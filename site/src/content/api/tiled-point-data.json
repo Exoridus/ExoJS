@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A 2D point as written by Tiled (used for tile offsets and object shapes)."],
+      "paragraphs": [
+        "A 2D point as written by Tiled (used for tile offsets and object shapes)."
+      ],
       "importLine": "import { TiledPointData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

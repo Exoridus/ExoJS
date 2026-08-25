@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Direction(s) in which a ScrollContainer can scroll."],
+      "paragraphs": [
+        "Direction(s) in which a ScrollContainer can scroll."
+      ],
       "importLine": "import { ScrollDirection } from '@codexo/exojs'",
       "sourceLink": null
     },

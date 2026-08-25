@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["One frame of a tile animation: which local tile to show, and for how long. Mirrors Tiled's per-tile animation frame model."],
+      "paragraphs": [
+        "One frame of a tile animation: which local tile to show, and for how long. Mirrors Tiled's per-tile animation frame model."
+      ],
       "importLine": "import { TileAnimationFrame } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

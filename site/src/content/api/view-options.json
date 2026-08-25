@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options for View.from."],
+      "paragraphs": [
+        "Options for View.from."
+      ],
       "importLine": "import { ViewOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

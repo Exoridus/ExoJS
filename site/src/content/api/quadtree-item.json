@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["An item stored in a Quadtree. Carries an axis-aligned bounding box and an arbitrary `payload`."],
+      "paragraphs": [
+        "An item stored in a Quadtree. Carries an axis-aligned bounding box and an arbitrary `payload`."
+      ],
       "importLine": "import { QuadtreeItem } from '@codexo/exojs'",
       "sourceLink": null
     },

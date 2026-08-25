@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for DelayEffect."],
+      "paragraphs": [
+        "Construction options for DelayEffect."
+      ],
       "importLine": "import { DelayEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Common playback configuration for Sound and AudioStream."],
+      "paragraphs": [
+        "Common playback configuration for Sound and AudioStream."
+      ],
       "importLine": "import { PlaybackOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

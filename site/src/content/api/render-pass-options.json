@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options shared by every RenderPass."],
+      "paragraphs": [
+        "Options shared by every RenderPass."
+      ],
       "importLine": "import { RenderPassOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

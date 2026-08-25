@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Storage layout for a Look-Up Table texture."],
+      "paragraphs": [
+        "Storage layout for a Look-Up Table texture."
+      ],
       "importLine": "import { LutMode } from '@codexo/exojs'",
       "sourceLink": null
     },

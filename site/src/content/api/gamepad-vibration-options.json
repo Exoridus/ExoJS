@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Effect parameters for Gamepad.vibrate."],
+      "paragraphs": [
+        "Effect parameters for Gamepad.vibrate."
+      ],
       "importLine": "import { GamepadVibrationOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

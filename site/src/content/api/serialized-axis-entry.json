@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["One alternative of a serialized AxisAction binding."],
+      "paragraphs": [
+        "One alternative of a serialized AxisAction binding."
+      ],
       "importLine": "import { SerializedAxisEntry } from '@codexo/exojs'",
       "sourceLink": null
     },

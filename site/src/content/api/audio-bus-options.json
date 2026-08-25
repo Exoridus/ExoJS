@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for AudioBus."],
+      "paragraphs": [
+        "Construction options for AudioBus."
+      ],
       "importLine": "import { AudioBusOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

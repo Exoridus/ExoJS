@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A TiledObjectAlignment with Tiled's orientation-dependent default already applied."],
+      "paragraphs": [
+        "A TiledObjectAlignment with Tiled's orientation-dependent default already applied."
+      ],
       "importLine": "import { TiledResolvedObjectAlignment } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

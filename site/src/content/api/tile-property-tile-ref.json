@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A reference into a tileset region (e.g. an LDtk `Tile`-typed field)."],
+      "paragraphs": [
+        "A reference into a tileset region (e.g. an LDtk `Tile`-typed field)."
+      ],
       "importLine": "import { TilePropertyTileRef } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

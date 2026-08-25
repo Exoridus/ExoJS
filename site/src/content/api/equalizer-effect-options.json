@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for EqualizerEffect."],
+      "paragraphs": [
+        "Construction options for EqualizerEffect."
+      ],
       "importLine": "import { EqualizerEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

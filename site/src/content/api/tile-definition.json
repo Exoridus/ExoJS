@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Optional per-tile metadata in a TileSet. Sparse - only defined tiles carry a definition."],
+      "paragraphs": [
+        "Optional per-tile metadata in a TileSet. Sparse - only defined tiles carry a definition."
+      ],
       "importLine": "import { TileDefinition } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

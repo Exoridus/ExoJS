@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A voice with rate / pitch controls."],
+      "paragraphs": [
+        "A voice with rate / pitch controls."
+      ],
       "importLine": "import { RatePitched } from '@codexo/exojs'",
       "sourceLink": null
     },

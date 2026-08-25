@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Text rendering options for a `text` object (object layers)."],
+      "paragraphs": [
+        "Text rendering options for a `text` object (object layers)."
+      ],
       "importLine": "import { TiledTextData } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

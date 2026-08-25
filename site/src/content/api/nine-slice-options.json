@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Constructor options for NineSliceSprite."],
+      "paragraphs": [
+        "Constructor options for NineSliceSprite."
+      ],
       "importLine": "import { NineSliceOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

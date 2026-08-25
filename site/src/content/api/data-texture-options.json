@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for DataTexture."],
+      "paragraphs": [
+        "Construction options for DataTexture."
+      ],
       "importLine": "import { DataTextureOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

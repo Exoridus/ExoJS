@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for a collider."],
+      "paragraphs": [
+        "Construction options for a collider."
+      ],
       "importLine": "import { ColliderOptions } from '@codexo/exojs-physics'",
       "sourceLink": null
     },

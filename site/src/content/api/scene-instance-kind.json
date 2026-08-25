@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Which kind of scene activation a disambiguating SceneDirector.unload call targets."],
+      "paragraphs": [
+        "Which kind of scene activation a disambiguating SceneDirector.unload call targets."
+      ],
       "importLine": "import { SceneInstanceKind } from '@codexo/exojs'",
       "sourceLink": null
     },

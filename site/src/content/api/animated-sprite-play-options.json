@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Per-call options passed to AnimatedSprite.play."],
+      "paragraphs": [
+        "Per-call options passed to AnimatedSprite.play."
+      ],
       "importLine": "import { AnimatedSpritePlayOptions } from '@codexo/exojs'",
       "sourceLink": null
     },

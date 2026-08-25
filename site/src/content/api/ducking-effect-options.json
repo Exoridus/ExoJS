@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Construction options for DuckingEffect. `sidechain` is required."],
+      "paragraphs": [
+        "Construction options for DuckingEffect. `sidechain` is required."
+      ],
       "importLine": "import { DuckingEffectOptions } from '@codexo/exojs-audio-fx'",
       "sourceLink": null
     },

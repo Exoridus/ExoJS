@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["The render-order values Tiled may write for an orthogonal map."],
+      "paragraphs": [
+        "The render-order values Tiled may write for an orthogonal map."
+      ],
       "importLine": "import { TiledRenderOrder } from '@codexo/exojs-tiled'",
       "sourceLink": null
     },

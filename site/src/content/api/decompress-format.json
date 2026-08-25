@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Compression formats supported by the native `DecompressionStream`."],
+      "paragraphs": [
+        "Compression formats supported by the native `DecompressionStream`."
+      ],
       "importLine": "import { DecompressFormat } from '@codexo/exojs'",
       "sourceLink": null
     },

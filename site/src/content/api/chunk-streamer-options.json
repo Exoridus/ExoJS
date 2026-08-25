@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Options for a ChunkStreamer. All optional."],
+      "paragraphs": [
+        "Options for a ChunkStreamer. All optional."
+      ],
       "importLine": "import { ChunkStreamerOptions } from '@codexo/exojs-tilemap'",
       "sourceLink": null
     },

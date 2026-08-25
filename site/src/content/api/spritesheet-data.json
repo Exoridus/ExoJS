@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["JSON-compatible descriptor that drives Spritesheet.parse. Matches the Aseprite / TexturePacker output format (subset)."],
+      "paragraphs": [
+        "JSON-compatible descriptor that drives Spritesheet.parse. Matches the Aseprite / TexturePacker output format (subset)."
+      ],
       "importLine": "import { SpritesheetData } from '@codexo/exojs'",
       "sourceLink": null
     },

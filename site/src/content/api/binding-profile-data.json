@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Wire format BindingProfile.toJSON produces and BindingProfile.fromJSON accepts."],
+      "paragraphs": [
+        "Wire format BindingProfile.toJSON produces and BindingProfile.fromJSON accepts."
+      ],
       "importLine": "import { BindingProfileData } from '@codexo/exojs'",
       "sourceLink": null
     },

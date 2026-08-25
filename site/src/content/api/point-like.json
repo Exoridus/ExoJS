@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Structural type for any object with a 2D `x`/`y` position."],
+      "paragraphs": [
+        "Structural type for any object with a 2D `x`/`y` position."
+      ],
       "importLine": "import { PointLike } from '@codexo/exojs'",
       "sourceLink": null
     },

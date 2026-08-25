@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A single contact point on a CollisionEvent. World space."],
+      "paragraphs": [
+        "A single contact point on a CollisionEvent. World space."
+      ],
       "importLine": "import { ContactPoint } from '@codexo/exojs-physics'",
       "sourceLink": null
     },

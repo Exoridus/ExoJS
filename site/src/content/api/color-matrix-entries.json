@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["A 4×5 row-major colour matrix: four rows of `[r, g, b, a, offset]`."],
+      "paragraphs": [
+        "A 4×5 row-major colour matrix: four rows of `[r, g, b, a, offset]`."
+      ],
       "importLine": "import { ColorMatrixEntries } from '@codexo/exojs'",
       "sourceLink": null
     },

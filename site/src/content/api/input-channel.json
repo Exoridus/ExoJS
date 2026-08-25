@@ -18,7 +18,9 @@
       "id": "import",
       "title": "Import",
       "members": [],
-      "paragraphs": ["Channel a single InputBinding can subscribe to."],
+      "paragraphs": [
+        "Channel a single InputBinding can subscribe to."
+      ],
       "importLine": "import { InputChannel } from '@codexo/exojs'",
       "sourceLink": null
     },
