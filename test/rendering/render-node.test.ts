@@ -2,11 +2,12 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderNode } from '#rendering/RenderNode';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+
+import { createRenderBackendDouble } from '../support/render-backend-double';
 
 class TestDrawable extends Drawable {}
 
@@ -15,7 +16,7 @@ const createRuntime = (): RenderBackend => {
   const stats = createRenderStats();
 
   return {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
     stats,
     renderTarget,
     get view() {

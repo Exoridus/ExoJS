@@ -4,6 +4,7 @@ import { RenderPlanPlayer } from '#rendering/plan/RenderPlanPlayer';
 import type { DrawScopeEntry, GroupScope, GroupScopeEntry, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 
+import { createGroupScopeDouble } from '../support/render-scope-double';
 import { renderGroupFromRange } from './helpers/collectRenderGroups';
 
 class BoxDrawable extends Drawable {
@@ -49,13 +50,6 @@ const groupEntry = (scope: GroupScope, seq: number): GroupScopeEntry => ({
   seq,
   zIndex: 0,
   scope,
-});
-
-const groupScope = (entries: Array<DrawScopeEntry | GroupScopeEntry>): GroupScope => ({
-  kind: RenderEntryKind.Group,
-  entries,
-  hasMixedZ: false,
-  preserveDrawOrder: false,
 });
 
 interface PlaybackSpy {
@@ -129,8 +123,8 @@ describe('render plan player', () => {
     const c = new BoxDrawable('c');
     const d = new BoxDrawable('d');
     const e = new BoxDrawable('e');
-    const nested = groupScope([drawEntry(createDrawCommand(d, 3, 7, 7)), drawEntry(createDrawCommand(e, 4, 7, 7))]);
-    const root = groupScope([
+    const nested = createGroupScopeDouble([drawEntry(createDrawCommand(d, 3, 7, 7)), drawEntry(createDrawCommand(e, 4, 7, 7))]);
+    const root = createGroupScopeDouble([
       drawEntry(createDrawCommand(a, 0, 1, 1)),
       drawEntry(createDrawCommand(b, 1, 1, 1)),
       groupEntry(nested, 2),
@@ -175,7 +169,7 @@ describe('render plan player', () => {
   test('undefined groupIndex draws remain singleton groups', () => {
     const a = new BoxDrawable('a');
     const b = new BoxDrawable('b');
-    const root = groupScope([drawEntry(createDrawCommand(a, 0, undefined, 1)), drawEntry(createDrawCommand(b, 1, undefined, 1))]);
+    const root = createGroupScopeDouble([drawEntry(createDrawCommand(a, 0, undefined, 1)), drawEntry(createDrawCommand(b, 1, undefined, 1))]);
     const spy = createPlaybackSpy();
 
     RenderPlanPlayer.playScope(root, spy.backend);
@@ -195,8 +189,8 @@ describe('render plan player', () => {
     const e = new BoxDrawable('e');
     const u = new BoxDrawable('u');
     const v = new BoxDrawable('v');
-    const nested = groupScope([drawEntry(createDrawCommand(d, 3, 7, 7)), drawEntry(createDrawCommand(e, 4, 7, 7))]);
-    const root = groupScope([
+    const nested = createGroupScopeDouble([drawEntry(createDrawCommand(d, 3, 7, 7)), drawEntry(createDrawCommand(e, 4, 7, 7))]);
+    const root = createGroupScopeDouble([
       drawEntry(createDrawCommand(a, 0, 1, 1)),
       drawEntry(createDrawCommand(b, 1, 1, 1)),
       groupEntry(nested, 2),

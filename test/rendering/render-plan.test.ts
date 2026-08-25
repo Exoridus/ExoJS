@@ -6,12 +6,13 @@ import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+
+import { createRenderBackendDouble } from '../support/render-backend-double';
 
 class BoxDrawable extends Drawable {
   public constructor(public readonly id: string) {
@@ -80,7 +81,7 @@ const createRuntime = () => {
   });
 
   const backend: RenderBackend = {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: root, stats }),
     // Resolution 1 keeps every internal target at its logical size, which is
     // what these tests assert on. The pixel-ratio behaviour of the same targets
     // is covered by the browser DPR lanes, where a real surface exists.

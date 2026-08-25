@@ -7,10 +7,10 @@ import { bench, describe } from 'vitest';
 import { Container } from '../../src/rendering/Container';
 import { Drawable } from '../../src/rendering/Drawable';
 import type { RenderBackend } from '../../src/rendering/RenderBackend';
-import { RenderBackendType } from '../../src/rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '../../src/rendering/RenderStats';
 import { RenderTarget } from '../../src/rendering/RenderTarget';
 import { RenderTexture } from '../../src/rendering/texture/RenderTexture';
+import { createRenderBackendDouble } from '../support/render-backend-double';
 
 const VIEWPORT_W = 800;
 const VIEWPORT_H = 600;
@@ -21,7 +21,7 @@ const createStubRuntime = (): RenderBackend => {
   const stats = createRenderStats();
 
   return {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
     stats,
     renderTarget,
     get view() {

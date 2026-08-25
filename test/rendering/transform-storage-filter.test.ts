@@ -6,6 +6,7 @@ import type { DrawScopeEntry, GroupScope, ScopeEntry } from '#rendering/plan/Ren
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { TRANSFORM_FLOATS_PER_ROW, TransformBuffer } from '#rendering/TransformBuffer';
 
+import { createGroupScopeDouble } from '../support/render-scope-double';
 import { forEachGroupCommand } from './helpers/collectRenderGroups';
 
 const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
@@ -64,13 +65,6 @@ const drawEntry = (command: DrawCommand): DrawScopeEntry => ({
   seq: command.seq,
   zIndex: command.zIndex,
   command,
-});
-
-const groupScope = (entries: DrawScopeEntry[]): GroupScope => ({
-  kind: RenderEntryKind.Group,
-  entries,
-  hasMixedZ: false,
-  preserveDrawOrder: false,
 });
 
 // Resolve by constructor identity, like the real RendererRegistry does for the
@@ -137,7 +131,7 @@ const buildMixedScope = () => {
 
   // Two consuming sprites coalesce into one group; each text node forms its own
   // group (distinct material), matching how the optimizer separates renderers.
-  const scope = groupScope([
+  const scope = createGroupScopeDouble([
     drawEntry(createDrawCommand(a, 0, 1, 1)),
     drawEntry(createDrawCommand(b, 1, 1, 1)),
     drawEntry(createDrawCommand(t1, 2, 2, 2)),
@@ -229,7 +223,7 @@ describe('render-group upload skips non-consuming transform writes', () => {
   test('a group made entirely of non-consuming draws writes nothing', () => {
     const t1 = new NonConsumingDrawable(10, 20, new Color());
     const t2 = new NonConsumingDrawable(30, 40, new Color());
-    const scope = groupScope([drawEntry(createDrawCommand(t1, 0, 1, 1)), drawEntry(createDrawCommand(t2, 1, 1, 1))]);
+    const scope = createGroupScopeDouble([drawEntry(createDrawCommand(t1, 0, 1, 1)), drawEntry(createDrawCommand(t2, 1, 1, 1))]);
 
     const { buffer, writtenNodeIndices, drawOrder } = playFiltered(scope);
 
@@ -254,7 +248,7 @@ describe('render-group upload records transform write stats', () => {
     const t1 = new NonConsumingDrawable(10, 20, new Color());
     const t2 = new NonConsumingDrawable(30, 40, new Color());
     const t3 = new NonConsumingDrawable(50, 60, new Color());
-    const scope = groupScope([drawEntry(createDrawCommand(t1, 0, 1, 1)), drawEntry(createDrawCommand(t2, 1, 1, 1)), drawEntry(createDrawCommand(t3, 2, 1, 1))]);
+    const scope = createGroupScopeDouble([drawEntry(createDrawCommand(t1, 0, 1, 1)), drawEntry(createDrawCommand(t2, 1, 1, 1)), drawEntry(createDrawCommand(t3, 2, 1, 1))]);
 
     const { buffer } = playFiltered(scope);
 
@@ -265,7 +259,7 @@ describe('render-group upload records transform write stats', () => {
   test('a group of only consuming draws records no skips', () => {
     const a = new ConsumingDrawable(10, 20, new Color());
     const b = new ConsumingDrawable(30, 40, new Color());
-    const scope = groupScope([drawEntry(createDrawCommand(a, 0, 1, 1)), drawEntry(createDrawCommand(b, 1, 1, 1))]);
+    const scope = createGroupScopeDouble([drawEntry(createDrawCommand(a, 0, 1, 1)), drawEntry(createDrawCommand(b, 1, 1, 1))]);
 
     const { buffer } = playFiltered(scope);
 

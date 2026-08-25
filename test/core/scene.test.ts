@@ -5,11 +5,12 @@ import { SceneState } from '#core/SceneState';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
+
+import { createRenderBackendDouble } from '../support/render-backend-double';
 
 class DummyDrawable extends Drawable {}
 
@@ -24,7 +25,7 @@ const createRuntime = (): { backend: RenderBackend; context: RenderingContext } 
   const stats = createRenderStats();
 
   const backend: RenderBackend = {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
     stats,
     renderTarget,
     get view() {

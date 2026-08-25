@@ -7,6 +7,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { TransformBuffer } from '#rendering/TransformBuffer';
 import { WebGpuTransformStorage } from '#rendering/webgpu/WebGpuTransformStorage';
 
+import { createGroupScopeDouble } from '../support/render-scope-double';
 import { forEachGroupCommand } from './helpers/collectRenderGroups';
 
 // Sprite/Mesh-like: renderer reads the shared transform storage.
@@ -70,13 +71,6 @@ const drawEntry = (command: DrawCommand): DrawScopeEntry => ({
   seq: command.seq,
   zIndex: command.zIndex,
   command,
-});
-
-const groupScope = (entries: DrawScopeEntry[]): GroupScope => ({
-  kind: RenderEntryKind.Group,
-  entries,
-  hasMixedZ: false,
-  preserveDrawOrder: false,
 });
 
 // ---------------------------------------------------------------------------
@@ -215,7 +209,7 @@ const buildConsumingScope = (n: number): GroupScope => {
     entries.push(drawEntry(createDrawCommand(d, i)));
   }
 
-  return groupScope(entries);
+  return createGroupScopeDouble(entries);
 };
 
 // K consuming + M opt-out draws, interleaved, all in one coalescing group.
@@ -236,7 +230,7 @@ const buildMixedScope = (consumingCount: number, optOutCount: number): GroupScop
     entries.push(drawEntry(createDrawCommand(t, nodeIndex++)));
   }
 
-  return groupScope(entries);
+  return createGroupScopeDouble(entries);
 };
 
 describe('transform buffer group upload count (WebGL2 path)', () => {

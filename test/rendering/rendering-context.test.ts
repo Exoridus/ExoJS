@@ -9,7 +9,6 @@ import { MeshMaterial } from '#rendering/material/MeshMaterial';
 import { ShaderSource } from '#rendering/material/ShaderSource';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { RenderBatch } from '#rendering/RenderBatch';
 import { RenderingContext } from '#rendering/RenderingContext';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
@@ -18,6 +17,8 @@ import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import { View } from '#rendering/View';
+
+import { createRenderBackendDouble } from '../support/render-backend-double';
 
 const createTexture = (width = 16, height = 16): Texture => {
   const canvas = document.createElement('canvas');
@@ -70,7 +71,7 @@ const createMockBackend = () => {
   });
 
   const backend: RenderBackend = {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: root, stats }),
     stats,
     get renderTarget() {
       return currentTarget;

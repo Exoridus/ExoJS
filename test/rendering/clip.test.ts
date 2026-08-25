@@ -3,12 +3,13 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Geometry } from '#rendering/geometry/Geometry';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+
+import { createRenderBackendDouble } from '../support/render-backend-double';
 
 interface StencilCall {
   readonly shape: Geometry;
@@ -40,7 +41,7 @@ const createRuntime = () => {
   const stencilCalls: StencilCall[] = [];
 
   const runtime: RenderBackend = {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: root, stats }),
     stats,
     get renderTarget() {
       return currentTarget;

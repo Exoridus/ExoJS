@@ -6,11 +6,12 @@ import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
 import type { GroupScope } from '#rendering/plan/RenderScope';
 import type { RetainedDrawData } from '#rendering/plan/RetainedRecordPool';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { BlendModes } from '#rendering/types';
+
+import { createRenderBackendDouble } from '../support/render-backend-double';
 
 class BoxDrawable extends Drawable {
   public constructor(public readonly id: string) {
@@ -173,7 +174,7 @@ const createRuntime = () => {
   const stats = createRenderStats();
 
   const backend: RenderBackend = {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: root, stats }),
     stats,
     get renderTarget() {
       return currentTarget;
