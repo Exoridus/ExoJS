@@ -22,6 +22,7 @@
 
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
+import type { Drawable } from '#rendering/Drawable';
 import type { RenderNode } from '#rendering/RenderNode';
 import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import { RepeatingSprite } from '#rendering/sprite/RepeatingSprite';
@@ -133,8 +134,8 @@ const countBindGroups = async (device: GPUDevice, prefix: string, run: () => Pro
   return count;
 };
 
-const pipelineCacheSize = (backend: WebGpuBackend, node: RenderNode): number => {
-  const renderer = backend.rendererRegistry.resolve(node) as unknown as { _pipelines: Map<string, unknown> };
+const pipelineCacheSize = (backend: WebGpuBackend, drawable: Drawable): number => {
+  const renderer = backend.rendererRegistry.resolve(drawable) as unknown as { _pipelines: Map<string, unknown> };
 
   return renderer._pipelines.size;
 };

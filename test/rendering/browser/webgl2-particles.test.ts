@@ -74,7 +74,7 @@ const createBackend = async (): Promise<WebGl2Backend> => {
   // Extension descriptor. Browser tests construct a bare backend (bypassing
   // Application), so the particle binding must be wired explicitly, same as
   // `wireCoreRenderers` does for Sprite/Mesh/Text.
-  materializeRendererBindings(backend, particlesExtension.renderers);
+  materializeRendererBindings(backend, particlesExtension.renderers!);
 
   return backend;
 };

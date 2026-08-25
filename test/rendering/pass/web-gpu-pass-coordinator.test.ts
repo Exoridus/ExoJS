@@ -46,8 +46,6 @@ const createMockBackend = (
   const flush = vi.fn(() => undefined);
   const pushScissorRect = vi.fn((_bounds: Rectangle) => undefined);
   const popScissorRect = vi.fn(() => undefined);
-  const pushStencilClip = vi.fn((_shape: Geometry, _transform: Matrix) => undefined);
-  const popStencilClip = vi.fn(() => undefined);
   const targetHasContent = vi.fn((target: RenderTarget) => contentTargets.has(target));
 
   const passEncoder = { end: vi.fn(), setScissorRect: vi.fn(), setStencilReference: vi.fn(), setViewport: vi.fn() };
@@ -78,8 +76,6 @@ const createMockBackend = (
     flush,
     pushScissorRect,
     popScissorRect,
-    pushStencilClip,
-    popStencilClip,
     createColorAttachment,
     getScissorRect,
     submit,
@@ -96,8 +92,6 @@ const createMockBackend = (
     flush,
     pushScissorRect,
     popScissorRect,
-    pushStencilClip,
-    popStencilClip,
     targetHasContent,
     beginRenderPass,
     passEncoder,
