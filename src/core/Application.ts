@@ -559,7 +559,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
    * to rebuild on. Read `app.canvas.width`/`height` for that resolution.
    */
   public readonly onResize = new Signal<[number, number, Application]>();
-  public readonly onFrame = new Signal<[Time]>();
+  public readonly onFrame = new Signal<[Duration]>();
   /** Dispatched once per fixed-timestep step (zero or more times per frame), ahead of {@link onFrame}. */
   public readonly onFixedFrame = new Signal<[Duration]>();
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
@@ -1040,15 +1040,15 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     return this._state;
   }
 
-  public get startupTime(): Time {
+  public get startupTime(): Duration {
     return this._startupClock.elapsedTime;
   }
 
-  public get activeTime(): Time {
+  public get activeTime(): Duration {
     return this._activeClock.elapsedTime;
   }
 
-  public get frameTime(): Time {
+  public get frameTime(): Duration {
     return this._frameClock.elapsedTime;
   }
 

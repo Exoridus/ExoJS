@@ -1,7 +1,7 @@
 import type { TimeSource } from '#platform/PlatformAdapter';
 
 import { Clock } from './Clock';
-import { Time } from './Time';
+import { type Duration, Time } from './Time';
 
 /**
  * {@link Clock} variant with a fixed limit. Inherits start/stop/reset/restart
@@ -22,11 +22,11 @@ export class Timer extends Clock {
     }
   }
 
-  public get limit(): Time {
+  public get limit(): Duration {
     return this._limit;
   }
 
-  public set limit(limit: Time) {
+  public set limit(limit: Duration) {
     this._limit.copy(limit);
   }
 

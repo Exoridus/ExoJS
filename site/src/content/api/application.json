@@ -1158,7 +1158,7 @@
         },
         {
           "name": "activeTime",
-          "signature": "activeTime: Time",
+          "signature": "activeTime: Duration",
           "signatureTokens": [
             {
               "text": "activeTime",
@@ -1169,7 +1169,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],
@@ -1389,7 +1389,7 @@
         },
         {
           "name": "frameTime",
-          "signature": "frameTime: Time",
+          "signature": "frameTime: Duration",
           "signatureTokens": [
             {
               "text": "frameTime",
@@ -1400,7 +1400,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],
@@ -1535,7 +1535,7 @@
         },
         {
           "name": "startupTime",
-          "signature": "startupTime: Time",
+          "signature": "startupTime: Duration",
           "signatureTokens": [
             {
               "text": "startupTime",
@@ -1546,7 +1546,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],
@@ -1763,7 +1763,7 @@
         },
         {
           "name": "onFixedFrame",
-          "signature": "onFixedFrame: Signal<[Time]>",
+          "signature": "onFixedFrame: Signal<[Duration]>",
           "signatureTokens": [
             {
               "text": "onFixedFrame",
@@ -1786,7 +1786,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -1804,7 +1804,7 @@
         },
         {
           "name": "onFrame",
-          "signature": "onFrame: Signal<[Time]>",
+          "signature": "onFrame: Signal<[Duration]>",
           "signatureTokens": [
             {
               "text": "onFrame",
@@ -1827,7 +1827,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {

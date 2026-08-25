@@ -1,6 +1,6 @@
 {
   "title": "Time",
-  "description": "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime). Constants on the class hold canonical durations: Time.zero, Time.oneMillisecond, Time.oneSecond, Time.oneMinute, Time.oneHour. Each of those is `Object.freeze`d - they are shared process-wide, so a mutating call on one (e.g. `Time.zero.add(1)`) throws instead of silently corrupting the shared instance for every other caller. The TimeInterval multipliers used by the `factor` parameter (`Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`) are plain `static readonly` numbers, not frozen.",
+  "description": "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime). Arithmetic mutates in place, so an instance reached by more than one owner is a shared mutable value. The canonical constants (Time.zero, Time.oneMillisecond, Time.oneSecond, Time.oneMinute, Time.oneHour) are process-wide and therefore typed as Duration: the mutators are not reachable on them. The TimeInterval multipliers used by the `factor` parameter (`Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`) are plain numbers.",
   "symbol": "Time",
   "kind": "class",
   "subsystem": "core",
@@ -20,7 +20,8 @@
       "members": [],
       "paragraphs": [
         "Time-duration value object stored internally in milliseconds. Provides unit-converted accessors (`seconds`, `minutes`, `hours`) and arithmetic helpers (Time.add, Time.subtract, Time.addTime).",
-        "Constants on the class hold canonical durations: Time.zero, Time.oneMillisecond, Time.oneSecond, Time.oneMinute, Time.oneHour. Each of those is `Object.freeze`d - they are shared process-wide, so a mutating call on one (e.g. `Time.zero.add(1)`) throws instead of silently corrupting the shared instance for every other caller. The TimeInterval multipliers used by the `factor` parameter (`Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`) are plain `static readonly` numbers, not frozen."
+        "Arithmetic mutates in place, so an instance reached by more than one owner is a shared mutable value. The canonical constants (Time.zero, Time.oneMillisecond, Time.oneSecond, Time.oneMinute, Time.oneHour) are process-wide and therefore typed as Duration: the mutators are not reachable on them.",
+        "The TimeInterval multipliers used by the `factor` parameter (`Time.milliseconds`, `Time.seconds`, `Time.minutes`, `Time.hours`) are plain numbers."
       ],
       "importLine": "import { Time } from '@codexo/exojs'",
       "sourceLink": null
@@ -252,7 +253,7 @@
         },
         {
           "name": "copy",
-          "signature": "copy(time: Time): this",
+          "signature": "copy(time: Duration): this",
           "signatureTokens": [
             {
               "text": "copy",
@@ -271,7 +272,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -290,7 +291,7 @@
           "params": [
             {
               "name": "time",
-              "type": "Time",
+              "type": "Duration",
               "optional": false
             }
           ],
@@ -328,7 +329,7 @@
         },
         {
           "name": "equals",
-          "signature": "equals(__namedParameters: Partial<Time>): boolean",
+          "signature": "equals(__namedParameters: Partial<Duration>): boolean",
           "signatureTokens": [
             {
               "text": "equals",
@@ -355,7 +356,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -378,7 +379,7 @@
           "params": [
             {
               "name": "__namedParameters",
-              "type": "Partial<Time>",
+              "type": "Partial<Duration>",
               "optional": false
             }
           ],
@@ -387,7 +388,7 @@
         },
         {
           "name": "greaterThan",
-          "signature": "greaterThan(time: Time): boolean",
+          "signature": "greaterThan(time: Duration): boolean",
           "signatureTokens": [
             {
               "text": "greaterThan",
@@ -406,7 +407,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -425,7 +426,7 @@
           "params": [
             {
               "name": "time",
-              "type": "Time",
+              "type": "Duration",
               "optional": false
             }
           ],
@@ -434,7 +435,7 @@
         },
         {
           "name": "lessThan",
-          "signature": "lessThan(time: Time): boolean",
+          "signature": "lessThan(time: Duration): boolean",
           "signatureTokens": [
             {
               "text": "lessThan",
@@ -453,7 +454,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -472,7 +473,7 @@
           "params": [
             {
               "name": "time",
-              "type": "Time",
+              "type": "Duration",
               "optional": false
             }
           ],
@@ -1141,7 +1142,7 @@
         },
         {
           "name": "oneHour",
-          "signature": "oneHour: Time",
+          "signature": "oneHour: Duration",
           "signatureTokens": [
             {
               "text": "oneHour",
@@ -1152,17 +1153,17 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Canonical one-hour duration. Frozen - mutating methods throw instead of corrupting the shared instance."
+          "description": "Canonical one-hour duration. Shared process-wide; copy it to obtain a duration you own."
         },
         {
           "name": "oneMillisecond",
-          "signature": "oneMillisecond: Time",
+          "signature": "oneMillisecond: Duration",
           "signatureTokens": [
             {
               "text": "oneMillisecond",
@@ -1173,17 +1174,17 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Canonical one-millisecond duration. Frozen - mutating methods throw instead of corrupting the shared instance."
+          "description": "Canonical one-millisecond duration. Shared process-wide; copy it to obtain a duration you own."
         },
         {
           "name": "oneMinute",
-          "signature": "oneMinute: Time",
+          "signature": "oneMinute: Duration",
           "signatureTokens": [
             {
               "text": "oneMinute",
@@ -1194,17 +1195,17 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Canonical one-minute duration. Frozen - mutating methods throw instead of corrupting the shared instance."
+          "description": "Canonical one-minute duration. Shared process-wide; copy it to obtain a duration you own."
         },
         {
           "name": "oneSecond",
-          "signature": "oneSecond: Time",
+          "signature": "oneSecond: Duration",
           "signatureTokens": [
             {
               "text": "oneSecond",
@@ -1215,13 +1216,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Canonical one-second duration. Frozen - mutating methods throw instead of corrupting the shared instance."
+          "description": "Canonical one-second duration. Shared process-wide; copy it to obtain a duration you own."
         },
         {
           "name": "seconds",
@@ -1246,7 +1247,7 @@
         },
         {
           "name": "zero",
-          "signature": "zero: Time",
+          "signature": "zero: Duration",
           "signatureTokens": [
             {
               "text": "zero",
@@ -1257,13 +1258,13 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],
           "params": [],
           "returnType": null,
-          "description": "Canonical zero duration. Frozen - mutating methods throw instead of corrupting the shared instance."
+          "description": "Canonical zero duration. Shared process-wide; copy it to obtain a duration you own."
         },
         {
           "name": "hours",

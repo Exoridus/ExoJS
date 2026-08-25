@@ -31,7 +31,7 @@
       "members": [
         {
           "name": "new",
-          "signature": "new(startTime: Time, autoStart: boolean, timeSource: TimeSource): Clock",
+          "signature": "new(autoStart: boolean, timeSource: TimeSource): Clock",
           "signatureTokens": [
             {
               "text": "new",
@@ -39,22 +39,6 @@
             },
             {
               "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": "startTime",
-              "kind": "param"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            },
-            {
-              "text": ", ",
               "kind": "punctuation"
             },
             {
@@ -99,11 +83,6 @@
             }
           ],
           "params": [
-            {
-              "name": "startTime",
-              "type": "Time",
-              "optional": false
-            },
             {
               "name": "autoStart",
               "type": "boolean",
@@ -367,7 +346,7 @@
         },
         {
           "name": "elapsedTime",
-          "signature": "elapsedTime: Time",
+          "signature": "elapsedTime: Duration",
           "signatureTokens": [
             {
               "text": "elapsedTime",
@@ -378,7 +357,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],

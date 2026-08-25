@@ -370,7 +370,7 @@
         },
         {
           "name": "elapsedTime",
-          "signature": "elapsedTime: Time",
+          "signature": "elapsedTime: Duration",
           "signatureTokens": [
             {
               "text": "elapsedTime",
@@ -381,7 +381,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],
@@ -412,7 +412,7 @@
         },
         {
           "name": "limit",
-          "signature": "limit: Time",
+          "signature": "limit: Duration",
           "signatureTokens": [
             {
               "text": "limit",
@@ -423,7 +423,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             }
           ],

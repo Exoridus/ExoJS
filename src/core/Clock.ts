@@ -1,6 +1,6 @@
 import type { TimeSource } from '#platform/PlatformAdapter';
 
-import { Time } from './Time';
+import { type Duration, Time } from './Time';
 import { getPreciseTime } from './utils';
 
 /** The host's own monotonic clock, used by any clock given no other source. */
@@ -44,7 +44,7 @@ export class Clock {
    * the stop point. Returns the same {@link Time} instance - read the
    * scalar fields if you need an unchanging snapshot.
    */
-  public get elapsedTime(): Time {
+  public get elapsedTime(): Duration {
     if (this._running) {
       const now = this._timeSource.now();
 

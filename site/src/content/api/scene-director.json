@@ -446,7 +446,7 @@
         },
         {
           "name": "fixedUpdate",
-          "signature": "fixedUpdate(step: Time): this",
+          "signature": "fixedUpdate(step: Duration): this",
           "signatureTokens": [
             {
               "text": "fixedUpdate",
@@ -465,7 +465,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -484,7 +484,7 @@
           "params": [
             {
               "name": "step",
-              "type": "Time",
+              "type": "Duration",
               "optional": false
             }
           ],
@@ -626,7 +626,7 @@
         },
         {
           "name": "preUpdate",
-          "signature": "preUpdate(delta: Time): this",
+          "signature": "preUpdate(delta: Duration): this",
           "signatureTokens": [
             {
               "text": "preUpdate",
@@ -645,7 +645,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -664,7 +664,7 @@
           "params": [
             {
               "name": "delta",
-              "type": "Time",
+              "type": "Duration",
               "optional": false
             }
           ],
@@ -974,7 +974,7 @@
         },
         {
           "name": "update",
-          "signature": "update(delta: Time): this",
+          "signature": "update(delta: Duration): this",
           "signatureTokens": [
             {
               "text": "update",
@@ -993,7 +993,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -1012,7 +1012,7 @@
           "params": [
             {
               "name": "delta",
-              "type": "Time",
+              "type": "Duration",
               "optional": false
             }
           ],

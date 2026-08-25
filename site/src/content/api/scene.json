@@ -1,6 +1,6 @@
 {
   "title": "Scene",
-  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type - the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } `AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it: class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle. Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
+  "description": "A scene's lifecycle host. Subclass to define scene behavior: class GameScene extends Scene { override init(): void { ... } override update(delta: Duration): void { ... } override draw(context: RenderingContext): void { ... } } `Data` is this scene's activation-data type - the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default: class TitleScene extends Scene { ... } A scene that needs typed data declares it through the generic: interface GameData { readonly level: number; } class GameScene extends Scene<GameData> { ... } `AppLike` (second generic, default Application) types Scene.app as the concrete Application subclass the scene runs under, so a project's own `Application` members are visible inside scene code, not just at the call site that constructs it: class AppScene<Data = void> extends Scene<Data, GameApplication> {} class TitleScene extends AppScene { ... } // this.app: GameApplication For a project whose own base scene needs `typeof app` (an already- constructed `Application` instance) rather than a named subclass, see ApplicationOf's doc for the explicit-fixed-point pattern required to avoid an unresolvable inference cycle. Scene-bound facilities (Scene.systems, Scene.loader, Scene.inputs, Scene.interaction, Scene.tweens, Scene.audio) are unavailable during construction and class-field initialization - they become available once the scene is attached and remain available through Scene.load, Scene.init, the frame hooks, Scene.unload, and Scene.destroy.",
   "symbol": "Scene",
   "kind": "class",
   "subsystem": "core",
@@ -20,7 +20,7 @@
       "members": [],
       "paragraphs": [
         "A scene's lifecycle host. Subclass to define scene behavior:",
-        "class GameScene extends Scene { override init(): void { ... } override update(delta: Time): void { ... } override draw(context: RenderingContext): void { ... } }",
+        "class GameScene extends Scene { override init(): void { ... } override update(delta: Duration): void { ... } override draw(context: RenderingContext): void { ... } }",
         "`Data` is this scene's activation-data type - the value passed to Scene.load and Scene.init. Scenes that need no activation data use the default:",
         "class TitleScene extends Scene { ... }",
         "A scene that needs typed data declares it through the generic:",
@@ -267,7 +267,7 @@
         },
         {
           "name": "fixedUpdate",
-          "signature": "fixedUpdate(_step: Time): Synchronous",
+          "signature": "fixedUpdate(_step: Duration): Synchronous",
           "signatureTokens": [
             {
               "text": "fixedUpdate",
@@ -286,7 +286,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -305,7 +305,7 @@
           "params": [
             {
               "name": "_step",
-              "type": "Time",
+              "type": "Duration",
               "optional": false
             }
           ],
@@ -452,7 +452,7 @@
         },
         {
           "name": "preUpdate",
-          "signature": "preUpdate(_delta: Time): Synchronous",
+          "signature": "preUpdate(_delta: Duration): Synchronous",
           "signatureTokens": [
             {
               "text": "preUpdate",
@@ -471,7 +471,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -490,7 +490,7 @@
           "params": [
             {
               "name": "_delta",
-              "type": "Time",
+              "type": "Duration",
               "optional": false
             }
           ],
@@ -671,7 +671,7 @@
         },
         {
           "name": "update",
-          "signature": "update(_delta: Time): Synchronous",
+          "signature": "update(_delta: Duration): Synchronous",
           "signatureTokens": [
             {
               "text": "update",
@@ -690,7 +690,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -709,7 +709,7 @@
           "params": [
             {
               "name": "_delta",
-              "type": "Time",
+              "type": "Duration",
               "optional": false
             }
           ],

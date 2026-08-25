@@ -359,7 +359,7 @@
         },
         {
           "name": "preUpdate",
-          "signature": "preUpdate(delta: Time): void",
+          "signature": "preUpdate(delta: Duration): void",
           "signatureTokens": [
             {
               "text": "preUpdate",
@@ -378,7 +378,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "Time",
+              "text": "Duration",
               "kind": "type"
             },
             {
@@ -397,7 +397,7 @@
           "params": [
             {
               "name": "delta",
-              "type": "Time",
+              "type": "Duration",
               "optional": false
             }
           ],
