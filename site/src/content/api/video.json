@@ -2684,7 +2684,7 @@
         },
         {
           "name": "analyserTarget",
-          "signature": "analyserTarget: GainNode | null",
+          "signature": "analyserTarget: AudioNode | null",
           "signatureTokens": [
             {
               "text": "analyserTarget",
@@ -2695,7 +2695,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "GainNode",
+              "text": "AudioNode",
               "kind": "type"
             },
             {
@@ -2709,7 +2709,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The Web Audio GainNode for this video's audio stream, or null when the audio context has not yet been initialized. Connect an analyser node here for audio-reactive visuals."
+          "description": "The Web Audio node this video's audio stream terminates in, or null when the audio context has not yet been initialized. Connect an analyser node here for audio-reactive visuals. Which concrete node type this is belongs to the routing implementation and is not part of the contract."
         },
         {
           "name": "anchor",

@@ -106,6 +106,14 @@ const createMockVideoElement = (options: MockVideoElementOptions = {}): MockVide
   };
 };
 
+/**
+ * The audio routing terminates in a `GainNode`, but `analyserTarget` exposes
+ * only the `AudioNode` a caller may rely on - attaching an analyser needs
+ * nothing more. The volume and mute cases assert on the gain ramp itself, so
+ * they name the concrete node the setup builds.
+ */
+const gainTarget = (video: Video): GainNode => video.analyserTarget as GainNode;
+
 /** A minimal `RenderPlanBuilder` fake - just enough surface for `RenderNode._collect`. */
 const createBuilder = (): {
   view: View;
@@ -267,7 +275,7 @@ describe('Video', () => {
     test('changes the live gain node target when muted and unmuted', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
-      const gainNode = video.analyserTarget!;
+      const gainNode = gainTarget(video);
       const gainSpy = vi.spyOn(gainNode.gain, 'setTargetAtTime');
 
       video.volume = 0.6;
@@ -336,7 +344,7 @@ describe('Video', () => {
     test('setMuted no-ops when unchanged and updates the gain target when changed', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);
-      const gainNode = video.analyserTarget!;
+      const gainNode = gainTarget(video);
       const gainSpy = vi.spyOn(gainNode.gain, 'setTargetAtTime');
 
       video.muted = false; // already false — no-op branch
