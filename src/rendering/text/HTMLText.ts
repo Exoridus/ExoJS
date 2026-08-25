@@ -167,7 +167,7 @@ export class HTMLText extends Container {
     const dataUri = `data:${fontMime[format]};base64,${HTMLText._toBase64(data)}`;
     const existing = this._fonts.findIndex(f => f.family === family);
 
-    if (existing >= 0) {
+    if (existing !== -1) {
       this._fonts[existing] = { family, dataUri };
     } else {
       this._fonts.push({ family, dataUri });
@@ -180,7 +180,7 @@ export class HTMLText extends Container {
   /** Remove a previously registered font and trigger a re-render. */
   public removeFont(family: string): this {
     const idx = this._fonts.findIndex(f => f.family === family);
-    if (idx >= 0) {
+    if (idx !== -1) {
       this._fonts.splice(idx, 1);
       this._schedule();
     }
@@ -216,7 +216,7 @@ export class HTMLText extends Container {
 
   private _schedule(): void {
     const version = ++this._renderVersion;
-    this._activeRender = this._render(version).catch(error => {
+    this._activeRender = this._render(version).catch((error: unknown) => {
       logger.warn('HTMLText render failed.', { source: 'HTMLText', ...(error instanceof Error && { error }) });
     });
   }

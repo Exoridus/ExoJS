@@ -9,7 +9,6 @@ type Language = 'en' | 'de';
 
 export interface LanguagePickerProps {
     baseUrl: string;
-    currentPath: string;
     locale: Language;
 }
 

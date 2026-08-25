@@ -447,7 +447,7 @@ export class SceneDirector<Registry extends SceneRegistryShape<Registry> = {}> {
             claimedEntry.status = 'ready';
             this._preloaded.set(resolvedTarget, claimedEntry);
           } else {
-            void this._disposeScene(claimedEntry.scope, { dispatchStopScene: false }).catch(disposeError => {
+            void this._disposeScene(claimedEntry.scope, { dispatchStopScene: false }).catch((disposeError: unknown) => {
               const normalized = disposeError instanceof Error ? disposeError : new Error(String(disposeError));
 
               logger.error('SceneDirector.change() failed to dispose an aborted claimed preload that could not be restored.', {

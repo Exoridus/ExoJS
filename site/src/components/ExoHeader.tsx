@@ -75,7 +75,7 @@ export function ExoHeader({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
                         <GlobalSearch baseUrl={baseUrl} />
                     </div>
                     <ThemeToggle />
-                    <LanguagePicker baseUrl={baseUrl} currentPath={currentPath} locale={normalizedLocale} />
+                    <LanguagePicker baseUrl={baseUrl} locale={normalizedLocale} />
                 </div>
                 <div className={css(styles, 'mobile-tools')}>
                     <button
@@ -131,7 +131,7 @@ export function ExoHeader({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
                     </section>
                     <section className={css(styles, 'sheet-block')}>
                         <h3>LANGUAGE</h3>
-                        <LanguagePicker baseUrl={baseUrl} currentPath={currentPath} locale={normalizedLocale} />
+                        <LanguagePicker baseUrl={baseUrl} locale={normalizedLocale} />
                     </section>
                     <section className={css(styles, 'sheet-block')}>
                         <h3>PROJECT</h3>
