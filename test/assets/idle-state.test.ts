@@ -30,7 +30,7 @@ describe('idle load state', () => {
   });
 
   it('a manually constructed runtime resource is never idle', () => {
-    expect(Texture.fromColor(0xff0000).state).toBe('ready');
+    expect(Texture.fromColor('#ff0000').state).toBe('ready');
   });
 
   it('an idle resource leaf is still a usable placeholder', () => {

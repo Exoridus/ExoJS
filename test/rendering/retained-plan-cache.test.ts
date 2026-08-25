@@ -8,6 +8,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import type { View } from '#rendering/View';
 
 const material: MaterialKey = { rendererId: 1, blendMode: 0, textureId: -1, shaderId: -1, pipelineKey: 1, bindKey: 1, ownMaterial: false };
 const fakeBackendA = {} as RenderBackend;
@@ -200,7 +201,7 @@ const createTestBackend = (): RenderBackend => {
     resize() {
       return this;
     },
-    setView(v) {
+    setView(v: View | null) {
       renderTarget.setView(v);
       return this;
     },

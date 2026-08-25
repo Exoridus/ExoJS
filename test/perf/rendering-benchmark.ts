@@ -13,10 +13,10 @@ import { performance } from 'node:perf_hooks';
 import { Container } from '../../src/rendering/Container';
 import { Drawable } from '../../src/rendering/Drawable';
 import type { RenderBackend } from '../../src/rendering/RenderBackend';
-import { RenderBackendType } from '../../src/rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '../../src/rendering/RenderStats';
 import { RenderTarget } from '../../src/rendering/RenderTarget';
 import { RenderTexture } from '../../src/rendering/texture/RenderTexture';
+import { createRenderBackendDouble } from '../support/render-backend-double';
 import type { BenchmarkResult, ColumnDef } from './harness';
 import { formatResults, writeResults } from './harness';
 
@@ -49,7 +49,7 @@ const createStubRuntime = (): RenderBackend => {
   const stats = createRenderStats();
 
   return {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
     stats,
     renderTarget,
     get view() {

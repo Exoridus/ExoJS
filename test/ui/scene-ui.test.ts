@@ -21,20 +21,20 @@ import { frameDelta } from '../support/frame-delta';
 const CAMERA_OFFSET = 1000;
 
 class TestSprite extends Drawable {
-  private readonly _bounds = new Rectangle(0, 0, 0, 0);
+  private readonly _rect = new Rectangle(0, 0, 0, 0);
 
   public setBounds(x: number, y: number, width: number, height: number): this {
-    this._bounds.set(x, y, width, height);
+    this._rect.set(x, y, width, height);
 
     return this;
   }
 
   public override contains(x: number, y: number): boolean {
-    return x >= this._bounds.x && x < this._bounds.x + this._bounds.width && y >= this._bounds.y && y < this._bounds.y + this._bounds.height;
+    return x >= this._rect.x && x < this._rect.x + this._rect.width && y >= this._rect.y && y < this._rect.y + this._rect.height;
   }
 
   public override getBounds(): Rectangle {
-    return this._bounds.clone();
+    return this._rect.clone();
   }
 }
 

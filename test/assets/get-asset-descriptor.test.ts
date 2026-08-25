@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, expectTypeOf, test, vi } from 'vitest';
 
 import { Asset } from '#assets/Asset';
+import type { CatalogResourceLeaf, CatalogValueLeaf } from '#assets/assetMeta';
 import { AssetRef } from '#assets/AssetRef';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
@@ -96,9 +97,9 @@ describe('get(Asset.type()) descriptor access', () => {
   test('type: get(Asset.type<primitive>(json)) is AssetRef, get(Asset.type(texture)) is Texture', () => {
     const loader = createCoreLoader();
 
-    // Value descriptor with a primitive payload → AssetRef<primitive>.
-    expectTypeOf(loader.get(Asset.type<number>('json', 'n.json'))).toEqualTypeOf<AssetRef<number>>();
-    // Resource descriptor → its heal-in-place handle.
-    expectTypeOf(loader.get(Asset.type('texture', 'x.png'))).toEqualTypeOf<Texture>();
+    // Value descriptor with a primitive payload → AssetRef<primitive>, branded as a catalog leaf.
+    expectTypeOf(loader.get(Asset.type<number>('json', 'n.json'))).toEqualTypeOf<CatalogValueLeaf<number>>();
+    // Resource descriptor → its heal-in-place handle, branded as a catalog leaf.
+    expectTypeOf(loader.get(Asset.type('texture', 'x.png'))).toEqualTypeOf<CatalogResourceLeaf<Texture>>();
   });
 });

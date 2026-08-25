@@ -51,7 +51,7 @@ describe('Assets.group', () => {
       Assets.group('texture', {
         // A nested group produces { kind, source, ... } values - reject them with
         // guidance to spread groups into Assets.from(...) instead.
-        ...(Assets.group('sound', { jump: 'jump.wav' }) as never),
+        ...Assets.group('sound', { jump: 'jump.wav' }),
       } as never),
     ).toThrow(/type/);
   });

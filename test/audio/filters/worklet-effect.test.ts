@@ -3,6 +3,8 @@
 import { getAudioContext, onAudioContextReady } from '#audio/audio-context';
 import { WorkletEffect } from '#audio/WorkletEffect';
 
+import { mutable } from '../../support/mutable';
+
 // ---------------------------------------------------------------------------
 // Test subclass
 // ---------------------------------------------------------------------------
@@ -317,7 +319,7 @@ describe('WorkletEffect', () => {
     const ctx = getAudioContext();
     const gainSpy = vi.spyOn(ctx, 'createGain');
     const originalState = ctx.state;
-    ctx.state = 'suspended';
+    mutable(ctx).state = 'suspended';
 
     const filter = new TestWorkletEffect();
     // Nothing set up yet - inputNode/outputNode still throw.
@@ -327,7 +329,7 @@ describe('WorkletEffect', () => {
     // _sampleRate falls back to 48000 before the output gain exists.
     expect(filter['_sampleRate']).toBe(48000);
 
-    ctx.state = originalState;
+    mutable(ctx).state = originalState;
     filter.destroy();
   });
 
@@ -335,12 +337,12 @@ describe('WorkletEffect', () => {
     const ctx = getAudioContext();
     const gainSpy = vi.spyOn(ctx, 'createGain');
     const originalState = ctx.state;
-    ctx.state = 'suspended';
+    mutable(ctx).state = 'suspended';
 
     const filter = new TestWorkletEffect();
     expect(gainSpy).not.toHaveBeenCalled();
 
-    ctx.state = originalState;
+    mutable(ctx).state = originalState;
     onAudioContextReady.dispatch(ctx);
 
     expect(gainSpy).toHaveBeenCalled();
@@ -354,13 +356,13 @@ describe('WorkletEffect', () => {
   it('wet setter no-ops safely before the dry/wet gains exist', () => {
     const ctx = getAudioContext();
     const originalState = ctx.state;
-    ctx.state = 'suspended';
+    mutable(ctx).state = 'suspended';
 
     const filter = new TestWorkletEffect();
     expect(() => (filter.wet = 0.5)).not.toThrow();
     expect(filter.wet).toBe(0.5);
 
-    ctx.state = originalState;
+    mutable(ctx).state = originalState;
     filter.destroy();
   });
 

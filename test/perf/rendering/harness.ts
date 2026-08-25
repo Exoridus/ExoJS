@@ -100,7 +100,7 @@ export const createWebGl2Harness = (options: HarnessOptions = {}): WebGl2Harness
 
   const backend = new WebGl2Backend(app as unknown as ConstructorParameters<typeof WebGl2Backend>[0]);
 
-  wireCoreRenderers(backend, { spriteRendererBatchSize: options.spriteRendererBatchSize });
+  wireCoreRenderers(backend, options.spriteRendererBatchSize === undefined ? {} : { spriteRendererBatchSize: options.spriteRendererBatchSize });
 
   return {
     backend,

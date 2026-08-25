@@ -22,6 +22,7 @@ import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import type { View } from '#rendering/View';
 
 // ---------------------------------------------------------------------------
 // File-local drawable types resolved by the fake renderer registry below.
@@ -107,7 +108,7 @@ const createTestBackend = (): RenderBackend => {
     resize() {
       return this;
     },
-    setView(v) {
+    setView(v: View | null) {
       renderTarget.setView(v);
       return this;
     },

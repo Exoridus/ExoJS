@@ -6,6 +6,7 @@ import type { DrawScopeEntry, GroupScope, GroupScopeEntry, ScopeEntry } from '#r
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { TRANSFORM_FLOATS_PER_ROW, TRANSFORM_TINT_BYTES_PER_ROW, TransformBuffer } from '#rendering/TransformBuffer';
 
+import { createGroupScopeDouble } from '../support/render-scope-double';
 import { forEachGroupCommand } from './helpers/collectRenderGroups';
 
 const floatsPerSlot = TRANSFORM_FLOATS_PER_ROW;
@@ -61,13 +62,6 @@ const groupEntry = (scope: GroupScope, seq: number): GroupScopeEntry => ({
   seq,
   zIndex: 0,
   scope,
-});
-
-const groupScope = (entries: Array<DrawScopeEntry | GroupScopeEntry>): GroupScope => ({
-  kind: RenderEntryKind.Group,
-  entries,
-  hasMixedZ: false,
-  preserveDrawOrder: false,
 });
 
 // Reference packing: one write per draw - the pre-refactor `_prepareDrawCommand` path.
@@ -127,9 +121,9 @@ const buildNestedScope = (): GroupScope => {
   const e = new BoxDrawable('e', 90, 100, new Color(130, 140, 150, 0.5));
   const u = new BoxDrawable('u', 110, 120, new Color(160, 170, 180, 0.6));
   const v = new BoxDrawable('v', 130, 140, new Color(190, 200, 210, 0.7));
-  const nested = groupScope([drawEntry(createDrawCommand(d, 3, 7, 7)), drawEntry(createDrawCommand(e, 4, 7, 7))]);
+  const nested = createGroupScopeDouble([drawEntry(createDrawCommand(d, 3, 7, 7)), drawEntry(createDrawCommand(e, 4, 7, 7))]);
 
-  return groupScope([
+  return createGroupScopeDouble([
     drawEntry(createDrawCommand(a, 0, 1, 1)),
     drawEntry(createDrawCommand(b, 1, 1, 1)),
     groupEntry(nested, 2),

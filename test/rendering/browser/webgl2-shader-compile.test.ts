@@ -71,7 +71,7 @@ const composeRuntimeSource = (name: string, source: string): string => {
 };
 
 const shaders: readonly ShaderEntry[] = Object.entries(shaderModules)
-  .map(([path, source]) => {
+  .map(([path, source]): ShaderEntry => {
     const name = path.slice(path.lastIndexOf('/') + 1);
 
     return {

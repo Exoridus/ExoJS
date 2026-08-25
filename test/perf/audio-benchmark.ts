@@ -42,6 +42,7 @@ const makeBufferSource = (): AudioBufferSourceNode => {
     start: () => undefined,
     stop: () => undefined,
     playbackRate: { value: 1 },
+    detune: { value: 0 },
     loop: false,
     loopStart: 0,
     loopEnd: 0,
@@ -128,7 +129,7 @@ const makeMockContext = (): AudioContext => {
         sampleRate: sr,
         duration: len / sr,
         getChannelData: () => new Float32Array(len),
-      }) as AudioBuffer,
+      }) as unknown as AudioBuffer,
   } as unknown as AudioContext;
 
   return ctx;
@@ -184,14 +185,20 @@ if (typeof (globalThis as Record<string, unknown>)['AudioWorkletNode'] === 'unde
 // We use dynamic-style imports resolved at module evaluation time via top-level await alternative:
 // tsx supports top-level await in ESM - but for simpler compat we do it synchronously here.
 
+import { getAudioContext } from '../../src/audio/audio-context';
 import { AudioBus } from '../../src/audio/AudioBus';
 import { AudioListener } from '../../src/audio/AudioListener';
 import { AudioManager } from '../../src/audio/AudioManager';
+import type { SpatialVoice } from '../../src/audio/BaseVoice';
 import { LowpassFilter } from '../../src/audio/filters/LowpassFilter';
+import type { Voice } from '../../src/audio/Playable';
 import { Sound } from '../../src/audio/Sound';
+import { seconds } from '../../src/core/units';
 
-// Ensure global AudioContext is bootstrapped (ExoJS lazily creates one on first use).
-// We do that by constructing an AudioManager which creates buses and the listener.
+// Bootstrap the shared AudioContext against the mock above. Nothing else does
+// it eagerly, and a Sound whose context does not exist yet hands out a
+// `NoopVoice` - the benchmark would then measure the silent path.
+getAudioContext();
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -215,18 +222,23 @@ const results: BenchmarkResult[] = [];
 // --- Scenario 1: 50 simultaneous Sound instances, play() once per iteration ---
 {
   const sounds: Sound[] = [];
+  let manager: AudioManager | null = null;
 
   results.push(
     runScenario({
       name: 'many-sounds-play',
       setup() {
+        manager = new AudioManager();
         for (let i = 0; i < 50; i++) {
           sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
         }
       },
       tick() {
+        // Stopping within the tick returns each voice to its sound's pool, so
+        // the measured cost stays "50 plays", not "50 plays on a pool that grew
+        // by 50 every previous iteration".
         for (const s of sounds) {
-          s.play();
+          manager!.play(s).stop();
         }
       },
       teardown() {
@@ -234,36 +246,41 @@ const results: BenchmarkResult[] = [];
           s.destroy();
         }
         sounds.length = 0;
+        manager!.destroy();
+        manager = null;
       },
     }),
   );
 }
 
-// --- Scenario 2: AudioManager.update() - listener tick + 20 spatial sounds ---
+// --- Scenario 2: AudioManager.preUpdate() - listener tick + 20 spatial voices ---
 {
+  const FRAME_DELTA = seconds(1 / 60);
+
   let manager: AudioManager | null = null;
   const spatialSounds: Sound[] = [];
 
   results.push(
     runScenario({
-      name: 'audio-manager-update',
+      name: 'audio-manager-pre-update',
       setup() {
         manager = new AudioManager();
         for (let i = 0; i < 20; i++) {
           const s = new Sound(makeAudioBuffer());
-          s.position = { x: Math.random() * 1000, y: Math.random() * 1000 };
           spatialSounds.push(s);
+          manager.play(s, { position: { x: Math.random() * 1000, y: Math.random() * 1000 } });
         }
       },
       tick() {
-        manager!.update();
+        manager!.preUpdate(FRAME_DELTA);
       },
       teardown() {
         for (const s of spatialSounds) {
           s.destroy();
         }
         spatialSounds.length = 0;
-        manager!.listener.destroy();
+        manager!.destroy();
+        manager = null;
       },
     }),
   );
@@ -306,31 +323,39 @@ const results: BenchmarkResult[] = [];
   ); // 100 iterations — each is 10 add+remove calls
 }
 
-// --- Scenario 4: Spatial sound _tickSpatial() - 20 sounds, positions updated each frame ---
+// --- Scenario 4: Voice._tickSpatial() - 20 voices, positions updated each frame ---
 {
+  let manager: AudioManager | null = null;
   const spatialSounds: Sound[] = [];
+  // `_tickSpatial` is the internal per-frame hook `SpatialVoice` declares; the
+  // concrete voice behind the public `Voice` handle is the thing that has it.
+  const spatialVoices: Array<Voice & SpatialVoice> = [];
 
   results.push(
     runScenario({
-      name: 'spatial-sound-tick',
+      name: 'spatial-voice-tick',
       setup() {
+        manager = new AudioManager();
         for (let i = 0; i < 20; i++) {
           const s = new Sound(makeAudioBuffer());
-          s.position = { x: Math.random() * 1000, y: Math.random() * 1000 };
           spatialSounds.push(s);
+          spatialVoices.push(manager.play(s, { position: { x: Math.random() * 1000, y: Math.random() * 1000 } }) as Voice & SpatialVoice);
         }
       },
       tick(i) {
-        for (const s of spatialSounds) {
-          s.position = { x: Math.sin(i * 0.1) * 500, y: Math.cos(i * 0.1) * 500 };
-          s._tickSpatial();
+        for (const voice of spatialVoices) {
+          voice.position = { x: Math.sin(i * 0.1) * 500, y: Math.cos(i * 0.1) * 500 };
+          voice._tickSpatial();
         }
       },
       teardown() {
+        spatialVoices.length = 0;
         for (const s of spatialSounds) {
           s.destroy();
         }
         spatialSounds.length = 0;
+        manager!.destroy();
+        manager = null;
       },
     }),
   );

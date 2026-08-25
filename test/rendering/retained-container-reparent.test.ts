@@ -11,6 +11,7 @@ import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import type { View } from '#rendering/View';
 
 // Coverage for the "reparent across boundaries" hole: the transform space-flip
 // was only exercised via the barrier toggle, never via addChild/removeChild.
@@ -54,7 +55,7 @@ const createTestBackend = (): RenderBackend => {
     resize() {
       return this;
     },
-    setView(v) {
+    setView(v: View | null) {
       renderTarget.setView(v);
       return this;
     },

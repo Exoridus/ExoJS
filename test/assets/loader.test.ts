@@ -3,11 +3,13 @@
 import { Asset } from '#assets/Asset';
 import { AssetCache } from '#assets/AssetCache';
 import { encodeContainer } from '#assets/AssetContainer';
+import type { AssetInput } from '#assets/AssetDefinitions';
 import { AssetRef } from '#assets/AssetRef';
 import { Assets } from '#assets/Assets';
 import type { CacheRecordKey } from '#assets/CacheRecordKey';
 import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader, LoadPriority } from '#assets/Loader';
+import type { LoadingQueue } from '#assets/LoadingQueue';
 import { FontAsset, TextAsset } from '#assets/tokens';
 import { materializeAssetTypes } from '#extensions/materialize';
 import { BmFont } from '#rendering/text/BmFont';
@@ -22,6 +24,15 @@ const createCoreLoader = (options?: ConstructorParameters<typeof Loader>[0]): Lo
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
 };
+
+/**
+ * `load()` has no typed overload for an inline record - public callers name a
+ * group with `Assets.from({...})`. The Loader keeps an internal record fallback
+ * for its multi-alias/identity plumbing, and these tests are its coverage, so
+ * they reach it through the implementation signature.
+ */
+const loadRecord = (loader: Loader, record: Record<string, AssetInput>): LoadingQueue<Record<string, unknown>> =>
+  (loader as unknown as { load(entries: Record<string, AssetInput>): LoadingQueue<Record<string, unknown>> }).load(record);
 
 interface ResidencyInternals {
   _unloadOne(asset: unknown): void;
@@ -437,7 +448,7 @@ describe('LoadingQueue progress tracking', () => {
     const goodAsset = new Asset({ type: 'mockAsset', source: 'good.dat' });
     const badAsset = new Asset({ type: 'mockAsset', source: 'bad.dat' });
 
-    const queue = loader.load({ good: goodAsset, bad: badAsset });
+    const queue = loadRecord(loader, { good: goodAsset, bad: badAsset });
     let lastProgress = queue.progress;
 
     queue.onProgress.add(p => {
@@ -507,7 +518,7 @@ describe('Asset / Assets identity and alias semantics', () => {
 
     const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
 
-    await loader.load({ heroA: hero, heroB: hero });
+    await loadRecord(loader, { heroA: hero, heroB: hero });
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     // Record keys are NAMES, not identities: both resolve to the one canonical
@@ -558,7 +569,7 @@ describe('Asset / Assets identity and alias semantics', () => {
 
     const hero = new Asset({ type: 'mockAsset', source: 'images/hero.dat' });
 
-    await loader.load({ heroA: hero, heroB: hero });
+    await loadRecord(loader, { heroA: hero, heroB: hero });
 
     expect(loader._peekResource(MockAssetType, 'images/hero.dat')).not.toBeNull();
 
@@ -611,13 +622,13 @@ describe('Asset / Assets identity and alias semantics', () => {
 
     const hero = new Asset({ type: 'mockAsset', source: 'hero.dat' });
 
-    await loader.load({ a: hero, b: hero, c: hero });
+    await loadRecord(loader, { a: hero, b: hero, c: hero });
 
     hardUnloadAsset(loader, hero);
 
     expect(loader._peekResource(MockAssetType, 'hero.dat')).toBeNull();
 
-    await loader.load({ a: hero });
+    await loadRecord(loader, { a: hero });
 
     expect(loader._peekResource(MockAssetType, 'hero.dat')).not.toBeNull();
     expect(loader.inspect()).toHaveLength(1);
@@ -708,7 +719,7 @@ describe('a custom asset type - acquisition, identity and caching', () => {
     installRich(loader, async source => source);
 
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
-    (global.fetch as MockInstance).mockClear();
+    vi.mocked(global.fetch).mockClear();
     await loader.load(new Asset({ type: 'richAsset', source: 'file.txt', format: 'txt' }));
 
     expect(global.fetch).not.toHaveBeenCalled();
@@ -869,7 +880,7 @@ describe('a custom asset type caches under its own namespace', () => {
 
     // A second loader shares the store but holds no resident resources, so the
     // next acquisition is a real cache read rather than a residency hit.
-    (global.fetch as MockInstance).mockClear();
+    vi.mocked(global.fetch).mockClear();
 
     const second = new Loader({ basePath: '/', cache: store });
 
@@ -903,7 +914,7 @@ describe('identity discrimination — one source, several resource identities', 
     const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
     const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
 
-    await loader.load({ tmxA: tmxMap, tmxB: tmxMap, rpgA: rpgMap });
+    await loadRecord(loader, { tmxA: tmxMap, tmxB: tmxMap, rpgA: rpgMap });
 
     const ctor = loader['_typeRegistry']['resolveTypeName']('richAsset')!;
 
@@ -926,7 +937,7 @@ describe('identity discrimination — one source, several resource identities', 
 
     const asset = new Asset({ type: 'richAsset', source: 'shared.dat', format: 'x' });
 
-    await loader.load({ a: asset, b: asset });
+    await loadRecord(loader, { a: asset, b: asset });
 
     const ctor = loader['_typeRegistry']['resolveTypeName']('richAsset')!;
 
@@ -954,7 +965,7 @@ describe('identity discrimination — one source, several resource identities', 
     const tmxMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'tmx' });
     const rpgMap = new Asset({ type: 'richAsset', source: 'map.dat', format: 'rpg-maker' });
 
-    await loader.load({ tmxA: tmxMap, rpgA: rpgMap });
+    await loadRecord(loader, { tmxA: tmxMap, rpgA: rpgMap });
 
     const ctor = loader['_typeRegistry']['resolveTypeName']('richAsset')!;
 
@@ -1508,7 +1519,12 @@ describe('handler load() rejection is wrapped with url + cause', () => {
     ]);
 
     const asset = new Asset({ type: 'richAsset', source: 'x.json', format: 'x' });
-    const error: Error = await loader.load(asset).catch((e: unknown) => e as Error);
+    const error = await loader.load(asset).then(
+      () => {
+        throw new Error('expected the load to reject');
+      },
+      (reason: unknown) => reason as Error,
+    );
 
     expect(error.message).toMatch(/Failed to load "x\.json" from "\/assets\/x\.json": handler exploded/);
     expect(error.cause).toBeInstanceOf(Error);
@@ -1623,7 +1639,7 @@ describe('load({ alias: config }) — plain object values are auto-wrapped in an
       testAssetType<string, string>({ id: 'mockAsset', token: MockAssetType, acquires: false, create: async (_source, context) => `loaded:${context.source}` }),
     ]);
 
-    await loader.load({ hero: { type: 'mockAsset', source: 'hero.dat' } });
+    await loadRecord(loader, { hero: { type: 'mockAsset', source: 'hero.dat' } });
 
     expect(loader._peekResource(MockAssetType, 'hero.dat')).not.toBeNull();
   });

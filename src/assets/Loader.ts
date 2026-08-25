@@ -56,7 +56,13 @@ export type Loadable = abstract new (...args: any[]) => unknown;
  * materialized leaves and must not re-validate the definition entries.
  */
 export type InferLoadedMap<M extends Record<string, CatalogEntry>> = {
-  [K in keyof M]: InferLoadedEntry<M[K]>;
+  // `-readonly` is deliberate. A catalog definition record declares its keys
+  // `readonly`, and a homomorphic mapping would carry that modifier into the
+  // loaded map - but the map is built per call and handed to the caller, who
+  // owns it. Stripping the modifier also keeps the type readable: a mapping
+  // that is not homomorphic is written out eagerly instead of surfacing as
+  // `InferLoadedMap<FlattenDefinition<...>>` on hover.
+  -readonly [K in keyof M]: InferLoadedEntry<M[K]>;
 };
 
 /**

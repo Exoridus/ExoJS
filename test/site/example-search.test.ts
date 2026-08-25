@@ -121,7 +121,7 @@ describe('filterExamples', () => {
     });
 
     it('returns empty when no featured examples exist', () => {
-      const nonfeatured = FIXTURES.map(e => ({ ...e, featured: undefined }));
+      const nonfeatured = FIXTURES.map(({ featured: _featured, ...rest }) => rest);
       const result = filterExamples(nonfeatured, { query: '', activeFilter: FEATURED_FILTER });
       expect(result).toHaveLength(0);
     });

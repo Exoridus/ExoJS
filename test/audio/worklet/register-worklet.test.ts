@@ -1,4 +1,4 @@
-﻿import type { MockInstance } from 'vitest';
+﻿import type { Mock } from 'vitest';
 
 import { registerAudioWorkletProcessor } from '#audio/worklet/registerWorklet';
 
@@ -19,13 +19,13 @@ const makeContext = () => {
 // ---------------------------------------------------------------------------
 
 describe('registerAudioWorkletProcessor', () => {
-  let createObjectURL: MockInstance;
-  let revokeObjectURL: MockInstance;
+  let createObjectURL: Mock<(obj: Blob | MediaSource) => string>;
+  let revokeObjectURL: Mock<(url: string) => void>;
 
   beforeEach(() => {
     // Ensure fresh URL mocks per test
-    createObjectURL = vi.fn().mockReturnValue('blob:mock-url');
-    revokeObjectURL = vi.fn();
+    createObjectURL = vi.fn((_obj: Blob | MediaSource) => 'blob:mock-url');
+    revokeObjectURL = vi.fn((_url: string) => undefined);
     vi.spyOn(URL, 'createObjectURL').mockImplementation(createObjectURL);
     vi.spyOn(URL, 'revokeObjectURL').mockImplementation(revokeObjectURL);
   });

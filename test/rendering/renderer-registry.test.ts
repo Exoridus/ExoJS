@@ -7,6 +7,8 @@ import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 
+import { createRenderBackendDouble } from '../support/render-backend-double';
+
 class BaseDrawable extends Drawable {
   public override render(_backend: RenderBackend): this {
     return this;
@@ -19,7 +21,7 @@ const createRuntime = (): RenderBackend => {
   const renderTarget = new RenderTarget(100, 100, true);
   const stats = createRenderStats();
   const runtime: RenderBackend = {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
     stats,
     renderTarget,
     get view() {

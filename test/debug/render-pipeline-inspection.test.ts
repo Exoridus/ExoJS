@@ -1,9 +1,15 @@
 import { RenderPassInspectorLayer } from '#debug/RenderPassInspectorLayer';
 import type { RenderingContext } from '#rendering/RenderingContext';
-import { RenderPass } from '#rendering/RenderPass';
+import { RenderPass, type RenderPassOptions } from '#rendering/RenderPass';
 import { RenderPipeline } from '#rendering/RenderPipeline';
 
 class TestPass extends RenderPass {
+  // `RenderPass` keeps its constructor `protected` so passes are authored as
+  // subclasses; a double the spec instantiates has to widen it.
+  public constructor(options?: RenderPassOptions) {
+    super(options);
+  }
+
   public override execute(_context: RenderingContext): void {
     // no-op - inspection tests never run the pass.
   }

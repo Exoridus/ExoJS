@@ -1,7 +1,7 @@
 import { bench, describe } from 'vitest';
 
 import type { RenderingContext } from '../../src/rendering/RenderingContext';
-import { RenderPass } from '../../src/rendering/RenderPass';
+import { RenderPass, type RenderPassOptions } from '../../src/rendering/RenderPass';
 import { RenderPipeline } from '../../src/rendering/RenderPipeline';
 
 // Pure orchestration overhead: a no-op pass isolates the per-frame loop cost
@@ -11,6 +11,12 @@ import { RenderPipeline } from '../../src/rendering/RenderPipeline';
 const context = {} as RenderingContext;
 
 class NoopPass extends RenderPass {
+  // `RenderPass` keeps its constructor `protected` so passes are authored as
+  // subclasses; a double the spec instantiates has to widen it.
+  public constructor(options?: RenderPassOptions) {
+    super(options);
+  }
+
   public override execute(_context: RenderingContext): void {
     // no-op
   }

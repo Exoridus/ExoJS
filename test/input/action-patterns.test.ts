@@ -1,7 +1,7 @@
 import type { ActionMapOwner } from '#input/actions/ActionMap';
 import { ActionMap } from '#input/actions/ActionMap';
-import { ChordAction } from '#input/actions/ChordAction';
-import { SequenceAction } from '#input/actions/SequenceAction';
+import { ChordAction, type ChordBinding } from '#input/actions/ChordAction';
+import { SequenceAction, type SequenceBinding } from '#input/actions/SequenceAction';
 import type { ActionSample, ChannelEvent } from '#input/actions/types';
 import { Gamepad } from '#input/Gamepad';
 import { GamepadButton } from '#input/GamepadButton';
@@ -56,6 +56,15 @@ const createSample = (): SampleDriver => {
  * runtime, but the file no longer type-checks.
  */
 const runtimePattern = (pattern: string): string => pattern;
+
+/**
+ * The array-form counterpart of {@link runtimePattern}. A step is either bare
+ * channels (`InputChord`) or nested alternatives (`InputAlternation`), never
+ * both, so no pattern type describes one that mixes the two shapes - only the
+ * runtime parser rejects it, and only a caller who assembled the array at
+ * runtime can reach that rejection.
+ */
+const runtimeArrayPattern = <T>(pattern: readonly unknown[]): T => pattern as T;
 
 describe('ChordAction', () => {
   test('presses only when every member is held and releases when one leaves', () => {
@@ -321,7 +330,7 @@ describe('ChordAction: `|` alternation', () => {
   });
 
   test('rejects a step mixing a bare channel with a nested alternative', () => {
-    expect(() => new ChordAction([Keyboard.A, [Keyboard.B, Keyboard.C]])).toThrow(/ChordAction:.*mixes a bare channel/);
+    expect(() => new ChordAction(runtimeArrayPattern<ChordBinding>([Keyboard.A, [Keyboard.B, Keyboard.C]]))).toThrow(/ChordAction:.*mixes a bare channel/);
   });
 });
 
@@ -695,7 +704,9 @@ describe('SequenceAction: `|` alternation', () => {
   });
 
   test('rejects a step mixing a bare channel with a nested alternative', () => {
-    expect(() => new SequenceAction([Keyboard.A, [Keyboard.B, [Keyboard.C, Keyboard.D]]])).toThrow(/SequenceAction:.*step 2.*mixes a bare channel/);
+    expect(() => new SequenceAction(runtimeArrayPattern<SequenceBinding>([Keyboard.A, [Keyboard.B, [Keyboard.C, Keyboard.D]]]))).toThrow(
+      /SequenceAction:.*step 2.*mixes a bare channel/,
+    );
   });
 });
 

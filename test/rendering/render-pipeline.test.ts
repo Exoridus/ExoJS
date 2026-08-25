@@ -15,11 +15,11 @@ class TestPass extends RenderPass {
   public readonly executions: RenderingContext[] = [];
   public readonly resizes: Array<[number, number]> = [];
   public destroyCount = 0;
-  private readonly _onExecute?: () => void;
-  private readonly _onDestroy?: () => void;
+  private readonly _onExecute: (() => void) | undefined;
+  private readonly _onDestroy: (() => void) | undefined;
 
   public constructor(options: TestPassOptions = {}) {
-    super({ label: options.label, enabled: options.enabled });
+    super(options);
     this._onExecute = options.onExecute;
     this._onDestroy = options.onDestroy;
   }
@@ -53,6 +53,10 @@ describe('RenderPass (base)', () => {
 
   test('resize and destroy are no-ops by default', () => {
     const pass = new (class extends RenderPass {
+      public constructor() {
+        super();
+      }
+
       public override execute(): void {
         // no-op
       }

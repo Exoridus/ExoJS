@@ -2,7 +2,12 @@ import '#assets/coreAssetTypes';
 
 import { describe, expectTypeOf, it } from 'vitest';
 
-import { type AssetRef } from '#assets/AssetRef';
+// `CatalogResourceLeaf` / `CatalogValueLeaf` are deliberately not part of the
+// root API - the brand mirrors the internal `_assetMeta` runtime stamp and is an
+// implementation detail of the loader's single-leaf overloads. Asserting a leaf
+// exactly means naming it, so this reaches the internal module the same way
+// test/type-tests/helpers/catalog-leaf.ts does.
+import type { CatalogResourceLeaf, CatalogValueLeaf } from '#assets/assetMeta';
 import { type AnyAssets, Assets } from '#assets/Assets';
 import type { Loader } from '#assets/Loader';
 import type { Texture } from '#rendering/texture/Texture';
@@ -10,8 +15,8 @@ import type { Texture } from '#rendering/texture/Texture';
 describe('Assets.from types', () => {
   it('infers Texture + AssetRef leaves from bare strings', () => {
     const a = Assets.from({ ship: 'a.png', level: 'b.json' });
-    expectTypeOf(a.ship).toEqualTypeOf<Texture>();
-    expectTypeOf(a.level).toEqualTypeOf<AssetRef<unknown>>();
+    expectTypeOf(a.ship).toEqualTypeOf<CatalogResourceLeaf<Texture>>();
+    expectTypeOf(a.level).toEqualTypeOf<CatalogValueLeaf<unknown>>();
   });
 });
 
@@ -22,10 +27,10 @@ describe('Assets.compose / Assets.extend types', () => {
   it('types a conflict-free composition as an ordinary catalog', () => {
     const composed = Assets.compose(shared, forest);
 
-    expectTypeOf(composed.ship).toEqualTypeOf<Texture>();
-    expectTypeOf(composed.level).toEqualTypeOf<AssetRef<unknown>>();
-    expectTypeOf(composed.tree).toEqualTypeOf<Texture>();
-    expectTypeOf(composed.entries.tree).toEqualTypeOf<Texture>();
+    expectTypeOf(composed.ship).toEqualTypeOf<CatalogResourceLeaf<Texture>>();
+    expectTypeOf(composed.level).toEqualTypeOf<CatalogValueLeaf<unknown>>();
+    expectTypeOf(composed.tree).toEqualTypeOf<CatalogResourceLeaf<Texture>>();
+    expectTypeOf(composed.entries.tree).toEqualTypeOf<CatalogResourceLeaf<Texture>>();
   });
 
   it('loads a composed catalog with the same resolved-map typing as a plain one', () => {
@@ -73,8 +78,8 @@ describe('Assets.compose / Assets.extend types', () => {
   it('adds and deliberately re-types keys via extend', () => {
     const derived = Assets.extend(shared, { tree: 'c.png', level: 'd.png' });
 
-    expectTypeOf(derived.ship).toEqualTypeOf<Texture>();
-    expectTypeOf(derived.tree).toEqualTypeOf<Texture>();
-    expectTypeOf(derived.level).toEqualTypeOf<Texture>();
+    expectTypeOf(derived.ship).toEqualTypeOf<CatalogResourceLeaf<Texture>>();
+    expectTypeOf(derived.tree).toEqualTypeOf<CatalogResourceLeaf<Texture>>();
+    expectTypeOf(derived.level).toEqualTypeOf<CatalogResourceLeaf<Texture>>();
   });
 });

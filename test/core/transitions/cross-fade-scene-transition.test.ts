@@ -5,6 +5,8 @@ import { Time } from '#core/units';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import type { Sprite } from '#rendering/sprite/Sprite';
 
+import { mutable } from '../../support/mutable';
+
 // beginSession() is public (wraps the protected createSession()) - the real
 // entry point any consumer (the Director) uses; no protected-access shim needed here.
 const navContext: SceneTransitionContext = { operation: 'change', hasOutgoingScene: true, hasIncomingScene: true };
@@ -67,7 +69,7 @@ describe('CrossFadeSceneTransition', () => {
       commitRequested: false,
       committed: false, // never flips true in this test — simulates a still-in-flight prepare()
       commit(): void {
-        environment.commitRequested = true;
+        mutable(environment).commitRequested = true;
       },
     };
     const session = crossFade.beginSession(environment);
@@ -84,7 +86,7 @@ describe('CrossFadeSceneTransition', () => {
       commitRequested: false,
       committed: false,
       commit(): void {
-        environment.commitRequested = true;
+        mutable(environment).commitRequested = true;
       },
     };
     const session = crossFade.beginSession(environment);

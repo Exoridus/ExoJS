@@ -5,13 +5,14 @@ import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
 import type { BlendModes } from '#rendering/types';
+
+import { createRenderBackendDouble } from '../support/render-backend-double';
 
 class TestDrawable extends Drawable {
   public override updateBounds(): this {
@@ -49,7 +50,7 @@ const createRuntime = (): MockRuntime => {
   const drawCalls: unknown[] = [];
 
   const runtime: RenderBackend = {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: root, stats }),
     // Resolution 1 keeps every internal target at its logical size, which is
     // what these tests assert on. The pixel-ratio behaviour of the same targets
     // is covered by the browser DPR lanes, where a real surface exists.

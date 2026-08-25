@@ -31,6 +31,8 @@ import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 import type { WebGpuBackend } from '#rendering/webgpu/WebGpuBackend';
 import { type WebGpuPassBackend, WebGpuPassCoordinator } from '#rendering/webgpu/WebGpuPassCoordinator';
 
+import { stubCanvas2dContext } from '../../support/canvas-2d-context-stub';
+
 // ---------------------------------------------------------------------------
 // Fuller canvas 2D context mock (createImageData/putImageData support)
 // ---------------------------------------------------------------------------
@@ -61,7 +63,7 @@ const makeFullContext2d = (): CanvasRenderingContext2D => {
 let getContextSpy: MockInstance;
 
 beforeAll(() => {
-  getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => makeFullContext2d());
+  getContextSpy = stubCanvas2dContext(makeFullContext2d);
 });
 
 afterAll(() => {

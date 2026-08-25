@@ -1,5 +1,3 @@
-import type { MockInstance } from 'vitest';
-
 import type { Application } from '#core/Application';
 import { Scene } from '#core/Scene';
 import { SceneScope } from '#core/SceneScope';
@@ -338,11 +336,15 @@ describe('SceneScope', () => {
       vi.spyOn(scope.audio, 'destroy').mockImplementation(() => events.push('audio.destroy'));
       vi.spyOn(scope.inputs, 'destroy').mockImplementation(() => events.push('inputs.destroy'));
       vi.spyOn(scope.interaction, 'destroy').mockImplementation(() => events.push('interaction.destroy'));
-      (app.interaction.detachRoot as MockInstance).mockImplementation(() => events.push('interaction.detachRoot'));
+      vi.mocked(app.interaction.detachRoot).mockImplementation(() => {
+        events.push('interaction.detachRoot');
+      });
       scene.destroy = (): void => {
         events.push('scene.destroy');
       };
-      (app.loader._releaseScope as MockInstance).mockImplementation(() => events.push('loader._releaseScope'));
+      vi.mocked(app.loader._releaseScope).mockImplementation(() => {
+        events.push('loader._releaseScope');
+      });
 
       await scope.destroy();
 
@@ -392,7 +394,7 @@ describe('SceneScope', () => {
         throw new Error('unload stage failed');
       };
 
-      const loaderDestroySpy = app.loader._releaseScope as MockInstance;
+      const loaderDestroySpy = vi.mocked(app.loader._releaseScope);
 
       await scope.destroy();
 
@@ -585,7 +587,7 @@ describe('SceneScope', () => {
       scope.suspend();
       expect(app.interaction.detachRoot).toHaveBeenCalledWith(scope.scene.root);
 
-      (app.interaction.attachRoot as MockInstance).mockClear();
+      vi.mocked(app.interaction.attachRoot).mockClear();
       scope.restore();
       expect(app.interaction.attachRoot).toHaveBeenCalledWith(scope.scene.root);
     });

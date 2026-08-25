@@ -123,7 +123,7 @@ const cases: readonly MutatorCase[] = [
   drawableCase('invalidateContent', 'content', n => n.invalidateContent()),
   // Drawable visual-source family - content-dirty.
   drawableCase('setTint', 'content', n => n.setTint(new Color(10, 20, 30))),
-  drawableCase('setBlendMode', 'content', n => n.setBlendMode(BlendModes.Add)),
+  drawableCase('setBlendMode', 'content', n => n.setBlendMode(BlendModes.Additive)),
   drawableCase('pixelSnapMode setter', 'content', n => (n.pixelSnapMode = PixelSnapMode.Geometry)),
   // Container structural mutators - structure-dirty.
   containerCase('addChild', 'structure', n => n.addChild(new Drawable())),

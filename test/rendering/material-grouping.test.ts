@@ -1,16 +1,20 @@
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import type { RenderPlan } from '#rendering/plan/RenderPlan';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
-import type { GroupScope } from '#rendering/plan/RenderScope';
+import type { DrawScopeEntry, GroupScope, ScopeEntry } from '#rendering/plan/RenderScope';
 import type { RetainedDrawData } from '#rendering/plan/RetainedRecordPool';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { BlendModes } from '#rendering/types';
+
+import { createRenderBackendDouble } from '../support/render-backend-double';
+import { createRenderPlanDouble } from '../support/render-plan-double';
+import { createGroupScopeDouble } from '../support/render-scope-double';
 
 class BoxDrawable extends Drawable {
   public constructor(public readonly id: string) {
@@ -108,7 +112,7 @@ interface DrawEntryOpts {
   aabb?: { minX: number; minY: number; maxX: number; maxY: number };
 }
 
-const createDrawEntry = (drawable: Drawable, opts: DrawEntryOpts = {}) => {
+const createDrawEntry = (drawable: Drawable, opts: DrawEntryOpts = {}): DrawScopeEntry => {
   const aabb = opts.aabb ?? { minX: 0, minY: 0, maxX: 16, maxY: 16 };
 
   return {
@@ -122,6 +126,7 @@ const createDrawEntry = (drawable: Drawable, opts: DrawEntryOpts = {}) => {
       seq: opts.seq ?? 0,
       zIndex: opts.zIndex ?? 0,
       material: mkMaterialKey(opts.pipelineKey ?? 100, opts.bindKey ?? 100, opts.ownMaterial ?? true),
+      groupIndex: undefined,
       minX: aabb.minX,
       minY: aabb.minY,
       maxX: aabb.maxX,
@@ -136,18 +141,16 @@ const createDrawEntry = (drawable: Drawable, opts: DrawEntryOpts = {}) => {
  * optimizer skips material grouping outright when the flag is false, so a
  * fixture that forgot it would silently test nothing.
  */
-const deriveHasMixedMaterial = (entries: readonly object[]): boolean => {
+const deriveHasMixedMaterial = (entries: readonly ScopeEntry[]): boolean => {
   let firstPipelineKey: number | null = null;
   let firstBindKey = 0;
 
   for (const entry of entries) {
-    const candidate = entry as { kind: RenderEntryKind; command?: DrawCommand };
-
-    if (candidate.kind !== RenderEntryKind.Draw || candidate.command === undefined) {
+    if (entry.kind !== RenderEntryKind.Draw) {
       continue;
     }
 
-    const { pipelineKey, bindKey } = candidate.command.material;
+    const { pipelineKey, bindKey } = entry.command.material;
 
     if (firstPipelineKey === null) {
       firstPipelineKey = pipelineKey;
@@ -161,7 +164,7 @@ const deriveHasMixedMaterial = (entries: readonly object[]): boolean => {
 };
 
 interface CreatePlanOpts {
-  entries: object[];
+  entries: ScopeEntry[];
   hasMixedZ?: boolean;
   hasMixedPipeline?: boolean;
   preserveDrawOrder?: boolean;
@@ -173,7 +176,7 @@ const createRuntime = () => {
   const stats = createRenderStats();
 
   const backend: RenderBackend = {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: root, stats }),
     stats,
     get renderTarget() {
       return currentTarget;
@@ -237,40 +240,21 @@ const createRuntime = () => {
   return { backend };
 };
 
-const createPlan = (opts: CreatePlanOpts) => {
+const createPlan = (opts: CreatePlanOpts): RenderPlan => {
   const { backend } = createRuntime();
+  const root = createGroupScopeDouble(opts.entries);
 
-  return {
-    passes: [
-      {
-        target: null as any,
-        view: backend.view,
-        clearColor: null as any,
-        root: {
-          kind: RenderEntryKind.Group as const,
-          entries: opts.entries as [],
-          hasMixedZ: opts.hasMixedZ ?? false,
-          hasMixedPipeline: opts.hasMixedPipeline ?? deriveHasMixedMaterial(opts.entries),
-          preserveDrawOrder: opts.preserveDrawOrder ?? false,
-          transformNode: null,
-          retainedInstructions: null,
-          retainedRecordTarget: null,
-          persistentDraw: null,
-        },
-      },
-    ],
-    nodeCount: 0,
-    reset() {
-      this.passes.length = 0;
-      this.nodeCount = 0;
-    },
-  };
+  root.hasMixedZ = opts.hasMixedZ ?? false;
+  root.hasMixedPipeline = opts.hasMixedPipeline ?? deriveHasMixedMaterial(opts.entries);
+  root.preserveDrawOrder = opts.preserveDrawOrder ?? false;
+
+  return createRenderPlanDouble(backend.view, root);
 };
 
-const getMaterials = (plan: ReturnType<typeof createPlan>) =>
+const getMaterials = (plan: RenderPlan) =>
   plan.passes[0].root.entries.filter((e: any) => e.kind === RenderEntryKind.Draw).map((e: any) => (e.command as DrawCommand).material);
 
-const getGroupIndices = (plan: ReturnType<typeof createPlan>) =>
+const getGroupIndices = (plan: RenderPlan) =>
   plan.passes[0].root.entries.filter((e: any) => e.kind === RenderEntryKind.Draw).map((e: any) => (e.command as DrawCommand).groupIndex ?? 0);
 
 describe('material grouping', () => {
@@ -371,13 +355,14 @@ describe('material grouping', () => {
           zIndex: 0,
           scope: {
             kind: RenderEntryKind.Barrier as const,
-            node: a as any,
-            effect: { filters: [], clip: 0, maskSource: null, cacheAsTexture: false, blendMode: 0 },
+            node: a,
+            effect: { filters: [], clip: 0, clipShape: null, maskSource: null, cacheAsTexture: false, blendMode: 0 },
             childPlan: null,
             left: 0,
             top: 0,
             width: 16,
             height: 16,
+            resolution: 1,
           },
         },
         createDrawEntry(b, { pipelineKey: 100, bindKey: 100 }),
@@ -562,7 +547,7 @@ describe('material grouping', () => {
     RenderPlanOptimizer.optimize(skipped);
     RenderPlanOptimizer.optimize(forced);
 
-    const ids = (plan: ReturnType<typeof createPlan>) => plan.passes[0].root.entries.map((e: any) => ((e.command as DrawCommand).drawable as BoxDrawable).id);
+    const ids = (plan: RenderPlan) => plan.passes[0].root.entries.map((e: any) => ((e.command as DrawCommand).drawable as BoxDrawable).id);
 
     expect(ids(skipped)).toEqual(ids(forced));
     expect(getGroupIndices(skipped)).toEqual(getGroupIndices(forced));

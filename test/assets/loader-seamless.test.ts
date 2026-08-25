@@ -19,6 +19,19 @@ const createCoreLoader = (): Loader => {
   return loader;
 };
 
+// Declaration merge for the test-only asset type used below.
+declare module '#assets/AssetDefinitions' {
+  interface AssetDefinitions {
+    nullable: { resource: null | undefined; config: { source: string } };
+  }
+}
+
+/**
+ * `get()` has no overload for an unsupported input - the rejection under test
+ * is a runtime one, so the call goes through the implementation signature.
+ */
+const getUnsupported = (loader: Loader, input: object): unknown => (loader as unknown as { get(input: object): unknown }).get(input);
+
 const originalFetch = global.fetch;
 
 const mockFetchImage = (): void => {
@@ -139,8 +152,8 @@ describe('Loader seamless get (Texture)', () => {
     // object/constructor no longer has a branch to fall through to.
     class Adapterless {}
 
-    expect(() => loader.get(Adapterless as unknown as object)).toThrow('accepts a path string');
-    expect(() => loader.get({} as object)).toThrow('accepts a path string');
+    expect(() => getUnsupported(loader, Adapterless)).toThrow('accepts a path string');
+    expect(() => getUnsupported(loader, {})).toThrow('accepts a path string');
   });
 
   test('a handler that legitimately resolves to null/undefined stores that value (presence, not truthiness)', async () => {

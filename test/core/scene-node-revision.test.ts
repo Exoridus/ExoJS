@@ -168,7 +168,7 @@ describe('RenderNode/Drawable content mutations route through invalidateCache ->
     const drawable = new Drawable();
     const before = drawable._contentRevision;
 
-    drawable.setBlendMode(BlendModes.Add);
+    drawable.setBlendMode(BlendModes.Additive);
 
     expect(drawable._contentRevision).toBeGreaterThan(before);
     drawable.destroy();

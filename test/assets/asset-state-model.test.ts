@@ -69,6 +69,14 @@ class StubHandle {
   }
 }
 
+/**
+ * `new Asset({...})` types its `type` against the registered `AssetDefinitions`
+ * keys, and `stub` is deliberately not one - the walk installs it on the loader
+ * at runtime only, so the descriptor goes through the implementation signature.
+ */
+const stubAsset = (source: string): Asset<StubHandle> =>
+  new (Asset as unknown as new (config: { type: string; source: string }) => Asset<StubHandle>)({ type: 'stub', source });
+
 const stubAdapter: SeamlessAdapter<StubHandle> = {
   createPlaceholder(): StubHandle {
     const handle = new StubHandle();
@@ -259,7 +267,7 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
         const expectNewFetch = !model.pending && !model.stored;
         const before = fetchCount;
 
-        void loader.load(new Asset({ type: 'stub', source: key })).catch(() => {
+        void loader.load(stubAsset(key)).catch(() => {
           /* settled explicitly via `pending`; swallow here to avoid an unhandled rejection */
         });
 

@@ -4,6 +4,7 @@ import { AudioStream } from '#audio/AudioStream';
 import type { AudioStreamVoice } from '#audio/AudioStreamVoice';
 
 import { frameDelta } from '../support/frame-delta';
+import { mutable } from '../support/mutable';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -210,9 +211,9 @@ describe('AudioStream', () => {
     const stream = new AudioStream(el);
     const voice = manager.play(stream) as AudioStreamVoice;
 
-    el.paused = false;
+    mutable(el).paused = false;
     expect(voice.paused).toBe(false);
-    el.paused = true;
+    mutable(el).paused = true;
     expect(voice.paused).toBe(true);
 
     stream.destroy();
@@ -333,7 +334,7 @@ describe('AudioStream', () => {
   test('construction while the audio context is not ready defers playback until unlock', () => {
     const ctx = getAudioContext();
     const originalState = ctx.state;
-    ctx.state = 'suspended';
+    mutable(ctx).state = 'suspended';
 
     const manager = new AudioManager();
     const el = createAudioElementStub();
@@ -343,7 +344,7 @@ describe('AudioStream', () => {
     const voice = manager.play(stream) as AudioStreamVoice;
     expect(playSpy).not.toHaveBeenCalled();
 
-    ctx.state = originalState;
+    mutable(ctx).state = originalState;
     onAudioContextReady.dispatch(ctx);
 
     expect(playSpy).toHaveBeenCalledTimes(1);
@@ -354,7 +355,7 @@ describe('AudioStream', () => {
   test('the unlock handler is a safe no-op if the voice already ended by the time the context becomes ready', () => {
     const ctx = getAudioContext();
     const originalState = ctx.state;
-    ctx.state = 'suspended';
+    mutable(ctx).state = 'suspended';
 
     const manager = new AudioManager();
     const el = createAudioElementStub();
@@ -370,7 +371,7 @@ describe('AudioStream', () => {
     holder.voice = voice;
     const playSpy = vi.spyOn(el, 'play');
 
-    ctx.state = originalState;
+    mutable(ctx).state = originalState;
     onAudioContextReady.dispatch(ctx);
 
     expect(voice.ended).toBe(true);

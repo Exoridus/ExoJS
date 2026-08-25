@@ -131,7 +131,7 @@ const drawGeometries = async (
     backend.clear(Color.black);
 
     for (const call of calls) {
-      context.drawGeometry(call.geometry, call.transform, { tint: call.tint, view: screenView() });
+      context.drawGeometry(call.geometry, call.transform, { ...(call.tint !== undefined && { tint: call.tint }), view: screenView() });
     }
 
     validationError = await device.popErrorScope();

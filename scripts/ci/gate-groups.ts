@@ -20,7 +20,11 @@ export const GATE_GROUPS = {
     'typecheck:scripts',
   ],
   lint: ['lint:all', 'lint:source-hygiene', 'lint:inline-source', 'lint:shaders', 'format:check'],
-  sync: ['docs:api:check', 'examples:sync:check'],
+  // `perf:smoke` runs the benchmarks for their EXIT CODE, not their numbers -
+  // a shared runner measures nothing meaningful. Every one of these executes
+  // engine source in-process, so they rot silently against an API change or a
+  // module-resolution change and no other lane touches them.
+  sync: ['docs:api:check', 'examples:sync:check', 'perf:smoke'],
   // `full-bundle:exports:check` reads every bundled package's built ESM barrel,
   // so it needs the same built dist this group's job already provides.
   site: ['typecheck:site', 'typecheck:site-scripts', 'full-bundle:exports:check'],

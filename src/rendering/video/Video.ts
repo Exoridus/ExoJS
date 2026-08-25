@@ -190,9 +190,12 @@ export class Video extends Sprite {
   }
 
   /**
-   * The Web Audio `GainNode` for this video's audio stream, or `null` when
+   * The Web Audio node this video's audio stream terminates in, or `null` when
    * the audio context has not yet been initialized. Connect an analyser node
    * here for audio-reactive visuals.
+   *
+   * Which concrete node type this is belongs to the routing implementation and
+   * is not part of the contract.
    */
   public get analyserTarget(): AudioNode | null {
     return this._audioSetup?.gainNode ?? null;

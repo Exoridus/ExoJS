@@ -1,4 +1,4 @@
-﻿import type { MockInstance } from 'vitest';
+﻿import type { Mock, MockInstance } from 'vitest';
 
 import type { Application, RenderingApplicationOptions } from '#core/Application';
 import { Color } from '#core/Color';
@@ -42,7 +42,7 @@ interface MockWebGpuEnvironment {
   readonly context: GPUCanvasContext;
   readonly encoder: {
     beginRenderPass: MockInstance;
-    finish: MockInstance;
+    finish: Mock<() => GPUCommandBuffer>;
   };
   readonly pass: {
     setPipeline: MockInstance;

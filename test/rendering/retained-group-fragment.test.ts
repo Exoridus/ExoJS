@@ -10,6 +10,7 @@ import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
+import type { View } from '#rendering/View';
 
 /** Real major GC + a macrotask hop so reclaimed WeakRefs settle (`--expose-gc` comes from the vitest project). */
 const forceGc = async (): Promise<void> => {
@@ -260,7 +261,7 @@ const createTestBackend = (): RenderBackend => {
     resize() {
       return this;
     },
-    setView(v) {
+    setView(v: View | null) {
       renderTarget.setView(v);
       return this;
     },

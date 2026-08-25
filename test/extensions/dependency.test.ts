@@ -15,9 +15,16 @@ import { RendererRegistry } from '#rendering/RendererRegistry';
 
 class FakeDrawable extends Drawable {}
 
-const extension = (id: string, deps?: readonly Extension[]): Extension => {
-  return { id, dependencies: deps };
-};
+const extension = (id: string, deps?: readonly Extension[]): Extension => (deps ? { id, dependencies: deps } : { id });
+
+/**
+ * A dependency cycle can only be wired after every node exists, which
+ * `Extension.dependencies` being readonly forbids.
+ */
+interface CycleNode {
+  id: string;
+  dependencies?: Extension[];
+}
 
 const createStubBackend = (): RenderBackend => {
   const registry = new RendererRegistry<RenderBackend>();
@@ -175,37 +182,37 @@ describe('Extension dependency graph', () => {
 
   describe('cycles', () => {
     it('self-cycle', () => {
-      const a: Extension = { id: 'A' };
-      (a as { dependencies: Extension[] }).dependencies = [a];
+      const a: CycleNode = { id: 'A' };
+      a.dependencies = [a];
       expect(() => buildSnapshot([a])).toThrow('Extension dependency cycle detected: A → A');
     });
 
     it('two-node cycle', () => {
-      const a: Extension = { id: 'A', dependencies: [] };
-      const b: Extension = { id: 'B', dependencies: [] };
-      (a as { dependencies: Extension[] }).dependencies = [b];
-      (b as { dependencies: Extension[] }).dependencies = [a];
+      const a: CycleNode = { id: 'A', dependencies: [] };
+      const b: CycleNode = { id: 'B', dependencies: [] };
+      a.dependencies = [b];
+      b.dependencies = [a];
       expect(() => buildSnapshot([a])).toThrow('Extension dependency cycle detected: A → B → A');
     });
 
     it('three-node cycle', () => {
-      const a: Extension = { id: 'A', dependencies: [] };
-      const b: Extension = { id: 'B', dependencies: [] };
-      const c: Extension = { id: 'C', dependencies: [] };
-      (a as { dependencies: Extension[] }).dependencies = [b];
-      (b as { dependencies: Extension[] }).dependencies = [c];
-      (c as { dependencies: Extension[] }).dependencies = [a];
+      const a: CycleNode = { id: 'A', dependencies: [] };
+      const b: CycleNode = { id: 'B', dependencies: [] };
+      const c: CycleNode = { id: 'C', dependencies: [] };
+      a.dependencies = [b];
+      b.dependencies = [c];
+      c.dependencies = [a];
       expect(() => buildSnapshot([a])).toThrow('Extension dependency cycle detected: A → B → C → A');
     });
 
     it('cycle error includes complete path with repeated start at end', () => {
       // D -> B -> C -> D
-      const d: Extension = { id: 'D', dependencies: [] };
-      const b: Extension = { id: 'B', dependencies: [] };
-      const c: Extension = { id: 'C', dependencies: [] };
-      (d as { dependencies: Extension[] }).dependencies = [b];
-      (b as { dependencies: Extension[] }).dependencies = [c];
-      (c as { dependencies: Extension[] }).dependencies = [d];
+      const d: CycleNode = { id: 'D', dependencies: [] };
+      const b: CycleNode = { id: 'B', dependencies: [] };
+      const c: CycleNode = { id: 'C', dependencies: [] };
+      d.dependencies = [b];
+      b.dependencies = [c];
+      c.dependencies = [d];
 
       let error: Error | undefined;
       try {
@@ -219,15 +226,15 @@ describe('Extension dependency graph', () => {
 
     it('cycle below an acyclic root propagates', () => {
       const x = extension('X');
-      const y: Extension = { id: 'Y', dependencies: [] };
-      (y as { dependencies: Extension[] }).dependencies = [y]; // self-cycle
+      const y: CycleNode = { id: 'Y', dependencies: [] };
+      y.dependencies = [y]; // self-cycle
       const root = extension('root', [x, y]);
       expect(() => buildSnapshot([root])).toThrow('Extension dependency cycle detected: Y → Y');
     });
 
     it('cycle detection prevents partial snapshot materialisation', () => {
-      const a: Extension = { id: 'A', dependencies: [] };
-      (a as { dependencies: Extension[] }).dependencies = [a];
+      const a: CycleNode = { id: 'A', dependencies: [] };
+      a.dependencies = [a];
 
       // The function must throw - it must not return a snapshot.
       expect(() => buildSnapshot([a])).toThrow();
@@ -243,11 +250,11 @@ describe('Extension dependency graph', () => {
 
       const depBinding: RendererBinding = {
         targets: [DrawableX as DrawableConstructor],
-        create: () => ({ connect() {}, disconnect() {}, render() {}, flush() {} }),
+        create: () => ({ backendType: RenderBackendType.WebGl2, connect() {}, disconnect() {}, render() {}, flush() {} }),
       };
       const rootBinding: RendererBinding = {
         targets: [DrawableY as DrawableConstructor],
-        create: () => ({ connect() {}, disconnect() {}, render() {}, flush() {} }),
+        create: () => ({ backendType: RenderBackendType.WebGl2, connect() {}, disconnect() {}, render() {}, flush() {} }),
       };
 
       const depExt: Extension = { id: 'dep', renderers: [depBinding] };
@@ -266,7 +273,7 @@ describe('Extension dependency graph', () => {
 
       const depBinding: RendererBinding = {
         targets: [DrawableX as DrawableConstructor],
-        create: () => ({ connect() {}, disconnect() {}, render() {}, flush() {} }),
+        create: () => ({ backendType: RenderBackendType.WebGl2, connect() {}, disconnect() {}, render() {}, flush() {} }),
       };
 
       const depExt: Extension = { id: 'dep', renderers: [depBinding] };
@@ -286,11 +293,11 @@ describe('Extension dependency graph', () => {
 
       const bindingA: RendererBinding = {
         targets: [DrawableX as DrawableConstructor],
-        create: () => ({ connect() {}, disconnect() {}, render() {}, flush() {} }),
+        create: () => ({ backendType: RenderBackendType.WebGl2, connect() {}, disconnect() {}, render() {}, flush() {} }),
       };
       const bindingB: RendererBinding = {
         targets: [DrawableX as DrawableConstructor],
-        create: () => ({ connect() {}, disconnect() {}, render() {}, flush() {} }),
+        create: () => ({ backendType: RenderBackendType.WebGl2, connect() {}, disconnect() {}, render() {}, flush() {} }),
       };
 
       const extA: Extension = { id: 'A', renderers: [bindingA] };
@@ -307,7 +314,7 @@ describe('Extension dependency graph', () => {
 
       const depBinding: RendererBinding = {
         targets: [DrawableX as DrawableConstructor],
-        create: () => ({ connect() {}, disconnect() {}, render() {}, flush() {} }),
+        create: () => ({ backendType: RenderBackendType.WebGl2, connect() {}, disconnect() {}, render() {}, flush() {} }),
       };
 
       const depExt: Extension = { id: 'dep', renderers: [depBinding] };

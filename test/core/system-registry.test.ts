@@ -8,7 +8,7 @@ import { Time } from '#core/units';
 // for the Scene-level integration).
 
 const makeSystem = (log: string[], name: string, order?: number): System => ({
-  order,
+  ...(order !== undefined && { order }),
   update: (): void => {
     log.push(name);
   },

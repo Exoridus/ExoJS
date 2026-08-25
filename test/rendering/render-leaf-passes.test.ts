@@ -246,7 +246,7 @@ describe('CallbackRenderPass', () => {
     const { context } = createContext();
     // Holder so the callback can reach its own pass without a self-referential `let`.
     const ref: CallbackRenderPass[] = [];
-    ref[0] = new CallbackRenderPass(c => ref[0].execute(c));
+    ref[0] = new CallbackRenderPass(() => ref[0].execute(context));
 
     expect(() => ref[0].execute(context)).toThrow(/re-entrant/);
   });
@@ -255,7 +255,7 @@ describe('CallbackRenderPass', () => {
     const { context } = createContext();
     const target = new RenderTexture(32, 32);
     const ref: CallbackRenderPass[] = [];
-    ref[0] = new CallbackRenderPass(c => ref[0].execute(c), { target });
+    ref[0] = new CallbackRenderPass(() => ref[0].execute(context), { target });
 
     expect(() => ref[0].execute(context)).toThrow(/re-entrant/);
 
@@ -302,9 +302,9 @@ describe('CallbackRenderPass', () => {
     const { context } = createContext();
     const order: string[] = [];
     const inner = new CallbackRenderPass(() => order.push('inner'));
-    const outer = new CallbackRenderPass(c => {
+    const outer = new CallbackRenderPass(() => {
       order.push('outer-start');
-      inner.execute(c);
+      inner.execute(context);
       order.push('outer-end');
     });
 

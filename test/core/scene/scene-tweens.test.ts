@@ -1,3 +1,5 @@
+import type { Mock } from 'vitest';
+
 import { Tween } from '#animation/Tween';
 import { TweenManager } from '#animation/TweenManager';
 import { TweenSequencer } from '#animation/TweenSequencer';
@@ -19,9 +21,9 @@ const createAppStub = (createResult: unknown, sequencerResult?: unknown): Applic
 
 interface StubTween {
   state: 'idle' | 'active' | 'paused' | 'complete' | 'stopped';
-  pause: ReturnType<typeof vi.fn>;
-  resume: ReturnType<typeof vi.fn>;
-  stop: ReturnType<typeof vi.fn>;
+  pause: Mock<(this: StubTween) => void>;
+  resume: Mock<(this: StubTween) => void>;
+  stop: Mock<(this: StubTween) => void>;
 }
 
 const makeStubTween = (state: StubTween['state'] = 'active'): StubTween => ({

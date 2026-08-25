@@ -122,7 +122,7 @@ describe('SceneInputs construction', () => {
       () => false,
     );
 
-    inputs.onTrigger(1, () => undefined);
+    inputs.onTrigger(Keyboard.Space, () => undefined);
 
     expect(app.input.onStart).toHaveBeenCalledTimes(1);
     expect(app.input.onActive).not.toHaveBeenCalled();
@@ -133,18 +133,18 @@ describe('SceneInputs construction', () => {
 
 describe('SceneInputs — when policy availability matrix', () => {
   test.each([
-    ['active', SceneState.Active, false, true],
-    ['active', SceneState.Active, true, false],
-    ['paused', SceneState.Active, false, false],
-    ['paused', SceneState.Active, true, true],
-    ['always', SceneState.Active, false, true],
-    ['always', SceneState.Active, true, true],
-    ['active', SceneState.Preparing, false, false],
-    ['always', SceneState.Preparing, false, false],
-    ['active', SceneState.Ready, false, false],
-    ['always', SceneState.Ready, false, false],
-    ['active', SceneState.Suspended, false, false],
-    ['always', SceneState.Suspended, false, false],
+    [SceneAvailability.Active, SceneState.Active, false, true],
+    [SceneAvailability.Active, SceneState.Active, true, false],
+    [SceneAvailability.Paused, SceneState.Active, false, false],
+    [SceneAvailability.Paused, SceneState.Active, true, true],
+    [SceneAvailability.Always, SceneState.Active, false, true],
+    [SceneAvailability.Always, SceneState.Active, true, true],
+    [SceneAvailability.Active, SceneState.Preparing, false, false],
+    [SceneAvailability.Always, SceneState.Preparing, false, false],
+    [SceneAvailability.Active, SceneState.Ready, false, false],
+    [SceneAvailability.Always, SceneState.Ready, false, false],
+    [SceneAvailability.Active, SceneState.Suspended, false, false],
+    [SceneAvailability.Always, SceneState.Suspended, false, false],
   ] as const)('when: "%s" at state %s, paused %s allows onActive dispatch: %s', (when, state, paused, expected) => {
     const { app, bindings } = createAppStub();
     const inputs = new SceneInputs(
@@ -154,7 +154,7 @@ describe('SceneInputs — when policy availability matrix', () => {
     );
     const onActive = vi.fn();
 
-    inputs.onActive(1, onActive, { when });
+    inputs.onActive(Keyboard.Space, onActive, { when });
 
     // Real InputBinding always fires onStart before onActive on the same
     // hold - prime the edge state the same way before asserting.
@@ -173,10 +173,10 @@ describe('SceneInputs — when policy availability matrix', () => {
     );
     const onStart = vi.fn();
 
-    inputs.onStart(1, onStart, { when: SceneAvailability.Active, threshold: 500 });
+    inputs.onStart(Keyboard.Space, onStart, { when: SceneAvailability.Active, threshold: 500 });
 
     // The `when` key must never reach app.input - only InputBindingOptions fields do.
-    expect(app.input.onStart).toHaveBeenCalledWith(1, expect.any(Function), { threshold: 500 });
+    expect(app.input.onStart).toHaveBeenCalledWith(Keyboard.Space, expect.any(Function), { threshold: 500 });
 
     bindings[0]!.onStart.dispatch(1);
     expect(onStart).not.toHaveBeenCalled(); // paused, when: SceneAvailability.Active -> disallowed
@@ -191,7 +191,7 @@ describe('SceneInputs — when policy availability matrix', () => {
     );
     const onActive = vi.fn();
 
-    inputs.onActive(1, onActive, { when: SceneAvailability.Always });
+    inputs.onActive(Keyboard.Space, onActive, { when: SceneAvailability.Always });
     bindings[0]!.onStart.dispatch(1);
     transitionGateOpen.value = true;
 
@@ -212,7 +212,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onTrigger = vi.fn();
 
-    inputs.onTrigger(1, onTrigger, { when: SceneAvailability.Active });
+    inputs.onTrigger(Keyboard.Space, onTrigger, { when: SceneAvailability.Active });
 
     bindings[0]!.onStart.dispatch(1);
 
@@ -234,7 +234,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onTrigger = vi.fn();
 
-    inputs.onTrigger(1, onTrigger, { when: SceneAvailability.Active });
+    inputs.onTrigger(Keyboard.Space, onTrigger, { when: SceneAvailability.Active });
 
     bindings[0]!.onStart.dispatch(1); // press edge disallowed
 
@@ -255,7 +255,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onTrigger = vi.fn();
 
-    inputs.onTrigger(1, onTrigger, { when: SceneAvailability.Active });
+    inputs.onTrigger(Keyboard.Space, onTrigger, { when: SceneAvailability.Active });
 
     bindings[0]!.onStart.dispatch(1);
 
@@ -278,7 +278,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onTrigger = vi.fn();
 
-    inputs.onTrigger(1, onTrigger, { when: SceneAvailability.Active });
+    inputs.onTrigger(Keyboard.Space, onTrigger, { when: SceneAvailability.Active });
 
     bindings[0]!.onStart.dispatch(1);
     bindings[0]!.onStop.dispatch(0);
@@ -296,7 +296,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onStop = vi.fn();
 
-    inputs.onStop(1, onStop, { when: SceneAvailability.Active });
+    inputs.onStop(Keyboard.Space, onStop, { when: SceneAvailability.Active });
 
     bindings[0]!.onStart.dispatch(1);
     bindings[0]!.onStop.dispatch(0);
@@ -314,7 +314,7 @@ describe('SceneInputs — edge rules', () => {
     );
     const onStart = vi.fn();
 
-    inputs.onStart(1, onStart);
+    inputs.onStart(Keyboard.Space, onStart);
 
     bindings[0]!.onStart.dispatch(1);
     expect(onStart).not.toHaveBeenCalled();
@@ -335,7 +335,7 @@ describe('SceneInputs — suspend()/resume()', () => {
     );
     const onActive = vi.fn();
 
-    inputs.onActive(1, onActive, { when: SceneAvailability.Always });
+    inputs.onActive(Keyboard.Space, onActive, { when: SceneAvailability.Always });
     bindings[0]!.onStart.dispatch(1);
 
     inputs.suspend();
@@ -352,7 +352,7 @@ describe('SceneInputs — suspend()/resume()', () => {
     );
     const onActive = vi.fn();
 
-    inputs.onActive(1, onActive, { when: SceneAvailability.Always });
+    inputs.onActive(Keyboard.Space, onActive, { when: SceneAvailability.Always });
     inputs.suspend();
     inputs.resume();
 
@@ -372,8 +372,8 @@ describe('SceneInputs — destroy()', () => {
       () => false,
     );
 
-    inputs.onStart(1, () => undefined);
-    inputs.onTrigger(1, () => undefined);
+    inputs.onStart(Keyboard.Space, () => undefined);
+    inputs.onTrigger(Keyboard.Space, () => undefined);
 
     inputs.destroy();
 
@@ -568,9 +568,7 @@ describe('SceneInputs action maps', () => {
 });
 
 describe('SceneInputs action maps — availability policy (when)', () => {
-  type Mode = 'active' | 'paused' | 'always';
-
-  const modes: readonly Mode[] = ['active', 'paused', 'always'];
+  const modes: readonly SceneAvailability[] = [SceneAvailability.Active, SceneAvailability.Paused, SceneAvailability.Always];
 
   interface AvailabilityStub {
     inputs: SceneInputs;
@@ -635,10 +633,10 @@ describe('SceneInputs action maps — availability policy (when)', () => {
    * Put `stub` into the allowed/disallowed condition for `mode` via the
    * `SceneState`/`paused` axes alone - independent of `suspend()` and the
    * transition gate, which have their own dedicated situations below.
-   * `'always'` never reacts to `paused`, so its only lever is a gated state.
+   * `Always` never reacts to `paused`, so its only lever is a gated state.
    */
-  const setAllowed = (stub: AvailabilityStub, mode: Mode, allowed: boolean): void => {
-    if (mode === 'always') {
+  const setAllowed = (stub: AvailabilityStub, mode: SceneAvailability, allowed: boolean): void => {
+    if (mode === SceneAvailability.Always) {
       stub.state.value = allowed ? SceneState.Active : SceneState.Preparing;
       stub.paused.value = false;
 
@@ -646,7 +644,7 @@ describe('SceneInputs action maps — availability policy (when)', () => {
     }
 
     stub.state.value = SceneState.Active;
-    stub.paused.value = mode === 'active' ? !allowed : allowed;
+    stub.paused.value = mode === SceneAvailability.Active ? !allowed : allowed;
   };
 
   describe.each(modes)('when: "%s"', mode => {
@@ -692,7 +690,7 @@ describe('SceneInputs action maps — availability policy (when)', () => {
       setChannel(sample, Keyboard.Space, 1);
       map._update(sample);
 
-      const activeWhileUnpaused = mode !== 'paused';
+      const activeWhileUnpaused = mode !== SceneAvailability.Paused;
 
       expect(map.jump.active).toBe(activeWhileUnpaused);
 
@@ -701,7 +699,7 @@ describe('SceneInputs action maps — availability policy (when)', () => {
       stub.snapshot[Keyboard.Space] = 1; // still physically held across the transition
       map._update(sample);
 
-      const activeWhilePaused = mode !== 'active';
+      const activeWhilePaused = mode !== SceneAvailability.Active;
 
       expect(map.jump.active).toBe(activeWhilePaused);
       expect(map.jump.pressed).toBe(false); // never a synthetic press from the toggle alone
@@ -728,7 +726,7 @@ describe('SceneInputs action maps — availability policy (when)', () => {
 
       stub.transitionGateOpen.value = true;
       map._update(sample);
-      expect(map.jump.active).toBe(false); // suppressed even for 'always'
+      expect(map.jump.active).toBe(false); // suppressed even for Always
 
       stub.transitionGateOpen.value = false;
       stub.snapshot[Keyboard.Space] = 1; // still physically held while the gate was open

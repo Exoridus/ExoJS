@@ -2,12 +2,13 @@ import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Mesh } from '#rendering/mesh/Mesh';
 import type { RenderBackend } from '#rendering/RenderBackend';
-import { RenderBackendType } from '#rendering/RenderBackendType';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+
+import { createRenderBackendDouble } from '../support/render-backend-double';
 
 const createRuntime = () => {
   const renderTarget = new RenderTarget(200, 200, true);
@@ -16,7 +17,7 @@ const createRuntime = () => {
     return this;
   });
   const runtime: RenderBackend = {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: renderTarget, stats }),
     stats,
     renderTarget,
     get view() {

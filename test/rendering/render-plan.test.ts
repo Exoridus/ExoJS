@@ -2,16 +2,23 @@ import { Rectangle } from '#math/Rectangle';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import { Filter } from '#rendering/filters/Filter';
-import { type DrawCommand, RenderEntryKind } from '#rendering/plan/RenderCommand';
+import { type DrawCommand, type MaterialKey, RenderEntryKind } from '#rendering/plan/RenderCommand';
 import { RenderPlanBuilder } from '#rendering/plan/RenderPlanBuilder';
 import { RenderPlanOptimizer } from '#rendering/plan/RenderPlanOptimizer';
+import type { DrawScopeEntry } from '#rendering/plan/RenderScope';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import { RenderBackendType } from '#rendering/RenderBackendType';
+import type { Renderer } from '#rendering/Renderer';
 import { createRenderStats, resetRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { Sprite } from '#rendering/sprite/Sprite';
 import { RenderTexture } from '#rendering/texture/RenderTexture';
 import { Texture } from '#rendering/texture/Texture';
+import { BlendModes } from '#rendering/types';
+
+import { createRenderBackendDouble } from '../support/render-backend-double';
+import { createRenderPlanDouble } from '../support/render-plan-double';
+import { createGroupScopeDouble } from '../support/render-scope-double';
 
 class BoxDrawable extends Drawable {
   public constructor(public readonly id: string) {
@@ -80,7 +87,7 @@ const createRuntime = () => {
   });
 
   const backend: RenderBackend = {
-    backendType: RenderBackendType.WebGl2,
+    ...createRenderBackendDouble({ renderTarget: root, stats }),
     // Resolution 1 keeps every internal target at its logical size, which is
     // what these tests assert on. The pixel-ratio behaviour of the same targets
     // is covered by the browser DPR lanes, where a real surface exists.
@@ -423,11 +430,15 @@ describe('render plan', () => {
   test('custom Drawable still routes through backend.draw and registry-backed material key path', () => {
     const { backend, draw } = createRuntime();
     const custom = new CustomDrawable();
-    const rendererToken = {};
-
-    (backend as RenderBackend & { rendererRegistry: { resolve(drawable: Drawable): unknown } }).rendererRegistry = {
-      resolve: vi.fn(() => rendererToken),
+    const rendererToken: Renderer = {
+      backendType: RenderBackendType.WebGl2,
+      connect: () => undefined,
+      disconnect: () => undefined,
+      render: () => undefined,
+      flush: () => undefined,
     };
+
+    vi.spyOn(backend.rendererRegistry, 'resolve').mockReturnValue(rendererToken);
 
     const builder = RenderPlanBuilder.acquire();
 
@@ -487,8 +498,8 @@ describe('render plan', () => {
     const { backend } = createRuntime();
     const a = new BoxDrawable('a');
     const b = new BoxDrawable('b');
-    const firstEntry = {
-      kind: RenderEntryKind.Draw as const,
+    const firstEntry: DrawScopeEntry = {
+      kind: RenderEntryKind.Draw,
       seq: 1,
       zIndex: 0,
       command: {
@@ -497,15 +508,16 @@ describe('render plan', () => {
         nodeIndex: 0,
         seq: 1,
         zIndex: 0,
-        material: { rendererId: 1, blendMode: a.blendMode, textureId: -1, shaderId: -1, pipelineKey: 1, bindKey: 1 },
+        material: { rendererId: 1, blendMode: a.blendMode, textureId: -1, shaderId: -1, pipelineKey: 1, bindKey: 1, ownMaterial: true },
+        groupIndex: undefined,
         minX: 0,
         minY: 0,
         maxX: 1,
         maxY: 1,
       },
     };
-    const secondEntry = {
-      kind: RenderEntryKind.Draw as const,
+    const secondEntry: DrawScopeEntry = {
+      kind: RenderEntryKind.Draw,
       seq: 0,
       zIndex: 0,
       command: {
@@ -514,7 +526,8 @@ describe('render plan', () => {
         nodeIndex: 1,
         seq: 0,
         zIndex: 0,
-        material: { rendererId: 2, blendMode: b.blendMode, textureId: -1, shaderId: -1, pipelineKey: 2, bindKey: 2 },
+        material: { rendererId: 2, blendMode: b.blendMode, textureId: -1, shaderId: -1, pipelineKey: 2, bindKey: 2, ownMaterial: true },
+        groupIndex: undefined,
         minX: 0,
         minY: 0,
         maxX: 1,
@@ -522,28 +535,13 @@ describe('render plan', () => {
       },
     };
 
-    const plan = {
-      passes: [
-        {
-          target: null,
-          view: backend.view,
-          clearColor: null,
-          root: {
-            kind: RenderEntryKind.Group,
-            entries: [firstEntry, secondEntry],
-            hasMixedZ: false,
-            // The two draws really do use different materials, so the material
-            // pass must be allowed to run - otherwise this asserts nothing.
-            hasMixedPipeline: true,
-          },
-        },
-      ],
-      nodeCount: 2,
-      reset() {
-        this.passes.length = 0;
-        this.nodeCount = 0;
-      },
-    };
+    const root = createGroupScopeDouble([firstEntry, secondEntry]);
+
+    // The two draws really do use different materials, so the material pass must
+    // be allowed to run - otherwise this asserts nothing.
+    root.hasMixedPipeline = true;
+
+    const plan = createRenderPlanDouble(backend.view, root);
 
     RenderPlanOptimizer.optimize(plan);
 
@@ -616,26 +614,28 @@ describe('render plan', () => {
     const a = new BoxDrawable('a');
     const b = new BoxDrawable('b');
 
-    const mkMat = (pk: number, bk: number) => ({
+    const mkMat = (pk: number, bk: number): MaterialKey => ({
       rendererId: 1,
-      blendMode: 0,
+      blendMode: BlendModes.Normal,
       textureId: -1,
       shaderId: -1,
       pipelineKey: pk,
       bindKey: bk,
+      ownMaterial: true,
     });
 
-    const createDraw = (d: Drawable, opts: { pk?: number; bk?: number } = {}) => ({
-      kind: RenderEntryKind.Draw as const,
+    const createDraw = (d: Drawable, opts: { pk?: number; bk?: number } = {}): DrawScopeEntry => ({
+      kind: RenderEntryKind.Draw,
       seq: 0,
       zIndex: 0,
       command: {
-        kind: RenderEntryKind.Draw as const,
+        kind: RenderEntryKind.Draw,
         drawable: d,
         nodeIndex: 0,
         seq: 0,
         zIndex: 0,
         material: mkMat(opts.pk ?? 100, opts.bk ?? 100),
+        groupIndex: undefined,
         minX: 0,
         minY: 0,
         maxX: 16,
@@ -644,27 +644,7 @@ describe('render plan', () => {
     });
 
     const { backend } = createRuntime();
-    const plan = {
-      passes: [
-        {
-          target: null as any,
-          view: backend.view,
-          clearColor: null as any,
-          root: {
-            kind: RenderEntryKind.Group as const,
-            entries: [createDraw(a, { pk: 100, bk: 100 }), createDraw(b, { pk: 100, bk: 100 })],
-            hasMixedZ: false,
-            hasMixedPipeline: false,
-            preserveDrawOrder: false,
-          },
-        },
-      ],
-      nodeCount: 0,
-      reset() {
-        this.passes.length = 0;
-        this.nodeCount = 0;
-      },
-    };
+    const plan = createRenderPlanDouble(backend.view, createGroupScopeDouble([createDraw(a, { pk: 100, bk: 100 }), createDraw(b, { pk: 100, bk: 100 })]));
 
     RenderPlanOptimizer.optimize(plan);
 

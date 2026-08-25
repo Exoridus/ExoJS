@@ -104,6 +104,10 @@ interface MockSignals {
   onPointerTap: Signal<[Pointer, number, number]>;
   onPointerCancel: Signal<[Pointer, number, number]>;
   onPointerLeave: Signal<[Pointer, number, number]>;
+  onContextMenu: Signal<[ContextMenuRequest]>;
+  onKeyDown: Signal<[number]>;
+  onKeyUp: Signal<[number]>;
+  _finishInteractionFrame(): void;
 }
 
 /** Dispatch a mock pointer through a mock signal with its own x/y, matching the real (pointer, x, y) shape. */

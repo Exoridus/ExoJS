@@ -237,7 +237,7 @@ describe('PointerStackLayer', () => {
     }).not.toThrow();
 
     // getPrimaryPointerPosition must have been called during update.
-    expect(app.input.getPrimaryPointerPosition as MockInstance).toHaveBeenCalled();
+    expect(vi.mocked(app.input.getPrimaryPointerPosition)).toHaveBeenCalled();
   });
 
   test('invisible nodes (and their subtree) are excluded from the stack', () => {
