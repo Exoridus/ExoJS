@@ -53,7 +53,7 @@ import type { CanvasSizing, CanvasSizingContext, CanvasSizingHostMetrics, Canvas
 import type { System } from './System';
 import { SystemOrder } from './SystemOrder';
 import { SystemRegistry } from './SystemRegistry';
-import { freezeTime, Time } from './Time';
+import { type Duration, Time } from './Time';
 import { canvasSourceToDataUrl, isWebKitUserAgent } from './utils';
 
 /**
@@ -561,7 +561,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   public readonly onResize = new Signal<[number, number, Application]>();
   public readonly onFrame = new Signal<[Time]>();
   /** Dispatched once per fixed-timestep step (zero or more times per frame), ahead of {@link onFrame}. */
-  public readonly onFixedFrame = new Signal<[Time]>();
+  public readonly onFixedFrame = new Signal<[Duration]>();
   public readonly onCanvasFocusChange = new Signal<[focused: boolean]>();
   public readonly onVisibilityChange = new Signal<[visible: boolean]>();
   public readonly onBackendLost = new Signal();
@@ -620,9 +620,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
   // code every fixed step via `systems._fixedUpdate`/`scenes.fixedUpdate`/
   // `onFixedFrame.dispatch`, so - same bug class as the old `Time.temp` - a
   // mutation from user code would corrupt every subsequent fixed step for
-  // the rest of the app's run, not just the current one. Frozen at
-  // construction (see `freezeTime`) so that throws instead.
-  private readonly _fixedTime: Time;
+  // the rest of the app's run, not just the current one. Typed as
+  // `Duration` so the mutators are not reachable on it.
+  private readonly _fixedTime: Duration;
   // Scratch instance for the per-frame variable-step delta - mutated in
   // place every frame instead of allocating a Time. Owned by the frame loop
   // (not exposed publicly, unlike the old `Time.temp`), since it hands out
@@ -763,9 +763,9 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       // Every runtime clock reads the host through the adapter, so a platform
       // with a deterministic time source makes the whole frame loop
       // deterministic - there is no second, global clock behind it.
-      this._startupClock = new Clock(Time.zero, false, this.platform);
-      this._activeClock = new Clock(Time.zero, false, this.platform);
-      this._frameClock = new Clock(Time.zero, false, this.platform);
+      this._startupClock = new Clock(false, this.platform);
+      this._activeClock = new Clock(false, this.platform);
+      this._frameClock = new Clock(false, this.platform);
 
       // Only an adapter created here is ours to release - an injected one stays
       // the caller's on the failure path, exactly as in `destroy()`.
@@ -847,7 +847,16 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
       const fixedStepMs = this.options.fixedTimeStep !== undefined ? this.options.fixedTimeStep * 1000 : defaultFixedStepMs;
 
       this._fixed = new FixedTimestep(fixedStepMs, maxFixedSteps);
-      this._fixedTime = freezeTime(new Time(fixedStepMs));
+
+      const fixedTime = new Time(fixedStepMs);
+
+      // Same reasoning as the canonical constants in `Time`: `Duration` hides
+      // the mutators from TypeScript, freezing catches the callers it cannot.
+      if (__DEV__) {
+        Object.freeze(fixedTime);
+      }
+
+      this._fixedTime = fixedTime;
 
       this._startupClock.start();
 

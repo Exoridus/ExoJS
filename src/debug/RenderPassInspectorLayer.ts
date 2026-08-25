@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import type { Time } from '#core/Time';
+import type { Duration } from '#core/Time';
 import { Container } from '#rendering/Container';
 import type { Filter } from '#rendering/filters/Filter';
 import { Graphics } from '#rendering/primitives/Graphics';
@@ -117,7 +117,7 @@ export class RenderPassInspectorLayer extends DebugLayer {
    * frame's snapshot. The current snapshot is exposed via {@link entries}
    * for tests and external consumers.
    */
-  public override update(_delta: Time): void {
+  public override update(_delta: Duration): void {
     if (this._root === null) {
       this._build();
     }

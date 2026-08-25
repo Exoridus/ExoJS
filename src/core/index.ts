@@ -91,7 +91,7 @@ export type { System, SystemMethods } from './System';
 export { SystemOrder } from './SystemOrder';
 export type { SystemPhase, SystemRegistrationOptions } from './SystemRegistry';
 export { SystemRegistry } from './SystemRegistry';
-export { Time } from './Time';
+export { type Duration, Time } from './Time';
 export { Timer } from './Timer';
 export { CrossFadeSceneTransition, type CrossFadeSceneTransitionOptions } from './transitions/CrossFadeSceneTransition';
 export { FadeSceneTransition, type FadeSceneTransitionOptions } from './transitions/FadeSceneTransition';

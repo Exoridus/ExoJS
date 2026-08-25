@@ -1,5 +1,5 @@
 import type { Color } from '#core/Color';
-import type { Time } from '#core/Time';
+import type { Duration } from '#core/Time';
 import type { Matrix } from '#math/Matrix';
 import type { Geometry } from '#rendering/geometry/Geometry';
 import type { MeshMaterial } from '#rendering/material/MeshMaterial';
@@ -156,7 +156,7 @@ export class RenderingContext implements DrawContext {
    * {@link trackView}-ed view. The {@link SystemMethods.preUpdate} phase, at
    * {@link SystemOrder.CoreRendering} - last of the engine's core systems.
    */
-  public preUpdate(delta: Time): void {
+  public preUpdate(delta: Duration): void {
     const ms = delta.milliseconds;
 
     this._view.update(ms);

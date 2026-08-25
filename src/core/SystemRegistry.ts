@@ -4,7 +4,7 @@ import { logger } from './logging';
 import { Signal } from './Signal';
 import { hookOwnerName, requireSynchronousHook } from './syncHooks';
 import type { System } from './System';
-import type { Time } from './Time';
+import type { Duration } from './Time';
 import type { Destroyable } from './types';
 
 /** Options accepted by {@link SystemRegistry.add}. */
@@ -341,7 +341,7 @@ export class SystemRegistry implements Destroyable {
   }
 
   /** @internal Dispatched once per frame, ahead of every fixed step. */
-  public _preUpdate(delta: Time): void {
+  public _preUpdate(delta: Duration): void {
     if (this._preUpdateList.length === 0) {
       return;
     }
@@ -361,7 +361,7 @@ export class SystemRegistry implements Destroyable {
   }
 
   /** @internal Dispatched once per fixed-timestep step, after {@link SystemRegistry._preUpdate} and ahead of {@link SystemRegistry._update}. */
-  public _fixedUpdate(step: Time): void {
+  public _fixedUpdate(step: Duration): void {
     if (this._fixedList.length === 0) {
       return;
     }
@@ -381,7 +381,7 @@ export class SystemRegistry implements Destroyable {
   }
 
   /** @internal Dispatched once per frame, after fixed steps and ahead of {@link SystemRegistry._draw}. */
-  public _update(delta: Time): void {
+  public _update(delta: Duration): void {
     if (this._updateList.length === 0) {
       return;
     }

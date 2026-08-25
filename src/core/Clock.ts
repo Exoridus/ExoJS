@@ -19,14 +19,13 @@ const hostTimeSource: TimeSource = { now: getPreciseTime };
  * Use {@link Timer} for a clock with a fixed limit and `expired` flag.
  */
 export class Clock {
-  private _startTime: Time;
+  private readonly _startTime: Time = new Time(0);
   private _elapsedTime: Time = new Time(0);
   private _running = false;
 
   private readonly _timeSource: TimeSource;
 
-  public constructor(startTime: Time = Time.zero, autoStart = false, timeSource: TimeSource = hostTimeSource) {
-    this._startTime = startTime.clone();
+  public constructor(autoStart = false, timeSource: TimeSource = hostTimeSource) {
     this._timeSource = timeSource;
 
     if (autoStart) {

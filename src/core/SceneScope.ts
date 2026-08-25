@@ -12,7 +12,7 @@ import { SceneTweens } from './scene/SceneTweens';
 import { canDestroy, canRestore, canSuspend, SceneState } from './SceneState';
 import { hookOwnerName, requireSynchronousHook } from './syncHooks';
 import { SystemRegistry } from './SystemRegistry';
-import type { Time } from './Time';
+import type { Duration } from './Time';
 
 // User Timing mark/measure names for the scene sub-phases dispatched here
 // (dev-only). Constant strings so the Performance panel groups every frame's
@@ -272,7 +272,7 @@ export class SceneScope<Data = unknown> {
    * unlike {@link SceneScope.draw}). Throws in every build if
    * `Scene.fixedUpdate` returns a thenable - the hook must be synchronous.
    */
-  public preUpdate(delta: Time): void {
+  public preUpdate(delta: Duration): void {
     if (this._state !== SceneState.Active || this._paused) {
       return;
     }
@@ -284,7 +284,7 @@ export class SceneScope<Data = unknown> {
     this.systems._preUpdate(delta);
   }
 
-  public fixedUpdate(step: Time): void {
+  public fixedUpdate(step: Duration): void {
     if (this._state !== SceneState.Active || this._paused) {
       return;
     }
@@ -308,7 +308,7 @@ export class SceneScope<Data = unknown> {
    * `Active` and unpaused. Throws in every build if `Scene.update` returns a
    * thenable - the hook must be synchronous.
    */
-  public update(delta: Time): void {
+  public update(delta: Duration): void {
     if (this._state !== SceneState.Active || this._paused) {
       return;
     }

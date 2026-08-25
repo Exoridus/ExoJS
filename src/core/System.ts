@@ -1,6 +1,6 @@
 import type { RenderingContext } from '#rendering/RenderingContext';
 
-import type { Time } from './Time';
+import type { Duration } from './Time';
 import type { Destroyable, Synchronous } from './types';
 
 /**
@@ -26,11 +26,11 @@ export interface SystemMethods {
    * input in {@link SystemMethods.update} would see the previous frame's
    * snapshot, because `update` runs after the fixed steps.
    */
-  preUpdate?(delta: Time): Synchronous;
+  preUpdate?(delta: Duration): Synchronous;
   /** Advance by one fixed-timestep `step` ({@link Application.fixedTimeStep}). Called zero or more times per frame, after {@link SystemMethods.preUpdate} and before {@link SystemMethods.update}. */
-  fixedUpdate?(step: Time): Synchronous;
+  fixedUpdate?(step: Duration): Synchronous;
   /** Advance by the variable frame `delta`. Called once per frame, after fixed steps. */
-  update?(delta: Time): Synchronous;
+  update?(delta: Duration): Synchronous;
   /** Render into `context`. Called once per frame, after {@link SystemMethods.update}. */
   draw?(context: RenderingContext): Synchronous;
 }
@@ -54,7 +54,7 @@ type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<T, Exclude<keyo
  *
  * ```ts
  * app.systems.add({
- *   update(delta: Time) {
+ *   update(delta: Duration) {
  *     simulation.update(delta);
  *   },
  *   draw(context: RenderingContext) {

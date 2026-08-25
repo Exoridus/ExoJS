@@ -1,4 +1,4 @@
-import type { Time } from '#core/Time';
+import type { Duration } from '#core/Time';
 
 import type { Pointer } from './Pointer';
 
@@ -105,7 +105,7 @@ export class GestureRecognizer {
    *
    * @internal
    */
-  public update(delta: Time): void {
+  public update(delta: Duration): void {
     if (this.longPressEntries.size === 0) {
       return;
     }

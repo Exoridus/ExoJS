@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import { Signal } from '#core/Signal';
-import type { Time } from '#core/Time';
+import type { Duration } from '#core/Time';
 import { getPreciseTime, stopEvent } from '#core/utils';
 import { Flags } from '#math/Flags';
 import type { PointLike } from '#math/PointLike';
@@ -659,7 +659,7 @@ export class InputManager {
    * `delta` is also the clock a pending long-press matures on - see
    * {@link GestureRecognizer.update}.
    */
-  public preUpdate(delta: Time): void {
+  public preUpdate(delta: Duration): void {
     for (const pointer of this.pointers.values()) {
       pointer._beginFrame();
     }

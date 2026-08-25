@@ -1,4 +1,4 @@
-import type { Time } from '#core/Time';
+import type { Duration } from '#core/Time';
 
 import { Tween } from './Tween';
 import { TweenSequencer } from './TweenSequencer';
@@ -204,7 +204,7 @@ export class TweenManager {
    * at {@link SystemOrder.CoreTweens}. Uses snapshots so callbacks that add or
    * remove tweens/tickers do not corrupt mid-iteration.
    */
-  public preUpdate(delta: Time): void {
+  public preUpdate(delta: Duration): void {
     if (this._destroyed) return;
 
     const seconds = delta.seconds;

@@ -11,7 +11,7 @@ import {
   type SceneTransitionRequirements,
   type SceneTransitionSession,
 } from './SceneTransition';
-import type { Time } from './Time';
+import type { Duration } from './Time';
 
 /**
  * Per-phase render-resource requirements for one phase (`enter` or `exit`)
@@ -220,7 +220,7 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
     return this._phaseState === 'enter' || this._phaseState === 'done' ? this._enterPhase.placement : this._exitPhase.placement;
   }
 
-  public update(delta: Time): void {
+  public update(delta: Duration): void {
     if (this._phaseState === 'done') {
       return;
     }

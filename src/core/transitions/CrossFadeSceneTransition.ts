@@ -2,7 +2,7 @@ import type { EasingFunction } from '#animation/Easing';
 import { Ease } from '#animation/Easing';
 import type { SceneTransitionEnvironment, SceneTransitionFrame, SceneTransitionRequirements, SceneTransitionSession } from '#core/SceneTransition';
 import { SceneTransition } from '#core/SceneTransition';
-import type { Time } from '#core/Time';
+import type { Duration } from '#core/Time';
 import type { RenderingContext } from '#rendering/RenderingContext';
 import { Sprite } from '#rendering/sprite/Sprite';
 
@@ -39,7 +39,7 @@ class CrossFadeSession implements SceneTransitionSession {
     return this._done;
   }
 
-  public update(delta: Time): void {
+  public update(delta: Duration): void {
     if (this._done || !this._environment.committed) {
       return;
     }

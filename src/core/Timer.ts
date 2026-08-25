@@ -13,7 +13,7 @@ export class Timer extends Clock {
   private readonly _limit: Time;
 
   public constructor(limit: Time, autoStart = false, timeSource?: TimeSource) {
-    super(Time.zero, false, timeSource);
+    super(false, timeSource);
 
     this._limit = limit.clone();
 

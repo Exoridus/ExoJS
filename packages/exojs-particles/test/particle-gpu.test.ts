@@ -30,7 +30,7 @@ const makeTexture = (): Texture => {
   return new Texture(canvas);
 };
 
-const tick = (s: number): Time => Time.zero.clone().set(s * 1000);
+const tick = (s: number): Time => Time.fromSeconds(s);
 
 interface MockComputePass {
   setPipeline: MockInstance;

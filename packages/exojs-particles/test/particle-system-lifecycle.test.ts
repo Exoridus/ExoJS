@@ -16,7 +16,7 @@ const makeTexture = (width = 16, height = 16): Texture => {
   return new Texture(canvas);
 };
 
-const tick = (s: number): Time => Time.zero.clone().set(s * 1000);
+const tick = (s: number): Time => Time.fromSeconds(s);
 
 describe('ParticleSystem construction shapes', () => {
   test('no texture falls back to the default and uses the default capacity', () => {

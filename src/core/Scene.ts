@@ -17,7 +17,7 @@ import { deserializeInto, migrate, serializeTree } from './serialization/seriali
 import { SERIALIZATION_VERSION, type SerializedScene } from './serialization/types';
 import { Signal } from './Signal';
 import type { SystemRegistry } from './SystemRegistry';
-import type { Time } from './Time';
+import type { Duration } from './Time';
 import type { Destroyable, Synchronous } from './types';
 
 /**
@@ -25,7 +25,7 @@ import type { Destroyable, Synchronous } from './types';
  *
  *   class GameScene extends Scene {
  *       override init(): void { ... }
- *       override update(delta: Time): void { ... }
+ *       override update(delta: Duration): void { ... }
  *       override draw(context: RenderingContext): void { ... }
  *   }
  *
@@ -406,7 +406,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    * {@link Synchronous} for why. The frame path never awaits a hook result,
    * so an `async` override would drop its timing and swallow its errors.
    */
-  public update(_delta: Time): Synchronous {
+  public update(_delta: Duration): Synchronous {
     // override in subclass
   }
 
@@ -423,7 +423,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    *
    * Must be synchronous - see {@link Scene.update}.
    */
-  public preUpdate(_delta: Time): Synchronous {
+  public preUpdate(_delta: Duration): Synchronous {
     // override in subclass
   }
 
@@ -437,7 +437,7 @@ export class Scene<Data = void, AppLike extends ApplicationLike = Application> {
    *
    * Must be synchronous - see {@link Scene.update}.
    */
-  public fixedUpdate(_step: Time): Synchronous {
+  public fixedUpdate(_step: Duration): Synchronous {
     // override in subclass
   }
 

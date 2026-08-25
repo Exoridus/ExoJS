@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import type { Time } from '#core/Time';
+import type { Duration } from '#core/Time';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
 import type { RenderNode } from '#rendering/RenderNode';
@@ -36,7 +36,7 @@ export class HitTestLayer extends DebugLayer {
   }
 
   /** No per-frame pre-computation required; all state is derived in {@link render}. */
-  public override update(_delta: Time): void {
+  public override update(_delta: Duration): void {
     // Nothing to pre-compute; all state is read in render().
   }
 

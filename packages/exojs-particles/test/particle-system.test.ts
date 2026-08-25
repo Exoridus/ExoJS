@@ -33,7 +33,7 @@ const makeTexture = (): Texture => {
   return new Texture(canvas);
 };
 
-const tick = (s: number): Time => Time.zero.clone().set(s * 1000);
+const tick = (s: number): Time => Time.fromSeconds(s);
 
 describe('ParticleSystem SoA storage', () => {
   test('allocates typed arrays sized to capacity', () => {
@@ -913,7 +913,7 @@ describe('emit()', () => {
     first.color = 0xff0000ff;
     first.lifetime = 0.01;
 
-    system.update(Time.zero.clone().set(20));
+    system.update(Time.fromMilliseconds(20));
     expect(system.liveCount).toBe(0);
 
     const second = system.emit()!;

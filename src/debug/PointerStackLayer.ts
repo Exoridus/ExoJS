@@ -1,6 +1,6 @@
 import type { Application } from '#core/Application';
 import { Color } from '#core/Color';
-import type { Time } from '#core/Time';
+import type { Duration } from '#core/Time';
 import { Container } from '#rendering/Container';
 import { Graphics } from '#rendering/primitives/Graphics';
 import type { RenderBackend } from '#rendering/RenderBackend';
@@ -52,7 +52,7 @@ export class PointerStackLayer extends DebugLayer {
    * top-right corner, and populate text lines with the current pointer
    * stack (up to 10 entries, sorted by zIndex descending).
    */
-  public override update(_delta: Time): void {
+  public override update(_delta: Duration): void {
     if (this._root === null) {
       this._build();
     }
