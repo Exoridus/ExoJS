@@ -48,7 +48,7 @@ export function showDevErrorOverlay(canvas: HTMLCanvasElement, message: string, 
 
   if (banner === undefined) {
     banner = document.createElement('div');
-    banner.setAttribute('data-exojs-error-overlay', '');
+    banner.dataset.exojsErrorOverlay = '';
     banners.set(canvas, banner);
     bannerCounts.set(banner, 0);
 

@@ -111,10 +111,10 @@ export const determineFontHeight = (font: string): number => {
     const body = document.body;
     const dummy = document.createElement('div');
 
-    dummy.appendChild(document.createTextNode('M'));
+    dummy.append(document.createTextNode('M'));
     dummy.setAttribute('style', `font: ${font};position:absolute;top:0;left:0`);
 
-    body.appendChild(dummy);
+    body.append(dummy);
     heightCache.set(font, dummy.offsetHeight);
     body.removeChild(dummy);
   }

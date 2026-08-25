@@ -126,7 +126,7 @@ export const supportsEventOptions = (): boolean => {
       },
     });
     window.removeEventListener('test', noop);
-  } catch (_e) {
+  } catch {
     // do nothing
   }
 

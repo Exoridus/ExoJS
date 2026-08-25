@@ -72,7 +72,7 @@ const freshStageCanvas = (host: HTMLElement): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
 
   canvas.id = 'stage';
-  host.appendChild(canvas);
+  host.append(canvas);
 
   return canvas;
 };

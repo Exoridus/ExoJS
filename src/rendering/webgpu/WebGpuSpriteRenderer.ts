@@ -136,13 +136,11 @@ export const resolveSpriteBatchTextureSlots = (device: GPUDevice): number => {
  * dispatches over the same slot range.
  * @internal
  */
-export const buildSpriteShaderSource = (textureSlots: number): string => {
-  return `${spriteSharedStorageWgsl}
+export const buildSpriteShaderSource = (textureSlots: number): string => `${spriteSharedStorageWgsl}
 ${buildSpriteTextureSlotWgsl(textureSlots)}
 
 ${spriteDefaultVertexInputWgsl}${spriteVertexCoreWgsl}
 ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`;
-};
 
 /**
  * WGSL source for the PERSISTENT-INDEXED sprite pipeline, generated for the
@@ -171,13 +169,11 @@ ${spriteDefaultVertexMainWgsl}${spriteFragmentMainWgsl}`;
  * `premultiplyAlpha` changed under a staying item.
  * @internal
  */
-export const buildPersistentSpriteShaderSource = (textureSlots: number): string => {
-  return `
+export const buildPersistentSpriteShaderSource = (textureSlots: number): string => `
 ${spritePersistentBindingsWgsl}
 ${buildSpriteTextureSlotWgsl(textureSlots)}
 ${spriteVertexCoreWgsl}
 ${spritePersistentVertexMainWgsl}${spriteFragmentMainWgsl}`;
-};
 
 const instanceStrideBytes = 32;
 const wordsPerInstance = instanceStrideBytes / Uint32Array.BYTES_PER_ELEMENT;
@@ -1068,20 +1064,18 @@ export class WebGpuSpriteRenderer extends AbstractWebGpuRenderer<Sprite> impleme
     // Retained capture: stage the exact packed bytes plus a live material
     // descriptor. Geometry/transform rows stay recorded; material values and
     // texture identities are resolved again at replay.
-    if (this._instanceCount > 0 && backend._retainedCaptureActive) {
-      if (this._currentBlendMode !== null) {
-        backend._recordRetainedBatch(
-          this,
-          this._instanceData,
-          this._instanceCount * instanceStrideBytes,
-          this._instanceCount,
-          this._currentBlendMode,
-          this._activeTextures,
-          this._slotCount,
-          null,
-          isCustom ? createRetainedMaterialState(this._currentMaterial!) : null,
-        );
-      }
+    if (this._instanceCount > 0 && backend._retainedCaptureActive && this._currentBlendMode !== null) {
+      backend._recordRetainedBatch(
+        this,
+        this._instanceData,
+        this._instanceCount * instanceStrideBytes,
+        this._instanceCount,
+        this._currentBlendMode,
+        this._activeTextures,
+        this._slotCount,
+        null,
+        isCustom ? createRetainedMaterialState(this._currentMaterial!) : null,
+      );
     }
 
     // Batch flushes never submit; the backend ends the pass at genuine

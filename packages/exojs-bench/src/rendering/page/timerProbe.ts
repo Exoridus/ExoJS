@@ -519,7 +519,7 @@ const freshCanvas = (): HTMLCanvasElement => {
   canvas.id = 'stage';
   canvas.width = STAGE_WIDTH;
   canvas.height = STAGE_HEIGHT;
-  document.body.appendChild(canvas);
+  document.body.append(canvas);
 
   return canvas;
 };

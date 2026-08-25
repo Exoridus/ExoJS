@@ -65,9 +65,7 @@ const readComponent = (view: DataView, type: AttributeType, offset: number, norm
   }
 };
 
-const cloneAttributes = (attributes: readonly GeometryAttribute[]): readonly GeometryAttribute[] => {
-  return attributes.map(attribute => ({ ...attribute }));
-};
+const cloneAttributes = (attributes: readonly GeometryAttribute[]): readonly GeometryAttribute[] => attributes.map(attribute => ({ ...attribute }));
 
 const resolvePositionAttribute = (attributes: readonly GeometryAttribute[]): GeometryAttribute => {
   const directMatch = attributes.find(attribute => positionAttributeNames.has(attribute.name));

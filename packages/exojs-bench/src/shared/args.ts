@@ -18,7 +18,7 @@ export const parseArgs = (argv: readonly string[]): Map<string, string> => {
     const body = token.slice(2);
     const equals = body.indexOf('=');
 
-    if (equals >= 0) {
+    if (equals !== -1) {
       args.set(body.slice(0, equals), body.slice(equals + 1));
     } else {
       const next = argv[i + 1];

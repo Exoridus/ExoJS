@@ -135,7 +135,7 @@ const setProgress = (text: string, state: 'running' | 'done' | 'error' | 'idle')
   visualTitle.hidden = state !== 'idle';
 
   if (state === 'idle') {
-    visualProgress.removeAttribute('data-state');
+    delete visualProgress.dataset.state;
 
     return;
   }
@@ -171,7 +171,7 @@ const addButton = (host: HTMLElement, value: string, label: string, onClick: () 
   button.textContent = label;
   button.dataset['value'] = value;
   button.addEventListener('click', onClick);
-  host.appendChild(button);
+  host.append(button);
 };
 
 /**
@@ -292,7 +292,7 @@ const renderResults = (): void => {
     const cell = document.createElement('th');
 
     cell.textContent = header;
-    head.appendChild(cell);
+    head.append(cell);
   }
 
   for (const result of collected) {
