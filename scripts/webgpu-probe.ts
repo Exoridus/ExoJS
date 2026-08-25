@@ -15,8 +15,8 @@
 // this script is for eyeballing a single example ad-hoc.
 //
 // Usage:
-//   node scripts/webgpu-probe.mjs                         # capability check only
-//   node scripts/webgpu-probe.mjs debug-layer/asset-browser.js   # render one example
+//   pnpm webgpu:probe                                     # capability check only
+//   pnpm webgpu:probe debug-layer/asset-browser.js        # render one example
 //
 // Requires a built + vendored site (pnpm build && pnpm --dir site vendor:sync:exo
 // && pnpm --dir site examples:sync) so site/public has the current engine.
@@ -24,6 +24,7 @@ import { createServer } from 'node:http';
 import { readFileSync, existsSync, statSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve, extname } from 'node:path';
 import { createRequire } from 'node:module';
+import type { AddressInfo } from 'node:net';
 
 const REPO = resolve(import.meta.dirname, '..');
 const PUBLIC = resolve(REPO, 'site/public');
@@ -31,10 +32,12 @@ const OUT = resolve(REPO, '.webgpu-probe');
 const BASE = '/ExoJS';
 const example = process.argv[2] ?? null;
 
+// Resolved from `site/` so the probe uses the same Playwright install the
+// browser lanes do, rather than requiring one at the repo root.
 const require = createRequire(resolve(REPO, 'site') + '/');
-const { chromium } = require('playwright');
+const { chromium } = require('playwright') as typeof import('playwright');
 
-const MIME = {
+const MIME: Readonly<Record<string, string>> = {
   '.js': 'text/javascript',
   '.mjs': 'text/javascript',
   '.html': 'text/html; charset=utf-8',
@@ -59,10 +62,15 @@ const MIME = {
   '.atlas': 'text/plain',
 };
 
-function startServer() {
+interface ProbeServer {
+  readonly port: number;
+  readonly server: ReturnType<typeof createServer>;
+}
+
+const startServer = (): Promise<ProbeServer> => {
   const server = createServer((req, res) => {
     try {
-      let urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
+      let urlPath = decodeURIComponent((req.url ?? '/').split('?')[0]!);
       if (urlPath.startsWith(BASE)) urlPath = urlPath.slice(BASE.length) || '/';
       let filePath = resolve(join(PUBLIC, urlPath));
       if (!filePath.startsWith(PUBLIC)) {
@@ -83,8 +91,8 @@ function startServer() {
       res.end(String(e));
     }
   });
-  return new Promise(r => server.listen(0, '127.0.0.1', () => r({ port: server.address().port, server })));
-}
+  return new Promise(resolvePort => server.listen(0, '127.0.0.1', () => resolvePort({ port: (server.address() as AddressInfo).port, server })));
+};
 
 const { port, server } = await startServer();
 const baseUrl = `http://127.0.0.1:${port}`;
@@ -97,7 +105,7 @@ const browser = await chromium.launch({
 });
 const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, colorScheme: 'dark', deviceScaleFactor: 1 });
 const page = await context.newPage();
-const errors = [];
+const errors: string[] = [];
 page.on('console', m => {
   if (m.type() === 'error') errors.push(m.text().replace(/\s+/g, ' ').slice(0, 200));
 });
@@ -105,8 +113,16 @@ page.on('pageerror', e => errors.push('PAGEERROR: ' + e.message.replace(/\s+/g, 
 
 await page.goto(`${baseUrl}${BASE}/preview.html`, { waitUntil: 'domcontentloaded', timeout: 20000 });
 
-const caps = await page.evaluate(async () => {
-  const out = { secureContext: isSecureContext, hasGpu: !!navigator.gpu };
+interface ProbeCaps {
+  secureContext: boolean;
+  hasGpu: boolean;
+  adapter?: string;
+  adapterInfo?: string;
+  device?: string;
+}
+
+const caps = await page.evaluate(async (): Promise<ProbeCaps> => {
+  const out: ProbeCaps = { secureContext: isSecureContext, hasGpu: !!navigator.gpu };
   if (navigator.gpu) {
     try {
       const a = await navigator.gpu.requestAdapter();
@@ -116,11 +132,11 @@ const caps = await page.evaluate(async () => {
         try {
           out.device = (await a.requestDevice()) ? 'non-null' : 'null';
         } catch (e) {
-          out.device = 'THROW: ' + e.message.slice(0, 80);
+          out.device = 'THROW: ' + (e as Error).message.slice(0, 80);
         }
       }
     } catch (e) {
-      out.adapter = 'THROW: ' + e.message.slice(0, 80);
+      out.adapter = 'THROW: ' + (e as Error).message.slice(0, 80);
     }
   }
   return out;
@@ -138,12 +154,20 @@ if (example) {
     const source = readFileSync(srcFile, 'utf8');
     await page.evaluate(
       async ({ exampleSource, meta }) => {
-        window.__EXAMPLE_META__ = meta;
+        const host = window as typeof window & { __EXAMPLE_META__?: unknown; assets?: Record<string, unknown> };
+
+        host.__EXAMPLE_META__ = meta;
+
         try {
-          const c = await import('./assets/catalog.js');
-          window.assets = c.assets ?? {};
+          // Built by the site at run time, so it must not be resolved statically:
+          // a non-literal specifier keeps the type checker out of the browser's
+          // module graph.
+          const catalogUrl = './assets/catalog.js';
+          const c = (await import(catalogUrl)) as { assets?: Record<string, unknown> };
+
+          host.assets = c.assets ?? {};
         } catch {
-          window.assets = {};
+          host.assets = {};
         }
         const s = document.createElement('script');
         s.type = 'module';
@@ -153,7 +177,10 @@ if (example) {
       { exampleSource: source, meta: { path: example } },
     );
     await page.waitForTimeout(3000);
-    const backendType = await page.evaluate(() => globalThis.__app?._backendType ?? 'unknown (example does not expose globalThis.__app)');
+    const backendType = await page.evaluate(
+      () =>
+        (globalThis as typeof globalThis & { __app?: { _backendType?: string } }).__app?._backendType ?? 'unknown (example does not expose globalThis.__app)',
+    );
     const buf = await page.screenshot({ clip: { x: 0, y: 0, width: 1280, height: 720 } });
     mkdirSync(OUT, { recursive: true });
     const shot = join(OUT, example.replace(/[\\/]/g, '__').replace(/\.js$/, '') + '.png');
@@ -169,6 +196,11 @@ if (example) {
         off.width = W;
         off.height = H;
         const ctx = off.getContext('2d');
+
+        if (!ctx) {
+          throw new Error('probe: no 2d context for the downsample canvas');
+        }
+
         ctx.drawImage(img, 0, 0, W, H);
         const d = ctx.getImageData(0, 0, W, H).data;
         const n = W * H;

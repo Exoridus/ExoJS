@@ -167,7 +167,7 @@ const isSitePath = file => {
  * @param {readonly string[]} changedFiles
  * @returns {LaneAreas}
  */
-export function selectAreas(changedFiles) {
+export const selectAreas = changedFiles => {
   let engine = false;
   let site = false;
   let audioFx = false;
@@ -183,7 +183,7 @@ export function selectAreas(changedFiles) {
     if (engine && site && audioFx && tilemapWorker) break;
   }
   return { engine, site, audioFx, tilemapWorker };
-}
+};
 
 /**
  * Map effective areas to the concrete CI lanes. This MIRRORS the job `if:` gates
@@ -197,7 +197,7 @@ export function selectAreas(changedFiles) {
  * @param {LaneAreas} areas
  * @returns {EffectiveLanes}
  */
-export function effectiveLanes(areas) {
+export const effectiveLanes = areas => {
   const { engine, site, audioFx, tilemapWorker } = areas;
   return {
     typecheck: true,
@@ -212,7 +212,7 @@ export function effectiveLanes(areas) {
     packageVerify: engine,
     siteBuild: site,
   };
-}
+};
 
 /**
  * Parse the changed-file list emitted by dorny/paths-filter (`list-files: json`)
@@ -220,7 +220,7 @@ export function effectiveLanes(areas) {
  * @param {string | undefined} raw
  * @returns {string[]}
  */
-function parseChangedFiles(raw) {
+const parseChangedFiles = raw => {
   const text = (raw ?? '').trim();
   if (text === '') return [];
   if (text.startsWith('[')) {
@@ -235,7 +235,7 @@ function parseChangedFiles(raw) {
     .split(/\r?\n/)
     .map(line => line.trim())
     .filter(Boolean);
-}
+};
 
 /**
  * CLI entry: read the event name + changed-file list from the environment and
@@ -245,7 +245,7 @@ function parseChangedFiles(raw) {
  * area runs: a push to main, a tag release (via release.yml) or a manual
  * dispatch is always validated in full, never partially.
  */
-function main() {
+const main = () => {
   const eventName = process.env['EVENT_NAME'] ?? '';
   const areas =
     eventName === 'pull_request'
@@ -257,7 +257,7 @@ function main() {
     `select-lanes: event=${eventName || 'unknown'} engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker}\n`,
   );
   process.stdout.write(`engine=${areas.engine}\nsite=${areas.site}\naudioFx=${areas.audioFx}\ntilemapWorker=${areas.tilemapWorker}\n`);
-}
+};
 
 // Only run the CLI when executed directly (`node scripts/ci/select-lanes.mjs`),
 // never when imported by the test suite.

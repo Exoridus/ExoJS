@@ -22,6 +22,13 @@
   // passes the wrong shape to a shared ESLint/Vitest/Rolldown factory fails
   // here. Converting it to TypeScript is not required for that and would cost
   // more than it buys - ESLint and Prettier load it directly at runtime.
+  //
+  // The three remaining `scripts/**/*.mjs` are in the program for the same
+  // reason, and stay `.mjs` for a hard one rather than a preference: the CI
+  // detector job runs `select-lanes.mjs` with the runner's ambient node before
+  // any install, and `--import` registers the GLSL loader pair BEFORE
+  // `tsx/esm`, so nothing can compile TypeScript at the point either runs.
+  // `checkJs` gives them the same checking a `.ts` file would get.
   "extends": "@codexo/exojs-config/typescript/base.json",
   "compilerOptions": {
     "lib": ["es2023"],
@@ -37,6 +44,6 @@
   // `exo-full.entry.ts` is a bundler entry, not a Node program: it re-exports
   // every extension package and is type-checked by `tsconfig.examples.json`
   // against their sources.
-  "include": ["scripts/**/*.ts", "*.config.ts", "packages/exojs-config/**/*.js"],
+  "include": ["scripts/**/*.ts", "scripts/**/*.mjs", "*.config.ts", "packages/exojs-config/**/*.js"],
   "exclude": ["scripts/exo-full.entry.ts"]
 }

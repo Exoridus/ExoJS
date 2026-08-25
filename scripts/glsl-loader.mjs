@@ -18,7 +18,13 @@
  *     condition (passed on the node command line).
  *
  * Pair with `--conditions=@codexo/exojs-source`. Entrypoint: `scripts/glsl-register.mjs`.
+ *
+ * Stays `.mjs`: node loads it as a module hook, and `--import` registers it
+ * BEFORE `tsx/esm`, so nothing can compile TypeScript at the point it runs.
+ * `@ts-check` plus the hook types below give it the same checking a `.ts` file
+ * would get.
  */
+// @ts-check
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -41,9 +47,11 @@ const packageAliases = new Map([
 
 const SHADER_EXTENSIONS = ['.vert', '.frag', '.wgsl'];
 
+/** @param {string} specifier */
 const isShaderSource = specifier => SHADER_EXTENSIONS.some(extension => specifier.endsWith(extension));
 
-export async function resolve(specifier, context, nextResolve) {
+/** @type {import('node:module').ResolveHook} */
+export const resolve = async (specifier, context, nextResolve) => {
   const alias = packageAliases.get(specifier);
 
   if (alias !== undefined) {
@@ -57,9 +65,10 @@ export async function resolve(specifier, context, nextResolve) {
   }
 
   return result;
-}
+};
 
-export async function load(url, context, nextLoad) {
+/** @type {import('node:module').LoadHook} */
+export const load = async (url, context, nextLoad) => {
   if (context.format === 'shader-source' || isShaderSource(url)) {
     const source = await readFile(fileURLToPath(url), 'utf8');
 
@@ -71,4 +80,4 @@ export async function load(url, context, nextLoad) {
   }
 
   return nextLoad(url, context);
-}
+};

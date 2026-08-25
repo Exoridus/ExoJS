@@ -5,8 +5,10 @@
  * Loop B  - calm minor chord drone (D minor, lower register)
  * Loop Main - mid-range ambient chord (C major)
  *
+ * Overwrites the three committed loops in `examples/assets/demo/audio`.
+ *
  * Requires: ffmpeg on PATH
- * Run: node scripts/generate-demo-audio-loops.mjs
+ * Run: tsx scripts/generate-demo-audio-loops.ts
  */
 
 import { execSync } from 'node:child_process';
@@ -16,7 +18,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const outDir = path.resolve(__dirname, '../packages/assets/demo/audio');
+const outDir = path.resolve(__dirname, '../examples/assets/demo/audio');
 
 const SAMPLE_RATE = 22050;
 const CHANNELS = 1;
@@ -26,7 +28,7 @@ const BITS = 16;
 // WAV writer
 // ---------------------------------------------------------------------------
 
-function writeWav(samples) {
+const writeWav = (samples: Float32Array): Buffer => {
   const dataSize = samples.length * 2;
   const buf = Buffer.alloc(44 + dataSize);
   let o = 0;
@@ -59,7 +61,7 @@ function writeWav(samples) {
     buf.writeInt16LE(Math.max(-32768, Math.min(32767, Math.round(samples[i] * 32767))), 44 + i * 2);
   }
   return buf;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Synthesis helpers
@@ -68,26 +70,32 @@ function writeWav(samples) {
 const TWO_PI = Math.PI * 2;
 
 /** Sum of sine harmonics - gives a richer, less harsh tone than a bare sine. */
-function osc(freq, t) {
-  return (
-    Math.sin(TWO_PI * freq * t) * 0.55 +
-    Math.sin(TWO_PI * freq * 2 * t) * 0.25 +
-    Math.sin(TWO_PI * freq * 3 * t) * 0.12 +
-    Math.sin(TWO_PI * freq * 4 * t) * 0.06 +
-    Math.sin(TWO_PI * freq * 5 * t) * 0.02
-  );
-}
+const osc = (freq: number, t: number): number =>
+  Math.sin(TWO_PI * freq * t) * 0.55 +
+  Math.sin(TWO_PI * freq * 2 * t) * 0.25 +
+  Math.sin(TWO_PI * freq * 3 * t) * 0.12 +
+  Math.sin(TWO_PI * freq * 4 * t) * 0.06 +
+  Math.sin(TWO_PI * freq * 5 * t) * 0.02;
 
 /** Smooth fade envelope: linear fade-in over `fadeS` seconds, fade-out over the last `fadeS` seconds. */
-function envelope(i, totalSamples, fadeS = 0.04) {
+const envelope = (i: number, totalSamples: number, fadeS = 0.04): number => {
   const fadeSamples = Math.round(SAMPLE_RATE * fadeS);
   const fadeIn = Math.min(1, i / fadeSamples);
   const fadeOut = Math.min(1, (totalSamples - 1 - i) / fadeSamples);
   return fadeIn * fadeOut;
+};
+
+/** One generated loop's synthesis parameters. */
+interface ChordLoopSpec {
+  readonly freqs: readonly number[];
+  readonly durationS: number;
+  readonly tremoloHz: number;
+  readonly tremoloDepth: number;
+  readonly masterVolume?: number;
 }
 
 /** Generate samples for a chord with a rhythmic tremolo pulse. */
-function generateChordLoop({ freqs, durationS, tremoloHz, tremoloDepth, masterVolume = 0.35 }) {
+const generateChordLoop = ({ freqs, durationS, tremoloHz, tremoloDepth, masterVolume = 0.35 }: ChordLoopSpec): Float32Array => {
   const n = Math.round(SAMPLE_RATE * durationS);
   const samples = new Float32Array(n);
   for (let i = 0; i < n; i++) {
@@ -100,7 +108,7 @@ function generateChordLoop({ freqs, durationS, tremoloHz, tremoloDepth, masterVo
     samples[i] = v * tremolo * masterVolume * envelope(i, n);
   }
   return samples;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Loop definitions

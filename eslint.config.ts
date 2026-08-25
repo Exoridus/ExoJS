@@ -904,14 +904,14 @@ export default defineConfig([
   // outside any typed program.
   ...nodeToolingConfig({ files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'] }),
 
-  // scripts/webgpu-probe.mjs runs as a Node process that drives a Playwright
+  // scripts/webgpu-probe.ts runs as a Node process that drives a Playwright
   // page, but several of its callbacks are passed to `page.evaluate()` and
   // execute inside the browser page instead - so the same file legitimately
   // references both Node and browser globals. Layer `globals.browser` on top
   // of the Node/scripts block above just for this file, rather than widening
   // browser globals onto every `scripts/**` file.
   {
-    files: ['scripts/webgpu-probe.mjs'],
+    files: ['scripts/webgpu-probe.ts'],
     languageOptions: {
       globals: {
         ...globals.browser,

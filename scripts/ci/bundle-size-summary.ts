@@ -19,10 +19,18 @@ import { dirname, resolve } from 'node:path';
 // of the manifest keeps this a plain `node <file>` spawn everywhere.
 const require = createRequire(import.meta.url);
 const manifestPath = require.resolve('size-limit/package.json');
-const sizeLimitBin = resolve(dirname(manifestPath), require(manifestPath).bin);
+const sizeLimitBin = resolve(dirname(manifestPath), (require(manifestPath) as { bin: string }).bin);
+
+/** One artifact's line in `size-limit --json`. */
+interface SizeLimitEntry {
+  readonly name: string;
+  readonly size: number;
+  readonly sizeLimit: number;
+  readonly passed: boolean;
+}
 
 /** size-limit exits non-zero when a budget is exceeded, and still prints the report. */
-function readSizeLimitReport() {
+const readSizeLimitReport = (): readonly SizeLimitEntry[] => {
   const result = spawnSync(process.execPath, [sizeLimitBin, '--json'], { encoding: 'utf8' });
 
   if (result.error) {
@@ -35,21 +43,19 @@ function readSizeLimitReport() {
     throw new Error(`size-limit produced no JSON report (exit ${result.status}).\n${result.stderr ?? ''}`);
   }
 
-  return JSON.parse(json[0]);
-}
+  return JSON.parse(json[0]) as readonly SizeLimitEntry[];
+};
 
 const KB = 1000;
 
-function kb(bytes) {
-  return `${(bytes / KB).toFixed(2)} kB`;
-}
+const kb = (bytes: number): string => `${(bytes / KB).toFixed(2)} kB`;
 
-function row({ name, size, sizeLimit, passed }) {
+const row = ({ name, size, sizeLimit, passed }: SizeLimitEntry): string => {
   const headroom = sizeLimit - size;
   const used = ((size / sizeLimit) * 100).toFixed(1);
 
   return `| \`${name}\` | ${kb(size)} | ${kb(sizeLimit)} | ${used}% | ${headroom < 0 ? `-${kb(-headroom)}` : kb(headroom)} | ${passed ? 'ok' : 'over budget'} |`;
-}
+};
 
 const report = readSizeLimitReport();
 const summary = [
