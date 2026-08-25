@@ -17,6 +17,7 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 import { RetainedContainer } from '#rendering/RetainedContainer';
+import type { View } from '#rendering/View';
 
 class LeafDrawable extends Drawable {
   public constructor(public readonly id: string) {
@@ -225,7 +226,7 @@ const createTestBackend = (): RenderBackend => {
     resize() {
       return this;
     },
-    setView(v) {
+    setView(v: View | null) {
       renderTarget.setView(v);
       return this;
     },

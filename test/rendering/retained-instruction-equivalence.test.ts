@@ -428,7 +428,7 @@ describe('instruction-replay equivalence: instruction replay reproduces the slow
     a.setPosition(3, 4);
     a.setTint(new Color(255, 0, 0));
     b.setPosition(10, 0);
-    b.setBlendMode(BlendModes.Add); // forces a batch split inside the group
+    b.setBlendMode(BlendModes.Additive); // forces a batch split inside the group
     c.setPosition(7, 8);
     mid.addChild(a);
     mid.addChild(b);

@@ -55,6 +55,7 @@ import { createRenderStats, resetRenderStats } from '../../src/rendering/RenderS
 import { RenderTarget } from '../../src/rendering/RenderTarget';
 import { RenderTexture } from '../../src/rendering/texture/RenderTexture';
 import { TransformBuffer } from '../../src/rendering/TransformBuffer';
+import type { View } from '../../src/rendering/View';
 
 // ---------------------------------------------------------------------------
 // Config
@@ -232,7 +233,7 @@ const createStubRuntime = (): RenderBackend => {
 
       return this;
     },
-    setView(v) {
+    setView(v: View | null) {
       renderTarget.setView(v);
 
       return this;

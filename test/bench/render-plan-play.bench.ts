@@ -13,6 +13,7 @@ import type { RenderBackend } from '../../src/rendering/RenderBackend';
 import { RenderBackendType } from '../../src/rendering/RenderBackendType';
 import { createRenderStats } from '../../src/rendering/RenderStats';
 import { RenderTarget } from '../../src/rendering/RenderTarget';
+import type { View } from '../../src/rendering/View';
 
 const NODE_COUNT = 4096;
 const PLAY_COUNT = 240;
@@ -56,11 +57,11 @@ const createStub = (): RenderBackend => {
     clear() {
       return this;
     },
-    resize(w, h) {
+    resize(w: number, h: number) {
       renderTarget.resize(w, h);
       return this;
     },
-    setView(v) {
+    setView(v: View | null) {
       renderTarget.setView(v);
       return this;
     },
