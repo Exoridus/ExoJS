@@ -79,8 +79,8 @@ describe('RenderTo WebGPU browser', () => {
     backend.destroy();
   });
 
-  test('float RenderTexture targets are valid render targets on WebGPU (no validation error)', async ctx => {
-    const backend = await setupBackend(ctx);
+  test('float RenderTexture targets are valid render targets on WebGPU (no validation error)', async () => {
+    const backend = await setupBackend();
     const context = new RenderingContext(backend);
     const device = backend.device;
 

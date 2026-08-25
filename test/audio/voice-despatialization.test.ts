@@ -19,6 +19,8 @@ import type { InputVoice } from '#audio/InputVoice';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 
+import { frameDelta } from '../support/frame-delta';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -337,12 +339,12 @@ describe('Real de-spatialization — AudioManager tick-set membership', () => {
 
     // Sanity: still ticked while spatial.
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
     tickSpy.mockClear();
 
     voice.position = null; // de-spatializes: unregisters from the manager's tick set
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
     expect(tickSpy).not.toHaveBeenCalled();
 
     pannerSpy.restore();
@@ -367,7 +369,7 @@ describe('Real de-spatialization — AudioManager tick-set membership', () => {
 
     // And it is ticked again.
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
 
     pannerSpy.restore();

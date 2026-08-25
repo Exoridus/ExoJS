@@ -30,6 +30,12 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "noEmit": true,
+    // A handful of specs cover the repository's own tooling (the gate-group
+    // parity spec, the release specs) and import those modules by their real
+    // `.ts` path, the way `tsconfig.scripts.json` requires them to. Without
+    // this the tooling files enter the program and are rejected on their
+    // import style rather than on anything the spec asserts.
+    "allowImportingTsExtensions": true,
     "rootDir": "..",
     "declaration": false,
     "declarationMap": false,

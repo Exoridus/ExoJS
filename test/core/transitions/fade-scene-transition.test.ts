@@ -1,6 +1,6 @@
 import { Ease } from '#animation/Easing';
 import { Color } from '#core/Color';
-import type { SceneTransitionPhaseContext, SceneTransitionPhaseRequirements } from '#core/PhasedSceneTransition';
+import type { SceneTransitionPhaseContext } from '#core/PhasedSceneTransition';
 import type { SceneTransitionContext, SceneTransitionEnvironment } from '#core/SceneTransition';
 import { FadeSceneTransition } from '#core/transitions/FadeSceneTransition';
 import { Time } from '#core/units';
@@ -20,9 +20,6 @@ class TestableFadeSceneTransition extends FadeSceneTransition {
   }
   public callExit(context: SceneTransitionPhaseContext): void {
     this.exit(context, this._testState);
-  }
-  public callGetPhaseRequirements(phase: 'enter' | 'exit', context: SceneTransitionContext): SceneTransitionPhaseRequirements {
-    return this.getPhaseRequirements(phase, context);
   }
 }
 
@@ -103,8 +100,8 @@ describe('FadeSceneTransition', () => {
   test('getPhaseRequirements: none/direct for both phases (no texture, no snapshot)', () => {
     const fade = new TestableFadeSceneTransition();
 
-    expect(fade.callGetPhaseRequirements('exit', navContext)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
-    expect(fade.callGetPhaseRequirements('enter', navContext)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
+    expect(fade.getRequirementsForPhase('exit', navContext)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
+    expect(fade.getRequirementsForPhase('enter', navContext)).toEqual({ outgoingFrame: 'none', currentFrame: 'direct' });
   });
 
   test('getRequirements() merges identical exit/enter requirements unchanged', () => {

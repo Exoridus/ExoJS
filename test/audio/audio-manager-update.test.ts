@@ -4,6 +4,8 @@ import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 import { Time } from '#core/units';
 
+import { frameDelta } from '../support/frame-delta';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -47,7 +49,7 @@ describe('AudioManager.update()', () => {
   test('update() calls listener._tick()', () => {
     const mixer = new AudioManager();
     const tickSpy = vi.spyOn(mixer.listener, '_tick');
-    mixer.preUpdate();
+    mixer.preUpdate(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -64,7 +66,7 @@ describe('AudioManager.update()', () => {
     const tick1 = vi.spyOn(voice1, '_tickSpatial');
     const tick2 = vi.spyOn(voice2, '_tickSpatial');
 
-    mixer.preUpdate();
+    mixer.preUpdate(frameDelta);
 
     expect(tick1).toHaveBeenCalledTimes(1);
     expect(tick2).toHaveBeenCalledTimes(1);
@@ -81,7 +83,7 @@ describe('AudioManager.update()', () => {
     // sound.position remains null - not spatial
     const voice = mixer.play(sound) as SoundVoice;
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    mixer.preUpdate();
+    mixer.preUpdate(frameDelta);
     expect(tickSpy).not.toHaveBeenCalled();
     sound.destroy();
   });
@@ -184,7 +186,7 @@ describe('AudioManager.update()', () => {
     const voice = mixer.play(sound, { position: { x: 0, y: 0 } });
     voice.stop(); // mark ended
 
-    expect(() => mixer.preUpdate()).not.toThrow();
+    expect(() => mixer.preUpdate(frameDelta)).not.toThrow();
     pannerSpy.restore();
     sound.destroy();
   });

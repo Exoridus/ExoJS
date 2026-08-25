@@ -36,6 +36,8 @@ import { Rectangle } from '#math/Rectangle';
 import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Drawable } from '#rendering/Drawable';
 
+import { frameDelta } from '../support/frame-delta';
+
 // ---------------------------------------------------------------------------
 // Minimal concrete RenderNode subclass for hit-testing (mirrors
 // test/input/interaction.test.ts's TestSprite).
@@ -154,7 +156,7 @@ const tick = (h: Harness): void => {
   h.input.preUpdate(Time.seconds(0));
 
   try {
-    h.interaction.preUpdate();
+    h.interaction.preUpdate(frameDelta);
   } finally {
     h.input._finishInteractionFrame();
   }
@@ -461,7 +463,7 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
 
     input.preUpdate(Time.seconds(0));
     try {
-      interaction.preUpdate();
+      interaction.preUpdate(frameDelta);
     } catch {
       // Expected: this focused harness lets the node handler's throw
       // propagate; Application.ts's real `try/finally` is what this test's
@@ -538,7 +540,7 @@ describe('InteractionManager — cross-pointer order preserved end-to-end (Bug C
     fire(canvas, 'pointermove', { pointerId: 1, pointerType: 'mouse', clientX: 60, clientY: 25, isPrimary: true });
 
     input.preUpdate(Time.seconds(0));
-    expect(() => interaction.preUpdate()).toThrow('expected handler failure');
+    expect(() => interaction.preUpdate(frameDelta)).toThrow('expected handler failure');
     input._finishInteractionFrame();
 
     expect(interaction.getCapturedNodes()).toEqual([]);

@@ -3,6 +3,8 @@ import { AudioManager } from '#audio/AudioManager';
 import { AudioStream } from '#audio/AudioStream';
 import type { AudioStreamVoice } from '#audio/AudioStreamVoice';
 
+import { frameDelta } from '../support/frame-delta';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -137,7 +139,7 @@ describe('AudioStream', () => {
 
     voice.position = { x: 1, y: 2 };
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
 
     stream.destroy();

@@ -7,6 +7,8 @@ import type { SoundVoice } from '#audio/SoundVoice';
 import { Drawable } from '#rendering/Drawable';
 import { RetainedContainer } from '#rendering/RetainedContainer';
 
+import { frameDelta } from '../support/frame-delta';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -144,7 +146,7 @@ describe('Voice — spatial (PannerNode)', () => {
     const sound = new Sound(createAudioBufferStub());
     const voice = mixer.play(sound, { position: { x: 0, y: 0 } }) as SoundVoice;
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    mixer.preUpdate();
+    mixer.preUpdate(frameDelta);
     expect(tickSpy).toHaveBeenCalledTimes(1);
     spy.restore();
     sound.destroy();
@@ -163,7 +165,7 @@ describe('Voice — spatial (PannerNode)', () => {
 
     panner.positionX.setValueAtTime.mockClear();
     panner.positionX.setTargetAtTime.mockClear();
-    mixer.preUpdate();
+    mixer.preUpdate(frameDelta);
     expect(panner.positionX.setValueAtTime).not.toHaveBeenCalled();
     expect(panner.positionX.setTargetAtTime).not.toHaveBeenCalled();
 
@@ -217,7 +219,7 @@ describe('Voice — spatial (PannerNode)', () => {
     voice.stop();
 
     const tickSpy = vi.spyOn(voice, '_tickSpatial');
-    mixer.preUpdate();
+    mixer.preUpdate(frameDelta);
     expect(tickSpy).not.toHaveBeenCalled();
 
     spy.restore();
@@ -371,7 +373,7 @@ describe('Voice — spatial (PannerNode)', () => {
     expect(voice.ended).toBe(true);
 
     const tickSpy = vi.spyOn(voice as SoundVoice, '_tickSpatial');
-    mixer.preUpdate();
+    mixer.preUpdate(frameDelta);
     expect(tickSpy).not.toHaveBeenCalled();
 
     spy.restore();
@@ -496,7 +498,7 @@ describe('Voice — spatial (PannerNode)', () => {
     const sound = new Sound(createAudioBufferStub());
     const voice = manager.play(sound, { position: { x: 0, y: 0 }, velocity: { x: 100, y: 0 } }) as SoundVoice;
     const rateSpy = vi.spyOn(voice, 'playbackRate', 'set');
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
     expect(rateSpy).not.toHaveBeenCalled();
     spy.restore();
     sound.destroy();
@@ -511,9 +513,9 @@ describe('Voice — spatial (PannerNode)', () => {
     const sound = new Sound(createAudioBufferStub());
     // Source starts far away on the +X axis and, between ticks, moves toward the listener.
     const voice = manager.play(sound, { position: { x: 500, y: 0 } }) as SoundVoice;
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
     voice.position = { x: 400, y: 0 }; // moved 100 units toward the listener
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
     // Exact rate value depends on the implementer's chosen formula (see plan Task 5 Step 3) -
     // assert direction (> 1, i.e. pitched up while approaching), not an exact number.
     const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
@@ -531,7 +533,7 @@ describe('Voice — spatial (PannerNode)', () => {
     manager.listener.position.set(0, 0);
     const sound = new Sound(createAudioBufferStub());
     const voice = manager.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
 
     const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
     // Sanity: a real Doppler shift is in effect before we disable it.
@@ -539,7 +541,7 @@ describe('Voice — spatial (PannerNode)', () => {
 
     source.playbackRate.setTargetAtTime.mockClear();
     manager.spatial.dopplerFactor = 0;
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
 
     expect(source.playbackRate.setTargetAtTime).toHaveBeenCalledWith(voice.playbackRate, expect.any(Number), expect.any(Number));
 
@@ -555,7 +557,7 @@ describe('Voice — spatial (PannerNode)', () => {
     manager.listener.position.set(0, 0);
     const sound = new Sound(createAudioBufferStub());
     const voice = manager.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
 
     const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
     expect(source.playbackRate.setTargetAtTime.mock.calls.at(-1)?.[0]).not.toBe(voice.playbackRate);
@@ -734,7 +736,7 @@ describe('Voice — spatial parameter sanitization (NaN/±Infinity rejection)', 
     manager.listener.position.set(0, 0);
     const sound = new Sound(createAudioBufferStub());
     const voice = manager.play(sound, { position: { x: 100, y: 0 }, velocity: { x: -50, y: 0 } }) as SoundVoice;
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
 
     const source = (voice as unknown as { _source: { playbackRate: { setTargetAtTime: MockInstance } } })._source;
     // Sanity: a real (finite, non-1) Doppler shift is in effect first.
@@ -742,7 +744,7 @@ describe('Voice — spatial parameter sanitization (NaN/±Infinity rejection)', 
 
     source.playbackRate.setTargetAtTime.mockClear();
     manager.spatial.speedOfSound = NaN;
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
 
     // Whatever writes DO happen after the settings object turns NaN must
     // never carry that NaN through to the live AudioParam.

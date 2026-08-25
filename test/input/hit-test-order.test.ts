@@ -26,6 +26,8 @@ import type { RenderNode } from '#rendering/RenderNode';
 import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 
+import { frameDelta } from '../support/frame-delta';
+
 class TestSprite extends Drawable {
   private _left = 0;
   private _top = 0;
@@ -97,7 +99,7 @@ const pick = (im: InteractionManager, signals: { onPointerDown: Signal<[Pointer]
 
   // getHoveredNode reflects the resolved hit, which the queue flush computes.
   signals.onPointerDown.dispatch(makePointer(x, y));
-  im.preUpdate();
+  im.preUpdate(frameDelta);
   probe();
   void scene;
 

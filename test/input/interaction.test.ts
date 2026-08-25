@@ -13,6 +13,8 @@ import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 import type { Geometry } from '#rendering/geometry/Geometry';
 
+import { frameDelta } from '../support/frame-delta';
+
 // ---------------------------------------------------------------------------
 // Minimal concrete RenderNode subclass for tests
 // ---------------------------------------------------------------------------
@@ -228,7 +230,7 @@ const createAppNoScene = (
  * node listeners.
  */
 const flushInteractions = (im: InteractionManager): void => {
-  im.preUpdate();
+  im.preUpdate(frameDelta);
 };
 
 // ---------------------------------------------------------------------------
@@ -1665,12 +1667,12 @@ describe('InteractionManager — multi-Application isolation', () => {
     // singleton the node registered with whichever manager was constructed
     // last, breaking exactly this case.
     dispatchPointer(b.signals.onPointerDown, { x: 25, y: 25 });
-    imB.preUpdate();
+    imB.preUpdate(frameDelta);
     expect(down).not.toHaveBeenCalled();
 
     // Only app A's own pointer reaches it.
     dispatchPointer(a.signals.onPointerDown, { x: 25, y: 25 });
-    imA.preUpdate();
+    imA.preUpdate(frameDelta);
     expect(down).toHaveBeenCalledTimes(1);
 
     imA.destroy();
@@ -2783,7 +2785,7 @@ describe('InteractionManager — miscellaneous', () => {
 
     im.attachRoot(scene.root);
 
-    expect(() => im.preUpdate()).not.toThrow();
+    expect(() => im.preUpdate(frameDelta)).not.toThrow();
 
     im.destroy();
   });
@@ -2839,7 +2841,7 @@ describe('InteractionManager — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.preUpdate();
+    im.preUpdate(frameDelta);
 
     expect(onDown).not.toHaveBeenCalled();
 
@@ -2860,7 +2862,7 @@ describe('InteractionManager — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.preUpdate();
+    im.preUpdate(frameDelta);
 
     expect(onDown).toHaveBeenCalledTimes(1);
 
@@ -2884,7 +2886,7 @@ describe('InteractionManager — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.preUpdate();
+    im.preUpdate(frameDelta);
 
     expect(onDown).toHaveBeenCalledTimes(1);
 
@@ -2908,11 +2910,11 @@ describe('InteractionManager — dispatch gating', () => {
     sprite.onPointerDown.add(onDown);
 
     dispatchPointer(signals.onPointerDown, { x: 10, y: 10 });
-    im.preUpdate();
+    im.preUpdate(frameDelta);
     expect(onDown).not.toHaveBeenCalled();
 
     appMutable.scenes._transitionGateOpen = false;
-    im.preUpdate(); // the stale queued event must NOT replay once the gate reopens
+    im.preUpdate(frameDelta); // the stale queued event must NOT replay once the gate reopens
 
     expect(onDown).not.toHaveBeenCalled();
 
@@ -2926,7 +2928,7 @@ describe('InteractionManager — dispatch gating', () => {
 
     expect(() => {
       dispatchPointer(signals.onPointerDown, { x: 50, y: 50 });
-      im.preUpdate();
+      im.preUpdate(frameDelta);
     }).not.toThrow();
 
     im.destroy();

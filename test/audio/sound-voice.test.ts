@@ -5,6 +5,8 @@ import { AudioManager } from '#audio/AudioManager';
 import { Sound } from '#audio/Sound';
 import type { SoundVoice } from '#audio/SoundVoice';
 
+import { frameDelta } from '../support/frame-delta';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -549,7 +551,7 @@ describe('SoundVoice — capabilities', () => {
 
     expect(pannerSpy.panners.length).toBe(1);
 
-    manager.preUpdate();
+    manager.preUpdate(frameDelta);
 
     expect(node.getWorldTransform).toHaveBeenCalled();
     expect(pannerSpy.panners[0].positionX.setValueAtTime).toHaveBeenCalledWith(10, expect.any(Number));
