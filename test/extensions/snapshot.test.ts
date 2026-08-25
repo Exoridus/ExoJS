@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import type { Extension } from '#extensions/Extension';
 import { buildSnapshot, EMPTY_SNAPSHOT } from '#extensions/snapshot';
 
+import { testAssetType } from '../assets/test-asset-type';
+
 describe('ExtensionSnapshot', () => {
   it('buildSnapshot([]) returns EMPTY_SNAPSHOT singleton', () => {
     const result = buildSnapshot([]);
@@ -27,19 +29,11 @@ describe('ExtensionSnapshot', () => {
     expect(snapshot.renderers[1]).toBe(binding2);
   });
 
-  it('buildSnapshot flattens asset bindings from multiple extensions', () => {
-    class FakeType {}
-    const handler1 = { create: () => ({ load: async () => ({}) as never, destroy: () => undefined }) };
-    const handler2 = { create: () => ({ load: async () => ({}) as never, destroy: () => undefined }) };
-    const extA: Extension = {
-      id: 'a',
-      assets: [{ type: FakeType as never, create: handler1.create as never }],
-    };
-    const extB: Extension = {
-      id: 'b',
-      assets: [{ type: FakeType as never, create: handler2.create as never }],
-    };
+  it('buildSnapshot flattens asset types from multiple extensions', () => {
+    const extA: Extension = { id: 'a', assets: [testAssetType({ id: 'fake-a', create: async () => ({}) })] };
+    const extB: Extension = { id: 'b', assets: [testAssetType({ id: 'fake-b', create: async () => ({}) })] };
     const snapshot = buildSnapshot([extA, extB]);
+
     expect(snapshot.assets).toHaveLength(2);
   });
 

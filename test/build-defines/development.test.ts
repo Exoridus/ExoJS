@@ -11,6 +11,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { assert, assertDefined, invariant } from '../../src/core/dev';
+import { mutable } from '../support/mutable';
 
 describe('buildInfo in test/development mode', () => {
   it('buildInfo.development is true', async () => {
@@ -34,7 +35,7 @@ describe('buildInfo in test/development mode', () => {
     const { buildInfo } = await import('../../src/core/BuildInfo');
     expect(Object.isFrozen(buildInfo)).toBe(true);
     expect(() => {
-      (buildInfo as Record<string, unknown>).version = 'hacked';
+      mutable(buildInfo).version = 'hacked';
     }).toThrow();
   });
 });

@@ -2684,7 +2684,7 @@
         },
         {
           "name": "analyserTarget",
-          "signature": "analyserTarget: AudioNode | null",
+          "signature": "analyserTarget: GainNode | null",
           "signatureTokens": [
             {
               "text": "analyserTarget",
@@ -2695,7 +2695,7 @@
               "kind": "punctuation"
             },
             {
-              "text": "AudioNode",
+              "text": "GainNode",
               "kind": "type"
             },
             {

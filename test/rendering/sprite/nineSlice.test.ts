@@ -2,6 +2,8 @@ import { buildNineSliceQuads, normalizeInsets, validateBorder, validateSlices } 
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 
+import { mutable } from '../../support/mutable';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -116,7 +118,7 @@ describe('normalizeInsets', () => {
   test('result is frozen', () => {
     const result = normalizeInsets({ left: 1, top: 2, right: 3, bottom: 4 });
     expect(() => {
-      (result as Record<string, number>).left = 99;
+      mutable(result).left = 99;
     }).toThrow();
   });
 });

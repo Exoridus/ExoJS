@@ -1,24 +1,12 @@
 {
   "note": "Per-file budget of type errors in `test/**` that predate the gate. The count may only go down; both an increase and an un-recorded decrease fail `pnpm typecheck:test`. Run `pnpm typecheck:test:update-baseline` to record a decrease. A clean test file is absent from this file.",
   "files": {
-    "test/audio/worklet/register-worklet.test.ts": 2,
-    "test/build-defines/development.test.ts": 1,
-    "test/debug/debug-overlay.test.ts": 1,
-    "test/debug/pointer-stack-layer.test.ts": 1,
-    "test/extensions/snapshot.test.ts": 2,
-    "test/input/action-patterns.test.ts": 2,
     "test/rendering/browser/webgl2-particles.test.ts": 1,
     "test/rendering/browser/webgl2-shader-compile.test.ts": 1,
     "test/rendering/browser/webgpu-draw-geometry.test.ts": 1,
     "test/rendering/browser/webgpu-particles.test.ts": 1,
     "test/rendering/browser/webgpu-prewarm-bindgroup-cache.test.ts": 1,
-    "test/rendering/filters/lut-filter.test.ts": 1,
     "test/rendering/pass/web-gpu-pass-coordinator.test.ts": 1,
-    "test/rendering/sprite/nineSlice.test.ts": 1,
-    "test/rendering/sprite/NineSliceSprite.test.ts": 2,
-    "test/rendering/text/html-text.test.ts": 1,
-    "test/rendering/texture/TextureRegion.test.ts": 1,
-    "test/rendering/video.test.ts": 2,
     "test/rendering/webgpu-backend.test.ts": 1,
     "test/site/example-search.test.ts": 1
   }

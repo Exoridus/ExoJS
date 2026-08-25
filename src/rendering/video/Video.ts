@@ -194,7 +194,7 @@ export class Video extends Sprite {
    * the audio context has not yet been initialized. Connect an analyser node
    * here for audio-reactive visuals.
    */
-  public get analyserTarget(): AudioNode | null {
+  public get analyserTarget(): GainNode | null {
     return this._audioSetup?.gainNode ?? null;
   }
 

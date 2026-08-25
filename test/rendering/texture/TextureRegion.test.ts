@@ -13,7 +13,7 @@ const makeRegion = (texture: Texture, x = 0, y = 0, width?: number, height?: num
     y,
     width: width ?? texture.width,
     height: height ?? texture.height,
-    extrusion,
+    ...(extrusion !== undefined && { extrusion }),
   });
 
 // ---------------------------------------------------------------------------

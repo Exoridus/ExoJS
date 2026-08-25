@@ -626,7 +626,7 @@ describe('DebugOverlay — resize handling', () => {
     const app = makeApp();
     const debug = new DebugOverlay(app);
 
-    expect(() => app.onResize.dispatch(1024, 768, undefined)).not.toThrow();
+    expect(() => app.onResize.dispatch(1024, 768, app)).not.toThrow();
 
     debug.destroy();
   });

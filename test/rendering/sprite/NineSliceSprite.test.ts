@@ -3,6 +3,8 @@ import { NineSliceSprite } from '#rendering/sprite/NineSliceSprite';
 import type { Texture } from '#rendering/texture/Texture';
 import { TextureRegion } from '#rendering/texture/TextureRegion';
 
+import { mutable } from '../../support/mutable';
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -438,18 +440,18 @@ describe('NineSliceSprite — ownership', () => {
 
   test('caller modes object mutation has no effect', () => {
     const tex = makeTexture(64, 64);
-    const modes = { edges: 'repeat' as const, edgeFit: 'clip' as const };
+    const modes: NineSliceModes = { edges: 'repeat', edgeFit: 'clip' };
     const sprite = new NineSliceSprite(tex, { slices: 10, modes });
-    modes.edges = 'stretch';
+    mutable(modes).edges = 'stretch';
     expect(sprite.modes.edges).toBe('repeat');
   });
 
   test('setModes caller object mutation has no effect', () => {
     const tex = makeTexture(64, 64);
     const sprite = new NineSliceSprite(tex, { slices: 10 });
-    const modes = { edges: 'repeat' as const };
+    const modes: NineSliceModes = { edges: 'repeat' };
     sprite.setModes(modes);
-    modes.edges = 'stretch';
+    mutable(modes).edges = 'stretch';
     expect(sprite.modes.edges).toBe('repeat');
   });
 

@@ -23,6 +23,8 @@ import { logger } from '#core/logging';
 import { HTMLText } from '#rendering/text/HTMLText';
 import type { Texture } from '#rendering/texture/Texture';
 
+import { stubCanvas2dContext } from '../../support/canvas-2d-context-stub';
+
 // ---------------------------------------------------------------------------
 // Canvas 2D context mock (adds clearRect on top of the shared stub)
 // ---------------------------------------------------------------------------
@@ -87,7 +89,7 @@ const lastSvg = (): string => {
 };
 
 beforeAll(() => {
-  getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => makeFullContext2d());
+  getContextSpy = stubCanvas2dContext(makeFullContext2d);
 
   originalImageSrcDescriptor = Object.getOwnPropertyDescriptor(HTMLImageElement.prototype, 'src');
   Object.defineProperty(HTMLImageElement.prototype, 'src', {
