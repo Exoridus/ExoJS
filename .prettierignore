@@ -7,7 +7,15 @@ examples/assets/**
 
 # Generated Monaco type shim; its exact shape is pinned by a drift test.
 examples/shared/assets-global.d.ts
-site/**
-packages/**
+
+# Astro's generated cache, and the vendored bundles plus copied example catalog
+# the site serves - none of it authored here.
+site/.astro/**
+site/public/**
+
+# Guide prose. Prettier reflows Markdown and rewrites JSX inside MDX, which is a
+# large edit with no formatting question behind it.
+*.mdx
+
 *.min.*
 pnpm-lock.yaml
