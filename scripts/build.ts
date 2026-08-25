@@ -24,7 +24,7 @@ import { fileURLToPath } from 'node:url';
 import { codecovRollupPlugin } from '@codecov/rollup-plugin';
 import { createShaderPlugin, createWorkletPlugin } from '@codexo/exojs-build';
 import { createBuildDefinesFromRepo } from '@codexo/exojs-config/build-defines';
-import { rolldown, watch, type OutputOptions, type Plugin, type RolldownOptions } from 'rolldown';
+import { rolldown, watch, type OutputOptions, type Plugin, type PreRenderedChunk, type RolldownOptions } from 'rolldown';
 
 const rootDir = resolvePath(dirname(fileURLToPath(import.meta.url)), '..');
 const watchMode = process.argv.includes('--watch');
@@ -76,7 +76,7 @@ const sourcemapPathTransform = (relativeSourcePath: string, sourcemapPath: strin
 // `facadeModuleId` restores that for the shader files; every other module
 // keeps the default `[name]`.
 const SHADER_EXTENSION = /\.(?:vert|frag|wgsl)$/;
-const preservedModuleNaming = (info: { facadeModuleId: string | null }): string => {
+const preservedModuleNaming = (info: PreRenderedChunk): string => {
   const id = info.facadeModuleId;
   if (id && SHADER_EXTENSION.test(id)) {
     return `${relativePath(resolvePath(rootDir, 'src'), id).replaceAll('\\', '/')}.js`;
@@ -88,8 +88,11 @@ const preservedModuleNaming = (info: { facadeModuleId: string | null }): string 
 // present (CI passes CODECOV_TOKEN via secrets: inherit). A plain local
 // `pnpm build` has no token and stays fully offline.
 const codecovBundlePlugin = (bundleName: string): Plugin[] => {
+  // `codecovRollupPlugin` returns a Rollup plugin array. Rolldown accepts them
+  // at runtime, but the two `Plugin` types are nominally distinct, so the shape
+  // has to be restated rather than narrowed.
   return process.env.CODECOV_TOKEN
-    ? [codecovRollupPlugin({ enableBundleAnalysis: true, bundleName, uploadToken: process.env.CODECOV_TOKEN, telemetry: false }) as Plugin]
+    ? (codecovRollupPlugin({ enableBundleAnalysis: true, bundleName, uploadToken: process.env.CODECOV_TOKEN, telemetry: false }) as unknown as Plugin[])
     : [];
 };
 

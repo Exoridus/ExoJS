@@ -105,6 +105,7 @@
     "typecheck:guides:no-check": "tsx scripts/check-guide-no-check-reasons.ts",
     "typecheck:guides:no-check:update-baseline": "tsx scripts/check-guide-no-check-reasons.ts --update-baseline",
     "typecheck:packages": "pnpm --filter \"@codexo/exojs-build\" --filter \"@codexo/exojs-particles\" --filter \"@codexo/exojs-tilemap\" --filter \"@codexo/exojs-tiled\" --filter \"@codexo/exojs-physics\" --filter \"@codexo/exojs-tilemap-physics\" --filter \"@codexo/exojs-audio-fx\" --filter \"@codexo/exojs-aseprite\" --filter \"@codexo/exojs-ldtk\" --filter \"@codexo/exojs-react\" typecheck",
+    "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json",
     "typecheck:site": "pnpm --filter @codexo/exojs-examples check-ts",
     "typecheck:test": "tsx scripts/typecheck-tests.ts",
     "typecheck:test:update-baseline": "tsx scripts/typecheck-tests.ts --update-baseline",

@@ -50,7 +50,11 @@ interface Baseline {
   files: Record<string, number>;
 }
 
-const fail = (message: string): never => {
+// A `never` return only ends control flow for the caller when the callee is a
+// function declaration or a constant with an explicit type annotation.
+type Abort = (message: string) => never;
+
+const fail: Abort = message => {
   console.error(message);
   process.exit(1);
 };
