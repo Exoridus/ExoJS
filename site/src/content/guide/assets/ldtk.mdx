@@ -59,7 +59,7 @@ This is the same add-only model the [Tiled maps](/ExoJS/en/guide/assets/tiled-ma
 Once the extension is active, load a `.ldtk` file with an explicit descriptor or by path (the
 `.ldtk` extension is registered):
 
-```ts no-check
+```ts no-check -- continues the loader setup above; loader belongs to the scene that snippet builds
 import { Asset } from '@codexo/exojs';
 
 // Explicit type
@@ -85,7 +85,7 @@ Every level — and every external `.ldtkl` file — is fetched and converted up
 
 A loaded `LdtkMap` exposes one runtime `TileMap` per LDtk level, plus the raw parsed document:
 
-```ts no-check
+```ts no-check -- property tour of the loaded world; member reads with no surrounding scope
 world.levels;                      // readonly TileMap[] — one per level, in document order
 world.getLevelByName('Level_0');   // TileMap | undefined — lookup by LDtk identifier
 world.data;                        // the raw parsed LdtkData document
@@ -102,7 +102,7 @@ World-space placement is stored in `TileMap.properties` (`worldX` / `worldY`), a
 level's own "Custom fields" tab — distinct from fields on the entities placed inside it), merged in
 under their own field identifier:
 
-```ts no-check
+```ts no-check -- property tour of a level's properties bag; member reads with no surrounding scope
 level.properties.worldX;       // number — level's world-space X position in pixels
 level.properties.musicTrack;   // whatever value the level's own custom field carries
 ```
@@ -120,7 +120,7 @@ levels into the same single ordered list, so the rest of this guide's API is unc
 The only difference is that each converted level's `TileMap.properties` additionally carries the
 owning world's id under the reserved `ldtkWorldIid` key:
 
-```ts no-check
+```ts no-check -- property tour of a level's properties bag; member reads with no surrounding scope
 level.properties.ldtkWorldIid; // string | undefined — set only for multi-world projects
 ```
 
@@ -129,7 +129,7 @@ level.properties.ldtkWorldIid; // string | undefined — set only for multi-worl
 Wrap a level's `TileMap` in a `TileMapNode` and add it to the scene. `TileMapNode` is the generic
 tilemap node from `@codexo/exojs-tilemap` (the package LDtk builds on):
 
-```ts no-check
+```ts no-check -- continues the load above; world and scene come from it
 import { TileMapNode } from '@codexo/exojs-tilemap';
 
 const level = world.getLevelByName('Level_0') ?? world.levels[0];
@@ -138,7 +138,7 @@ scene.root.addChild(new TileMapNode(level));
 
 To stream a multi-level world, add a node per level — each level is its own `TileMap`:
 
-```ts no-check
+```ts
 for (const level of world.levels) {
     scene.root.addChild(new TileMapNode(level));
 }
@@ -156,7 +156,7 @@ String, Multilines, Color, FilePath, Enum — convert directly to their JS scala
 field types — **Point**, **EntityRef**, and **Tile** — convert into the tagged `TilePropertyValue`
 variants from `@codexo/exojs-tilemap`, discriminated by a `kind` string:
 
-```ts no-check
+```ts no-check -- continues the load above; level comes from it
 import { TilePropertyKind } from '@codexo/exojs-tilemap';
 
 const entities = level.getObjectLayer('Entities');
@@ -202,7 +202,7 @@ IntGrid layers classify each grid cell with a small integer you assign meaning t
 (e.g. `1` = Wall, `2` = Water). Query a converted IntGrid layer's classification with
 `getLdtkIntGridValueAt(layer, x, y)`:
 
-```ts no-check
+```ts no-check -- continues the load above; level comes from it
 import { getLdtkIntGridValueAt } from '@codexo/exojs-ldtk';
 
 const collision = level.getTileLayer('Collision');
@@ -230,7 +230,7 @@ The loader does the fetch-and-convert for you, but the conversion step is also a
 `ldtkToTileMap` turns a raw `LdtkData` document into an `LdtkMap` of runtime `TileMap`s — useful for
 custom pipelines or for converting data you already hold in memory:
 
-```ts no-check
+```ts no-check -- continues the load above; world comes from it
 import { ldtkToTileMap } from '@codexo/exojs-ldtk';
 
 const converted = ldtkToTileMap(world.data, { source: 'https://example.com/levels/world.ldtk' });

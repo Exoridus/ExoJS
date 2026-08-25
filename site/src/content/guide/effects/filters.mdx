@@ -95,7 +95,7 @@ Maps every pixel through a Look-Up Table texture. Two modes:
 - **RGB 1D LUT** (`'rgb1d'`): `N×1` texture holding three independent per-channel curves — red graded through the LUT's red channel, green through green, blue through blue. Levels/curves-style grading, color ramps, posterisation.
 - **3D LUT** (color grading): `N²×N` unwrapped cube texture with trilinear interpolation. Cinematic color grading, film stock emulation, tone mapping.
 
-```ts no-check
+```ts no-check -- the LUT image and the sprite are the reader's own
 import { LutFilter } from '@codexo/exojs';
 
 // From a DaVinci/OBS/Photoshop-exported PNG strip
@@ -113,7 +113,7 @@ filter.setLut(differentLutTexture);
 
 `ShaderFilter` takes a fragment shader source per language and an optional uniforms map. It renders a fullscreen quad and executes the shader against the filter input texture, picking the source the active backend speaks:
 
-```ts no-check
+```ts no-check -- the shader sources are inline text and the update hook belongs to a scene the block does not show
 import { ShaderFilter } from '@codexo/exojs';
 
 const waveFilter = new ShaderFilter({

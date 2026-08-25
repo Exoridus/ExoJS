@@ -35,7 +35,7 @@ Deploying under a subpath — GitHub Pages at `https://username.github.io/repo-n
 
 By default Vite assumes your app is hosted at the root of a domain (`/`). If you deploy to a subpath — for example GitHub Pages at `https://username.github.io/repo-name/` — you must set the `base` option in `vite.config.ts`:
 
-```ts no-check
+```ts no-check -- a vite config; vite is not part of the guide typecheck program
 import { defineConfig } from 'vite';
 
 export default defineConfig({
@@ -118,7 +118,7 @@ Files placed in `public/` are copied verbatim to `dist/` during the build. A fil
 
 Reference assets without the `public/` prefix:
 
-```ts no-check
+```ts no-check -- path comparison; loader comes from the application above
 await loader.load('assets/bunny.png'); // correct
 ```
 

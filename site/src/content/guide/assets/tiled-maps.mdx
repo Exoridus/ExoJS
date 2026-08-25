@@ -65,7 +65,7 @@ resolve to the same handler.
 XML (`.tmx`/`.tsx`), isometric or hexagonal orientations, collection-of-images tilesets, and `zstd` compression each raise a clear error rather than loading. Export an orthogonal JSON map (`.tmj`) with CSV, gzip, or zlib data. Infinite (chunked) maps **are** supported: `toTileMap()` converts each chunked layer to an unbounded runtime layer whose data streams in on demand via `getChunkSource()` — see the [Infinite maps](/ExoJS/en/guide/rendering/infinite-maps/) chapter.
 </Callout>
 
-```ts no-check
+```ts no-check -- continues the loader setup above; loader belongs to the scene that snippet builds
 import { Asset } from '@codexo/exojs';
 
 // Explicit type
@@ -82,7 +82,7 @@ references as a `Texture` through the same loader, returning a fully-resolved `T
 
 `TiledMap` exposes the parsed metadata, layers, and the resolved tileset textures:
 
-```ts no-check
+```ts no-check -- property tour of the loaded map; member reads with no surrounding scope
 map.width;            // map width in tiles
 map.height;           // map height in tiles
 map.tileWidth;        // tile width in pixels
@@ -105,7 +105,7 @@ Tiled's custom properties (on maps, layers, tiles, and objects) survive the trip
 map's Tiled property list. Plain-scalar Tiled types (`string`, `int`, `float`, `bool`, `color`,
 `file`) come through as their equivalent JS value:
 
-```ts no-check
+```ts no-check -- continues the load above; map comes from it
 const tileMap = map.toTileMap();
 const [spawnLayer] = tileMap.objectLayers;
 const spawn = spawnLayer.objects.find(object => object.name === 'PlayerSpawn');
@@ -121,7 +121,7 @@ Two Tiled property types aren't plain scalars and convert to structured values i
   a `TilePropertyObjectRef`: `{ kind: 'objectRef', id }`. Resolve it by matching `id` against
   another object's `id` in the same map:
 
-  ```js no-check
+  ```js no-check -- continues the object-layer snippet above; spawnLayer comes from it
   import { TilePropertyKind } from '@codexo/exojs-tilemap';
 
   const door = spawnLayer.objects.find(object => object.name === 'Door');
@@ -136,7 +136,7 @@ Two Tiled property types aren't plain scalars and convert to structured values i
   their own `properties`-shaped bag instead of being dropped. Nesting can be arbitrarily deep, and
   each nested bag reads the same way as the top-level one:
 
-  ```js no-check
+  ```js no-check -- continues the object-layer snippet above; spawn comes from it
   const stats = spawn.properties.stats; // a nested TileProperties bag
   stats.health; // number
   stats.resistances.fire; // further nesting reads the same way
@@ -151,7 +151,7 @@ a plain number or silently dropped; both are now tagged (`TilePropertyObjectRef`
 An object placed with Tiled's *insert tile* tool converts to a `TileObject` — `kind` is `'tile'`
 and `tile` carries the resolved `ResolvedTile` (tileset, local tile id, flip flags):
 
-```ts no-check
+```ts no-check -- continues the load above; map comes from it
 import { ObjectKind } from '@codexo/exojs-tilemap';
 
 const tileMap = map.toTileMap();
@@ -173,7 +173,7 @@ an orthogonal map and the bottom-centre in an isometric one. A tileset can overr
 `toTileMap()` resolves that alignment and converts the anchor to the top-left corner, so
 `x`/`y` mean the same thing on every `TileMapObject` kind:
 
-```ts no-check
+```ts no-check -- worked example of the anchor conversion; chest comes from the snippet above
 // A 16×24 tile object stored at (32, 48) in a default orthogonal map
 // (bottom-left anchor) converts to a corner at (32, 24).
 chest.x; // 32
@@ -197,7 +197,7 @@ anchor's offset from the corner.
 An object drawn with Tiled's text tool converts to a `TextObject` — a `TileMapObject` whose
 `kind` is `'text'` and whose `text` field carries the styled content:
 
-```ts no-check
+```ts no-check -- continues the load above; map comes from it
 import { ObjectKind } from '@codexo/exojs-tilemap';
 
 const tileMap = map.toTileMap();
@@ -226,7 +226,7 @@ A Tiled image layer converts to an `ImageLayer` — a data-only layer holding a 
 image, alongside the same offset/parallax/tint/opacity/`properties` fields tile and object layers
 carry:
 
-```ts no-check
+```ts no-check -- continues the load above; map comes from it
 const tileMap = map.toTileMap();
 const [background] = tileMap.imageLayers;
 
@@ -247,7 +247,7 @@ Shapes drawn in Tiled's tile collision editor (the `objectgroup` on an individua
 tileset) survive the trip through `toTileMap()` as `TileDefinition.collision` — a list of
 `TileMapObject`s in tile-local pixel space (origin at the top-left of the cell):
 
-```ts no-check
+```ts no-check -- continues the load above; map comes from it
 const tileMap = map.toTileMap();
 const [ground] = tileMap.layers;
 const tile = ground.getTileAt(3, 5);
@@ -313,7 +313,7 @@ Wang sets — Tiled's terrain/auto-tile definitions — parse onto `TiledTileset
 it to a layer with `autoTile` (a full-layer pass) or `refreshCell` (an incremental, single-cell
 update) from `@codexo/exojs-tilemap`:
 
-```ts no-check
+```ts no-check -- continues the load above; map and the painted cell coordinates come from it
 import { tiledWangSetToWangSet } from '@codexo/exojs-tiled';
 import { autoTile, refreshCell } from '@codexo/exojs-tilemap';
 
@@ -347,7 +347,7 @@ different local tile ID for a set duration. `toTileMap()` carries these frames i
 `TileDefinition.animation`; `@codexo/exojs-tilemap` ships `TileAnimator` to drive them at runtime,
 RPG-Maker style — advancing every animated cell across one or more layers on a shared clock:
 
-```ts no-check
+```ts no-check -- continues the load above; map and scene come from it
 import { TileAnimator } from '@codexo/exojs-tilemap';
 
 const tileMap = map.toTileMap();
@@ -368,7 +368,7 @@ animated tiles.
 The tileset textures a `TiledMap` exposes are loaded through the `Loader` and owned by the
 **loader cache** — not by the `TiledMap`. This matters for teardown:
 
-```ts no-check
+```ts no-check -- continues the load above; map comes from it
 map.destroy(); // releases the TiledMap; does NOT destroy tileset textures
 ```
 

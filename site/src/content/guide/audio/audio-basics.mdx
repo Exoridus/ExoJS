@@ -179,7 +179,7 @@ voice.fade(0.7, 500);
 
 The `crossFade` utility fades one playing voice down while fading another up, in parallel:
 
-```ts no-check
+```ts no-check -- scene-method fragment shown at top level; both tracks belong to the scene above
 import { crossFade } from '@codexo/exojs';
 
 const current = this.app.audio.play(this.trackA, { volume: 0.7 });

@@ -89,7 +89,7 @@ Three attenuation curves control how volume drops with distance:
 
 Configure per-voice via `PlayOptions` at play time, or live on the returned `Voice`:
 
-```ts no-check
+```ts no-check -- scene-method fragment shown at top level; audioBuffer is the caller's own decoded buffer
 import { Sound } from '@codexo/exojs';
 
 const ambient = new Sound(audioBuffer);

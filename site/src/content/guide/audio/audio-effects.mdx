@@ -307,7 +307,7 @@ Four filters use `AudioWorkletProcessor` and load asynchronously. They extend `W
 A `WorkletEffect` loads its processor asynchronously — the bus rewires itself once it's ready, but until then the effect passes audio through untouched. `await effect.ready` before you rely on its output or read state from it.
 </Callout>
 
-```ts no-check
+```ts no-check -- effect-constructor tour; modulatorBus is the caller's own bus
 import { BitCrusherEffect, GranularEffect, PitchShiftEffect, VocoderEffect } from '@codexo/exojs-audio-fx';
 
 // Granular pitch shifting (0.25x to 4x)

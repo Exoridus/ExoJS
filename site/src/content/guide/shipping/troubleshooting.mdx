@@ -59,7 +59,7 @@ See [Your first scene](/ExoJS/en/guide/getting-started/your-first-scene/) for a 
 
 Pre-0.9 ExoJS snippets commonly use an older draw signature. If you copied code from an older tutorial or GitHub issue, it may look like this:
 
-```ts no-check
+```ts no-check -- deliberately shows the removed 0.8.x renderer API
 // old (0.8.x and earlier) — do not use
 draw(backend) {
     backend.clear();
@@ -113,7 +113,7 @@ Asset load failures typically produce network errors in the browser's developer 
 
 **Vite `public/` path confusion.** Files in `public/` are served from the site root. A file at `public/assets/bunny.png` is available at `/assets/bunny.png`, not `public/assets/bunny.png`. Reference it without the `public/` prefix:
 
-```ts no-check
+```ts no-check -- path comparison; loader comes from the application above
 await loader.load('assets/bunny.png'); // correct
 await loader.load('public/assets/bunny.png'); // wrong
 ```
@@ -136,7 +136,7 @@ The symptom: audio code runs without errors, but nothing is audible. Often the b
 
 The fix: start audio in response to a click, tap, or keypress:
 
-```ts no-check
+```ts no-check -- DOM listener fragment; mySound is the reader's own
 button.addEventListener('click', () => {
     mySound.play(); // the engine resumes the AudioContext on the first user gesture
 });

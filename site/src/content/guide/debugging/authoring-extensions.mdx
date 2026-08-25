@@ -15,7 +15,7 @@ The model is deliberately small and **add-only**: an extension can only *contrib
 
 An [`Extension`](/ExoJS/en/api/extension/) is a plain, immutable descriptor. It holds **no** `Application`, backend, GPU, or loader instances — only *bindings* that describe how to build those things later. The registry reads it exactly once, at `Application` construction, and never touches it on a hot path.
 
-```ts no-check
+```ts no-check -- annotated Extension template; every field is a placeholder
 import type { Extension } from '@codexo/exojs/extensions';
 
 const myExtension: Extension = {
@@ -118,7 +118,7 @@ If `install` throws, construction is aborted and every extension installed *befo
 
 A `RendererBinding` is `{ targets, create }`: the drawable constructors it renders, and a factory that receives the live `RenderBackend` and returns a matching renderer — or `undefined` when the backend is unsupported (the binding is then skipped for that backend). Branch on `backend.backendType` to build the right per-backend renderer; the `satisfies never` exhaustiveness check makes an unhandled backend a *compile* error, not a runtime surprise:
 
-```ts no-check
+```ts no-check -- the Confetti drawable and its two renderers are the reader's own types
 import type { Extension, RendererBinding } from '@codexo/exojs/extensions';
 import type { RenderBackend } from '@codexo/exojs/renderer-sdk';
 import { RenderBackendType } from '@codexo/exojs/renderer-sdk';
@@ -158,7 +158,7 @@ Study how `@codexo/exojs-particles` is set up — the official packages all foll
 
 **One entry point, no side effects.** The package root exports the descriptor and the public API and does nothing else — importing it must not change any application's behaviour. There is no registration module, because there is nothing global to register into; the consumer decides by passing the descriptor to the application that should have it.
 
-```ts no-check
+```ts no-check -- package-layout sketch; the re-exported modules are the reader's own
 // src/index.ts — exports only, no side effects
 export { confettiExtension } from './confettiExtension';
 export * from './public';

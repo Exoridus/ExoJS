@@ -44,7 +44,7 @@ both.
 
 `useExoApplication(options?, onReady?)` returns the app and a ref to attach to your own canvas:
 
-```tsx no-check
+```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
 import { useExoApplication } from '@codexo/exojs-react';
 
 function Game() {
@@ -92,7 +92,7 @@ With no `canvas.sizing` the engine only ever writes the base resolution onto the
 the app via context so descendants (HUD, the scene API) can reach it. Because the wrapper is
 positioned, absolutely-positioned children sit over the canvas with no extra setup.
 
-```tsx no-check
+```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
 import { ExoCanvas } from '@codexo/exojs-react';
 
 function Game() {
@@ -140,7 +140,7 @@ export class TitleScene extends Scene {}
 export class GameScene extends Scene {}
 ```
 
-```tsx no-check
+```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
 import { FadeSceneTransition } from '@codexo/exojs';
 import { ExoCanvas, Scenes, Scene } from '@codexo/exojs-react';
 import { TitleScene, GameScene } from './scenes';
@@ -173,7 +173,7 @@ name="...">` declarations if you see the warning.
 `useActiveScene()` reads the live scene instance from the nearest `<Scenes>`, so an overlay can
 react to scene state:
 
-```tsx no-check
+```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
 import { useActiveScene } from '@codexo/exojs-react';
 import type { GameScene } from './scenes';
 
@@ -202,7 +202,7 @@ Any component rendered inside `<ExoCanvas>` can read the running app:
 alone does not make a component re-render. Pair `useExoApp()` with `useSignal()` to subscribe
 to `app.onFrame` and re-render on every dispatch:
 
-```tsx no-check
+```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
 import { useExoApp, useSignal } from '@codexo/exojs-react';
 
 function FrameCounter() {
@@ -217,7 +217,7 @@ function FrameCounter() {
 A small app that hosts the canvas, switches between two scenes with a fade, and overlays React
 HUD on the active scene:
 
-```tsx no-check
+```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
 import { useState } from 'react';
 import { FadeSceneTransition } from '@codexo/exojs';
 import { ExoCanvas, Scenes, Scene, useActiveScene } from '@codexo/exojs-react';

@@ -62,7 +62,7 @@ The Aseprite binding claims no file extension, so `loader.load('hero.json')` fal
 
 Once the extension is active, load the JSON export with an explicit descriptor:
 
-```ts no-check
+```ts no-check -- continues the loader setup above; loader belongs to the scene that snippet builds
 import { Asset } from '@codexo/exojs';
 
 const sheet = await loader.load(Asset.type('asepriteSheet', 'sprites/hero.json'));
@@ -99,7 +99,7 @@ engine's `AnimationManager` ticks it every frame. See the
 The parsed clips are also exposed directly on `sheet.clips` — a read-only `Map` keyed by tag name —
 so you can inspect what was imported or build a sprite by hand:
 
-```ts no-check
+```ts no-check -- property tour of the loaded sheet; member reads with no surrounding scope
 sheet.clips.size;          // number of tags
 sheet.clips.has('walk');   // true when the 'walk' tag exists
 sheet.clips.keys();        // iterate tag names
@@ -125,7 +125,7 @@ One consequence: a ping-pong tag's resulting clip has **more frames than `to - f
 bounce frames are appended, not looped separately — so `sheet.clips.get(name).frames.length` (and
 the tag's average fps, see below) already reflect the expanded sequence, not the raw tag range:
 
-```ts no-check
+```ts no-check -- property tour of the loaded sheet; member reads with no surrounding scope
 // Aseprite tag: { name: 'idle', from: 0, to: 2, direction: 'pingpong' }
 sheet.clips.get('idle').frames.length; // 4 — plays [0, 1, 2, 1], not the 3 declared source frames
 ```
@@ -143,7 +143,7 @@ maps it directly onto [`AnimatedSpriteClipDefinition.repeat`](/ExoJS/en/api/anim
 - `repeat: "3"` → the clip plays exactly three full cycles through its (possibly direction-expanded)
   frame sequence, then stops.
 
-```ts no-check
+```ts no-check -- continues the load above; loader and Asset come from that snippet
 import { AsepriteSheet } from '@codexo/exojs-aseprite';
 
 const sheet = await loader.load(Asset.type('asepriteSheet', 'sprites/hero.json'));
@@ -180,7 +180,7 @@ during playback; `fps` is retained only as a display-only average. A non-positiv
 falls back to the tag's average, the same degenerate case the `fps` calculation itself guards
 against.
 
-```ts no-check
+```ts no-check -- property tour of the loaded sheet; member reads with no surrounding scope
 sheet.clips.get('walk').fps;             // 5 — display-only average
 sheet.clips.get('walk').frameDurations;  // [100, 200, 300] — authoritative per-frame hold times
 ```
@@ -211,7 +211,7 @@ Aseprite's editor lets you define named **slices** — hitboxes, nine-patch bord
 points — independently of the frame/animation data. `AsepriteSheet.parse()` reads `meta.slices` into
 `AsepriteSheet.slices: ReadonlyMap<string, AsepriteSlice>`, keyed by slice name:
 
-```ts no-check
+```ts no-check -- property tour of the loaded sheet; member reads with no surrounding scope
 sheet.slices.size;                 // number of named slices
 sheet.slices.has('hitbox');        // true when the 'hitbox' slice exists
 sheet.slices.get('hitbox').keys;   // AsepriteSliceKey[] — bounds per frame

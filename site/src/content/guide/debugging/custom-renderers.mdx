@@ -92,8 +92,8 @@ A `RenderPipeline` composes high-level `RenderPass` objects (`RenderNodePass`, `
 
 When you need full GPU control — raw pipeline creation, custom vertex buffers, compute dispatches — access `WebGpuBackend` directly through `app.backend`. This is the escape hatch: you bypass ExoJS drawable types and renderer pipelines entirely, working at the WebGPU API level:
 
-```ts no-check
-import { WebGpuBackend } from '@codexo/exojs';
+```ts no-check -- sketch of a caller-owned renderer; its fields are assigned in an untyped constructor
+import { WebGpuBackend } from '@codexo/exojs/renderer-sdk';
 
 class CustomTriangleRenderer {
     constructor(backend) {

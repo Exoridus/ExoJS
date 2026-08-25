@@ -129,14 +129,14 @@ Each tween operates independently — they don't need to know about each other. 
 
 Navigate to the cinematic scene from the game to fully replace the active scene while the cutscene plays:
 
-```ts no-check
+```ts no-check -- app.scenes.change needs a real Scene subclass; the scenes this page names exist only in prose
 // From the game scene — switch to the cinematic:
 this.app.scenes.change(CinematicScene);
 ```
 
 Because the cinematic is now the only active scene, the game scene neither renders nor updates for the duration. When the cinematic ends, switch back:
 
-```ts no-check
+```ts no-check -- app.scenes.change needs a real Scene subclass; the scenes this page names exist only in prose
 // At the end of the sequence — chain a tween to transition back to the game:
 this.app.tweens.create(this.barSize)
     .to({ v: 70 }, 0.6)
@@ -181,7 +181,7 @@ Add a skip mechanism — press any confirm key (Space, Enter, gamepad Start) to 
 Staggering tweens with `Tween.delay()` is what turns independent animations into a timeline — no sequencer needed. To skip the whole cutscene, `app.tweens.clear()` stops every active tween at once so you can snap straight to the end state.
 </Callout>
 
-```ts no-check
+```ts no-check -- app.scenes.change needs a real Scene subclass; the scenes this page names exist only in prose
 init() {
     // ... cinematic setup ...
 
@@ -198,7 +198,7 @@ init() {
 
 For a smoother skip, fast-forward remaining tweens to completion rather than cutting hard:
 
-```ts no-check
+```ts no-check -- app.scenes.change needs a real Scene subclass; the scenes this page names exist only in prose
 this.inputs.onTrigger(Keyboard.Space, () => {
     // Jump all tweens to their end state
     this.app.tweens.clear(); // stops all active tweens

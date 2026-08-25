@@ -24,7 +24,7 @@ The scene's `this.inputs` registry creates bindings that are automatically dispo
 
 Each returns an `InputBinding` you can call `.unbind()` on to detach early. The `threshold` option (in ms) overrides the 300 ms default for `onTrigger`:
 
-```ts no-check
+```ts no-check -- sketch of the reader's own scene; player and togglePause are its members, not the guide's
 import { Keyboard, Scene } from '@codexo/exojs';
 
 class GameScene extends Scene {

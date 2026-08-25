@@ -164,7 +164,7 @@ async load() {
 
 Typed properties on the catalog give autocomplete and type inference for free:
 
-```ts no-check
+```ts no-check -- shows the key types a catalog infers; member reads with no surrounding scope
 TitleAssets.logo; // Texture
 TitleAssets.music; // AudioStream
 TitleAssets.config; // AssetRef<{ startLevel: string }>
@@ -190,7 +190,7 @@ A composition **shares** its inputs' handles instead of copying them: `LevelAsse
 
 Two _different_ catalogs may not define the same key. That ambiguity is caught at compile time (the result types as a message naming the key) and always throws at runtime:
 
-```ts no-check
+```ts no-check -- shows the duplicate-key error Assets.compose reports, not working code
 // Assets.compose(): duplicate catalog key "ship" — two catalogs define it,
 // use Assets.extend() to override it deliberately.
 Assets.compose(LevelLocalAssets, Assets.from({ ship: 'image/other-ship.png' }));
@@ -198,7 +198,7 @@ Assets.compose(LevelLocalAssets, Assets.from({ ship: 'image/other-ship.png' }));
 
 The same catalog arriving twice along different paths — a diamond — is not a conflict and deduplicates:
 
-```ts no-check
+```ts no-check -- continues the catalog above; SharedAssets comes from it
 const Left = Assets.compose(SharedAssets, Assets.from({ tree: 'image/tree.png' }));
 const Right = Assets.compose(SharedAssets, Assets.from({ rock: 'image/rock.png' }));
 
@@ -768,7 +768,7 @@ makes it loadable, and it makes it loadable on that application alone - two
 applications in one process can map the same suffix to different types without
 seeing each other. Once installed, the type works everywhere the built-ins do:
 
-```ts no-check
+```ts no-check -- continues the asset type above; heightFieldType comes from it
 // The type itself gives you a fully typed, loadable descriptor
 const field = await this.loader.load(heightFieldType.asset('maps/level-1.hf'));
 
@@ -782,7 +782,7 @@ const World = Assets.from({ level1: heightFieldType.asset('maps/level-1.hf') });
 the type. A bare `this.loader.load('maps/level-1.hf')` also works there once the
 type claims the suffix and the type system mirrors the mapping:
 
-```ts no-check
+```ts no-check -- abbreviated AssetType sketch; the class body is elided
 export class HeightFieldAssetType extends AssetType<string, HeightField> {
   public readonly id = 'com.example.height-field';
   public override readonly extensions = ['hf'];

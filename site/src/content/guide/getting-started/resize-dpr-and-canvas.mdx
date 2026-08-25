@@ -58,7 +58,7 @@ Resizing the surface does not move what you already positioned. A sprite centere
 
 The example calls `layout()` every frame from `update`, which is simple and always correct. For heavier layouts, subscribe to `app.onResize` instead and recompute only when the size actually changes:
 
-```ts no-check
+```ts
 init() {
     this.layout();
     app.onResize.add(() => this.layout());

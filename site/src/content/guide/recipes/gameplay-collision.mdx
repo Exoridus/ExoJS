@@ -200,7 +200,7 @@ if (hero.intersectsWith(box)) {
 
 For scenes with many objects, pair-wise collision checks against every other object are O(n²). A [`Quadtree`](/ExoJS/en/api/quadtree/) reduces the search space:
 
-```ts no-check
+```ts no-check -- continues the collision example; Rectangle, player and the enemy list come from it
 import { Quadtree } from '@codexo/exojs';
 
 const tree = new Quadtree(new Rectangle(0, 0, 800, 600), 8, 5);
