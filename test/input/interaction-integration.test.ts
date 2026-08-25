@@ -18,6 +18,8 @@ import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 
+import { frameDelta } from '../support/frame-delta';
+
 class TestSprite extends Drawable {
   private _left = 0;
   private _top = 0;
@@ -125,7 +127,7 @@ const createHarness = (dragThreshold?: number): Harness => {
 
 const flush = (h: Harness): void => {
   h.input.preUpdate(0 as never);
-  h.im.preUpdate();
+  h.im.preUpdate(frameDelta);
 };
 
 beforeAll(() => {

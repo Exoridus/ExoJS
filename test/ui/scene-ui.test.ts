@@ -14,6 +14,8 @@ import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 
+import { frameDelta } from '../support/frame-delta';
+
 // Camera offset so world-space coordinates differ from screen-space ones; the
 // screenView stays identity, proving UI is hit-tested in screen space.
 const CAMERA_OFFSET = 1000;
@@ -125,7 +127,7 @@ describe('UI interaction routing', () => {
 
     button.onPointerDown.add(handler);
     dispatchPointer(signals.onPointerDown, 80, 80);
-    im.preUpdate();
+    im.preUpdate(frameDelta);
 
     expect(handler).toHaveBeenCalledTimes(1);
   });
@@ -147,7 +149,7 @@ describe('UI interaction routing', () => {
     button.onPointerDown.add(uiHandler);
     worldSprite.onPointerDown.add(worldHandler);
     dispatchPointer(signals.onPointerDown, 80, 80);
-    im.preUpdate();
+    im.preUpdate(frameDelta);
 
     expect(uiHandler).toHaveBeenCalledTimes(1);
     expect(worldHandler).not.toHaveBeenCalled();
@@ -170,7 +172,7 @@ describe('UI interaction routing', () => {
     button.onPointerDown.add(uiHandler);
     worldSprite.onPointerDown.add(worldHandler);
     dispatchPointer(signals.onPointerDown, 400, 400);
-    im.preUpdate();
+    im.preUpdate(frameDelta);
 
     expect(uiHandler).not.toHaveBeenCalled();
     expect(worldHandler).toHaveBeenCalledTimes(1);

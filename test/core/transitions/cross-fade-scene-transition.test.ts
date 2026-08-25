@@ -41,7 +41,7 @@ describe('CrossFadeSceneTransition', () => {
   test('getRequirements(): snapshot + texture, regardless of context', () => {
     const crossFade = new CrossFadeSceneTransition();
 
-    expect(crossFade.getRequirements(navContext)).toEqual({ outgoingFrame: 'snapshot', currentFrame: 'texture' });
+    expect(crossFade.getRequirements()).toEqual({ outgoingFrame: 'snapshot', currentFrame: 'texture' });
   });
 
   test('beginSession() requests commit synchronously (no separate exit hold, unlike FadeSceneTransition)', () => {

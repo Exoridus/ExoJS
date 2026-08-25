@@ -13,6 +13,8 @@ import { BrowserPlatform } from '#platform/BrowserPlatform';
 import { Container } from '#rendering/Container';
 import { Drawable } from '#rendering/Drawable';
 
+import { frameDelta } from '../support/frame-delta';
+
 // ---------------------------------------------------------------------------
 // TestSprite - overrides both contains() and getBounds() for spatial-index tests
 // ---------------------------------------------------------------------------
@@ -132,7 +134,7 @@ const createApp = (): {
 };
 
 const flushInteractions = (im: InteractionManager): void => {
-  im.preUpdate();
+  im.preUpdate(frameDelta);
 };
 
 // ---------------------------------------------------------------------------
@@ -525,7 +527,7 @@ describe('InteractionManager — spatial index: addChild registers subtree', () 
     expect(im._getDebugQuadtree()).not.toBeNull();
 
     // Both children should be discoverable via hit test.
-    im.preUpdate(); // flush stale entries
+    im.preUpdate(frameDelta); // flush stale entries
 
     im.destroy();
     container.destroy();
