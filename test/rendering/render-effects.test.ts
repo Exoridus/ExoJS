@@ -51,7 +51,7 @@ const createRuntime = () => {
   const released: RenderTexture[] = [];
   const clipEvents: string[] = [];
   const clipBoundsCalls: Rectangle[] = [];
-  const draw = vi.fn(function (this: RenderBackend) {
+  const draw = vi.fn(function (this: RenderBackend, _drawable: Drawable) {
     return this;
   });
   const clear = vi.fn(function (this: RenderBackend) {

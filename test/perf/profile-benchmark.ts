@@ -101,6 +101,7 @@ const makeBufferSource = (): AudioBufferSourceNode =>
     start: () => undefined,
     stop: () => undefined,
     playbackRate: { value: 1 },
+    detune: { value: 0 },
     loop: false,
     loopStart: 0,
     loopEnd: 0,
@@ -139,7 +140,7 @@ const makeMockContext = (): AudioContext =>
         sampleRate: sr,
         duration: len / sr,
         getChannelData: () => new Float32Array(len),
-      }) as AudioBuffer,
+      }) as unknown as AudioBuffer,
   }) as unknown as AudioContext;
 
 Object.defineProperty(globalThis, 'AudioContext', {
@@ -185,6 +186,8 @@ if (typeof (globalThis as Record<string, unknown>)['AudioWorkletNode'] === 'unde
 // Domain imports (after audio mock)
 // ---------------------------------------------------------------------------
 
+import { getAudioContext } from '../../src/audio/audio-context';
+import { AudioManager } from '../../src/audio/AudioManager';
 import { Sound } from '../../src/audio/Sound';
 import { getCollisionSat } from '../../src/math/collision-detection';
 import { Polygon } from '../../src/math/Polygon';
@@ -514,13 +517,19 @@ const scenarioResults: ProfileScenarioResult[] = [];
 // ── 5. Many sounds play ────────────────────────────────────────────────────
 
 {
+  // Nothing bootstraps the shared AudioContext eagerly, and a Sound played
+  // without one hands out a NoopVoice - the scenario would measure the silent path.
+  getAudioContext();
+
   const sounds: Sound[] = [];
+  let manager: AudioManager | null = null;
 
   scenarioResults.push(
     runProfile({
       name: 'many-sounds-play',
       iterations: 1000,
       setup() {
+        manager = new AudioManager();
         for (let i = 0; i < 50; i++) {
           sounds.push(new Sound(makeAudioBuffer(), { poolSize: 4 }));
         }
@@ -530,7 +539,9 @@ const scenarioResults: ProfileScenarioResult[] = [];
         for (const s of sounds) {
           counter.count('sound-play-calls');
           const stopPlay = timings.start('sound.play');
-          s.play();
+          // Stopping within the tick returns the voice to the sound's pool, so the
+          // measured cost stays "50 plays" instead of growing by 50 each iteration.
+          manager!.play(s).stop();
           stopPlay();
         }
       },
@@ -539,6 +550,8 @@ const scenarioResults: ProfileScenarioResult[] = [];
           s.destroy();
         }
         sounds.length = 0;
+        manager!.destroy();
+        manager = null;
       },
     }),
   );

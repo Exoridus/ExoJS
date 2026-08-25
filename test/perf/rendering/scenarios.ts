@@ -10,6 +10,7 @@
  * @internal Test/perf-only.
  */
 import type { RenderNode } from '#rendering/RenderNode';
+import type { RepeatMode } from '#rendering/texture/repeat';
 import { BlendModes } from '#rendering/types';
 
 import { buildNineSliceScene, buildRepeatingScene, buildSpriteScene, makeTextures } from './fixtures';
@@ -17,6 +18,8 @@ import type { WebGl2Harness } from './harness';
 import { buildTilemapScene, makeTilesets, wireTilemapRenderers } from './tilemapFixtures';
 
 export type BenchProfile = 'quick' | 'full';
+
+type TilemapMutation = 'static' | 'one-tile' | 'pan';
 
 export interface BuiltScene {
   readonly root: RenderNode;
@@ -36,6 +39,8 @@ const VIEW = { w: 1280, h: 720 };
 const spriteCounts = (profile: BenchProfile): number[] => (profile === 'quick' ? [1000] : [100, 1000, 10000, 50000]);
 const nineCounts = (profile: BenchProfile): number[] => (profile === 'quick' ? [100] : [10, 100, 1000]);
 const repeatCounts = (profile: BenchProfile): number[] => (profile === 'quick' ? [100] : [100, 1000, 5000]);
+const nineFills = (profile: BenchProfile): readonly RepeatMode[] => (profile === 'quick' ? ['stretch'] : ['stretch', 'repeat', 'mirror-repeat']);
+const tilemapMutations = (profile: BenchProfile): readonly TilemapMutation[] => (profile === 'quick' ? ['static'] : ['static', 'one-tile', 'pan']);
 const tilemapSizes = (profile: BenchProfile): Array<{ w: number; h: number; label: number }> =>
   profile === 'quick'
     ? [{ w: 32, h: 32, label: 1024 }]
@@ -86,7 +91,7 @@ export const buildScenarioCatalog = (profile: BenchProfile): BenchScenario[] => 
                   }
                 : undefined;
 
-            return { root, beforeFrame, teardown: () => root.destroy() };
+            return { root, ...(beforeFrame ? { beforeFrame } : {}), teardown: () => root.destroy() };
           },
         });
       }
@@ -113,7 +118,7 @@ export const buildScenarioCatalog = (profile: BenchProfile): BenchScenario[] => 
   // ── NineSlice ─────────────────────────────────────────────────────────
   for (const count of nineCounts(profile)) {
     for (const textureCount of profile === 'quick' ? [1] : [1, 8]) {
-      for (const fill of (profile === 'quick' ? ['stretch'] : ['stretch', 'repeat', 'mirror-repeat']) as const) {
+      for (const fill of nineFills(profile)) {
         scenarios.push({
           id: `nine-slice/${count}/${textureCount}tex/${fill}`,
           family: 'nine-slice',
@@ -164,7 +169,7 @@ export const buildScenarioCatalog = (profile: BenchProfile): BenchScenario[] => 
 
   for (const size of tilemapSizes(profile)) {
     for (const tilesetCount of tilesetCounts) {
-      for (const mutation of (profile === 'quick' ? ['static'] : ['static', 'one-tile', 'pan']) as const) {
+      for (const mutation of tilemapMutations(profile)) {
         scenarios.push({
           id: `tilemap/${size.label}/${tilesetCount}ts/${mutation}`,
           family: 'tilemap',
@@ -202,7 +207,7 @@ export const buildScenarioCatalog = (profile: BenchProfile): BenchScenario[] => 
                       });
                     };
 
-            return { root: scene.node, beforeFrame, teardown: () => scene.node.destroy() };
+            return { root: scene.node, ...(beforeFrame ? { beforeFrame } : {}), teardown: () => scene.node.destroy() };
           },
         });
       }
