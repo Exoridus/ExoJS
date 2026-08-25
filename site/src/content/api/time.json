@@ -6,10 +6,10 @@
   "subsystem": "core",
   "importPath": "@codexo/exojs",
   "tier": "stable",
-  "memberCount": 34,
+  "memberCount": 33,
   "counts": {
     "constructors": 1,
-    "methods": 20,
+    "methods": 19,
     "properties": 13,
     "events": 0
   },
@@ -1038,35 +1038,6 @@
           ],
           "returnType": "Time",
           "description": "Construct a Time from a second count."
-        },
-        {
-          "name": "now",
-          "signature": "now(): Time",
-          "signatureTokens": [
-            {
-              "text": "now",
-              "kind": "name"
-            },
-            {
-              "text": "(",
-              "kind": "punctuation"
-            },
-            {
-              "text": ")",
-              "kind": "punctuation"
-            },
-            {
-              "text": ": ",
-              "kind": "punctuation"
-            },
-            {
-              "text": "Time",
-              "kind": "type"
-            }
-          ],
-          "params": [],
-          "returnType": "Time",
-          "description": "Current high-resolution monotonic time (performance.now()) as a Time."
         }
       ],
       "paragraphs": [],
