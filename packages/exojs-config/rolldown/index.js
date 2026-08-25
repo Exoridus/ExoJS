@@ -20,6 +20,10 @@ import { createBuildDefinesFromRepo } from '../build-defines/index.js';
 // has always contained. Rebuilding the path from `facadeModuleId` restores
 // that for the shader files; every other module keeps the default `[name]`.
 const SHADER_EXTENSION = /\.(?:vert|frag|wgsl)$/;
+/**
+ * @param {string} sourceRoot
+ * @returns {import('rolldown').ChunkFileNamesFunction}
+ */
 function preservedModuleNaming(sourceRoot) {
   return info => {
     const id = info.facadeModuleId;
@@ -43,6 +47,7 @@ export function createExtensionBuildOptions(opts) {
     packageDir: root,
   });
 
+  /** @param {string} id */
   const isExternal = id => id.startsWith('@codexo/exojs') || external.some(name => id === name || id.startsWith(`${name}/`));
 
   const packageName = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).name ?? 'extension';

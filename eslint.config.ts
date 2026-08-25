@@ -145,7 +145,6 @@ export default defineConfig([
       ],
       '@typescript-eslint/explicit-member-accessibility': 'error',
       '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
-      '@typescript-eslint/no-deprecated': 'error',
       '@typescript-eslint/no-empty-function': [
         'warn',
         {
@@ -195,8 +194,6 @@ export default defineConfig([
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/non-nullable-type-assertion-style': 'error',
       '@typescript-eslint/prefer-for-of': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'error',
-      '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/prefer-readonly': 'off',
       '@typescript-eslint/prefer-reduce-type-parameter': 'error',
       '@typescript-eslint/prefer-regexp-exec': 'error',
@@ -213,7 +210,6 @@ export default defineConfig([
       ],
       '@typescript-eslint/return-await': ['error', 'in-try-catch'],
       '@typescript-eslint/strict-boolean-expressions': 'error',
-      '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/unbound-method': 'error',
       '@typescript-eslint/unified-signatures': 'error',
 

@@ -23,7 +23,9 @@ import { resolve } from 'node:path';
  */
 
 /**
- * @param {{ cwd?: string, runner?: MiniRunner }} opts
+ * @param {string} cmd
+ * @param {string[]} args
+ * @param {{ cwd?: string, runner?: MiniRunner }} [opts]
  * @returns {{ code: number; stdout: string; stderr: string }}
  */
 const run = (cmd, args, { cwd, runner } = {}) => {
@@ -31,7 +33,8 @@ const run = (cmd, args, { cwd, runner } = {}) => {
   try {
     const stdout = execSync(`${cmd} ${args.join(' ')}`, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
     return { code: 0, stdout, stderr: '' };
-  } catch (e) {
+  } catch (error) {
+    const e = /** @type {{ status?: number, stdout?: string, stderr?: string }} */ (error);
     return { code: e.status ?? 1, stdout: e.stdout?.trim() ?? '', stderr: e.stderr?.trim() ?? '' };
   }
 };
@@ -83,8 +86,8 @@ const ciShaEnv = () => {
 };
 
 /**
- * @param {{ cwd?: string, runner?: MiniRunner }} opts
- * @returns {string}
+ * @param {{ cwd?: string, runner?: MiniRunner }} [opts]
+ * @returns {string | undefined}
  */
 const gitRevParse = ({ cwd, runner } = {}) => {
   const result = run('git', ['rev-parse', 'HEAD'], { cwd, runner });
@@ -100,7 +103,7 @@ const gitRevParse = ({ cwd, runner } = {}) => {
  *
  * Returns the FULL SHA so downstream code can abbreviate it as needed.
  *
- * @param {{ cwd?: string, runner?: MiniRunner }} opts
+ * @param {{ cwd?: string, runner?: MiniRunner }} [opts]
  * @returns {string}
  */
 export const resolveRevision = (opts = {}) => {
@@ -119,7 +122,7 @@ export const resolveRevision = (opts = {}) => {
 // ---- dirty-tree detection --------------------------------------------------
 
 /**
- * @param {{ cwd?: string, runner?: MiniRunner }} opts
+ * @param {{ cwd?: string, runner?: MiniRunner }} [opts]
  * @returns {boolean}
  */
 export const isTreeDirty = ({ cwd, runner } = {}) => {
