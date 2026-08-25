@@ -24,7 +24,7 @@ export interface SceneActionMapOptions {
 
 const gatedStates = new Set<SceneState>([SceneState.Preparing, SceneState.Ready, SceneState.Suspended, SceneState.Destroying, SceneState.Destroyed]);
 
-function whenPolicyAllows(when: SceneAvailability, state: SceneState, paused: boolean): boolean {
+const whenPolicyAllows = (when: SceneAvailability, state: SceneState, paused: boolean): boolean => {
   if (gatedStates.has(state)) {
     return false;
   }
@@ -34,7 +34,7 @@ function whenPolicyAllows(when: SceneAvailability, state: SceneState, paused: bo
   }
 
   return when === SceneAvailability.Active ? !paused : paused;
-}
+};
 
 type BindingKind = 'onStart' | 'onActive' | 'onStop' | 'onTrigger';
 

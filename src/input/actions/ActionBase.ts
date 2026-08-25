@@ -22,7 +22,7 @@ export type GamepadSlot = 0 | 1 | 2 | 3;
  * @throws {Error} If no control carries `token`. Deserialization never falls
  * back to a nearby control - see {@link inputChannelFromToken}.
  */
-export function channelFromToken(token: string): InputChannel {
+export const channelFromToken = (token: string): InputChannel => {
   const channel = inputChannelFromToken(token);
 
   if (channel === null) {
@@ -30,10 +30,10 @@ export function channelFromToken(token: string): InputChannel {
   }
 
   return channel;
-}
+};
 
 /** {@link channelFromToken} over a list, rejecting a non-array or non-string entry outright. */
-export function channelsFromTokens(tokens: unknown, what: string): readonly InputChannel[] {
+export const channelsFromTokens = (tokens: unknown, what: string): readonly InputChannel[] => {
   if (!Array.isArray(tokens)) {
     throw new Error(`Input binding: ${what} must be an array of input tokens.`);
   }
@@ -45,7 +45,7 @@ export function channelsFromTokens(tokens: unknown, what: string): readonly Inpu
 
     return channelFromToken(token);
   });
-}
+};
 
 /**
  * Canonical token for every channel in `channels`.
@@ -54,9 +54,7 @@ export function channelsFromTokens(tokens: unknown, what: string): readonly Inpu
  * displayed by the control it names, never by the runtime pad slot the owning
  * map happens to sit on.
  */
-export function tokensFromChannels(channels: readonly number[]): readonly InputToken[] {
-  return channels.map(channel => inputToken(slotZeroGamepadChannel(channel)));
-}
+export const tokensFromChannels = (channels: readonly number[]): readonly InputToken[] => channels.map(channel => inputToken(slotZeroGamepadChannel(channel)));
 
 /**
  * Shared contract of every action kind.

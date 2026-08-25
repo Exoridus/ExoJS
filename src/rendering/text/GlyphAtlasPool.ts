@@ -103,12 +103,12 @@ let _defaultPool: GlyphAtlasPool | null = null;
  * Returns the shared process-wide {@link GlyphAtlasPool}, creating it lazily
  * on first call. All {@link Text} instances use this pool by default.
  */
-export function getDefaultGlyphAtlasPool(): GlyphAtlasPool {
+export const getDefaultGlyphAtlasPool = (): GlyphAtlasPool => {
   if (_defaultPool === null) {
     _defaultPool = new GlyphAtlasPool();
   }
   return _defaultPool;
-}
+};
 
 /**
  * Override the default pool. Passing no argument (or `undefined`) causes the
@@ -117,6 +117,6 @@ export function getDefaultGlyphAtlasPool(): GlyphAtlasPool {
  * Intended for tests: call with a mock pool in `beforeEach` and with no
  * argument in `afterEach` to restore default behaviour.
  */
-export function resetDefaultGlyphAtlasPool(pool?: GlyphAtlasPool): void {
+export const resetDefaultGlyphAtlasPool = (pool?: GlyphAtlasPool): void => {
   _defaultPool = pool ?? null;
-}
+};

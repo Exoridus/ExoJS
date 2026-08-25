@@ -8,15 +8,15 @@ import { AudioAnalyser } from '../src/AudioAnalyser';
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeAudioNode(): AudioNode {
+const makeAudioNode = (): AudioNode => {
   const ctx = getAudioContext();
   return ctx.createGain() as unknown as AudioNode;
-}
+};
 
-function makeMediaStream(): MediaStream {
+const makeMediaStream = (): MediaStream => {
   // Must have getTracks for duck-type detection in AudioAnalyser
   return { getTracks: () => [] } as unknown as MediaStream;
-}
+};
 
 /**
  * Runs `run` against a fresh copy of the `@codexo/exojs` module registry (via
@@ -36,9 +36,9 @@ function makeMediaStream(): MediaStream {
  * re-triggers the module's monitoring so every handler registered so far fires
  * in registration order.
  */
-async function withSuspendedContext<T>(
+const withSuspendedContext = async <T>(
   run: (mod: { fresh: typeof import('@codexo/exojs'); FreshAudioAnalyser: typeof AudioAnalyser; flipToReady: () => void }) => T | Promise<T>,
-): Promise<T> {
+): Promise<T> => {
   const OriginalAudioContext = globalThis.AudioContext;
   class SuspendedMockAudioContext extends (OriginalAudioContext as unknown as new () => AudioContext) {
     public constructor() {
@@ -60,7 +60,7 @@ async function withSuspendedContext<T>(
   } finally {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: OriginalAudioContext });
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests

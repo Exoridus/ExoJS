@@ -17,7 +17,7 @@ import type { SerializedNode } from './types';
  * (px / degrees); the `Drawable` tint is `[r, g, b, a]` with `r/g/b` in 0..255
  * and `a` in 0..1. Runtime caches, matrices and dirty flags are never written.
  */
-export function writeCommonFields(node: SceneNode, out: SerializedNode): void {
+export const writeCommonFields = (node: SceneNode, out: SerializedNode): void => {
   if (node.x !== 0) out.x = node.x;
   if (node.y !== 0) out.y = node.y;
   if (node.rotation !== 0) out.rotation = node.rotation;
@@ -78,7 +78,7 @@ export function writeCommonFields(node: SceneNode, out: SerializedNode): void {
     if (node.anchor.x !== 0) out.anchorX = node.anchor.x;
     if (node.anchor.y !== 0) out.anchorY = node.anchor.y;
   }
-}
+};
 
 /**
  * Apply the common fields from `data` onto an already-constructed `node`.
@@ -87,7 +87,7 @@ export function writeCommonFields(node: SceneNode, out: SerializedNode): void {
  * overrides any transform side-effects of construction (e.g. a `Sprite` frame
  * resetting scale). Absent fields keep the node's constructed defaults.
  */
-export function applyCommonFields(node: SceneNode, data: SerializedNode): void {
+export const applyCommonFields = (node: SceneNode, data: SerializedNode): void => {
   if (typeof data.x === 'number') node.x = data.x;
   if (typeof data.y === 'number') node.y = data.y;
   if (typeof data.rotation === 'number') node.rotation = data.rotation;
@@ -155,4 +155,4 @@ export function applyCommonFields(node: SceneNode, data: SerializedNode): void {
       node.pixelSnapMode = data.pixelSnapMode;
     }
   }
-}
+};

@@ -2,7 +2,7 @@ import { Connectivity } from '#core/Connectivity';
 import type { NetworkHint, NetworkHintSource, PlatformSubscription } from '#platform/PlatformAdapter';
 
 /** A hint source a test drives directly, standing in for a platform adapter. */
-function hintSource(initial: NetworkHint = 'online') {
+const hintSource = (initial: NetworkHint = 'online') => {
   const listeners = new Set<(hint: NetworkHint) => void>();
   let current = initial;
 
@@ -30,7 +30,7 @@ function hintSource(initial: NetworkHint = 'online') {
       }
     },
   };
-}
+};
 
 describe('Connectivity state', () => {
   test('starts at whatever the host already reports', () => {

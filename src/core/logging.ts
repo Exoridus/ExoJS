@@ -124,23 +124,21 @@ const consolePrefixStyle = 'color:#7dd3fc;font-weight:bold;';
  * `entry.error`/`entry.data` as extra arguments. Browser-targeted only - no
  * Node/Deno console detection.
  */
-export function createConsoleSink(): LogSink {
-  return entry => {
-    const prefix = entry.source !== undefined ? `%c[ExoJS][${entry.source}]` : '%c[ExoJS]';
-    let method: 'log' | 'warn' | 'error' = 'log';
+export const createConsoleSink = (): LogSink => entry => {
+  const prefix = entry.source !== undefined ? `%c[ExoJS][${entry.source}]` : '%c[ExoJS]';
+  let method: 'log' | 'warn' | 'error' = 'log';
 
-    if (entry.severity >= LogSeverity.Error) method = 'error';
-    else if (entry.severity >= LogSeverity.Warning) method = 'warn';
+  if (entry.severity >= LogSeverity.Error) method = 'error';
+  else if (entry.severity >= LogSeverity.Warning) method = 'warn';
 
-    if (entry.error) {
-      console[method](prefix, consolePrefixStyle, entry.message, entry.error);
-    } else if (entry.data) {
-      console[method](prefix, consolePrefixStyle, entry.message, entry.data);
-    } else {
-      console[method](prefix, consolePrefixStyle, entry.message);
-    }
-  };
-}
+  if (entry.error) {
+    console[method](prefix, consolePrefixStyle, entry.message, entry.error);
+  } else if (entry.data) {
+    console[method](prefix, consolePrefixStyle, entry.message, entry.data);
+  } else {
+    console[method](prefix, consolePrefixStyle, entry.message);
+  }
+};
 
 if (__DEV__) {
   logger.addSink(createConsoleSink());
@@ -155,7 +153,7 @@ let _helloShown = false;
  * {@link Application} startup. Opt out via `new Application({ hello: false })`.
  * @internal
  */
-export function hello(info?: { backend?: string }): void {
+export const hello = (info?: { backend?: string }): void => {
   if (!__DEV__ || _helloShown) {
     return;
   }
@@ -165,9 +163,9 @@ export function hello(info?: { backend?: string }): void {
   const suffix = info?.backend !== undefined ? ` (${info.backend})` : '';
 
   console.log(`%cExoJS v${__VERSION__}${suffix}`, consolePrefixStyle);
-}
+};
 
 /** @internal - clears the {@link hello} one-time latch. For unit tests only. */
-export function _resetHello(): void {
+export const _resetHello = (): void => {
   _helloShown = false;
-}
+};

@@ -13,7 +13,7 @@ import { testAssetType } from '../assets/test-asset-type';
 
 class FakeDrawable extends Drawable {}
 
-function createStubBackend(destroyFn = vi.fn()): RenderBackend & { destroy: ReturnType<typeof vi.fn> } {
+const createStubBackend = (destroyFn = vi.fn()): RenderBackend & { destroy: ReturnType<typeof vi.fn> } => {
   const registry = new RendererRegistry<RenderBackend>();
   const backend = {
     backendType: RenderBackendType.WebGl2,
@@ -40,7 +40,7 @@ function createStubBackend(destroyFn = vi.fn()): RenderBackend & { destroy: Retu
     destroy: destroyFn,
   } as unknown as RenderBackend & { destroy: ReturnType<typeof vi.fn> };
   return backend;
-}
+};
 
 describe('rollback behaviour', () => {
   it('renderer setup error: original error propagates', () => {

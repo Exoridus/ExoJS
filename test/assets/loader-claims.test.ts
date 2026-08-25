@@ -8,12 +8,12 @@ import { Sound } from '#audio/Sound';
 import { materializeAssetTypes } from '#extensions/materialize';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts). */
-function createCoreLoader(options?: LoaderOptions): Loader {
+const createCoreLoader = (options?: LoaderOptions): Loader => {
   const loader = new Loader(options);
   const owner = loader.createScope({ name: 'owner' });
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 // SoundFactory.create() decodes bytes via the shared OfflineAudioContext
 // (`decodeAudioData` from '#audio/audio-context'). jsdom has no real audio
@@ -31,14 +31,14 @@ vi.mock('#audio/audio-context', () => ({
 
 const originalFetch = global.fetch;
 
-function mockFetchAudio(): void {
+const mockFetchAudio = (): void => {
   global.fetch = vi.fn(async () => ({
     ok: true,
     status: 200,
     statusText: 'OK',
     arrayBuffer: async () => new ArrayBuffer(8),
   })) as unknown as typeof fetch;
-}
+};
 
 describe('seamless Sound', () => {
   afterEach(() => {

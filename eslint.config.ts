@@ -1030,6 +1030,17 @@ export default defineConfig([
     },
   },
 
+  // Function style is a repository-wide convention, not a property of shipped
+  // code: `typeAwareCorrectnessRules` carries it for the engine and the
+  // extension packages, and these trees sit outside a typed program, so they
+  // take the rule on its own. The site has its own config and carries it there.
+  {
+    files: ['test/**/*.{ts,tsx}', 'packages/exojs-*/test/**/*.{ts,tsx}', 'scripts/**/*.{ts,mjs}', '*.config.ts'],
+    rules: {
+      'func-style': ['error', 'expression'],
+    },
+  },
+
   // Prettier compatibility: keep this last
   prettier,
 ]);

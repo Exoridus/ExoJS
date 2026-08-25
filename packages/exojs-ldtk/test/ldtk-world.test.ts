@@ -16,13 +16,13 @@ import { LdtkFormatError } from '../src/validate';
 const PKG_DIR = basename(process.cwd()) === 'exojs-ldtk' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-ldtk');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
-function loadFixture(name: string): unknown {
+const loadFixture = (name: string): unknown => {
   return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
-}
+};
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return { width: 4096, height: 4096, uid: 0, label: 'test', destroy: () => {}, destroyed: false } as unknown as Texture;
-}
+};
 
 /** A loader scope that records what it claims and when it is released. */
 interface FakeScope extends LoaderScope {
@@ -31,7 +31,7 @@ interface FakeScope extends LoaderScope {
   readonly released: boolean;
 }
 
-function fakeScope(name: string, claims: string[], fixtures: Record<string, unknown>): FakeScope {
+const fakeScope = (name: string, claims: string[], fixtures: Record<string, unknown>): FakeScope => {
   const children: FakeScope[] = [];
   let released = false;
 
@@ -61,9 +61,9 @@ function fakeScope(name: string, claims: string[], fixtures: Record<string, unkn
   };
 
   return scope as unknown as FakeScope;
-}
+};
 
-function makeContext(claims: string[], fixtures: Record<string, unknown>, source: string): AssetFactoryContext {
+const makeContext = (claims: string[], fixtures: Record<string, unknown>, source: string): AssetFactoryContext => {
   return {
     source,
     resourceKey: `test|${source}`,
@@ -71,7 +71,7 @@ function makeContext(claims: string[], fixtures: Record<string, unknown>, source
     locator: `url:${source}`,
     dependencies: fakeScope('asset', claims, fixtures) as unknown as AssetFactoryContext['dependencies'],
   } as AssetFactoryContext;
-}
+};
 
 const STREAMING_FIXTURES: Record<string, unknown> = {
   'streaming.ldtk': loadFixture('streaming.ldtk'),

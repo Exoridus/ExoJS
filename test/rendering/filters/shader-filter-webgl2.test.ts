@@ -24,7 +24,7 @@ import type { WebGl2Backend } from '#rendering/webgl2/WebGl2Backend';
 // Minimal WebGL2 rendering context mock
 // ---------------------------------------------------------------------------
 
-function makeGlMock(): WebGL2RenderingContext {
+const makeGlMock = (): WebGL2RenderingContext => {
   let programId = 1;
   let shaderId = 1;
   let bufferId = 1;
@@ -115,7 +115,7 @@ function makeGlMock(): WebGL2RenderingContext {
     }),
     getUniformLocation: vi.fn(() => ({ _id: uniformLocation++ })),
   } as unknown as WebGL2RenderingContext;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Minimal backend mocks
@@ -129,7 +129,7 @@ interface MockBackendExtras {
   gl: WebGL2RenderingContext;
 }
 
-function makeWebGl2Backend(glOverride?: WebGL2RenderingContext): RenderBackend & WebGl2Backend & MockBackendExtras {
+const makeWebGl2Backend = (glOverride?: WebGL2RenderingContext): RenderBackend & WebGl2Backend & MockBackendExtras => {
   const root = new RenderTarget(320, 200, true);
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
@@ -206,9 +206,9 @@ function makeWebGl2Backend(glOverride?: WebGL2RenderingContext): RenderBackend &
   } as unknown as RenderBackend & WebGl2Backend & MockBackendExtras;
 
   return backend;
-}
+};
 
-function makeWebGpuBackend(): RenderBackend {
+const makeWebGpuBackend = (): RenderBackend => {
   const root = new RenderTarget(320, 200, true);
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
@@ -272,7 +272,7 @@ function makeWebGpuBackend(): RenderBackend {
       root.destroy();
     },
   } as unknown as RenderBackend;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -294,16 +294,16 @@ void main() { vUv = aUv; gl_Position = vec4(aPosition, 0.0, 1.0); }
 `;
 
 /** Marshal a value through the WebGL2 pass, which owns the scratch buffers. */
-function marshalOn(name: string, value: ShaderFilterUniformValue): unknown {
+const marshalOn = (name: string, value: ShaderFilterUniformValue): unknown => {
   const pass = new WebGl2ShaderFilterPass(customVertSrc, minimalFragSrc, {});
 
   return (pass as unknown as Record<string, (n: string, v: ShaderFilterUniformValue) => unknown>)['_marshalValue']!.call(pass, name, value);
-}
+};
 
 /** The WebGL2 pass a filter built on its first attachment, or `null`. */
-function glslPassOf(filter: ShaderFilter): Record<string, unknown> | null {
+const glslPassOf = (filter: ShaderFilter): Record<string, unknown> | null => {
   return (filter as unknown as Record<string, Record<string, unknown> | null>)['_glslPass'] ?? null;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests

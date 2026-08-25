@@ -26,25 +26,25 @@ interface RawPackageJson {
   repository?: string | { url?: string };
 }
 
-function parsePackageJson(raw: string): RawPackageJson {
+const parsePackageJson = (raw: string): RawPackageJson => {
   try {
     return JSON.parse(raw) as RawPackageJson;
   } catch {
     return {};
   }
-}
+};
 
-function resolveAuthor(value: RawPackageJson['author']): string {
+const resolveAuthor = (value: RawPackageJson['author']): string => {
   if (!value) return '';
   if (typeof value === 'string') return value;
   return typeof value.name === 'string' ? value.name : '';
-}
+};
 
-function resolveRepositoryUrl(value: RawPackageJson['repository']): string {
+const resolveRepositoryUrl = (value: RawPackageJson['repository']): string => {
   if (!value) return '';
   const raw = typeof value === 'string' ? value : (value.url ?? '');
   return raw.replace(/^git\+/, '').replace(/\.git$/, '');
-}
+};
 
 const rootPkg = parsePackageJson(rootPkgRaw);
 const examplesPkg = parsePackageJson(examplesPkgRaw);

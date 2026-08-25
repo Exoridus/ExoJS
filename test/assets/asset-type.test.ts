@@ -68,26 +68,26 @@ class NoteAssetType extends AssetType<string, string[]> {
   }
 }
 
-function extensionFor(...assets: AnyAssetType[]): Extension {
+const extensionFor = (...assets: AnyAssetType[]): Extension => {
   return { id: 'com.example.test', assets };
-}
+};
 
 /** A loader with `types` installed, exactly as an Application would install them. */
-function createLoader(types: readonly AnyAssetType[]): Loader {
+const createLoader = (types: readonly AnyAssetType[]): Loader => {
   const loader = new Loader({ basePath: 'https://assets.test/' });
 
   materializeAssetTypes(loader, types);
 
   return loader;
-}
+};
 
-function mockJsonFetch(body: unknown = { name: 'overworld' }): ReturnType<typeof vi.fn> {
+const mockJsonFetch = (body: unknown = { name: 'overworld' }): ReturnType<typeof vi.fn> => {
   const fetchMock = vi.fn(() => Promise.resolve(new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } })));
 
   vi.stubGlobal('fetch', fetchMock);
 
   return fetchMock;
-}
+};
 
 beforeEach(() => {
   createdFactories.length = 0;
@@ -269,7 +269,7 @@ describe('AssetType factory lifecycle', () => {
 
 describe('AssetType factory boundary', () => {
   /** Captures the context the factory is handed for one load. */
-  async function captureContext(): Promise<AssetFactoryContext<WorldOptions>> {
+  const captureContext = async (): Promise<AssetFactoryContext<WorldOptions>> => {
     let captured: AssetFactoryContext<WorldOptions> | undefined;
 
     class ProbeType extends WorldAssetType {
@@ -294,7 +294,7 @@ describe('AssetType factory boundary', () => {
     }
 
     return captured;
-  }
+  };
 
   test('the factory context exposes no fetch, cache store or cache policy', async () => {
     const context = await captureContext();

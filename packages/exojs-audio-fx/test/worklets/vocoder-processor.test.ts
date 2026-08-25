@@ -31,7 +31,7 @@ interface VocoderProcessorLike {
 
 type VocoderProcessorConstructor = new (options: { processorOptions?: Record<string, number> }) => VocoderProcessorLike;
 
-function buildProcessorClass(): VocoderProcessorConstructor {
+const buildProcessorClass = (): VocoderProcessorConstructor => {
   let klass: VocoderProcessorConstructor | null = null;
 
   const savedSampleRate = (globalThis as Record<string, unknown>)['sampleRate'];
@@ -54,11 +54,11 @@ function buildProcessorClass(): VocoderProcessorConstructor {
 
   if (!klass) throw new Error('registerProcessor was not called — worklet source malformed');
   return klass;
-}
+};
 
 // ─── Signal helpers ───────────────────────────────────────────────────────────
 
-function makeSawtooth(freq: number, amplitude: number, n: number): Float32Array {
+const makeSawtooth = (freq: number, amplitude: number, n: number): Float32Array => {
   const buf = new Float32Array(n);
   let phase = 0;
   const inc = freq / SAMPLE_RATE;
@@ -67,18 +67,18 @@ function makeSawtooth(freq: number, amplitude: number, n: number): Float32Array 
     phase = (phase + inc) % 1.0;
   }
   return buf;
-}
+};
 
-function makeSine(freq: number, amplitude: number, n: number): Float32Array {
+const makeSine = (freq: number, amplitude: number, n: number): Float32Array => {
   const buf = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     buf[i] = amplitude * Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
   }
   return buf;
-}
+};
 
 /** Voice-like signal: three formants at 700/1200/2500 Hz, AM-modulated at 4 Hz. */
-function makeVoiceLike(n: number): Float32Array {
+const makeVoiceLike = (n: number): Float32Array => {
   const buf = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     const am = 0.5 + 0.5 * Math.sin((2 * Math.PI * 4 * i) / SAMPLE_RATE);
@@ -89,10 +89,10 @@ function makeVoiceLike(n: number): Float32Array {
         0.2 * Math.sin((2 * Math.PI * 2500 * i) / SAMPLE_RATE));
   }
   return buf;
-}
+};
 
 /** Discrete Fourier magnitude at a single frequency (no FFT required for spot-checks). */
-function magnitudeAt(buf: Float32Array, freq: number): number {
+const magnitudeAt = (buf: Float32Array, freq: number): number => {
   let re = 0,
     im = 0;
   const omega = (2 * Math.PI * freq) / SAMPLE_RATE;
@@ -101,15 +101,15 @@ function magnitudeAt(buf: Float32Array, freq: number): number {
     im -= buf[i] * Math.sin(omega * i);
   }
   return (2 * Math.sqrt(re * re + im * im)) / buf.length;
-}
+};
 
-function rms(buf: Float32Array): number {
+const rms = (buf: Float32Array): number => {
   let sum = 0;
   for (const v of buf) sum += v * v;
   return Math.sqrt(sum / buf.length);
-}
+};
 
-function runVocoder(proc: VocoderProcessorLike, carrier: Float32Array, modulator: Float32Array, envSmoothing: number): Float32Array {
+const runVocoder = (proc: VocoderProcessorLike, carrier: Float32Array, modulator: Float32Array, envSmoothing: number): Float32Array => {
   const n = carrier.length;
   const out = new Float32Array(n);
   for (let off = 0; off < n; off += BLOCK) {
@@ -121,7 +121,7 @@ function runVocoder(proc: VocoderProcessorLike, carrier: Float32Array, modulator
     out.set(oB, off);
   }
   return out;
-}
+};
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
@@ -177,11 +177,11 @@ describe('VocoderProcessor DSP', () => {
     const FORMANT_LOW = 660; // harmonic 6
     const FORMANT_HIGH = 2200; // harmonic 20
 
-    function buildMod(freq: number): Float32Array {
+    const buildMod = (freq: number): Float32Array => {
       const buf = new Float32Array(TOTAL);
       for (let i = 0; i < TOTAL; i++) buf[i] = Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
       return buf;
-    }
+    };
 
     const carrier = makeSawtooth(CARRIER_FREQ, 1.0, TOTAL);
     const modLow = buildMod(FORMANT_LOW);

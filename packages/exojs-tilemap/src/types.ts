@@ -122,13 +122,13 @@ export const TILE_TRANSFORM_IDENTITY: Readonly<TileTransform> = Object.freeze({
  * Returns one of the eight deterministic names, e.g. `"flipX"` or `"diag+flipX+flipY"`.
  * @internal
  */
-export function tileTransformLabel(t: TileTransform): string {
+export const tileTransformLabel = (t: TileTransform): string => {
   const parts: string[] = [];
   if (t.diagonal) parts.push('diag');
   if (t.flipX) parts.push('flipX');
   if (t.flipY) parts.push('flipY');
   return parts.length === 0 ? 'identity' : parts.join('+');
-}
+};
 
 // ── Tile identity ─────────────────────────────────────────────────────────
 
@@ -185,7 +185,7 @@ const TRANSFORM_DIAGONAL = 1 << 2;
  * duplicating this encoding.
  * @advanced
  */
-export function packTile(tilesetIndex: number, localTileId: number, transform: TileTransform): PackedTile {
+export const packTile = (tilesetIndex: number, localTileId: number, transform: TileTransform): PackedTile => {
   if (tilesetIndex < 0 || tilesetIndex > MAX_TILESET_INDEX) {
     throw new Error(`Tileset index ${tilesetIndex} exceeds maximum ${MAX_TILESET_INDEX}.`);
   }
@@ -201,18 +201,20 @@ export function packTile(tilesetIndex: number, localTileId: number, transform: T
   return (
     (storedId & PACKED_LOCAL_MASK) | ((tilesetIndex << PACKED_TILESET_SHIFT) & PACKED_TILESET_MASK) | ((bits << PACKED_TRANSFORM_SHIFT) & PACKED_TRANSFORM_MASK)
   );
-}
+};
 
 /**
  * Decode a packed word into its components.
  * Returns null for an empty cell (packed === 0).
  * @advanced
  */
-export function unpackTile(packed: PackedTile): {
+export const unpackTile = (
+  packed: PackedTile,
+): {
   tilesetIndex: number;
   localTileId: number;
   transform: TileTransform;
-} | null {
+} | null => {
   if (packed === 0) return null;
   const storedId = packed & PACKED_LOCAL_MASK;
   // Undo the +1 offset applied during packTile.
@@ -228,7 +230,7 @@ export function unpackTile(packed: PackedTile): {
       diagonal: !!(rawTransform & TRANSFORM_DIAGONAL),
     },
   };
-}
+};
 
 // ── Resolved tile reference (public query result) ─────────────────────────
 
@@ -296,51 +298,47 @@ export interface ChunkCoord {
 }
 
 /** Convert tile coordinates to chunk coordinates given a chunk size. */
-export function tileToChunkCoord(tx: number, ty: number, chunkW: number, chunkH: number): ChunkCoord {
-  return {
-    cx: Math.floor(tx / chunkW),
-    cy: Math.floor(ty / chunkH),
-  };
-}
+export const tileToChunkCoord = (tx: number, ty: number, chunkW: number, chunkH: number): ChunkCoord => ({
+  cx: Math.floor(tx / chunkW),
+  cy: Math.floor(ty / chunkH),
+});
 
 /** Convert tile coordinates to local-in-chunk coordinates. */
-export function tileToLocalInChunk(tx: number, ty: number, chunkW: number, chunkH: number): { lx: number; ly: number } {
-  return {
-    lx: ((tx % chunkW) + chunkW) % chunkW,
-    ly: ((ty % chunkH) + chunkH) % chunkH,
-  };
-}
+export const tileToLocalInChunk = (tx: number, ty: number, chunkW: number, chunkH: number): { lx: number; ly: number } => ({
+  lx: ((tx % chunkW) + chunkW) % chunkW,
+  ly: ((ty % chunkH) + chunkH) % chunkH,
+});
 
 /**
  * Validate that a value is a finite, safe, positive integer.
  * Used for dimensions, tile counts, chunk sizes.
  */
-export function validatePositiveInteger(value: number, label: string): void {
+export const validatePositiveInteger = (value: number, label: string): void => {
   if (!Number.isFinite(value) || !Number.isInteger(value) || value <= 0) {
     throw new Error(`${label} must be a positive integer (got ${value}).`);
   }
   if (value > Number.MAX_SAFE_INTEGER) {
     throw new Error(`${label} exceeds safe integer range (got ${value}).`);
   }
-}
+};
 
 /**
  * Validate a non-negative finite integer.
  */
-export function validateNonNegativeInteger(value: number, label: string): void {
+export const validateNonNegativeInteger = (value: number, label: string): void => {
   if (!Number.isFinite(value) || !Number.isInteger(value) || value < 0) {
     throw new Error(`${label} must be a non-negative integer (got ${value}).`);
   }
-}
+};
 
 /**
  * Validate that a value is a finite integer (may be negative).
  */
-export function validateInteger(value: number, label: string): void {
+export const validateInteger = (value: number, label: string): void => {
   if (!Number.isFinite(value) || !Number.isInteger(value)) {
     throw new Error(`${label} must be a finite integer (got ${value}).`);
   }
-}
+};
 
 /**
  * Validate a `width`/`height` pair that must be provided together (bounded)
@@ -352,7 +350,7 @@ export function validateInteger(value: number, label: string): void {
  * @param fieldPrefix Used as the field-name prefix passed to {@link validatePositiveInteger} (e.g. `"layer"` for `"layer.width"`).
  * @throws If exactly one of `width`/`height` is provided, or either is not a positive integer.
  */
-export function validatePairedDimensions(width: number | undefined, height: number | undefined, entityName: string, fieldPrefix: string): void {
+export const validatePairedDimensions = (width: number | undefined, height: number | undefined, entityName: string, fieldPrefix: string): void => {
   if (width !== undefined || height !== undefined) {
     if (width === undefined || height === undefined) {
       throw new Error(`${entityName} width and height must both be provided (bounded) or both omitted (unbounded).`);
@@ -360,4 +358,4 @@ export function validatePairedDimensions(width: number | undefined, height: numb
     validatePositiveInteger(width, `${fieldPrefix}.width`);
     validatePositiveInteger(height, `${fieldPrefix}.height`);
   }
-}
+};

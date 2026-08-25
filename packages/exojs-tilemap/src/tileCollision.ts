@@ -160,11 +160,11 @@ export interface TileCollisionOptions {
 const DEGREES_TO_RADIANS = Math.PI / 180;
 
 /** Normalise degrees into `[0, 360)`. */
-function normaliseDegrees(degrees: number): number {
+const normaliseDegrees = (degrees: number): number => {
   const wrapped = degrees % 360;
 
   return wrapped < 0 ? wrapped + 360 : wrapped;
-}
+};
 
 /**
  * Cosine of an angle in degrees, exact on the quadrant multiples.
@@ -172,7 +172,7 @@ function normaliseDegrees(degrees: number): number {
  * quadrant angles constantly, and the whole-cell test below compares
  * coordinates exactly, so the noise has to stay out of the arithmetic.
  */
-function cosDegrees(degrees: number): number {
+const cosDegrees = (degrees: number): number => {
   const angle = normaliseDegrees(degrees);
 
   if (angle === 0) return 1;
@@ -180,10 +180,10 @@ function cosDegrees(degrees: number): number {
   if (angle === 180) return -1;
 
   return Math.cos(angle * DEGREES_TO_RADIANS);
-}
+};
 
 /** Sine of an angle in degrees, exact on the quadrant multiples. */
-function sinDegrees(degrees: number): number {
+const sinDegrees = (degrees: number): number => {
   const angle = normaliseDegrees(degrees);
 
   if (angle === 0 || angle === 180) return 0;
@@ -191,27 +191,27 @@ function sinDegrees(degrees: number): number {
   if (angle === 270) return -1;
 
   return Math.sin(angle * DEGREES_TO_RADIANS);
-}
+};
 
 /** `true` when the transform mirrors (an odd number of reflections). */
-function isMirrored(transform: TileTransform): boolean {
+const isMirrored = (transform: TileTransform): boolean => {
   const flags = (transform.flipX ? 1 : 0) + (transform.flipY ? 1 : 0) + (transform.diagonal ? 1 : 0);
 
   return flags % 2 === 1;
-}
+};
 
 /**
  * Rotation in degrees contributed by a non-mirroring transform. Only the four
  * even-parity transforms are rotations: identity, `flipX+flipY` (180°),
  * `diagonal+flipX` (90°) and `diagonal+flipY` (270°).
  */
-function transformRotation(transform: TileTransform): number {
+const transformRotation = (transform: TileTransform): number => {
   if (transform.diagonal) {
     return transform.flipX ? 90 : 270;
   }
 
   return transform.flipX ? 180 : 0;
-}
+};
 
 /**
  * Map a point from tile-local pixel space into the transformed tile-local
@@ -219,7 +219,7 @@ function transformRotation(transform: TileTransform): number {
  * also swaps the box dimensions) is applied first, then the axis mirrors -
  * the same order the renderer's orientation code implies.
  */
-function mapLocalPoint(px: number, py: number, boxWidth: number, boxHeight: number, transform: TileTransform): ObjectPoint {
+const mapLocalPoint = (px: number, py: number, boxWidth: number, boxHeight: number, transform: TileTransform): ObjectPoint => {
   let x = px;
   let y = py;
   let width = boxWidth;
@@ -238,7 +238,7 @@ function mapLocalPoint(px: number, py: number, boxWidth: number, boxHeight: numb
   if (transform.flipY) y = height - y;
 
   return { x, y };
-}
+};
 
 /**
  * Layer-space position of a placed tile's top-left image corner. Mirrors the
@@ -246,12 +246,10 @@ function mapLocalPoint(px: number, py: number, boxWidth: number, boxHeight: numb
  * every tile, and a tile taller than the layer's cell is bottom-aligned within
  * it, so collision geometry lands exactly where the tile is drawn.
  */
-function tileAnchor(layer: TileLayer, tileset: TileSet, tx: number, ty: number): ObjectPoint {
-  return {
-    x: tx * layer.tileWidth + layer.offsetX + tileset.offsetX,
-    y: ty * layer.tileHeight + layer.offsetY + layer.tileHeight - tileset.tileHeight + tileset.offsetY,
-  };
-}
+const tileAnchor = (layer: TileLayer, tileset: TileSet, tx: number, ty: number): ObjectPoint => ({
+  x: tx * layer.tileWidth + layer.offsetX + tileset.offsetX,
+  y: ty * layer.tileHeight + layer.offsetY + layer.tileHeight - tileset.tileHeight + tileset.offsetY,
+});
 
 /** A shape in layer pixel space, before it is classified as cell or shape. */
 interface PlacedShape {
@@ -269,7 +267,7 @@ interface PlacedShape {
  * tile's flip/rotation transform, the tileset draw offset and the layer offset.
  * Returns `null` for kinds that carry no collision geometry.
  */
-function placeShape(object: TileMapObject, layer: TileLayer, tileset: TileSet, transform: TileTransform, tx: number, ty: number): PlacedShape | null {
+const placeShape = (object: TileMapObject, layer: TileLayer, tileset: TileSet, transform: TileTransform, tx: number, ty: number): PlacedShape | null => {
   if (object.kind === ObjectKind.Tile || object.kind === ObjectKind.Text) {
     return null;
   }
@@ -368,10 +366,10 @@ function placeShape(object: TileMapObject, layer: TileLayer, tileset: TileSet, t
     height,
     rotation,
   };
-}
+};
 
 /** The tile-coordinate bounding box of the layer's loaded chunks, or `null`. */
-function loadedTileRegion(layer: TileLayer): TileRegion | null {
+const loadedTileRegion = (layer: TileLayer): TileRegion | null => {
   let minTx = Number.POSITIVE_INFINITY;
   let minTy = Number.POSITIVE_INFINITY;
   let maxTx = Number.NEGATIVE_INFINITY;
@@ -392,7 +390,7 @@ function loadedTileRegion(layer: TileLayer): TileRegion | null {
   }
 
   return { x: minTx, y: minTy, width: maxTx - minTx + 1, height: maxTy - minTy + 1 };
-}
+};
 
 /**
  * Region a cell source spans on `layer`: the full tile extent of a bounded
@@ -400,28 +398,28 @@ function loadedTileRegion(layer: TileLayer): TileRegion | null {
  * walk itself. Chunk residency deliberately plays no part - the classification
  * lives outside the layer, so loaded chunks cannot define its domain.
  */
-function cellSourceRegion(layer: TileLayer): TileRegion | null {
+const cellSourceRegion = (layer: TileLayer): TileRegion | null => {
   if (layer.width === undefined || layer.height === undefined) {
     return null;
   }
 
   return { x: 0, y: 0, width: layer.width, height: layer.height };
-}
+};
 
 /**
  * The region to walk: the caller's, else the extent a cell source spans, else
  * whatever is currently resident. `null` when there is nothing to walk.
  */
-function resolveRegion(layer: TileLayer, options: TileCollisionOptions): TileRegion | null {
+const resolveRegion = (layer: TileLayer, options: TileCollisionOptions): TileRegion | null => {
   if (options.region !== undefined) return options.region;
 
   const fromCells = options.cells !== undefined ? cellSourceRegion(layer) : null;
 
   return fromCells ?? loadedTileRegion(layer);
-}
+};
 
 /** Claim every cell of `region` the source classifies, into the occupancy grid. */
-function claimSourceCells(cells: Map<string, string>, region: TileRegion, source: TileCellSource): void {
+const claimSourceCells = (cells: Map<string, string>, region: TileRegion, source: TileCellSource): void => {
   const endTx = region.x + region.width;
   const endTy = region.y + region.height;
 
@@ -432,30 +430,25 @@ function claimSourceCells(cells: Map<string, string>, region: TileRegion, source
       if (type !== null) cells.set(cellKey(tx, ty), type);
     }
   }
-}
+};
 
 /** Key of a claimed cell in the occupancy grid. */
-function cellKey(tx: number, ty: number): string {
-  return `${tx},${ty}`;
-}
+const cellKey = (tx: number, ty: number): string => `${tx},${ty}`;
 
 /**
  * `true` when a placed shape is an axis-aligned rectangle covering exactly the
  * tile cell at `(cellX, cellY)` - the only geometry the merging pass handles.
  */
-function coversWholeCell(placed: PlacedShape, layer: TileLayer, cellX: number, cellY: number): boolean {
-  return (
-    placed.kind === ObjectKind.Rectangle &&
-    placed.rotation === 0 &&
-    placed.x === cellX &&
-    placed.y === cellY &&
-    placed.width === layer.tileWidth &&
-    placed.height === layer.tileHeight
-  );
-}
+const coversWholeCell = (placed: PlacedShape, layer: TileLayer, cellX: number, cellY: number): boolean =>
+  placed.kind === ObjectKind.Rectangle &&
+  placed.rotation === 0 &&
+  placed.x === cellX &&
+  placed.y === cellY &&
+  placed.width === layer.tileWidth &&
+  placed.height === layer.tileHeight;
 
 /** One single-cell rectangle per claimed cell, for `merge: false`. */
-function unmergedCells(cells: ReadonlyMap<string, string>, layer: TileLayer): TileCollisionRect[] {
+const unmergedCells = (cells: ReadonlyMap<string, string>, layer: TileLayer): TileCollisionRect[] => {
   const rects: TileCollisionRect[] = [];
 
   for (const [key, type] of cells) {
@@ -471,7 +464,7 @@ function unmergedCells(cells: ReadonlyMap<string, string>, layer: TileLayer): Ti
   }
 
   return rects;
-}
+};
 
 /**
  * Greedy rectangle merging over the claimed cells: walk row-major, grow each
@@ -480,7 +473,7 @@ function unmergedCells(cells: ReadonlyMap<string, string>, layer: TileLayer): Ti
  * textbook pass - it is linear in the number of cells and always produces a
  * valid, non-overlapping cover, which matters more here than minimality.
  */
-function mergeCells(cells: ReadonlyMap<string, string>, region: TileRegion, layer: TileLayer): TileCollisionRect[] {
+const mergeCells = (cells: ReadonlyMap<string, string>, region: TileRegion, layer: TileLayer): TileCollisionRect[] => {
   const consumed = new Set<string>();
   const rects: TileCollisionRect[] = [];
   const endTx = region.x + region.width;
@@ -531,7 +524,7 @@ function mergeCells(cells: ReadonlyMap<string, string>, region: TileRegion, laye
   }
 
   return rects;
-}
+};
 
 /**
  * Extract collision geometry from a tile layer's per-tile
@@ -577,7 +570,7 @@ function mergeCells(cells: ReadonlyMap<string, string>, region: TileRegion, laye
  * ```
  * @advanced
  */
-export function buildTileCollisionGeometry(layer: TileLayer, options: TileCollisionOptions = {}): TileCollisionGeometry {
+export const buildTileCollisionGeometry = (layer: TileLayer, options: TileCollisionOptions = {}): TileCollisionGeometry => {
   const cellSource = options.cells;
   const region = resolveRegion(layer, options);
 
@@ -643,4 +636,4 @@ export function buildTileCollisionGeometry(layer: TileLayer, options: TileCollis
   const rects = options.merge === false ? unmergedCells(cells, layer) : mergeCells(cells, region, layer);
 
   return { rects, shapes };
-}
+};

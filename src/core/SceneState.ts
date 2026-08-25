@@ -47,16 +47,10 @@ export enum SceneState {
  * preparing but was never activated has nothing live to suspend - it is
  * discarded via `destroy()` instead (see {@link SceneState.Ready}).
  */
-export function canSuspend(state: SceneState): boolean {
-  return state === SceneState.Active;
-}
+export const canSuspend = (state: SceneState): boolean => state === SceneState.Active;
 
 /** `true` when the scene can be restored from retention (`Suspended` → `Active`). */
-export function canRestore(state: SceneState): boolean {
-  return state === SceneState.Suspended;
-}
+export const canRestore = (state: SceneState): boolean => state === SceneState.Suspended;
 
 /** `true` when the scene can begin permanent teardown - anything other than an already-destroying or already-destroyed scene. */
-export function canDestroy(state: SceneState): boolean {
-  return state !== SceneState.Destroying && state !== SceneState.Destroyed;
-}
+export const canDestroy = (state: SceneState): boolean => state !== SceneState.Destroying && state !== SceneState.Destroyed;

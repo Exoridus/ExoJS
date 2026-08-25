@@ -22,7 +22,7 @@ interface ObjectSpec {
   readonly name?: string;
 }
 
-function object(spec: ObjectSpec): TileMapObject {
+const object = (spec: ObjectSpec): TileMapObject => {
   return {
     kind: 'rectangle',
     id: spec.id,
@@ -37,9 +37,9 @@ function object(spec: ObjectSpec): TileMapObject {
     visible: true,
     properties: {},
   };
-}
+};
 
-function mapWith(...layers: readonly LayerSpec[]): TileMap {
+const mapWith = (...layers: readonly LayerSpec[]): TileMap => {
   return new TileMap({
     name: 'level',
     width: 4,
@@ -48,7 +48,7 @@ function mapWith(...layers: readonly LayerSpec[]): TileMap {
     tileHeight: 16,
     objectLayers: layers.map(layer => new ObjectLayer({ id: layer.id, name: layer.name, objects: layer.objects.map(object) })),
   });
-}
+};
 
 class Thing implements Destroyable {
   public destroyed = false;

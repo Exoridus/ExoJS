@@ -21,12 +21,11 @@ export interface WorkletPluginOptions {
 }
 
 /** Inlines `*.worklet.ts?worklet` imports as bundled AudioWorklet source strings. */
-export function createWorkletPlugin({ minify = false }: WorkletPluginOptions = {}): InlineSourcePlugin {
-  return createInlineModulePlugin({
+export const createWorkletPlugin = ({ minify = false }: WorkletPluginOptions = {}): InlineSourcePlugin =>
+  createInlineModulePlugin({
     name: 'exojs-worklet-transform',
     query: '?worklet',
     format: 'iife',
     target: 'es2022',
     minify,
   });
-}

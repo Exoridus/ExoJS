@@ -20,24 +20,24 @@ vi.mock('#audio/audio-context', () => ({
 
 const originalFetch = global.fetch;
 
-function mockFetchAudio(): void {
+const mockFetchAudio = (): void => {
   global.fetch = vi.fn(async () => ({
     ok: true,
     status: 200,
     statusText: 'OK',
     arrayBuffer: async () => new ArrayBuffer(8),
   })) as unknown as typeof fetch;
-}
+};
 
 /** Minimal Application harness exposing a real Loader (mirrors test/ui/scene-ui.test.ts's fake-app pattern). */
-function makeAppWithAudio(): { app: Application; fetchMock: typeof fetch } {
+const makeAppWithAudio = (): { app: Application; fetchMock: typeof fetch } => {
   mockFetchAudio();
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   const app = { loader } as unknown as Application;
 
   return { app, fetchMock: global.fetch };
-}
+};
 
 describe('SceneLoader', () => {
   afterEach(() => {

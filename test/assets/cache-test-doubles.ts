@@ -24,7 +24,7 @@ export interface CacheStoreDouble extends CacheStore {
   destroy: MockedFunction<CacheStore['destroy']>;
 }
 
-export function createCacheStoreDouble(id = 'double'): CacheStoreDouble {
+export const createCacheStoreDouble = (id = 'double'): CacheStoreDouble => {
   const records = new Map<string, unknown>();
 
   return {
@@ -62,14 +62,16 @@ export function createCacheStoreDouble(id = 'double'): CacheStoreDouble {
     }),
     destroy: vi.fn(),
   };
-}
+};
 
 /** A policy that records every context it saw and resolves through `resolve`. */
-export function createRecordingPolicy(resolve: (context: CacheContext<unknown>) => Promise<unknown> = context => context.fetch()): {
+export const createRecordingPolicy = (
+  resolve: (context: CacheContext<unknown>) => Promise<unknown> = context => context.fetch(),
+): {
   policy: CachePolicy;
   contexts: Array<CacheContext<unknown>>;
   calls: MockedFunction<(context: CacheContext<unknown>) => Promise<unknown>>;
-} {
+} => {
   const contexts: Array<CacheContext<unknown>> = [];
   const calls = vi.fn((context: CacheContext<unknown>): Promise<unknown> => {
     contexts.push(context);
@@ -78,4 +80,4 @@ export function createRecordingPolicy(resolve: (context: CacheContext<unknown>) 
   });
 
   return { policy: { resolve: calls } as unknown as CachePolicy, contexts, calls };
-}
+};

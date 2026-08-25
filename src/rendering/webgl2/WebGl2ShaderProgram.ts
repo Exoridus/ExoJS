@@ -93,7 +93,7 @@ const uniformUploadFunctions: Record<number, UniformUploadFunction> = {
  * `shader-link`). `label` names the program in those errors (renderer name,
  * material label) - omit it when no cheap label is available.
  */
-export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: string): ShaderProgram {
+export const createWebGl2ShaderProgram = (gl: WebGL2RenderingContext, label?: string): ShaderProgram => {
   let program: WebGLProgram | null = null;
   let vertexShader: WebGLShader | null = null;
   let fragmentShader: WebGLShader | null = null;
@@ -121,7 +121,7 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
   const parallelExt = gl.getExtension('KHR_parallel_shader_compile') as ParallelCompileExtension | null;
   const completionStatus = parallelExt?.COMPLETION_STATUS_KHR ?? completionStatusEnumKhr;
 
-  function initialize(shader: Shader): void {
+  const initialize = (shader: Shader): void => {
     if (program) {
       return;
     }
@@ -140,9 +140,9 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
     program = linkProgram(gl, vertexShader, fragmentShader);
 
     pendingShader = shader;
-  }
+  };
 
-  function finalize(): void {
+  const finalize = (): void => {
     if (pendingShader === null || program === null || vertexShader === null || fragmentShader === null) {
       return;
     }
@@ -184,12 +184,12 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
     extractUniformBlocks(gl, program, uniformBlocks);
 
     pendingShader = null;
-  }
+  };
 
   // Indexed rather than `for...of`: this runs once per batch, so it is the one
   // loop every scene in the catalog walks - and the array iterators V8 does not
   // scalar-replace here are the only allocation left in a fully retained frame.
-  function syncUniforms(): void {
+  const syncUniforms = (): void => {
     for (let i = 0; i < managedUniforms.length; i++) {
       const managed = managedUniforms[i]!;
 
@@ -202,7 +202,7 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
     for (let i = 0; i < uniformBlocks.length; i++) {
       uniformBlocks[i]!.upload();
     }
-  }
+  };
 
   return {
     initialize,
@@ -249,25 +249,24 @@ export function createWebGl2ShaderProgram(gl: WebGL2RenderingContext, label?: st
       shader.disconnect();
     },
   };
-}
+};
 
 /** Build a structured shader-compile {@link RenderError} for one failed stage. */
-function createCompileError(stage: 'vertex' | 'fragment', source: string, log: string | null, label: string | undefined): RenderError {
-  return new RenderError({
+const createCompileError = (stage: 'vertex' | 'fragment', source: string, log: string | null, label: string | undefined): RenderError =>
+  new RenderError({
     code: 'shader-compile',
     backendType: RenderBackendType.WebGl2,
     message: `[ExoJS] ${label ?? 'shader'}: ${stage} shader failed to compile.`,
     detail: formatShaderError(source, log ?? '<no log>'),
     ...(label !== undefined && { resource: label }),
   });
-}
 
 // compileShader / linkProgram intentionally do NOT query COMPILE_STATUS or
 // LINK_STATUS here - those queries block on driver completion. Status checks
 // happen in finalize() at first bind, after the driver has had time to
 // compile in the background (especially with KHR_parallel_shader_compile).
 
-function compileShader(gl: WebGL2RenderingContext, type: number, source: string): WebGLShader {
+const compileShader = (gl: WebGL2RenderingContext, type: number, source: string): WebGLShader => {
   const shader = gl.createShader(type);
 
   if (!shader) {
@@ -278,9 +277,9 @@ function compileShader(gl: WebGL2RenderingContext, type: number, source: string)
   gl.compileShader(shader);
 
   return shader;
-}
+};
 
-function linkProgram(gl: WebGL2RenderingContext, vertexShader: WebGLShader, fragmentShader: WebGLShader): WebGLProgram {
+const linkProgram = (gl: WebGL2RenderingContext, vertexShader: WebGLShader, fragmentShader: WebGLShader): WebGLProgram => {
   const program = gl.createProgram();
 
   if (!program) {
@@ -292,9 +291,9 @@ function linkProgram(gl: WebGL2RenderingContext, vertexShader: WebGLShader, frag
   gl.linkProgram(program);
 
   return program;
-}
+};
 
-function extractAttributes(gl: WebGL2RenderingContext, program: WebGLProgram, shader: Shader): void {
+const extractAttributes = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: Shader): void => {
   const activeAttributes = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
 
   for (let i = 0; i < activeAttributes; i++) {
@@ -308,9 +307,9 @@ function extractAttributes(gl: WebGL2RenderingContext, program: WebGLProgram, sh
     attribute.location = gl.getAttribLocation(program, info.name);
     shader.attributes.set(info.name, attribute);
   }
-}
+};
 
-function extractUniforms(gl: WebGL2RenderingContext, program: WebGLProgram, shader: Shader, managedUniforms: ManagedUniform[]): void {
+const extractUniforms = (gl: WebGL2RenderingContext, program: WebGLProgram, shader: Shader, managedUniforms: ManagedUniform[]): void => {
   const activeCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
   const activeIndices = new Uint8Array(activeCount).map((_, index) => index);
   const blocks = gl.getActiveUniforms(program, activeIndices, gl.UNIFORM_BLOCK_INDEX) as number[];
@@ -341,13 +340,13 @@ function extractUniforms(gl: WebGL2RenderingContext, program: WebGLProgram, shad
       managedUniforms.push({ location, uploadFn, uniform });
     }
   }
-}
+};
 
-function extractUniformBlocks(gl: WebGL2RenderingContext, program: WebGLProgram, uniformBlocks: WebGl2ShaderBlock[]): void {
+const extractUniformBlocks = (gl: WebGL2RenderingContext, program: WebGLProgram, uniformBlocks: WebGl2ShaderBlock[]): void => {
   const activeBlocks = gl.getProgramParameter(program, gl.ACTIVE_UNIFORM_BLOCKS);
 
   for (let index = 0; index < activeBlocks; index++) {
     const block = new WebGl2ShaderBlock(gl, program, index);
     uniformBlocks.push(block);
   }
-}
+};

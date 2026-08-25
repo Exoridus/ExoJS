@@ -12,7 +12,7 @@ import { toChannels } from './types';
 export type ButtonBinding = OneOrMany<InputChannel>;
 
 /** Strongest absolute value across every entry, sign-preserving. */
-function strongestOf(values: Float32Array): number {
+const strongestOf = (values: Float32Array): number => {
   let strongest = 0;
 
   for (let i = 0; i < values.length; i++) {
@@ -24,7 +24,7 @@ function strongestOf(values: Float32Array): number {
   }
 
   return strongest;
-}
+};
 
 /**
  * A named on/off input, fed by one source or by several interchangeable ones.

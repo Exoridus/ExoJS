@@ -18,7 +18,7 @@ interface FakeScope {
   destroy(): void;
 }
 
-function fakeScope(name: string, log: string[] = []): FakeScope & LoaderScope {
+const fakeScope = (name: string, log: string[] = []): FakeScope & LoaderScope => {
   const scope: FakeScope = {
     name,
     children: [],
@@ -37,11 +37,11 @@ function fakeScope(name: string, log: string[] = []): FakeScope & LoaderScope {
   };
 
   return scope as unknown as FakeScope & LoaderScope;
-}
+};
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
-function level(id: string): MapLevel {
+const level = (id: string): MapLevel => {
   return {
     id,
     name: id,
@@ -51,11 +51,11 @@ function level(id: string): MapLevel {
     neighbours: [],
     properties: {},
   };
-}
+};
 
 const world = new MapWorld({ name: 'overworld', levels: [level('forest'), level('cave')] });
 
-function levelMap(id: string, objectType?: string): TileMap {
+const levelMap = (id: string, objectType?: string): TileMap => {
   return new TileMap({
     name: id,
     width: 4,
@@ -87,7 +87,7 @@ function levelMap(id: string, objectType?: string): TileMap {
             }),
           ],
   });
-}
+};
 
 class Thing implements Destroyable {
   public destroyed = false;

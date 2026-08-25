@@ -39,12 +39,10 @@ const currentFrameRank = { none: 0, direct: 1, texture: 2 } as const;
  * `texture`-requesting session - a promoted phase that itself only
  * declared `direct` never needs to know it was promoted.
  */
-export function mergeSceneTransitionRequirements(a: SceneTransitionPhaseRequirements, b: SceneTransitionPhaseRequirements): SceneTransitionRequirements {
-  return {
-    outgoingFrame: outgoingFrameRank[a.outgoingFrame] >= outgoingFrameRank[b.outgoingFrame] ? a.outgoingFrame : b.outgoingFrame,
-    currentFrame: currentFrameRank[a.currentFrame] >= currentFrameRank[b.currentFrame] ? a.currentFrame : b.currentFrame,
-  };
-}
+export const mergeSceneTransitionRequirements = (a: SceneTransitionPhaseRequirements, b: SceneTransitionPhaseRequirements): SceneTransitionRequirements => ({
+  outgoingFrame: outgoingFrameRank[a.outgoingFrame] >= outgoingFrameRank[b.outgoingFrame] ? a.outgoingFrame : b.outgoingFrame,
+  currentFrame: currentFrameRank[a.currentFrame] >= currentFrameRank[b.currentFrame] ? a.currentFrame : b.currentFrame,
+});
 
 /** Construction options for {@link PhasedSceneTransition} and its subclasses. */
 export interface PhasedSceneTransitionOptions {
@@ -315,9 +313,8 @@ export class PhasedSceneTransitionSession implements SceneTransitionSession {
  * wrapper on each instance, then merged - never via the
  * `protected` `getPhaseRequirements()` hook directly.
  */
-export function composePhasedSceneTransition(exit: PhasedSceneTransition, enter: PhasedSceneTransition): SceneTransition {
-  return new ComposedPhasedSceneTransition(exit, enter);
-}
+export const composePhasedSceneTransition = (exit: PhasedSceneTransition, enter: PhasedSceneTransition): SceneTransition =>
+  new ComposedPhasedSceneTransition(exit, enter);
 
 class ComposedPhasedSceneTransition extends SceneTransition {
   public constructor(
@@ -361,6 +358,5 @@ const noOpPhasedSceneTransition = new NoOpPhasedSceneTransition({ duration: 0 })
  * see {@link NoOpPhasedSceneTransition}) into one composed
  * {@link SceneTransition}, ready to hand to {@link SceneTransition.beginSession}.
  */
-export function resolvePhasedSelection(exit: PhasedSceneTransition | undefined, enter: PhasedSceneTransition | undefined): SceneTransition {
-  return composePhasedSceneTransition(exit ?? noOpPhasedSceneTransition, enter ?? noOpPhasedSceneTransition);
-}
+export const resolvePhasedSelection = (exit: PhasedSceneTransition | undefined, enter: PhasedSceneTransition | undefined): SceneTransition =>
+  composePhasedSceneTransition(exit ?? noOpPhasedSceneTransition, enter ?? noOpPhasedSceneTransition);

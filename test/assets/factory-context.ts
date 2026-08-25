@@ -7,7 +7,7 @@ import type { AssetDependencyScope, AssetFactoryContext } from '#assets/AssetFac
  * test that did not supply it is a fact worth failing on, not one to paper over
  * with a stub that resolves to nothing.
  */
-export function factoryContext<Options>(options?: Options, overrides: Partial<AssetFactoryContext<Options>> = {}): AssetFactoryContext<Options> {
+export const factoryContext = <Options>(options?: Options, overrides: Partial<AssetFactoryContext<Options>> = {}): AssetFactoryContext<Options> => {
   const dependencies = {
     get: () => {
       throw new Error('factoryContext: this test supplied no dependency scope.');
@@ -29,4 +29,4 @@ export function factoryContext<Options>(options?: Options, overrides: Partial<As
     dependencies,
     ...overrides,
   };
-}
+};

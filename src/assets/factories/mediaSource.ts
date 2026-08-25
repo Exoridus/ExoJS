@@ -70,11 +70,11 @@ export interface AttachMediaSourceOptions {
  * connection open for its own caching, so this ends the element's interest
  * rather than guaranteeing the network is idle.
  */
-export function detachMediaElement(element: HTMLMediaElement): void {
+export const detachMediaElement = (element: HTMLMediaElement): void => {
   element.pause();
   element.removeAttribute('src');
   element.load();
-}
+};
 
 /**
  * Points `element` at `src` and resolves once it reaches its load event.
@@ -84,7 +84,7 @@ export function detachMediaElement(element: HTMLMediaElement): void {
  * deliberate cancel stays distinguishable from a failed load. Any rejection
  * detaches the element first.
  */
-export function attachMediaSource(options: AttachMediaSourceOptions): Promise<void> {
+export const attachMediaSource = (options: AttachMediaSourceOptions): Promise<void> => {
   const { element, src, messages, loadEvent, stallTimeout, crossOrigin, signal, onSettled } = options;
 
   return new Promise<void>((resolve, reject) => {
@@ -111,12 +111,12 @@ export function attachMediaSource(options: AttachMediaSourceOptions): Promise<vo
         reject(new Error(message));
       });
 
-    function onAbort(): void {
+    const onAbort = (): void => {
       settle(() => {
         detachMediaElement(element);
         reject(new DOMException('Media load was cancelled.', 'AbortError'));
       });
-    }
+    };
 
     if (signal?.aborted === true) {
       onAbort();
@@ -155,4 +155,4 @@ export function attachMediaSource(options: AttachMediaSourceOptions): Promise<vo
     element.preload = 'auto';
     element.src = src;
   });
-}
+};

@@ -28,7 +28,7 @@ import type { Renderer } from './Renderer';
  * Particles are in @codexo/exojs-particles, not in Core.
  * @internal
  */
-export function buildCoreRendererBindings(options: RenderingApplicationOptions): RendererBinding[] {
+export const buildCoreRendererBindings = (options: RenderingApplicationOptions): RendererBinding[] => {
   const spriteRendererBatchSize = options.spriteRendererBatchSize ?? 4096;
 
   type BackendRendererMap = Partial<Record<RenderBackendType, () => Renderer>>;
@@ -84,4 +84,4 @@ export function buildCoreRendererBindings(options: RenderingApplicationOptions):
       create: backend => repeatingSpriteRenderers[backend.backendType]?.(),
     },
   ];
-}
+};

@@ -42,7 +42,7 @@ import type { TiledWangSetData } from './data';
  *   tileset list (forwarded to {@link WangSet} as-is).
  * @returns A {@link WangSet}, or `null` when the wangset type is unsupported.
  */
-export function tiledWangSetToWangSet(wangSet: TiledWangSetData, tilesetIndex: number): WangSet | null {
+export const tiledWangSetToWangSet = (wangSet: TiledWangSetData, tilesetIndex: number): WangSet | null => {
   if (wangSet.type === 'corner') {
     return convertCornerWangSet(wangSet, tilesetIndex);
   }
@@ -53,7 +53,7 @@ export function tiledWangSetToWangSet(wangSet: TiledWangSetData, tilesetIndex: n
 
   // 'mixed' or any unknown type cannot be faithfully mapped.
   return null;
-}
+};
 
 // ── Corner → blob ─────────────────────────────────────────────────────────────
 //
@@ -76,7 +76,7 @@ const blobBitTopRight = 4; // bit 2
 const blobBitBottomLeft = 32; // bit 5
 const blobBitBottomRight = 128; // bit 7
 
-function convertCornerWangSet(wangSet: TiledWangSetData, tilesetIndex: number): WangSet {
+const convertCornerWangSet = (wangSet: TiledWangSetData, tilesetIndex: number): WangSet => {
   const blobMap = new Map<number, number>();
 
   for (const wangTile of wangSet.wangtiles) {
@@ -94,7 +94,7 @@ function convertCornerWangSet(wangSet: TiledWangSetData, tilesetIndex: number): 
   }
 
   return new WangSet({ tilesetIndex, blobMap, type: 'blob' });
-}
+};
 
 // ── Edge → edge ───────────────────────────────────────────────────────────────
 //
@@ -117,7 +117,7 @@ const edgeBitRight = 2; // bit 1
 const edgeBitBottom = 4; // bit 2
 const edgeBitLeft = 8; // bit 3
 
-function convertEdgeWangSet(wangSet: TiledWangSetData, tilesetIndex: number): WangSet {
+const convertEdgeWangSet = (wangSet: TiledWangSetData, tilesetIndex: number): WangSet => {
   const blobMap = new Map<number, number>();
 
   for (const wangTile of wangSet.wangtiles) {
@@ -133,4 +133,4 @@ function convertEdgeWangSet(wangSet: TiledWangSetData, tilesetIndex: number): Wa
   }
 
   return new WangSet({ tilesetIndex, blobMap, type: 'edge' });
-}
+};

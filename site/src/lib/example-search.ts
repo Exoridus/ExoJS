@@ -20,7 +20,7 @@ export interface ExampleSearchFilter {
  * Search is case-insensitive substring match across title, description, path,
  * section, tags, and capabilities. Filter and search are AND-combined.
  */
-export function filterExamples(examples: ReadonlyArray<Example>, { query, activeFilter }: ExampleSearchFilter): Array<Example> {
+export const filterExamples = (examples: ReadonlyArray<Example>, { query, activeFilter }: ExampleSearchFilter): Array<Example> => {
   const q = query.trim().toLowerCase();
   const filter = activeFilter === 'all' ? null : activeFilter;
 
@@ -46,4 +46,4 @@ export function filterExamples(examples: ReadonlyArray<Example>, { query, active
 
     return true;
   });
-}
+};

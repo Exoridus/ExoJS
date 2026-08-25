@@ -40,7 +40,7 @@ const REGION_CLOSE_RE = /^[ \t]*\/\/ #endregion guide:(.+)$/;
  * `import.meta.dirname` points to the bundle output directory, not the
  * original source directory.
  */
-function repoRoot(): string {
+const repoRoot = (): string => {
   let dir = process.cwd();
   for (let i = 0; i < 8; i++) {
     if (existsSync(join(dir, 'pnpm-workspace.yaml'))) {
@@ -52,7 +52,7 @@ function repoRoot(): string {
   }
   // Last resort: return cwd and let readFileSync emit a clear error.
   return process.cwd();
-}
+};
 
 /**
  * Extracts a named region from a TypeScript (or any text) source file.
@@ -73,7 +73,7 @@ function repoRoot(): string {
  * @throws If the region is not found in the file.
  * @throws If the region contains no non-empty lines after stripping markers.
  */
-export function extractSnippetRegion(filePath: string, region: string): string {
+export const extractSnippetRegion = (filePath: string, region: string): string => {
   const absolutePath = join(repoRoot(), filePath);
 
   let source: string;
@@ -142,4 +142,4 @@ export function extractSnippetRegion(filePath: string, region: string): string {
   const dedented = snippetLines.map(line => (line.length >= minIndent ? line.slice(minIndent) : line));
 
   return dedented.join('\n');
-}
+};

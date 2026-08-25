@@ -74,7 +74,7 @@ interface FakeNode {
   children: FakeNode[];
 }
 
-function makeNode(
+const makeNode = (
   opts: {
     visible?: boolean;
     zIndex?: number;
@@ -83,7 +83,7 @@ function makeNode(
     boundsH?: number;
     children?: FakeNode[];
   } = {},
-): FakeNode {
+): FakeNode => {
   const { visible = true, zIndex = 0, interactive = false, boundsW = 100, boundsH = 50, children = [] } = opts;
 
   return {
@@ -101,7 +101,7 @@ function makeNode(
     })),
     children,
   };
-}
+};
 
 const makeInteraction = (
   opts: {

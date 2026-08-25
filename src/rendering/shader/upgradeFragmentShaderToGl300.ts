@@ -31,7 +31,7 @@
  *
  * Idempotent - calling twice returns the same source.
  */
-export function upgradeFragmentShaderToGl300(source: string): string {
+export const upgradeFragmentShaderToGl300 = (source: string): string => {
   // Already 3.00 → return unchanged
   if (/^\s*#version\s+300\s+es/.test(source)) {
     return source;
@@ -56,4 +56,4 @@ export function upgradeFragmentShaderToGl300(source: string): string {
   const header = '#version 300 es\n' + 'precision highp float;\n' + 'out vec4 fragColor;\n';
 
   return header + transformed;
-}
+};

@@ -124,11 +124,11 @@ describe('consumeDirty', () => {
 // ---------------------------------------------------------------------------
 
 describe('StyleChangeHint merging', () => {
-  function freshStyle(): TextStyle {
+  const freshStyle = (): TextStyle => {
     const style = new TextStyle();
     style.consumeDirty();
     return style;
-  }
+  };
 
   test('a lone tint change reports hint "tint"', () => {
     const style = freshStyle();
@@ -192,11 +192,11 @@ describe('StyleChangeHint merging', () => {
 // ---------------------------------------------------------------------------
 
 describe('setters', () => {
-  function freshStyle(): TextStyle {
+  const freshStyle = (): TextStyle => {
     const style = new TextStyle();
     style.consumeDirty();
     return style;
-  }
+  };
 
   test('fontFamily: same value is a no-op', () => {
     const style = freshStyle();

@@ -24,7 +24,7 @@ export interface PreviewToolbarProps {
   onToggleSidebar(): void;
 }
 
-export function PreviewToolbar({
+export const PreviewToolbar = ({
   canvasHeight,
   canvasWidth,
   capabilities,
@@ -42,7 +42,7 @@ export function PreviewToolbar({
   onToggleExpand,
   onToggleLayout,
   onToggleSidebar,
-}: PreviewToolbarProps): JSX.Element {
+}: PreviewToolbarProps): JSX.Element => {
   const hasDimensions = canvasWidth > 0 && canvasHeight > 0;
   const zoomPercent = hasDimensions && Math.abs(zoom - 1) > 0.01 ? Math.round(zoom * 100) : null;
 
@@ -142,4 +142,4 @@ export function PreviewToolbar({
       </div>
     </div>
   );
-}
+};

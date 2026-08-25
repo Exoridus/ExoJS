@@ -75,7 +75,7 @@ export interface PointerPhaseEntry {
  *
  * @internal
  */
-export function computeDesignPoint(app: Application, platform: PlatformAdapter, clientX: number, clientY: number): { x: number; y: number } {
+export const computeDesignPoint = (app: Application, platform: PlatformAdapter, clientX: number, clientY: number): { x: number; y: number } => {
   const rect = platform.getSurfaceMetrics();
   const u = rect.width > 0 ? (clientX - rect.left) / rect.width : 0;
   const v = rect.height > 0 ? (clientY - rect.top) / rect.height : 0;
@@ -83,7 +83,7 @@ export function computeDesignPoint(app: Application, platform: PlatformAdapter, 
   const backingStoreY = v * rect.backingHeight;
 
   return app._backingStoreToLogical(backingStoreX, backingStoreY);
-}
+};
 
 /**
  * High-level lifecycle state of a {@link Pointer}.

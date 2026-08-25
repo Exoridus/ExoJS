@@ -7,17 +7,17 @@ const STORAGE_KEY = 'exo-theme';
 
 type Theme = 'dark' | 'light';
 
-function subscribeTheme(onChange: () => void): () => void {
+const subscribeTheme = (onChange: () => void): (() => void) => {
   const observer = new MutationObserver(onChange);
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
   return () => observer.disconnect();
-}
+};
 
-function getThemeSnapshot(): Theme {
+const getThemeSnapshot = (): Theme => {
   return document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
-}
+};
 
-export function ThemeToggle(): JSX.Element {
+export const ThemeToggle = (): JSX.Element => {
   // The DOM `data-theme` is the source of truth (set pre-hydration by the AppShell
   // inline script). Subscribing to it keeps the toggle in sync without a
   // setState-in-effect and stays hydration-safe via the 'dark' server snapshot.
@@ -50,8 +50,8 @@ export function ThemeToggle(): JSX.Element {
       </button>
     </div>
   );
-}
+};
 
-function applyTheme(theme: Theme): void {
+const applyTheme = (theme: Theme): void => {
   document.documentElement.setAttribute('data-theme', theme);
-}
+};

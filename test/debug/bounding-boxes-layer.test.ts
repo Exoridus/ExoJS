@@ -74,7 +74,7 @@ interface FakeNode {
 }
 
 /** Build a minimal RenderNode-like object. */
-function makeNode(
+const makeNode = (
   opts: {
     visible?: boolean;
     zIndex?: number;
@@ -82,7 +82,7 @@ function makeNode(
     boundsH?: number;
     children?: FakeNode[];
   } = {},
-): FakeNode {
+): FakeNode => {
   const { visible = true, zIndex = 0, boundsW = 100, boundsH = 50, children = [] } = opts;
 
   return {
@@ -100,7 +100,7 @@ function makeNode(
     })),
     children,
   };
-}
+};
 
 const makeApp = (root: FakeNode | null = null) =>
   ({

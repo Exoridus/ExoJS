@@ -9,17 +9,17 @@
  */
 
 /** Apply a Hann window in-place to `real`. `imag` is zeroed. */
-export function hannWindow(real: Float32Array, imag: Float32Array): void {
+export const hannWindow = (real: Float32Array, imag: Float32Array): void => {
   const n = real.length;
   for (let i = 0; i < n; i++) {
     const w = 0.5 * (1 - Math.cos((2 * Math.PI * i) / (n - 1)));
     real[i]! *= w;
     imag[i] = 0;
   }
-}
+};
 
 /** Bit-reversal permutation for length `n` (must be power of 2). */
-function bitReverse(real: Float32Array, imag: Float32Array): void {
+const bitReverse = (real: Float32Array, imag: Float32Array): void => {
   const n = real.length;
   let j = 0;
   for (let i = 1; i < n; i++) {
@@ -37,13 +37,13 @@ function bitReverse(real: Float32Array, imag: Float32Array): void {
       imag[j] = tmp;
     }
   }
-}
+};
 
 /**
  * In-place FFT. `real` and `imag` must have the same length (power of 2).
  * A Hann window is applied to `real` before the transform; `imag` is zeroed.
  */
-export function fft(real: Float32Array, imag: Float32Array): void {
+export const fft = (real: Float32Array, imag: Float32Array): void => {
   hannWindow(real, imag);
   bitReverse(real, imag);
 
@@ -65,17 +65,17 @@ export function fft(real: Float32Array, imag: Float32Array): void {
       }
     }
   }
-}
+};
 
 /**
  * Compute magnitude spectrum from complex FFT output.
  * Returns a Float32Array of length `n/2` (positive frequencies only).
  */
-export function magnitudeSpectrum(real: Float32Array, imag: Float32Array): Float32Array {
+export const magnitudeSpectrum = (real: Float32Array, imag: Float32Array): Float32Array => {
   const bins = real.length >> 1;
   const mag = new Float32Array(bins);
   for (let i = 0; i < bins; i++) {
     mag[i] = Math.sqrt(real[i]! * real[i]! + imag[i]! * imag[i]!);
   }
   return mag;
-}
+};

@@ -14,11 +14,11 @@ const TEMPLATE_DESCRIPTIONS: Record<TemplateName, string> = {
   'audio-reactive': 'AudioAnalyser-driven shapes and animations',
 };
 
-function isInteractive(): boolean {
+const isInteractive = (): boolean => {
   return process.stdin.isTTY === true;
-}
+};
 
-function prompt(question: string): Promise<string> {
+const prompt = (question: string): Promise<string> => {
   return new Promise(resolve => {
     const rl = createInterface({ input: process.stdin, output: process.stdout });
     rl.question(question, answer => {
@@ -26,9 +26,9 @@ function prompt(question: string): Promise<string> {
       resolve(answer.trim());
     });
   });
-}
+};
 
-async function promptProjectName(): Promise<string> {
+const promptProjectName = async (): Promise<string> => {
   const answer = await prompt('Project name: ');
 
   if (!answer) {
@@ -37,9 +37,9 @@ async function promptProjectName(): Promise<string> {
   }
 
   return answer;
-}
+};
 
-async function promptTemplate(): Promise<TemplateName> {
+const promptTemplate = async (): Promise<TemplateName> => {
   console.log('\nWhich template?');
   for (let i = 0; i < TEMPLATES.length; i++) {
     const t = TEMPLATES[i];
@@ -61,9 +61,9 @@ async function promptTemplate(): Promise<TemplateName> {
 
   console.error(`Unknown template: "${answer}". Using "minimal".`);
   return 'minimal';
-}
+};
 
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   const args = process.argv.slice(2);
   let projectName = '';
   let templateArg: string | null = null;
@@ -133,7 +133,7 @@ async function main(): Promise<void> {
   console.log(`  npm install`);
   console.log(`  npm run dev`);
   console.log('');
-}
+};
 
 main().catch((err: unknown) => {
   console.error('Error:', err instanceof Error ? err.message : String(err));

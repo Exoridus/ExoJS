@@ -43,11 +43,11 @@ const identityGroupMat3 = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1]);
 // Sampler cache helper
 // ---------------------------------------------------------------------------
 
-function repeatModeToWrap(mode: RepeatMode): WrapModes {
+const repeatModeToWrap = (mode: RepeatMode): WrapModes => {
   if (mode === 'repeat') return WrapModes.Repeat;
   if (mode === 'mirror-repeat') return WrapModes.MirroredRepeat;
   return WrapModes.ClampToEdge;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Connection type

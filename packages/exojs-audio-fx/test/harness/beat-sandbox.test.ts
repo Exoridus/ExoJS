@@ -16,16 +16,16 @@ import { type BeatMessage, runDetector, type StateMessage, type WorkletMessage }
 const FIXTURE = clicktrack(120, 15);
 const TOTAL_SAMPLES = FIXTURE.samples.length;
 
-function beatMessages(msgs: WorkletMessage[]): BeatMessage[] {
+const beatMessages = (msgs: WorkletMessage[]): BeatMessage[] => {
   return msgs.filter((m): m is BeatMessage => m.type === 'beat');
-}
+};
 
-function stateMessages(msgs: WorkletMessage[]): StateMessage[] {
+const stateMessages = (msgs: WorkletMessage[]): StateMessage[] => {
   return msgs.filter((m): m is StateMessage => m.type === 'state');
-}
+};
 
 /** Serialize a message log to a stable string for equality comparison. */
-function serializeLog(msgs: WorkletMessage[]): string {
+const serializeLog = (msgs: WorkletMessage[]): string => {
   return JSON.stringify(
     msgs.map(m => {
       // Exclude _audioTimeSec from determinism comparison (it's an annotation
@@ -34,7 +34,7 @@ function serializeLog(msgs: WorkletMessage[]): string {
       return rest;
     }),
   );
-}
+};
 
 // ── 1. Determinism ─────────────────────────────────────────────────────────────
 

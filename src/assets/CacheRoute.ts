@@ -4,13 +4,13 @@ import { type CachePolicyResolutionContext, type CachePolicySource, isPolicyReso
 import type { CacheStore } from './CacheStore';
 
 /** Normalize the single-or-many store shorthand every route option accepts. */
-function toStoreList(stores: CacheStore | readonly CacheStore[] | undefined): readonly CacheStore[] {
+const toStoreList = (stores: CacheStore | readonly CacheStore[] | undefined): readonly CacheStore[] => {
   if (stores === undefined) {
     return [];
   }
 
   return Array.isArray(stores) ? (stores as readonly CacheStore[]) : [stores as CacheStore];
-}
+};
 
 /** Construction options for a {@link CacheRoute}. */
 export interface CacheRouteOptions {

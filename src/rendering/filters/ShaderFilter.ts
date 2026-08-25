@@ -136,14 +136,10 @@ export const defaultWgslVertexSource: string = defaultWgslVertexSourceModule;
 const wgslVertexStagePattern = /@vertex\b/;
 
 /** Strip line and block comments so a commented-out `@vertex` does not count. */
-function stripComments(source: string): string {
-  return source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/\/\/[^\n]*/g, '');
-}
+const stripComments = (source: string): string => source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/\/\/[^\n]*/g, '');
 
 /** Prepend the default vertex stage to a module that declares none. */
-function withWgslVertexStage(source: string): string {
-  return wgslVertexStagePattern.test(stripComments(source)) ? source : `${defaultWgslVertexSource}\n${source}`;
-}
+const withWgslVertexStage = (source: string): string => (wgslVertexStagePattern.test(stripComments(source)) ? source : `${defaultWgslVertexSource}\n${source}`);
 
 /**
  * Build the {@link ShaderSource} behind a filter pass: fills in the default
@@ -153,7 +149,7 @@ function withWgslVertexStage(source: string): string {
  * structural parity checks read.
  * @internal
  */
-export function createFilterShaderSource(options: ShaderFilterSourceOptions): ShaderSource {
+export const createFilterShaderSource = (options: ShaderFilterSourceOptions): ShaderSource => {
   const autoUpgrade = options.autoUpgrade !== false;
   const glsl =
     options.glsl !== undefined
@@ -168,7 +164,7 @@ export function createFilterShaderSource(options: ShaderFilterSourceOptions): Sh
     ...(glsl !== undefined ? { glsl } : {}),
     ...(wgsl !== undefined ? { wgsl } : {}),
   });
-}
+};
 
 /**
  * A {@link Filter} that renders its input through a user-supplied shader, in

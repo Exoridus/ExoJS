@@ -16,7 +16,7 @@ import { DebugLayer } from './DebugLayer';
  * Convert HSL (hue 0-360, saturation 0-1, lightness 0-1) to a Color instance.
  * Returns an RGB Color (alpha = alpha parameter).
  */
-function hslToColor(h: number, s: number, l: number, alpha: number): Color {
+const hslToColor = (h: number, s: number, l: number, alpha: number): Color => {
   const c = (1 - Math.abs(2 * l - 1)) * s;
   const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
   const m = l - c / 2;
@@ -53,7 +53,7 @@ function hslToColor(h: number, s: number, l: number, alpha: number): Color {
 
   // Color channels are 0..255 (alpha 0..1) - scale up from the HSL math's 0..1.
   return new Color((r + m) * 255, (g + m) * 255, (b + m) * 255, alpha);
-}
+};
 
 // ---------------------------------------------------------------------------
 

@@ -7,15 +7,15 @@ import { coreAssetTypes } from '#assets/coreAssetTypes';
 import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
 
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 
-function mockJson(payload: unknown): void {
+const mockJson = (payload: unknown): void => {
   global.fetch = vi.fn(
     async (): Promise<Response> =>
       ({
@@ -27,7 +27,7 @@ function mockJson(payload: unknown): void {
         arrayBuffer: async () => new ArrayBuffer(8),
       }) as unknown as Response,
   ) as typeof fetch;
-}
+};
 
 interface Config {
   readonly hp: number;

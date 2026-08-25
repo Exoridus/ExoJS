@@ -35,7 +35,7 @@ declare function expectType<_T extends true>(): void;
 // ButtonAction
 // ---------------------------------------------------------------------------
 
-export function buttonActionAcceptsOneOrManySources(): void {
+export const buttonActionAcceptsOneOrManySources = (): void => {
   const single = new ButtonAction(Keyboard.Space);
   const many = new ButtonAction([Keyboard.Space, GamepadButton.South]);
   const pointer = new ButtonAction(PointerButton.Primary);
@@ -45,9 +45,9 @@ export function buttonActionAcceptsOneOrManySources(): void {
   expectType<Equal<typeof many.active, boolean>>();
   expectType<Equal<typeof pointer.pressed, boolean>>();
   expectType<Equal<typeof withOptions.released, boolean>>();
-}
+};
 
-export function buttonActionRejectsBadArguments(): void {
+export const buttonActionRejectsBadArguments = (): void => {
   // @ts-expect-error -- options are a separate parameter, never a binding
   new ButtonAction({ threshold: 0.5 });
 
@@ -56,13 +56,13 @@ export function buttonActionRejectsBadArguments(): void {
 
   // @ts-expect-error -- a binding is required
   new ButtonAction();
-}
+};
 
 // ---------------------------------------------------------------------------
 // AxisAction
 // ---------------------------------------------------------------------------
 
-export function axisActionAcceptsSignedAndCompositeBindings(): void {
+export const axisActionAcceptsSignedAndCompositeBindings = (): void => {
   const direct = new AxisAction(GamepadAxis.LeftStickX);
   const composite = new AxisAction({ negative: Keyboard.A, positive: Keyboard.D });
   const multiSource = new AxisAction({ negative: [Keyboard.A, Keyboard.Left], positive: [Keyboard.D, Keyboard.Right] });
@@ -76,21 +76,21 @@ export function axisActionAcceptsSignedAndCompositeBindings(): void {
   expectType<Equal<typeof mixed.value, number>>();
   expectType<Equal<typeof positiveOnly.value, number>>();
   expectType<Equal<typeof negativeOnly.value, number>>();
-}
+};
 
-export function axisActionRejectsBadArguments(): void {
+export const axisActionRejectsBadArguments = (): void => {
   // @ts-expect-error -- a composite needs at least one side
   new AxisAction({});
 
   // @ts-expect-error -- `up` belongs to a vector binding, not an axis
   new AxisAction({ up: Keyboard.W });
-}
+};
 
 // ---------------------------------------------------------------------------
 // VectorAction
 // ---------------------------------------------------------------------------
 
-export function vectorActionAcceptsAxesAndDirections(): void {
+export const vectorActionAcceptsAxesAndDirections = (): void => {
   const stick = new VectorAction({ x: GamepadAxis.LeftStickX, y: GamepadAxis.LeftStickY });
   const wasd = new VectorAction({ up: Keyboard.W, down: Keyboard.S, left: Keyboard.A, right: Keyboard.D });
   const both = new VectorAction([
@@ -107,21 +107,21 @@ export function vectorActionAcceptsAxesAndDirections(): void {
   expectType<Equal<typeof horizontalOnly.active, boolean>>();
   expectType<Equal<typeof verticalAxisOnly.active, boolean>>();
   expectType<Equal<typeof singleDirection.active, boolean>>();
-}
+};
 
-export function vectorActionRejectsBadArguments(): void {
+export const vectorActionRejectsBadArguments = (): void => {
   // @ts-expect-error -- a vector binding needs at least one source
   new VectorAction({});
 
   // @ts-expect-error -- `negative`/`positive` belong to an axis binding
   new VectorAction({ negative: Keyboard.A, positive: Keyboard.D });
-}
+};
 
 // ---------------------------------------------------------------------------
 // ActionMap
 // ---------------------------------------------------------------------------
 
-export function actionMapPreservesMemberTypes(): void {
+export const actionMapPreservesMemberTypes = (): void => {
   const controls = new ActionMap({
     jump: new ButtonAction([Keyboard.Space, GamepadButton.South]),
     steer: new AxisAction([GamepadAxis.LeftStickX, { negative: Keyboard.A, positive: Keyboard.D }]),
@@ -134,9 +134,9 @@ export function actionMapPreservesMemberTypes(): void {
   expectType<Equal<typeof controls.jump.pressed, boolean>>();
   expectType<Equal<typeof controls.steer.value, number>>();
   expectType<Equal<typeof controls.attached, boolean>>();
-}
+};
 
-export function actionMapRejectsUnknownMembers(): void {
+export const actionMapRejectsUnknownMembers = (): void => {
   const controls = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
 
   // @ts-expect-error -- only declared actions are members
@@ -144,13 +144,13 @@ export function actionMapRejectsUnknownMembers(): void {
 
   // @ts-expect-error -- an action map holds actions, not arbitrary values
   new ActionMap({ speed: 4 });
-}
+};
 
 // ---------------------------------------------------------------------------
 // Rebinding, profiles and scopes
 // ---------------------------------------------------------------------------
 
-export function rebindIsTypedPerActionKind(): void {
+export const rebindIsTypedPerActionKind = (): void => {
   const controls = new ActionMap({
     jump: new ButtonAction(Keyboard.Space),
     steer: new AxisAction(GamepadAxis.LeftStickX),
@@ -168,9 +168,9 @@ export function rebindIsTypedPerActionKind(): void {
 
   // @ts-expect-error -- only declared actions can be rebound
   controls.rebind('crouch', Keyboard.C);
-}
+};
 
-export function bindingProfileRoundTripsAsPlainData(): void {
+export const bindingProfileRoundTripsAsPlainData = (): void => {
   const profile = new BindingProfile().set('jump', { kind: 'button', binding: ['keyboard.key-j'] });
   const data = profile.toJSON();
 
@@ -180,9 +180,9 @@ export function bindingProfileRoundTripsAsPlainData(): void {
 
   // @ts-expect-error -- an action kind must be one of the five known ones
   profile.set('jump', { kind: 'trigger', binding: ['keyboard.key-j'] });
-}
+};
 
-export function actionsShareAReadableBindingSurface(): void {
+export const actionsShareAReadableBindingSurface = (): void => {
   const controls = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
   const action = controls.get('jump');
 
@@ -190,11 +190,11 @@ export function actionsShareAReadableBindingSurface(): void {
   expectType<Equal<typeof controls.jump.channels, readonly number[]>>();
   expectType<Equal<typeof action, Action | undefined>>();
   expectType<Equal<ReturnType<typeof controls.conflicts>, readonly BindingConflict[]>>();
-}
+};
 
 declare const pad: Gamepad;
 
-export function inputScopeTakesMapsOnly(): void {
+export const inputScopeTakesMapsOnly = (): void => {
   const controls = new ActionMap({ jump: new ButtonAction(Keyboard.Space) });
   const scope = new InputScope(controls);
 
@@ -203,9 +203,9 @@ export function inputScopeTakesMapsOnly(): void {
 
   // @ts-expect-error -- a scope groups maps, never bare actions
   scope.add(new ButtonAction(Keyboard.Space));
-}
+};
 
-export function actionMapTakesAGamepadContextNotASlot(): void {
+export const actionMapTakesAGamepadContextNotASlot = (): void => {
   new ActionMap({ jump: new ButtonAction(GamepadButton.South) }, { gamepad: pad });
 
   // @ts-expect-error -- gamepad context is a pad, not a slot index
@@ -213,4 +213,4 @@ export function actionMapTakesAGamepadContextNotASlot(): void {
 
   // @ts-expect-error -- an action no longer carries a gamepad slot of its own
   new ButtonAction(GamepadButton.South, { gamepadSlot: 1 });
-}
+};

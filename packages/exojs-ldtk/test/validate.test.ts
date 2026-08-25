@@ -48,11 +48,11 @@ const RAW_MINIMAL = {
 };
 
 /** Deep-clone the fixture so a test can mutate one field in isolation. */
-function withRoot(mutate: (root: Record<string, any>) => void): unknown {
+const withRoot = (mutate: (root: Record<string, any>) => void): unknown => {
   const clone = JSON.parse(JSON.stringify(RAW_MINIMAL)) as Record<string, any>;
   mutate(clone);
   return clone;
-}
+};
 
 describe('validateLdtkData — accepts well-formed documents', () => {
   it('returns the same object graph it was given (no rebuild, no stripping)', () => {

@@ -244,7 +244,7 @@ export class IndexedDbStore implements CacheStore {
  * carried neither a type namespace nor a layout version, so nothing in them can
  * be read back safely under the current record identity.
  */
-function upgradeToGenericSchema(database: IDBDatabase): void {
+const upgradeToGenericSchema = (database: IDBDatabase): void => {
   for (const name of [...database.objectStoreNames]) {
     if (name !== recordStoreName) {
       database.deleteObjectStore(name);
@@ -254,4 +254,4 @@ function upgradeToGenericSchema(database: IDBDatabase): void {
   if (!database.objectStoreNames.contains(recordStoreName)) {
     database.createObjectStore(recordStoreName, { keyPath: 'key' });
   }
-}
+};

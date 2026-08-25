@@ -112,20 +112,20 @@ interface ResolvedTileLayerOptions {
 }
 
 /** Resolve and validate the optional uniform parallax scale. */
-function resolveParallaxScale(value = 1): number {
+const resolveParallaxScale = (value = 1): number => {
   if (!Number.isFinite(value) || value <= 0) {
     throw new Error('TileLayer parallaxScale must be a positive finite number.');
   }
 
   return value;
-}
+};
 
 /**
  * Validate a {@link TileLayerOptions} bag and resolve its optional fields
  * (chunk size, opacity, offset, parallax) to concrete defaults.
  * @throws When dimensions, chunk size, or other options are invalid.
  */
-function validateTileLayerOptions(options: TileLayerOptions): ResolvedTileLayerOptions {
+const validateTileLayerOptions = (options: TileLayerOptions): ResolvedTileLayerOptions => {
   validateNonNegativeInteger(options.id, 'layer.id');
   if (!options.name || typeof options.name !== 'string') {
     throw new Error('TileLayer name must be a non-empty string.');
@@ -163,7 +163,7 @@ function validateTileLayerOptions(options: TileLayerOptions): ResolvedTileLayerO
   const parallaxScale = resolveParallaxScale(options.parallaxScale);
 
   return { chunkWidth, chunkHeight, opacity, offsetX, offsetY, parallaxX, parallaxY, parallaxScale };
-}
+};
 
 /**
  * A generic, format-independent tile layer with chunk-first storage.

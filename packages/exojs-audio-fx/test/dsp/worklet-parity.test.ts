@@ -36,7 +36,7 @@ interface ParityProc {
 }
 
 /** Reconstruct the worklet's flux ring buffer as a linear oldest-first array. */
-function linearizeFlux(proc: ParityProc): Float32Array {
+const linearizeFlux = (proc: ParityProc): Float32Array => {
   const buf = proc._fluxWindow;
   const wp = proc._fluxWritePos;
   const n = proc._fluxCount;
@@ -46,9 +46,9 @@ function linearizeFlux(proc: ParityProc): Float32Array {
     lin[t] = buf[(((wp - 1 - (n - 1 - t)) % len) + len) % len]!;
   }
   return lin;
-}
+};
 
-function driveAndCompare(samples: Float32Array): void {
+const driveAndCompare = (samples: Float32Array): void => {
   const Ctor = buildBeatProcessor();
   const g = globalThis as Record<string, unknown>;
   const prevSR = g['sampleRate'];
@@ -85,7 +85,7 @@ function driveAndCompare(samples: Float32Array): void {
     expect(worklet[i]!.bpm).toBeCloseTo(expected[i]!.bpm, 6);
     expect(worklet[i]!.score).toBeCloseTo(expected[i]!.score, 6);
   }
-}
+};
 
 describe('worklet real-time tempogram path ↔ canonical computeTempoCandidates', () => {
   it('clicktrack_120 candidates match computeTempoCandidates', () => {

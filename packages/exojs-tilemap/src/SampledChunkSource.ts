@@ -42,7 +42,7 @@ export interface SampledChunkSourceOptions {
  * `ChunkStreamer` with.
  * @advanced
  */
-export function createSampledChunkSource(layer: TileLayer, options: SampledChunkSourceOptions): ChunkSource {
+export const createSampledChunkSource = (layer: TileLayer, options: SampledChunkSourceOptions): ChunkSource => {
   const sample = options.sample.bind(options);
   const mapValueToTile = options.mapValueToTile.bind(options);
 
@@ -75,4 +75,4 @@ export function createSampledChunkSource(layer: TileLayer, options: SampledChunk
       return out === null ? null : { width: chunkWidth, height: chunkHeight, tiles: out };
     },
   };
-}
+};

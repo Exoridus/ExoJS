@@ -28,7 +28,7 @@ export interface LdtkLayerParallax {
  * Resolve the runtime parallax transform for a layer instance. Missing
  * definitions and factors use LDtk's defaults: no shift and scale `1`.
  */
-export function resolveLdtkLayerParallax(
+export const resolveLdtkLayerParallax = (
   data: LdtkData,
   layer: {
     readonly layerDefUid: number;
@@ -36,7 +36,7 @@ export function resolveLdtkLayerParallax(
     readonly __cHei: number;
     readonly __gridSize: number;
   },
-): LdtkLayerParallax {
+): LdtkLayerParallax => {
   const layerDef = data.defs.layers.find(def => def.uid === layer.layerDefUid);
   const factorX = layerDef?.parallaxFactorX ?? 0;
   const factorY = layerDef?.parallaxFactorY ?? 0;
@@ -49,4 +49,4 @@ export function resolveLdtkLayerParallax(
     offsetX: (layerDef?.pxOffsetX ?? 0) + (scaling ? 0 : -layer.__cWid * layer.__gridSize * 0.5 * factorX),
     offsetY: (layerDef?.pxOffsetY ?? 0) + (scaling ? 0 : -layer.__cHei * layer.__gridSize * 0.5 * factorY),
   };
-}
+};

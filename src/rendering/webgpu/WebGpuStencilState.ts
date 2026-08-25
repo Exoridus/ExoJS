@@ -22,14 +22,12 @@ const stencilContentFace: GPUStencilFaceState = {
  * interchangeable, so callers key their pipeline cache on the stencil flag.
  * @internal
  */
-export function stencilContentDepthStencilState(): GPUDepthStencilState {
-  return {
-    format: stencilAttachmentFormat,
-    depthWriteEnabled: false,
-    depthCompare: 'always',
-    stencilFront: stencilContentFace,
-    stencilBack: stencilContentFace,
-    stencilReadMask: 0xff,
-    stencilWriteMask: 0,
-  };
-}
+export const stencilContentDepthStencilState = (): GPUDepthStencilState => ({
+  format: stencilAttachmentFormat,
+  depthWriteEnabled: false,
+  depthCompare: 'always',
+  stencilFront: stencilContentFace,
+  stencilBack: stencilContentFace,
+  stencilReadMask: 0xff,
+  stencilWriteMask: 0,
+});

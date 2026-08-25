@@ -5,7 +5,7 @@ export interface LoadingSpinnerProps {
   centered?: boolean;
 }
 
-export function LoadingSpinner({ centered = false }: LoadingSpinnerProps): JSX.Element {
+export const LoadingSpinner = ({ centered = false }: LoadingSpinnerProps): JSX.Element => {
   return (
     <div className={cx(css(styles, 'root'), css(styles, 'indicator'), centered && css(styles, 'centered'))}>
       <svg className={css(styles, 'spinner')} viewBox="0 0 100 100" aria-hidden="true">
@@ -13,4 +13,4 @@ export function LoadingSpinner({ centered = false }: LoadingSpinnerProps): JSX.E
       </svg>
     </div>
   );
-}
+};

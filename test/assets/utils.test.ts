@@ -1,13 +1,13 @@
 import { determineMimeType } from '#assets/utils';
 
 /** Builds a big-endian uint32 as 4 bytes. */
-function u32be(n: number): number[] {
+const u32be = (n: number): number[] => {
   return [(n >>> 24) & 0xff, (n >>> 16) & 0xff, (n >>> 8) & 0xff, n & 0xff];
-}
+};
 
-function toBuffer(bytes: number[]): ArrayBuffer {
+const toBuffer = (bytes: number[]): ArrayBuffer => {
   return new Uint8Array(bytes).buffer;
-}
+};
 
 describe('determineMimeType', () => {
   test('throws when the buffer is empty', () => {

@@ -12,7 +12,7 @@ import type { NetworkHint, NetworkHintSource, PlatformSubscription } from '#plat
 import { createCacheStoreDouble } from './cache-test-doubles';
 
 /** A hint source a test drives directly. */
-function hintSource(initial: NetworkHint = 'online') {
+const hintSource = (initial: NetworkHint = 'online') => {
   const listeners = new Set<(hint: NetworkHint) => void>();
   let current = initial;
 
@@ -37,18 +37,18 @@ function hintSource(initial: NetworkHint = 'online') {
       }
     },
   };
-}
+};
 
 /**
  * Drives one acquisition through `cache`, the way the loader does: the
  * connectivity facts are read once, here, and travel as a value.
  */
-function acquire(
+const acquire = (
   cache: AssetCache,
   source = 'url:/a.txt',
   fetch: () => Promise<string> = () => Promise.resolve('fresh'),
   connectivity?: Connectivity,
-): Promise<string> {
+): Promise<string> => {
   return cache.resolve<string>({
     namespace: 'text',
     sourceKey: source,
@@ -57,7 +57,7 @@ function acquire(
     fetch,
     report: () => undefined,
   });
-}
+};
 
 describe('a route resolves its policy per acquisition', () => {
   test('a fixed policy is used as-is', async () => {
@@ -146,14 +146,14 @@ describe('a route resolves its policy per acquisition', () => {
 });
 
 describe('ConnectivityPolicyResolver', () => {
-  function setup(hint: NetworkHint) {
+  const setup = (hint: NetworkHint) => {
     const host = hintSource(hint);
     const connectivity = new Connectivity(host.source);
     const store = createCacheStoreDouble();
     const cache = new AssetCache({ stores: store, policy: new ConnectivityPolicyResolver() });
 
     return { host, connectivity, store, cache };
-  }
+  };
 
   test('an online host acquires and fills the cache', async () => {
     const { cache, store, connectivity } = setup('online');

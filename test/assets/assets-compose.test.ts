@@ -12,13 +12,13 @@ import { Sound } from '#audio/Sound';
 import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   const owner = loader.createScope({ name: 'owner' });
   materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
-}
+};
 
 // jsdom has no audio decoder - mirror the `{ duration }` AudioBuffer stub used
 // by the other loader tests (see test/assets/loader-claims.test.ts).
@@ -32,14 +32,14 @@ vi.mock('#audio/audio-context', () => ({
 
 const originalFetch = global.fetch;
 
-function mockFetchAudio(): void {
+const mockFetchAudio = (): void => {
   global.fetch = vi.fn(async () => ({
     ok: true,
     status: 200,
     statusText: 'OK',
     arrayBuffer: async () => new ArrayBuffer(8),
   })) as unknown as typeof fetch;
-}
+};
 
 describe('Assets.compose', () => {
   it('combines conflict-free catalogs into one ordinary catalog', () => {

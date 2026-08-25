@@ -4,7 +4,7 @@ import { FEATURED_FILTER, filterExamples } from '../../site/src/lib/example-sear
 import { EXAMPLES_CATALOG } from '../../site/src/lib/examples-catalog';
 import type { Example } from '../../site/src/lib/types';
 
-function ex(section: string, slug: string, extra: Partial<Example> = {}): Example {
+const ex = (section: string, slug: string, extra: Partial<Example> = {}): Example => {
   return {
     section,
     slug,
@@ -14,7 +14,7 @@ function ex(section: string, slug: string, extra: Partial<Example> = {}): Exampl
     backend: 'core',
     ...extra,
   };
-}
+};
 
 const FIXTURES: Example[] = [
   ex('getting-started', 'hello-world', {

@@ -10,7 +10,7 @@ import type { ObjectUrlPool } from './ObjectUrlPool';
  * for the lifetime of the document.
  * @internal
  */
-export function decodeImageBlob(blob: Blob, objectUrls: ObjectUrlPool): Promise<ImageBitmap | HTMLImageElement> {
+export const decodeImageBlob = (blob: Blob, objectUrls: ObjectUrlPool): Promise<ImageBitmap | HTMLImageElement> => {
   if (typeof createImageBitmap === 'function') {
     return createImageBitmap(blob);
   }
@@ -41,4 +41,4 @@ export function decodeImageBlob(blob: Blob, objectUrls: ObjectUrlPool): Promise<
 
     image.src = objectUrl;
   });
-}
+};

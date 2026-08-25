@@ -27,7 +27,7 @@ import type { NetworkHint, NetworkHintSource, PlatformSubscription } from '#plat
  * 8-bit mono, 8 kHz, a handful of silent samples - the smallest thing that is
  * still a valid file.
  */
-function silentWav(): ArrayBuffer {
+const silentWav = (): ArrayBuffer => {
   const samples = 64;
   const buffer = new ArrayBuffer(44 + samples);
   const view = new DataView(buffer);
@@ -55,10 +55,10 @@ function silentWav(): ArrayBuffer {
   new Uint8Array(buffer, 44).fill(128);
 
   return buffer;
-}
+};
 
 /** A hint source the test drives, standing in for the host's own reporting. */
-function hintSource(initial: NetworkHint = 'online') {
+const hintSource = (initial: NetworkHint = 'online') => {
   const listeners = new Set<(hint: NetworkHint) => void>();
   let current = initial;
 
@@ -83,7 +83,7 @@ function hintSource(initial: NetworkHint = 'online') {
       }
     },
   };
-}
+};
 
 /** A database name no other spec in this file shares. */
 let counter = 0;
@@ -93,20 +93,20 @@ const openStores: IndexedDbStore[] = [];
 const openDatabases: string[] = [];
 const openLoaders: Loader[] = [];
 
-function createStore(name: string): IndexedDbStore {
+const createStore = (name: string): IndexedDbStore => {
   const store = new IndexedDbStore(name);
 
   openStores.push(store);
 
   return store;
-}
+};
 
 /**
  * A loader over `store`, following `connectivity` - which is exactly what
  * `Application` does with its own, and the only wiring there is: the resolver
  * holds nothing, and reads the snapshot the loader hands it per acquisition.
  */
-function createLoader(store: IndexedDbStore, connectivity: Connectivity): Loader {
+const createLoader = (store: IndexedDbStore, connectivity: Connectivity): Loader => {
   const loader = new Loader({
     basePath: '/',
     cache: new AssetCache({ stores: store, policy: new ConnectivityPolicyResolver() }),
@@ -117,7 +117,7 @@ function createLoader(store: IndexedDbStore, connectivity: Connectivity): Loader
   openLoaders.push(loader);
 
   return loader;
-}
+};
 
 let fetchSpy: ReturnType<typeof vi.fn>;
 const originalFetch = globalThis.fetch;

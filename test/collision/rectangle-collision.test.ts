@@ -1,9 +1,9 @@
 import { getCollisionRectangleRectangle } from '#math/collision-detection';
 import { Rectangle } from '#math/Rectangle';
 
-function rect(x: number, y: number, width: number, height: number): Rectangle {
+const rect = (x: number, y: number, width: number, height: number): Rectangle => {
   return new Rectangle(x, y, width, height);
-}
+};
 
 describe('getCollisionRectangleRectangle', () => {
   // 1. Partial overlap: returns correct min-axis distance

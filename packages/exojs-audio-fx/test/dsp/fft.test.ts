@@ -2,9 +2,9 @@ import { fft, hannWindow, magnitudeSpectrum } from '../../src/dsp/fft';
 
 const FFT_SIZE = 64; // small for fast tests
 
-function makeRealImag(n: number): [Float32Array, Float32Array] {
+const makeRealImag = (n: number): [Float32Array, Float32Array] => {
   return [new Float32Array(n), new Float32Array(n)];
-}
+};
 
 describe('fft', () => {
   describe('hannWindow', () => {

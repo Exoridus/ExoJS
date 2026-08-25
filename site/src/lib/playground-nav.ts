@@ -21,12 +21,12 @@ export interface PlaygroundNavCategory {
 
 // Title-cases an unknown category slug as a last resort. Known categories use
 // their curated `CHAPTERS` title instead.
-function humanizeSlug(slug: string): string {
+const humanizeSlug = (slug: string): string => {
   return slug
     .split(/[-/]/)
     .map(word => (word ? word[0].toUpperCase() + word.slice(1) : word))
     .join(' ');
-}
+};
 
 /**
  * Reduces an example path or route to its canonical slug form so two
@@ -36,7 +36,7 @@ function humanizeSlug(slug: string): string {
  *
  *   normalizeExamplePath('/particles/bonfire.js?x=1#frag') === 'particles/bonfire'
  */
-export function normalizeExamplePath(value: string | null | undefined): string {
+export const normalizeExamplePath = (value: string | null | undefined): string => {
   if (!value) return '';
 
   let path = value.trim();
@@ -47,7 +47,7 @@ export function normalizeExamplePath(value: string | null | undefined): string {
   }
 
   return path.replace(/^\/+/, '').replace(/\/+$/, '').replace(/\.js$/i, '');
-}
+};
 
 /**
  * Exact, unambiguous active-route match: true only when `candidatePath` and
@@ -55,10 +55,10 @@ export function normalizeExamplePath(value: string | null | undefined): string {
  * equality check, never a prefix match, so sibling routes like
  * `input/keyboard` and `input/keyboard-extra` never both match.
  */
-export function isExampleRouteActive(candidatePath: string, activePath: string | null | undefined): boolean {
+export const isExampleRouteActive = (candidatePath: string, activePath: string | null | undefined): boolean => {
   if (!activePath) return false;
   return normalizeExamplePath(candidatePath) === normalizeExamplePath(activePath);
-}
+};
 
 /**
  * Groups a flat list of examples into one nav level - category → examples -
@@ -67,7 +67,7 @@ export function isExampleRouteActive(candidatePath: string, activePath: string |
  * Categories that end up empty (e.g. after search/tag filtering upstream) are
  * not produced.
  */
-export function buildPlaygroundNavModel(examples: ReadonlyArray<Example>): Array<PlaygroundNavCategory> {
+export const buildPlaygroundNavModel = (examples: ReadonlyArray<Example>): Array<PlaygroundNavCategory> => {
   const bySection = new Map<string, Array<Example>>();
 
   for (const example of examples) {
@@ -92,4 +92,4 @@ export function buildPlaygroundNavModel(examples: ReadonlyArray<Example>): Array
 
   categories.sort((a, b) => a.order - b.order || a.slug.localeCompare(b.slug));
   return categories;
-}
+};

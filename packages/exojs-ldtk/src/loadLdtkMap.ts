@@ -24,7 +24,7 @@ import { LdtkFormatError, validateLdtkData, validateLdtkLevelData } from './vali
  * would make every cell and entity referencing it vanish without a diagnostic.
  * @internal
  */
-export async function loadLdtkTileset(def: LdtkTilesetDef, ldtkSource: string, context: AssetFactoryContext): Promise<TileSet | null> {
+export const loadLdtkTileset = async (def: LdtkTilesetDef, ldtkSource: string, context: AssetFactoryContext): Promise<TileSet | null> => {
   if (def.relPath === null || def.relPath === '') {
     logger.warn(
       `LDtk: tileset "${def.identifier}" in "${ldtkSource}" has no atlas image (relPath is null) — it is an ` +
@@ -76,7 +76,7 @@ export async function loadLdtkTileset(def: LdtkTilesetDef, ldtkSource: string, c
     spacing,
     margin,
   });
-}
+};
 
 // ── External level loading ───────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ export async function loadLdtkTileset(def: LdtkTilesetDef, ldtkSource: string, c
  * levels. Levels that already carry `layerInstances` (not externalized) are
  * returned unchanged.
  */
-async function loadExternalLevel(level: LdtkLevel, ldtkSource: string, context: AssetFactoryContext): Promise<LdtkLevel> {
+const loadExternalLevel = async (level: LdtkLevel, ldtkSource: string, context: AssetFactoryContext): Promise<LdtkLevel> => {
   // Already-inlined level, or no external file to fetch: return as-is.
   if (level.layerInstances !== null || level.externalRelPath === undefined || level.externalRelPath === null || level.externalRelPath === '') {
     return level;
@@ -110,7 +110,7 @@ async function loadExternalLevel(level: LdtkLevel, ldtkSource: string, context: 
     layerInstances: external.layerInstances,
     ...(fieldInstances !== undefined && { fieldInstances }),
   };
-}
+};
 
 /**
  * Rebuild an {@link LdtkData} document with its levels replaced by
@@ -124,7 +124,7 @@ async function loadExternalLevel(level: LdtkLevel, ldtkSource: string, context: 
  * through {@link getLdtkLevelEntries} (performed inside {@link ldtkToTileMap})
  * reproduces an identical flattened list, now with external levels resolved.
  */
-function withResolvedLevels(data: LdtkData, resolvedLevels: readonly LdtkLevel[]): LdtkData {
+const withResolvedLevels = (data: LdtkData, resolvedLevels: readonly LdtkLevel[]): LdtkData => {
   if (data.worlds && data.worlds.length > 0) {
     let cursor = 0;
     const worlds = data.worlds.map(world => {
@@ -136,7 +136,7 @@ function withResolvedLevels(data: LdtkData, resolvedLevels: readonly LdtkLevel[]
   }
 
   return { ...data, levels: resolvedLevels };
-}
+};
 
 // ── Public loader ─────────────────────────────────────────────────────────────
 
@@ -157,7 +157,7 @@ function withResolvedLevels(data: LdtkData, resolvedLevels: readonly LdtkLevel[]
  * rejected, since its image lives inside the LDtk editor; that skip warns.
  * @internal
  */
-export async function loadLdtkMap(context: AssetFactoryContext): Promise<LdtkMap> {
+export const loadLdtkMap = async (context: AssetFactoryContext): Promise<LdtkMap> => {
   const source = context.source;
   const data = validateLdtkData(await context.dependencies.load(Asset.type('json', source)), source);
 
@@ -181,4 +181,4 @@ export async function loadLdtkMap(context: AssetFactoryContext): Promise<LdtkMap
   }
 
   return ldtkToTileMap(withResolvedLevels(data, resolvedLevels), { source, tilesets });
-}
+};

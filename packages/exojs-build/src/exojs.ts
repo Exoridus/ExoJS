@@ -39,6 +39,8 @@ export interface ExojsPluginOptions {
  * left to the bundler, so `?raw` and `?url` behave as they would without this
  * preset.
  */
-export function exojs({ minify = false }: ExojsPluginOptions = {}): SourcePlugin[] {
-  return [createShaderPlugin({ minify }), createWorkletPlugin({ minify }), createWorkerPlugin({ minify })];
-}
+export const exojs = ({ minify = false }: ExojsPluginOptions = {}): SourcePlugin[] => [
+  createShaderPlugin({ minify }),
+  createWorkletPlugin({ minify }),
+  createWorkerPlugin({ minify }),
+];

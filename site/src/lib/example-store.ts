@@ -18,45 +18,45 @@ interface VersionEntry {
 const _entries = new Map<string, VersionEntry>();
 const _loadListeners = new Set<(versionId: string) => void>();
 
-function getOrCreateEntry(versionId: string): VersionEntry {
+const getOrCreateEntry = (versionId: string): VersionEntry => {
   let entry = _entries.get(versionId);
   if (!entry) {
     entry = { response: null, error: null };
     _entries.set(versionId, entry);
   }
   return entry;
-}
+};
 
-function buildSourceUrl(versionId: string, filePath: string): string {
+const buildSourceUrl = (versionId: string, filePath: string): string => {
   if (isCurrentVersion(versionId)) {
     return buildExampleUrl(filePath, { 'no-cache': Date.now() });
   }
   // Remote release sources are immutable - let the browser/CDN cache normally.
   return buildGithubRawExampleUrl(versionId, filePath);
-}
+};
 
-export function hasExamplesFor(versionId: string): boolean {
+export const hasExamplesFor = (versionId: string): boolean => {
   const response = _entries.get(versionId)?.response;
   return response !== undefined && response !== null;
-}
+};
 
-export function getLoadErrorFor(versionId: string): string | null {
+export const getLoadErrorFor = (versionId: string): string | null => {
   return _entries.get(versionId)?.error ?? null;
-}
+};
 
-export function onExamplesLoaded(callback: (versionId: string) => void): () => void {
+export const onExamplesLoaded = (callback: (versionId: string) => void): (() => void) => {
   _loadListeners.add(callback);
   return () => _loadListeners.delete(callback);
-}
+};
 
-function getCleanName(text: string): string {
+const getCleanName = (text: string): string => {
   return text
     .split('-')
     .map((part: string) => ([...part].some(char => char !== char.toUpperCase()) ? part[0].toUpperCase() + part.substring(1) : part))
     .join(' ');
-}
+};
 
-export function getNestedExamples(versionId: string): ExamplesMap {
+export const getNestedExamples = (versionId: string): ExamplesMap => {
   const response = _entries.get(versionId)?.response;
   if (!response) {
     return new Map();
@@ -77,21 +77,21 @@ export function getNestedExamples(versionId: string): ExamplesMap {
           .map((def: ExampleDefinition) => ({ ...def, section: directory })),
       ]),
   );
-}
+};
 
-export function getExamplesList(versionId: string): Array<Example> {
+export const getExamplesList = (versionId: string): Array<Example> => {
   return Array.from(getNestedExamples(versionId).values()).flat();
-}
+};
 
-export function getAvailableTags(versionId: string): Array<string> {
+export const getAvailableTags = (versionId: string): Array<string> => {
   return Array.from(new Set(getExamplesList(versionId).flatMap(example => example.tags ?? []))).sort((a, b) => a.localeCompare(b));
-}
+};
 
-export function getExampleByPath(versionId: string, path: string): Example | null {
+export const getExampleByPath = (versionId: string, path: string): Example | null => {
   return getExamplesList(versionId).find(example => example.path === path) ?? null;
-}
+};
 
-export async function loadExampleSource(versionId: string, filePath: string): Promise<string> {
+export const loadExampleSource = async (versionId: string, filePath: string): Promise<string> => {
   const url = buildSourceUrl(versionId, filePath);
   const request = createUniqueRequest(url);
   const response = await request.getText();
@@ -115,9 +115,9 @@ export async function loadExampleSource(versionId: string, filePath: string): Pr
   }
 
   throw new Error(`Could not fetch example source at ${url}!`);
-}
+};
 
-export async function loadExamples(versionId: string): Promise<void> {
+export const loadExamples = async (versionId: string): Promise<void> => {
   const entry = getOrCreateEntry(versionId);
   entry.error = null;
 
@@ -162,4 +162,4 @@ export async function loadExamples(versionId: string): Promise<void> {
   for (const listener of _loadListeners) {
     listener(versionId);
   }
-}
+};

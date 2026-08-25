@@ -48,19 +48,17 @@ export interface ShaderPluginOptions {
  * Included in the `exojs()` preset; construct it directly only to give shaders
  * different options from the worklet and worker plugins.
  */
-export function createShaderPlugin({ minify = false }: ShaderPluginOptions = {}): SourcePlugin {
-  return {
-    name: 'exojs-shader-source',
-    load(id: string): string | null {
-      // A query means the importer asked for some other representation. Vite
-      // resolves `?raw` and `?url` in a core plugin that runs ahead of this
-      // one, so claiming them here would only change what Rollup does - and a
-      // difference between the two bundlers is exactly what must not exist.
-      if (id.includes('?') || !isShaderId(id)) return null;
+export const createShaderPlugin = ({ minify = false }: ShaderPluginOptions = {}): SourcePlugin => ({
+  name: 'exojs-shader-source',
+  load(id: string): string | null {
+    // A query means the importer asked for some other representation. Vite
+    // resolves `?raw` and `?url` in a core plugin that runs ahead of this
+    // one, so claiming them here would only change what Rollup does - and a
+    // difference between the two bundlers is exactly what must not exist.
+    if (id.includes('?') || !isShaderId(id)) return null;
 
-      const source = readFileSync(id, 'utf8');
+    const source = readFileSync(id, 'utf8');
 
-      return `export default ${JSON.stringify(minify ? stripShaderSource(source) : source)};`;
-    },
-  };
-}
+    return `export default ${JSON.stringify(minify ? stripShaderSource(source) : source)};`;
+  },
+});

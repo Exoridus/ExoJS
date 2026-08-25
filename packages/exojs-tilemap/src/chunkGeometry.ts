@@ -47,9 +47,7 @@ export interface ChunkPage {
 }
 
 /** Pack a {@link TileTransform} into a 3-bit orientation code. @internal */
-export function orientCode(transform: TileTransform): number {
-  return (transform.flipX ? 1 : 0) | (transform.flipY ? 2 : 0) | (transform.diagonal ? 4 : 0);
-}
+export const orientCode = (transform: TileTransform): number => (transform.flipX ? 1 : 0) | (transform.flipY ? 2 : 0) | (transform.diagonal ? 4 : 0);
 
 // Test/perf-only instrumentation: counts CPU chunk-geometry rebuilds. A rebuild
 // happens once per {@link buildChunkPages} call - i.e. when a chunk node sees a
@@ -59,14 +57,12 @@ export function orientCode(transform: TileTransform): number {
 let tileGeometryRebuildCount = 0;
 
 /** Read the cumulative chunk-geometry rebuild count. @internal */
-export function getTileGeometryRebuildCount(): number {
-  return tileGeometryRebuildCount;
-}
+export const getTileGeometryRebuildCount = (): number => tileGeometryRebuildCount;
 
 /** Reset the chunk-geometry rebuild counter (call before a measured frame). @internal */
-export function resetTileGeometryRebuildCount(): void {
+export const resetTileGeometryRebuildCount = (): void => {
   tileGeometryRebuildCount = 0;
-}
+};
 
 /**
  * Build per-tileset page geometry for a single chunk.
@@ -89,7 +85,7 @@ export function resetTileGeometryRebuildCount(): void {
  * @param tileHeight Map/layer tile cell height in pixels.
  * @internal
  */
-export function buildChunkPages(chunk: ReadonlyTileChunk, tilesets: readonly TileSet[], tileWidth: number, tileHeight: number): ChunkPage[] {
+export const buildChunkPages = (chunk: ReadonlyTileChunk, tilesets: readonly TileSet[], tileWidth: number, tileHeight: number): ChunkPage[] => {
   tileGeometryRebuildCount++;
 
   if (chunk.empty) {
@@ -178,4 +174,4 @@ export function buildChunkPages(chunk: ReadonlyTileChunk, tilesets: readonly Til
   }
 
   return pages;
-}
+};

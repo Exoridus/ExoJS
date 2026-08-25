@@ -21,7 +21,7 @@ export interface InstalledAssetType {
  * without one is given a token at install. It is loader-local and carries no
  * behaviour: what survives a reload is the type's own id.
  */
-function mintToken(id: string): AssetConstructor {
+const mintToken = (id: string): AssetConstructor => {
   const token = class {};
 
   // The token appears verbatim in loader diagnostics; an anonymous class would
@@ -29,7 +29,7 @@ function mintToken(id: string): AssetConstructor {
   Object.defineProperty(token, 'name', { value: id, configurable: true });
 
   return token;
-}
+};
 
 /**
  * The asset types installed on one {@link Loader}: what each is called, which
@@ -281,6 +281,4 @@ export class AssetTypeRegistry {
 }
 
 /** The shape an identity hook sees. Options are omitted entirely when the request carried none. */
-function request(source: string, options: unknown): AssetRequest<unknown> {
-  return options === undefined || options === null ? { source } : { source, options };
-}
+const request = (source: string, options: unknown): AssetRequest<unknown> => (options === undefined || options === null ? { source } : { source, options });

@@ -89,7 +89,7 @@ const renderScene = async (ctx: { skip: (reason: string) => void }, backend: Web
  * Tile pitch is 16px; the canvas is 64px wide, leaving room for the seam at
  * screen x≈32 when the node is near the origin.
  */
-function buildSeamMap(texture: ReturnType<typeof createSolidTexture>): TileMap {
+const buildSeamMap = (texture: ReturnType<typeof createSolidTexture>): TileMap => {
   const tileset = makeTileset(texture);
   const layer = new TileLayer({
     id: 1,
@@ -116,7 +116,7 @@ function buildSeamMap(texture: ReturnType<typeof createSolidTexture>): TileMap {
     tilesets: [tileset],
     layers: [layer],
   });
-}
+};
 
 // ── pixel-snap seam tests ────────────────────────────────────────────────
 

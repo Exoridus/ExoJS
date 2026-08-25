@@ -9,7 +9,7 @@ import { createLdtkIntGridCellSource, getLdtkIntGridValueAt, ldtkToTileMap } fro
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return {
     width: 512,
     height: 512,
@@ -18,9 +18,9 @@ function fakeTexture(): Texture {
     destroy: () => {},
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function makeTileset(name = 'Atlas', tileCount = 4): TileSet {
+const makeTileset = (name = 'Atlas', tileCount = 4): TileSet => {
   return new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
@@ -28,10 +28,10 @@ function makeTileset(name = 'Atlas', tileCount = 4): TileSet {
     tileHeight: 16,
     tileCount,
   });
-}
+};
 
 /** Build a single-level document containing exactly one layer instance. */
-function docWithLayer(layer: LdtkLayerInstance, level: Partial<LdtkLevel> = {}): LdtkData {
+const docWithLayer = (layer: LdtkLayerInstance, level: Partial<LdtkLevel> = {}): LdtkData => {
   return {
     jsonVersion: '1.5.3',
     defaultGridSize: 16,
@@ -50,13 +50,13 @@ function docWithLayer(layer: LdtkLayerInstance, level: Partial<LdtkLevel> = {}):
       },
     ],
   };
-}
+};
 
 /**
  * Convert a document with one Entities layer holding exactly one entity with
  * exactly one field, returning that entity's converted properties bag.
  */
-function convertSingleField(field: LdtkFieldInstance): TileProperties {
+const convertSingleField = (field: LdtkFieldInstance): TileProperties => {
   const data = docWithLayer({
     __identifier: 'Entities',
     __type: 'Entities',
@@ -82,7 +82,7 @@ function convertSingleField(field: LdtkFieldInstance): TileProperties {
     ],
   });
   return ldtkToTileMap(data).levels[0]!.objectLayers[0]!.objects[0]!.properties;
-}
+};
 
 // ── Flip-bit constants ──────────────────────────────────────────────────────────
 
@@ -128,9 +128,9 @@ describe('ldtkToTileMap — tile population with a tileset', () => {
     autoLayerTiles: [],
   });
 
-  function convert() {
+  const convert = () => {
     return ldtkToTileMap(data, { tilesets: new Map([[1, tileset]]) });
-  }
+  };
 
   it('places one tile per gridTiles entry', () => {
     const layer = convert().levels[0]!.layers[0]!;
@@ -1256,7 +1256,7 @@ describe('ldtkToTileMap — entity id assignment across layers and levels', () =
 
 // ── Local builders for the multi-level id fixtures ──────────────────────────────
 
-function makeEntity(identifier: string): LdtkEntityInstance {
+const makeEntity = (identifier: string): LdtkEntityInstance => {
   return {
     __identifier: identifier,
     __type: identifier,
@@ -1268,7 +1268,7 @@ function makeEntity(identifier: string): LdtkEntityInstance {
     defUid: 0,
     fieldInstances: [],
   };
-}
+};
 
 // ── Coverage-closing edge cases ─────────────────────────────────────────────
 
@@ -1502,7 +1502,7 @@ describe('ldtkToTileMap — unrecognised field types (exhaustiveness guard)', ()
   });
 });
 
-function makeEntityLevel(identifier: string, uid: number): LdtkLevel {
+const makeEntityLevel = (identifier: string, uid: number): LdtkLevel => {
   return {
     identifier,
     uid,
@@ -1526,7 +1526,7 @@ function makeEntityLevel(identifier: string, uid: number): LdtkLevel {
       },
     ],
   };
-}
+};
 
 describe('createLdtkIntGridCellSource', () => {
   const collisionDoc = (csv: readonly number[], width: number, height: number): LdtkData => {

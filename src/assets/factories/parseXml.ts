@@ -6,7 +6,7 @@
  * throwing, so the check cannot be skipped.
  * @internal
  */
-export function parseXmlDocument(source: string): Document {
+export const parseXmlDocument = (source: string): Document => {
   const document = new DOMParser().parseFromString(source, 'text/xml');
   const parseError = document.querySelector('parsererror');
 
@@ -15,4 +15,4 @@ export function parseXmlDocument(source: string): Document {
   }
 
   return document;
-}
+};

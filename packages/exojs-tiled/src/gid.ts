@@ -24,6 +24,4 @@ const TILED_GID_MASK = 0x0fffffff;
  * value is first coerced to an unsigned 32-bit integer via `>>> 0`.
  * @internal
  */
-export function maskTiledGid(raw: number): number {
-  return (raw >>> 0) & TILED_GID_MASK;
-}
+export const maskTiledGid = (raw: number): number => (raw >>> 0) & TILED_GID_MASK;

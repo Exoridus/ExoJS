@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { MapLevel } from '../src/MapWorld';
 import { MapLevelSide, MapWorld } from '../src/MapWorld';
 
-function level(id: string, x: number, y: number, overrides: Partial<MapLevel> = {}): MapLevel {
+const level = (id: string, x: number, y: number, overrides: Partial<MapLevel> = {}): MapLevel => {
   return {
     id,
     name: id.toUpperCase(),
@@ -14,7 +14,7 @@ function level(id: string, x: number, y: number, overrides: Partial<MapLevel> = 
     properties: {},
     ...overrides,
   };
-}
+};
 
 describe('MapWorld', () => {
   it('rejects duplicate level ids', () => {

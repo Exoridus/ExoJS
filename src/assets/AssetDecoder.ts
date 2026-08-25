@@ -44,9 +44,7 @@ const CONTAINER_NAMESPACE = 'exoa';
 const containerLayout = SingleEntryLayout.version<ArrayBuffer>(1);
 
 /** The shape an identity hook sees. Options are omitted entirely when the request carried none. */
-function toRequest(source: string, options: unknown): AssetRequest<unknown> {
-  return options === undefined || options === null ? { source } : { source, options };
-}
+const toRequest = (source: string, options: unknown): AssetRequest<unknown> => (options === undefined || options === null ? { source } : { source, options });
 
 /**
  * Turns a canonical request into a built resource: URL resolution, acquisition

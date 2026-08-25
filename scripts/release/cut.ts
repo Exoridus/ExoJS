@@ -54,49 +54,49 @@ const die = (msg: string): never => {
   process.exit(1);
 };
 
-function parseVersionArg(argv: string[]): string {
+const parseVersionArg = (argv: string[]): string => {
   const idx = argv.indexOf('--version');
   const version = idx !== -1 ? argv[idx + 1] : undefined;
   if (!version || !/^\d+\.\d+\.\d+$/.test(version)) {
     die('Missing or invalid --version. Usage: pnpm release:cut --version 0.15.0');
   }
   return version;
-}
+};
 
-function readPackageJson(absDir: string): Record<string, unknown> {
+const readPackageJson = (absDir: string): Record<string, unknown> => {
   const path = resolve(absDir, 'package.json');
   return JSON.parse(readFileSync(path, 'utf8')) as Record<string, unknown>;
-}
+};
 
-function writePackageJson(absDir: string, pkg: Record<string, unknown>): void {
+const writePackageJson = (absDir: string, pkg: Record<string, unknown>): void => {
   const path = resolve(absDir, 'package.json');
   writeFileSync(path, `${JSON.stringify(pkg, null, 2)}\n`, 'utf8');
-}
+};
 
-function run(cmd: string, opts: { cwd?: string } = {}): void {
+const run = (cmd: string, opts: { cwd?: string } = {}): void => {
   execSync(cmd, { stdio: 'inherit', cwd: opts.cwd ?? repoRoot });
-}
+};
 
 // ── Pre-flight checks ──────────────────────────────────────────────────────
 
-function assertCleanTree(): void {
+const assertCleanTree = (): void => {
   try {
     execSync('git diff-index --quiet HEAD --', { stdio: 'pipe', cwd: repoRoot });
   } catch {
     die('Working tree is dirty. Commit or stash changes before cutting a release.');
   }
-}
+};
 
-function assertChangelogSection(version: string): void {
+const assertChangelogSection = (version: string): void => {
   const changelog = readFileSync(resolve(repoRoot, 'CHANGELOG.md'), 'utf8');
   const escapedVersion = version.replace(/\./g, '\\.');
   const pattern = new RegExp(`^## \\[${escapedVersion}\\] - \\d{4}-\\d{2}-\\d{2}`, 'm');
   if (!pattern.test(changelog)) {
     die(`CHANGELOG.md does not have a dated section for [${version}].\n` + `Add "## [${version}] - YYYY-MM-DD" with release notes before cutting.`);
   }
-}
+};
 
-function assertTagAbsent(version: string): void {
+const assertTagAbsent = (version: string): void => {
   const tag = `v${version}`;
   try {
     execSync(`git rev-parse --verify refs/tags/${tag}`, { stdio: 'pipe', cwd: repoRoot });
@@ -104,7 +104,7 @@ function assertTagAbsent(version: string): void {
   } catch {
     // tag absent - good
   }
-}
+};
 
 /**
  * The published parity matrix must describe the commit being released - it is
@@ -117,7 +117,7 @@ function assertTagAbsent(version: string): void {
  * Deliberately not a CI browser lane: the run is bound to the moment the claim
  * gets published, not to every push.
  */
-function assertEvidenceFresh(doc: EvidenceDocument): void {
+const assertEvidenceFresh = (doc: EvidenceDocument): void => {
   const head = execSync('git rev-parse --short HEAD', { encoding: 'utf8', cwd: repoRoot }).trim();
   const stale = staleEvidenceReasons(doc, head);
 
@@ -131,11 +131,11 @@ function assertEvidenceFresh(doc: EvidenceDocument): void {
         `  pnpm test:parity:firefox`,
     );
   }
-}
+};
 
 // ── Bump ───────────────────────────────────────────────────────────────────
 
-function bumpPackages(version: string): boolean {
+const bumpPackages = (version: string): boolean => {
   const peerRange = `${version.split('.').slice(0, 2).join('.')}.x`;
   let anyChanged = false;
 
@@ -168,7 +168,7 @@ function bumpPackages(version: string): boolean {
   }
 
   return anyChanged;
-}
+};
 
 // ── Main ───────────────────────────────────────────────────────────────────
 

@@ -32,13 +32,13 @@ export const pointerSlotSize = 16;
  * gamepad category pass through unchanged, so callers can map a mixed binding
  * list without inspecting each entry.
  */
-export function resolveGamepadSlotChannel(channel: number, slot: 0 | 1 | 2 | 3): number {
+export const resolveGamepadSlotChannel = (channel: number, slot: 0 | 1 | 2 | 3): number => {
   if (channel >= ChannelOffset.Gamepads && channel < ChannelOffset.Gamepads + ChannelSize.Category) {
     return ChannelOffset.Gamepads + slot * ChannelSize.Gamepad + (channel ^ ChannelOffset.Gamepads);
   }
 
   return channel;
-}
+};
 
 /**
  * Undo {@link resolveGamepadSlotChannel}: the slot-0 channel a rebased gamepad
@@ -48,13 +48,13 @@ export function resolveGamepadSlotChannel(channel: number, slot: 0 | 1 | 2 | 3):
  * Serialization and conflict reporting both need this - a binding names a
  * control, never the runtime pad slot it happens to be read from.
  */
-export function slotZeroGamepadChannel(channel: number): number {
+export const slotZeroGamepadChannel = (channel: number): number => {
   if (channel >= ChannelOffset.Gamepads && channel < ChannelOffset.Gamepads + ChannelSize.Category) {
     return ChannelOffset.Gamepads + ((channel - ChannelOffset.Gamepads) % ChannelSize.Gamepad);
   }
 
   return channel;
-}
+};
 
 /**
  * Channel indices for the buttons of the primary pointer (slot 0), named by

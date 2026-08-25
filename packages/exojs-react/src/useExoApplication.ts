@@ -26,9 +26,7 @@ export interface UseExoApplicationResult {
 }
 
 /** Stable string key for the colour so the sync effect can depend on its value. */
-function colorKey(color: Color | undefined): string | undefined {
-  return color === undefined ? undefined : `${color.r},${color.g},${color.b},${color.a}`;
-}
+const colorKey = (color: Color | undefined): string | undefined => (color === undefined ? undefined : `${color.r},${color.g},${color.b},${color.a}`);
 
 /**
  * Creates and owns an ExoJS {@link Application}, binding it to a `<canvas>` you
@@ -69,11 +67,11 @@ function colorKey(color: Color | undefined): string | undefined {
  *   init/scene-load failures) while an Application exists. Re-subscribed
  *   automatically whenever the Application is (re)created.
  */
-export function useExoApplication(
+export const useExoApplication = (
   options?: ExoApplicationOptions,
   onReady?: (app: Application) => void,
   onError?: (error: unknown) => void,
-): UseExoApplicationResult {
+): UseExoApplicationResult => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [app, setApp] = useState<Application | null>(null);
 
@@ -161,4 +159,4 @@ export function useExoApplication(
   }, [app, clearKey]);
 
   return { app, canvasRef };
-}
+};

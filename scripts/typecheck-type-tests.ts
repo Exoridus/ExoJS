@@ -93,17 +93,17 @@ const PROFILES: readonly Profile[] = [
   },
 ];
 
-function fail(message: string): never {
+const fail = (message: string): never => {
   console.error(message);
   process.exit(1);
-}
+};
 
 /**
  * Resolves a profile the same way `tsc -p` resolves a file on disk: the config
  * is parsed against the repository root, so its `extends` and every relative
  * path in it mean what they would mean in a root tsconfig.
  */
-function parseProfile(profile: Profile): ts.ParsedCommandLine {
+const parseProfile = (profile: Profile): ts.ParsedCommandLine => {
   const parsed = ts.parseJsonConfigFileContent(profile.config, ts.sys, REPO_ROOT, undefined, resolve(REPO_ROOT, `tsconfig.type-tests-${profile.name}.json`));
 
   if (parsed.errors.length > 0) {
@@ -111,7 +111,7 @@ function parseProfile(profile: Profile): ts.ParsedCommandLine {
   }
 
   return parsed;
-}
+};
 
 let failed = false;
 

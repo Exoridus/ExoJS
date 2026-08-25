@@ -233,16 +233,14 @@ export class MapObjectSpawner<Context = void, Result extends Destroyable = Scene
   }
 }
 
-function defaultIdentify(object: MapObjectDescriptor): string | null {
-  return object.kind;
-}
+const defaultIdentify = (object: MapObjectDescriptor): string | null => object.kind;
 
-async function runFactory<Context, Result extends Destroyable>(
+const runFactory = async <Context, Result extends Destroyable>(
   factory: MapObjectFactory<Context, Result>,
   object: MapObjectDescriptor,
   context: Context,
   signal: AbortSignal,
-): Promise<Result | null> {
+): Promise<Result | null> => {
   try {
     return await factory(object, context, signal);
   } catch (error) {
@@ -254,19 +252,19 @@ async function runFactory<Context, Result extends Destroyable>(
       { cause: error },
     );
   }
-}
+};
 
-function throwIfAborted(signal: AbortSignal): void {
+const throwIfAborted = (signal: AbortSignal): void => {
   if (signal.aborted) {
     throw new DOMException('Map object spawn was cancelled.', 'AbortError');
   }
-}
+};
 
 // One shared never-aborting signal: `spawn` without a signal is the common
 // case, and a fresh AbortController per spawn would allocate for nothing.
 let sharedNeverAborts: AbortSignal | undefined;
 
-function neverAborts(): AbortSignal {
+const neverAborts = (): AbortSignal => {
   sharedNeverAborts ??= new AbortController().signal;
   return sharedNeverAborts;
-}
+};

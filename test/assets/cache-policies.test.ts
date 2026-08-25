@@ -32,7 +32,7 @@ interface Harness {
   seed(value: string): Promise<void>;
 }
 
-function harness(policy: CachePolicy, fetchImpl: () => Promise<string> = () => Promise.resolve('from-network')): Harness {
+const harness = (policy: CachePolicy, fetchImpl: () => Promise<string> = () => Promise.resolve('from-network')): Harness => {
   const store = createCacheStoreDouble();
   const reported: AssetCacheError[] = [];
   const cache = new AssetCache({ policy, stores: store });
@@ -52,7 +52,7 @@ function harness(policy: CachePolicy, fetchImpl: () => Promise<string> = () => P
         ...overrides,
       }),
   };
-}
+};
 
 describe('CacheFirstPolicy', () => {
   test('serves a hit without touching the network', async () => {

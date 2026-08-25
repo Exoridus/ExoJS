@@ -6,7 +6,7 @@ import type { ChunkPayload, ChunkSource } from '../src/ChunkSource';
 import { TileLayer } from '../src/TileLayer';
 import { TileSet } from '../src/TileSet';
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return {
     width: 512,
     height: 512,
@@ -15,9 +15,9 @@ function fakeTexture(): Texture {
     destroy: vi.fn(),
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function makeTileset(): TileSet {
+const makeTileset = (): TileSet => {
   return new TileSet({
     name: 'tiles',
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
@@ -25,7 +25,7 @@ function makeTileset(): TileSet {
     tileHeight: 32,
     tileCount: 16,
   });
-}
+};
 
 describe('ChunkPayload / ChunkSource', () => {
   it("ChunkPayload is structurally compatible with _adoptChunk's existing usage", () => {

@@ -22,7 +22,7 @@ import { TILE_TRANSFORM_IDENTITY } from '../src/types';
  * backend - see the browser suites for the full retained-replay pixel proof.
  */
 
-function fakeTexture(width = 512, height = 512): Texture {
+const fakeTexture = (width = 512, height = 512): Texture => {
   return {
     width,
     height,
@@ -32,9 +32,9 @@ function fakeTexture(width = 512, height = 512): Texture {
     destroy: vi.fn(),
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function makeTileset(name = 'tiles'): TileSet {
+const makeTileset = (name = 'tiles'): TileSet => {
   return new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
@@ -42,12 +42,12 @@ function makeTileset(name = 'tiles'): TileSet {
     tileHeight: 32,
     tileCount: 16,
   });
-}
+};
 
 /** Read the internal aggregate content revision the engine keys retained captures on. */
-function contentRevisionOf(node: TileChunkNode): number {
+const contentRevisionOf = (node: TileChunkNode): number => {
   return (node as unknown as { _contentRevision: number })._contentRevision;
-}
+};
 
 describe('TileChunk mutation -> TileChunkNode content-dirty wiring', () => {
   it('setTileAt on an existing chunk bumps the owning TileChunkNode content revision', () => {

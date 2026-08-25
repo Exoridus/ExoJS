@@ -82,11 +82,11 @@ const defaultRequestOptions: RequestInit = {
 
 const uniqueRequests = new Map<string, FetchRequest>();
 
-export function createRequest(url: string): FetchRequest {
+export const createRequest = (url: string): FetchRequest => {
   return new FetchRequest(url, defaultRequestOptions);
-}
+};
 
-export function createUniqueRequest(url: string): FetchRequest {
+export const createUniqueRequest = (url: string): FetchRequest => {
   const existing = uniqueRequests.get(url);
 
   if (existing) {
@@ -97,4 +97,4 @@ export function createUniqueRequest(url: string): FetchRequest {
   uniqueRequests.set(url, request);
 
   return request;
-}
+};

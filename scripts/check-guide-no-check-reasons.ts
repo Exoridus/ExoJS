@@ -72,12 +72,12 @@ const CHECKED_LANGS = new Set(['ts', 'tsx', 'typescript', 'js', 'javascript']);
 // and ```ts no-check: pseudo-code``` both count; a bare ```ts no-check``` does not.
 const NO_CHECK_REASON_RE = /\bno-check\b\s*(?:--|:|—)?\s*(.*)$/;
 
-function fail(message: string): never {
+const fail = (message: string): never => {
   console.error(message);
   process.exit(1);
-}
+};
 
-function walkFiles(dir: string, predicate: (name: string) => boolean): string[] {
+const walkFiles = (dir: string, predicate: (name: string) => boolean): string[] => {
   const results: string[] = [];
 
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -91,7 +91,7 @@ function walkFiles(dir: string, predicate: (name: string) => boolean): string[] 
   }
 
   return results;
-}
+};
 
 interface NoCheckBlock {
   readonly file: string;
@@ -118,7 +118,7 @@ interface InfoStringProblem {
  * `no-check` fence is the natural place to reach for backticks, so the rule
  * lives beside the gate that asks for those reasons.
  */
-function scanInfoStrings(files: readonly string[]): InfoStringProblem[] {
+const scanInfoStrings = (files: readonly string[]): InfoStringProblem[] => {
   const problems: InfoStringProblem[] = [];
 
   for (const file of files) {
@@ -136,12 +136,12 @@ function scanInfoStrings(files: readonly string[]): InfoStringProblem[] {
   }
 
   return problems;
-}
+};
 
 const guideFiles = walkFiles(GUIDE_DIR, name => name.endsWith('.mdx') || name.endsWith('.md'));
 
 /** Every `no-check` fenced ts/tsx/js/javascript block in the guide tree, with whether its meta carries a reason. */
-function scanGuide(): NoCheckBlock[] {
+const scanGuide = (): NoCheckBlock[] => {
   const files = guideFiles;
   const blocks: NoCheckBlock[] = [];
 
@@ -159,15 +159,15 @@ function scanGuide(): NoCheckBlock[] {
   }
 
   return blocks;
-}
+};
 
-function formatRows(deltas: BaselineDiff['regressions']): string {
+const formatRows = (deltas: BaselineDiff['regressions']): string => {
   const width = deltas.reduce((max, d) => Math.max(max, d.file.length), 0);
 
   return deltas.map(d => `    ${d.file.padEnd(width)}  ${d.baseline} -> ${d.actual}  (${d.actual > d.baseline ? '+' : ''}${d.actual - d.baseline})`).join('\n');
-}
+};
 
-function formatFailure(diff: BaselineDiff): string {
+const formatFailure = (diff: BaselineDiff): string => {
   const sections: string[] = [];
 
   if (diff.regressions.length > 0) {
@@ -207,7 +207,7 @@ function formatFailure(diff: BaselineDiff): string {
   }
 
   return sections.join('\n\n');
-}
+};
 
 const infoStringProblems = scanInfoStrings(guideFiles);
 

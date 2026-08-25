@@ -26,7 +26,7 @@ import {
 const GUIDE_DIR = join(process.cwd(), 'site', 'src', 'content', 'guide');
 const API_DIR = join(process.cwd(), 'site', 'src', 'content', 'api');
 
-function walkMdx(dir: string): string[] {
+const walkMdx = (dir: string): string[] => {
   const out: string[] = [];
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
@@ -34,10 +34,10 @@ function walkMdx(dir: string): string[] {
     else if (full.endsWith('.mdx') || full.endsWith('.md')) out.push(full);
   }
   return out;
-}
+};
 
 /** Minimal frontmatter reader for the controlled `title` / `description` scalars. */
-function readFrontmatter(file: string): { title: string; description: string } {
+const readFrontmatter = (file: string): { title: string; description: string } => {
   const raw = readFileSync(file, 'utf8');
   const match = /^---\n([\s\S]*?)\n---/.exec(raw);
   const block = match?.[1] ?? '';
@@ -50,7 +50,7 @@ function readFrontmatter(file: string): { title: string; description: string } {
       .trim();
   };
   return { title: scalar('title'), description: scalar('description') };
-}
+};
 
 const exampleExists = (ref: string): boolean => {
   const slash = ref.indexOf('/');

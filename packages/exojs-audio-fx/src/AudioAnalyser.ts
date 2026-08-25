@@ -533,7 +533,7 @@ interface LogBandRange {
   readonly endBin: number;
 }
 
-function buildLogRanges(bandCount: number, fMin: number, fMax: number, fftSize: number, sampleRate: number): LogBandRange[] {
+const buildLogRanges = (bandCount: number, fMin: number, fMax: number, fftSize: number, sampleRate: number): LogBandRange[] => {
   const binCount = fftSize >> 1;
   const nyquist = sampleRate / 2;
   const logMin = Math.log(fMin);
@@ -549,9 +549,9 @@ function buildLogRanges(bandCount: number, fMin: number, fMax: number, fftSize: 
   }
 
   return ranges;
-}
+};
 
-function applyFilterbank(spectrum: Uint8Array | Float32Array, bands: MelBand[], out: Uint8Array | Float32Array): void {
+const applyFilterbank = (spectrum: Uint8Array | Float32Array, bands: MelBand[], out: Uint8Array | Float32Array): void => {
   for (let b = 0; b < bands.length; b++) {
     const { startBin, weights } = bands[b]!;
     let sum = 0;
@@ -560,9 +560,9 @@ function applyFilterbank(spectrum: Uint8Array | Float32Array, bands: MelBand[], 
     }
     out[b] = sum;
   }
-}
+};
 
-function applyLogRanges(spectrum: Uint8Array | Float32Array, ranges: LogBandRange[], out: Uint8Array | Float32Array): void {
+const applyLogRanges = (spectrum: Uint8Array | Float32Array, ranges: LogBandRange[], out: Uint8Array | Float32Array): void => {
   for (let b = 0; b < ranges.length; b++) {
     const { startBin, endBin } = ranges[b]!;
     let sum = 0;
@@ -572,4 +572,4 @@ function applyLogRanges(spectrum: Uint8Array | Float32Array, ranges: LogBandRang
     }
     out[b] = sum / count;
   }
-}
+};

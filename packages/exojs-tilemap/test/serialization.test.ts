@@ -8,17 +8,17 @@ import { TileMapNode } from '../src/TileMapNode';
 import { tileMapNodeSerializer } from '../src/tilemapSerializers';
 
 /** Minimal Loader stand-in implementing the two methods the serialization context uses. */
-function fakeLoader(map: TileMap, source: string): Loader {
+const fakeLoader = (map: TileMap, source: string): Loader => {
   return {
     keyFor: (resource: object) => (resource === map ? { type: TileMap, source } : null),
     _peekResource: (type: Loadable, source_: string) => (type === TileMap && source_ === source ? map : null),
   } as unknown as Loader;
-}
+};
 
 /** Wrap a hand-written node descriptor in the versioned document frame `fromJSON` expects. */
-function prefabDocument(root: SerializedNode) {
+const prefabDocument = (root: SerializedNode) => {
   return { version: SERIALIZATION_VERSION, root };
-}
+};
 
 // Register the serializer into the default registry, exactly as the extension's
 // `serializers` binding does at Application construction.

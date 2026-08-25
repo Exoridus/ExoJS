@@ -53,10 +53,19 @@ export const typeAwareCorrectnessRules = {
   '@typescript-eslint/use-unknown-in-catch-callback-variable': 'error',
 
   // ── Function style ───────────────────────────────────────────────────────
-  // Callbacks and function values are arrows. Function declarations stay where
-  // they earn it - hoisting, recursion, generators, overloads - and class
-  // methods stay methods: turning one into an arrow field moves it off the
-  // prototype, allocates it per instance and breaks `super`.
+  // Every function value is an expression: callbacks are arrows, and a module's
+  // own functions are constants rather than declarations, so a name is bound
+  // where it is written instead of being hoisted to the top of the module.
+  //
+  // Class methods stay methods - turning one into an arrow field moves it off
+  // the prototype, allocates it per instance and breaks `super`. TypeScript
+  // overload sets are exempt from `func-style` on their own; a generator has no
+  // arrow form and takes `const g = function* () {}`.
+  //
+  // An assertion or `never` signature is only honoured on a function
+  // declaration or on a constant carrying an explicit type annotation, so the
+  // few guards in the tree name their signature (see `core/dev.ts`).
+  'func-style': ['error', 'expression'],
   'prefer-arrow-callback': 'error',
   'arrow-body-style': ['error', 'as-needed'],
 

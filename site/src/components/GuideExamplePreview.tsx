@@ -17,7 +17,7 @@ export interface GuideExamplePreviewProps {
   title: string;
 }
 
-export function GuideExamplePreview({ capabilities = EMPTY_CAPABILITIES, chapter, slug, sourceCode, title }: GuideExamplePreviewProps): JSX.Element {
+export const GuideExamplePreview = ({ capabilities = EMPTY_CAPABILITIES, chapter, slug, sourceCode, title }: GuideExamplePreviewProps): JSX.Element => {
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
@@ -61,9 +61,9 @@ export function GuideExamplePreview({ capabilities = EMPTY_CAPABILITIES, chapter
       </div>
     </div>
   );
-}
+};
 
-function parseCapabilities(value: Capability[] | string): Capability[] {
+const parseCapabilities = (value: Capability[] | string): Capability[] => {
   if (Array.isArray(value)) return value;
   try {
     const raw = JSON.parse(value) as unknown;
@@ -71,4 +71,4 @@ function parseCapabilities(value: Capability[] | string): Capability[] {
   } catch {
     return [];
   }
-}
+};

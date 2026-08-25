@@ -14,7 +14,7 @@
  * @param vertices flat (x, y) pairs
  * @returns triangle index list (length is multiple of 3)
  */
-export function triangulate(vertices: ArrayLike<number>): Uint32Array {
+export const triangulate = (vertices: ArrayLike<number>): Uint32Array => {
   const n = vertices.length >> 1;
 
   if (n < 3) {
@@ -131,10 +131,10 @@ export function triangulate(vertices: ArrayLike<number>): Uint32Array {
   }
 
   return out.subarray(0, outIdx);
-}
+};
 
 /** Shoelace signed area. Positive = CCW (mathematical orientation), negative = CW. */
-function signedArea(vertices: ArrayLike<number>): number {
+const signedArea = (vertices: ArrayLike<number>): number => {
   const n = vertices.length >> 1;
   let area = 0;
 
@@ -150,21 +150,19 @@ function signedArea(vertices: ArrayLike<number>): number {
   }
 
   return area; // Positive = CCW, negative = CW.
-}
+};
 
 /**
  * Returns true if the triangle (a, b, c) has a counter-clockwise (CCW) winding.
  * Uses the cross product of (b-a) × (c-a); positive = CCW.
  */
-function isCcwTriangle(ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean {
-  return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax) > 0;
-}
+const isCcwTriangle = (ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean => (bx - ax) * (cy - ay) - (by - ay) * (cx - ax) > 0;
 
 /**
  * Returns true if point (px, py) lies strictly inside triangle (a, b, c).
  * Uses sign-of-cross-products. Boundary points (including corners) return false.
  */
-function pointInTriangle(px: number, py: number, ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean {
+const pointInTriangle = (px: number, py: number, ax: number, ay: number, bx: number, by: number, cx: number, cy: number): boolean => {
   const d1 = (px - bx) * (ay - by) - (ax - bx) * (py - by);
   const d2 = (px - cx) * (by - cy) - (bx - cx) * (py - cy);
   const d3 = (px - ax) * (cy - ay) - (cx - ax) * (py - ay);
@@ -174,13 +172,13 @@ function pointInTriangle(px: number, py: number, ax: number, ay: number, bx: num
 
   // Strictly inside: all same sign and none are exactly zero (exclude boundary).
   return !(hasNeg && hasPos) && d1 !== 0 && d2 !== 0 && d3 !== 0;
-}
+};
 
 /**
  * Returns true if point (px, py) lies on the open segment (a, b) - its endpoints
  * excluded.
  */
-function pointOnOpenSegment(px: number, py: number, ax: number, ay: number, bx: number, by: number): boolean {
+const pointOnOpenSegment = (px: number, py: number, ax: number, ay: number, bx: number, by: number): boolean => {
   if ((px - ax) * (by - ay) - (py - ay) * (bx - ax) !== 0) {
     return false;
   }
@@ -189,14 +187,21 @@ function pointOnOpenSegment(px: number, py: number, ax: number, ay: number, bx: 
   const withinY = py > Math.min(ay, by) && py < Math.max(ay, by);
 
   return withinX || withinY;
-}
+};
 
 /**
  * Returns true if vertex v is an ear: the triangle (previousVertexIndex, v, nextVertexIndex) contains
  * no other polygon vertex strictly inside it, and no other vertex sits on the
  * diagonal the clip would introduce.
  */
-function isEar(vertices: ArrayLike<number>, _prev: Uint32Array, next: Uint32Array, previousVertexIndex: number, v: number, nextVertexIndex: number): boolean {
+const isEar = (
+  vertices: ArrayLike<number>,
+  _prev: Uint32Array,
+  next: Uint32Array,
+  previousVertexIndex: number,
+  v: number,
+  nextVertexIndex: number,
+): boolean => {
   // The three indices are valid node indices; vertices holds 2n entries.
   const ax = vertices[previousVertexIndex * 2]!;
   const ay = vertices[previousVertexIndex * 2 + 1]!;
@@ -229,4 +234,4 @@ function isEar(vertices: ArrayLike<number>, _prev: Uint32Array, next: Uint32Arra
   }
 
   return true;
-}
+};

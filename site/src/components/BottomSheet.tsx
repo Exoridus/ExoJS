@@ -26,7 +26,7 @@ export interface BottomSheetProps {
   onOpenChange(open: boolean): void;
 }
 
-export function BottomSheet({ children, open, title, opener, onOpenChange }: BottomSheetProps): JSX.Element {
+export const BottomSheet = ({ children, open, title, opener, onOpenChange }: BottomSheetProps): JSX.Element => {
   const titleId = useId();
   const sheetRef = useRef<HTMLElement | null>(null);
   // Portal target only exists in the browser; render nothing during SSR.
@@ -130,11 +130,11 @@ export function BottomSheet({ children, open, title, opener, onOpenChange }: Bot
     </div>,
     document.body,
   );
-}
+};
 
-function getFocusable(root: HTMLElement | null): HTMLElement[] {
+const getFocusable = (root: HTMLElement | null): HTMLElement[] => {
   if (!root) return [];
   return Array.from(root.querySelectorAll(FOCUSABLE_SELECTOR)).filter(
     (node): node is HTMLElement => node instanceof HTMLElement && !node.hasAttribute('hidden') && !node.hasAttribute('inert'),
   );
-}
+};

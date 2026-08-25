@@ -11,7 +11,7 @@ import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── Test helpers ──────────────────────────────────────────────────────────
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return {
     destroyed: false,
     destroy: () => {},
@@ -20,14 +20,14 @@ function fakeTexture(): Texture {
     uid: 0,
     width: 512,
   } as unknown as Texture;
-}
+};
 
-function fakeRegion(): TextureRegion {
+const fakeRegion = (): TextureRegion => {
   return new TextureRegion(fakeTexture(), { height: 512, width: 512, x: 0, y: 0 });
-}
+};
 
 /** A tile-local collision shape, defaulting to a full 16×16 tile rectangle. */
-function shape(overrides: Partial<TileMapObject> = {}): TileMapObject {
+const shape = (overrides: Partial<TileMapObject> = {}): TileMapObject => {
   return {
     kind: ObjectKind.Rectangle,
     id: 1,
@@ -42,7 +42,7 @@ function shape(overrides: Partial<TileMapObject> = {}): TileMapObject {
     properties: {},
     ...overrides,
   } as TileMapObject;
-}
+};
 
 interface TileSetSetup {
   readonly tileWidth?: number;
@@ -51,7 +51,7 @@ interface TileSetSetup {
   readonly offsetY?: number;
 }
 
-function makeTileset(collisionByTile: Record<number, readonly TileMapObject[]>, setup: TileSetSetup = {}): TileSet {
+const makeTileset = (collisionByTile: Record<number, readonly TileMapObject[]>, setup: TileSetSetup = {}): TileSet => {
   const tileset = new TileSet({
     name: 'ts',
     texture: fakeRegion(),
@@ -69,14 +69,14 @@ function makeTileset(collisionByTile: Record<number, readonly TileMapObject[]>, 
   tileset._setDefinitions(definitions);
 
   return tileset;
-}
+};
 
 interface LayerSetup {
   readonly offsetX?: number;
   readonly offsetY?: number;
 }
 
-function makeLayer(tileset: TileSet, setup: LayerSetup = {}): TileLayer {
+const makeLayer = (tileset: TileSet, setup: LayerSetup = {}): TileLayer => {
   return new TileLayer({
     id: 1,
     name: 'ground',
@@ -88,11 +88,11 @@ function makeLayer(tileset: TileSet, setup: LayerSetup = {}): TileLayer {
     offsetX: setup.offsetX ?? 0,
     offsetY: setup.offsetY ?? 0,
   });
-}
+};
 
-function place(layer: TileLayer, tileset: TileSet, tx: number, ty: number, localTileId = 0, transform: TileTransform = TILE_TRANSFORM_IDENTITY): void {
+const place = (layer: TileLayer, tileset: TileSet, tx: number, ty: number, localTileId = 0, transform: TileTransform = TILE_TRANSFORM_IDENTITY): void => {
   layer.setTileAt(tx, ty, { tileset, localTileId, transform });
-}
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 

@@ -73,11 +73,11 @@ const infiniteRepeat = -1;
  * setter, and {@link AnimatedSprite.play}'s `options.repeat` so every entry
  * point rejects the same invalid values consistently.
  */
-function assertValidRepeat(context: string, repeat: number): void {
+const assertValidRepeat = (context: string, repeat: number): void => {
   if (!Number.isInteger(repeat) || (repeat !== infiniteRepeat && repeat < 1)) {
     throw new Error(`AnimatedSprite ${context} has an invalid repeat value (${repeat}). Must be ${infiniteRepeat} (infinite) or a positive integer.`);
   }
-}
+};
 
 /**
  * A {@link Sprite} that advances through a sequence of texture-frame

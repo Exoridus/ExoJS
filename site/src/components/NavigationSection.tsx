@@ -11,7 +11,7 @@ export interface NavigationSectionProps {
   onToggle(): void;
 }
 
-export function NavigationSection({ children, expanded, headline, onToggle, unavailableCount }: NavigationSectionProps): JSX.Element {
+export const NavigationSection = ({ children, expanded, headline, onToggle, unavailableCount }: NavigationSectionProps): JSX.Element => {
   return (
     <section className={css(styles, 'root')}>
       <button className={css(styles, 'toggle')} type="button" aria-expanded={expanded} onClick={onToggle}>
@@ -28,4 +28,4 @@ export function NavigationSection({ children, expanded, headline, onToggle, unav
       {expanded && <div className={css(styles, 'content')}>{children}</div>}
     </section>
   );
-}
+};

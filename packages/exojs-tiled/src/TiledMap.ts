@@ -335,20 +335,20 @@ export class TiledMap {
  * `-1` when none covers it: the rightmost entry with `firstGid <= baseGid`,
  * relying on `tilesets` being sorted ascending.
  */
-function findTilesetIndexForGid(baseGid: number, tiledTilesets: readonly TiledTileset[]): number {
+const findTilesetIndexForGid = (baseGid: number, tiledTilesets: readonly TiledTileset[]): number => {
   for (let t = tiledTilesets.length - 1; t >= 0; t--) {
     const candidate = tiledTilesets[t];
     if (candidate && baseGid >= candidate.firstGid) return t;
   }
 
   return -1;
-}
+};
 
 /**
  * Resolve a raw (flag-bearing) Tiled GID to a runtime {@link ResolvedTile}, or
  * `null` for an empty cell or a GID no tileset covers.
  */
-function resolveGid(rawGid: number, tiledTilesets: readonly TiledTileset[], indexToRuntime: ReadonlyArray<TileSet | null>): ResolvedTile | null {
+const resolveGid = (rawGid: number, tiledTilesets: readonly TiledTileset[], indexToRuntime: ReadonlyArray<TileSet | null>): ResolvedTile | null => {
   if (rawGid === 0) return null;
   const baseGid = maskTiledGid(rawGid);
   const transform: TileTransform = {
@@ -366,7 +366,7 @@ function resolveGid(rawGid: number, tiledTilesets: readonly TiledTileset[], inde
     localTileId: baseGid - owningTs.firstGid,
     transform,
   };
-}
+};
 
 /**
  * Fill a `TileLayer` from a flat GID array decoded from a Tiled tile layer.
@@ -378,13 +378,13 @@ function resolveGid(rawGid: number, tiledTilesets: readonly TiledTileset[], inde
  *              also supports unbounded layers), so the caller's already-known
  *              Tiled-source width is threaded through explicitly instead.
  */
-function populateTileLayer(
+const populateTileLayer = (
   layer: TileLayer,
   gids: readonly number[],
   tiledTilesets: readonly TiledTileset[],
   indexToRuntime: ReadonlyArray<TileSet | null>,
   width: number,
-): void {
+): void => {
   for (let i = 0; i < gids.length; i++) {
     const gid = gids[i];
     if (gid === undefined) continue;
@@ -392,7 +392,7 @@ function populateTileLayer(
     if (!tile) continue;
     layer.setTileAt(i % width, Math.floor(i / width), tile);
   }
-}
+};
 
 /**
  * Build a {@link ChunkSource} that lazily re-slices a chunked
@@ -408,13 +408,13 @@ function populateTileLayer(
  *         misaligned chunk would otherwise silently corrupt the re-sliced
  *         tile indices instead of failing loudly).
  */
-function buildTiledChunkSource(
+const buildTiledChunkSource = (
   layer: TiledTileLayer,
   runtimeLayer: TileLayer,
   tiledTilesets: readonly TiledTileset[],
   indexToRuntime: ReadonlyArray<TileSet | null>,
   source: string,
-): ChunkSource {
+): ChunkSource => {
   const index = new Map<string, TiledChunkData>();
   let onDiskWidth = 0;
   let onDiskHeight = 0;
@@ -488,16 +488,16 @@ function buildTiledChunkSource(
       return out === null ? null : { width: chunkWidth, height: chunkHeight, tiles: out };
     },
   };
-}
+};
 
 /** Convert a parsed `TiledObjectLayer` into a runtime data-only `ObjectLayer`. */
-function convertObjectLayer(
+const convertObjectLayer = (
   layer: TiledObjectLayer,
   tiledTilesets: readonly TiledTileset[],
   indexToRuntime: ReadonlyArray<TileSet | null>,
   orientation: TiledOrientation,
   group: TiledGroupStyle,
-): ObjectLayer {
+): ObjectLayer => {
   const objects: TileMapObject[] = [];
   for (const object of layer.objects) {
     const converted = convertObject(object, tiledTilesets, indexToRuntime, orientation);
@@ -518,7 +518,7 @@ function convertObjectLayer(
     objects,
     properties: convertProperties(layer.properties),
   });
-}
+};
 
 /**
  * Convert one `TiledObject` to a `TileMapObject`. A tile object whose GID
@@ -532,12 +532,12 @@ function convertObjectLayer(
  * {@link import('@codexo/exojs-tilemap').TileObject} for the resulting
  * convention.
  */
-function convertObject(
+const convertObject = (
   object: TiledObject,
   tiledTilesets: readonly TiledTileset[],
   indexToRuntime: ReadonlyArray<TileSet | null>,
   orientation: TiledOrientation,
-): TileMapObject | null {
+): TileMapObject | null => {
   const base = {
     id: object.id,
     name: object.name,
@@ -590,7 +590,7 @@ function convertObject(
     return { ...base, kind: 'polyline', points: toPoints(object.polyline) };
   }
   return { ...base, kind: 'rectangle' };
-}
+};
 
 const toPoints = (points: ReadonlyArray<{ x: number; y: number }>): ObjectPoint[] => points.map(p => ({ x: p.x, y: p.y }));
 
@@ -603,20 +603,20 @@ const ORIGIN_OFFSET = { x: 0, y: 0 } as const;
  * orientation-dependent default). Falls back to no offset when `gid` belongs
  * to no tileset - such an object is dropped by the caller anyway.
  */
-function tileObjectAnchorOffset(
+const tileObjectAnchorOffset = (
   gid: number,
   width: number,
   height: number,
   tiledTilesets: readonly TiledTileset[],
   orientation: TiledOrientation,
-): { readonly x: number; readonly y: number } {
+): { readonly x: number; readonly y: number } => {
   const owningTs = tiledTilesets[findTilesetIndexForGid(maskTiledGid(gid), tiledTilesets)];
   if (!owningTs) return ORIGIN_OFFSET;
 
   const alignment = resolveTiledObjectAlignment(owningTs.objectAlignment, orientation);
 
   return tiledObjectAnchorOffset(alignment, width, height);
-}
+};
 
 /**
  * The accumulated style of the Tiled group layers enclosing a layer. The runtime
@@ -649,24 +649,22 @@ const rootGroupStyle: TiledGroupStyle = {
  * ANDs, opacity and parallax multiply, offsets add, and tints multiply per
  * colour channel.
  */
-function composeGroupStyle(parent: TiledGroupStyle, group: TiledGroupLayer): TiledGroupStyle {
-  return {
-    visible: parent.visible && group.visible,
-    opacity: parent.opacity * group.opacity,
-    offsetX: parent.offsetX + group.offsetX,
-    offsetY: parent.offsetY + group.offsetY,
-    parallaxX: parent.parallaxX * group.parallaxX,
-    parallaxY: parent.parallaxY * group.parallaxY,
-    tintColor: multiplyTiledTint(parent.tintColor, parseTiledColor(group.tintColor)),
-  };
-}
+const composeGroupStyle = (parent: TiledGroupStyle, group: TiledGroupLayer): TiledGroupStyle => ({
+  visible: parent.visible && group.visible,
+  opacity: parent.opacity * group.opacity,
+  offsetX: parent.offsetX + group.offsetX,
+  offsetY: parent.offsetY + group.offsetY,
+  parallaxX: parent.parallaxX * group.parallaxX,
+  parallaxY: parent.parallaxY * group.parallaxY,
+  tintColor: multiplyTiledTint(parent.tintColor, parseTiledColor(group.tintColor)),
+});
 
 /**
  * Multiply two `0xRRGGBB` tints channel-wise (Tiled's own composition rule).
  * `null` means "no tint" and acts as the identity, so an untinted group leaves
  * its children's tints untouched - and vice versa.
  */
-function multiplyTiledTint(a: number | null, b: number | null): number | null {
+const multiplyTiledTint = (a: number | null, b: number | null): number | null => {
   if (a === null) return b;
   if (b === null) return a;
 
@@ -675,13 +673,13 @@ function multiplyTiledTint(a: number | null, b: number | null): number | null {
   const blue = Math.round(((a & 0xff) * (b & 0xff)) / 255);
 
   return (red << 16) | (green << 8) | blue;
-}
+};
 
 /**
  * Parse a Tiled colour string (`#RRGGBB` or `#AARRGGBB`) into a `0xRRGGBB`
  * integer, dropping any alpha. Returns `null` for an absent or malformed value.
  */
-function parseTiledColor(value: string | undefined): number | null {
+const parseTiledColor = (value: string | undefined): number | null => {
   if (value === undefined || value === '') return null;
   const hex = value.startsWith('#') ? value.slice(1) : value;
   let rrggbb: string;
@@ -694,7 +692,7 @@ function parseTiledColor(value: string | undefined): number | null {
   }
   const parsed = Number.parseInt(rrggbb, 16);
   return Number.isNaN(parsed) ? null : parsed;
-}
+};
 
 /**
  * Build runtime {@link TileDefinition}s from a Tiled tileset's per-tile data,
@@ -703,7 +701,7 @@ function parseTiledColor(value: string | undefined): number | null {
  * frames referencing out-of-range local ids, are skipped so the runtime tileset
  * never receives malformed definitions.
  */
-function buildTileDefinitions(tiles: readonly TiledTileData[], tileCount: number): TileDefinition[] {
+const buildTileDefinitions = (tiles: readonly TiledTileData[], tileCount: number): TileDefinition[] => {
   const defs: TileDefinition[] = [];
   for (const tile of tiles) {
     if (tile.id < 0 || tile.id >= tileCount) continue;
@@ -735,7 +733,7 @@ function buildTileDefinitions(tiles: readonly TiledTileData[], tileCount: number
     });
   }
   return defs;
-}
+};
 
 /**
  * Convert a raw `TiledObjectData` to a runtime `TileMapObject` for use as a
@@ -743,7 +741,7 @@ function buildTileDefinitions(tiles: readonly TiledTileData[], tileCount: number
  * dropped - returns `null`. Does not perform GID resolution; collision shapes
  * in tile objectgroups are almost exclusively plain geometry.
  */
-function convertCollisionObject(obj: TiledObjectData): TileMapObject | null {
+const convertCollisionObject = (obj: TiledObjectData): TileMapObject | null => {
   if (obj.text) return null; // text not representable as a collision shape
   if (obj.gid !== undefined) return null; // tile objects require GID resolution not available here
 
@@ -765,7 +763,7 @@ function convertCollisionObject(obj: TiledObjectData): TileMapObject | null {
   if (obj.polygon) return { ...base, kind: 'polygon', points: toPoints(obj.polygon) };
   if (obj.polyline) return { ...base, kind: 'polyline', points: toPoints(obj.polyline) };
   return { ...base, kind: 'rectangle' };
-}
+};
 
 /**
  * Project Tiled custom properties to the generic flat property bag.
@@ -775,7 +773,7 @@ function convertCollisionObject(obj: TiledObjectData): TileMapObject | null {
  * properties recursively convert their nested member bag into a
  * {@link TileProperties}.
  */
-function convertProperties(properties: readonly TiledPropertyData[]): TileProperties {
+const convertProperties = (properties: readonly TiledPropertyData[]): TileProperties => {
   if (properties.length === 0) return Object.freeze({});
   const out: Record<string, TilePropertyValue> = {};
   for (const property of properties) {
@@ -785,10 +783,10 @@ function convertProperties(properties: readonly TiledPropertyData[]): TileProper
     }
   }
   return Object.freeze(out);
-}
+};
 
 /** Convert one {@link TiledPropertyData} to its canonical {@link TilePropertyValue}. */
-function convertPropertyValue(property: TiledPropertyData): TilePropertyValue | undefined {
+const convertPropertyValue = (property: TiledPropertyData): TilePropertyValue | undefined => {
   switch (property.type) {
     case 'string':
     case 'int':
@@ -812,7 +810,7 @@ function convertPropertyValue(property: TiledPropertyData): TilePropertyValue | 
       throw new Error(`convertProperties: unrecognised Tiled property type "${property.type as string}".`);
     }
   }
-}
+};
 
 /**
  * Reserved key under which a `class`-typed property's Tiled custom-class name
@@ -834,7 +832,7 @@ const tiledClassNameProperty = 'tiledClassName';
  * reserved {@link tiledClassNameProperty} key, applied last so it can never
  * be clobbered by a same-named member.
  */
-function convertClassPropertyValue(value: TiledClassPropertyValueData, propertytype?: string): TileProperties {
+const convertClassPropertyValue = (value: TiledClassPropertyValueData, propertytype?: string): TileProperties => {
   const out: Record<string, TilePropertyValue> = {};
   for (const [name, member] of Object.entries(value)) {
     out[name] = typeof member === 'string' || typeof member === 'number' || typeof member === 'boolean' ? member : convertClassPropertyValue(member);
@@ -843,9 +841,9 @@ function convertClassPropertyValue(value: TiledClassPropertyValueData, propertyt
     out[tiledClassNameProperty] = propertytype;
   }
   return Object.freeze(out);
-}
+};
 
-function sortAndValidateTilesetRanges(tilesets: readonly TiledTileset[], source: string): readonly TiledTileset[] {
+const sortAndValidateTilesetRanges = (tilesets: readonly TiledTileset[], source: string): readonly TiledTileset[] => {
   const sorted = [...tilesets].sort((a, b) => a.firstGid - b.firstGid);
 
   for (let i = 1; i < sorted.length; i++) {
@@ -867,9 +865,9 @@ function sortAndValidateTilesetRanges(tilesets: readonly TiledTileset[], source:
   }
 
   return sorted;
-}
+};
 
-function walkLayers(layers: readonly TiledLayer[], path: string, visit: (layer: TiledLayer, layerPath: string) => void): void {
+const walkLayers = (layers: readonly TiledLayer[], path: string, visit: (layer: TiledLayer, layerPath: string) => void): void => {
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
     if (layer === undefined) continue;
@@ -881,9 +879,9 @@ function walkLayers(layers: readonly TiledLayer[], path: string, visit: (layer: 
       walkLayers(layer.layers, `${layerPath}.layers`, visit);
     }
   }
-}
+};
 
-function checkGidArray(gids: readonly number[], map: TiledMap, source: string, path: string): void {
+const checkGidArray = (gids: readonly number[], map: TiledMap, source: string, path: string): void => {
   for (let i = 0; i < gids.length; i++) {
     const gid = gids[i];
     if (gid === undefined) continue;
@@ -892,9 +890,9 @@ function checkGidArray(gids: readonly number[], map: TiledMap, source: string, p
       throw new TiledFormatError(source, `${path}[${i}]`, `gid ${gid} (masked: ${maskTiledGid(gid)}) is not covered by any tileset`);
     }
   }
-}
+};
 
-function checkGidCoverage(map: TiledMap, source: string): void {
+const checkGidCoverage = (map: TiledMap, source: string): void => {
   walkLayers(map.layers, 'layers', (layer, layerPath) => {
     if (layer instanceof TiledTileLayer) {
       if (layer.data !== undefined) {
@@ -923,4 +921,4 @@ function checkGidCoverage(map: TiledMap, source: string): void {
       }
     }
   });
-}
+};

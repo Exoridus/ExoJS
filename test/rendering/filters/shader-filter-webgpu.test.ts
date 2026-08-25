@@ -52,7 +52,7 @@ interface MockWebGpuEnv {
   restore(): void;
 }
 
-function createMockWebGpuEnv(): MockWebGpuEnv {
+const createMockWebGpuEnv = (): MockWebGpuEnv => {
   const previousBufferUsage = Object.getOwnPropertyDescriptor(globalThis, 'GPUBufferUsage');
   const previousShaderStage = Object.getOwnPropertyDescriptor(globalThis, 'GPUShaderStage');
 
@@ -138,7 +138,7 @@ function createMockWebGpuEnv(): MockWebGpuEnv {
       }
     },
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // WebGPU backend mock
@@ -155,7 +155,7 @@ interface MockWebGpuBackendExtras {
   stats: ReturnType<typeof createRenderStats>;
 }
 
-function makeWebGpuBackend(env: MockWebGpuEnv): RenderBackend & WebGpuBackend & MockWebGpuBackendExtras {
+const makeWebGpuBackend = (env: MockWebGpuEnv): RenderBackend & WebGpuBackend & MockWebGpuBackendExtras => {
   const root = new RenderTarget(320, 200, true);
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
@@ -266,9 +266,9 @@ function makeWebGpuBackend(env: MockWebGpuEnv): RenderBackend & WebGpuBackend & 
   (backend as unknown as { _passCoordinator: WebGpuPassCoordinator })._passCoordinator = new WebGpuPassCoordinator(backend as unknown as WebGpuPassBackend);
 
   return backend;
-}
+};
 
-function makeWebGl2Backend(): RenderBackend {
+const makeWebGl2Backend = (): RenderBackend => {
   const root = new RenderTarget(320, 200, true);
   let currentTarget: RenderTarget = root;
   const stats = createRenderStats();
@@ -339,7 +339,7 @@ function makeWebGl2Backend(): RenderBackend {
       root.destroy();
     },
   } as unknown as RenderBackend;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -373,9 +373,9 @@ fn vertexMain(@location(0) aPosition: vec2<f32>, @location(1) aUv: vec2<f32>) ->
 ${minimalFragSrc}`;
 
 /** The WebGPU pass a filter built on its first attachment, or `null`. */
-function wgslPassOf(filter: ShaderFilter): Record<string, unknown> | null {
+const wgslPassOf = (filter: ShaderFilter): Record<string, unknown> | null => {
   return (filter as unknown as Record<string, Record<string, unknown> | null>)['_wgslPass'] ?? null;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests

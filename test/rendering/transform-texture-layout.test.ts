@@ -31,7 +31,7 @@ const expectedTexel = (row: number, texel: number) => ({
 });
 
 /** Every shader-bearing source file below `directory`, skipping build output. */
-function* walkSources(directory: string): Generator<string> {
+const walkSources = function* (directory: string): Generator<string> {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     const path = join(directory, entry.name);
 
@@ -43,7 +43,7 @@ function* walkSources(directory: string): Generator<string> {
       yield path;
     }
   }
-}
+};
 
 describe('transform texture layout', () => {
   test('a row store far past MAX_TEXTURE_SIZE still fits both texture dimensions', () => {

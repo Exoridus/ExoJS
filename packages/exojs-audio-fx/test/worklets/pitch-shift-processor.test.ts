@@ -22,7 +22,7 @@ interface PitchProcessorLike {
 }
 type PitchProcessorConstructor = new (options: { processorOptions?: Record<string, number> }) => PitchProcessorLike;
 
-function buildProcessorClass(): PitchProcessorConstructor {
+const buildProcessorClass = (): PitchProcessorConstructor => {
   let klass: PitchProcessorConstructor | null = null;
   const g = globalThis as Record<string, unknown>;
   const savedSampleRate = g['sampleRate'];
@@ -39,17 +39,17 @@ function buildProcessorClass(): PitchProcessorConstructor {
   delete g['registerProcessor'];
   if (!klass) throw new Error('registerProcessor was not called — worklet source malformed');
   return klass;
-}
+};
 
 // ─── Signal helpers ─────────────────────────────────────────────────────────
-function makeSine(freq: number, amplitude: number, n: number): Float32Array {
+const makeSine = (freq: number, amplitude: number, n: number): Float32Array => {
   const buf = new Float32Array(n);
   for (let i = 0; i < n; i++) buf[i] = amplitude * Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
   return buf;
-}
+};
 
 /** Single-frequency DFT magnitude (no FFT needed for spot checks). */
-function magnitudeAt(buf: Float32Array, freq: number): number {
+const magnitudeAt = (buf: Float32Array, freq: number): number => {
   let re = 0,
     im = 0;
   const omega = (2 * Math.PI * freq) / SAMPLE_RATE;
@@ -58,16 +58,16 @@ function magnitudeAt(buf: Float32Array, freq: number): number {
     im -= buf[i] * Math.sin(omega * i);
   }
   return (2 * Math.sqrt(re * re + im * im)) / buf.length;
-}
+};
 
-function rms(buf: Float32Array): number {
+const rms = (buf: Float32Array): number => {
   let s = 0;
   for (const v of buf) s += v * v;
   return Math.sqrt(s / buf.length);
-}
+};
 
 /** Dominant frequency via a coarse magnitude sweep + local refine. */
-function dominantFreq(buf: Float32Array, lo = 50, hi = 4000): { freq: number; mag: number } {
+const dominantFreq = (buf: Float32Array, lo = 50, hi = 4000): { freq: number; mag: number } => {
   let bestF = lo,
     bestM = -1;
   for (let f = lo; f <= hi; f += 2) {
@@ -85,9 +85,9 @@ function dominantFreq(buf: Float32Array, lo = 50, hi = 4000): { freq: number; ma
     }
   }
   return { freq: bestF, mag: bestM };
-}
+};
 
-function runWorklet(Processor: PitchProcessorConstructor, input: Float32Array, opts: { pitch: number; grainSize: number }): Float32Array {
+const runWorklet = (Processor: PitchProcessorConstructor, input: Float32Array, opts: { pitch: number; grainSize: number }): Float32Array => {
   const proc = new Processor({ processorOptions: { grainSize: opts.grainSize } });
   const n = input.length;
   const out = new Float32Array(n);
@@ -99,7 +99,7 @@ function runWorklet(Processor: PitchProcessorConstructor, input: Float32Array, o
     out.set(oB, off);
   }
   return out;
-}
+};
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
 describe('PitchShiftProcessor DSP', () => {
@@ -114,7 +114,7 @@ describe('PitchShiftProcessor DSP', () => {
     Processor = buildProcessorClass();
   });
 
-  function measureShift(pitch: number): { freq: number; purity: number; ratioRms: number } {
+  const measureShift = (pitch: number): { freq: number; purity: number; ratioRms: number } => {
     const input = makeSine(INPUT_FREQ, 0.5, TOTAL);
     const out = runWorklet(Processor, input, { pitch, grainSize: GRAIN });
     const meas = out.subarray(WARMUP);
@@ -122,7 +122,7 @@ describe('PitchShiftProcessor DSP', () => {
     const purity = mag / (Math.SQRT2 * (rms(meas) || 1e-9));
     const ratioRms = rms(meas) / rms(input.subarray(WARMUP));
     return { freq, purity, ratioRms };
-  }
+  };
 
   // ── Identity: pitch=1.0 must not change the pitch ──────────────────────────
   it('pitch=1.0 leaves the dominant frequency at the input frequency', () => {

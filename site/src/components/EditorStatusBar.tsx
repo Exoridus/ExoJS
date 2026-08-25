@@ -11,7 +11,7 @@ export interface EditorStatusBarProps {
   viewMode?: 'source' | 'compiled';
 }
 
-export function EditorStatusBar({ column, dirty, language, line, onToggleViewMode, selectionLength, viewMode }: EditorStatusBarProps): JSX.Element {
+export const EditorStatusBar = ({ column, dirty, language, line, onToggleViewMode, selectionLength, viewMode }: EditorStatusBarProps): JSX.Element => {
   return (
     <div className={css(styles, 'root')}>
       <div className={css(styles, 'left')}>
@@ -47,4 +47,4 @@ export function EditorStatusBar({ column, dirty, language, line, onToggleViewMod
       </div>
     </div>
   );
-}
+};

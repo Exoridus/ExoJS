@@ -86,9 +86,7 @@ interface WorkerErrorMessage {
 
 type WorkerResponseMessage = WorkerSuccessMessage | WorkerErrorMessage;
 
-function isWorkerErrorMessage(message: WorkerResponseMessage): message is WorkerErrorMessage {
-  return 'error' in message;
-}
+const isWorkerErrorMessage = (message: WorkerResponseMessage): message is WorkerErrorMessage => 'error' in message;
 
 interface PendingRequest {
   readonly resolve: (payload: ChunkPayload | null) => void;
@@ -125,7 +123,7 @@ interface PendingRequest {
  * your deployment sets one.
  * @advanced
  */
-export function createWorkerSampledChunkSource(layer: TileLayer, options: WorkerSampledChunkSourceOptions): ChunkSource & { destroy(): void } {
+export const createWorkerSampledChunkSource = (layer: TileLayer, options: WorkerSampledChunkSourceOptions): ChunkSource & { destroy(): void } => {
   const mapValueToTile = options.mapValueToTile.bind(options);
 
   const blob = new Blob([options.workerSource], { type: 'application/javascript' });
@@ -141,7 +139,7 @@ export function createWorkerSampledChunkSource(layer: TileLayer, options: Worker
   const pending = new Map<number, PendingRequest>();
   let destroyed = false;
 
-  function composePayload(values: Float64Array, request: PendingRequest): ChunkPayload | null {
+  const composePayload = (values: Float64Array, request: PendingRequest): ChunkPayload | null => {
     const { cx, cy, chunkWidth, chunkHeight } = request;
     const startTx = cx * chunkWidth;
     const startTy = cy * chunkHeight;
@@ -167,7 +165,7 @@ export function createWorkerSampledChunkSource(layer: TileLayer, options: Worker
     }
 
     return out === null ? null : { width: chunkWidth, height: chunkHeight, tiles: out };
-  }
+  };
 
   worker.onmessage = (event: MessageEvent<WorkerResponseMessage>): void => {
     const message = event.data;
@@ -219,4 +217,4 @@ export function createWorkerSampledChunkSource(layer: TileLayer, options: Worker
       worker.terminate();
     },
   };
-}
+};

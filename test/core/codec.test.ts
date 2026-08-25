@@ -4,7 +4,7 @@ import { Codec } from '#core/Codec';
 
 // Helper: gzip/deflate a byte buffer with the native CompressionStream so the
 // decompress round-trip can be asserted without committing binary fixtures.
-async function compress(bytes: Uint8Array, format: 'gzip' | 'deflate'): Promise<Uint8Array> {
+const compress = async (bytes: Uint8Array, format: 'gzip' | 'deflate'): Promise<Uint8Array> => {
   const source = new ReadableStream<BufferSource>({
     start(controller) {
       controller.enqueue(bytes as BufferSource);
@@ -27,7 +27,7 @@ async function compress(bytes: Uint8Array, format: 'gzip' | 'deflate'): Promise<
     offset += chunk.length;
   }
   return out;
-}
+};
 
 describe('Codec.decodeBase64', () => {
   it('decodes a standard base64 string to bytes', () => {

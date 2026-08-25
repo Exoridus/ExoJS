@@ -75,7 +75,7 @@ interface FakeNode {
 }
 
 /** Create a minimal node stub with configurable contains/zIndex/children. */
-function makeNode(
+const makeNode = (
   opts: {
     name?: string;
     visible?: boolean;
@@ -84,7 +84,7 @@ function makeNode(
     containsResult?: boolean;
     children?: FakeNode[];
   } = {},
-): FakeNode {
+): FakeNode => {
   const { visible = true, zIndex = 0, interactive = false, containsResult = false, children = [] } = opts;
 
   return {
@@ -96,7 +96,7 @@ function makeNode(
     children,
     constructor: { name: opts.name ?? 'MockNode' },
   };
-}
+};
 
 const makeApp = (
   opts: {

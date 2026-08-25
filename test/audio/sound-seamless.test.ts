@@ -5,9 +5,9 @@ import { Sound } from '#audio/Sound';
 import { LoadState } from '#core/LoadState';
 import { logger, LogSeverity } from '#core/logging';
 
-function bufferStub(duration = 2): AudioBuffer {
+const bufferStub = (duration = 2): AudioBuffer => {
   return { duration } as AudioBuffer;
-}
+};
 
 describe('Sound seamless surface', () => {
   test('a directly constructed Sound is ready with its buffer', () => {

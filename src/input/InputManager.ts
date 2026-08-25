@@ -50,7 +50,7 @@ const wheelLineHeightPx = 16;
 const wheelPageSizePx = 800;
 
 /** Convert a raw `WheelEvent` delta component to an approximate pixel-equivalent, based on its `deltaMode`. */
-function normalizeWheelDelta(delta: number, deltaMode: number): number {
+const normalizeWheelDelta = (delta: number, deltaMode: number): number => {
   switch (deltaMode) {
     case 1: // WheelEvent.DOM_DELTA_LINE
       return delta * wheelLineHeightPx;
@@ -59,7 +59,7 @@ function normalizeWheelDelta(delta: number, deltaMode: number): number {
     default: // WheelEvent.DOM_DELTA_PIXEL
       return delta;
   }
-}
+};
 
 /**
  * Strategy used by {@link InputManager} when assigning physical gamepads to

@@ -24,7 +24,7 @@ const fakeLoader = {} as Loader;
  * seamless adapter for the cases that need one; `dispose` the per-resource
  * teardown for the cases that assert it.
  */
-function installTypeA(typeRegistry: AssetTypeRegistry, options: { leaf?: unknown; dispose?: (resource: unknown) => void } = {}): void {
+const installTypeA = (typeRegistry: AssetTypeRegistry, options: { leaf?: unknown; dispose?: (resource: unknown) => void } = {}): void => {
   typeRegistry.installAll([
     testAssetType<string, unknown>({
       id: 'typeA',
@@ -34,20 +34,22 @@ function installTypeA(typeRegistry: AssetTypeRegistry, options: { leaf?: unknown
       create: async source => source,
     }),
   ]);
-}
+};
 
 /** Fake cache whose policy resolves to a canned value (or rejects, via mockRejectedValueOnce on .resolve). */
-function createFakeCache(resolveTo: (context: CacheContext<unknown>) => unknown = () => 'resolved'): {
+const createFakeCache = (
+  resolveTo: (context: CacheContext<unknown>) => unknown = () => 'resolved',
+): {
   cache: AssetCache;
   resolve: ReturnType<typeof vi.fn>;
-} {
+} => {
   const resolve = vi.fn(async (context: CacheContext<unknown>) => resolveTo(context));
 
   return { cache: new AssetCache({ policy: { resolve } as unknown as CachePolicy }), resolve };
-}
+};
 
 /** A minimal seamless-handle: a plain object whose identity IS the handle, tracked via a WeakMap-backed state. */
-function createFakeSeamlessAdapter(): SeamlessAdapter<unknown> & { states: WeakMap<object, 'loading' | 'ready' | 'failed'> } {
+const createFakeSeamlessAdapter = (): SeamlessAdapter<unknown> & { states: WeakMap<object, 'loading' | 'ready' | 'failed'> } => {
   const states = new WeakMap<object, 'loading' | 'ready' | 'failed'>();
 
   return {
@@ -63,9 +65,9 @@ function createFakeSeamlessAdapter(): SeamlessAdapter<unknown> & { states: WeakM
     fail: vi.fn((handle: object) => states.set(handle, 'failed')),
     evict: vi.fn((handle: object) => states.set(handle, 'loading')),
   };
-}
+};
 
-function createResidency(overrides: { cache?: AssetCache; concurrency?: number } = {}) {
+const createResidency = (overrides: { cache?: AssetCache; concurrency?: number } = {}) => {
   const typeRegistry = new AssetTypeRegistry();
   const decoder = new AssetDecoder(fakeLoader, typeRegistry, {
     basePath: '',
@@ -103,7 +105,7 @@ function createResidency(overrides: { cache?: AssetCache; concurrency?: number }
   decoder._bindResourceStore((asset, resource) => residency._storeResource(asset, resource));
 
   return { residency, typeRegistry, decoder, onProgress, onLoaded, onError, canonical };
-}
+};
 
 describe('AssetResidency', () => {
   describe('claim / release / eviction', () => {

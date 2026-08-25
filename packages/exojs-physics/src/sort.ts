@@ -14,7 +14,7 @@
  *
  * @internal
  */
-export function sortInPlace<T>(array: T[], compare: (a: T, b: T) => number): void {
+export const sortInPlace = <T>(array: T[], compare: (a: T, b: T) => number): void => {
   const n = array.length;
 
   // Heapify: turn the array into a max-heap bottom-up.
@@ -29,9 +29,9 @@ export function sortInPlace<T>(array: T[], compare: (a: T, b: T) => number): voi
     array[end] = root;
     siftDown(array, 0, end, compare);
   }
-}
+};
 
-function siftDown<T>(array: T[], start: number, end: number, compare: (a: T, b: T) => number): void {
+const siftDown = <T>(array: T[], start: number, end: number, compare: (a: T, b: T) => number): void => {
   let parent = start;
 
   for (;;) {
@@ -56,4 +56,4 @@ function siftDown<T>(array: T[], start: number, end: number, compare: (a: T, b: 
     array[child] = tmp;
     parent = child;
   }
-}
+};

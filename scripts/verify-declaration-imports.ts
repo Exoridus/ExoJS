@@ -40,7 +40,7 @@ interface DeclarationRoot {
 }
 
 /** Declaration trees to scan: the core package plus every extension package. */
-function declarationRoots(): DeclarationRoot[] {
+const declarationRoots = (): DeclarationRoot[] => {
   const roots: DeclarationRoot[] = [{ dist: join(REPO_ROOT, 'dist'), src: join(REPO_ROOT, 'src') }];
   const packagesDir = join(REPO_ROOT, 'packages');
 
@@ -53,10 +53,10 @@ function declarationRoots(): DeclarationRoot[] {
   }
 
   return roots.filter(root => existsSync(root.dist));
-}
+};
 
 /** Newest mtime under `dir`, or 0 when it does not exist. */
-function newestMtime(dir: string): number {
+const newestMtime = (dir: string): number => {
   if (!existsSync(dir)) return 0;
 
   let newest = 0;
@@ -68,9 +68,9 @@ function newestMtime(dir: string): number {
   }
 
   return newest;
-}
+};
 
-function declarationFiles(dir: string): string[] {
+const declarationFiles = (dir: string): string[] => {
   const files: string[] = [];
 
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -84,7 +84,7 @@ function declarationFiles(dir: string): string[] {
   }
 
   return files;
-}
+};
 
 interface Violation {
   readonly file: string;

@@ -60,10 +60,10 @@ export class AssetNetworkError extends Error {
  * CORS rejection - is invisible to any consumer that logs `error.message`
  * alone.
  */
-function appendCause(message: string, cause: unknown): string {
+const appendCause = (message: string, cause: unknown): string => {
   if (cause instanceof Error) {
     return `${message} (${cause.name}: ${cause.message})`;
   }
 
   return message;
-}
+};

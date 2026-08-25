@@ -20,7 +20,7 @@ import { describe, expect, it } from 'vitest';
 const repoRoot = process.cwd();
 const readmePath = resolve(repoRoot, 'packages/exojs-particles/README.md');
 
-function extractMinimalExample(): string {
+const extractMinimalExample = (): string => {
   const readme = readFileSync(readmePath, 'utf8');
   const heading = '## Minimal working example';
   const headingIndex = readme.indexOf(heading);
@@ -37,7 +37,7 @@ function extractMinimalExample(): string {
   }
 
   return fenceMatch[1]!;
-}
+};
 
 describe('README "Minimal working example"', () => {
   it('typechecks against the real Scene/ParticleSystem API', () => {

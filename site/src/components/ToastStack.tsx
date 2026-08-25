@@ -6,7 +6,7 @@ import styles from './ToastStack.module.scss';
 
 const EMPTY_TOASTS: ReadonlyArray<ToastMessage> = [];
 
-export function ToastStack(): JSX.Element {
+export const ToastStack = (): JSX.Element => {
   // `getToasts` returns a stable module-level array ref (mutated only on change),
   // so it is a valid useSyncExternalStore snapshot. getServerSnapshot = empty.
   const toasts = useSyncExternalStore(subscribeToasts, getToasts, () => EMPTY_TOASTS);
@@ -33,12 +33,12 @@ export function ToastStack(): JSX.Element {
       </div>
     </div>
   );
-}
+};
 
-function runAction(toast: ToastMessage): void {
+const runAction = (toast: ToastMessage): void => {
   try {
     toast.action?.onClick();
   } finally {
     dismissToast(toast.id);
   }
-}
+};

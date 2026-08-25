@@ -6,20 +6,20 @@ import { materializeAssetTypes } from '#extensions/materialize';
 
 const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text);
 
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader({ basePath: '/' });
   materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
-}
+};
 
 /** A fetch stub whose single `arrayBuffer()` body is `container`. */
-function mockContainerFetch(container: ArrayBuffer): ReturnType<typeof vi.fn> {
+const mockContainerFetch = (container: ArrayBuffer): ReturnType<typeof vi.fn> => {
   const spy = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response);
   global.fetch = spy;
 
   return spy;
-}
+};
 
 describe('asset container format', () => {
   test('encode → parse round-trips the index and data offsets', () => {
@@ -128,7 +128,7 @@ describe('asset container format', () => {
   // -------------------------------------------------------------------------
 
   /** Builds a container buffer (header + index) with an arbitrary raw index value, and no data section. */
-  function encodeRawIndexBuffer(indexBytes: Uint8Array): ArrayBuffer {
+  const encodeRawIndexBuffer = (indexBytes: Uint8Array): ArrayBuffer => {
     const buffer = new ArrayBuffer(CONTAINER_HEADER_SIZE + indexBytes.byteLength);
     const bytes = new Uint8Array(buffer);
     const view = new DataView(buffer);
@@ -141,11 +141,11 @@ describe('asset container format', () => {
     bytes.set(indexBytes, CONTAINER_HEADER_SIZE);
 
     return buffer;
-  }
+  };
 
-  function encodeRawIndex(index: unknown): ArrayBuffer {
+  const encodeRawIndex = (index: unknown): ArrayBuffer => {
     return encodeRawIndexBuffer(utf8(JSON.stringify(index)));
-  }
+  };
 
   test('rejects an index entry that is not an object', () => {
     expect(() => parseContainer(encodeRawIndex([42]))).toThrow(/index entry 0 is not an object/);

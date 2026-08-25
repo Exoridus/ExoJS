@@ -54,7 +54,7 @@ export interface EditorPreviewProps {
   onPreviewErrors?(errors: PreviewErrorEntry[]): void;
 }
 
-export function EditorPreview({ exampleMeta, onCanvasSize, onPreviewErrors, ref, selectedVersionId, sourceCode }: EditorPreviewProps): JSX.Element {
+export const EditorPreview = ({ exampleMeta, onCanvasSize, onPreviewErrors, ref, selectedVersionId, sourceCode }: EditorPreviewProps): JSX.Element => {
   const [updateId, setUpdateId] = useState(0);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -234,7 +234,7 @@ export function EditorPreview({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
       />
     </div>
   );
-}
+};
 
 // Scale the canvas to fill the available preview-panel width rather than
 // sitting at native size with empty gutters. The iframe itself is a fixed
@@ -245,29 +245,29 @@ export function EditorPreview({ exampleMeta, onCanvasSize, onPreviewErrors, ref,
 // `.preview-surface` (a layout-driven width, not the shrink-to-fit wrapper)
 // and allow upscaling past 1, capping height at ~72vh so a small native canvas
 // never overflows the viewport.
-function measureFillZoom(root: HTMLElement | null, width: number, height: number): number {
+const measureFillZoom = (root: HTMLElement | null, width: number, height: number): number => {
   if (!width || !height) return 1;
   const surface = root?.closest<HTMLElement>('[data-preview-surface]');
   const availableWidth = surface?.clientWidth ?? window.innerWidth;
   const widthZoom = availableWidth / width;
   const heightZoom = (window.innerHeight * 0.72) / height;
   return Math.max(0.1, Math.min(widthZoom, heightZoom));
-}
+};
 
-function buildPreviewUrl(options: { noCache: number; sourceKey?: string }, selectedVersionId: string): string {
+const buildPreviewUrl = (options: { noCache: number; sourceKey?: string }, selectedVersionId: string): string => {
   const params: UrlParams = { 'no-cache': options.noCache };
   if (selectedVersionId) params.v = selectedVersionId;
   if (options.sourceKey) params['source-key'] = options.sourceKey;
   return buildIframeUrl(params);
-}
+};
 
-function focusPreviewSurface(iframe: HTMLIFrameElement | null): void {
+const focusPreviewSurface = (iframe: HTMLIFrameElement | null): void => {
   iframe?.focus();
   iframe?.contentWindow?.focus();
   iframe?.contentDocument?.body?.focus();
-}
+};
 
-function installPreviewErrorHandlers(iframeWindow: Window, iframeBody: HTMLBodyElement, syncPreviewErrors: (errors: PreviewErrorEntry[]) => void): void {
+const installPreviewErrorHandlers = (iframeWindow: Window, iframeBody: HTMLBodyElement, syncPreviewErrors: (errors: PreviewErrorEntry[]) => void): void => {
   iframeWindow.__EXAMPLE_PREVIEW_ERROR_RENDERED__ = false;
 
   iframeWindow.onerror = (message, _source, _lineno, _colno, error) => {
@@ -292,14 +292,14 @@ function installPreviewErrorHandlers(iframeWindow: Window, iframeBody: HTMLBodyE
     syncPreviewErrors([previewError]);
     renderExecutionError(iframeBody);
   };
-}
+};
 
-async function executePreviewSource(
+const executePreviewSource = async (
   iframeBody: HTMLBodyElement,
   sourceCode: string,
   exampleMeta: Example | null,
   _syncPreviewErrors: (errors: PreviewErrorEntry[]) => void,
-): Promise<void> {
+): Promise<void> => {
   const required = exampleMeta?.capabilities ?? [];
   if (required.length > 0) {
     let missing = getMissingCapabilities(required);
@@ -317,19 +317,19 @@ async function executePreviewSource(
   script.type = 'module';
   script.textContent = `${sourceCode}\n`;
   iframeBody.appendChild(script);
-}
+};
 
-function disconnectCanvasObservers(
+const disconnectCanvasObservers = (
   canvasMutationObserver: RefObject<MutationObserver | null>,
   canvasAttributeObserver: RefObject<MutationObserver | null>,
-): void {
+): void => {
   canvasMutationObserver.current?.disconnect();
   canvasMutationObserver.current = null;
   canvasAttributeObserver.current?.disconnect();
   canvasAttributeObserver.current = null;
-}
+};
 
-function isRecoverablePreviewError(message: string): boolean {
+const isRecoverablePreviewError = (message: string): boolean => {
   const normalized = message.toLowerCase();
   return (
     normalized.includes('does not support webgl') ||
@@ -341,9 +341,9 @@ function isRecoverablePreviewError(message: string): boolean {
     normalized.includes('could not acquire a webgpu adapter') ||
     normalized.includes('webgpu setup failed')
   );
-}
+};
 
-function blankPreviewSurface(iframeBody: HTMLBodyElement): void {
+const blankPreviewSurface = (iframeBody: HTMLBodyElement): void => {
   const iframeWindow = iframeBody.ownerDocument.defaultView;
   if (iframeWindow?.__EXAMPLE_PREVIEW_ERROR_RENDERED__) return;
   if (iframeWindow) iframeWindow.__EXAMPLE_PREVIEW_ERROR_RENDERED__ = true;
@@ -355,9 +355,9 @@ function blankPreviewSurface(iframeBody: HTMLBodyElement): void {
     color: '#f4f6fb',
     fontFamily: '"Segoe UI", sans-serif',
   });
-}
+};
 
-function renderExecutionError(iframeBody: HTMLBodyElement): void {
+const renderExecutionError = (iframeBody: HTMLBodyElement): void => {
   iframeBody.replaceChildren();
   Object.assign(iframeBody.style, {
     display: 'block',
@@ -365,9 +365,9 @@ function renderExecutionError(iframeBody: HTMLBodyElement): void {
     color: '#f4f6fb',
     fontFamily: '"Segoe UI", sans-serif',
   });
-}
+};
 
-function createPreviewErrorEntry(error: unknown, fallbackMessage?: string | Event): PreviewErrorEntry {
+const createPreviewErrorEntry = (error: unknown, fallbackMessage?: string | Event): PreviewErrorEntry => {
   // Duck-type instead of `instanceof Error`: errors thrown inside the preview
   // iframe come from a different realm (the iframe's own Error constructor),
   // so `instanceof` fails and every runtime error used to collapse into a
@@ -395,9 +395,9 @@ function createPreviewErrorEntry(error: unknown, fallbackMessage?: string | Even
     summary: details,
     details,
   };
-}
+};
 
-function stringifyPreviewError(error: unknown): string {
+const stringifyPreviewError = (error: unknown): string => {
   if (typeof error === 'string') return error;
   if (typeof error === 'number' || typeof error === 'boolean' || typeof error === 'bigint') return String(error);
   if (error === null) return 'null';
@@ -411,9 +411,9 @@ function stringifyPreviewError(error: unknown): string {
   }
 
   return Object.prototype.toString.call(error);
-}
+};
 
-function renderCapabilityOverlay(iframeBody: HTMLBodyElement, required: ReadonlyArray<Capability>, missing: ReadonlyArray<Capability>): void {
+const renderCapabilityOverlay = (iframeBody: HTMLBodyElement, required: ReadonlyArray<Capability>, missing: ReadonlyArray<Capability>): void => {
   const doc = iframeBody.ownerDocument;
   const iframeWindow = doc.defaultView;
   if (iframeWindow) iframeWindow.__EXAMPLE_PREVIEW_ERROR_RENDERED__ = true;
@@ -491,4 +491,4 @@ function renderCapabilityOverlay(iframeBody: HTMLBodyElement, required: Readonly
   }
   overlay.appendChild(list);
   iframeBody.appendChild(overlay);
-}
+};

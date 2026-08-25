@@ -47,15 +47,15 @@ const applicationTextType = testAssetType<string, string>({
   create: async (_source, context) => `extension:${context.source}`,
 });
 
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const JSON_BODY = '{"marker":true}';
 
-function mockTextAndJsonResponse(): void {
+const mockTextAndJsonResponse = (): void => {
   global.fetch = vi.fn(
     async (): Promise<Response> =>
       ({
@@ -69,7 +69,7 @@ function mockTextAndJsonResponse(): void {
         arrayBuffer: async () => new ArrayBuffer(0),
       }) as unknown as Response,
   ) as typeof fetch;
-}
+};
 
 describe('compound extension matching', () => {
   test('type-level: basename-only, longest-suffix-first', () => {

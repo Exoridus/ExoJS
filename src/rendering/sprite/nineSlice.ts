@@ -50,11 +50,9 @@ export interface NineSliceQuad {
 // Validation helpers (module-private)
 // ---------------------------------------------------------------------------
 
-function isFiniteNumber(value: number): boolean {
-  return typeof value === 'number' && Number.isFinite(value);
-}
+const isFiniteNumber = (value: number): boolean => typeof value === 'number' && Number.isFinite(value);
 
-export function validateSlices(slices: NineSliceInsets, regionWidth: number, regionHeight: number): void {
+export const validateSlices = (slices: NineSliceInsets, regionWidth: number, regionHeight: number): void => {
   const { left, top, right, bottom } = slices;
 
   if (!isFiniteNumber(left) || !isFiniteNumber(top) || !isFiniteNumber(right) || !isFiniteNumber(bottom)) {
@@ -72,9 +70,9 @@ export function validateSlices(slices: NineSliceInsets, regionWidth: number, reg
   if (top + bottom > regionHeight) {
     throw new Error(`NineSliceSprite: slices.top (${top}) + slices.bottom (${bottom}) exceeds region height (${regionHeight}).`);
   }
-}
+};
 
-export function validateBorder(border: NineSliceInsets): void {
+export const validateBorder = (border: NineSliceInsets): void => {
   const { left, top, right, bottom } = border;
 
   if (!isFiniteNumber(left) || !isFiniteNumber(top) || !isFiniteNumber(right) || !isFiniteNumber(bottom)) {
@@ -84,14 +82,14 @@ export function validateBorder(border: NineSliceInsets): void {
   if (left < 0 || top < 0 || right < 0 || bottom < 0) {
     throw new Error(`NineSliceSprite: border values must be non-negative (got left=${left}, top=${top}, right=${right}, bottom=${bottom}).`);
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Normalization helpers (module-private)
 // ---------------------------------------------------------------------------
 
 /** Normalise a uniform number or partial insets object into a full {@link NineSliceInsets}. */
-export function normalizeInsets(value: number | Partial<NineSliceInsets>, fallback?: NineSliceInsets): NineSliceInsets {
+export const normalizeInsets = (value: number | Partial<NineSliceInsets>, fallback?: NineSliceInsets): NineSliceInsets => {
   if (typeof value === 'number') {
     return Object.freeze({ left: value, top: value, right: value, bottom: value });
   }
@@ -102,24 +100,24 @@ export function normalizeInsets(value: number | Partial<NineSliceInsets>, fallba
     right: value.right ?? fallback?.right ?? 0,
     bottom: value.bottom ?? fallback?.bottom ?? 0,
   });
-}
+};
 
 const validRepeatModes = new Set<string>(['stretch', 'repeat', 'mirror-repeat']);
 const validRepeatFits = new Set<string>(['clip', 'round']);
 
-function validateModeField(value: unknown, label: string): void {
+const validateModeField = (value: unknown, label: string): void => {
   if (typeof value !== 'string' || !validRepeatModes.has(value)) {
     throw new Error(`NineSliceSprite: ${label} must be "stretch", "repeat", or "mirror-repeat".`);
   }
-}
+};
 
-function validateFitField(value: unknown, label: string): void {
+const validateFitField = (value: unknown, label: string): void => {
   if (typeof value !== 'string' || !validRepeatFits.has(value)) {
     throw new Error(`NineSliceSprite: ${label} must be "clip" or "round".`);
   }
-}
+};
 
-export function normalizeModes(modes: NineSliceModes | undefined): Readonly<NineSliceModes> {
+export const normalizeModes = (modes: NineSliceModes | undefined): Readonly<NineSliceModes> => {
   if (!modes) {
     return _defaultModes;
   }
@@ -160,46 +158,35 @@ export function normalizeModes(modes: NineSliceModes | undefined): Readonly<Nine
   }
 
   return Object.freeze(normalized);
-}
+};
 
 const _defaultModes: Readonly<NineSliceModes> = Object.freeze({});
 
-export function equalInsets(a: Readonly<NineSliceInsets>, b: Readonly<NineSliceInsets>): boolean {
-  return a.left === b.left && a.top === b.top && a.right === b.right && a.bottom === b.bottom;
-}
+export const equalInsets = (a: Readonly<NineSliceInsets>, b: Readonly<NineSliceInsets>): boolean =>
+  a.left === b.left && a.top === b.top && a.right === b.right && a.bottom === b.bottom;
 
-export function equalModes(a: Readonly<NineSliceModes>, b: Readonly<NineSliceModes>): boolean {
-  return (
-    a.edges === b.edges &&
-    a.center === b.center &&
-    a.top === b.top &&
-    a.right === b.right &&
-    a.bottom === b.bottom &&
-    a.left === b.left &&
-    a.edgeFit === b.edgeFit &&
-    a.centerFit === b.centerFit
-  );
-}
+export const equalModes = (a: Readonly<NineSliceModes>, b: Readonly<NineSliceModes>): boolean =>
+  a.edges === b.edges &&
+  a.center === b.center &&
+  a.top === b.top &&
+  a.right === b.right &&
+  a.bottom === b.bottom &&
+  a.left === b.left &&
+  a.edgeFit === b.edgeFit &&
+  a.centerFit === b.centerFit;
 
 // ---------------------------------------------------------------------------
 // Mode resolution helpers (module-private)
 // ---------------------------------------------------------------------------
 
-function resolveEdgeMode(modes: Readonly<NineSliceModes> | undefined, side: 'top' | 'right' | 'bottom' | 'left'): RepeatMode {
-  return modes?.[side] ?? modes?.edges ?? 'stretch';
-}
+const resolveEdgeMode = (modes: Readonly<NineSliceModes> | undefined, side: 'top' | 'right' | 'bottom' | 'left'): RepeatMode =>
+  modes?.[side] ?? modes?.edges ?? 'stretch';
 
-function resolveCenterMode(modes: Readonly<NineSliceModes> | undefined): RepeatMode {
-  return modes?.center ?? 'stretch';
-}
+const resolveCenterMode = (modes: Readonly<NineSliceModes> | undefined): RepeatMode => modes?.center ?? 'stretch';
 
-function resolveEdgeFit(modes: Readonly<NineSliceModes> | undefined): RepeatFit {
-  return modes?.edgeFit ?? 'round';
-}
+const resolveEdgeFit = (modes: Readonly<NineSliceModes> | undefined): RepeatFit => modes?.edgeFit ?? 'round';
 
-function resolveCenterFit(modes: Readonly<NineSliceModes> | undefined): RepeatFit {
-  return modes?.centerFit ?? 'round';
-}
+const resolveCenterFit = (modes: Readonly<NineSliceModes> | undefined): RepeatFit => modes?.centerFit ?? 'round';
 
 // ---------------------------------------------------------------------------
 // UV helpers (module-private)
@@ -232,7 +219,7 @@ interface UvGrid {
  * filtering from sampling across slice seams. Outer boundaries use the full
  * region UV range when extrusion is present, or a half-texel inset otherwise.
  */
-function computeSliceUvGrid(region: TextureRegion, slices: NineSliceInsets): UvGrid {
+const computeSliceUvGrid = (region: TextureRegion, slices: NineSliceInsets): UvGrid => {
   const tw = region.texture.width;
   const th = region.texture.height;
 
@@ -278,13 +265,13 @@ function computeSliceUvGrid(region: TextureRegion, slices: NineSliceInsets): UvG
     row1: { u0: v1, u1: v2 },
     row2: { u0: v2, u1: vOuter1 },
   };
-}
+};
 
-function clampUv(value: number, min: number, max: number): number {
+const clampUv = (value: number, min: number, max: number): number => {
   if (!isFiniteNumber(value) || value < min) return min;
   if (value > max) return max;
   return value;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Compression helpers (module-private)
@@ -297,7 +284,7 @@ interface CompressedBorders {
   readonly bb: number;
 }
 
-function compressBorders(border: NineSliceInsets, width: number, height: number): CompressedBorders {
+const compressBorders = (border: NineSliceInsets, width: number, height: number): CompressedBorders => {
   let bl = border.left;
   let br = border.right;
   let bt = border.top;
@@ -318,7 +305,7 @@ function compressBorders(border: NineSliceInsets, width: number, height: number)
   }
 
   return { bl, br, bt, bb };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Geometry builder
@@ -329,14 +316,14 @@ function compressBorders(border: NineSliceInsets, width: number, height: number)
  * requested destination size. Called lazily by {@link NineSliceSprite}.
  * @internal
  */
-export function buildNineSliceQuads(
+export const buildNineSliceQuads = (
   region: TextureRegion,
   slices: NineSliceInsets,
   border: NineSliceInsets,
   width: number,
   height: number,
   modes: Readonly<NineSliceModes> | undefined,
-): NineSliceQuad[] {
+): NineSliceQuad[] => {
   const uvGrid = computeSliceUvGrid(region, slices);
   const compressed = compressBorders(border, width, height);
 
@@ -474,4 +461,4 @@ export function buildNineSliceQuads(
   }
 
   return quads;
-}
+};

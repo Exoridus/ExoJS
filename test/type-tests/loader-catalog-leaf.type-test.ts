@@ -95,7 +95,7 @@ expectType<Equal<typeof bag.metrics, CatalogValueLeaf<AtlasMetrics>>>();
 
 // --- load(leaf) / get(leaf) -------------------------------------------------
 
-export async function leafLoads(): Promise<void> {
+export const leafLoads = async (): Promise<void> => {
   const textureQueue = loader.load(bag.player);
   expectType<Equal<typeof textureQueue, LoadingQueue<Texture>>>();
   expectType<Equal<Awaited<typeof textureQueue>, Texture>>();
@@ -139,23 +139,23 @@ export async function leafLoads(): Promise<void> {
 
   const roundTripMetrics = loader.load(loader.get(bag.metrics));
   expectType<Equal<typeof roundTripMetrics, LoadingQueue<AtlasMetrics>>>();
-}
+};
 
-function getTexture() {
+const getTexture = () => {
   return loader.get(bag.player);
-}
-function getSound() {
+};
+const getSound = () => {
   return loader.get(bag.jump);
-}
-function getAtlas() {
+};
+const getAtlas = () => {
   return loader.get(bag.atlas);
-}
-function getConfig() {
+};
+const getConfig = () => {
   return loader.get(bag.config);
-}
-function getMetrics() {
+};
+const getMetrics = () => {
   return loader.get(bag.metrics);
-}
+};
 
 // --- composed / extended catalogs hand out the same branded leaves ----------
 
@@ -163,7 +163,7 @@ const extra = Assets.from({ tree: 'tree.png', trees: 'trees.json' });
 const composed = Assets.compose(bag, extra);
 const extended = Assets.extend(bag, { enemy: 'enemy.png' });
 
-export async function derivedLeaves(): Promise<void> {
+export const derivedLeaves = async (): Promise<void> => {
   const composedLeaf = await loader.load(composed.tree);
   expectType<Equal<typeof composedLeaf, Texture>>();
 
@@ -179,11 +179,11 @@ export async function derivedLeaves(): Promise<void> {
 
   const extendedKept = loader.get(extended.player);
   expectType<Equal<typeof extendedKept, CatalogResourceLeaf<Texture>>>();
-}
+};
 
 // --- SceneLoader mirrors the same surface ----------------------------------
 
-export async function sceneLeaves(): Promise<void> {
+export const sceneLeaves = async (): Promise<void> => {
   const sceneTexture = await scene.loader.load(bag.player);
   expectType<Equal<typeof sceneTexture, Texture>>();
 
@@ -201,21 +201,21 @@ export async function sceneLeaves(): Promise<void> {
 
   const sceneValueRoundTrip = scene.loader.load(scene.loader.get(bag.metrics));
   expectType<Equal<typeof sceneValueRoundTrip, LoadingQueue<AtlasMetrics>>>();
-}
+};
 
-function sceneGetTexture() {
+const sceneGetTexture = () => {
   return scene.loader.get(bag.player);
-}
-function sceneGetMetrics() {
+};
+const sceneGetMetrics = () => {
   return scene.loader.get(bag.metrics);
-}
+};
 
 // --- get(descriptor) is branded too, and round-trips ------------------------
 //
 // The `Asset.type(...)` branch mints its leaf through `createLeaf`, so the
 // returned handle carries the very same `_assetMeta` stamp a catalog leaf does.
 
-export function descriptorLeaves(): void {
+export const descriptorLeaves = (): void => {
   const descriptorTexture = loader.get(Asset.type('texture', 'player.png'));
   expectType<Equal<typeof descriptorTexture, CatalogResourceLeaf<Texture>>>();
 
@@ -242,14 +242,14 @@ export function descriptorLeaves(): void {
   const sceneDescriptorMetrics = scene.loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta'));
   expectType<Equal<typeof sceneDescriptorMetrics, CatalogValueLeaf<AtlasMetrics>>>();
   expectType<Equal<ReturnType<typeof sceneLoadDescriptorMetrics>, LoadingQueue<AtlasMetrics>>>();
-}
+};
 
-function sceneLoadDescriptorTexture() {
+const sceneLoadDescriptorTexture = () => {
   return scene.loader.load(scene.loader.get(Asset.type('texture', 'player.png')));
-}
-function sceneLoadDescriptorMetrics() {
+};
+const sceneLoadDescriptorMetrics = () => {
   return scene.loader.load(scene.loader.get(Asset.type('atlasMetrics', 'atlases/hero.meta')));
-}
+};
 
 // --- negative: only a MATERIALIZED leaf is a leaf ---------------------------
 
@@ -265,7 +265,7 @@ declare const bmFont: BmFont;
 declare const image: HTMLImageElement;
 declare const fontFace: FontFace;
 
-export function negatives(): void {
+export const negatives = (): void => {
   // @ts-expect-error - a raw resource carries no `_assetMeta` stamp.
   loader.load(rawTexture);
   // @ts-expect-error - ...and `get` rejects it for the same reason.
@@ -294,7 +294,7 @@ export function negatives(): void {
   scene.loader.load(rawTexture);
   // @ts-expect-error - raw resource, scene loader `get`.
   scene.loader.get(rawTexture);
-}
+};
 
 // --- negative: bare-path `get()` stays UNBRANDED -----------------------------
 //
@@ -302,7 +302,7 @@ export function negatives(): void {
 // rather than `createLeaf`, so the handle it returns carries no `_assetMeta`
 // stamp at runtime - and must therefore not be re-loadable as a single leaf.
 
-export function barePathStaysUnbranded(): void {
+export const barePathStaysUnbranded = (): void => {
   const bareTexture = loader.get('player.png');
   expectType<Equal<typeof bareTexture, Texture>>();
 
@@ -320,6 +320,6 @@ export function barePathStaysUnbranded(): void {
   expectType<Equal<typeof sceneBareTexture, Texture>>();
   // @ts-expect-error - the scene mirror keeps the asymmetry.
   scene.loader.load(sceneBareTexture);
-}
+};
 
 void [texture, sound, config, atlas, metrics, new AssetRef<unknown>()];

@@ -394,7 +394,7 @@ export class MapWorldRuntime implements Destroyable {
  * after it still run. Matches how the application reports a subsystem that
  * fails to dispose.
  */
-function guardedDestroy(target: Destroyable, what: string): void {
+const guardedDestroy = (target: Destroyable, what: string): void => {
   try {
     target.destroy();
   } catch (error) {
@@ -403,10 +403,10 @@ function guardedDestroy(target: Destroyable, what: string): void {
       ...(error instanceof Error && { error }),
     });
   }
-}
+};
 
-function throwIfAborted(id: string, signal: AbortSignal): void {
+const throwIfAborted = (id: string, signal: AbortSignal): void => {
   if (signal.aborted) {
     throw new DOMException(`Level "${id}" load was cancelled.`, 'AbortError');
   }
-}
+};

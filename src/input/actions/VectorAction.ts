@@ -30,7 +30,7 @@ type ResolvedVectorBinding = Record<keyof VectorBindingShape, readonly number[]>
 
 const vectorFields = ['x', 'y', 'up', 'down', 'left', 'right'] as const;
 
-function resolveVectorBinding(binding: VectorBinding, slot: GamepadSlot): ResolvedVectorBinding {
+const resolveVectorBinding = (binding: VectorBinding, slot: GamepadSlot): ResolvedVectorBinding => {
   const rebase = (source: OneOrMany<InputChannel> | undefined): readonly number[] =>
     toChannels(source).map(channel => resolveGamepadSlotChannel(channel, slot));
 
@@ -44,9 +44,9 @@ function resolveVectorBinding(binding: VectorBinding, slot: GamepadSlot): Resolv
     left: rebase(shape.left),
     right: rebase(shape.right),
   };
-}
+};
 
-function serializeEntry(binding: ResolvedVectorBinding): SerializedVectorEntry {
+const serializeEntry = (binding: ResolvedVectorBinding): SerializedVectorEntry => {
   const entry: Record<string, readonly string[]> = {};
 
   for (const field of vectorFields) {
@@ -56,9 +56,9 @@ function serializeEntry(binding: ResolvedVectorBinding): SerializedVectorEntry {
   }
 
   return entry;
-}
+};
 
-function deserializeEntry(entry: unknown): VectorBinding {
+const deserializeEntry = (entry: unknown): VectorBinding => {
   if (entry === null || typeof entry !== 'object') {
     throw new Error('VectorAction: every serialized binding entry must be an object.');
   }
@@ -77,15 +77,15 @@ function deserializeEntry(entry: unknown): VectorBinding {
   }
 
   return shape as VectorBinding;
-}
+};
 
 /** Combine a directly signed source with an opposing button pair, strongest deflection winning. */
-function evaluateAxis(buffer: Float32Array, direct: readonly number[], negative: readonly number[], positive: readonly number[]): number {
+const evaluateAxis = (buffer: Float32Array, direct: readonly number[], negative: readonly number[], positive: readonly number[]): number => {
   const axis = sampleStrongest(buffer, direct);
   const composite = Math.abs(sampleStrongest(buffer, positive)) - Math.abs(sampleStrongest(buffer, negative));
 
   return Math.abs(axis) >= Math.abs(composite) ? axis : composite;
-}
+};
 
 /**
  * A named two-dimensional input, fed by a stick, by four direction buttons, or

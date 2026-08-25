@@ -71,7 +71,7 @@ for (const [alias, canonical] of keyboardAliases) {
   keyboardByName.set(alias, Keyboard[canonical]);
 }
 
-function resolveToken(token: string, owner: PatternOwner, patternText: string): number {
+const resolveToken = (token: string, owner: PatternOwner, patternText: string): number => {
   const normalized = token
     .trim()
     .replace(/^Keyboard\./i, '')
@@ -83,7 +83,7 @@ function resolveToken(token: string, owner: PatternOwner, patternText: string): 
   }
 
   return channel;
-}
+};
 
 /**
  * Parse one `'>'`-separated step's text into raw channel numbers - either a
@@ -94,7 +94,7 @@ function resolveToken(token: string, owner: PatternOwner, patternText: string): 
  * existing string-parsing errors, for an empty `'|'`-separated alternative
  * or an empty `'+'`-joined token.
  */
-function parseStepText(stepText: string, stepIndex: number, chord: boolean, owner: PatternOwner, patternText: string): number[] | number[][] {
+const parseStepText = (stepText: string, stepIndex: number, chord: boolean, owner: PatternOwner, patternText: string): number[] | number[][] => {
   const where = chord ? 'the chord' : `step ${stepIndex + 1}`;
   const alternativesText = stepText.split('|');
   const isAlternation = alternativesText.length > 1;
@@ -116,7 +116,7 @@ function parseStepText(stepText: string, stepIndex: number, chord: boolean, owne
   });
 
   return isAlternation ? alternatives : alternatives[0]!;
-}
+};
 
 /**
  * Reduce one already-parsed step (a bare channel, an {@link InputChord}, an
@@ -127,7 +127,7 @@ function parseStepText(stepText: string, stepIndex: number, chord: boolean, owne
  * rejected - that shape can only ever be a copy/paste mistake, since neither
  * a chord nor an alternation is expressed that way.
  */
-function normalizeStep(step: InputChannel | InputChord | InputAlternation, stepIndex: number, chord: boolean, owner: PatternOwner): NormalizedStep {
+const normalizeStep = (step: InputChannel | InputChord | InputAlternation, stepIndex: number, chord: boolean, owner: PatternOwner): NormalizedStep => {
   const where = chord ? 'the chord' : `step ${stepIndex + 1}`;
 
   if (!Array.isArray(step)) {
@@ -164,7 +164,7 @@ function normalizeStep(step: InputChannel | InputChord | InputAlternation, stepI
 
     return channels;
   });
-}
+};
 
 /**
  * Parse and validate a string or array pattern into raw, slot-0 channel steps.
@@ -180,7 +180,7 @@ function normalizeStep(step: InputChannel | InputChord | InputAlternation, stepI
  * simultaneously within one alternative - `'A+B|C>D'` is "(A and B) or C,
  * then D".
  */
-export function normalizeSequence(input: string | InputSequence, owner: PatternOwner): readonly NormalizedStep[] {
+export const normalizeSequence = (input: string | InputSequence, owner: PatternOwner): readonly NormalizedStep[] => {
   const chord = owner === 'ChordAction';
 
   const rawSteps: ReadonlyArray<InputChannel | InputChord | InputAlternation> =
@@ -196,7 +196,7 @@ export function normalizeSequence(input: string | InputSequence, owner: PatternO
   }
 
   return rawSteps.map((step, index) => normalizeStep(step, index, chord, owner));
-}
+};
 
 /*
  * Type-level mirror of the string parser above.

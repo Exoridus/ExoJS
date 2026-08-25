@@ -24,9 +24,7 @@ import { Video } from '#rendering/video/Video';
  * Persisting a source for that path is a separate operation - `cacheSource` -
  * rather than a flag on the load.
  */
-function streamsFromUrl(network: NetworkSnapshot): boolean {
-  return network.allowsNetwork;
-}
+const streamsFromUrl = (network: NetworkSnapshot): boolean => network.allowsNetwork;
 
 /**
  * How a media type reads an acquisition it did not stream.
@@ -62,7 +60,7 @@ const mediaSourceCodec: AssetSourceCodec<MediaAssetSource, Blob> = {
  * arrives - a blob-backed element is same-origin anyway, and separating the two
  * would put the transport back into identity to save one resident element.
  */
-function mediaIdentity({ options }: AssetRequest<MediaAssetOptions & { mimeType?: string }>): string {
+const mediaIdentity = ({ options }: AssetRequest<MediaAssetOptions & { mimeType?: string }>): string => {
   const parts: string[] = [];
 
   if (options?.mimeType !== undefined) {
@@ -74,7 +72,7 @@ function mediaIdentity({ options }: AssetRequest<MediaAssetOptions & { mimeType?
   }
 
   return parts.join(',');
-}
+};
 
 /** Streaming audio backed by an `<audio>` element. */
 export class MusicAssetType extends AssetType<MediaAssetSource, AudioStream, MusicAssetOptions, Blob> {

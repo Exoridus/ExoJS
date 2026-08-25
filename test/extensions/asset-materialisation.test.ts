@@ -31,7 +31,7 @@ interface SpiedType {
  * An installable type whose `createFactory`, `create` and `destroy` are all
  * observable, so the install contract can be asserted without a real asset.
  */
-function spiedType(spec: { id: string; token?: object; extensions?: readonly string[] } = { id: 'testType' }): SpiedType {
+const spiedType = (spec: { id: string; token?: object; extensions?: readonly string[] } = { id: 'testType' }): SpiedType => {
   const create = vi.fn(async (_source: string, _context: AssetFactoryContext<Record<string, unknown>>) => ({}));
   const destroy = vi.fn();
   const createFactory = vi.fn((): AssetFactory<string, unknown, Record<string, unknown>> => ({ create, destroy }));
@@ -57,7 +57,7 @@ function spiedType(spec: { id: string; token?: object; extensions?: readonly str
   }
 
   return { type: new Spied() as AnyAssetType, createFactory, create, destroy };
-}
+};
 
 describe('materializeAssetTypes', () => {
   beforeEach(() => {});

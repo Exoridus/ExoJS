@@ -17,11 +17,11 @@ import { type CacheStoreDouble, createCacheStoreDouble } from './cache-test-doub
 import { testAssetType } from './test-asset-type';
 
 /** Create a Loader with all built-in asset types installed. */
-function createCoreLoader(options?: ConstructorParameters<typeof Loader>[0]): Loader {
+const createCoreLoader = (options?: ConstructorParameters<typeof Loader>[0]): Loader => {
   const loader = new Loader(options);
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 interface ResidencyInternals {
   _unloadOne(asset: unknown): void;
@@ -30,16 +30,16 @@ interface ResidencyInternals {
 
 /** The internal hard-reset path. Not public on `Loader`: it forgets every scope's
  *  claim, so only scope-aware `release()` is exposed to users. */
-function residencyOf(loader: Loader): ResidencyInternals {
+const residencyOf = (loader: Loader): ResidencyInternals => {
   return (loader as unknown as { _residency: ResidencyInternals })._residency;
-}
+};
 
 /**
  * Hard-removes one canonical asset - the internal reset behaviour that
  * `Loader.unload(asset)` used to expose publicly. Kept as a test helper so the
  * bookkeeping stays covered now that no public verb reaches it.
  */
-function hardUnloadAsset(loader: Loader, asset: Asset<unknown>): void {
+const hardUnloadAsset = (loader: Loader, asset: Asset<unknown>): void => {
   const registry = (loader as unknown as { _typeRegistry: { resolveTypeName(name: string): unknown } })._typeRegistry;
   const ctor = registry.resolveTypeName(asset.type);
 
@@ -49,14 +49,14 @@ function hardUnloadAsset(loader: Loader, asset: Asset<unknown>): void {
   const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string, options?: unknown): unknown })._canonicalize.bind(loader);
 
   residencyOf(loader)._unloadOne(canonicalize(ctor, source, Object.keys(options).length > 0 ? options : undefined));
-}
+};
 
 /** Hard-removes the canonical asset a `(type, source)` pair resolves to. */
-function hardUnloadPath(loader: Loader, type: unknown, source: string): void {
+const hardUnloadPath = (loader: Loader, type: unknown, source: string): void => {
   const canonicalize = (loader as unknown as { _canonicalize(type: unknown, source: string): unknown })._canonicalize.bind(loader);
 
   residencyOf(loader)._unloadOne(canonicalize(type, source));
-}
+};
 
 // Declaration merges for test-only asset types
 declare module '#assets/AssetDefinitions' {
@@ -79,7 +79,7 @@ declare module '#assets/AssetDefinitions' {
  * caches exactly where the built-in text type does and cache-store assertions
  * keyed on that namespace keep working.
  */
-function bindTextAsset(loader: Loader, create: (text: string) => string | Promise<string> = text => `resource:${text}`): { create: MockInstance } {
+const bindTextAsset = (loader: Loader, create: (text: string) => string | Promise<string> = text => `resource:${text}`): { create: MockInstance } => {
   const createSpy = vi.fn(create);
 
   loader._installAssetTypes([
@@ -87,7 +87,7 @@ function bindTextAsset(loader: Loader, create: (text: string) => string | Promis
   ]);
 
   return { create: createSpy };
-}
+};
 
 /** Stand-in constructor for a package-declared, seamless-less asset type. */
 class PackageLeafAsset {}
@@ -451,7 +451,7 @@ describe('LoadingQueue progress tracking', () => {
   });
 
   // Shared mockFetch helper (redeclare locally in scope)
-  function mockFetch(): void {
+  const mockFetch = (): void => {
     global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
@@ -463,7 +463,7 @@ describe('LoadingQueue progress tracking', () => {
           arrayBuffer: async () => new ArrayBuffer(0),
         }) as unknown as Response,
     );
-  }
+  };
 
   afterEach(() => {
     global.fetch = vi.fn();
@@ -477,7 +477,7 @@ describe('Asset / Assets identity and alias semantics', () => {
     global.fetch = originalFetch;
   });
 
-  function mockFetch(): void {
+  const mockFetch = (): void => {
     global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
@@ -489,15 +489,15 @@ describe('Asset / Assets identity and alias semantics', () => {
           arrayBuffer: async () => new ArrayBuffer(0),
         }) as unknown as Response,
     );
-  }
+  };
 
   // Installs MockAssetType as an acquiring type, so cross-alias network dedup
   // stays observable.
-  function bindMockAsset(loader: Loader): void {
+  const bindMockAsset = (loader: Loader): void => {
     loader._installAssetTypes([
       testAssetType<string, string>({ id: 'mockAsset', token: MockAssetType, create: async (_source, context) => `loaded:${context.source}` }),
     ]);
-  }
+  };
 
   test('one Asset named twice shares a single network fetch and one resident entry', async () => {
     const loader = new Loader({ basePath: '/' });
@@ -652,7 +652,7 @@ describe('a custom asset type - acquisition, identity and caching', () => {
     vi.restoreAllMocks();
   });
 
-  function mockFetchText(body: string): void {
+  const mockFetchText = (body: string): void => {
     global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
@@ -664,12 +664,12 @@ describe('a custom asset type - acquisition, identity and caching', () => {
           arrayBuffer: async () => Buffer.from(body).buffer,
         }) as unknown as Response,
     );
-  }
+  };
 
   /** Installs `richAsset` with the given factory body, over the default text codec. */
-  function installRich(loader: Loader, create: (source: string, context: { source: string; resourceKey: string }) => Promise<string>): void {
+  const installRich = (loader: Loader, create: (source: string, context: { source: string; resourceKey: string }) => Promise<string>): void => {
     loader._installAssetTypes([testAssetType<string, string>({ id: 'richAsset', token: RichAsset, create: create as never })]);
-  }
+  };
 
   test('the factory sees the resource key its asset is stored under', async () => {
     mockFetchText('body');
@@ -802,13 +802,13 @@ describe('a custom asset type caches under its own namespace', () => {
     vi.restoreAllMocks();
   });
 
-  function makeMockStore(): { store: CacheStoreDouble; saves: () => CacheRecordKey[] } {
+  const makeMockStore = (): { store: CacheStoreDouble; saves: () => CacheRecordKey[] } => {
     const store = createCacheStoreDouble();
 
     return { store, saves: () => store.set.mock.calls.map(call => call[0]) };
-  }
+  };
 
-  function mockFetch(body: string): void {
+  const mockFetch = (body: string): void => {
     global.fetch = vi.fn(
       async (): Promise<Response> =>
         ({
@@ -820,11 +820,11 @@ describe('a custom asset type caches under its own namespace', () => {
           arrayBuffer: async () => Buffer.from(body).buffer,
         }) as unknown as Response,
     );
-  }
+  };
 
-  function installRich(loader: Loader): void {
+  const installRich = (loader: Loader): void => {
     loader._installAssetTypes([testAssetType<string, string>({ id: 'richAsset', token: RichAsset, create: async source => source })]);
-  }
+  };
 
   test('writes its record under the type id, not a namespace shared with every other type', async () => {
     mockFetch('hello');
@@ -1004,9 +1004,9 @@ describe('keyFor()', () => {
     global.fetch = originalFetch;
   });
 
-  function mockFetch(): void {
+  const mockFetch = (): void => {
     global.fetch = vi.fn(async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', text: async () => 'raw' }) as unknown as Response);
-  }
+  };
 
   test('returns the type + first alias for a loaded object resource', async () => {
     const loader = new Loader({ basePath: '/' });
@@ -1346,18 +1346,18 @@ describe('loadContainer()', () => {
     global.fetch = originalFetch;
   });
 
-  function createCoreLoaderLocal(): Loader {
+  const createCoreLoaderLocal = (): Loader => {
     const loader = new Loader({ basePath: '/' });
     materializeAssetTypes(loader, coreAssetTypes);
 
     return loader;
-  }
+  };
 
-  function mockContainerFetch(container: ArrayBuffer): void {
+  const mockContainerFetch = (container: ArrayBuffer): void => {
     global.fetch = vi.fn(
       async (): Promise<Response> => ({ ok: true, status: 200, statusText: 'OK', arrayBuffer: async () => container }) as unknown as Response,
     );
-  }
+  };
 
   test('loads N assets from one container in a single request', async () => {
     const container = encodeContainer([
@@ -1661,9 +1661,9 @@ describe('non-Error throws are stringified when wrapping fetch/handler failures'
 
 describe('bare-path descriptor normalization', () => {
   /** Installs `TextAsset` as the app's `text` type so a re-pointed suffix has somewhere to land. */
-  function bindTextType(loader: Loader, result = 'overridden'): void {
+  const bindTextType = (loader: Loader, result = 'overridden'): void => {
     loader._installAssetTypes([testAssetType<string, string>({ id: 'text', token: TextAsset, acquires: false, create: async () => result })]);
-  }
+  };
 
   test('get() resolves a bare path through the app-local type override, not the global default', async () => {
     const loader = new Loader({ basePath: '/' });

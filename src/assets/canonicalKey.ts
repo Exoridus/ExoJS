@@ -71,14 +71,11 @@ export interface CanonicalAsset {
 }
 
 /** Sources that already carry their own absolute, opaque identity and must never be joined onto a base path or normalized. */
-function isOpaqueSource(source: string): boolean {
-  return source.startsWith('blob:') || source.startsWith('data:');
-}
+const isOpaqueSource = (source: string): boolean => source.startsWith('blob:') || source.startsWith('data:');
 
 /** Sources that resolve without the loader base path: absolute URLs, protocol-relative, and root-relative paths. */
-function isAbsoluteSource(source: string): boolean {
-  return source.startsWith('http://') || source.startsWith('https://') || source.startsWith('//') || source.startsWith('/');
-}
+const isAbsoluteSource = (source: string): boolean =>
+  source.startsWith('http://') || source.startsWith('https://') || source.startsWith('//') || source.startsWith('/');
 
 /**
  * Collapse `.` and `..` segments and drop the fragment, leaving scheme,
@@ -89,7 +86,7 @@ function isAbsoluteSource(source: string): boolean {
  * resolve to one identity. A type whose fragment IS semantic still receives the
  * raw source and can carry it in its identity discriminator.
  */
-function isSchemeChar(code: number, first: boolean): boolean {
+const isSchemeChar = (code: number, first: boolean): boolean => {
   const isLetter = (code >= 97 && code <= 122) || (code >= 65 && code <= 90);
 
   if (first) {
@@ -98,14 +95,14 @@ function isSchemeChar(code: number, first: boolean): boolean {
 
   // digits, '+', '-', '.'
   return isLetter || (code >= 48 && code <= 57) || code === 43 || code === 45 || code === 46;
-}
+};
 
 /**
  * Length of the leading `scheme:` plus `//authority` of `path`, or `0` when it
  * has neither. Scanned rather than matched: a regex for this shape needs nested
  * quantifiers, and the input is an arbitrary caller-supplied string.
  */
-function prefixLength(path: string): number {
+const prefixLength = (path: string): number => {
   let index = 0;
   const colon = path.indexOf(':');
 
@@ -137,9 +134,9 @@ function prefixLength(path: string): number {
   }
 
   return path.length;
-}
+};
 
-function normalizeUrl(url: string): string {
+const normalizeUrl = (url: string): string => {
   const fragmentStart = url.indexOf('#');
   const withoutFragment = fragmentStart === -1 ? url : url.slice(0, fragmentStart);
   const queryStart = withoutFragment.indexOf('?');
@@ -178,36 +175,32 @@ function normalizeUrl(url: string): string {
   const body = segments.join('/') + (trailingSlash && segments.length > 0 ? '/' : '');
 
   return `${prefix}${rooted ? '/' : ''}${body}${query}`;
-}
+};
 
 /**
  * The URL a source is actually fetched from. Shares its whole resolution path
  * with {@link canonicalizeSource}, so the fetched URL and the identity a load is
  * keyed by can never drift apart.
  */
-export function resolveAssetUrl(basePath: string, source: string): string {
+export const resolveAssetUrl = (basePath: string, source: string): string => {
   if (isOpaqueSource(source)) {
     return source;
   }
 
   return normalizeUrl(isAbsoluteSource(source) ? source : `${basePath}${source}`);
-}
+};
 
 /** The canonical locator for a fetchable source. */
-export function canonicalizeSource(basePath: string, source: string): AssetLocator {
-  return `url:${resolveAssetUrl(basePath, source)}`;
-}
+export const canonicalizeSource = (basePath: string, source: string): AssetLocator => `url:${resolveAssetUrl(basePath, source)}`;
 
 /** Compose the {@link ResourceKey} for a type identity, the source it is built from, and an optional resource discriminator. */
-export function resourceKey(typeId: string, source: SourceKey, discriminator?: string): ResourceKey {
-  return discriminator === undefined || discriminator === '' ? `${typeId}|${source}` : `${typeId}|${source}|${discriminator}`;
-}
+export const resourceKey = (typeId: string, source: SourceKey, discriminator?: string): ResourceKey =>
+  discriminator === undefined || discriminator === '' ? `${typeId}|${source}` : `${typeId}|${source}|${discriminator}`;
 
 /**
  * Compose the {@link SourceKey} for a locator and an optional source
  * discriminator. Type-free by construction: whichever asset type asked for it,
  * one locator plus one source variant is one acquisition.
  */
-export function sourceKey(locator: AssetLocator, discriminator?: string): SourceKey {
-  return discriminator === undefined || discriminator === '' ? locator : `${locator}|${discriminator}`;
-}
+export const sourceKey = (locator: AssetLocator, discriminator?: string): SourceKey =>
+  discriminator === undefined || discriminator === '' ? locator : `${locator}|${discriminator}`;

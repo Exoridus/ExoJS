@@ -7,11 +7,11 @@ import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
 import { Texture } from '#rendering/texture/Texture';
 
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 

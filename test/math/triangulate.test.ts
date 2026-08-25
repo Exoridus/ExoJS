@@ -5,7 +5,7 @@ import { triangulate } from '#math/triangulate';
 // ---------------------------------------------------------------------------
 
 /** Signed area of a triangle given its three (x, y) pairs. */
-function triArea(verts: ArrayLike<number>, a: number, b: number, c: number): number {
+const triArea = (verts: ArrayLike<number>, a: number, b: number, c: number): number => {
   const ax = verts[a * 2],
     ay = verts[a * 2 + 1];
   const bx = verts[b * 2],
@@ -14,10 +14,10 @@ function triArea(verts: ArrayLike<number>, a: number, b: number, c: number): num
     cy = verts[c * 2 + 1];
 
   return (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
-}
+};
 
 /** Shoelace area of a flat point ring. */
-function polygonArea(verts: ArrayLike<number>): number {
+const polygonArea = (verts: ArrayLike<number>): number => {
   const count = verts.length / 2;
   let sum = 0;
 
@@ -28,14 +28,14 @@ function polygonArea(verts: ArrayLike<number>): number {
   }
 
   return Math.abs(sum) / 2;
-}
+};
 
 /**
  * Assert the triangles cover exactly the polygon's area. Winding and triangle
  * count alone do not catch a clip across a pinched vertex: the output stays
  * counter-clockwise and complete while covering area outside the outline.
  */
-function expectCoversPolygon(verts: ArrayLike<number>, indices: Uint32Array): void {
+const expectCoversPolygon = (verts: ArrayLike<number>, indices: Uint32Array): void => {
   let covered = 0;
 
   for (let i = 0; i < indices.length; i += 3) {
@@ -43,16 +43,16 @@ function expectCoversPolygon(verts: ArrayLike<number>, indices: Uint32Array): vo
   }
 
   expect(covered).toBeCloseTo(polygonArea(verts), 6);
-}
+};
 
 /** Assert every triangle in `indices` has positive (CCW) signed area. */
-function expectAllCcw(verts: ArrayLike<number>, indices: Uint32Array): void {
+const expectAllCcw = (verts: ArrayLike<number>, indices: Uint32Array): void => {
   for (let i = 0; i < indices.length; i += 3) {
     const area = triArea(verts, indices[i], indices[i + 1], indices[i + 2]);
 
     expect(area).toBeGreaterThan(0);
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // 1. Triangle (3 vertices)

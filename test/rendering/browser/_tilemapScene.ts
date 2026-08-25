@@ -15,9 +15,9 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
  */
 
 /** Materialise the tilemap renderer binding directly into a bare test backend. */
-export function wireTilemapRenderers(backend: RenderBackend): void {
+export const wireTilemapRenderers = (backend: RenderBackend): void => {
   materializeRendererBindings(backend, tilemapExtension.renderers ?? []);
-}
+};
 
 /**
  * Wire renderers the way an Application would for `extensions: [tiledExtension]`:
@@ -25,12 +25,12 @@ export function wireTilemapRenderers(backend: RenderBackend): void {
  * and materialise its renderer bindings. Proves the one-extension Tiled path -
  * loading is unit-tested in the Tiled package; this exercises rendering.
  */
-export function wireViaTiledExtension(backend: RenderBackend): void {
+export const wireViaTiledExtension = (backend: RenderBackend): void => {
   materializeRendererBindings(backend, buildSnapshot([tiledExtension]).renderers);
-}
+};
 
 /** A `size`×`size` solid-colour texture. */
-export function createSolidTexture(color: string, size = 16): Texture {
+export const createSolidTexture = (color: string, size = 16): Texture => {
   const canvas = document.createElement('canvas');
 
   canvas.width = size;
@@ -42,14 +42,14 @@ export function createSolidTexture(color: string, size = 16): Texture {
   ctx.fillRect(0, 0, size, size);
 
   return new Texture(canvas);
-}
+};
 
 /**
  * A 16×16 four-quadrant atlas: top-left red, top-right green, bottom-left blue,
  * bottom-right white. Rendered as one 16×16 tile, every flip/rotation
  * orientation produces a distinct, observable quadrant arrangement.
  */
-export function createQuadrantTexture(): Texture {
+export const createQuadrantTexture = (): Texture => {
   const canvas = document.createElement('canvas');
 
   canvas.width = 16;
@@ -67,10 +67,10 @@ export function createQuadrantTexture(): Texture {
   ctx.fillRect(8, 8, 8, 8); // bottom-right
 
   return new Texture(canvas);
-}
+};
 
 /** A single 16×16 tile tileset over a texture (`tileCount` covering the grid). */
-export function makeTileset(texture: Texture, name = 'tiles', tileCount = 1): TileSet {
+export const makeTileset = (texture: Texture, name = 'tiles', tileCount = 1): TileSet => {
   return new TileSet({
     name,
     texture: new TextureRegion(texture, { x: 0, y: 0, width: texture.width, height: texture.height }),
@@ -78,14 +78,14 @@ export function makeTileset(texture: Texture, name = 'tiles', tileCount = 1): Ti
     tileHeight: 16,
     tileCount,
   });
-}
+};
 
 /** Build a 1×1 map containing a single tile with the given orientation. */
-export function singleTileMap(texture: Texture, transform: TileTransform = TILE_TRANSFORM_IDENTITY): TileMap {
+export const singleTileMap = (texture: Texture, transform: TileTransform = TILE_TRANSFORM_IDENTITY): TileMap => {
   const tileset = makeTileset(texture);
   const layer = new TileLayer({ id: 1, name: 'ground', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset] });
 
   layer.setTileAt(0, 0, { tileset, localTileId: 0, transform });
 
   return new TileMap({ name: 'm', width: 1, height: 1, tileWidth: 16, tileHeight: 16, tilesets: [tileset], layers: [layer] });
-}
+};

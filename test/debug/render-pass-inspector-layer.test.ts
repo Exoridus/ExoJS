@@ -70,7 +70,7 @@ interface FakeNode {
   constructor: { name: string };
 }
 
-function makeNode(
+const makeNode = (
   opts: {
     visible?: boolean;
     filters?: FakeFilter[];
@@ -81,7 +81,7 @@ function makeNode(
     children?: FakeNode[];
     className?: string;
   } = {},
-): FakeNode {
+): FakeNode => {
   const { visible = true, filters = [], mask = null, cacheAsTexture = false, width = 100, height = 50, children = [], className = 'Sprite' } = opts;
   class NamedClass {
     public static get name(): string {
@@ -97,7 +97,7 @@ function makeNode(
     children,
     constructor: NamedClass as any,
   };
-}
+};
 
 const makeFakeView = () => ({
   width: 800,

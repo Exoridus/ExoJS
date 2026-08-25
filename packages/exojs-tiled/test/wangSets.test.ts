@@ -26,7 +26,7 @@ import { tiledWangSetToWangSet } from '../src/wangSets';
 const TILESET_INDEX = 2;
 
 // Helper to build a minimal TiledWangSetData
-function makeWangSet(type: string, wangtiles: { tileid: number; wangid: number[] }[]): TiledWangSetData {
+const makeWangSet = (type: string, wangtiles: { tileid: number; wangid: number[] }[]): TiledWangSetData => {
   return {
     name: 'terrain',
     type,
@@ -34,7 +34,7 @@ function makeWangSet(type: string, wangtiles: { tileid: number; wangid: number[]
     colors: [{ name: 'grass', color: '#00ff00', tile: 0, probability: 1 }],
     wangtiles: wangtiles.map(wt => ({ tileid: wt.tileid, wangid: wt.wangid })),
   };
-}
+};
 
 describe('tiledWangSetToWangSet — corner type', () => {
   // Build a corner wangset with 3 tiles:

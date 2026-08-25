@@ -32,7 +32,7 @@ interface ConvolutionRenderOptions {
  * Graph:  oscillator → inputGain → dryGain → outputGain → destination
  *                                → convolver → wetGain → outputGain
  */
-async function renderConvolution(opts: ConvolutionRenderOptions): Promise<Float32Array> {
+const renderConvolution = async (opts: ConvolutionRenderOptions): Promise<Float32Array> => {
   const sr = SAMPLE_RATE;
   const length = Math.floor(opts.durationSeconds * sr);
   const wet = opts.wet ?? 1;
@@ -75,7 +75,7 @@ async function renderConvolution(opts: ConvolutionRenderOptions): Promise<Float3
 
   const rendered = await ctx.startRendering();
   return rendered.getChannelData(0).slice();
-}
+};
 
 describe('ConvolutionEffect — acoustic contract (real Web Audio)', () => {
   it('unit-impulse IR [1] is the identity of convolution (output ≈ input)', async () => {

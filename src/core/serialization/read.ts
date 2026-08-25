@@ -69,14 +69,10 @@ export function readEnum<T extends string>(data: Data, key: string, allowed: rea
 }
 
 /** Read an object-valued (non-array) field as a record, or `undefined`. */
-export function readObject(data: Data, key: string): Data | undefined {
-  return asObject(data[key]) ?? undefined;
-}
+export const readObject = (data: Data, key: string): Data | undefined => asObject(data[key]) ?? undefined;
 
 /** Narrow an already-extracted value to a plain object record, or `null`. */
-export function asObject(value: unknown): Data | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Data) : null;
-}
+export const asObject = (value: unknown): Data | null => (typeof value === 'object' && value !== null && !Array.isArray(value) ? (value as Data) : null);
 
 /**
  * Narrow an already-extracted value to a {@link SerializedNode} (an object
@@ -84,17 +80,15 @@ export function asObject(value: unknown): Data | null {
  * so a `children` array containing non-objects is skipped rather than crashing
  * with `Cannot read 'type' of ...`.
  */
-export function asSerializedNode(value: unknown): SerializedNode | null {
-  return typeof value === 'object' && value !== null && typeof (value as Data).type === 'string' ? (value as SerializedNode) : null;
-}
+export const asSerializedNode = (value: unknown): SerializedNode | null =>
+  typeof value === 'object' && value !== null && typeof (value as Data).type === 'string' ? (value as SerializedNode) : null;
 
 /**
  * Narrow an already-extracted value to an array of finite numbers (non-numeric
  * or non-finite entries collapse to `0`), or `null` when not an array.
  */
-export function asNumberArray(value: unknown): number[] | null {
-  return Array.isArray(value) ? value.map(entry => (typeof entry === 'number' && Number.isFinite(entry) ? entry : 0)) : null;
-}
+export const asNumberArray = (value: unknown): number[] | null =>
+  Array.isArray(value) ? value.map(entry => (typeof entry === 'number' && Number.isFinite(entry) ? entry : 0)) : null;
 
 // ── Serialized-enum value lists ──────────────────────────────────────────────
 // `satisfies readonly T[]` makes a typo here a compile error (a listed value

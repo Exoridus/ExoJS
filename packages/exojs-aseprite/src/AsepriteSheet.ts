@@ -7,13 +7,13 @@ import { type AsepriteData, type AsepriteFrameData, type AsepriteFrameTag, type 
  * {@link AsepriteFrameData} entries regardless of whether the JSON was
  * produced in array or hash mode.
  */
-function normaliseFrames(data: AsepriteData): AsepriteFrameData[] {
+const normaliseFrames = (data: AsepriteData): AsepriteFrameData[] => {
   if (isAsepriteArrayData(data)) {
     return [...data.frames];
   }
 
   return Object.values(data.frames);
-}
+};
 
 /**
  * Expands a frame tag's inclusive `[from, to]` range into the ordered
@@ -28,7 +28,7 @@ function normaliseFrames(data: AsepriteData): AsepriteFrameData[] {
  * - `pingpong_reverse`: the mirrored shape, starting from `to`.
  * - A single-frame tag (`from === to`) always yields just that one frame.
  */
-function expandFrameIndices(tag: AsepriteFrameTag): number[] {
+const expandFrameIndices = (tag: AsepriteFrameTag): number[] => {
   const { from, to } = tag;
 
   if (from === to) {
@@ -59,7 +59,7 @@ function expandFrameIndices(tag: AsepriteFrameTag): number[] {
   }
 
   return indices;
-}
+};
 
 /**
  * Calculates the average frames-per-second for a sequence of frame indices,
@@ -68,7 +68,7 @@ function expandFrameIndices(tag: AsepriteFrameTag): number[] {
  * ping-pong sequences that means repeated (bounced) frames are weighted twice.
  * Falls back to `12` fps when all durations are zero or the sequence is empty.
  */
-function avgFps(frames: TaggedFrame[]): number {
+const avgFps = (frames: TaggedFrame[]): number => {
   if (frames.length === 0) {
     return 12;
   }
@@ -77,7 +77,7 @@ function avgFps(frames: TaggedFrame[]): number {
   const avgMs = totalMs / frames.length;
 
   return avgMs > 0 ? 1000 / avgMs : 12;
-}
+};
 
 /**
  * A frame a tag actually resolved to, paired with the index it came from.
@@ -93,7 +93,7 @@ interface TaggedFrame {
  * Resolves a tag's frame indices against the frame array, dropping any that
  * fall outside it - Aseprite exports can reference frames a later edit removed.
  */
-function resolveTaggedFrames(frameArray: AsepriteFrameData[], indices: number[]): TaggedFrame[] {
+const resolveTaggedFrames = (frameArray: AsepriteFrameData[], indices: number[]): TaggedFrame[] => {
   const resolved: TaggedFrame[] = [];
 
   for (const index of indices) {
@@ -105,7 +105,7 @@ function resolveTaggedFrames(frameArray: AsepriteFrameData[], indices: number[])
   }
 
   return resolved;
-}
+};
 
 /**
  * Parsed representation of an Aseprite JSON sprite sheet export.

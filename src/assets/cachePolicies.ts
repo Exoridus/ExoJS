@@ -119,9 +119,7 @@ export class CacheOnlyPolicy implements CachePolicy {
  * `AssetNetworkError` for exactly the transport and HTTP-status failures, and
  * lets a cancellation through as the platform `AbortError`.
  */
-function isNetworkFailure(error: unknown): boolean {
-  return error instanceof AssetNetworkError;
-}
+const isNetworkFailure = (error: unknown): boolean => error instanceof AssetNetworkError;
 
 /**
  * Continue as though the cache held nothing.
@@ -131,11 +129,9 @@ function isNetworkFailure(error: unknown): boolean {
  * reports every store failure before raising it - so degrading it here hides
  * nothing.
  */
-function degradedRead<T>(): CacheReadResult<T> {
-  return cacheMiss;
-}
+const degradedRead = <T>(): CacheReadResult<T> => cacheMiss;
 
 /** Continue as though the representation had been written. See {@link degradedRead}. */
-function degradedWrite(error: unknown): void {
+const degradedWrite = (error: unknown): void => {
   void error;
-}
+};

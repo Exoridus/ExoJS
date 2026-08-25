@@ -12,7 +12,7 @@ import { createRenderStats } from '#rendering/RenderStats';
 import { RenderTarget } from '#rendering/RenderTarget';
 
 /** Real major GC + a macrotask hop so reclaimed WeakRefs settle (`--expose-gc` comes from the vitest project). */
-async function forceGc(): Promise<void> {
+const forceGc = async (): Promise<void> => {
   const gc = (globalThis as { gc?: () => void }).gc;
 
   if (!gc) throw new Error('globalThis.gc is unavailable — the test project must pass --expose-gc to the fork pool');
@@ -21,7 +21,7 @@ async function forceGc(): Promise<void> {
     gc();
     await new Promise(resolve => setTimeout(resolve, 0));
   }
-}
+};
 
 const material: MaterialKey = { rendererId: 1, blendMode: 0, textureId: -1, shaderId: -1, pipelineKey: 1, bindKey: 1, ownMaterial: false };
 const fakeBackendA = {} as RenderBackend;

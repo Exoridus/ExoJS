@@ -9,14 +9,10 @@
  */
 
 /** Convert Hz to mel. */
-export function hzToMel(hz: number): number {
-  return 2595 * Math.log10(1 + hz / 700);
-}
+export const hzToMel = (hz: number): number => 2595 * Math.log10(1 + hz / 700);
 
 /** Convert mel to Hz. */
-export function melToHz(mel: number): number {
-  return 700 * (Math.pow(10, mel / 2595) - 1);
-}
+export const melToHz = (mel: number): number => 700 * (Math.pow(10, mel / 2595) - 1);
 
 export interface MelBand {
   /** Index of the FFT bin where this filter starts (weight 0). */
@@ -38,7 +34,7 @@ export interface MelBand {
  * @param fftSize    Number of FFT points (e.g., 2048).
  * @param sampleRate Audio sample rate in Hz (e.g., 48000).
  */
-export function buildMelFilterbank(bandCount: number, fMin: number, fMax: number, fftSize: number, sampleRate: number): MelBand[] {
+export const buildMelFilterbank = (bandCount: number, fMin: number, fMax: number, fftSize: number, sampleRate: number): MelBand[] => {
   const binCount = fftSize >> 1; // positive frequencies
   const nyquist = sampleRate / 2;
 
@@ -81,7 +77,7 @@ export function buildMelFilterbank(bandCount: number, fMin: number, fMax: number
   }
 
   return bands;
-}
+};
 
 /**
  * Compute mel band energies from a magnitude spectrum.
@@ -91,7 +87,7 @@ export function buildMelFilterbank(bandCount: number, fMin: number, fMax: number
  * @param out     Optional pre-allocated output array of length `bands.length`.
  * @returns       Log-compressed mel band energies.
  */
-export function computeMelBands(mag: Float32Array, bands: readonly MelBand[], out?: Float32Array): Float32Array {
+export const computeMelBands = (mag: Float32Array, bands: readonly MelBand[], out?: Float32Array): Float32Array => {
   const result = out ?? new Float32Array(bands.length);
   for (let b = 0; b < bands.length; b++) {
     const { startBin, weights } = bands[b]!;
@@ -102,4 +98,4 @@ export function computeMelBands(mag: Float32Array, bands: readonly MelBand[], ou
     result[b] = Math.log(1 + energy);
   }
   return result;
-}
+};

@@ -34,7 +34,7 @@ const isGeneratedJs = (filePath: string): boolean => {
   }
 };
 
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   console.log('Checking example .js/.ts synchronization...\n');
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -93,6 +93,6 @@ async function main(): Promise<void> {
 
   console.log(green('\nExample .js files are in sync with their .ts sources.'));
   process.exit(0);
-}
+};
 
 void main();

@@ -59,13 +59,13 @@ type LeafPayloadOf<T> = T extends AssetRef<infer V> ? V : T;
  *
  * @internal
  */
-export function _stampMeta<T extends object>(target: T, meta: AssetMeta): T & CatalogLeafBrand<LeafPayloadOf<T>> {
+export const _stampMeta = <T extends object>(target: T, meta: AssetMeta): T & CatalogLeafBrand<LeafPayloadOf<T>> => {
   Object.defineProperty(target, _assetMeta, { value: meta, enumerable: false, configurable: false, writable: false });
   return target as T & CatalogLeafBrand<LeafPayloadOf<T>>;
-}
+};
 
 /** Read the {@link AssetMeta} off a value, or `undefined` if not stamped. @internal */
-export function _readMeta(value: unknown): AssetMeta | undefined {
+export const _readMeta = (value: unknown): AssetMeta | undefined => {
   if (typeof value !== 'object' || value === null) return undefined;
   return (value as { [_assetMeta]?: AssetMeta })[_assetMeta];
-}
+};

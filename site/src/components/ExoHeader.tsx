@@ -14,7 +14,7 @@ export interface ExoHeaderProps {
   locale: 'en' | 'de';
 }
 
-export function ExoHeader({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX.Element {
+export const ExoHeader = ({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX.Element => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [sheetOpener, setSheetOpener] = useState<HTMLElement | null>(null);
@@ -164,4 +164,4 @@ export function ExoHeader({ baseUrl, currentPath, locale }: ExoHeaderProps): JSX
       </BottomSheet>
     </div>
   );
-}
+};

@@ -8,7 +8,7 @@ import type { PlayOptions, Spatializable } from './Playable';
  * (`Sound`, `AudioStream`, `AudioGenerator`) so a new spatial option only
  * needs adding here once, not at every call site.
  */
-export function seedVoiceFromPlayOptions(voice: Spatializable, options: PlayOptions): void {
+export const seedVoiceFromPlayOptions = (voice: Spatializable, options: PlayOptions): void => {
   if (options.distanceModel !== undefined) voice.distanceModel = options.distanceModel;
   if (options.refDistance !== undefined) voice.refDistance = options.refDistance;
   if (options.maxDistance !== undefined) voice.maxDistance = options.maxDistance;
@@ -25,4 +25,4 @@ export function seedVoiceFromPlayOptions(voice: Spatializable, options: PlayOpti
   if (options.position !== undefined) voice.position = options.position;
   if (options.panningModel !== undefined) voice.panningModel = options.panningModel;
   if (options.velocity !== undefined) voice.velocity = options.velocity;
-}
+};

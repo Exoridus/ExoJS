@@ -28,7 +28,7 @@ const key = (overrides: Partial<CacheRecordKey> = {}): CacheRecordKey => ({
  * fake factory must be installed on `globalThis` before a fresh dynamic import
  * of `IndexedDbStore`.
  */
-async function loadStore(name = 'cache-db'): Promise<{ store: CacheStore; fake: FakeIndexedDb }> {
+const loadStore = async (name = 'cache-db'): Promise<{ store: CacheStore; fake: FakeIndexedDb }> => {
   const fake = createFakeIndexedDb();
   const target = globalThis as GlobalWithIndexedDb;
 
@@ -39,7 +39,7 @@ async function loadStore(name = 'cache-db'): Promise<{ store: CacheStore; fake: 
   const { IndexedDbStore } = await import('#assets/IndexedDbStore');
 
   return { store: new IndexedDbStore(name), fake };
-}
+};
 
 describe('IndexedDbStore', () => {
   afterEach(() => {

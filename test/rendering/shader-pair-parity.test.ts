@@ -64,11 +64,11 @@ interface Declaration {
   readonly type: string;
 }
 
-function stripComments(source: string): string {
+const stripComments = (source: string): string => {
   return source.replaceAll(/\/\*[\s\S]*?\*\//g, '').replaceAll(/\/\/[^\n]*/g, '');
-}
+};
 
-function matchAll(source: string, pattern: RegExp): RegExpExecArray[] {
+const matchAll = (source: string, pattern: RegExp): RegExpExecArray[] => {
   const regex = new RegExp(pattern.source, pattern.flags.includes('g') ? pattern.flags : `${pattern.flags}g`);
   const results: RegExpExecArray[] = [];
   let match: RegExpExecArray | null = regex.exec(source);
@@ -79,17 +79,17 @@ function matchAll(source: string, pattern: RegExp): RegExpExecArray[] {
   }
 
   return results;
-}
+};
 
 /** `uniform <type> <name>;` in declaration order. */
-function glslUniforms(source: string): Declaration[] {
+const glslUniforms = (source: string): Declaration[] => {
   return matchAll(stripComments(source), /\buniform\s+(?:lowp\s+|mediump\s+|highp\s+)?(\w+)\s+(\w+)\s*;/).map(m => ({ type: m[1]!, name: m[2]! }));
-}
+};
 
 /** `in <type> <name>;` / `out <type> <name>;` at file scope, in order. */
-function glslStageVariables(source: string, direction: 'in' | 'out'): Declaration[] {
+const glslStageVariables = (source: string, direction: 'in' | 'out'): Declaration[] => {
   return matchAll(stripComments(source), new RegExp(`^\\s*${direction}\\s+(\\w+)\\s+(\\w+)\\s*;`, 'm')).map(m => ({ type: m[1]!, name: m[2]! }));
-}
+};
 
 interface WgslBinding extends Declaration {
   readonly group: number;
@@ -97,14 +97,14 @@ interface WgslBinding extends Declaration {
 }
 
 /** `@group(g) @binding(b) var[<...>] name: type;`, sorted by group then binding. */
-function wgslBindings(source: string): WgslBinding[] {
+const wgslBindings = (source: string): WgslBinding[] => {
   return matchAll(stripComments(source), /@group\(\s*(\d+)\s*\)\s*@binding\(\s*(\d+)\s*\)\s*var(?:<[^>]*>)?\s+(\w+)\s*:\s*([^;]+);/)
     .map(m => ({ group: Number(m[1]), binding: Number(m[2]), name: m[3]!, type: m[4]!.trim() }))
     .sort((a, b) => a.group - b.group || a.binding - b.binding);
-}
+};
 
 /** Members of `struct <name> { ... }`, in declaration order. */
-function wgslStructMembers(source: string, structName: string): Declaration[] {
+const wgslStructMembers = (source: string, structName: string): Declaration[] => {
   const body = new RegExp(`struct\\s+${structName}\\s*\\{([^}]*)\\}`).exec(stripComments(source));
 
   if (body === null) {
@@ -112,7 +112,7 @@ function wgslStructMembers(source: string, structName: string): Declaration[] {
   }
 
   return matchAll(body[1]!, /(\w+)\s*:\s*([^,;]+)[,;]/).map(m => ({ name: m[1]!, type: m[2]!.trim() }));
-}
+};
 
 interface WgslEntryPoint {
   readonly name: string;
@@ -120,7 +120,7 @@ interface WgslEntryPoint {
 }
 
 /** The `@vertex` / `@fragment` entry point and its `@location(n)` parameters. */
-function wgslEntryPoint(source: string, stage: 'vertex' | 'fragment'): WgslEntryPoint | null {
+const wgslEntryPoint = (source: string, stage: 'vertex' | 'fragment'): WgslEntryPoint | null => {
   // The parameter list itself contains `)` (every `@location(n)`), so it runs
   // to the LAST `)` before the return arrow or the body.
   const match = new RegExp(`@${stage}\\s+fn\\s+(\\w+)\\s*\\(([\\s\\S]*?)\\)\\s*(?:->|\\{)`).exec(stripComments(source));
@@ -133,7 +133,7 @@ function wgslEntryPoint(source: string, stage: 'vertex' | 'fragment'): WgslEntry
     name: match[1]!,
     parameters: matchAll(match[2]!, /@location\(\s*(\d+)\s*\)\s*(\w+)\s*:\s*([\w<>]+)/).map(m => ({ location: Number(m[1]), name: m[2]!, type: m[3]! })),
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests

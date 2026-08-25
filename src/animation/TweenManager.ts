@@ -9,7 +9,7 @@ import { TweenState } from './types';
  * allocating. The copy is what makes the walk tolerate a callback that mutates
  * `source` while it runs.
  */
-function fill<T>(cursor: T[], source: readonly T[]): T[] {
+const fill = <T>(cursor: T[], source: readonly T[]): T[] => {
   cursor.length = 0;
 
   for (const item of source) {
@@ -17,7 +17,7 @@ function fill<T>(cursor: T[], source: readonly T[]): T[] {
   }
 
   return cursor;
-}
+};
 
 /** Any object that can be driven each frame by a delta in seconds. @internal */
 interface Ticker {

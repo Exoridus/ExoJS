@@ -63,13 +63,13 @@ for (const dir of readdirSync(packagesDir, { withFileTypes: true })) {
  * Anything else (a stale pin, a mismatched major/minor, a `workspace:` protocol
  * range that would break a published scaffold) fails.
  */
-function isInSyncRange(range: string, version: string): boolean {
+const isInSyncRange = (range: string, version: string): boolean => {
   if (range === 'latest') return true;
   if (range === version || range === `^${version}`) return true;
 
   const [major, minor] = version.split('.');
   return range === `${major}.${minor}.x` || range === `^${major}.${minor}.0`;
-}
+};
 
 describe('create-exo-app template version sync', () => {
   it('discovers at least one template', () => {

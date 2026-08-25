@@ -20,30 +20,30 @@ interface MockWorkletNode {
   port: MockPort;
 }
 
-function getMockWorkletNode(detector: BeatDetector): MockWorkletNode | null {
+const getMockWorkletNode = (detector: BeatDetector): MockWorkletNode | null => {
   // Access via internal field (test-only)
   return (detector as unknown as { _workletNode: MockWorkletNode | null })._workletNode;
-}
+};
 
-function simulateMessage(detector: BeatDetector, data: unknown): void {
+const simulateMessage = (detector: BeatDetector, data: unknown): void => {
   const node = getMockWorkletNode(detector);
   if (node?.port.onmessage) {
     node.port.onmessage({ data });
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeMediaStream(): MediaStream {
+const makeMediaStream = (): MediaStream => {
   return { getTracks: () => [] } as unknown as MediaStream;
-}
+};
 
-function makeVoiceLike(): Voice {
+const makeVoiceLike = (): Voice => {
   const ctx = getAudioContext();
   return { output: ctx.createGain() } as unknown as Voice;
-}
+};
 
 /**
  * Runs `run` against a fresh copy of the `@codexo/exojs` module registry (via
@@ -58,9 +58,9 @@ function makeVoiceLike(): Voice {
  * autoplay policy; this helper reproduces that deterministically. Nothing
  * dispatches until `flipToReady()` is called.
  */
-async function withSuspendedBeatDetectorContext<T>(
+const withSuspendedBeatDetectorContext = async <T>(
   run: (mod: { fresh: typeof import('@codexo/exojs'); FreshBeatDetector: typeof BeatDetector; flipToReady: () => void }) => T | Promise<T>,
-): Promise<T> {
+): Promise<T> => {
   const OriginalAudioContext = globalThis.AudioContext;
   class SuspendedMockAudioContext extends (OriginalAudioContext as unknown as new () => AudioContext) {
     public constructor() {
@@ -82,7 +82,7 @@ async function withSuspendedBeatDetectorContext<T>(
   } finally {
     Object.defineProperty(globalThis, 'AudioContext', { configurable: true, value: OriginalAudioContext });
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -465,7 +465,7 @@ describe('BeatDetector', () => {
   // ---- Settling / provisional emission ----
 
   describe('provisional emission options', () => {
-    function captureProcessorOptions(): { get: () => Record<string, unknown> | undefined } {
+    const captureProcessorOptions = (): { get: () => Record<string, unknown> | undefined } => {
       let captured: Record<string, unknown> | undefined;
       const OrigAWN = globalThis.AudioWorkletNode;
       (globalThis.AudioWorkletNode as unknown as MockInstance) = vi.fn(function (c: AudioContext, name: string, opts: AudioWorkletNodeOptions) {
@@ -473,7 +473,7 @@ describe('BeatDetector', () => {
         return new OrigAWN(c, name, opts);
       });
       return { get: () => captured };
-    }
+    };
 
     it('forwards default minSettlingMs (400) and emitProvisionalBeats (true)', async () => {
       const cap = captureProcessorOptions();

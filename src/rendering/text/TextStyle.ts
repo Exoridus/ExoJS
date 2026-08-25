@@ -18,11 +18,11 @@ export type StyleChangeHint = 'tint' | 'layout' | 'font';
  * never downgraded by a cheaper change arriving after it.
  * @internal
  */
-export function mergeHint(a: StyleChangeHint, b: StyleChangeHint): StyleChangeHint {
+export const mergeHint = (a: StyleChangeHint, b: StyleChangeHint): StyleChangeHint => {
   if (a === 'font' || b === 'font') return 'font';
   if (a === 'layout' || b === 'layout') return 'layout';
   return 'tint';
-}
+};
 
 /**
  * Font weight values accepted by CSS / Canvas 2D.

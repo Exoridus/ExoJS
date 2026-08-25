@@ -27,7 +27,7 @@ const syntheticOrigin = 'https://exojs.invalid/';
  * - Relative bases use a synthetic origin to collapse `./` and `../` segments,
  *   then strips the origin from the result.
  */
-function resolveAsepriteUrl(ref: string, base: string): string {
+const resolveAsepriteUrl = (ref: string, base: string): string => {
   if (absoluteRefPattern.test(ref)) {
     return ref;
   }
@@ -43,7 +43,7 @@ function resolveAsepriteUrl(ref: string, base: string): string {
   // the leading slash would make the browser re-resolve the reference against
   // the document base URL (e.g. `/site/assets/x.png` → `/site/site/assets/...`).
   return base.startsWith('/') ? `/${relative}` : relative;
-}
+};
 
 // ── Validation ───────────────────────────────────────────────────────────────
 
@@ -66,7 +66,7 @@ export class AsepriteFormatError extends Error {
  * shape and narrows it to {@link AsepriteData}. Throws {@link AsepriteFormatError}
  * on any mismatch.
  */
-function validateAsepriteData(raw: unknown, source: string): AsepriteData {
+const validateAsepriteData = (raw: unknown, source: string): AsepriteData => {
   if (typeof raw !== 'object' || raw === null) {
     throw new AsepriteFormatError(source, 'root must be an object');
   }
@@ -94,7 +94,7 @@ function validateAsepriteData(raw: unknown, source: string): AsepriteData {
   }
 
   return doc as unknown as AsepriteData;
-}
+};
 
 /**
  * Aseprite JSON exports, together with the packed sheet they reference.

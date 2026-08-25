@@ -181,7 +181,7 @@ export const createVelocitySample = (): VelocitySample => ({ lastPosition: null,
  * {@link MIN_VELOCITY_DT}) - the *next* distinctly-different position still
  * measures its delta against the last position that was actually recorded.
  */
-export function deriveVelocity(sample: VelocitySample, x: number, y: number, now: number): void {
+export const deriveVelocity = (sample: VelocitySample, x: number, y: number, now: number): void => {
   if (sample.lastPosition === null) {
     sample.x = 0;
     sample.y = 0;
@@ -212,4 +212,4 @@ export function deriveVelocity(sample: VelocitySample, x: number, y: number, now
   sample.y = dy / dt;
   sample.lastPosition = { x, y };
   sample.lastTime = now;
-}
+};

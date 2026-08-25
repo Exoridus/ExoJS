@@ -17,7 +17,7 @@ import { Rectangle } from '@codexo/exojs';
  * forgets to check).
  * @internal
  */
-export function aggregateChildLocalBounds(children: readonly SceneNode[], out: Rectangle): void {
+export const aggregateChildLocalBounds = (children: readonly SceneNode[], out: Rectangle): void => {
   if (children.length === 0) {
     return;
   }
@@ -46,4 +46,4 @@ export function aggregateChildLocalBounds(children: readonly SceneNode[], out: R
   }
 
   out.set(minX, minY, maxX - minX, maxY - minY);
-}
+};

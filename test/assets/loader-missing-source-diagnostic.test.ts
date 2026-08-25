@@ -5,11 +5,11 @@ import { logger, LogSeverity } from '#core/logging';
 import { materializeAssetTypes } from '#extensions/materialize';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in loader-seamless.test.ts). */
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 
@@ -37,13 +37,13 @@ const mockFetch404 = (): void => {
 };
 
 /** Collects the messages of every Warning-or-higher log entry for the duration of a test. */
-function captureWarnings(): { messages: string[]; stop: () => void } {
+const captureWarnings = (): { messages: string[]; stop: () => void } => {
   const messages: string[] = [];
   const remove = logger.addSink(entry => {
     if (entry.severity >= LogSeverity.Warning) messages.push(entry.message);
   });
   return { messages, stop: remove };
-}
+};
 
 describe('Loader: silent-404 diagnostic (F7 / DX-1)', () => {
   beforeEach(() => {

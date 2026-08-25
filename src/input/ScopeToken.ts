@@ -13,6 +13,4 @@
 export type ScopeToken = object;
 
 /** Mint a fresh, unique scope token. @internal */
-export function createScopeToken(): ScopeToken {
-  return {};
-}
+export const createScopeToken = (): ScopeToken => ({});

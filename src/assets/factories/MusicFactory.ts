@@ -97,6 +97,5 @@ export class MusicFactory implements AssetFactory<MediaAssetSource, AudioStream,
 }
 
 /** Re-wrap a blob only when the request asked for a MIME type it does not already carry. */
-function retyped(blob: Blob, mimeType: string | undefined): Blob {
-  return mimeType === undefined || mimeType === blob.type ? blob : new Blob([blob], { type: mimeType });
-}
+const retyped = (blob: Blob, mimeType: string | undefined): Blob =>
+  mimeType === undefined || mimeType === blob.type ? blob : new Blob([blob], { type: mimeType });

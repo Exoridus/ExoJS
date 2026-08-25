@@ -11,7 +11,7 @@ import type { AssetLeaf } from './AssetType';
  * returning a handle that could never settle.
  * @internal
  */
-export function createLeaf(leaf: AssetLeaf<unknown> | undefined, kind: string, src: string, opts?: unknown): object {
+export const createLeaf = (leaf: AssetLeaf<unknown> | undefined, kind: string, src: string, opts?: unknown): object => {
   if (leaf === undefined) {
     throw new Error(`No asset type "${kind}" is installed, so "${src}" cannot be materialized.`);
   }
@@ -43,4 +43,4 @@ export function createLeaf(leaf: AssetLeaf<unknown> | undefined, kind: string, s
   placeholder._loadState.markIdle(); // idle until adopted (overrides createPlaceholder's 'loading')
 
   return _stampMeta(placeholder as object, { kind, src, opts });
-}
+};

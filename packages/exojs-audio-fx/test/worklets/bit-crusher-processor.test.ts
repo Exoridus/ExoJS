@@ -24,7 +24,7 @@ interface BitCrusherProcessorLike {
 }
 type BitCrusherProcessorConstructor = new () => BitCrusherProcessorLike;
 
-function buildProcessorClass(): BitCrusherProcessorConstructor {
+const buildProcessorClass = (): BitCrusherProcessorConstructor => {
   let klass: BitCrusherProcessorConstructor | null = null;
   const g = globalThis as Record<string, unknown>;
   const savedSampleRate = g['sampleRate'];
@@ -45,25 +45,25 @@ function buildProcessorClass(): BitCrusherProcessorConstructor {
 
   if (!klass) throw new Error('registerProcessor was not called — worklet source malformed');
   return klass;
-}
+};
 
 // ─── Signal helpers ───────────────────────────────────────────────────────────
 
-function makeSine(freq: number, amplitude: number, n: number): Float32Array {
+const makeSine = (freq: number, amplitude: number, n: number): Float32Array => {
   const buf = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     buf[i] = amplitude * Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
   }
   return buf;
-}
+};
 
-function rms(buf: Float32Array): number {
+const rms = (buf: Float32Array): number => {
   let s = 0;
   for (const v of buf) s += v * v;
   return Math.sqrt(s / buf.length);
-}
+};
 
-function runCrusher(proc: BitCrusherProcessorLike, input: Float32Array, bits: number, normFreq: number): Float32Array {
+const runCrusher = (proc: BitCrusherProcessorLike, input: Float32Array, bits: number, normFreq: number): Float32Array => {
   const n = input.length;
   const out = new Float32Array(n);
   for (let off = 0; off < n; off += BLOCK) {
@@ -74,7 +74,7 @@ function runCrusher(proc: BitCrusherProcessorLike, input: Float32Array, bits: nu
     out.set(outB, off);
   }
   return out;
-}
+};
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 

@@ -18,14 +18,14 @@ import { SERIALIZATION_VERSION, type SerializedNode, type SerializedPrefab, type
 let _coreRegistered = false;
 
 /** Idempotently register the built-in node serializers on first use. @internal */
-function ensureCoreSerializers(): void {
+const ensureCoreSerializers = (): void => {
   if (_coreRegistered) {
     return;
   }
 
   _coreRegistered = true;
   registerCoreSerializers(defaultSerializationRegistry);
-}
+};
 
 /**
  * Reset the process-wide serialization state so test suites do not leak
@@ -39,12 +39,12 @@ function ensureCoreSerializers(): void {
  * tests.
  * @internal - For unit tests only.
  */
-export function _resetDefaultSerializers(): void {
+export const _resetDefaultSerializers = (): void => {
   _coreRegistered = false;
   defaultSerializationRegistry.clear();
-}
+};
 
-function createSerializeContext(loader: Loader | null, registry: SerializationRegistry): SerializeContext {
+const createSerializeContext = (loader: Loader | null, registry: SerializationRegistry): SerializeContext => {
   const ctx: SerializeContext = {
     version: SERIALIZATION_VERSION,
     loader,
@@ -73,9 +73,9 @@ function createSerializeContext(loader: Loader | null, registry: SerializationRe
   };
 
   return ctx;
-}
+};
 
-function createDeserializeContext(loader: Loader | null, version: number, registry: SerializationRegistry): DeserializeContext {
+const createDeserializeContext = (loader: Loader | null, version: number, registry: SerializationRegistry): DeserializeContext => {
   const ctx: DeserializeContext = {
     version,
     loader,
@@ -99,9 +99,9 @@ function createDeserializeContext(loader: Loader | null, version: number, regist
   };
 
   return ctx;
-}
+};
 
-function writeNodeWith(node: SceneNode, ctx: SerializeContext, registry: SerializationRegistry): SerializedNode {
+const writeNodeWith = (node: SceneNode, ctx: SerializeContext, registry: SerializationRegistry): SerializedNode => {
   const entry = registry.resolveByNode(node);
 
   if (entry === undefined) {
@@ -114,9 +114,9 @@ function writeNodeWith(node: SceneNode, ctx: SerializeContext, registry: Seriali
   Object.assign(out, entry.serializer.write(node, ctx));
 
   return out;
-}
+};
 
-function readNodeWith(data: SerializedNode, ctx: DeserializeContext, registry: SerializationRegistry): SceneNode {
+const readNodeWith = (data: SerializedNode, ctx: DeserializeContext, registry: SerializationRegistry): SceneNode => {
   const entry = registry.resolveByName(data.type);
 
   if (entry === undefined) {
@@ -128,29 +128,37 @@ function readNodeWith(data: SerializedNode, ctx: DeserializeContext, registry: S
   applyCommonFields(node, data);
 
   return node;
-}
+};
 
 /**
  * Serialize a single node and its subtree to a {@link SerializedNode}. Pass a
  * {@link Loader} so texture/asset references resolve to their source keys.
  * @internal
  */
-export function serializeTree(node: SceneNode, loader: Loader | null = null, registry: SerializationRegistry = defaultSerializationRegistry): SerializedNode {
+export const serializeTree = (
+  node: SceneNode,
+  loader: Loader | null = null,
+  registry: SerializationRegistry = defaultSerializationRegistry,
+): SerializedNode => {
   ensureCoreSerializers();
 
   return writeNodeWith(node, createSerializeContext(loader, registry), registry);
-}
+};
 
 /**
  * Reconstruct a node subtree from a {@link SerializedNode}. Referenced assets
  * must be pre-loaded into `loader`.
  * @internal
  */
-export function deserializeTree(data: SerializedNode, loader: Loader | null = null, registry: SerializationRegistry = defaultSerializationRegistry): SceneNode {
+export const deserializeTree = (
+  data: SerializedNode,
+  loader: Loader | null = null,
+  registry: SerializationRegistry = defaultSerializationRegistry,
+): SceneNode => {
   ensureCoreSerializers();
 
   return readNodeWith(data, createDeserializeContext(loader, SERIALIZATION_VERSION, registry), registry);
-}
+};
 
 /**
  * Rebuild `container`'s contents from `data` in place: clears existing
@@ -159,12 +167,12 @@ export function deserializeTree(data: SerializedNode, loader: Loader | null = nu
  * eagerly-created scene root.
  * @internal
  */
-export function deserializeInto(
+export const deserializeInto = (
   container: Container,
   data: SerializedNode,
   loader: Loader | null = null,
   registry: SerializationRegistry = defaultSerializationRegistry,
-): void {
+): void => {
   ensureCoreSerializers();
 
   const ctx = createDeserializeContext(loader, SERIALIZATION_VERSION, registry);
@@ -180,7 +188,7 @@ export function deserializeInto(
       if (childNode !== null) container.addChild(ctx.readNode(childNode) as RenderNode);
     }
   }
-}
+};
 
 /**
  * Validate and migrate a serialized scene document to the current
@@ -198,7 +206,7 @@ export function deserializeInto(
  * version→version+1 transforms here.
  * @internal
  */
-export function migrate(data: unknown): SerializedScene {
+export const migrate = (data: unknown): SerializedScene => {
   const scene = asObject(data);
 
   if (scene === null) {
@@ -220,7 +228,7 @@ export function migrate(data: unknown): SerializedScene {
   const ui = asSerializedNode(scene.ui);
 
   return ui !== null ? { version, root, ui } : { version, root };
-}
+};
 
 /**
  * Validate and migrate a serialized prefab document to the current
@@ -236,7 +244,7 @@ export function migrate(data: unknown): SerializedScene {
  * bump registers its version→version+1 transform in both places.
  * @internal
  */
-export function migratePrefab(data: unknown): SerializedPrefab {
+export const migratePrefab = (data: unknown): SerializedPrefab => {
   const document = asObject(data);
 
   if (document === null) {
@@ -256,4 +264,4 @@ export function migratePrefab(data: unknown): SerializedPrefab {
   }
 
   return { version, root };
-}
+};

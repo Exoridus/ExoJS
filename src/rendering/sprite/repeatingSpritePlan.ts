@@ -41,7 +41,7 @@ export interface RepeatingSpriteQuad {
 const validRepeatModes = new Set<string>(['stretch', 'repeat', 'mirror-repeat']);
 const validRepeatFits = new Set<string>(['clip', 'round']);
 
-export function validateSizeInput(width: number, height: number): void {
+export const validateSizeInput = (width: number, height: number): void => {
   if (!Number.isFinite(width) || !Number.isFinite(height)) {
     throw new Error(`RepeatingSprite: width and height must be finite numbers (got ${width}, ${height}).`);
   }
@@ -51,25 +51,25 @@ export function validateSizeInput(width: number, height: number): void {
   if (height < 0) {
     throw new Error(`RepeatingSprite: height must be non-negative (got ${height}).`);
   }
-}
+};
 
-export function validateMode(mode: unknown, label: string): void {
+export const validateMode = (mode: unknown, label: string): void => {
   if (typeof mode !== 'string' || !validRepeatModes.has(mode)) {
     throw new Error(`RepeatingSprite: ${label} must be "stretch", "repeat", or "mirror-repeat" (got ${String(mode)}).`);
   }
-}
+};
 
-export function validateFit(fit: unknown, label: string): void {
+export const validateFit = (fit: unknown, label: string): void => {
   if (typeof fit !== 'string' || !validRepeatFits.has(fit)) {
     throw new Error(`RepeatingSprite: ${label} must be "clip" or "round" (got ${String(fit)}).`);
   }
-}
+};
 
-export function validateOffset(value: number, label: string): void {
+export const validateOffset = (value: number, label: string): void => {
   if (!Number.isFinite(value)) {
     throw new Error(`RepeatingSprite: ${label} must be a finite number (got ${value}).`);
   }
-}
+};
 
 // ---------------------------------------------------------------------------
 // Shader-path tiling helpers
@@ -84,7 +84,7 @@ export function validateOffset(value: number, label: string): void {
  * - `repeat`/`mirror-repeat` + `clip`: exact fraction `destLen / srcLen`
  * @internal
  */
-export function computeShaderTiling(srcLen: number, destLen: number, mode: RepeatMode, fit: RepeatFit): number {
+export const computeShaderTiling = (srcLen: number, destLen: number, mode: RepeatMode, fit: RepeatFit): number => {
   if (mode === 'stretch' || srcLen <= 0 || destLen <= 0) {
     return 1;
   }
@@ -92,7 +92,7 @@ export function computeShaderTiling(srcLen: number, destLen: number, mode: Repea
     return Math.max(1, Math.round(destLen / srcLen));
   }
   return destLen / srcLen;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Geometry-path quad builder
@@ -109,7 +109,7 @@ const halfTexelInset = 0.5;
  * extrusion-aware outer insets.
  * @internal
  */
-export function buildRepeatingSpriteQuads(
+export const buildRepeatingSpriteQuads = (
   region: TextureRegion,
   width: number,
   height: number,
@@ -119,7 +119,7 @@ export function buildRepeatingSpriteQuads(
   fitY: RepeatFit,
   offsetX: number,
   offsetY: number,
-): RepeatingSpriteQuad[] {
+): RepeatingSpriteQuad[] => {
   if (width === 0 || height === 0 || region.width <= 0 || region.height <= 0) {
     return [];
   }
@@ -163,7 +163,7 @@ export function buildRepeatingSpriteQuads(
   }
 
   return quads;
-}
+};
 
 /**
  * Build repeat segments for one axis with an optional phase offset.
@@ -178,7 +178,7 @@ export function buildRepeatingSpriteQuads(
  * discouraged by design.
  * @internal
  */
-function buildAxisSegmentsWithOffset(srcLen: number, destLen: number, mode: RepeatMode, fit: RepeatFit, offset: number): RepeatSegment[] {
+const buildAxisSegmentsWithOffset = (srcLen: number, destLen: number, mode: RepeatMode, fit: RepeatFit, offset: number): RepeatSegment[] => {
   if (destLen === 0 || srcLen <= 0) {
     return [];
   }
@@ -226,4 +226,4 @@ function buildAxisSegmentsWithOffset(srcLen: number, destLen: number, mode: Repe
   }
 
   return result;
-}
+};

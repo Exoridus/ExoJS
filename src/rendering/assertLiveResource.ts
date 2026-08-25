@@ -24,7 +24,7 @@ interface Destroyable {
  * not register against the surrounding work.
  */
 
-export function assertLiveTexture(texture: Destroyable): void {
+export const assertLiveTexture = (texture: Destroyable): void => {
   if (texture.destroyed) {
     throw new Error(
       'Cannot bind a destroyed texture. It was passed to a renderer after `destroy()` had already run — ' +
@@ -33,13 +33,13 @@ export function assertLiveTexture(texture: Destroyable): void {
         "the backend's temporary pool must be handed back with `releaseRenderTexture()` rather than destroyed.",
     );
   }
-}
+};
 
-export function assertLiveRenderTarget(target: Destroyable): void {
+export const assertLiveRenderTarget = (target: Destroyable): void => {
   if (target.destroyed) {
     throw new Error(
       'Cannot render into a destroyed render target. It was activated after `destroy()` had already run — ' +
         'check whether something released it while a render pass still referenced it.',
     );
   }
-}
+};

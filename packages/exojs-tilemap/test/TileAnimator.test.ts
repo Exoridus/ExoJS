@@ -9,7 +9,7 @@ import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── Test helpers ──────────────────────────────────────────────────────────
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return {
     destroyed: false,
     destroy: () => {},
@@ -18,13 +18,13 @@ function fakeTexture(): Texture {
     uid: 0,
     width: 512,
   } as unknown as Texture;
-}
+};
 
-function fakeRegion(): TextureRegion {
+const fakeRegion = (): TextureRegion => {
   return new TextureRegion(fakeTexture(), { height: 512, width: 512, x: 0, y: 0 });
-}
+};
 
-function makeTileset256(name = 'ts'): TileSet {
+const makeTileset256 = (name = 'ts'): TileSet => {
   return new TileSet({
     columns: 16,
     name,
@@ -33,9 +33,9 @@ function makeTileset256(name = 'ts'): TileSet {
     tileWidth: 32,
     texture: fakeRegion(),
   });
-}
+};
 
-function makeLayer(ts: TileSet, w = 3, h = 3): TileLayer {
+const makeLayer = (ts: TileSet, w = 3, h = 3): TileLayer => {
   return new TileLayer({
     height: h,
     id: 0,
@@ -45,11 +45,11 @@ function makeLayer(ts: TileSet, w = 3, h = 3): TileLayer {
     tilesets: [ts],
     width: w,
   });
-}
+};
 
-function setTile(layer: TileLayer, ts: TileSet, tx: number, ty: number, localTileId = 0): void {
+const setTile = (layer: TileLayer, ts: TileSet, tx: number, ty: number, localTileId = 0): void => {
   layer.setTileAt(tx, ty, { localTileId, tileset: ts, transform: TILE_TRANSFORM_IDENTITY });
-}
+};
 
 // ═══════════════════════════════════════════════════════════════════════════
 

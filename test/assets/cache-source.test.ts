@@ -18,7 +18,7 @@ const recordKey = (namespace: string, source: string): CacheRecordKey => ({ name
 
 const originalFetch = global.fetch;
 
-function mockFetch(body = 'payload'): ReturnType<typeof vi.fn> {
+const mockFetch = (body = 'payload'): ReturnType<typeof vi.fn> => {
   const spy = vi.fn(
     async (): Promise<Response> =>
       ({
@@ -35,15 +35,15 @@ function mockFetch(body = 'payload'): ReturnType<typeof vi.fn> {
   global.fetch = spy as unknown as typeof fetch;
 
   return spy;
-}
+};
 
-function createLoader(store: CacheStoreDouble): Loader {
+const createLoader = (store: CacheStoreDouble): Loader => {
   const loader = new Loader({ basePath: '/', cache: store });
 
   materializeAssetTypes(loader, coreAssetTypes);
 
   return loader;
-}
+};
 
 afterEach(() => {
   global.fetch = originalFetch;

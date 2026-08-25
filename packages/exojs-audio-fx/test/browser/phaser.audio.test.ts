@@ -40,7 +40,7 @@ interface PhaserRenderOptions {
  *                             ↑                     │
  *                             └── feedbackDelay ◄── feedbackGain ◄──┘
  */
-async function renderPhaser(opts: PhaserRenderOptions): Promise<Float32Array> {
+const renderPhaser = async (opts: PhaserRenderOptions): Promise<Float32Array> => {
   const sr = SAMPLE_RATE;
   const stages = opts.stages ?? 4;
   const feedback = opts.feedback ?? 0.7;
@@ -101,7 +101,7 @@ async function renderPhaser(opts: PhaserRenderOptions): Promise<Float32Array> {
   osc.start(0);
   const rendered = await ctx.startRendering();
   return rendered.getChannelData(0).slice();
-}
+};
 
 describe('PhaserEffect — acoustic contract (real Web Audio)', () => {
   it('allpass chain with feedbackDelay carries signal (wet path is not muted)', async () => {

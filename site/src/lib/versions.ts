@@ -60,37 +60,37 @@ const currentEntry: VersionInfo = {
   latest: false,
 };
 
-export function hasVersions(): boolean {
+export const hasVersions = (): boolean => {
   return _catalog !== null && _catalog.versions.length > 0;
-}
+};
 
-export function getVersions(): ReadonlyArray<VersionInfo> {
+export const getVersions = (): ReadonlyArray<VersionInfo> => {
   return _catalog?.versions ?? [];
-}
+};
 
-export function getLatestStableId(): string | null {
+export const getLatestStableId = (): string | null => {
   return _catalog?.latestStable ?? null;
-}
+};
 
-export function getVersionById(id: string | null | undefined): VersionInfo | null {
+export const getVersionById = (id: string | null | undefined): VersionInfo | null => {
   if (!id) return null;
   return _catalog?.versions.find(version => version.id === id) ?? null;
-}
+};
 
-export function isCurrentVersion(id: string | null | undefined): boolean {
+export const isCurrentVersion = (id: string | null | undefined): boolean => {
   return id === CURRENT_VERSION_ID;
-}
+};
 
-export function getVersionLoadError(): string | null {
+export const getVersionLoadError = (): string | null => {
   return _loadError;
-}
+};
 
-export function onVersionsLoaded(callback: () => void): () => void {
+export const onVersionsLoaded = (callback: () => void): (() => void) => {
   _loadListeners.add(callback);
   return () => _loadListeners.delete(callback);
-}
+};
 
-function compareSemver(a: string, b: string): number {
+const compareSemver = (a: string, b: string): number => {
   const partsA = a.split('.').map(n => parseInt(n, 10) || 0);
   const partsB = b.split('.').map(n => parseInt(n, 10) || 0);
   for (let i = 0; i < 3; i++) {
@@ -99,9 +99,9 @@ function compareSemver(a: string, b: string): number {
     if (da !== db) return da - db;
   }
   return 0;
-}
+};
 
-function readCache(): VersionCatalog | null {
+const readCache = (): VersionCatalog | null => {
   try {
     const raw = window.localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
@@ -111,9 +111,9 @@ function readCache(): VersionCatalog | null {
   } catch {
     return null;
   }
-}
+};
 
-function writeCache(catalog: VersionCatalog): void {
+const writeCache = (catalog: VersionCatalog): void => {
   try {
     const payload: CachedCatalog = { storedAt: Date.now(), catalog };
     window.localStorage.setItem(CACHE_KEY, JSON.stringify(payload));
@@ -121,9 +121,9 @@ function writeCache(catalog: VersionCatalog): void {
     // localStorage quota or disabled - silently ignore; a fresh fetch on the
     // next reload is acceptable.
   }
-}
+};
 
-function buildCatalog(doc: NpmRegistryDocument): VersionCatalog {
+const buildCatalog = (doc: NpmRegistryDocument): VersionCatalog => {
   const distTags = doc['dist-tags'] ?? {};
   const latestId = distTags.latest;
 
@@ -161,9 +161,9 @@ function buildCatalog(doc: NpmRegistryDocument): VersionCatalog {
     latestStable,
     versions: [currentEntry, ...released],
   };
-}
+};
 
-export async function loadVersionCatalog(): Promise<void> {
+export const loadVersionCatalog = async (): Promise<void> => {
   _loadError = null;
 
   const cached = readCache();
@@ -200,4 +200,4 @@ export async function loadVersionCatalog(): Promise<void> {
   }
 
   for (const listener of _loadListeners) listener();
-}
+};

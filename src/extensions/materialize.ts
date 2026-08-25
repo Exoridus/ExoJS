@@ -10,7 +10,7 @@ import type { AssetEntry, RendererBinding, SerializerBinding } from './Extension
  * Called once per backend from createBackend in Application.
  * @internal
  */
-export function materializeRendererBindings(backend: RenderBackend, bindings: readonly RendererBinding[]): void {
+export const materializeRendererBindings = (backend: RenderBackend, bindings: readonly RendererBinding[]): void => {
   const seenTargets = new Set<DrawableConstructor>();
 
   for (const binding of bindings) {
@@ -32,7 +32,7 @@ export function materializeRendererBindings(backend: RenderBackend, bindings: re
 
     backend.rendererRegistry.bindRenderer(binding.targets, renderer);
   }
-}
+};
 
 /**
  * Install every asset type an application declares onto its loader.
@@ -42,9 +42,9 @@ export function materializeRendererBindings(backend: RenderBackend, bindings: re
  * applications never shares the mutable instance it describes.
  * @internal
  */
-export function materializeAssetTypes(loader: Loader, entries: readonly AssetEntry[]): void {
+export const materializeAssetTypes = (loader: Loader, entries: readonly AssetEntry[]): void => {
   loader._installAssetTypes(entries);
-}
+};
 
 /**
  * Materialise all serializer bindings into the scene serialization registry.
@@ -52,8 +52,8 @@ export function materializeAssetTypes(loader: Loader, entries: readonly AssetEnt
  * a different constructor) throws via {@link SerializationRegistry.register}.
  * @internal
  */
-export function materializeSerializerBindings(registry: SerializationRegistry, bindings: readonly SerializerBinding[]): void {
+export const materializeSerializerBindings = (registry: SerializationRegistry, bindings: readonly SerializerBinding[]): void => {
   for (const binding of bindings) {
     registry.register(binding.typeName, binding.target, binding.serializer);
   }
-}
+};

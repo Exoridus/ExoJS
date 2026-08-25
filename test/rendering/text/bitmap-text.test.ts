@@ -35,7 +35,7 @@ const layoutPasses = (): number => layoutCounter.passes;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeFontData(overrides: Partial<BmFontData> = {}): BmFontData {
+const makeFontData = (overrides: Partial<BmFontData> = {}): BmFontData => {
   const chars = new Map([
     [65, { x: 0, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }], // A
     [66, { x: 8, y: 0, width: 8, height: 12, xOffset: 0, yOffset: 2, xAdvance: 10, page: 0 }], // B
@@ -49,15 +49,15 @@ function makeFontData(overrides: Partial<BmFontData> = {}): BmFontData {
     base: 12,
     ...overrides,
   };
-}
+};
 
-function makeTex(w = 64, h = 64): Texture {
+const makeTex = (w = 64, h = 64): Texture => {
   return { width: w, height: h } as unknown as Texture;
-}
+};
 
-function makeFont(overrides: Partial<BmFontData> = {}): BmFont {
+const makeFont = (overrides: Partial<BmFontData> = {}): BmFont => {
   return new BmFont(makeFontData(overrides), [makeTex()]);
-}
+};
 
 // ---------------------------------------------------------------------------
 // BmFontAdapter tests

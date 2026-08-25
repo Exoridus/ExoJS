@@ -284,7 +284,7 @@ export class GlyphSdf {
 // 2D Euclidean Distance Transform (Felzenszwalb & Huttenlocher, TPAMI 2012).
 // Applied separably: one pass per column, then one pass per row + sqrt.
 
-function _edt2d(data: Float64Array, width: number, height: number, f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array): void {
+const _edt2d = (data: Float64Array, width: number, height: number, f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array): void => {
   // Vertical pass: transform along each column. All indices are in-bounds:
   // y*width+x < width*height <= data.length, and y/x < height/width <= f/d.length.
   for (let x = 0; x < width; x++) {
@@ -299,13 +299,13 @@ function _edt2d(data: Float64Array, width: number, height: number, f: Float64Arr
     _edt1d(f, d, v, z, width);
     for (let x = 0; x < width; x++) data[y * width + x] = Math.sqrt(d[x]!);
   }
-}
+};
 
 /**
  * 1D EDT (squared Euclidean distance) via the parabola-envelope algorithm.
  * Writes squared distances into `d[0..n−1]` for the function values in `f`.
  */
-function _edt1d(f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array, n: number): void {
+const _edt1d = (f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array, n: number): void => {
   let k = 0;
   v[0] = 0;
   z[0] = -inf;
@@ -334,4 +334,4 @@ function _edt1d(f: Float64Array, d: Float64Array, v: Int16Array, z: Float64Array
     const r = v[k]!;
     d[q] = (q - r) * (q - r) + f[r]!;
   }
-}
+};

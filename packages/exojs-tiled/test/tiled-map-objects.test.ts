@@ -14,13 +14,13 @@ import { makeTiledContext } from './type-context';
 
 const PKG_DIR = basename(process.cwd()) === 'exojs-tiled' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-tiled');
 
-function rawObject(overrides: Record<string, unknown>): Record<string, unknown> {
+const rawObject = (overrides: Record<string, unknown>): Record<string, unknown> => {
   return { id: 1, name: 'thing', x: 0, y: 0, width: 16, height: 16, rotation: 0, visible: true, ...overrides };
-}
+};
 
-function loadFixture(name: string): unknown {
+const loadFixture = (name: string): unknown => {
   return JSON.parse(readFileSync(join(PKG_DIR, 'test', 'fixtures', name), 'utf-8'));
-}
+};
 
 const FIXTURES: Record<string, unknown> = {
   'orthogonal-rich.tmj': loadFixture('orthogonal-rich.tmj'),
@@ -32,13 +32,13 @@ const TEXTURE_SIZES: Record<string, { w: number; h: number }> = {
   'tiles-b.png': { w: 80, h: 20 },
 };
 
-async function tiledMapFrom(document: unknown): Promise<TileMap> {
+const tiledMapFrom = async (document: unknown): Promise<TileMap> => {
   const { loadSource } = makeTiledContext({ ...FIXTURES, 'inline.tmj': document }, TEXTURE_SIZES);
 
   return (await loadSource('inline.tmj')).toTileMap();
-}
+};
 
-function documentWith(object: Record<string, unknown>): Record<string, unknown> {
+const documentWith = (object: Record<string, unknown>): Record<string, unknown> => {
   return {
     type: 'map',
     version: '1.10',
@@ -67,9 +67,9 @@ function documentWith(object: Record<string, unknown>): Record<string, unknown> 
       },
     ],
   };
-}
+};
 
-async function singleObjectMap(objectClass: string, name: string): Promise<TileMap> {
+const singleObjectMap = async (objectClass: string, name: string): Promise<TileMap> => {
   return tiledMapFrom(
     documentWith({
       id: 1,
@@ -83,13 +83,13 @@ async function singleObjectMap(objectClass: string, name: string): Promise<TileM
       visible: true,
     }),
   );
-}
+};
 
-async function richMap(): Promise<TileMap> {
+const richMap = async (): Promise<TileMap> => {
   const { loadSource } = makeTiledContext(FIXTURES, TEXTURE_SIZES);
 
   return (await loadSource('orthogonal-rich.tmj')).toTileMap();
-}
+};
 
 class Thing implements Destroyable {
   public destroyed = false;

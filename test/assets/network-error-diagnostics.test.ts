@@ -24,7 +24,7 @@ import { createCacheStoreDouble } from './cache-test-doubles';
  * Resolve one acquisition of `url` through `policy`, against a store that never
  * holds the asset - so every policy with a network leg reaches it.
  */
-function acquire(policy: CachePolicy, url: string): Promise<string> {
+const acquire = (policy: CachePolicy, url: string): Promise<string> => {
   const cache = new AssetCache({ policy, stores: createCacheStoreDouble() });
   const acquisition: CacheAcquisition<string> = {
     namespace: 'test',
@@ -36,7 +36,7 @@ function acquire(policy: CachePolicy, url: string): Promise<string> {
   };
 
   return cache.resolve(acquisition);
-}
+};
 
 const policies: ReadonlyArray<readonly [string, () => CachePolicy]> = [
   ['CacheFirstPolicy', () => new CacheFirstPolicy()],

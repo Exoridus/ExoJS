@@ -22,7 +22,7 @@ interface GranularProcessorLike {
 }
 type GranularProcessorConstructor = new (options: { processorOptions?: Record<string, unknown> }) => GranularProcessorLike;
 
-function buildProcessorClass(): GranularProcessorConstructor {
+const buildProcessorClass = (): GranularProcessorConstructor => {
   let klass: GranularProcessorConstructor | null = null;
   const g = globalThis as Record<string, unknown>;
   const savedSampleRate = g['sampleRate'];
@@ -39,22 +39,22 @@ function buildProcessorClass(): GranularProcessorConstructor {
   delete g['registerProcessor'];
   if (!klass) throw new Error('registerProcessor was not called — worklet source malformed');
   return klass;
-}
+};
 
-function makeSine(freq: number, amplitude: number, n: number): Float32Array {
+const makeSine = (freq: number, amplitude: number, n: number): Float32Array => {
   const buf = new Float32Array(n);
   for (let i = 0; i < n; i++) buf[i] = amplitude * Math.sin((2 * Math.PI * freq * i) / SAMPLE_RATE);
   return buf;
-}
+};
 
-function rms(buf: Float32Array): number {
+const rms = (buf: Float32Array): number => {
   let s = 0;
   for (const v of buf) s += v * v;
   return Math.sqrt(s / buf.length);
-}
+};
 
 /** Deterministic mulberry32 PRNG so grain randomness is reproducible. */
-function mulberry32(seed: number): () => number {
+const mulberry32 = (seed: number): (() => number) => {
   let a = seed;
   return () => {
     a |= 0;
@@ -63,7 +63,7 @@ function mulberry32(seed: number): () => number {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-}
+};
 
 describe('GranularProcessor normalizeGain DSP', () => {
   let Processor: GranularProcessorConstructor;
@@ -81,7 +81,7 @@ describe('GranularProcessor normalizeGain DSP', () => {
     randomSpy.mockRestore();
   });
 
-  function rmsRatio(opts: { density: number; grainSize: number; normalizeGain?: boolean }): number {
+  const rmsRatio = (opts: { density: number; grainSize: number; normalizeGain?: boolean }): number => {
     const proc = new Processor({ processorOptions: { bufferSeconds: 2, normalizeGain: opts.normalizeGain ?? false } });
     const n = SAMPLE_RATE * 3;
     const input = makeSine(440, 0.5, n);
@@ -99,7 +99,7 @@ describe('GranularProcessor normalizeGain DSP', () => {
       out.set(oB, off);
     }
     return rms(out.subarray(SAMPLE_RATE)) / rms(input.subarray(SAMPLE_RATE)); // skip 1 s warmup
-  }
+  };
 
   // ── Default (normalizeGain off) preserves the expressive density dynamics ──
   it('without normalizeGain, output level rises with density (current behaviour)', () => {

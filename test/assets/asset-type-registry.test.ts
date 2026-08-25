@@ -10,14 +10,14 @@ class TypeB {}
 const adapter = (): never => ({ createPlaceholder: vi.fn(), stateOf: vi.fn(), begin: vi.fn(), fill: vi.fn(), fail: vi.fn(), evict: vi.fn() }) as never;
 
 /** An installable type, with everything the individual test does not care about defaulted. */
-function type(spec: {
+const type = (spec: {
   id: string;
   token?: object;
   extensions?: readonly string[];
   leaf?: unknown;
   destroy?: () => void;
   resourceIdentity?: (request: { source: string; options?: unknown }) => string;
-}): ReturnType<typeof testAssetType> {
+}): ReturnType<typeof testAssetType> => {
   return testAssetType<string, unknown>({
     id: spec.id,
     ...(spec.token !== undefined && { token: spec.token as never }),
@@ -27,7 +27,7 @@ function type(spec: {
     ...(spec.resourceIdentity !== undefined && { resourceIdentity: spec.resourceIdentity as never }),
     create: async source => source,
   });
-}
+};
 
 describe('AssetTypeRegistry', () => {
   test('installs a type under its id, its token and every suffix it claims', () => {

@@ -3,7 +3,7 @@
  * `fallback` when the element exposes no error detail.
  * @internal
  */
-export function mediaErrorMessage(element: HTMLMediaElement, fallback: string): string {
+export const mediaErrorMessage = (element: HTMLMediaElement, fallback: string): string => {
   const error = element.error;
 
   if (!error) {
@@ -11,4 +11,4 @@ export function mediaErrorMessage(element: HTMLMediaElement, fallback: string): 
   }
 
   return error.message.length > 0 ? `${fallback} ${error.message}` : `${fallback} (media error code ${error.code})`;
-}
+};

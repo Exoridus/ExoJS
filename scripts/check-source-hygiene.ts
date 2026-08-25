@@ -103,11 +103,11 @@ const OWN_REPOSITORY_SET = new Set(OWN_REPOSITORIES.map(name => name.toLowerCase
 const GITHUB_ISSUE_URL = /https?:\/\/(?:www\.)?github\.com\/([\w.-]+)\/([\w.-]+)\/(?:issues|pull|pulls)\/\d+/i;
 
 /** True for a GitHub issue or pull-request link that points outside this project. */
-function isForeignIssueUrl(match: string): boolean {
+const isForeignIssueUrl = (match: string): boolean => {
   const url = GITHUB_ISSUE_URL.exec(match);
 
   return url !== null && !OWN_REPOSITORY_SET.has(`${url[1]}/${url[2]}`.toLowerCase());
-}
+};
 
 /**
  * "This session" is the one provenance phrase that is also ordinary domain
@@ -213,34 +213,34 @@ interface Violation {
   readonly text: string;
 }
 
-function commentKind(text: string): CommentKind {
+const commentKind = (text: string): CommentKind => {
   if (text.startsWith('/**')) return 'jsdoc';
 
   return text.startsWith('/*') ? 'block-comment' : 'line-comment';
-}
+};
 
-function fail(message: string): never {
+const fail = (message: string): never => {
   console.error(message);
   process.exit(1);
-}
+};
 
-function git(args: readonly string[]): string {
+const git = (args: readonly string[]): string => {
   return execFileSync('git', ['-c', 'core.quotepath=off', ...args], {
     cwd: REPO_ROOT,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   });
-}
+};
 
-function tryGit(args: readonly string[]): string {
+const tryGit = (args: readonly string[]): string => {
   try {
     return git(args);
   } catch {
     return '';
   }
-}
+};
 
-function gitLines(args: readonly string[]): string[] {
+const gitLines = (args: readonly string[]): string[] => {
   try {
     return git(args)
       .split('\n')
@@ -249,21 +249,21 @@ function gitLines(args: readonly string[]): string[] {
   } catch {
     return [];
   }
-}
+};
 
-function toRepoPath(absolutePath: string): string {
+const toRepoPath = (absolutePath: string): string => {
   return relative(REPO_ROOT, absolutePath).split(sep).join('/');
-}
+};
 
-function isScannable(repoPath: string): boolean {
+const isScannable = (repoPath: string): boolean => {
   if (!SCANNABLE_EXTENSIONS.some(extension => repoPath.endsWith(extension))) return false;
 
   return !repoPath.split('/').some(segment => segment.startsWith('.') || SKIPPED_SEGMENTS.has(segment));
-}
+};
 
-function isGenerated(source: string): boolean {
+const isGenerated = (source: string): boolean => {
   return GENERATED_BANNER.test(source.split('\n', GENERATED_BANNER_LINES).join('\n'));
-}
+};
 
 /**
  * Every comment range in the file, found by walking all tokens and reading
@@ -271,7 +271,7 @@ function isGenerated(source: string): boolean {
  * leading trivia of the following token, and the end-of-file token catches the
  * ones that close a file.
  */
-function collectComments(sourceFile: ts.SourceFile, source: string): ts.CommentRange[] {
+const collectComments = (sourceFile: ts.SourceFile, source: string): ts.CommentRange[] => {
   const seen = new Set<number>();
   const comments: ts.CommentRange[] = [];
 
@@ -295,7 +295,7 @@ function collectComments(sourceFile: ts.SourceFile, source: string): ts.CommentR
   visit(sourceFile);
 
   return comments;
-}
+};
 
 /** A one-based, inclusive span of source lines. */
 interface LineRange {
@@ -308,14 +308,14 @@ interface LineRange {
  * whole span rather than the comment's first line is what puts an existing
  * JSDoc block in scope when a single sentence inside it is rewritten.
  */
-function isInScope(sourceFile: ts.SourceFile, comment: ts.CommentRange, ranges: readonly LineRange[] | null): boolean {
+const isInScope = (sourceFile: ts.SourceFile, comment: ts.CommentRange, ranges: readonly LineRange[] | null): boolean => {
   if (ranges === null) return true;
 
   const first = sourceFile.getLineAndCharacterOfPosition(comment.pos).line + 1;
   const last = sourceFile.getLineAndCharacterOfPosition(Math.max(comment.pos, comment.end - 1)).line + 1;
 
   return ranges.some(range => range.start <= last && range.end >= first);
-}
+};
 
 interface Match {
   readonly rule: string;
@@ -331,7 +331,7 @@ interface Match {
  * *different* rules that merely overlap are kept, because a rule that quotes
  * trailing context would otherwise swallow an unrelated finding inside it.
  */
-function dedupe(matches: readonly Match[]): Match[] {
+const dedupe = (matches: readonly Match[]): Match[] => {
   const ordered = [...matches].sort((a, b) => a.start - b.start || b.end - a.end);
   const kept: Match[] = [];
   const seenSpans = new Set<string>();
@@ -345,19 +345,19 @@ function dedupe(matches: readonly Match[]): Match[] {
   }
 
   return kept;
-}
+};
 
-function summarize(text: string): string {
+const summarize = (text: string): string => {
   const collapsed = text.replaceAll(/\s+/g, ' ').trim();
 
   return collapsed.length > 120 ? `${collapsed.slice(0, 117)}...` : collapsed;
-}
+};
 
 /**
  * Scans one file. `ranges` limits reporting to comments intersecting those
  * one-based, inclusive line ranges; `null` reports every comment.
  */
-function scanFile(repoPath: string, absolutePath: string, ranges: readonly LineRange[] | null): Violation[] {
+const scanFile = (repoPath: string, absolutePath: string, ranges: readonly LineRange[] | null): Violation[] => {
   const source = readFileSync(absolutePath, 'utf8');
 
   if (isGenerated(source)) return [];
@@ -395,7 +395,7 @@ function scanFile(repoPath: string, absolutePath: string, ranges: readonly LineR
   }
 
   return violations;
-}
+};
 
 /**
  * The typographic punctuation this gate can normalize without reading the
@@ -418,7 +418,7 @@ const SAFE_PUNCTUATION: readonly (readonly [RegExp, string])[] = [
  * Only comment trivia is rewritten, so punctuation in a string literal, an
  * identifier or JSX content is left alone.
  */
-function fixFile(absolutePath: string, ranges: readonly LineRange[] | null): number {
+const fixFile = (absolutePath: string, ranges: readonly LineRange[] | null): number => {
   const source = readFileSync(absolutePath, 'utf8');
 
   if (isGenerated(source)) return 0;
@@ -455,7 +455,7 @@ function fixFile(absolutePath: string, ranges: readonly LineRange[] | null): num
   writeFileSync(absolutePath, result + source.slice(cursor), 'utf8');
 
   return fixed;
-}
+};
 
 interface Scope {
   readonly description: string;
@@ -463,13 +463,13 @@ interface Scope {
   readonly files: Map<string, LineRange[] | null>;
 }
 
-function unique(paths: readonly string[]): string[] {
+const unique = (paths: readonly string[]): string[] => {
   return [...new Set(paths)].sort((a, b) => a.localeCompare(b));
-}
+};
 
-function wholeFiles(paths: readonly string[]): Map<string, LineRange[] | null> {
+const wholeFiles = (paths: readonly string[]): Map<string, LineRange[] | null> => {
   return new Map(unique(paths).map(path => [path, null]));
-}
+};
 
 /**
  * New-side line ranges per file from a zero-context diff.
@@ -479,7 +479,7 @@ function wholeFiles(paths: readonly string[]): Map<string, LineRange[] | null> {
  * content that can look like a header. A hunk with a zero new-side count is a
  * pure deletion and contributes nothing to scan.
  */
-function parseChangedRanges(diff: string): Map<string, LineRange[]> {
+const parseChangedRanges = (diff: string): Map<string, LineRange[]> => {
   const ranges = new Map<string, LineRange[]>();
   let current: string | null = null;
   let inHeader = false;
@@ -512,10 +512,10 @@ function parseChangedRanges(diff: string): Map<string, LineRange[]> {
   }
 
   return ranges;
-}
+};
 
 /** The default branch to compare against, preferring the remote's own HEAD over a guess. */
-function defaultBaseRef(): string {
+const defaultBaseRef = (): string => {
   const symbolic = gitLines(['symbolic-ref', '--quiet', 'refs/remotes/origin/HEAD'])[0];
 
   if (symbolic) return symbolic.replace('refs/remotes/', '');
@@ -525,7 +525,7 @@ function defaultBaseRef(): string {
   }
 
   return 'HEAD';
-}
+};
 
 /**
  * Comments touching a line this branch changed. The diff runs against the
@@ -533,7 +533,7 @@ function defaultBaseRef(): string {
  * its line numbers describe the file as it sits on disk. Untracked files have
  * no diff to read and are scanned whole.
  */
-function changedScope(baseRef: string): Scope {
+const changedScope = (baseRef: string): Scope => {
   const mergeBase = gitLines(['merge-base', 'HEAD', baseRef])[0] ?? baseRef;
   const files = new Map<string, LineRange[] | null>();
 
@@ -551,29 +551,31 @@ function changedScope(baseRef: string): Scope {
       '(line-scoped: only comments touching a changed line)',
     files,
   };
-}
+};
 
-function allScope(): Scope {
+const allScope = (): Scope => {
   return {
     description: 'the whole tree, every comment (reporting mode)',
     files: wholeFiles([...gitLines(['ls-files']), ...gitLines(['ls-files', '--others', '--exclude-standard'])]),
   };
-}
+};
 
-function explicitScope(paths: readonly string[]): Scope {
+const explicitScope = (paths: readonly string[]): Scope => {
   return {
     description: `${paths.length} explicitly named path(s), every comment`,
     files: wholeFiles(paths.map(path => toRepoPath(resolve(REPO_ROOT, path)))),
   };
-}
+};
 
-function parseArguments(argv: readonly string[]): {
+const parseArguments = (
+  argv: readonly string[],
+): {
   all: boolean;
   base?: string;
   fixSafe: boolean;
   json: boolean;
   paths: string[];
-} {
+} => {
   const paths: string[] = [];
   let all = false;
   let base: string | undefined;
@@ -604,7 +606,7 @@ function parseArguments(argv: readonly string[]): {
   }
 
   return { all, base, fixSafe, json, paths };
-}
+};
 
 const { all, base, fixSafe, json, paths } = parseArguments(process.argv.slice(2));
 

@@ -10,32 +10,32 @@ let _capabilitySnapshot: Record<Capability, boolean> | null = null;
 
 const _listeners = new Set<() => void>();
 
-export function getAutoRendererStatus(): AutoRendererStatus {
+export const getAutoRendererStatus = (): AutoRendererStatus => {
   return _autoRendererStatus;
-}
+};
 
-export function isWebGpuSupported(): boolean {
+export const isWebGpuSupported = (): boolean => {
   return _webgpuSupported;
-}
+};
 
-export function isWebGl2Supported(): boolean {
+export const isWebGl2Supported = (): boolean => {
   return _webgl2Supported;
-}
+};
 
-export function onRuntimeDetected(callback: () => void): () => void {
+export const onRuntimeDetected = (callback: () => void): (() => void) => {
   _listeners.add(callback);
   return () => _listeners.delete(callback);
-}
+};
 
-export function getExampleAvailability(example: Example | null): ExampleAvailability {
+export const getExampleAvailability = (example: Example | null): ExampleAvailability => {
   if (!example) {
     return { available: true, reason: null };
   }
 
   return getAvailabilityForBackend(example.backend);
-}
+};
 
-export function getAvailabilityForBackend(backend: ExampleBackend): ExampleAvailability {
+export const getAvailabilityForBackend = (backend: ExampleBackend): ExampleAvailability => {
   if (_autoRendererStatus === 'checking') {
     return { available: true, reason: null };
   }
@@ -52,9 +52,9 @@ export function getAvailabilityForBackend(backend: ExampleBackend): ExampleAvail
     default:
       return { available: true, reason: null };
   }
-}
+};
 
-export async function detectRuntimeSupport(): Promise<void> {
+export const detectRuntimeSupport = async (): Promise<void> => {
   // Capabilities.ready does the WebGL2 context probe + the async WebGPU
   // adapter check in one shot. `webgpuAdapter !== null` is the strict
   // "real adapter is available" signal - `caps.webgpu` alone only confirms
@@ -91,15 +91,15 @@ export async function detectRuntimeSupport(): Promise<void> {
   for (const listener of _listeners) {
     listener();
   }
-}
+};
 
 /**
  * Returns the resolved capability snapshot, or `null` if
  * {@link detectRuntimeSupport} hasn't run yet. Read-only.
  */
-export function getCapabilitySnapshot(): Readonly<Record<Capability, boolean>> | null {
+export const getCapabilitySnapshot = (): Readonly<Record<Capability, boolean>> | null => {
   return _capabilitySnapshot;
-}
+};
 
 /**
  * Filters `required` to the subset that is currently `false` in the
@@ -107,7 +107,7 @@ export function getCapabilitySnapshot(): Readonly<Record<Capability, boolean>> |
  * should treat as "not yet known"). Returns an empty array when all
  * required capabilities are met.
  */
-export function getMissingCapabilities(required: ReadonlyArray<Capability>): ReadonlyArray<Capability> | null {
+export const getMissingCapabilities = (required: ReadonlyArray<Capability>): ReadonlyArray<Capability> | null => {
   if (_capabilitySnapshot === null) return null;
   return required.filter(cap => !_capabilitySnapshot![cap]);
-}
+};

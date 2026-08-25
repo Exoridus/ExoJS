@@ -11,9 +11,9 @@
 
 import { diffPartialBaseline, formatBaselineFailure, isBaselineClean, mergePartialBaseline, type PartialBaseline } from '../../scripts/guide-partial-baseline';
 
-function baselineOf(files: Record<string, number>): PartialBaseline {
+const baselineOf = (files: Record<string, number>): PartialBaseline => {
   return { note: 'test', files };
-}
+};
 
 describe('diffPartialBaseline', () => {
   test('matching counts are clean', () => {

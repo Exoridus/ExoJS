@@ -31,17 +31,17 @@ const uniqueName = (): string => `exojs-cache-test-${Date.now()}-${counter++}`;
 const openStores: IndexedDbStore[] = [];
 const openDatabases: string[] = [];
 
-function createStore(name = uniqueName()): IndexedDbStore {
+const createStore = (name = uniqueName()): IndexedDbStore => {
   const store = new IndexedDbStore(name);
 
   openStores.push(store);
   openDatabases.push(name);
 
   return store;
-}
+};
 
 /** Read the physical schema, which is what proves a new namespace needs none of its own. */
-async function inspectSchema(name: string): Promise<{ version: number; stores: string[] }> {
+const inspectSchema = async (name: string): Promise<{ version: number; stores: string[] }> => {
   const database = await new Promise<IDBDatabase>((resolve, reject) => {
     const request = indexedDB.open(name);
 
@@ -54,7 +54,7 @@ async function inspectSchema(name: string): Promise<{ version: number; stores: s
   database.close();
 
   return schema;
-}
+};
 
 afterEach(async () => {
   for (const store of openStores.splice(0)) {

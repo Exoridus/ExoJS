@@ -4,15 +4,15 @@ import { Loader } from '#assets/Loader';
 import { materializeAssetTypes } from '#extensions/materialize';
 
 /** Loader with all core asset bindings (mirrors createCoreLoader in the sibling loader tests). */
-function createCoreLoader(): Loader {
+const createCoreLoader = (): Loader => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   return loader;
-}
+};
 
 const originalFetch = global.fetch;
 
-function mockFetchJson(payload: unknown): void {
+const mockFetchJson = (payload: unknown): void => {
   global.fetch = vi.fn(
     async (): Promise<Response> =>
       ({
@@ -24,7 +24,7 @@ function mockFetchJson(payload: unknown): void {
         arrayBuffer: async () => new ArrayBuffer(8),
       }) as unknown as Response,
   );
-}
+};
 
 // `get()` is an acquiring call: it resolves, claims, and starts a fetch when the
 // source is unknown. `peek()` is the pure lookup that was missing next to it -

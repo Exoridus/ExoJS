@@ -2,24 +2,24 @@ import type { BmFontChar, BmFontData } from '#rendering/text/BmFont';
 
 // ── Parser helpers ────────────────────────────────────────────────────────────
 
-function intVal(line: string, key: string): number {
+const intVal = (line: string, key: string): number => {
   const match = new RegExp(`\\b${key}=(-?\\d+)`).exec(line);
   return match?.[1] !== undefined ? parseInt(match[1], 10) : 0;
-}
+};
 
-function strVal(line: string, key: string): string {
+const strVal = (line: string, key: string): string => {
   const match = new RegExp(`\\b${key}="([^"]*)"`).exec(line);
   if (match?.[1] !== undefined) return match[1];
   const bare = new RegExp(`\\b${key}=(\\S+)`).exec(line);
   return bare?.[1] ?? '';
-}
+};
 
 /**
  * Parse an AngelCode BMFont `.fnt` text file and return structured
  * {@link BmFontData}. Supports the `text` format; the binary and XML
  * formats are not implemented.
  */
-export function parseBmFontText(text: string): BmFontData {
+export const parseBmFontText = (text: string): BmFontData => {
   const lines = text.split(/\r?\n/);
   const pages: string[] = [];
   const chars = new Map<number, BmFontChar>();
@@ -72,4 +72,4 @@ export function parseBmFontText(text: string): BmFontData {
   }
 
   return { pages, chars, kernings, lineHeight, base };
-}
+};

@@ -90,9 +90,7 @@ export const combPenaltyTriple = 0.5;
  * (a sub-harmonic candidate's real beat). One third of `minLag` reaches the 3f lag of a
  * candidate at maxBpm.
  */
-export function acfExtendedMinLag(minLag: number): number {
-  return Math.max(1, Math.round(minLag / 3));
-}
+export const acfExtendedMinLag = (minLag: number): number => Math.max(1, Math.round(minLag / 3));
 
 /**
  * Compute the normalised autocorrelation function over a novelty curve.
@@ -107,13 +105,13 @@ export function acfExtendedMinLag(minLag: number): number {
  * @param maxLag     Maximum lag in hops (inclusive).
  * @returns          ACF array indexed by lag (index 0 = lag minLag).
  */
-export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): Float32Array {
+export const computeAcf = (flux: Float32Array, minLag: number, maxLag: number): Float32Array => {
   const acf = new Float32Array(maxLag - minLag + 1);
 
   computeAcfInto(flux, flux.length, minLag, maxLag, acf);
 
   return acf;
-}
+};
 
 /**
  * {@link computeAcf} writing into a caller-owned buffer.
@@ -128,7 +126,7 @@ export function computeAcf(flux: Float32Array, minLag: number, maxLag: number): 
  * @param maxLag  Maximum lag in hops (inclusive).
  * @param out     Receives `maxLag - minLag + 1` values, indexed by lag from `minLag`.
  */
-export function computeAcfInto(flux: Float32Array, n: number, minLag: number, maxLag: number, out: Float32Array): void {
+export const computeAcfInto = (flux: Float32Array, n: number, minLag: number, maxLag: number, out: Float32Array): void => {
   const lagCount = maxLag - minLag + 1;
 
   // Window mean - subtracted before correlation to remove the DC pedestal.
@@ -156,14 +154,14 @@ export function computeAcfInto(flux: Float32Array, n: number, minLag: number, ma
     }
     out[lagIndex] = n > 0 ? sum / n / norm : 0;
   }
-}
+};
 
 /**
  * Sample the ACF at an arbitrary (possibly fractional) lag with linear interpolation.
  * Returns 0 outside the computed lag range and clamps negative correlation to 0 so
  * anti-correlated harmonics never contribute to (or subtract spuriously from) a comb.
  */
-export function acfAtLag(acf: Float32Array, minLag: number, lag: number): number {
+export const acfAtLag = (acf: Float32Array, minLag: number, lag: number): number => {
   const maxIndex = acf.length - 1;
   const f = lag - minLag;
   if (f < 0 || f > maxIndex) return 0;
@@ -172,7 +170,7 @@ export function acfAtLag(acf: Float32Array, minLag: number, lag: number): number
   const frac = f - i0;
   const v = acf[i0]! * (1 - frac) + acf[i1]! * frac;
   return v > 0 ? v : 0;
-}
+};
 
 /**
  * Sub-lag peak refinement. Fit a parabola through the three samples around an interior
@@ -184,14 +182,14 @@ export function acfAtLag(acf: Float32Array, minLag: number, lag: number): number
  * Returns 0 when the three points are not strictly concave (cannot happen for a genuine
  * strict local maximum, but guards floating-point edge cases).
  */
-export function parabolicPeakOffset(yPrev: number, yMid: number, yNext: number): number {
+export const parabolicPeakOffset = (yPrev: number, yMid: number, yNext: number): number => {
   const denom = yPrev - 2 * yMid + yNext;
   if (denom >= 0) return 0;
   let d = (0.5 * (yPrev - yNext)) / denom;
   if (d < -0.5) d = -0.5;
   else if (d > 0.5) d = 0.5;
   return d;
-}
+};
 
 /**
  * Find all positive local-maxima peaks in the ACF and convert lags to BPM candidates.
@@ -208,7 +206,7 @@ export function parabolicPeakOffset(yPrev: number, yMid: number, yNext: number):
  * @param sampleRate Audio sample rate in Hz.
  * @param topK       Number of peaks to return (default 3).
  */
-export function findTempoPeaks(acf: Float32Array, minLag: number, hopSize: number, sampleRate: number, topK = 3): TempoCandidateResult[] {
+export const findTempoPeaks = (acf: Float32Array, minLag: number, hopSize: number, sampleRate: number, topK = 3): TempoCandidateResult[] => {
   const peaks: TempoCandidateResult[] = [];
   const last = acf.length - 1;
 
@@ -234,13 +232,13 @@ export function findTempoPeaks(acf: Float32Array, minLag: number, hopSize: numbe
 
   peaks.sort((a, b) => b.score - a.score);
   return peaks.slice(0, topK);
-}
+};
 
 /** Soft log-Gaussian tempo prior: 1 at `mu`, decaying symmetrically in log-BPM. */
-export function tempoPrior(bpm: number, mu = defaultPriorMu, sigma = defaultPriorSigma): number {
+export const tempoPrior = (bpm: number, mu = defaultPriorMu, sigma = defaultPriorSigma): number => {
   const z = Math.log(bpm / mu) / sigma;
   return Math.exp(-0.5 * z * z);
-}
+};
 
 /**
  * Re-score raw ACF peaks into musically-disambiguated tempo candidates.
@@ -261,12 +259,12 @@ export function tempoPrior(bpm: number, mu = defaultPriorMu, sigma = defaultPrio
  * 180 BPM kick), not a competing fundamental, and must not demote the true beat. Returns
  * candidates sorted by score.
  */
-export function scoreTempoHypotheses(
+export const scoreTempoHypotheses = (
   peaks: TempoCandidateResult[],
   acf: Float32Array,
   minLag: number,
   options: TempoScoringOptions = {},
-): TempoCandidateResult[] {
+): TempoCandidateResult[] => {
   const mu = options.priorMu ?? defaultPriorMu;
   const sigma = options.priorSigma ?? defaultPriorSigma;
   const maxBpm = options.maxBpm ?? 300;
@@ -292,7 +290,7 @@ export function scoreTempoHypotheses(
 
   scored.sort((a, b) => b.score - a.score);
   return scored;
-}
+};
 
 /**
  * Full tempo-candidate pipeline: ACF → peaks → comb + super-harmonic penalty + prior.
@@ -305,14 +303,14 @@ export function scoreTempoHypotheses(
  * @param hopSize    Audio samples per hop.
  * @param sampleRate Audio sample rate in Hz.
  */
-export function computeTempoCandidates(
+export const computeTempoCandidates = (
   flux: Float32Array,
   minLag: number,
   maxLag: number,
   hopSize: number,
   sampleRate: number,
   options: TempoScoringOptions = {},
-): TempoCandidateResult[] {
+): TempoCandidateResult[] => {
   const minBpm = options.minBpm ?? 50;
   const maxBpm = options.maxBpm ?? 300;
   const topK = options.topK ?? 3;
@@ -325,7 +323,7 @@ export function computeTempoCandidates(
   const inRange = peaks.filter(p => p.bpm >= loBpm && p.bpm <= hiBpm);
   const scored = scoreTempoHypotheses(inRange, acf, acfMinLag, options);
   return scored.slice(0, topK);
-}
+};
 
 /**
  * True when `bpm` is a metrically-related multiple of `reference` - a ½×, 2×, 3× or ⅓×
@@ -334,7 +332,7 @@ export function computeTempoCandidates(
  * (e.g. 180 BPM kick vs the 120 BPM "dotted" grouping its 8th-note subdivisions create), not
  * a genuine tempo change.
  */
-export function isOctaveRelated(bpm: number, reference: number): boolean {
+export const isOctaveRelated = (bpm: number, reference: number): boolean => {
   if (reference <= 0) return false;
   const r = bpm / reference;
   return (
@@ -345,4 +343,4 @@ export function isOctaveRelated(bpm: number, reference: number): boolean {
     Math.abs(r - 2 / 3) < 0.04 ||
     Math.abs(r - 3 / 2) < 0.06
   );
-}
+};

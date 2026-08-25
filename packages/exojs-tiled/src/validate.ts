@@ -54,115 +54,114 @@ export class TiledFormatError extends Error {
 
 // ── Primitive helpers ───────────────────────────────────────────────────────
 
-function describeValue(value: unknown): string {
+const describeValue = (value: unknown): string => {
   if (value === null) return 'null';
   if (Array.isArray(value)) return 'an array';
   return typeof value;
-}
+};
 
-function joinPath(path: string, key: string | number): string {
+const joinPath = (path: string, key: string | number): string => {
   if (typeof key === 'number') return `${path}[${key}]`;
   return path === '' ? key : `${path}.${key}`;
-}
+};
 
-function expectObject(value: unknown, source: string, path: string): Record<string, unknown> {
+const expectObject = (value: unknown, source: string, path: string): Record<string, unknown> => {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     throw new TiledFormatError(source, path, `expected an object, got ${describeValue(value)}`);
   }
   return value as Record<string, unknown>;
-}
+};
 
-function expectArray(value: unknown, source: string, path: string): readonly unknown[] {
+const expectArray = (value: unknown, source: string, path: string): readonly unknown[] => {
   if (!Array.isArray(value)) {
     throw new TiledFormatError(source, path, `expected an array, got ${describeValue(value)}`);
   }
   return value;
-}
+};
 
-function expectString(value: unknown, source: string, path: string): string {
+const expectString = (value: unknown, source: string, path: string): string => {
   if (typeof value !== 'string') {
     throw new TiledFormatError(source, path, `expected a string, got ${describeValue(value)}`);
   }
   return value;
-}
+};
 
-function expectNumber(value: unknown, source: string, path: string): number {
+const expectNumber = (value: unknown, source: string, path: string): number => {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     throw new TiledFormatError(source, path, `expected a finite number, got ${describeValue(value)}`);
   }
   return value;
-}
+};
 
-function expectInteger(value: unknown, source: string, path: string): number {
+const expectInteger = (value: unknown, source: string, path: string): number => {
   const n = expectNumber(value, source, path);
   if (!Number.isInteger(n)) {
     throw new TiledFormatError(source, path, `expected an integer, got ${n}`);
   }
   return n;
-}
+};
 
-function expectNonNegativeInteger(value: unknown, source: string, path: string): number {
+const expectNonNegativeInteger = (value: unknown, source: string, path: string): number => {
   const n = expectInteger(value, source, path);
   if (n < 0) {
     throw new TiledFormatError(source, path, `expected a non-negative integer, got ${n}`);
   }
   return n;
-}
+};
 
-function expectPositiveInteger(value: unknown, source: string, path: string): number {
+const expectPositiveInteger = (value: unknown, source: string, path: string): number => {
   const n = expectInteger(value, source, path);
   if (n <= 0) {
     throw new TiledFormatError(source, path, `expected a positive integer, got ${n}`);
   }
   return n;
-}
+};
 
-function expectBoolean(value: unknown, source: string, path: string): boolean {
+const expectBoolean = (value: unknown, source: string, path: string): boolean => {
   if (typeof value !== 'boolean') {
     throw new TiledFormatError(source, path, `expected a boolean, got ${describeValue(value)}`);
   }
   return value;
-}
+};
 
-function optionalString(obj: Record<string, unknown>, key: string, source: string, path: string): string | undefined {
+const optionalString = (obj: Record<string, unknown>, key: string, source: string, path: string): string | undefined => {
   const value = obj[key];
   return value === undefined ? undefined : expectString(value, source, joinPath(path, key));
-}
+};
 
-function optionalNumber(obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined {
+const optionalNumber = (obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined => {
   const value = obj[key];
   return value === undefined ? undefined : expectNumber(value, source, joinPath(path, key));
-}
+};
 
-function optionalInteger(obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined {
+const optionalInteger = (obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined => {
   const value = obj[key];
   return value === undefined ? undefined : expectInteger(value, source, joinPath(path, key));
-}
+};
 
-function optionalNonNegativeInteger(obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined {
+const optionalNonNegativeInteger = (obj: Record<string, unknown>, key: string, source: string, path: string): number | undefined => {
   const value = obj[key];
   return value === undefined ? undefined : expectNonNegativeInteger(value, source, joinPath(path, key));
-}
+};
 
-function optionalBoolean(obj: Record<string, unknown>, key: string, source: string, path: string): boolean | undefined {
+const optionalBoolean = (obj: Record<string, unknown>, key: string, source: string, path: string): boolean | undefined => {
   const value = obj[key];
   return value === undefined ? undefined : expectBoolean(value, source, joinPath(path, key));
-}
+};
 
-function mapArray<T>(value: unknown, source: string, path: string, fn: (item: unknown, itemPath: string) => T): readonly T[] {
+const mapArray = <T>(value: unknown, source: string, path: string, fn: (item: unknown, itemPath: string) => T): readonly T[] => {
   const arr = expectArray(value, source, path);
   return arr.map((item, i) => fn(item, joinPath(path, i)));
-}
+};
 
-function optionalMapArray<T>(value: unknown, source: string, path: string, fn: (item: unknown, itemPath: string) => T): readonly T[] | undefined {
-  return value === undefined ? undefined : mapArray(value, source, path, fn);
-}
+const optionalMapArray = <T>(value: unknown, source: string, path: string, fn: (item: unknown, itemPath: string) => T): readonly T[] | undefined =>
+  value === undefined ? undefined : mapArray(value, source, path, fn);
 
 // ── Custom properties ───────────────────────────────────────────────────────
 
 const PROPERTY_TYPES: readonly TiledPropertyType[] = ['string', 'int', 'float', 'bool', 'color', 'file', 'object', 'class'];
 
-function validateTiledClassPropertyValue(raw: unknown, source: string, path: string): TiledClassPropertyValueData {
+const validateTiledClassPropertyValue = (raw: unknown, source: string, path: string): TiledClassPropertyValueData => {
   const obj = expectObject(raw, source, path);
   const result: Record<string, string | number | boolean | TiledClassPropertyValueData> = {};
   for (const [key, value] of Object.entries(obj)) {
@@ -176,10 +175,10 @@ function validateTiledClassPropertyValue(raw: unknown, source: string, path: str
     }
   }
   return result;
-}
+};
 
 /** @internal */
-export function validateTiledPropertyData(raw: unknown, source: string, path: string): TiledPropertyData {
+export const validateTiledPropertyData = (raw: unknown, source: string, path: string): TiledPropertyData => {
   const obj = expectObject(raw, source, path);
   const name = expectString(obj.name, source, joinPath(path, 'name'));
   const typePath = joinPath(path, 'type');
@@ -214,41 +213,39 @@ export function validateTiledPropertyData(raw: unknown, source: string, path: st
   }
 
   return { name, type, propertytype, value };
-}
+};
 
-function validateTiledPropertiesArray(value: unknown, source: string, path: string): readonly TiledPropertyData[] | undefined {
-  return optionalMapArray(value, source, path, (item, itemPath) => validateTiledPropertyData(item, source, itemPath));
-}
+const validateTiledPropertiesArray = (value: unknown, source: string, path: string): readonly TiledPropertyData[] | undefined =>
+  optionalMapArray(value, source, path, (item, itemPath) => validateTiledPropertyData(item, source, itemPath));
 
 // ── Points / animation frames ───────────────────────────────────────────────
 
-function validateTiledPointData(raw: unknown, source: string, path: string): TiledPointData {
+const validateTiledPointData = (raw: unknown, source: string, path: string): TiledPointData => {
   const obj = expectObject(raw, source, path);
   return {
     x: expectNumber(obj.x, source, joinPath(path, 'x')),
     y: expectNumber(obj.y, source, joinPath(path, 'y')),
   };
-}
+};
 
-function validateTiledPointArray(value: unknown, source: string, path: string): readonly TiledPointData[] {
-  return mapArray(value, source, path, (item, itemPath) => validateTiledPointData(item, source, itemPath));
-}
+const validateTiledPointArray = (value: unknown, source: string, path: string): readonly TiledPointData[] =>
+  mapArray(value, source, path, (item, itemPath) => validateTiledPointData(item, source, itemPath));
 
 /** @internal */
-export function validateTiledAnimationFrameData(raw: unknown, source: string, path: string): TiledAnimationFrameData {
+export const validateTiledAnimationFrameData = (raw: unknown, source: string, path: string): TiledAnimationFrameData => {
   const obj = expectObject(raw, source, path);
   return {
     tileid: expectNonNegativeInteger(obj.tileid, source, joinPath(path, 'tileid')),
     duration: expectNonNegativeInteger(obj.duration, source, joinPath(path, 'duration')),
   };
-}
+};
 
 // ── Text objects ─────────────────────────────────────────────────────────────
 
 const HALIGN_VALUES: ReadonlyArray<TiledTextData['halign']> = ['center', 'right', 'justify', 'left'];
 const VALIGN_VALUES: ReadonlyArray<TiledTextData['valign']> = ['center', 'bottom', 'top'];
 
-function validateTiledTextData(raw: unknown, source: string, path: string): TiledTextData {
+const validateTiledTextData = (raw: unknown, source: string, path: string): TiledTextData => {
   const obj = expectObject(raw, source, path);
   const text = expectString(obj.text, source, joinPath(path, 'text'));
 
@@ -284,12 +281,12 @@ function validateTiledTextData(raw: unknown, source: string, path: string): Tile
     valign,
     wrap: optionalBoolean(obj, 'wrap', source, path),
   };
-}
+};
 
 // ── Objects ──────────────────────────────────────────────────────────────────
 
 /** @internal */
-export function validateTiledObjectData(raw: unknown, source: string, path: string): TiledObjectData {
+export const validateTiledObjectData = (raw: unknown, source: string, path: string): TiledObjectData => {
   const obj = expectObject(raw, source, path);
 
   return {
@@ -315,7 +312,7 @@ export function validateTiledObjectData(raw: unknown, source: string, path: stri
     template: optionalString(obj, 'template', source, path),
     properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
   };
-}
+};
 
 // ── Layers ───────────────────────────────────────────────────────────────────
 
@@ -323,29 +320,26 @@ const LAYER_TYPES = ['tilelayer', 'objectgroup', 'imagelayer', 'group'] as const
 const SUPPORTED_TILE_LAYER_ENCODINGS = new Set<string>(['csv']);
 const DRAW_ORDERS: ReadonlyArray<NonNullable<TiledObjectLayerData['draworder']>> = ['topdown', 'index'];
 
-function validateTiledLayerBase(obj: Record<string, unknown>, source: string, path: string): TiledLayerDataBase {
-  return {
-    id: expectNonNegativeInteger(obj.id, source, joinPath(path, 'id')),
-    name: expectString(obj.name, source, joinPath(path, 'name')),
-    class: optionalString(obj, 'class', source, path),
-    visible: expectBoolean(obj.visible, source, joinPath(path, 'visible')),
-    opacity: expectNumber(obj.opacity, source, joinPath(path, 'opacity')),
-    x: expectNumber(obj.x, source, joinPath(path, 'x')),
-    y: expectNumber(obj.y, source, joinPath(path, 'y')),
-    offsetx: optionalNumber(obj, 'offsetx', source, path),
-    offsety: optionalNumber(obj, 'offsety', source, path),
-    parallaxx: optionalNumber(obj, 'parallaxx', source, path),
-    parallaxy: optionalNumber(obj, 'parallaxy', source, path),
-    tintcolor: optionalString(obj, 'tintcolor', source, path),
-    properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
-  };
-}
+const validateTiledLayerBase = (obj: Record<string, unknown>, source: string, path: string): TiledLayerDataBase => ({
+  id: expectNonNegativeInteger(obj.id, source, joinPath(path, 'id')),
+  name: expectString(obj.name, source, joinPath(path, 'name')),
+  class: optionalString(obj, 'class', source, path),
+  visible: expectBoolean(obj.visible, source, joinPath(path, 'visible')),
+  opacity: expectNumber(obj.opacity, source, joinPath(path, 'opacity')),
+  x: expectNumber(obj.x, source, joinPath(path, 'x')),
+  y: expectNumber(obj.y, source, joinPath(path, 'y')),
+  offsetx: optionalNumber(obj, 'offsetx', source, path),
+  offsety: optionalNumber(obj, 'offsety', source, path),
+  parallaxx: optionalNumber(obj, 'parallaxx', source, path),
+  parallaxy: optionalNumber(obj, 'parallaxy', source, path),
+  tintcolor: optionalString(obj, 'tintcolor', source, path),
+  properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
+});
 
-function validateTiledGidArray(value: unknown, source: string, path: string): readonly number[] {
-  return mapArray(value, source, path, (item, itemPath) => expectNonNegativeInteger(item, source, itemPath));
-}
+const validateTiledGidArray = (value: unknown, source: string, path: string): readonly number[] =>
+  mapArray(value, source, path, (item, itemPath) => expectNonNegativeInteger(item, source, itemPath));
 
-function validateTiledChunkData(raw: unknown, source: string, path: string): TiledChunkData {
+const validateTiledChunkData = (raw: unknown, source: string, path: string): TiledChunkData => {
   const obj = expectObject(raw, source, path);
   return {
     x: expectInteger(obj.x, source, joinPath(path, 'x')),
@@ -354,9 +348,9 @@ function validateTiledChunkData(raw: unknown, source: string, path: string): Til
     height: expectPositiveInteger(obj.height, source, joinPath(path, 'height')),
     data: validateTiledGidArray(obj.data, source, joinPath(path, 'data')),
   };
-}
+};
 
-function validateTiledTileLayerData(obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledTileLayerData {
+const validateTiledTileLayerData = (obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledTileLayerData => {
   // Validation runs AFTER the async decode pass (`decodeLayerData.ts`), which
   // turns base64/gzip/zlib `data` into a plain GID array and strips these
   // markers. Reaching here with them still set means the data was not decoded
@@ -396,9 +390,9 @@ function validateTiledTileLayerData(obj: Record<string, unknown>, base: TiledLay
     data: hasData ? validateTiledGidArray(obj.data, source, joinPath(path, 'data')) : undefined,
     chunks: hasChunks ? mapArray(obj.chunks, source, joinPath(path, 'chunks'), (item, itemPath) => validateTiledChunkData(item, source, itemPath)) : undefined,
   };
-}
+};
 
-function validateTiledObjectLayerData(obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledObjectLayerData {
+const validateTiledObjectLayerData = (obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledObjectLayerData => {
   let draworder: TiledObjectLayerData['draworder'];
   if (obj.draworder !== undefined) {
     const value = expectString(obj.draworder, source, joinPath(path, 'draworder'));
@@ -414,28 +408,24 @@ function validateTiledObjectLayerData(obj: Record<string, unknown>, base: TiledL
     draworder,
     objects: mapArray(obj.objects, source, joinPath(path, 'objects'), (item, itemPath) => validateTiledObjectData(item, source, itemPath)),
   };
-}
+};
 
-function validateTiledImageLayerData(obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledImageLayerData {
-  return {
-    ...base,
-    type: 'imagelayer',
-    image: obj.image === undefined ? '' : expectString(obj.image, source, joinPath(path, 'image')),
-    repeatx: optionalBoolean(obj, 'repeatx', source, path),
-    repeaty: optionalBoolean(obj, 'repeaty', source, path),
-  };
-}
+const validateTiledImageLayerData = (obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledImageLayerData => ({
+  ...base,
+  type: 'imagelayer',
+  image: obj.image === undefined ? '' : expectString(obj.image, source, joinPath(path, 'image')),
+  repeatx: optionalBoolean(obj, 'repeatx', source, path),
+  repeaty: optionalBoolean(obj, 'repeaty', source, path),
+});
 
-function validateTiledGroupLayerData(obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledGroupLayerData {
-  return {
-    ...base,
-    type: 'group',
-    layers: mapArray(obj.layers, source, joinPath(path, 'layers'), (item, itemPath) => validateTiledLayerData(item, source, itemPath)),
-  };
-}
+const validateTiledGroupLayerData = (obj: Record<string, unknown>, base: TiledLayerDataBase, source: string, path: string): TiledGroupLayerData => ({
+  ...base,
+  type: 'group',
+  layers: mapArray(obj.layers, source, joinPath(path, 'layers'), (item, itemPath) => validateTiledLayerData(item, source, itemPath)),
+});
 
 /** @internal */
-export function validateTiledLayerData(raw: unknown, source: string, path: string): TiledLayerData {
+export const validateTiledLayerData = (raw: unknown, source: string, path: string): TiledLayerData => {
   const obj = expectObject(raw, source, path);
   const type = expectString(obj.type, source, joinPath(path, 'type'));
   const base = validateTiledLayerBase(obj, source, path);
@@ -454,7 +444,7 @@ export function validateTiledLayerData(raw: unknown, source: string, path: strin
       throw new TiledFormatError(source, joinPath(path, 'type'), `unknown layer type "${type}" (expected one of ${known.join(', ')})`);
     }
   }
-}
+};
 
 /**
  * Walks a layer tree and ensures every tile layer's `data`/`chunks` choice
@@ -462,7 +452,7 @@ export function validateTiledLayerData(raw: unknown, source: string, path: strin
  * entire map; a mismatch indicates a hand-edited or corrupt file.
  * @internal
  */
-export function checkTiledLayerInfiniteConsistency(layers: readonly TiledLayerData[], infinite: boolean, source: string, path: string): void {
+export const checkTiledLayerInfiniteConsistency = (layers: readonly TiledLayerData[], infinite: boolean, source: string, path: string): void => {
   for (let i = 0; i < layers.length; i++) {
     const layer = layers[i];
     if (layer === undefined) continue;
@@ -481,12 +471,12 @@ export function checkTiledLayerInfiniteConsistency(layers: readonly TiledLayerDa
       checkTiledLayerInfiniteConsistency(layer.layers, infinite, source, joinPath(layerPath, 'layers'));
     }
   }
-}
+};
 
 // ── Tile definitions ─────────────────────────────────────────────────────────
 
 /** @internal */
-export function validateTiledTileData(raw: unknown, source: string, path: string): TiledTileData {
+export const validateTiledTileData = (raw: unknown, source: string, path: string): TiledTileData => {
   const obj = expectObject(raw, source, path);
 
   let objectgroup: TiledObjectLayerData | undefined;
@@ -511,11 +501,11 @@ export function validateTiledTileData(raw: unknown, source: string, path: string
     imagewidth: optionalNonNegativeInteger(obj, 'imagewidth', source, path),
     imageheight: optionalNonNegativeInteger(obj, 'imageheight', source, path),
   };
-}
+};
 
 // ── Wangsets ─────────────────────────────────────────────────────────────────
 
-function validateTiledWangColorData(raw: unknown, source: string, path: string): TiledWangColorData {
+const validateTiledWangColorData = (raw: unknown, source: string, path: string): TiledWangColorData => {
   const obj = expectObject(raw, source, path);
   return {
     name: expectString(obj.name, source, joinPath(path, 'name')),
@@ -523,16 +513,16 @@ function validateTiledWangColorData(raw: unknown, source: string, path: string):
     tile: expectInteger(obj.tile, source, joinPath(path, 'tile')),
     probability: expectNumber(obj.probability, source, joinPath(path, 'probability')),
   };
-}
+};
 
-function validateTiledWangTileData(raw: unknown, source: string, path: string): TiledWangTileData {
+const validateTiledWangTileData = (raw: unknown, source: string, path: string): TiledWangTileData => {
   const obj = expectObject(raw, source, path);
   const tileid = expectNonNegativeInteger(obj.tileid, source, joinPath(path, 'tileid'));
   const wangid = mapArray(obj.wangid, source, joinPath(path, 'wangid'), (item, itemPath) => expectNonNegativeInteger(item, source, itemPath));
   return { tileid, wangid };
-}
+};
 
-function validateTiledWangSetData(raw: unknown, source: string, path: string): TiledWangSetData {
+const validateTiledWangSetData = (raw: unknown, source: string, path: string): TiledWangSetData => {
   const obj = expectObject(raw, source, path);
   return {
     name: expectString(obj.name, source, joinPath(path, 'name')),
@@ -543,22 +533,21 @@ function validateTiledWangSetData(raw: unknown, source: string, path: string): T
     wangtiles: mapArray(obj.wangtiles, source, joinPath(path, 'wangtiles'), (item, itemPath) => validateTiledWangTileData(item, source, itemPath)),
     properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
   };
-}
+};
 
-function validateTiledWangSets(value: unknown, source: string, path: string): readonly TiledWangSetData[] | undefined {
-  return optionalMapArray(value, source, path, (item, itemPath) => validateTiledWangSetData(item, source, itemPath));
-}
+const validateTiledWangSets = (value: unknown, source: string, path: string): readonly TiledWangSetData[] | undefined =>
+  optionalMapArray(value, source, path, (item, itemPath) => validateTiledWangSetData(item, source, itemPath));
 
 // ── Tilesets ─────────────────────────────────────────────────────────────────
 
-function validateTiledVersion(value: unknown, source: string, path: string): string | number {
+const validateTiledVersion = (value: unknown, source: string, path: string): string | number => {
   if (typeof value !== 'string' && typeof value !== 'number') {
     throw new TiledFormatError(source, path, `expected a string or number, got ${describeValue(value)}`);
   }
   return value;
-}
+};
 
-function validateTiledObjectAlignment(obj: Record<string, unknown>, source: string, path: string): TiledObjectAlignment | undefined {
+const validateTiledObjectAlignment = (obj: Record<string, unknown>, source: string, path: string): TiledObjectAlignment | undefined => {
   const value = obj.objectalignment;
   if (value === undefined) return undefined;
 
@@ -569,38 +558,36 @@ function validateTiledObjectAlignment(obj: Record<string, unknown>, source: stri
   }
 
   return name as TiledObjectAlignment;
-}
+};
 
 /** @internal */
-export function validateTiledTilesetData(obj: Record<string, unknown>, source: string, path: string): TiledTilesetData {
-  return {
-    name: expectString(obj.name, source, joinPath(path, 'name')),
-    class: optionalString(obj, 'class', source, path),
-    tilewidth: expectPositiveInteger(obj.tilewidth, source, joinPath(path, 'tilewidth')),
-    tileheight: expectPositiveInteger(obj.tileheight, source, joinPath(path, 'tileheight')),
-    tilecount: expectNonNegativeInteger(obj.tilecount, source, joinPath(path, 'tilecount')),
-    columns: expectNonNegativeInteger(obj.columns, source, joinPath(path, 'columns')),
-    spacing: optionalNonNegativeInteger(obj, 'spacing', source, path),
-    margin: optionalNonNegativeInteger(obj, 'margin', source, path),
-    image: optionalString(obj, 'image', source, path),
-    imagewidth: optionalNonNegativeInteger(obj, 'imagewidth', source, path),
-    imageheight: optionalNonNegativeInteger(obj, 'imageheight', source, path),
-    tileoffset: obj.tileoffset === undefined ? undefined : validateTiledPointData(obj.tileoffset, source, joinPath(path, 'tileoffset')),
-    objectalignment: validateTiledObjectAlignment(obj, source, path),
-    tiles: optionalMapArray(obj.tiles, source, joinPath(path, 'tiles'), (item, itemPath) => validateTiledTileData(item, source, itemPath)),
-    wangsets: validateTiledWangSets(obj.wangsets, source, joinPath(path, 'wangsets')),
-    properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
-    tiledversion: optionalString(obj, 'tiledversion', source, path),
-    version: obj.version === undefined ? undefined : validateTiledVersion(obj.version, source, joinPath(path, 'version')),
-  };
-}
+export const validateTiledTilesetData = (obj: Record<string, unknown>, source: string, path: string): TiledTilesetData => ({
+  name: expectString(obj.name, source, joinPath(path, 'name')),
+  class: optionalString(obj, 'class', source, path),
+  tilewidth: expectPositiveInteger(obj.tilewidth, source, joinPath(path, 'tilewidth')),
+  tileheight: expectPositiveInteger(obj.tileheight, source, joinPath(path, 'tileheight')),
+  tilecount: expectNonNegativeInteger(obj.tilecount, source, joinPath(path, 'tilecount')),
+  columns: expectNonNegativeInteger(obj.columns, source, joinPath(path, 'columns')),
+  spacing: optionalNonNegativeInteger(obj, 'spacing', source, path),
+  margin: optionalNonNegativeInteger(obj, 'margin', source, path),
+  image: optionalString(obj, 'image', source, path),
+  imagewidth: optionalNonNegativeInteger(obj, 'imagewidth', source, path),
+  imageheight: optionalNonNegativeInteger(obj, 'imageheight', source, path),
+  tileoffset: obj.tileoffset === undefined ? undefined : validateTiledPointData(obj.tileoffset, source, joinPath(path, 'tileoffset')),
+  objectalignment: validateTiledObjectAlignment(obj, source, path),
+  tiles: optionalMapArray(obj.tiles, source, joinPath(path, 'tiles'), (item, itemPath) => validateTiledTileData(item, source, itemPath)),
+  wangsets: validateTiledWangSets(obj.wangsets, source, joinPath(path, 'wangsets')),
+  properties: validateTiledPropertiesArray(obj.properties, source, joinPath(path, 'properties')),
+  tiledversion: optionalString(obj, 'tiledversion', source, path),
+  version: obj.version === undefined ? undefined : validateTiledVersion(obj.version, source, joinPath(path, 'version')),
+});
 
 /**
  * Validates one entry of a map's `tilesets` array: either `{ firstgid,
  * source }` (external `.tsj`) or `{ firstgid, ...embedded tileset fields }`.
  * @internal
  */
-export function validateTiledTilesetRefData(raw: unknown, source: string, path: string): TiledTilesetRefData {
+export const validateTiledTilesetRefData = (raw: unknown, source: string, path: string): TiledTilesetRefData => {
   const obj = expectObject(raw, source, path);
   const firstgid = expectPositiveInteger(obj.firstgid, source, joinPath(path, 'firstgid'));
 
@@ -609,7 +596,7 @@ export function validateTiledTilesetRefData(raw: unknown, source: string, path: 
   }
 
   return { ...validateTiledTilesetData(obj, source, path), firstgid };
-}
+};
 
 // ── Map ──────────────────────────────────────────────────────────────────────
 
@@ -622,7 +609,7 @@ const RENDER_ORDERS: readonly TiledRenderOrder[] = ['right-down', 'right-up', 'l
  * `infinite`/`data`/`chunks` inconsistencies.
  * @internal
  */
-export function validateTiledMapData(raw: unknown, source: string): TiledMapData {
+export const validateTiledMapData = (raw: unknown, source: string): TiledMapData => {
   const obj = expectObject(raw, source, '');
 
   const type = expectString(obj.type, source, 'type');
@@ -671,12 +658,11 @@ export function validateTiledMapData(raw: unknown, source: string): TiledMapData
     tilesets: mapArray(obj.tilesets, source, 'tilesets', (item, itemPath) => validateTiledTilesetRefData(item, source, itemPath)),
     properties: validateTiledPropertiesArray(obj.properties, source, 'properties'),
   };
-}
+};
 
 /**
  * Validates a standalone `.tsj` tileset file's root object.
  * @internal
  */
-export function validateTiledTilesetFileData(raw: unknown, source: string): TiledTilesetData {
-  return validateTiledTilesetData(expectObject(raw, source, ''), source, '');
-}
+export const validateTiledTilesetFileData = (raw: unknown, source: string): TiledTilesetData =>
+  validateTiledTilesetData(expectObject(raw, source, ''), source, '');

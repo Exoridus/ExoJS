@@ -12,6 +12,6 @@ import type { RenderBackend } from '#rendering/RenderBackend';
  * (bypassing Application) must do the same explicitly - the backend no longer
  * self-registers core renderers.
  */
-export function wireCoreRenderers(backend: RenderBackend, rendering: RenderingApplicationOptions = {}): void {
+export const wireCoreRenderers = (backend: RenderBackend, rendering: RenderingApplicationOptions = {}): void => {
   materializeRendererBindings(backend, buildCoreRendererBindings(rendering));
-}
+};

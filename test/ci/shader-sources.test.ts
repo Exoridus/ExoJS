@@ -27,16 +27,16 @@ const WGSL_TARGET = 'src/rendering/webgpu/wgsl/text.wgsl';
 const backups = new Map<string, string>();
 
 /** Rewrites a tracked shader for the duration of one test. */
-function mutate(file: string, transform: (text: string) => string): void {
+const mutate = (file: string, transform: (text: string) => string): void => {
   const path = join(REPO_ROOT, file);
 
   if (!backups.has(file)) backups.set(file, readFileSync(path, 'utf8'));
 
   writeFileSync(path, transform(backups.get(file)!), 'utf8');
-}
+};
 
 /** Runs the gate; returns its combined output on failure, or null when it passed. */
-function scan(): string | null {
+const scan = (): string | null => {
   try {
     execFileSync('node', [TSX_CLI, SCANNER], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' });
 
@@ -46,7 +46,7 @@ function scan(): string | null {
 
     return `${failure.stdout ?? ''}${failure.stderr ?? ''}`;
   }
-}
+};
 
 afterEach(() => {
   for (const [file, text] of backups) {

@@ -14,7 +14,7 @@ import { GlyphSdf } from '#rendering/text/GlyphSdf';
  */
 
 // Vertical extent (in pixels) of the "inside-glyph" region - SDF value >= 128.
-function verticalInkExtent(result: { data: Uint8ClampedArray; width: number; height: number }): number {
+const verticalInkExtent = (result: { data: Uint8ClampedArray; width: number; height: number }): number => {
   const { data, width, height } = result;
   let minY = height;
   let maxY = -1;
@@ -30,7 +30,7 @@ function verticalInkExtent(result: { data: Uint8ClampedArray; width: number; hei
   }
 
   return maxY - minY + 1;
-}
+};
 
 describe('GlyphSdf SDF rasterization', () => {
   const fontSize = 48;

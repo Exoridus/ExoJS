@@ -118,21 +118,17 @@ const instanceVertexFormats: readonly GPUVertexFormat[] = ['float32', 'float32x2
  * vertex inputs by numeric location only, so the layout is driven by each
  * binding's fixed location rather than by name as on WebGL2.
  */
-function instanceAttributeBufferLayout(instances: InstanceDataView): GPUVertexBufferLayout {
-  return {
-    arrayStride: instances.strideFloats * Float32Array.BYTES_PER_ELEMENT,
-    stepMode: 'instance',
-    attributes: instances.attributes.map(binding => ({
-      shaderLocation: binding.location,
-      offset: binding.offsetFloats * Float32Array.BYTES_PER_ELEMENT,
-      format: instanceVertexFormats[binding.componentCount - 1]!,
-    })),
-  };
-}
+const instanceAttributeBufferLayout = (instances: InstanceDataView): GPUVertexBufferLayout => ({
+  arrayStride: instances.strideFloats * Float32Array.BYTES_PER_ELEMENT,
+  stepMode: 'instance',
+  attributes: instances.attributes.map(binding => ({
+    shaderLocation: binding.location,
+    offset: binding.offsetFloats * Float32Array.BYTES_PER_ELEMENT,
+    format: instanceVertexFormats[binding.componentCount - 1]!,
+  })),
+});
 
-function meshPipelineCacheKey(blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): string {
-  return `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
-}
+const meshPipelineCacheKey = (blendMode: BlendModes, format: GPUTextureFormat, stencil: boolean): string => `${blendMode}:${format}:${stencil ? 's' : 'n'}`;
 
 interface GeometryCacheEntry {
   readonly geometry: Geometry;

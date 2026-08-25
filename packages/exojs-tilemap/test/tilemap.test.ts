@@ -23,7 +23,7 @@ import {
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return {
     width: 512,
     height: 512,
@@ -32,13 +32,13 @@ function fakeTexture(): Texture {
     destroy: () => {},
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function fakeRegion(tw = 512, th = 512): TextureRegion {
+const fakeRegion = (tw = 512, th = 512): TextureRegion => {
   return new TextureRegion(fakeTexture(), { x: 0, y: 0, width: tw, height: th });
-}
+};
 
-function makeTileset(name: string, tileCount = 16, tw = 32, th = 32): TileSet {
+const makeTileset = (name: string, tileCount = 16, tw = 32, th = 32): TileSet => {
   return new TileSet({
     name,
     texture: fakeRegion(512, 512),
@@ -46,7 +46,7 @@ function makeTileset(name: string, tileCount = 16, tw = 32, th = 32): TileSet {
     tileHeight: th,
     tileCount,
   });
-}
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 // Tile identity & packing

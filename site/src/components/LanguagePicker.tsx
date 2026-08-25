@@ -12,7 +12,7 @@ export interface LanguagePickerProps {
   locale: Language;
 }
 
-export function LanguagePicker({ baseUrl, locale }: LanguagePickerProps): JSX.Element {
+export const LanguagePicker = ({ baseUrl, locale }: LanguagePickerProps): JSX.Element => {
   const language: Language = locale === 'de' ? 'de' : 'en';
 
   useEffect(() => {
@@ -36,9 +36,9 @@ export function LanguagePicker({ baseUrl, locale }: LanguagePickerProps): JSX.El
       </button>
     </div>
   );
-}
+};
 
-function buildLocaleHref(baseUrl: string, language: Language): string {
+const buildLocaleHref = (baseUrl: string, language: Language): string => {
   const url = new URL(window.location.href);
   const basePath = new URL(baseUrl, window.location.href).pathname;
   const normalizedBase = basePath.endsWith('/') ? basePath : `${basePath}/`;
@@ -50,4 +50,4 @@ function buildLocaleHref(baseUrl: string, language: Language): string {
   const withTrailingSlash = localizedPath.endsWith('/') ? localizedPath : `${localizedPath}/`;
 
   return `${url.origin}${withTrailingSlash}${url.search}${url.hash}`;
-}
+};

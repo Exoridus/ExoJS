@@ -87,7 +87,7 @@ const SHADER_CASES = new Set(['inline-glsl', 'inline-wgsl', 'wgsl-identifier-in-
 const fixturePath = (name: string): string => `${SHADER_CASES.has(name) ? SHADER_FIXTURE_DIRECTORY : FIXTURE_DIRECTORY}/${name}.ts`;
 
 /** Runs the scanner over one fixture; returns its combined output, or null when it passed. */
-function scan(name: string): string | null {
+const scan = (name: string): string | null => {
   try {
     execFileSync('node', [TSX_CLI, SCANNER, fixturePath(name)], { cwd: REPO_ROOT, encoding: 'utf8', stdio: 'pipe' });
 
@@ -97,7 +97,7 @@ function scan(name: string): string | null {
 
     return `${failure.stdout ?? ''}${failure.stderr ?? ''}`;
   }
-}
+};
 
 beforeAll(() => {
   mkdirSync(join(REPO_ROOT, FIXTURE_DIRECTORY), { recursive: true });

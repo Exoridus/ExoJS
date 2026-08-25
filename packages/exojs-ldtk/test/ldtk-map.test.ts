@@ -7,7 +7,7 @@ import { LdtkMap } from '../src/LdtkMap';
 // ── Fixtures ──────────────────────────────────────────────────────────────────
 
 /** Build a bare LDtk level record with only the fields LdtkMap reads. */
-function makeLevel(identifier: string, uid: number): LdtkLevel {
+const makeLevel = (identifier: string, uid: number): LdtkLevel => {
   return {
     identifier,
     uid,
@@ -18,20 +18,20 @@ function makeLevel(identifier: string, uid: number): LdtkLevel {
     pxHei: 16,
     layerInstances: [],
   };
-}
+};
 
 /** Build LdtkData carrying the given level identifiers (in order). */
-function makeData(identifiers: readonly string[]): LdtkData {
+const makeData = (identifiers: readonly string[]): LdtkData => {
   return {
     jsonVersion: '1.5.3',
     defaultGridSize: 16,
     defs: { tilesets: [], layers: [] },
     levels: identifiers.map((id, i) => makeLevel(id, i + 1)),
   };
-}
+};
 
 /** Build a bare LDtk world record carrying the given level identifiers. */
-function makeWorld(worldIid: string, identifiers: readonly string[], uidStart: number): LdtkWorldData {
+const makeWorld = (worldIid: string, identifiers: readonly string[], uidStart: number): LdtkWorldData => {
   return {
     identifier: worldIid,
     iid: worldIid,
@@ -40,13 +40,13 @@ function makeWorld(worldIid: string, identifiers: readonly string[], uidStart: n
     worldLayout: 'Free',
     levels: identifiers.map((id, i) => makeLevel(id, uidStart + i)),
   };
-}
+};
 
 /**
  * Build multi-world LdtkData: root `levels` stays empty (per the LDtk spec's
  * backward-compatibility shape) and every level lives under `worlds[].levels`.
  */
-function makeMultiWorldData(worlds: ReadonlyMap<string, readonly string[]>): LdtkData {
+const makeMultiWorldData = (worlds: ReadonlyMap<string, readonly string[]>): LdtkData => {
   let uidCursor = 1;
   const worldEntries: LdtkWorldData[] = [];
   for (const [worldIid, identifiers] of worlds) {
@@ -60,18 +60,18 @@ function makeMultiWorldData(worlds: ReadonlyMap<string, readonly string[]>): Ldt
     levels: [],
     worlds: worldEntries,
   };
-}
+};
 
 /**
  * A stand-in TileMap that records destroy() calls. LdtkMap only ever calls
  * `destroy()` on its levels and otherwise stores the references opaquely, so a
  * spy object is sufficient and keeps the unit isolated from TileMap internals.
  */
-function makeFakeTileMap(): TileMap & { destroy: ReturnType<typeof vi.fn> } {
+const makeFakeTileMap = (): TileMap & { destroy: ReturnType<typeof vi.fn> } => {
   return { destroy: vi.fn() } as unknown as TileMap & {
     destroy: ReturnType<typeof vi.fn>;
   };
-}
+};
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 

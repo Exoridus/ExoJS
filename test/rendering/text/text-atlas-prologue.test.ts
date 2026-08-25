@@ -15,9 +15,9 @@ import { composeTextAtlasFragmentGlsl, textAtlasTextureSlots } from '#rendering/
 // part of the assertion: ahead of `uniform` it would not compile at all.
 const SAMPLER_DECL = /^\s*uniform\s+(?:(highp|mediump|lowp)\s+)?sampler2D\s+u_texture\d+;/gm;
 
-function samplerPrecisions(source: string): Array<string | undefined> {
+const samplerPrecisions = (source: string): Array<string | undefined> => {
   return [...source.matchAll(SAMPLER_DECL)].map(match => match[1]);
-}
+};
 
 describe('text atlas fragment prologue', () => {
   const composed = composeTextAtlasFragmentGlsl(['#version 300 es', 'precision highp float;', '', 'void main(void) {}'].join('\n'));

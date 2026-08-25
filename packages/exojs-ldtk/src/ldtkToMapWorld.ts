@@ -19,7 +19,7 @@ const SIDE_BY_DIR: Readonly<Record<string, MapLevelSide>> = Object.freeze({
   '>': MapLevelSide.Above,
 });
 
-function convertNeighbours(level: LdtkLevel): readonly MapLevelNeighbour[] {
+const convertNeighbours = (level: LdtkLevel): readonly MapLevelNeighbour[] => {
   const raw = level.__neighbours;
   if (raw === undefined || raw === null || raw.length === 0) return [];
 
@@ -30,19 +30,17 @@ function convertNeighbours(level: LdtkLevel): readonly MapLevelNeighbour[] {
     // future LDtk adds a direction.
     side: SIDE_BY_DIR[neighbour.dir] ?? MapLevelSide.Unknown,
   }));
-}
+};
 
-function convertLevel(level: LdtkLevel, worldIid: string | undefined, index: number): MapLevel {
-  return {
-    id: level.iid,
-    name: level.identifier,
-    index,
-    bounds: { x: level.worldX, y: level.worldY, width: level.pxWid, height: level.pxHei },
-    external: Boolean(level.externalRelPath),
-    neighbours: convertNeighbours(level),
-    properties: buildLdtkLevelProperties(level, worldIid),
-  };
-}
+const convertLevel = (level: LdtkLevel, worldIid: string | undefined, index: number): MapLevel => ({
+  id: level.iid,
+  name: level.identifier,
+  index,
+  bounds: { x: level.worldX, y: level.worldY, width: level.pxWid, height: level.pxHei },
+  external: Boolean(level.externalRelPath),
+  neighbours: convertNeighbours(level),
+  properties: buildLdtkLevelProperties(level, worldIid),
+});
 
 /**
  * Build the format-neutral world model for an LDtk document: one
@@ -60,7 +58,7 @@ function convertLevel(level: LdtkLevel, worldIid: string | undefined, index: num
  * Level metadata only: no layer payload is read, so this is safe to call on a
  * document whose external levels have not been fetched.
  */
-export function ldtkToMapWorld(data: LdtkData): readonly MapWorld[] {
+export const ldtkToMapWorld = (data: LdtkData): readonly MapWorld[] => {
   const entries = getLdtkLevelEntries(data);
 
   if (data.worlds && data.worlds.length > 0) {
@@ -76,4 +74,4 @@ export function ldtkToMapWorld(data: LdtkData): readonly MapWorld[] {
   }
 
   return Object.freeze([new MapWorld({ levels: entries.map((entry, index) => convertLevel(entry.level, entry.worldIid, index)) })]);
-}
+};

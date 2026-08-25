@@ -146,7 +146,7 @@ const isUnresolved = (manifold: Manifold): boolean => {
  * real {@link SceneNode}s expose `getWorldTransform()`, test doubles that omit
  * it fall back to `(0, 0)` (the previous, surprising default).
  */
-function worldPositionOf(node: SceneNode): Readonly<PointLike> {
+const worldPositionOf = (node: SceneNode): Readonly<PointLike> => {
   const asNode = node as Partial<SceneNode>;
 
   if (typeof asNode.getWorldTransform === 'function') {
@@ -156,7 +156,7 @@ function worldPositionOf(node: SceneNode): Readonly<PointLike> {
   }
 
   return { x: 0, y: 0 };
-}
+};
 
 /**
  * {@link PhysicsWorld.attach}'s default `angle` (radians): `node`'s current
@@ -166,7 +166,7 @@ function worldPositionOf(node: SceneNode): Readonly<PointLike> {
  * radians ⇄ degrees round-trip `PhysicsBinding.sync` already relies on).
  * Falls back to `0` for a duck-typed node without `getWorldTransform`.
  */
-function worldAngleOf(node: SceneNode): number {
+const worldAngleOf = (node: SceneNode): number => {
   const asNode = node as Partial<SceneNode>;
 
   if (typeof asNode.getWorldTransform === 'function') {
@@ -176,7 +176,7 @@ function worldAngleOf(node: SceneNode): number {
   }
 
   return 0;
-}
+};
 
 /** Construction options for a {@link PhysicsWorld}. */
 export interface PhysicsWorldOptions {

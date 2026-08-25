@@ -238,7 +238,7 @@ export class ActionOwnership {
 }
 
 /** Strongest absolute value among `channels`, sign-preserving. */
-export function sampleStrongest(buffer: Float32Array, channels: readonly number[]): number {
+export const sampleStrongest = (buffer: Float32Array, channels: readonly number[]): number => {
   let strongest = 0;
 
   for (const channel of channels) {
@@ -250,13 +250,13 @@ export function sampleStrongest(buffer: Float32Array, channels: readonly number[
   }
 
   return strongest;
-}
+};
 
 /** Normalize a single-or-many binding field into a flat channel list. */
-export function toChannels(binding: OneOrMany<InputChannel> | undefined): readonly number[] {
+export const toChannels = (binding: OneOrMany<InputChannel> | undefined): readonly number[] => {
   if (binding === undefined) {
     return [];
   }
 
   return Array.isArray(binding) ? (binding as readonly number[]) : [binding as number];
-}
+};

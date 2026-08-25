@@ -13,7 +13,7 @@ import { FONT_WEIGHTS, readBoolean, readEnum, readNumber, TEXT_ALIGNMENTS } from
  * past a constructor's own `?? default` (and stays valid under
  * `exactOptionalPropertyTypes`).
  */
-export function compact<T extends object>(options: T): { [K in keyof T]: Exclude<T[K], undefined> } {
+export const compact = <T extends object>(options: T): { [K in keyof T]: Exclude<T[K], undefined> } => {
   const out: Record<string, unknown> = {};
 
   for (const [key, value] of Object.entries(options)) {
@@ -21,7 +21,7 @@ export function compact<T extends object>(options: T): { [K in keyof T]: Exclude
   }
 
   return out as { [K in keyof T]: Exclude<T[K], undefined> };
-}
+};
 
 // ── Colour ───────────────────────────────────────────────────────────────────
 
@@ -37,7 +37,7 @@ const colorEquals = (color: Color, r: number, g: number, b: number, a: number): 
 // ── TextStyle ────────────────────────────────────────────────────────────────
 
 /** Serialize the plain-data fields of a {@link TextStyle}, omitting defaults. */
-export function serializeStyle(style: {
+export const serializeStyle = (style: {
   fontFamily: string;
   fontWeight: string;
   fontStyle: string;
@@ -55,7 +55,7 @@ export function serializeStyle(style: {
   shadowBlur: number;
   gradientColors: [Color, Color] | null;
   gradientAxis: string;
-}): Record<string, unknown> | undefined {
+}): Record<string, unknown> | undefined => {
   const out: Record<string, unknown> = {};
 
   if (style.fontFamily !== 'Arial') out.fontFamily = style.fontFamily;
@@ -81,10 +81,10 @@ export function serializeStyle(style: {
   if (style.gradientAxis !== 'vertical') out.gradientAxis = style.gradientAxis;
 
   return Object.keys(out).length > 0 ? out : undefined;
-}
+};
 
 /** Rebuild {@link TextStyleOptions} from serialized style data, or `undefined`. */
-export function deserializeStyleOptions(data: unknown): TextStyleOptions | undefined {
+export const deserializeStyleOptions = (data: unknown): TextStyleOptions | undefined => {
   if (typeof data !== 'object' || data === null) {
     return undefined;
   }
@@ -136,7 +136,7 @@ export function deserializeStyleOptions(data: unknown): TextStyleOptions | undef
   }
 
   return options;
-}
+};
 
 // ── LayoutOptions ─────────────────────────────────────────────────────────────
 
@@ -172,7 +172,7 @@ const LAYOUT_KEYS = Object.keys(LAYOUT_READERS) as ReadonlyArray<keyof LayoutOpt
  * unknown or mistyped fields. Returns `undefined` when nothing valid remains,
  * so a corrupt `layout` value degrades to the node's constructor defaults.
  */
-export function readLayoutOptions(value: unknown): LayoutOptions | undefined {
+export const readLayoutOptions = (value: unknown): LayoutOptions | undefined => {
   if (typeof value !== 'object' || value === null) {
     return undefined;
   }
@@ -188,7 +188,7 @@ export function readLayoutOptions(value: unknown): LayoutOptions | undefined {
   }
 
   return Object.keys(out).length > 0 ? out : undefined;
-}
+};
 
 /**
  * Copy only the layout keys out of an options bag, dropping everything else.
@@ -202,7 +202,7 @@ export function readLayoutOptions(value: unknown): LayoutOptions | undefined {
  * filters keys, it does not validate values. `undefined`-valued keys are
  * omitted so the result stays a faithful "which options were actually set".
  */
-export function pickLayoutOptions(source: Readonly<LayoutOptions>): LayoutOptions {
+export const pickLayoutOptions = (source: Readonly<LayoutOptions>): LayoutOptions => {
   const bag = source as Record<string, unknown>;
   const out: Record<string, unknown> = {};
 
@@ -213,4 +213,4 @@ export function pickLayoutOptions(source: Readonly<LayoutOptions>): LayoutOption
   }
 
   return out;
-}
+};

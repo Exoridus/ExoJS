@@ -34,16 +34,16 @@ const SNAPSHOT_PATH = resolve(__dirname, '__snapshots__/beat-baseline.json');
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function measureFixture(fixture: BeatFixture): BeatMetrics {
+const measureFixture = (fixture: BeatFixture): BeatMetrics => {
   const { messages } = runDetector(fixture.samples);
   return computeMetrics(messages, fixture);
-}
+};
 
 /**
  * Classify the current detector's result per fixture for the Stage-2 target list.
  * Returns an array of failure strings (empty = PASS).
  */
-function classifyFailures(m: BeatMetrics, fixture: BeatFixture): string[] {
+const classifyFailures = (m: BeatMetrics, fixture: BeatFixture): string[] => {
   const fails: string[] = [];
   if (m.lockTimeSec === null) {
     fails.push('never-locked');
@@ -66,7 +66,7 @@ function classifyFailures(m: BeatMetrics, fixture: BeatFixture): string[] {
     fails.push(`ramp-lag:bpm-err=${m.bpmError.meanAbs.toFixed(1)}`);
   }
   return fails;
-}
+};
 
 // ── Baseline data collection ───────────────────────────────────────────────────
 

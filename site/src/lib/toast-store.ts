@@ -31,7 +31,7 @@ const _listeners = new Set<ToastListener>();
 
 const DEFAULT_DURATION_MS = 3500;
 
-export function showToast(message: string, options: ShowToastOptions = {}): string {
+export const showToast = (message: string, options: ShowToastOptions = {}): string => {
   const id = `toast-${++_idCounter}`;
   const toast: ToastMessage = { id, message, action: options.action };
 
@@ -44,26 +44,26 @@ export function showToast(message: string, options: ShowToastOptions = {}): stri
   }
 
   return id;
-}
+};
 
-export function dismissToast(id: string): void {
+export const dismissToast = (id: string): void => {
   const next = _toasts.filter(toast => toast.id !== id);
   if (next.length === _toasts.length) return;
   _toasts = next;
   _notify();
-}
+};
 
-export function getToasts(): ReadonlyArray<ToastMessage> {
+export const getToasts = (): ReadonlyArray<ToastMessage> => {
   return _toasts;
-}
+};
 
-export function subscribeToasts(listener: ToastListener): () => void {
+export const subscribeToasts = (listener: ToastListener): (() => void) => {
   _listeners.add(listener);
   return () => _listeners.delete(listener);
-}
+};
 
-function _notify(): void {
+const _notify = (): void => {
   for (const listener of _listeners) {
     listener(_toasts);
   }
-}
+};

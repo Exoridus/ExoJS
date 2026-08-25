@@ -34,10 +34,10 @@ const FORMAT_HOST: ts.FormatDiagnosticsHost = {
   getNewLine: () => ts.sys.newLine,
 };
 
-function fail(message: string): never {
+const fail = (message: string): never => {
   console.error(message);
   process.exit(1);
-}
+};
 
 const configFile = ts.readConfigFile(CONFIG_PATH, ts.sys.readFile);
 

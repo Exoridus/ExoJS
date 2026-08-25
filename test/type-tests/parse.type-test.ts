@@ -24,9 +24,9 @@ type _ConfigValue = Expect<Equal<typeof catalog.config.value, Config>>;
 
 // resolved map from load(catalog) unwraps to the parsed value
 declare const loader: Loader;
-function loadIt() {
+const loadIt = () => {
   return loader.load(catalog);
-}
+};
 type LoadedMap = Awaited<ReturnType<typeof loadIt>>;
 type _ConfigResolved = Expect<Equal<LoadedMap['config'], Config>>;
 

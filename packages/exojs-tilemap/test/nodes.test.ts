@@ -13,7 +13,7 @@ import { packTile, TILE_TRANSFORM_IDENTITY } from '../src/types';
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-function fakeTexture(width = 512, height = 512): Texture {
+const fakeTexture = (width = 512, height = 512): Texture => {
   return {
     width,
     height,
@@ -23,9 +23,9 @@ function fakeTexture(width = 512, height = 512): Texture {
     destroy: vi.fn(),
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function makeTileset(name = 'tiles'): TileSet {
+const makeTileset = (name = 'tiles'): TileSet => {
   return new TileSet({
     name,
     texture: new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 512, height: 512 }),
@@ -33,7 +33,7 @@ function makeTileset(name = 'tiles'): TileSet {
     tileHeight: 32,
     tileCount: 16,
   });
-}
+};
 
 interface LayerOpts {
   readonly id?: number;
@@ -46,7 +46,7 @@ interface LayerOpts {
   readonly offsetY?: number;
 }
 
-function makeLayer(tileset: TileSet, opts: LayerOpts = {}): TileLayer {
+const makeLayer = (tileset: TileSet, opts: LayerOpts = {}): TileLayer => {
   const layer = new TileLayer({
     id: opts.id ?? 1,
     name: opts.name ?? 'ground',
@@ -61,9 +61,9 @@ function makeLayer(tileset: TileSet, opts: LayerOpts = {}): TileLayer {
     ...(opts.offsetY === undefined ? {} : { offsetY: opts.offsetY }),
   });
   return layer;
-}
+};
 
-function fillLayer(layer: TileLayer, tileset: TileSet): TileLayer {
+const fillLayer = (layer: TileLayer, tileset: TileSet): TileLayer => {
   // Only finite layers can be filled exhaustively; an infinite one would make
   // the sweep silently do nothing.
   if (layer.width === undefined || layer.height === undefined) {
@@ -75,16 +75,16 @@ function fillLayer(layer: TileLayer, tileset: TileSet): TileLayer {
     }
   }
   return layer;
-}
+};
 
-function makeImageLayer(opts: Partial<ImageLayerOptions> = {}): ImageLayer {
+const makeImageLayer = (opts: Partial<ImageLayerOptions> = {}): ImageLayer => {
   return new ImageLayer({
     id: opts.id ?? 100,
     image: opts.image ?? 'bg.png',
     texture: opts.texture === undefined ? fakeTexture() : opts.texture,
     ...opts,
   });
-}
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 // TileLayerNode
@@ -405,7 +405,7 @@ describe('TileChunkNode geometry cache', () => {
 // ═══════════════════════════════════════════════════════════════════════
 
 describe('TileMapNode', () => {
-  function makeMap(): { map: TileMap; tileset: TileSet } {
+  const makeMap = (): { map: TileMap; tileset: TileSet } => {
     const tileset = makeTileset();
     const background = fillLayer(makeLayer(tileset, { id: 1, name: 'background' }), tileset);
     const foreground = fillLayer(makeLayer(tileset, { id: 2, name: 'foreground' }), tileset);
@@ -419,7 +419,7 @@ describe('TileMapNode', () => {
       layers: [background, foreground],
     });
     return { map, tileset };
-  }
+  };
 
   it('builds one layer node per map layer, preserving order', () => {
     const { map } = makeMap();
@@ -478,7 +478,7 @@ describe('TileMapNode', () => {
 
 describe('TileMapNode interleaved image layers', () => {
   /** bg image (10) → ground (1) → fg image (11) → roofs (2), via documentOrder. */
-  function makeInterleavedMap(): { map: TileMap; tileset: TileSet } {
+  const makeInterleavedMap = (): { map: TileMap; tileset: TileSet } => {
     const tileset = makeTileset();
     const map = new TileMap({
       name: 'interleaved',
@@ -493,7 +493,7 @@ describe('TileMapNode interleaved image layers', () => {
     });
 
     return { map, tileset };
-  }
+  };
 
   it('builds one node per renderable layer, interleaved in document order', () => {
     const { map } = makeInterleavedMap();

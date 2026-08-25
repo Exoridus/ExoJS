@@ -12,7 +12,7 @@ import { Texture } from '#rendering/texture/Texture';
 // pattern (a real Loader wrapped in `{ loader } as unknown as Application`).
 const originalFetch = global.fetch;
 
-function mockFetchImage(): void {
+const mockFetchImage = (): void => {
   global.fetch = vi.fn(
     async (): Promise<Response> =>
       ({
@@ -22,9 +22,9 @@ function mockFetchImage(): void {
         arrayBuffer: async () => new ArrayBuffer(8),
       }) as unknown as Response,
   );
-}
+};
 
-function mockFetchJson(payload: unknown): void {
+const mockFetchJson = (payload: unknown): void => {
   global.fetch = vi.fn(
     async (): Promise<Response> =>
       ({
@@ -36,16 +36,16 @@ function mockFetchJson(payload: unknown): void {
         arrayBuffer: async () => new ArrayBuffer(0),
       }) as unknown as Response,
   );
-}
+};
 
-function makeSceneLoaderWithTextures(): { sceneLoader: SceneLoader; loader: Loader } {
+const makeSceneLoaderWithTextures = (): { sceneLoader: SceneLoader; loader: Loader } => {
   const loader = new Loader();
   materializeAssetTypes(loader, coreAssetTypes);
   const app = { loader } as unknown as Application;
   const sceneLoader = new SceneLoader(app);
 
   return { sceneLoader, loader };
-}
+};
 
 describe('SceneLoader catalog adopt', () => {
   beforeEach(() => {

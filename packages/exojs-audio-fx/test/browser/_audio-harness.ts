@@ -26,7 +26,7 @@ interface RenderOptions {
 }
 
 /** Render a worklet effect offline and return the mono output samples. */
-export async function renderWorklet(opts: RenderOptions): Promise<Float32Array> {
+export const renderWorklet = async (opts: RenderOptions): Promise<Float32Array> => {
   const sr = SAMPLE_RATE;
   const length = Math.floor(opts.durationSeconds * sr);
   const ctx = new OfflineAudioContext(1, length, sr);
@@ -66,14 +66,14 @@ export async function renderWorklet(opts: RenderOptions): Promise<Float32Array> 
 
   const rendered = await ctx.startRendering();
   return rendered.getChannelData(0).slice();
-}
+};
 
 /**
  * Hann-windowed power spectrum via an in-place radix-2 FFT over the largest
  * power-of-two prefix of `buf`. O(N log N) - far cheaper than a per-bin DFT
  * sweep when scanning the whole spectrum.
  */
-function powerSpectrum(buf: Float32Array): { mag: Float32Array; n: number } {
+const powerSpectrum = (buf: Float32Array): { mag: Float32Array; n: number } => {
   let n = 1;
   while (n * 2 <= buf.length) n *= 2;
   const re = new Float32Array(n);
@@ -123,10 +123,10 @@ function powerSpectrum(buf: Float32Array): { mag: Float32Array; n: number } {
   const mag = new Float32Array(half);
   for (let i = 0; i < half; i++) mag[i] = re[i] * re[i] + im[i] * im[i];
   return { mag, n };
-}
+};
 
 /** Dominant frequency via FFT peak + parabolic interpolation for sub-bin accuracy. */
-export function dominantFreq(buf: Float32Array, sampleRate = SAMPLE_RATE): number {
+export const dominantFreq = (buf: Float32Array, sampleRate = SAMPLE_RATE): number => {
   const { mag, n } = powerSpectrum(buf);
   let peak = 1;
   for (let i = 1; i < mag.length; i++) if (mag[i] > mag[peak]) peak = i;
@@ -136,15 +136,15 @@ export function dominantFreq(buf: Float32Array, sampleRate = SAMPLE_RATE): numbe
   const denom = a - 2 * b + c;
   const delta = denom !== 0 ? (0.5 * (a - c)) / denom : 0;
   return ((peak + delta) * sampleRate) / n;
-}
+};
 
-export function rms(buf: Float32Array): number {
+export const rms = (buf: Float32Array): number => {
   let s = 0;
   for (const v of buf) s += v * v;
   return Math.sqrt(s / buf.length);
-}
+};
 
 /** Return the tail of `buf` starting at `fromSeconds` (drops warmup transient). */
-export function tail(buf: Float32Array, fromSeconds: number, sampleRate = SAMPLE_RATE): Float32Array {
+export const tail = (buf: Float32Array, fromSeconds: number, sampleRate = SAMPLE_RATE): Float32Array => {
   return buf.subarray(Math.floor(fromSeconds * sampleRate));
-}
+};

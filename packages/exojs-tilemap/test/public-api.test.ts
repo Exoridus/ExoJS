@@ -8,7 +8,7 @@ import { TileLayer } from '../src/TileLayer';
 import { TileSet } from '../src/TileSet';
 import { TILE_TRANSFORM_IDENTITY } from '../src/types';
 
-function fakeTexture(): Texture {
+const fakeTexture = (): Texture => {
   return {
     width: 256,
     height: 256,
@@ -17,16 +17,16 @@ function fakeTexture(): Texture {
     destroy: () => {},
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function fakeRegion(): TextureRegion {
+const fakeRegion = (): TextureRegion => {
   return new TextureRegion(fakeTexture(), { x: 0, y: 0, width: 256, height: 256 });
-}
+};
 
-function createTestLayer(): {
+const createTestLayer = (): {
   layer: TileLayer;
   ref: { tileset: TileSet; localTileId: number; transform: typeof TILE_TRANSFORM_IDENTITY };
-} {
+} => {
   const ts = new TileSet({
     name: 'ts',
     texture: fakeRegion(),
@@ -45,7 +45,7 @@ function createTestLayer(): {
     tilesets: [ts],
   });
   return { layer, ref: { tileset: ts, localTileId: 0, transform: TILE_TRANSFORM_IDENTITY } };
-}
+};
 
 describe('public chunk boundary', () => {
   it('TileChunk class is NOT exported from the package barrel', async () => {

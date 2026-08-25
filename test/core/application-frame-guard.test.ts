@@ -97,20 +97,20 @@ vi.mock('#rendering/webgpu/WebGpuBackend', () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-function forceRunning(app: Application): void {
+const forceRunning = (app: Application): void => {
   const record = app as unknown as Record<string, unknown>;
 
   record['_state'] = ApplicationState.Running;
   record['_frameLoopActive'] = true;
-}
+};
 
-function frameClock(app: Application): import('#core/Clock').Clock {
+const frameClock = (app: Application): import('#core/Clock').Clock => {
   return (app as unknown as Record<string, unknown>)['_frameClock'] as import('#core/Clock').Clock;
-}
+};
 
-function mockFrameElapsed(app: Application, ms: number): void {
+const mockFrameElapsed = (app: Application, ms: number): void => {
   vi.spyOn(frameClock(app), 'elapsedSeconds', 'get').mockReturnValue(Time.toSeconds(Time.milliseconds(ms)));
-}
+};
 
 describe('Application frame guard', () => {
   let app: Application;
@@ -136,17 +136,17 @@ describe('Application frame guard', () => {
     vi.restoreAllMocks();
   });
 
-  function makeFlushThrow(error: Error): void {
+  const makeFlushThrow = (error: Error): void => {
     (app.backend.flush as unknown as MockInstance).mockImplementation(() => {
       throw error;
     });
-  }
+  };
 
-  function makeFlushSucceed(): void {
+  const makeFlushSucceed = (): void => {
     (app.backend.flush as unknown as MockInstance).mockImplementation(function (this: unknown) {
       return this;
     });
-  }
+  };
 
   // -------------------------------------------------------------------------
   // Contract 3 - one throwing frame is reported and the loop survives

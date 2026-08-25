@@ -13,20 +13,20 @@ import { AsepriteSheet } from '../src/AsepriteSheet';
 const PKG_DIR = basename(process.cwd()) === 'exojs-aseprite' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-aseprite');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
-function loadFixture(name: string): AsepriteData {
+const loadFixture = (name: string): AsepriteData => {
   return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8')) as AsepriteData;
-}
+};
 
 const arrayData = loadFixture('hero.array.json');
 const hashData = loadFixture('hero.hash.json');
 
-function newTexture(): Texture {
+const newTexture = (): Texture => {
   const tex = new Texture();
   tex.width = 48;
   tex.height = 16;
 
   return tex;
-}
+};
 
 // ── isAsepriteArrayData ────────────────────────────────────────────────────────
 
@@ -123,7 +123,7 @@ describe('AsepriteSheet.parse — clips from frameTags', () => {
 // ── AsepriteSheet.parse - direction expansion ──────────────────────────────────
 
 describe('AsepriteSheet.parse — direction expansion', () => {
-  function makeData(tag: { from: number; to: number; direction: AsepriteDirection }): AsepriteData {
+  const makeData = (tag: { from: number; to: number; direction: AsepriteDirection }): AsepriteData => {
     return {
       frames: [0, 1, 2].map(i => ({
         duration: 100,
@@ -143,9 +143,9 @@ describe('AsepriteSheet.parse — direction expansion', () => {
         frameTags: [{ name: 'clip', from: tag.from, to: tag.to, direction: tag.direction }],
       },
     };
-  }
+  };
 
-  function indicesOf(sheet: AsepriteSheet): number[] {
+  const indicesOf = (sheet: AsepriteSheet): number[] => {
     const frames = sheet.clips.get('clip')!.frames;
 
     return frames.map(rect => {
@@ -157,7 +157,7 @@ describe('AsepriteSheet.parse — direction expansion', () => {
 
       throw new Error('frame not found');
     });
-  }
+  };
 
   it('forward (default) expands to [from..to] unchanged', () => {
     const sheet = AsepriteSheet.parse(makeData({ from: 0, to: 2, direction: 'forward' }), newTexture());
@@ -344,7 +344,7 @@ describe('AsepriteSheet.parse — trimmed-frame offsets', () => {
 // ── AsepriteSheet.parse - repeat (one-shot vs finite vs infinite) ──────────────
 
 describe('AsepriteSheet.parse — repeat', () => {
-  function makeData(repeat: string | undefined): AsepriteData {
+  const makeData = (repeat: string | undefined): AsepriteData => {
     return {
       frames: [0, 1].map(i => ({
         duration: 100,
@@ -364,7 +364,7 @@ describe('AsepriteSheet.parse — repeat', () => {
         frameTags: [{ name: 'clip', from: 0, to: 1, direction: 'forward', ...(repeat === undefined ? {} : { repeat }) }],
       },
     };
-  }
+  };
 
   it('repeat: "1" maps to repeatCount 1 (one-shot)', () => {
     const sheet = AsepriteSheet.parse(makeData('1'), newTexture());
@@ -476,7 +476,7 @@ describe('AsepriteSheet.parse — layers', () => {
 // ── AsepriteSheet.parse - fps averaging and fallbacks ──────────────────────────
 
 describe('AsepriteSheet.parse — fps derivation', () => {
-  function makeData(durations: number[], tag: { from: number; to: number }): AsepriteData {
+  const makeData = (durations: number[], tag: { from: number; to: number }): AsepriteData => {
     return {
       frames: durations.map((duration, i) => ({
         duration,
@@ -496,7 +496,7 @@ describe('AsepriteSheet.parse — fps derivation', () => {
         frameTags: [{ name: 'clip', from: tag.from, to: tag.to, direction: 'forward' }],
       },
     };
-  }
+  };
 
   it('averages mixed durations across the range (100/200/300 -> 200ms -> 5fps)', () => {
     const sheet = AsepriteSheet.parse(makeData([100, 200, 300], { from: 0, to: 2 }), newTexture());
@@ -512,7 +512,7 @@ describe('AsepriteSheet.parse — fps derivation', () => {
 // ── AsepriteSheet.parse - frame-index edge cases ───────────────────────────────
 
 describe('AsepriteSheet.parse — frame-index handling in tags', () => {
-  function makeData(tag: { from: number; to: number }): AsepriteData {
+  const makeData = (tag: { from: number; to: number }): AsepriteData => {
     return {
       frames: [0, 1, 2].map(i => ({
         duration: 100,
@@ -532,7 +532,7 @@ describe('AsepriteSheet.parse — frame-index handling in tags', () => {
         frameTags: [{ name: 'clip', from: tag.from, to: tag.to, direction: 'forward' }],
       },
     };
-  }
+  };
 
   it('silently skips out-of-range frame indices in a tag', () => {
     // from 1 to 10 against 3 frames -> only indices 1 and 2 resolve.

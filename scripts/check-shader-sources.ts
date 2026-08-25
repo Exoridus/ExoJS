@@ -55,7 +55,7 @@ interface Problem {
   readonly message: string;
 }
 
-async function collectFiles(root: string, keep: (name: string) => boolean): Promise<string[]> {
+const collectFiles = async (root: string, keep: (name: string) => boolean): Promise<string[]> => {
   const found: string[] = [];
 
   const walk = async (directory: string): Promise<void> => {
@@ -75,7 +75,7 @@ async function collectFiles(root: string, keep: (name: string) => boolean): Prom
   await walk(resolve(REPO_ROOT, root));
 
   return found;
-}
+};
 
 /** What a mis-decoded file looks like once it has been read as UTF-8. */
 const REPLACEMENT_CHARACTER = String.fromCharCode(0xfffd);
@@ -86,7 +86,7 @@ const REPLACEMENT_CHARACTER = String.fromCharCode(0xfffd);
  * character class of literal control bytes is unreadable in source and is
  * exactly what `no-control-regex` exists to prevent.
  */
-function hasControlCharacter(line: string): boolean {
+const hasControlCharacter = (line: string): boolean => {
   for (let index = 0; index < line.length; index++) {
     const code = line.charCodeAt(index);
 
@@ -95,7 +95,7 @@ function hasControlCharacter(line: string): boolean {
   }
 
   return false;
-}
+};
 
 const toRepoPath = (absolutePath: string): string => relative(REPO_ROOT, absolutePath).split(sep).join('/');
 
@@ -104,7 +104,7 @@ const toRepoPath = (absolutePath: string): string => relative(REPO_ROOT, absolut
  * payload; and `.gitattributes` normalises the whole tree to LF, which a shader
  * has no exemption from.
  */
-function checkBytes(file: string, text: string): Problem[] {
+const checkBytes = (file: string, text: string): Problem[] => {
   const problems: Problem[] = [];
   const lines = text.split('\n');
 
@@ -151,7 +151,7 @@ function checkBytes(file: string, text: string): Problem[] {
   });
 
   return problems;
-}
+};
 
 /**
  * Extension/content agreement. A `.frag` without its version directive compiles
@@ -159,7 +159,7 @@ function checkBytes(file: string, text: string): Problem[] {
  * is a syntax error. Both are silent until a GPU sees them, and the file
  * extension is what every loader in the repository dispatches on.
  */
-function checkLanguage(file: string, text: string): Problem[] {
+const checkLanguage = (file: string, text: string): Problem[] => {
   const problems: Problem[] = [];
   const isWgsl = file.endsWith('.wgsl');
   const firstLine = text.split('\n', 1)[0] ?? '';
@@ -180,14 +180,14 @@ function checkLanguage(file: string, text: string): Problem[] {
   }
 
   return problems;
-}
+};
 
 /**
  * Placeholders and directives: the two ways a shader can pass every compiler in
  * the suite and still be wrong, because the text that reaches the GPU is not the
  * text on disk.
  */
-function checkSubstitutions(file: string, text: string): Problem[] {
+const checkSubstitutions = (file: string, text: string): Problem[] => {
   const problems: Problem[] = [];
   const valid = new Set(text.match(VALID_PLACEHOLDER) ?? []);
 
@@ -206,14 +206,14 @@ function checkSubstitutions(file: string, text: string): Problem[] {
   });
 
   return problems;
-}
+};
 
 /**
  * Stripping runs on every production build and its output is what ships. A file
  * whose stripped form loses its version line, or strips to nothing, is a shader
  * that only works in development.
  */
-function checkStripped(file: string, text: string): Problem[] {
+const checkStripped = (file: string, text: string): Problem[] => {
   const stripped = stripShaderSource(text);
 
   if (stripped.trim() === '') {
@@ -225,9 +225,9 @@ function checkStripped(file: string, text: string): Problem[] {
   }
 
   return [];
-}
+};
 
-async function main(): Promise<void> {
+const main = async (): Promise<void> => {
   console.log('Checking shader source hygiene...\n');
 
   const shaderFiles = (await Promise.all(SCAN_ROOTS.map(root => collectFiles(root, name => SHADER_EXTENSIONS.some(ext => name.endsWith(ext)))))).flat();
@@ -263,6 +263,6 @@ async function main(): Promise<void> {
   }
 
   console.log(`\x1b[32m${shaderFiles.length} shader file(s) checked, no problems.\x1b[0m`);
-}
+};
 
 await main();

@@ -7,11 +7,11 @@ import { vi } from 'vitest';
 const state = { stopped: 'stopped', running: 'running', loading: 'loading' };
 
 /** Inject the real enum values so the mock's state matches what the hooks compare against. */
-export function configureApplicationState(applicationState: { Stopped: string; Running: string; Loading: string }): void {
+export const configureApplicationState = (applicationState: { Stopped: string; Running: string; Loading: string }): void => {
   state.stopped = applicationState.Stopped;
   state.running = applicationState.Running;
   state.loading = applicationState.Loading;
-}
+};
 
 /**
  * Stand-in for the engine's `ConcurrentSceneNavigationError`, used until a test
@@ -29,9 +29,9 @@ class MockConcurrentSceneNavigationError extends Error {
 let concurrentNavigationError: new () => Error = MockConcurrentSceneNavigationError;
 
 /** Inject the real error class so tests can assert on its identity, not just its name. */
-export function configureConcurrentNavigationError(errorClass: new () => Error): void {
+export const configureConcurrentNavigationError = (errorClass: new () => Error): void => {
   concurrentNavigationError = errorClass;
-}
+};
 
 interface MockSceneDirector {
   currentScene: unknown;

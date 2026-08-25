@@ -28,18 +28,15 @@ const vertexStrideBytes = 16;
 const resolutionBufferBytes = 16;
 
 /** Returns true when the value is a texture (goes into a bind group, not a UBO). */
-function isTextureValue(value: ShaderFilterUniformValue): value is Texture | RenderTexture {
-  return (
-    value instanceof Texture ||
-    (typeof value === 'object' &&
-      value !== null &&
-      'width' in value &&
-      'height' in value &&
-      !(value instanceof Float32Array) &&
-      !(value instanceof Int32Array) &&
-      !Array.isArray(value))
-  );
-}
+const isTextureValue = (value: ShaderFilterUniformValue): value is Texture | RenderTexture =>
+  value instanceof Texture ||
+  (typeof value === 'object' &&
+    value !== null &&
+    'width' in value &&
+    'height' in value &&
+    !(value instanceof Float32Array) &&
+    !(value instanceof Int32Array) &&
+    !Array.isArray(value));
 
 interface WebGpuConnection {
   readonly device: GPUDevice;

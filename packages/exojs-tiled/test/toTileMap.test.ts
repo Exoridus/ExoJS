@@ -12,9 +12,9 @@ const TEXTURE_SIZES: Record<string, { w: number; h: number }> = {
   'tiles-b.png': { w: 80, h: 20 },
 };
 
-function makeContext(fixtures: Record<string, unknown>) {
+const makeContext = (fixtures: Record<string, unknown>) => {
   return makeTiledContext(fixtures, TEXTURE_SIZES);
-}
+};
 
 const richFixtures = {
   'orthogonal-rich.tmj': loadFixture('orthogonal-rich.tmj'),
@@ -225,16 +225,16 @@ describe('TiledMap.toTileMap() — orthogonal-rich.tmj', () => {
 describe('runtime binding vs source.toTileMap() equivalence', () => {
   const { loadSource, loadRuntime } = makeContext(richFixtures);
 
-  function sampleLayers(map: TileMap): unknown {
+  const sampleLayers = (map: TileMap): unknown => {
     return map.layers.map(layer => ({
       name: layer.name,
       width: layer.width,
       height: layer.height,
       tiles: sampleTiles(layer),
     }));
-  }
+  };
 
-  function sampleTiles(layer: TileLayer): unknown[] {
+  const sampleTiles = (layer: TileLayer): unknown[] => {
     const out: unknown[] = [];
     // Finite layers always carry both dimensions; an infinite layer would make
     // the sweep below meaningless, so fail loudly instead of sampling nothing.
@@ -248,7 +248,7 @@ describe('runtime binding vs source.toTileMap() equivalence', () => {
       }
     }
     return out;
-  }
+  };
 
   it('produces semantically equivalent runtime maps via both load paths', async () => {
     const direct = await loadRuntime('orthogonal-rich.tmj');
@@ -326,7 +326,7 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
     tilecount: 8,
   };
 
-  function makeInfiniteMapContext(chunks: readonly { x: number; y: number; width: number; height: number; data: number[] }[]) {
+  const makeInfiniteMapContext = (chunks: readonly { x: number; y: number; width: number; height: number; data: number[] }[]) => {
     return makeContext({
       'inf.tmj': {
         type: 'map',
@@ -354,7 +354,7 @@ describe('TiledMap.toTileMap() — infinite maps', () => {
         tilesets: [baseTileset],
       },
     });
-  }
+  };
 
   it('getChunkSource returns undefined before toTileMap() has run', async () => {
     const { loadSource } = makeInfiniteMapContext([{ x: 0, y: 0, width: 16, height: 16, data: new Array(256).fill(1) }]);

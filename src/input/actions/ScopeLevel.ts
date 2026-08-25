@@ -182,7 +182,7 @@ export class ScopeLevel {
 }
 
 /** `batches` with every event on a masked channel removed, dropping batches that empty out. */
-function filterBatches(batches: readonly ChannelEventBatch[], masked: ReadonlySet<number>): ChannelEventBatch[] {
+const filterBatches = (batches: readonly ChannelEventBatch[], masked: ReadonlySet<number>): ChannelEventBatch[] => {
   const result: ChannelEventBatch[] = [];
 
   for (const batch of batches) {
@@ -210,9 +210,9 @@ function filterBatches(batches: readonly ChannelEventBatch[], masked: ReadonlySe
   }
 
   return result;
-}
+};
 
-function sameChannels(a: ReadonlySet<number>, b: ReadonlySet<number>): boolean {
+const sameChannels = (a: ReadonlySet<number>, b: ReadonlySet<number>): boolean => {
   if (a.size !== b.size) {
     return false;
   }
@@ -224,4 +224,4 @@ function sameChannels(a: ReadonlySet<number>, b: ReadonlySet<number>): boolean {
   }
 
   return true;
-}
+};

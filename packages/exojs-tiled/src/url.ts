@@ -30,7 +30,7 @@ const SYNTHETIC_ORIGIN = 'https://exojs.invalid/';
  *
  * @internal
  */
-export function resolveTiledUrl(ref: string, base: string): string {
+export const resolveTiledUrl = (ref: string, base: string): string => {
   if (ABSOLUTE_REF.test(ref)) {
     return ref;
   }
@@ -46,4 +46,4 @@ export function resolveTiledUrl(ref: string, base: string): string {
   // the leading slash would make the browser re-resolve the reference against
   // the document base URL (e.g. `/site/assets/x.png` → `/site/site/assets/...`).
   return base.startsWith('/') ? `/${relative}` : relative;
-}
+};

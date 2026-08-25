@@ -6,7 +6,7 @@ import { TextureRegion } from '#rendering/texture/TextureRegion';
 import type { NineSliceInsets, NineSliceModes, NineSliceOptions, NineSliceQuad } from './nineSlice';
 import { buildNineSliceQuads, equalInsets, equalModes, normalizeInsets, normalizeModes, validateBorder, validateSlices } from './nineSlice';
 
-function validateSizeInput(width: number, height: number): void {
+const validateSizeInput = (width: number, height: number): void => {
   if (!Number.isFinite(width) || !Number.isFinite(height)) {
     throw new Error(`NineSliceSprite: width and height must be finite numbers (got ${width}, ${height}).`);
   }
@@ -16,7 +16,7 @@ function validateSizeInput(width: number, height: number): void {
   if (height < 0) {
     throw new Error(`NineSliceSprite: height must be non-negative (got ${height}).`);
   }
-}
+};
 
 /**
  * A scalable nine-slice (9-patch) sprite.

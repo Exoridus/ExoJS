@@ -6,7 +6,7 @@ import { ImageLayerNode } from '../src/ImageLayerNode';
 
 // ── helpers ────────────────────────────────────────────────────────────
 
-function fakeTexture(width = 64, height = 64): Texture {
+const fakeTexture = (width = 64, height = 64): Texture => {
   return {
     width,
     height,
@@ -16,16 +16,16 @@ function fakeTexture(width = 64, height = 64): Texture {
     destroy: vi.fn(),
     destroyed: false,
   } as unknown as Texture;
-}
+};
 
-function makeLayer(opts: Partial<ImageLayerOptions> = {}): ImageLayer {
+const makeLayer = (opts: Partial<ImageLayerOptions> = {}): ImageLayer => {
   return new ImageLayer({
     id: opts.id ?? 1,
     image: opts.image ?? 'bg.png',
     texture: opts.texture === undefined ? fakeTexture() : opts.texture,
     ...opts,
   });
-}
+};
 
 /**
  * A minimal stand-in for `RenderPlanBuilder`, mirroring exactly what
@@ -39,12 +39,12 @@ function makeLayer(opts: Partial<ImageLayerOptions> = {}): ImageLayer {
  *    no-slot capture bookkeeping,
  *  - `backend`             - stored verbatim by the retained-plan cache commit.
  */
-function mockBuilder(
+const mockBuilder = (
   options: {
     center?: { x: number; y: number };
     bounds?: { x: number; y: number; width: number; height: number };
   } = {},
-): unknown {
+): unknown => {
   const center = options.center ?? { x: 0, y: 0 };
   const bounds = options.bounds ?? { x: 0, y: 0, width: 0, height: 0 };
 
@@ -60,15 +60,15 @@ function mockBuilder(
     _peekCurrentScopeEntries: (): readonly unknown[] => [],
     _peekCurrentScopeEntryCount: (): number => 0,
   };
-}
+};
 
-function collect(node: ImageLayerNode, builder: unknown): void {
+const collect = (node: ImageLayerNode, builder: unknown): void => {
   (node as unknown as { _collectContent(b: unknown): void })._collectContent(builder);
-}
+};
 
-function spriteOf(node: ImageLayerNode): RepeatingSprite {
+const spriteOf = (node: ImageLayerNode): RepeatingSprite => {
   return node.children[0] as RepeatingSprite;
-}
+};
 
 // ═══════════════════════════════════════════════════════════════════════
 // ImageLayerNode - construction

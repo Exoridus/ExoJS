@@ -10,16 +10,16 @@ import { RendererRegistry } from '#rendering/RendererRegistry';
 
 class TestDrawable extends Drawable {}
 
-function createMinimalRenderer(): Renderer<RenderBackend> {
+const createMinimalRenderer = (): Renderer<RenderBackend> => {
   return {
     connect: vi.fn(),
     disconnect: vi.fn(),
     render: vi.fn(),
     flush: vi.fn(),
   } as unknown as Renderer<RenderBackend>;
-}
+};
 
-function createStubBackend(): RenderBackend {
+const createStubBackend = (): RenderBackend => {
   const registry = new RendererRegistry<RenderBackend>();
   return {
     backendType: RenderBackendType.WebGl2,
@@ -45,7 +45,7 @@ function createStubBackend(): RenderBackend {
     flush: vi.fn(),
     destroy: vi.fn(),
   } as unknown as RenderBackend;
-}
+};
 
 describe('hot-path spy tests', () => {
   it('resolve cache: no prototype walk after first draw (spy Object.getPrototypeOf)', () => {

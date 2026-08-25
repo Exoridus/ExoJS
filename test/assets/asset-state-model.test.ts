@@ -149,18 +149,18 @@ test('readiness x residency: seeded random claim/release/fetch/fail sequence kee
 
   const flush = (): Promise<void> => new Promise(resolve => setTimeout(resolve, 0));
 
-  function pickClaimedPair(): { key: string; scopeIdx: number } | null {
+  const pickClaimedPair = (): { key: string; scopeIdx: number } | null => {
     const candidates: Array<{ key: string; scopeIdx: number }> = [];
     for (const [key, model] of ch1) {
       for (const scopeIdx of model.claims) candidates.push({ key, scopeIdx });
     }
     return candidates.length === 0 ? null : candidates[Math.floor(random() * candidates.length)]!;
-  }
+  };
 
-  function pickPendingKey(pool: readonly string[]): string | null {
+  const pickPendingKey = (pool: readonly string[]): string | null => {
     const candidates = pool.filter(k => pending.has(k));
     return candidates.length === 0 ? null : candidates[Math.floor(random() * candidates.length)]!;
-  }
+  };
 
   for (let step = 0; step < 200; step++) {
     const action = Math.floor(random() * 7);

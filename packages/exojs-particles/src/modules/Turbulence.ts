@@ -111,13 +111,13 @@ fn exojs_turbulence_valueNoise2(x: f32, y: f32) -> f32 {
   }
 }
 
-function hash21(x: number, y: number): number {
+const hash21 = (x: number, y: number): number => {
   let n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
   n = n - Math.floor(n);
   return n;
-}
+};
 
-function valueNoise2(x: number, y: number): number {
+const valueNoise2 = (x: number, y: number): number => {
   const xi = Math.floor(x);
   const yi = Math.floor(y);
   const xf = x - xi;
@@ -134,4 +134,4 @@ function valueNoise2(x: number, y: number): number {
   const ab = a + (b - a) * u;
   const cd = c + (d - c) * u;
   return ab + (cd - ab) * v;
-}
+};

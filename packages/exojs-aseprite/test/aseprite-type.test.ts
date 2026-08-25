@@ -13,14 +13,14 @@ import { AsepriteFormatError, asepriteType } from '../src/asepriteType';
 const PKG_DIR = basename(process.cwd()) === 'exojs-aseprite' ? process.cwd() : join(process.cwd(), 'packages', 'exojs-aseprite');
 const FIXTURES_DIR = join(PKG_DIR, 'test', 'fixtures');
 
-function loadFixture(name: string): unknown {
+const loadFixture = (name: string): unknown => {
   return JSON.parse(readFileSync(join(FIXTURES_DIR, name), 'utf-8'));
-}
+};
 
 // ── Context factory ────────────────────────────────────────────────────────────
 
 /** Drives the type end to end - codec then factory - against in-memory fixtures. */
-function makeContext(fixtures: Record<string, unknown>) {
+const makeContext = (fixtures: Record<string, unknown>) => {
   const loaderLoad = vi.fn(async (asset: unknown): Promise<unknown> => {
     const { type } = (asset as { _config: { type: string } })._config;
 
@@ -53,7 +53,7 @@ function makeContext(fixtures: Record<string, unknown>) {
   };
 
   return { loadSheet, loaderLoad };
-}
+};
 
 // ── Descriptor ───────────────────────────────────────────────────────────────
 
@@ -134,11 +134,11 @@ describe('asepriteType - array fixture', () => {
 // ── load() - validation / AsepriteFormatError ───────────────────────────────────
 
 describe('asepriteType - AsepriteFormatError on malformed input', () => {
-  async function loadRaw(raw: unknown): Promise<AsepriteSheet> {
+  const loadRaw = async (raw: unknown): Promise<AsepriteSheet> => {
     const { loadSheet } = makeContext({ 'doc.json': raw });
 
     return loadSheet('doc.json');
-  }
+  };
 
   it('rejects a non-object root', async () => {
     await expect(loadRaw(null)).rejects.toThrow(/root must be an object/);

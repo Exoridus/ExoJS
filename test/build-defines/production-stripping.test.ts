@@ -75,12 +75,12 @@ const read = (rel: string): string => {
 // ---------------------------------------------------------------------------
 
 /** Extracts the real invariant message from Container.addChild's scene-graph cycle guard. */
-function extractContainerCycleMessage(): string {
+const extractContainerCycleMessage = (): string => {
   const source = readFileSync(resolve(rootDir, 'src/rendering/Container.ts'), 'utf8');
   const match = /invariant\(\s*ancestor !== child,\s*'([^']+)'/.exec(source);
   expect(match).not.toBeNull();
   return match![1]!;
-}
+};
 
 /**
  * Strips TypeScript syntax down to plain JS via the TypeScript compiler's own
@@ -91,11 +91,11 @@ function extractContainerCycleMessage(): string {
  * cannot be relied on. The syntax-stripping step is not what this test
  * models; the define-replace and terser passes below it are.
  */
-function transpileTs(source: string): string {
+const transpileTs = (source: string): string => {
   return ts.transpileModule(source, {
     compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
   }).outputText;
-}
+};
 
 /**
  * Runs a small snippet - importing the real `assert`/`assertDefined`/
@@ -103,7 +103,7 @@ function transpileTs(source: string): string {
  * do - through the production define-replace + terser pipeline, and returns
  * the minified output.
  */
-async function buildProductionSnippet(cycleMessage: string, pureFuncs: string[]): Promise<string> {
+const buildProductionSnippet = async (cycleMessage: string, pureFuncs: string[]): Promise<string> => {
   const virtualEntryId = '\0virtual-entry.js';
   const virtualDevId = '\0virtual-dev.js';
 
@@ -153,7 +153,7 @@ async function buildProductionSnippet(cycleMessage: string, pureFuncs: string[])
   } finally {
     await bundle.close();
   }
-}
+};
 
 describe('assert/assertDefined stripped vs. invariant survives (real terser production pipeline)', () => {
   it('strips assert/assertDefined callsites but keeps invariant and its real runtime message', async () => {
@@ -187,7 +187,7 @@ describe('assert/assertDefined stripped vs. invariant survives (real terser prod
 describe('invariant always-on contract (source-level, no build required)', () => {
   it('has no __DEV__ guard in its function body', () => {
     const source = readFileSync(resolve(rootDir, 'src/core/dev.ts'), 'utf8');
-    const match = /export function invariant\([^)]*\)[^{]*\{([\s\S]*?)\n\}/.exec(source);
+    const match = /export const invariant(?:\s*:\s*[^=]+)?\s*=\s*\([^)]*\)[^=]*=>\s*\{([\s\S]*?)\n\};/.exec(source);
     expect(match).not.toBeNull();
     expect(match![1]).not.toMatch(/__DEV__/);
     expect(match![1]).toMatch(/throw new Error/);

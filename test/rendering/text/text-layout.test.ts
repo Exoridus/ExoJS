@@ -15,7 +15,7 @@ import type { GlyphInfo, GlyphPlacement, GlyphProvider } from '#rendering/text/t
 // Mock atlas
 // ---------------------------------------------------------------------------
 
-function makeAtlas(advance = 10, width = 8, height = 16): GlyphAtlas {
+const makeAtlas = (advance = 10, width = 8, height = 16): GlyphAtlas => {
   const infoBase: GlyphInfo = {
     x: 0,
     y: 0,
@@ -34,13 +34,13 @@ function makeAtlas(advance = 10, width = 8, height = 16): GlyphAtlas {
     getGlyph: vi.fn(() => infoBase),
     pages: [{ texture: { width: 1024, height: 1024 } }],
   } as unknown as GlyphAtlas;
-}
+};
 
 // ---------------------------------------------------------------------------
 // Fake GlyphProvider - fixed advance per char, no atlas/canvas involved.
 // ---------------------------------------------------------------------------
 
-function makeProvider(advance = 10): GlyphProvider {
+const makeProvider = (advance = 10): GlyphProvider => {
   return {
     getGlyph: (_char: string, fontSize: number): GlyphInfo => ({
       x: 0,
@@ -56,7 +56,7 @@ function makeProvider(advance = 10): GlyphProvider {
       uvBottom: 1,
     }),
   };
-}
+};
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -392,9 +392,9 @@ describe('layoutText vertical overflow', () => {
   // fontSize 16 * lineHeight 1.2 = 19.2px per line, so maxHeight 40 fits two.
   const twoLineMaxHeight = 40;
 
-  function overflowStyle(): TextStyle {
+  const overflowStyle = (): TextStyle => {
     return new TextStyle({ fontSize: 16, lineHeight: 1.2, align: 'left' });
-  }
+  };
 
   test('maxHeight without overflow keeps every line visible', () => {
     const placements = layoutText('A\nB\nC', overflowStyle(), { maxHeight: twoLineMaxHeight }, makeAtlas()).placements;
@@ -450,7 +450,7 @@ describe('layoutText vertical overflow', () => {
 
 describe('layoutText direction', () => {
   /** Provider whose per-character advance doubles as an identity marker. */
-  function makeCharProvider(advances: Record<string, number>): GlyphProvider {
+  const makeCharProvider = (advances: Record<string, number>): GlyphProvider => {
     return {
       getGlyph: (char: string, fontSize: number): GlyphInfo => {
         const advance = advances[char] ?? 10;
@@ -469,7 +469,7 @@ describe('layoutText direction', () => {
         };
       },
     };
-  }
+  };
 
   test('direction "ltr" places glyphs in logical order', () => {
     const provider = makeCharProvider({ A: 10, B: 20 });
@@ -611,7 +611,7 @@ describe('layoutText ink', () => {
    * and hands back negative bearings to pull the padded tile back around the
    * cursor. The ink therefore starts left of and above the layout origin.
    */
-  function makePaddedProvider(buffer: number, advance = 10, glyph = 8): GlyphProvider {
+  const makePaddedProvider = (buffer: number, advance = 10, glyph = 8): GlyphProvider => {
     return {
       getGlyph: (): GlyphInfo => ({
         x: 0,
@@ -629,7 +629,7 @@ describe('layoutText ink', () => {
         yBearing: -buffer,
       }),
     };
-  }
+  };
 
   test('ink starts in the negative when the provider pads its glyphs', () => {
     const buffer = 3;
@@ -680,7 +680,7 @@ describe('layoutText ink', () => {
 // ---------------------------------------------------------------------------
 
 describe('buildTextPageQuads', () => {
-  function makePlacement(overrides: Partial<GlyphPlacement> = {}): GlyphPlacement {
+  const makePlacement = (overrides: Partial<GlyphPlacement> = {}): GlyphPlacement => {
     return {
       x: 0,
       y: 0,
@@ -693,7 +693,7 @@ describe('buildTextPageQuads', () => {
       uvBottom: 1,
       ...overrides,
     };
-  }
+  };
 
   test('empty placement array yields no page-quad batches', () => {
     expect(buildTextPageQuads([])).toEqual([]);

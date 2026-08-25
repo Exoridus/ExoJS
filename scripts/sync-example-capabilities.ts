@@ -58,7 +58,7 @@ const AUDIO_SYMBOLS = [
   'WorkletFilter',
 ];
 
-function deriveCapabilities(source: string, slug: string, sectionSlug: string): Capability[] {
+const deriveCapabilities = (source: string, slug: string, sectionSlug: string): Capability[] => {
   const caps = new Set<Capability>();
 
   if (source.includes("'@codexo/exojs/webgpu'") || source.includes('"@codexo/exojs/webgpu"')) {
@@ -121,9 +121,9 @@ function deriveCapabilities(source: string, slug: string, sectionSlug: string): 
     'webWorkers',
   ];
   return order.filter(c => caps.has(c));
-}
+};
 
-async function syncCapabilities(): Promise<void> {
+const syncCapabilities = async (): Promise<void> => {
   const raw = readFileSync(manifestPath, 'utf8');
   const catalog = JSON.parse(raw) as Catalog;
 
@@ -158,6 +158,6 @@ async function syncCapabilities(): Promise<void> {
   writeFileSync(manifestPath, await formatSource(JSON.stringify(catalog), { ...sharedPrettierConfig, parser: 'json' }));
 
   process.stdout.write(`Sync complete. Changed: ${changed}, unchanged: ${unchanged}.\n`);
-}
+};
 
 void syncCapabilities();
