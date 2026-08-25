@@ -293,7 +293,7 @@ export class TileMapView {
     if (!band) {
       throw new Error(
         `TileMapView has no band named "${name}". Defined bands: ${
-          this._bands.length ? this._bands.map(b => `"${b.name}"`).join(', ') : '(none)'
+          this._bands.length > 0 ? this._bands.map(b => `"${b.name}"`).join(', ') : '(none)'
         }.`,
       );
     }

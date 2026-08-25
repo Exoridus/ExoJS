@@ -693,10 +693,10 @@ export class Loader {
           this._onFgBatchSettled(claimer, path, true);
           return v;
         },
-        (e: unknown) => {
+        (error: unknown) => {
           notifyFn?.(false);
-          this._onFgBatchSettled(claimer, path, false, this._settleError(e));
-          throw e;
+          this._onFgBatchSettled(claimer, path, false, this._settleError(error));
+          throw error;
         },
       );
       const queue = new LoadingQueue(promise, 1, () => this._cancelClaims(claimer, [canonical.key]));

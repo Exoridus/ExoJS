@@ -136,7 +136,7 @@ const matchesWebmVideo = (arrayBuffer: ArrayBuffer): boolean => {
 export const determineMimeType = (arrayBuffer: ArrayBuffer): string => {
   const header = new Uint8Array(arrayBuffer);
 
-  if (!header.length) {
+  if (header.length === 0) {
     throw new Error('Cannot determine mime type: No data.');
   }
 

@@ -1311,7 +1311,7 @@ export class PhysicsWorld implements BodyOwner {
       return;
     }
 
-    const commands = this._commands.splice(0, this._commands.length);
+    const commands = this._commands.splice(0);
 
     for (const command of commands) {
       command();

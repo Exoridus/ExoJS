@@ -171,7 +171,7 @@ export class BrowserPlatform implements PlatformAdapter {
     listener: (event: PlatformWindowEventMap[K]) => void,
     options?: PlatformListenerOptions,
   ): PlatformSubscription {
-    return this._listen(window, type, listener, options);
+    return this._listen(globalThis, type, listener, options);
   }
 
   public destroy(): void {

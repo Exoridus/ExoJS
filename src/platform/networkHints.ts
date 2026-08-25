@@ -50,11 +50,14 @@ export function browserNetworkHints(): OwnedNetworkHintSource {
     }
   };
 
-  const listening = typeof window !== 'undefined';
+  // An `in` test rather than a comparison against `undefined`: the DOM lib types
+  // `window` as always present, so any value check is statically true even though
+  // a worker realm genuinely has none.
+  const listening = 'window' in globalThis;
 
   if (listening) {
-    window.addEventListener('online', update);
-    window.addEventListener('offline', update);
+    globalThis.addEventListener('online', update);
+    globalThis.addEventListener('offline', update);
   }
 
   return {
@@ -79,8 +82,8 @@ export function browserNetworkHints(): OwnedNetworkHintSource {
 
     destroy(): void {
       if (listening) {
-        window.removeEventListener('online', update);
-        window.removeEventListener('offline', update);
+        globalThis.removeEventListener('online', update);
+        globalThis.removeEventListener('offline', update);
       }
 
       listeners.clear();

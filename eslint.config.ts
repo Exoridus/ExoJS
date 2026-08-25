@@ -467,6 +467,18 @@ export default defineConfig([
     },
   },
 
+  // The input channel map addresses a slot as "category base + index", so every
+  // member of the keyboard and pointer enums is an addition. That is the design,
+  // not a literal waiting to be inlined: writing the same values as bitwise ORs
+  // would satisfy the rule while quietly depending on every sub-value staying
+  // under the 256-slot category size.
+  {
+    files: ['src/input/types.ts'],
+    rules: {
+      '@typescript-eslint/prefer-literal-enum-member': 'off',
+    },
+  },
+
   // Claim/refcount tracking, multi-handle fill, and options-equivalence
   // branching are inherently branchy state machines.
   {
@@ -481,7 +493,6 @@ export default defineConfig([
   {
     files: ['src/assets/IndexedDbDatabase.ts', 'src/assets/factories/**/*.ts'],
     rules: {
-      '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       complexity: 'off',

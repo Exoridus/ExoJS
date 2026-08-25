@@ -38,6 +38,10 @@ export const typeAwareCorrectnessRules = {
   // `??=` is a rewrite with no correctness content.
   '@typescript-eslint/prefer-nullish-coalescing': ['error', { ignoreIfStatements: true }],
   '@typescript-eslint/prefer-optional-chain': 'error',
+  // Bitmask members are the reason this rule is usually rejected here, and the
+  // option covers them exactly. What is left is offset arithmetic in the input
+  // channel map, which is relaxed at that file rather than repo-wide.
+  '@typescript-eslint/prefer-literal-enum-member': ['error', { allowBitwiseExpressions: true }],
   '@typescript-eslint/prefer-return-this-type': 'error',
   // A getter whose type is not assignable to its setter's makes `a.x = b.x`
   // fail to compile - a real defect in a public accessor pair.
@@ -99,6 +103,13 @@ export const typeAwareCorrectnessRules = {
   'unicorn/text-encoding-identifier-case': 'error',
   'unicorn/escape-case': 'error',
   'unicorn/no-hex-escape': 'error',
+  'unicorn/catch-error-name': 'error',
+  // Covers `.size` as well as `.length`, so an emptiness check reads the same
+  // whichever collection it is asking about.
+  'unicorn/explicit-length-check': 'error',
+  'unicorn/no-unnecessary-array-splice-count': 'error',
+  // `window` is not the global object in a worker, and this engine runs in both.
+  'unicorn/prefer-global-this': 'error',
 
   // Promoted from warning: all three are satisfied everywhere, so the warning
   // was a migration state with nothing left to migrate.
@@ -133,9 +144,6 @@ export const typeAwareCorrectnessRules = {
 //   @typescript-eslint/no-dynamic-delete
 //     1. One in-place record clear in a destroy path, where the object
 //     identity is retained.
-//   @typescript-eslint/prefer-literal-enum-member
-//     139. Every hit is a bitmask enum whose members are `1 << n` or an OR of
-//     other members.
 //   @typescript-eslint/promise-function-async
 //     84 + 15. Would add `async` to satisfy a linter rather than to await
 //     anything.

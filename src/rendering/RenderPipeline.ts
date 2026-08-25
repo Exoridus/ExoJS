@@ -152,7 +152,7 @@ export class RenderPipeline extends RenderPass {
     // destroyed-and-empty state regardless of whether a child's destroy() throws.
     this._destroyed = true;
 
-    const passes = this._passes.splice(0, this._passes.length);
+    const passes = this._passes.splice(0);
     const errors: unknown[] = [];
 
     for (const pass of passes) {

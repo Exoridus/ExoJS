@@ -877,7 +877,7 @@ export const runTimerProbe = async (spec: TimerProbeSpec): Promise<TimerProbeRes
 
     return { spec, frames, warmupMs, warmupDrainMs, controls, notes };
   } finally {
-    for (const restore of restores.splice(0, restores.length)) {
+    for (const restore of restores.splice(0)) {
       restore();
     }
 
