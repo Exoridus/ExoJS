@@ -31,7 +31,7 @@ const chapters = [
 
 const examplesPath = path.resolve(repoRoot, 'examples', 'examples.json');
 const outputDir = path.resolve(siteRoot, 'src', 'content', 'guide');
-const examplesCatalog = JSON.parse(fs.readFileSync(examplesPath, 'utf8')) as Record<string, Array<{ slug: string; title: string; description: string }>>;
+const examplesCatalog = JSON.parse(fs.readFileSync(examplesPath, 'utf8')) as Record<string, { slug: string; title: string; description: string }[]>;
 
 const safeDescription = (text: string): string => text.replaceAll('"', '\\"');
 const safeTitle = (text: string): string => text.replaceAll('"', '\\"');

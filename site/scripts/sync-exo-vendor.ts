@@ -77,7 +77,7 @@ const generatedTypingsFiles = ['exo.d.ts', 'module-shims.d.ts', 'esm-typings.jso
 // re-populating. Historical versioned subdirectories are no longer produced
 // (released versions load via jsDelivr at runtime); leftovers from prior
 // syncs may remain on disk and are harmless - they're gitignored.
-const flatManagedEntries: ReadonlyArray<{ name: string; type: 'file' | 'dir' }> = [
+const flatManagedEntries: readonly { name: string; type: 'file' | 'dir' }[] = [
   ...requiredArtifacts.map(name => ({ name, type: 'file' as const })),
   ...generatedTypingsFiles.map(name => ({ name, type: 'file' as const })),
   { name: 'esm', type: 'dir' as const },
@@ -105,7 +105,7 @@ interface MonacoShimEntry {
 
 interface MonacoRegistry {
   packageJson: string;
-  subpathShims: ReadonlyArray<MonacoShimEntry>;
+  subpathShims: readonly MonacoShimEntry[];
 }
 
 const buildMonacoRegistry = (packageName: string, pkgRootDir: string, version: string): MonacoRegistry => {
@@ -255,7 +255,7 @@ const copyEsmTree = (sourceEsmDir: string, destEsmDir: string): { allFiles: stri
 // `#<path>` resolves to `dist/esm/<path>` - i.e. `<path>` within this copied
 // esm tree - so rewrite each `#<path>` to a path relative to its declaration
 // file. Then assert none survived: a stray one silently breaks the playground.
-const rewriteSubpathImports = (esmDir: string, dtsRelFiles: ReadonlyArray<string>): number => {
+const rewriteSubpathImports = (esmDir: string, dtsRelFiles: readonly string[]): number => {
   const importRe = /(\bfrom\s*|\bimport\s*\(\s*)(['"])#([^'"]+)\2/g;
   let rewritten = 0;
 
@@ -397,7 +397,7 @@ const syncVendor = (): void => {
     'exojs-tilemap-physics',
   ] as const;
   for (const pkgName of extensionPackages) {
-    let pkgRoot: string | null = null;
+    let pkgRoot: string;
     try {
       const pkgJsonPath = requireFromSite.resolve(`@codexo/${pkgName}/package.json`);
       pkgRoot = path.dirname(pkgJsonPath);
