@@ -133,8 +133,8 @@ export abstract class Material {
     }
 
     this.shader = options.shader;
-    this._uniformValues = { ...(options.uniforms ?? {}) };
-    this._textureValues = { ...(options.textures ?? {}) };
+    this._uniformValues = { ...options.uniforms };
+    this._textureValues = { ...options.textures };
     this._uniformView = this._createUniformView();
     this._textureView = this._createTextureView();
 

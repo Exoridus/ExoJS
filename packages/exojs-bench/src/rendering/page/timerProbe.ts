@@ -519,7 +519,7 @@ const freshCanvas = (): HTMLCanvasElement => {
   canvas.id = 'stage';
   canvas.width = STAGE_WIDTH;
   canvas.height = STAGE_HEIGHT;
-  document.body.appendChild(canvas);
+  document.body.append(canvas);
 
   return canvas;
 };
@@ -877,7 +877,7 @@ export const runTimerProbe = async (spec: TimerProbeSpec): Promise<TimerProbeRes
 
     return { spec, frames, warmupMs, warmupDrainMs, controls, notes };
   } finally {
-    for (const restore of restores.splice(0, restores.length)) {
+    for (const restore of restores.splice(0)) {
       restore();
     }
 

@@ -155,9 +155,7 @@ export class Tooltip {
       return;
     }
 
-    const hex = (packed: number): Color => {
-      return new Color((packed >> 16) & 0xff, (packed >> 8) & 0xff, packed & 0xff, 1);
-    };
+    const hex = (packed: number): Color => new Color((packed >> 16) & 0xff, (packed >> 8) & 0xff, packed & 0xff, 1);
 
     const label = new Text(this._text, {
       fillColor: hex(this._textColor),

@@ -103,7 +103,7 @@ export class Logger {
 
     return () => {
       const idx = this._sinks.indexOf(sink);
-      if (idx >= 0) this._sinks.splice(idx, 1);
+      if (idx !== -1) this._sinks.splice(idx, 1);
     };
   }
 

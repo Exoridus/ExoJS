@@ -1,8 +1,6 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite, type Time } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-
-
 // A detailed full-frame texture so grain + vignette read as a screen-wide post
 // effect rather than decorating one small sprite.
 const UV_GRID = assets.technical.filtering.uvGrid256;
@@ -25,72 +23,72 @@ fn hash(p:vec2<f32>) -> f32 { return fract(sin(dot(p,vec2<f32>(12.9898,78.233)))
 }`;
 
 class NoiseVignetteScene extends Scene {
-    private time = 0;
-    private intensity = 1;
-    private filter!: ShaderFilter;
-    private sprite!: Sprite;
-    private hud!: ReturnType<typeof mountControls>;
-    private panel!: ReturnType<typeof mountControlPanel>;
+  private time = 0;
+  private intensity = 1;
+  private filter!: ShaderFilter;
+  private sprite!: Sprite;
+  private hud!: ReturnType<typeof mountControls>;
+  private panel!: ReturnType<typeof mountControlPanel>;
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
 
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uTime: 0, uIntensity: this.intensity } });
 
-        // Fill the whole 16:9 frame so the post effect covers the viewport.
-        const texture = this.loader.get(UV_GRID);
+    // Fill the whole 16:9 frame so the post effect covers the viewport.
+    const texture = this.loader.get(UV_GRID);
 
-        this.sprite = new Sprite(texture).setAnchor(0.5).setPosition(width / 2, height / 2);
-        this.sprite.width = width;
-        this.sprite.height = height;
-        this.sprite.filters = [this.filter];
+    this.sprite = new Sprite(texture).setAnchor(0.5).setPosition(width / 2, height / 2);
+    this.sprite.width = width;
+    this.sprite.height = height;
+    this.sprite.filters = [this.filter];
 
-        this.hud = mountControls({
-            title: 'Noise + Vignette',
-            controls: [{ keys: 'Intensity', action: 'scale film grain + vignette together' }],
-            status: this.statusText(),
-            hint: 'A single-pass filter adds animated grain and a radial vignette across the frame.',
-        });
+    this.hud = mountControls({
+      title: 'Noise + Vignette',
+      controls: [{ keys: 'Intensity', action: 'scale film grain + vignette together' }],
+      status: this.statusText(),
+      hint: 'A single-pass filter adds animated grain and a radial vignette across the frame.',
+    });
 
-        this.panel = mountControlPanel({ title: 'Grade' });
-        this.panel.addSlider({
-            label: 'Intensity',
-            min: 0,
-            max: 1,
-            step: 0.01,
-            value: this.intensity,
-            onChange: value => {
-                this.intensity = value;
-                this.filter.setUniform('uIntensity', value);
-                this.hud.setStatus(this.statusText());
-            },
-        });
-    }
+    this.panel = mountControlPanel({ title: 'Grade' });
+    this.panel.addSlider({
+      label: 'Intensity',
+      min: 0,
+      max: 1,
+      step: 0.01,
+      value: this.intensity,
+      onChange: value => {
+        this.intensity = value;
+        this.filter.setUniform('uIntensity', value);
+        this.hud.setStatus(this.statusText());
+      },
+    });
+  }
 
-    private statusText(): string {
-        return this.intensity === 0 ? 'Intensity: 0% (clean frame)' : `Intensity: ${Math.round(this.intensity * 100)}%`;
-    }
+  private statusText(): string {
+    return this.intensity === 0 ? 'Intensity: 0% (clean frame)' : `Intensity: ${Math.round(this.intensity * 100)}%`;
+  }
 
-    override update(delta: Time): void {
-        this.time += delta.seconds;
-        this.filter.setUniform('uTime', this.time);
-    }
+  override update(delta: Time): void {
+    this.time += delta.seconds;
+    this.filter.setUniform('uTime', this.time);
+  }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.sprite);
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.sprite);
+  }
 }
 
 const app = new Application({
-    scenes: { NoiseVignetteScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
+  scenes: { NoiseVignetteScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
 });
 
 app.start(NoiseVignetteScene);

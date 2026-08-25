@@ -1,52 +1,50 @@
 import { Application, Asset, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, SvgAsset, Texture } from '@codexo/exojs';
 
-
-
 class SvgDrawableScene extends Scene {
-    private texture!: Texture;
-    private sprite!: Sprite;
+  private texture!: Texture;
+  private sprite!: Sprite;
 
-    override async load(): Promise<void> {
-        const app = this.app;
-        const { width, height } = app;
+  override async load(): Promise<void> {
+    const app = this.app;
+    const { width, height } = app;
 
-        // SvgAsset has no seamless adapter (unlike Texture/Sound), so it is
-        // awaited via `load()` rather than fetched synchronously via `get()`.
-        // The exo.js wordmark SVG carries only a viewBox (no width/height), so
-        // it would rasterise to a 0x0 image. Request an explicit pixel size -
-        // the SVG is vector, so it stays crisp at any rasterised resolution.
-        //
-        // The cast below works around a pre-existing overload-resolution gap:
-        // every value-asset dispatch token (Json/TextAsset/SvgAsset/...) is an
-        // empty marker class, so they're structurally identical to `load()`'s
-        // `typeof Json` overload - which is declared first and wins, typing
-        // the result as `unknown` instead of `HTMLImageElement`. See the
-        // flagged deviation in the migration report.
-        const mark = (await this.loader.load(Asset.type('svg', 'svg/exo-wordmark.svg', { width: 850, height: 324 }))) as HTMLImageElement;
+    // SvgAsset has no seamless adapter (unlike Texture/Sound), so it is
+    // awaited via `load()` rather than fetched synchronously via `get()`.
+    // The exo.js wordmark SVG carries only a viewBox (no width/height), so
+    // it would rasterise to a 0x0 image. Request an explicit pixel size -
+    // the SVG is vector, so it stays crisp at any rasterised resolution.
+    //
+    // The cast below works around a pre-existing overload-resolution gap:
+    // every value-asset dispatch token (Json/TextAsset/SvgAsset/...) is an
+    // empty marker class, so they're structurally identical to `load()`'s
+    // `typeof Json` overload - which is declared first and wins, typing
+    // the result as `unknown` instead of `HTMLImageElement`. See the
+    // flagged deviation in the migration report.
+    const mark = (await this.loader.load(Asset.type('svg', 'svg/exo-wordmark.svg', { width: 850, height: 324 }))) as HTMLImageElement;
 
-        this.texture = new Texture(mark);
-        this.sprite = new Sprite(this.texture);
-        this.sprite.setAnchor(0.5);
-        this.sprite.setPosition((width / 2) | 0, (height / 2) | 0);
-    }
+    this.texture = new Texture(mark);
+    this.sprite = new Sprite(this.texture);
+    this.sprite.setAnchor(0.5);
+    this.sprite.setPosition((width / 2) | 0, (height / 2) | 0);
+  }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.sprite);
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.sprite);
+  }
 }
 
 const app = new Application({
-    scenes: { SvgDrawableScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { SvgDrawableScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 
 app.start(SvgDrawableScene);

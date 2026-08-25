@@ -1,5 +1,5 @@
 /**
- * Type-checks `test/**` against `tsconfig.test.json` and ratchets what is left.
+ * Type-checks `test/**` against `test/tsconfig.json` and ratchets what is left.
  *
  * The root `tsconfig.json` includes `src/**` only, so until now no compiler
  * ever looked at the test tree. Vitest does not typecheck and esbuild only
@@ -29,8 +29,8 @@ import { relative, resolve } from 'node:path';
 import ts from 'typescript';
 
 const REPO_ROOT = resolve(import.meta.dirname, '..');
-const CONFIG_PATH = resolve(REPO_ROOT, 'tsconfig.test.json');
 const TEST_DIR = resolve(REPO_ROOT, 'test');
+const CONFIG_PATH = resolve(TEST_DIR, 'tsconfig.json');
 const BASELINE_PATH = resolve(REPO_ROOT, 'scripts', 'test-typecheck-baseline.json');
 const BASELINE_REL = 'scripts/test-typecheck-baseline.json';
 const UPDATE_COMMAND = 'pnpm typecheck:test:update-baseline';
@@ -77,7 +77,11 @@ if (configFile.error) {
   fail(ts.formatDiagnosticsWithColorAndContext([configFile.error], FORMAT_HOST));
 }
 
-const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, REPO_ROOT, undefined, CONFIG_PATH);
+// Relative paths in the config - `include`, `paths`, `exclude` - are resolved
+// against the directory the config lives in, not the repository root. Passing
+// the wrong base leaves every workspace `paths` mapping pointing one level off,
+// which surfaces as a wall of TS2307 rather than as a config error.
+const parsed = ts.parseJsonConfigFileContent(configFile.config, ts.sys, TEST_DIR, undefined, CONFIG_PATH);
 
 if (parsed.errors.length > 0) {
   fail(ts.formatDiagnosticsWithColorAndContext(parsed.errors, FORMAT_HOST));

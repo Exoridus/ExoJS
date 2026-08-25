@@ -622,7 +622,7 @@ const shortenProfileUrl = (url: string): string => {
   const withoutQuery = url.split('?')[0]!;
   const marker = withoutQuery.lastIndexOf('/exojs/');
 
-  if (marker >= 0) {
+  if (marker !== -1) {
     return withoutQuery.slice(marker + '/exojs/'.length);
   }
 

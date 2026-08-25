@@ -3,42 +3,33 @@ import { Application, Color, FixedResolutionCanvasSizing, Mesh, Scene } from '@c
 const UV_GRID = assets.technical.filtering.uvGrid256;
 const HALF = 300;
 class MeshTexturedQuadScene extends Scene {
-    quad;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.quad = new Mesh({
-            vertices: new Float32Array([
-                -HALF,
-                -HALF,
-                HALF,
-                -HALF,
-                HALF,
-                HALF,
-                -HALF,
-                HALF,
-            ]),
-            uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
-            indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
-            texture: this.loader.get(UV_GRID),
-        });
-        this.quad.setPosition((width / 2) | 0, (height / 2) | 0);
-    }
-    update(delta) {
-        this.quad.rotate(delta.seconds * 30);
-    }
-    draw(context) {
-        context.render(this.quad);
-    }
+  quad;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.quad = new Mesh({
+      vertices: new Float32Array([-HALF, -HALF, HALF, -HALF, HALF, HALF, -HALF, HALF]),
+      uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+      indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
+      texture: this.loader.get(UV_GRID),
+    });
+    this.quad.setPosition((width / 2) | 0, (height / 2) | 0);
+  }
+  update(delta) {
+    this.quad.rotate(delta.seconds * 30);
+  }
+  draw(context) {
+    context.render(this.quad);
+  }
 }
 const app = new Application({
-    scenes: { MeshTexturedQuadScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
+  scenes: { MeshTexturedQuadScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
 });
 app.start(MeshTexturedQuadScene);

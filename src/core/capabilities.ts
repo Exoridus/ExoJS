@@ -25,7 +25,7 @@ import { getWebGl2Context, type RenderSurface } from '#platform/RenderSurface';
  */
 export type HostRealm = 'window' | 'worker' | 'unknown';
 
-const hasWindow = typeof window !== 'undefined';
+const hasWindow = 'window' in globalThis;
 const hasDocument = typeof document !== 'undefined';
 const hasNavigator = typeof navigator !== 'undefined';
 // `WorkerGlobalScope` rather than `DedicatedWorkerGlobalScope`, and reached
@@ -297,11 +297,11 @@ async function probeWebGpu(): Promise<[GPUAdapter | null, GPUAdapterInfo | null]
 // event nor a target to receive it, so a realm without a document has no input
 // of its own regardless of which constructors happen to be defined in it.
 function probePointer(): boolean {
-  return hasWindow && 'PointerEvent' in window;
+  return hasWindow && 'PointerEvent' in globalThis;
 }
 
 function probeKeyboard(): boolean {
-  return hasWindow && 'KeyboardEvent' in window;
+  return hasWindow && 'KeyboardEvent' in globalThis;
 }
 
 function probeGamepad(): boolean {
@@ -310,7 +310,7 @@ function probeGamepad(): boolean {
 
 function probeTouchSupported(): boolean {
   if (!hasWindow) return false;
-  if ('ontouchstart' in window) return true;
+  if ('ontouchstart' in globalThis) return true;
   if (probeMaxTouchPoints() > 0) return true;
   return false;
 }
@@ -325,7 +325,7 @@ function probeMaxTouchPoints(): number {
 // one even where the identifier resolves.
 function probeAudio(): boolean {
   if (!hasWindow) return false;
-  const w = window as typeof window & { webkitAudioContext?: unknown };
+  const w = globalThis as typeof globalThis & { webkitAudioContext?: unknown };
   return w.AudioContext !== undefined || w.webkitAudioContext !== undefined;
 }
 

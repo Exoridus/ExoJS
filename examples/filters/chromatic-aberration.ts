@@ -1,8 +1,6 @@
 import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
-
-
 // A dense checkerboard makes the per-channel RGB split read clearly along edges.
 const CHECKER = assets.technical.filtering.checker256;
 
@@ -28,70 +26,73 @@ struct Uniforms { uOffset:f32, _pad0:vec3<f32> };
 const MAX_OFFSET = 0.03;
 
 class ChromaticAberrationScene extends Scene {
-    private filter!: ShaderFilter;
-    private sprite!: Sprite;
-    private intensity = 0.4;
-    private hud!: ReturnType<typeof mountControls>;
-    private panel!: ReturnType<typeof mountControlPanel>;
+  private filter!: ShaderFilter;
+  private sprite!: Sprite;
+  private intensity = 0.4;
+  private hud!: ReturnType<typeof mountControls>;
+  private panel!: ReturnType<typeof mountControlPanel>;
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
 
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } });
-        this.sprite = new Sprite(this.loader.get(CHECKER)).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
-        this.sprite.filters = [this.filter];
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } });
+    this.sprite = new Sprite(this.loader.get(CHECKER))
+      .setAnchor(0.5)
+      .setScale(2.6)
+      .setPosition(width / 2, height / 2);
+    this.sprite.filters = [this.filter];
 
-        // The HUD must exist before applyIntensity() runs - it calls hud.setStatus().
-        this.hud = mountControls({
-            title: 'Chromatic Aberration',
-            controls: [{ keys: 'Intensity', action: 'split the R / B channels apart' }],
-            status: this.statusText(),
-            hint: 'A fragment-shader filter samples red and blue at opposite UV offsets.',
-        });
+    // The HUD must exist before applyIntensity() runs - it calls hud.setStatus().
+    this.hud = mountControls({
+      title: 'Chromatic Aberration',
+      controls: [{ keys: 'Intensity', action: 'split the R / B channels apart' }],
+      status: this.statusText(),
+      hint: 'A fragment-shader filter samples red and blue at opposite UV offsets.',
+    });
 
-        this.panel = mountControlPanel({ title: 'Lens' });
-        this.panel.addSlider({
-            label: 'Intensity',
-            min: 0,
-            max: 1,
-            step: 0.01,
-            value: this.intensity,
-            onChange: value => {
-                this.intensity = value;
-                this.applyIntensity();
-            },
-        });
-
+    this.panel = mountControlPanel({ title: 'Lens' });
+    this.panel.addSlider({
+      label: 'Intensity',
+      min: 0,
+      max: 1,
+      step: 0.01,
+      value: this.intensity,
+      onChange: value => {
+        this.intensity = value;
         this.applyIntensity();
-    }
+      },
+    });
 
-    private applyIntensity(): void {
-        this.filter.setUniform('uOffset', this.intensity * MAX_OFFSET);
-        this.hud.setStatus(this.statusText());
-    }
+    this.applyIntensity();
+  }
 
-    private statusText(): string {
-        const pct = Math.round(this.intensity * 100);
-        const offset = (this.intensity * MAX_OFFSET).toFixed(4);
+  private applyIntensity(): void {
+    this.filter.setUniform('uOffset', this.intensity * MAX_OFFSET);
+    this.hud.setStatus(this.statusText());
+  }
 
-        return this.intensity === 0 ? 'Intensity: 0% (no split — original)' : `Intensity: ${pct}%  (uOffset ${offset})`;
-    }
+  private statusText(): string {
+    const pct = Math.round(this.intensity * 100);
+    const offset = (this.intensity * MAX_OFFSET).toFixed(4);
 
-    override draw(context: RenderingContext): void {
-        context.render(this.sprite);
-    }
+    return this.intensity === 0 ? 'Intensity: 0% (no split — original)' : `Intensity: ${pct}%  (uOffset ${offset})`;
+  }
+
+  override draw(context: RenderingContext): void {
+    context.render(this.sprite);
+  }
 }
 
 const app = new Application({
-    scenes: { ChromaticAberrationScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
+  scenes: { ChromaticAberrationScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
 });
 
 app.start(ChromaticAberrationScene);

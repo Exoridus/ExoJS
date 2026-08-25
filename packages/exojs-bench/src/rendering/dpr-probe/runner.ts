@@ -72,7 +72,7 @@ const freshStageCanvas = (host: HTMLElement): HTMLCanvasElement => {
   const canvas = document.createElement('canvas');
 
   canvas.id = 'stage';
-  host.appendChild(canvas);
+  host.append(canvas);
 
   return canvas;
 };
@@ -177,12 +177,12 @@ const captureLooseErrors = (sink: string[]): (() => void) => {
     sink.push(`unhandled rejection: ${reason instanceof Error ? reason.message : String(reason)}`);
   };
 
-  window.addEventListener('error', onError);
-  window.addEventListener('unhandledrejection', onRejection);
+  globalThis.addEventListener('error', onError);
+  globalThis.addEventListener('unhandledrejection', onRejection);
 
   return (): void => {
-    window.removeEventListener('error', onError);
-    window.removeEventListener('unhandledrejection', onRejection);
+    globalThis.removeEventListener('error', onError);
+    globalThis.removeEventListener('unhandledrejection', onRejection);
   };
 };
 

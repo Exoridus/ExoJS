@@ -3,157 +3,165 @@ import { Application, Color, Container, FixedResolutionCanvasSizing, Rectangle, 
 const GRID_COLUMNS = 56;
 const GRID_ROWS = 30;
 
-
 class SpriteStressScene extends Scene {
-    private sprites!: { sprite: Sprite; offsetX: number; offsetY: number; phase: number; baseScale: number; driftX: number; driftY: number; rotationSpeed: number }[];
-    private spriteLayer!: Container;
+  private sprites!: {
+    sprite: Sprite;
+    offsetX: number;
+    offsetY: number;
+    phase: number;
+    baseScale: number;
+    driftX: number;
+    driftY: number;
+    rotationSpeed: number;
+  }[];
+  private spriteLayer!: Container;
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
-        const atlasTexture = createAtlasTexture();
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
+    const atlasTexture = createAtlasTexture();
 
-        this.sprites = [];
-        this.spriteLayer = new Container();
-        this.spriteLayer.setPosition(width / 2, height / 2);
+    this.sprites = [];
+    this.spriteLayer = new Container();
+    this.spriteLayer.setPosition(width / 2, height / 2);
 
-        const frameChoices = [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64), new Rectangle(0, 64, 64, 64), new Rectangle(64, 64, 64, 64)];
-        const tintPalette = [Color.white, Color.skyBlue, Color.gold, Color.hotPink, Color.mediumSpringGreen, Color.orange];
+    const frameChoices = [new Rectangle(0, 0, 64, 64), new Rectangle(64, 0, 64, 64), new Rectangle(0, 64, 64, 64), new Rectangle(64, 64, 64, 64)];
+    const tintPalette = [Color.white, Color.skyBlue, Color.gold, Color.hotPink, Color.mediumSpringGreen, Color.orange];
 
-        let index = 0;
+    let index = 0;
 
-        for (let row = 0; row < GRID_ROWS; row++) {
-            for (let column = 0; column < GRID_COLUMNS; column++) {
-                const sprite = new Sprite(atlasTexture);
-                const frameIndex = index % frameChoices.length;
-                const offsetX = (column - (GRID_COLUMNS - 1) / 2) * 22;
-                const offsetY = (row - (GRID_ROWS - 1) / 2) * 22;
-                const phase = (row * GRID_COLUMNS + column) * 0.13;
-                const baseScale = 0.58 + (index % 5) * 0.08;
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let column = 0; column < GRID_COLUMNS; column++) {
+        const sprite = new Sprite(atlasTexture);
+        const frameIndex = index % frameChoices.length;
+        const offsetX = (column - (GRID_COLUMNS - 1) / 2) * 22;
+        const offsetY = (row - (GRID_ROWS - 1) / 2) * 22;
+        const phase = (row * GRID_COLUMNS + column) * 0.13;
+        const baseScale = 0.58 + (index % 5) * 0.08;
 
-                sprite.setTextureFrame(frameChoices[frameIndex]);
-                sprite.setAnchor(0.5);
-                sprite.setPosition(offsetX, offsetY);
-                sprite.setScale(baseScale);
-                sprite.setTint(tintPalette[index % tintPalette.length]);
+        sprite.setTextureFrame(frameChoices[frameIndex]);
+        sprite.setAnchor(0.5);
+        sprite.setPosition(offsetX, offsetY);
+        sprite.setScale(baseScale);
+        sprite.setTint(tintPalette[index % tintPalette.length]);
 
-                this.sprites.push({
-                    sprite,
-                    offsetX,
-                    offsetY,
-                    phase,
-                    baseScale,
-                    driftX: 6 + (index % 7) * 2,
-                    driftY: 4 + (index % 5) * 2,
-                    rotationSpeed: (index % 2 === 0 ? 1 : -1) * (14 + (index % 6) * 7),
-                });
+        this.sprites.push({
+          sprite,
+          offsetX,
+          offsetY,
+          phase,
+          baseScale,
+          driftX: 6 + (index % 7) * 2,
+          driftY: 4 + (index % 5) * 2,
+          rotationSpeed: (index % 2 === 0 ? 1 : -1) * (14 + (index % 6) * 7),
+        });
 
-                this.spriteLayer.addChild(sprite);
-                index++;
-            }
-        }
+        this.spriteLayer.addChild(sprite);
+        index++;
+      }
     }
+  }
 
-    override update(delta: Time): void {
-        const app = this.app;
-        const time = app.activeTime.seconds;
+  override update(delta: Time): void {
+    const app = this.app;
+    const time = app.activeTime.seconds;
 
-        this.spriteLayer.rotate(delta.seconds * 2.5);
+    this.spriteLayer.rotate(delta.seconds * 2.5);
 
-        for (const entry of this.sprites) {
-            const localPhase = time + entry.phase;
-            const scale = entry.baseScale + Math.sin(localPhase * 1.8) * 0.08;
+    for (const entry of this.sprites) {
+      const localPhase = time + entry.phase;
+      const scale = entry.baseScale + Math.sin(localPhase * 1.8) * 0.08;
 
-            entry.sprite.x = entry.offsetX + Math.sin(localPhase * 1.4) * entry.driftX;
-            entry.sprite.y = entry.offsetY + Math.cos(localPhase * 1.7) * entry.driftY;
-            entry.sprite.rotation += delta.seconds * entry.rotationSpeed;
-            entry.sprite.setScale(scale);
-        }
+      entry.sprite.x = entry.offsetX + Math.sin(localPhase * 1.4) * entry.driftX;
+      entry.sprite.y = entry.offsetY + Math.cos(localPhase * 1.7) * entry.driftY;
+      entry.sprite.rotation += delta.seconds * entry.rotationSpeed;
+      entry.sprite.setScale(scale);
     }
+  }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.spriteLayer);
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.spriteLayer);
+  }
 
-    override destroy(): void {
-        this.spriteLayer?.destroy();
-    }
+  override destroy(): void {
+    this.spriteLayer?.destroy();
+  }
 }
 
 const app = new Application({
-    scenes: { SpriteStressScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: new Color(5, 8, 15, 1),
-    backend: { type: 'webgpu' },
+  scenes: { SpriteStressScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: new Color(5, 8, 15, 1),
+  backend: { type: 'webgpu' },
 });
 
 app.start(SpriteStressScene).catch(() => {
-    app.element?.remove();
-    app.destroy();
+  app.element?.remove();
+  app.destroy();
 });
 
 function createAtlasTexture(): Texture {
-    const atlasCanvas = document.createElement('canvas');
-    const context = atlasCanvas.getContext('2d')!;
+  const atlasCanvas = document.createElement('canvas');
+  const context = atlasCanvas.getContext('2d')!;
 
-    atlasCanvas.width = 128;
-    atlasCanvas.height = 128;
+  atlasCanvas.width = 128;
+  atlasCanvas.height = 128;
 
-    drawAtlasCell(context, 0, 0, '#0f172a', '#ffd166', 'circle');
-    drawAtlasCell(context, 64, 0, '#10243d', '#ff6b6b', 'diamond');
-    drawAtlasCell(context, 0, 64, '#112b21', '#4ade80', 'star');
-    drawAtlasCell(context, 64, 64, '#23163c', '#7dd3fc', 'triangle');
+  drawAtlasCell(context, 0, 0, '#0f172a', '#ffd166', 'circle');
+  drawAtlasCell(context, 64, 0, '#10243d', '#ff6b6b', 'diamond');
+  drawAtlasCell(context, 0, 64, '#112b21', '#4ade80', 'star');
+  drawAtlasCell(context, 64, 64, '#23163c', '#7dd3fc', 'triangle');
 
-    return new Texture(atlasCanvas);
+  return new Texture(atlasCanvas);
 }
 
 function drawAtlasCell(context: CanvasRenderingContext2D, x: number, y: number, background: string, accent: string, shape: string): void {
-    context.fillStyle = background;
-    context.fillRect(x, y, 64, 64);
+  context.fillStyle = background;
+  context.fillRect(x, y, 64, 64);
 
-    context.fillStyle = 'rgba(255, 255, 255, 0.08)';
-    context.fillRect(x + 4, y + 4, 56, 56);
+  context.fillStyle = 'rgba(255, 255, 255, 0.08)';
+  context.fillRect(x + 4, y + 4, 56, 56);
 
-    context.fillStyle = accent;
-    context.beginPath();
+  context.fillStyle = accent;
+  context.beginPath();
 
-    if (shape === 'circle') {
-        context.arc(x + 32, y + 32, 18, 0, Math.PI * 2);
-    } else if (shape === 'diamond') {
-        context.moveTo(x + 32, y + 10);
-        context.lineTo(x + 52, y + 32);
-        context.lineTo(x + 32, y + 54);
-        context.lineTo(x + 12, y + 32);
-        context.closePath();
-    } else if (shape === 'star') {
-        for (let i = 0; i < 5; i++) {
-            const outerAngle = -Math.PI / 2 + (i * Math.PI * 2) / 5;
-            const innerAngle = outerAngle + Math.PI / 5;
-            const outerX = x + 32 + Math.cos(outerAngle) * 20;
-            const outerY = y + 32 + Math.sin(outerAngle) * 20;
-            const innerX = x + 32 + Math.cos(innerAngle) * 9;
-            const innerY = y + 32 + Math.sin(innerAngle) * 9;
+  if (shape === 'circle') {
+    context.arc(x + 32, y + 32, 18, 0, Math.PI * 2);
+  } else if (shape === 'diamond') {
+    context.moveTo(x + 32, y + 10);
+    context.lineTo(x + 52, y + 32);
+    context.lineTo(x + 32, y + 54);
+    context.lineTo(x + 12, y + 32);
+    context.closePath();
+  } else if (shape === 'star') {
+    for (let i = 0; i < 5; i++) {
+      const outerAngle = -Math.PI / 2 + (i * Math.PI * 2) / 5;
+      const innerAngle = outerAngle + Math.PI / 5;
+      const outerX = x + 32 + Math.cos(outerAngle) * 20;
+      const outerY = y + 32 + Math.sin(outerAngle) * 20;
+      const innerX = x + 32 + Math.cos(innerAngle) * 9;
+      const innerY = y + 32 + Math.sin(innerAngle) * 9;
 
-            if (i === 0) {
-                context.moveTo(outerX, outerY);
-            } else {
-                context.lineTo(outerX, outerY);
-            }
+      if (i === 0) {
+        context.moveTo(outerX, outerY);
+      } else {
+        context.lineTo(outerX, outerY);
+      }
 
-            context.lineTo(innerX, innerY);
-        }
-        context.closePath();
-    } else {
-        context.moveTo(x + 32, y + 9);
-        context.lineTo(x + 54, y + 52);
-        context.lineTo(x + 10, y + 52);
-        context.closePath();
+      context.lineTo(innerX, innerY);
     }
+    context.closePath();
+  } else {
+    context.moveTo(x + 32, y + 9);
+    context.lineTo(x + 54, y + 52);
+    context.lineTo(x + 10, y + 52);
+    context.closePath();
+  }
 
-    context.fill();
+  context.fill();
 }

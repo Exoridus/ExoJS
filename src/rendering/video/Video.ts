@@ -200,21 +200,21 @@ export class Video extends Sprite {
 
   /**
    * The {@link AudioBus} this video's audio routes into, or `null` when none
-   * has been assigned (audio then routes straight to the context destination).
-   * Set `video.bus = app.audio.master` to route through a manager's mix.
+   * has been assigned. Set `video.bus = app.audio.master` to route through a
+   * manager's mix; assigning `null` routes straight to the context destination.
    */
   public get bus(): AudioBus | null {
     return this._bus;
   }
 
-  public set bus(bus: AudioBus) {
+  public set bus(bus: AudioBus | null) {
     if (this._bus === bus) return;
     if (this._audioSetup) {
       this._audioSetup.gainNode.disconnect();
     }
     this._bus = bus;
     if (this._audioSetup) {
-      const inputNode = bus._getInputNode();
+      const inputNode = bus?._getInputNode() ?? null;
       if (inputNode) {
         this._audioSetup.gainNode.connect(inputNode);
       } else {

@@ -7,13 +7,13 @@ import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext,
 // Scene: `app.loader` in place of `this.loader`.
 
 const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: new Color(18, 22, 33),
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: new Color(18, 22, 33),
 });
 
 const square = new Sprite(app.loader.get(assets.demo.textures.pixelWhite)).setAnchor(0.5);
@@ -25,13 +25,13 @@ square.setPosition(app.width / 2, app.height / 2);
 let angle = 0;
 
 app.systems.add({
-    update(delta) {
-        angle += delta.seconds;
-        square.rotation = angle * 40;
-    },
-    draw(context: RenderingContext) {
-        context.render(square);
-    },
+  update(delta) {
+    angle += delta.seconds;
+    square.rotation = angle * 40;
+  },
+  draw(context: RenderingContext) {
+    context.render(square);
+  },
 });
 
 app.start();

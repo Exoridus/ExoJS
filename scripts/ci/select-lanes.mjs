@@ -96,7 +96,7 @@ const isEnginePath = file => {
   if (file.startsWith('.github/workflows/')) return true;
   // Shared root build / test / type configuration.
   if (file === 'vitest.config.ts') return true;
-  if (file === 'tsconfig.json' || file === 'tsconfig.eslint.json') return true;
+  if (file.startsWith('tsconfig.') && file.endsWith('.json')) return true;
   // Root manifest + lockfile + workspace topology all affect the whole build.
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
   // The release version-coherence tests derive expectations from the root
@@ -157,7 +157,7 @@ const isSitePath = file => {
   if (file.startsWith('examples/')) return true;
   if (file.startsWith('packages/')) return true;
   if (file.startsWith('.github/workflows/')) return true;
-  if (file === 'tsconfig.guides.json' || file === 'tsconfig.examples.json' || file === 'tsconfig.eslint.json') return true;
+  if (file === 'tsconfig.guides.json' || file === 'tsconfig.examples.json') return true;
   if (file === 'package.json' || file === 'pnpm-lock.yaml' || file === 'pnpm-workspace.yaml') return true;
   return false;
 };

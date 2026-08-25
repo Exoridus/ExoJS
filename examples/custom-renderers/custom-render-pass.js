@@ -1,57 +1,59 @@
 // Auto-generated from custom-render-pass.ts - edit the .ts source, not this file.
 import { Application, CallbackRenderPass, Color, FixedResolutionCanvasSizing, Graphics, RenderNodePass, RenderPipeline, Scene, Sprite } from '@codexo/exojs';
 class CustomRenderPassScene extends Scene {
-    back;
-    front;
-    between;
-    pipeline;
-    angle = 0;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.back = new Sprite(this.loader.get('image/ship-a.png'))
-            .setAnchor(0.5)
-            .setPosition(width / 2 - 200, height / 2)
-            .setScale(2.2)
-            .setTint(new Color(120, 170, 255));
-        this.front = new Sprite(this.loader.get('image/ship-a.png'))
-            .setAnchor(0.5)
-            .setPosition(width / 2 + 200, height / 2)
-            .setScale(2.2)
-            .setTint(new Color(255, 180, 120));
-        this.between = new Graphics();
-        // A callback pass slots procedural geometry between two scene nodes - same frame order
-        // as the imperative version, now a named, inspectable step.
-        this.pipeline = new RenderPipeline()
-            .addPass(new RenderNodePass(this.back, { clear: Color.black }))
-            .addPass(new CallbackRenderPass((context) => {
-            const { width: w, height: h } = app;
-            this.between.clear();
-            this.between.lineWidth = 10;
-            this.between.lineColor = new Color(130, 240, 170);
-            this.between.drawArc(w / 2, h / 2, 120, this.angle, this.angle + Math.PI * 1.3);
-            this.between.render(context.backend);
-        }))
-            .addPass(new RenderNodePass(this.front));
-    }
-    update(delta) {
-        this.angle += delta.seconds * 2.2;
-    }
-    draw(context) {
-        this.pipeline.execute(context);
-    }
+  back;
+  front;
+  between;
+  pipeline;
+  angle = 0;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.back = new Sprite(this.loader.get('image/ship-a.png'))
+      .setAnchor(0.5)
+      .setPosition(width / 2 - 200, height / 2)
+      .setScale(2.2)
+      .setTint(new Color(120, 170, 255));
+    this.front = new Sprite(this.loader.get('image/ship-a.png'))
+      .setAnchor(0.5)
+      .setPosition(width / 2 + 200, height / 2)
+      .setScale(2.2)
+      .setTint(new Color(255, 180, 120));
+    this.between = new Graphics();
+    // A callback pass slots procedural geometry between two scene nodes - same frame order
+    // as the imperative version, now a named, inspectable step.
+    this.pipeline = new RenderPipeline()
+      .addPass(new RenderNodePass(this.back, { clear: Color.black }))
+      .addPass(
+        new CallbackRenderPass(context => {
+          const { width: w, height: h } = app;
+          this.between.clear();
+          this.between.lineWidth = 10;
+          this.between.lineColor = new Color(130, 240, 170);
+          this.between.drawArc(w / 2, h / 2, 120, this.angle, this.angle + Math.PI * 1.3);
+          this.between.render(context.backend);
+        }),
+      )
+      .addPass(new RenderNodePass(this.front));
+  }
+  update(delta) {
+    this.angle += delta.seconds * 2.2;
+  }
+  draw(context) {
+    this.pipeline.execute(context);
+  }
 }
 const app = new Application({
-    scenes: { CustomRenderPassScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { CustomRenderPassScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 app.start(CustomRenderPassScene);

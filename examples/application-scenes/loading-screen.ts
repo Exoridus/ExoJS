@@ -1,11 +1,24 @@
-import { Application, Asset, Assets, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, SceneState, Sprite, Text } from '@codexo/exojs';
+import {
+  Application,
+  Asset,
+  Assets,
+  Color,
+  FixedResolutionCanvasSizing,
+  Graphics,
+  Keyboard,
+  type RenderingContext,
+  Scene,
+  SceneState,
+  Sprite,
+  Text,
+} from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const GameAssets = Assets.from({
-    ship: 'image/ship-a.png',
-    grid: 'image/uv-grid-256.png',
-    ramp: 'image/hue-ramp.png',
-    click: Asset.type('sound', 'audio/ui-click.ogg'),
+  ship: 'image/ship-a.png',
+  grid: 'image/uv-grid-256.png',
+  ramp: 'image/hue-ramp.png',
+  click: Asset.type('sound', 'audio/ui-click.ogg'),
 });
 
 /**
@@ -15,159 +28,159 @@ const GameAssets = Assets.from({
  * not just this scene's.
  */
 class BootScene extends Scene {
-    private bar!: Graphics;
-    private label!: Text;
+  private bar!: Graphics;
+  private label!: Text;
 
-    private loaded = 0;
-    private total = 0;
-    private message = 'Waiting for the first request…';
+  private loaded = 0;
+  private total = 0;
+  private message = 'Waiting for the first request…';
 
-    private onLoadStart!: (key: string, url: string) => void;
-    private onLoadProgress!: (loaded: number, total: number, key: string) => void;
-    private onLoadError!: (key: string, error: Error) => void;
-    private onLoadComplete!: () => void;
+  private onLoadStart!: (key: string, url: string) => void;
+  private onLoadProgress!: (loaded: number, total: number, key: string) => void;
+  private onLoadError!: (key: string, error: Error) => void;
+  private onLoadComplete!: () => void;
 
-    // #region guide:boot-signals
-    override init(): void {
-        const app = this.app;
+  // #region guide:boot-signals
+  override init(): void {
+    const app = this.app;
 
-        // Per-scene background. `init` runs once per activation, so navigating
-        // back here from the play scene repaints the frame in this colour.
-        app.clearColor.set(12, 16, 24);
+    // Per-scene background. `init` runs once per activation, so navigating
+    // back here from the play scene repaints the frame in this colour.
+    app.clearColor.set(12, 16, 24);
 
-        this.bar = new Graphics();
-        this.label = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' });
-        this.label.setAnchor(0.5, 0);
+    this.bar = new Graphics();
+    this.label = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' });
+    this.label.setAnchor(0.5, 0);
 
-        // Every listener is kept in a field so `unload()` can take it off again.
-        this.onLoadStart = (key: string) => {
-            this.message = `Loading ${key}…`;
-        };
-        this.onLoadProgress = (loaded: number, total: number, key: string) => {
-            this.loaded = loaded;
-            this.total = total;
-            this.message = `${loaded} / ${total} — ${key}`;
-        };
-        this.onLoadError = (key: string, error: Error) => {
-            // onLoadComplete still fires once the rest of the batch settles.
-            this.message = `Failed to load "${key}": ${error.message}`;
-        };
-        this.onLoadComplete = () => {
-            this.enterGame();
-        };
+    // Every listener is kept in a field so `unload()` can take it off again.
+    this.onLoadStart = (key: string) => {
+      this.message = `Loading ${key}…`;
+    };
+    this.onLoadProgress = (loaded: number, total: number, key: string) => {
+      this.loaded = loaded;
+      this.total = total;
+      this.message = `${loaded} / ${total} — ${key}`;
+    };
+    this.onLoadError = (key: string, error: Error) => {
+      // onLoadComplete still fires once the rest of the batch settles.
+      this.message = `Failed to load "${key}": ${error.message}`;
+    };
+    this.onLoadComplete = () => {
+      this.enterGame();
+    };
 
-        app.loader.onLoadStart.add(this.onLoadStart);
-        app.loader.onLoadProgress.add(this.onLoadProgress);
-        app.loader.onLoadError.add(this.onLoadError);
-        app.loader.onLoadComplete.add(this.onLoadComplete);
+    app.loader.onLoadStart.add(this.onLoadStart);
+    app.loader.onLoadProgress.add(this.onLoadProgress);
+    app.loader.onLoadError.add(this.onLoadError);
+    app.loader.onLoadComplete.add(this.onLoadComplete);
 
-        // Trigger loads from anywhere - the signals above see all of them. The
-        // claim goes on the application loader so the assets outlive this scene.
-        app.loader.load(GameAssets);
+    // Trigger loads from anywhere - the signals above see all of them. The
+    // claim goes on the application loader so the assets outlive this scene.
+    app.loader.load(GameAssets);
+  }
+  // #endregion guide:boot-signals
+
+  // #region guide:boot-unsubscribe
+  override unload(): void {
+    // `this.app` is still valid here - `unload()` runs before the scene is
+    // detached, so the listeners can still be removed from the very loader
+    // they were added to.
+    const app = this.app;
+
+    app.loader.onLoadStart.remove(this.onLoadStart);
+    app.loader.onLoadProgress.remove(this.onLoadProgress);
+    app.loader.onLoadError.remove(this.onLoadError);
+    app.loader.onLoadComplete.remove(this.onLoadComplete);
+  }
+
+  /** Leaves for the game - but only while this scene is still the one on screen. */
+  private enterGame(): void {
+    // Check `attached` first: it never throws, unlike `state`, which does
+    // once the scene has been fully detached. `Active` is the only state
+    // allowed to navigate - suspended, unloading, or detached must not.
+    if (!this.attached || this.state !== SceneState.Active) {
+      return;
     }
-    // #endregion guide:boot-signals
 
-    // #region guide:boot-unsubscribe
-    override unload(): void {
-        // `this.app` is still valid here - `unload()` runs before the scene is
-        // detached, so the listeners can still be removed from the very loader
-        // they were added to.
-        const app = this.app;
+    const app = this.app;
+    void app.scenes.change(PlayScene);
+  }
+  // #endregion guide:boot-unsubscribe
 
-        app.loader.onLoadStart.remove(this.onLoadStart);
-        app.loader.onLoadProgress.remove(this.onLoadProgress);
-        app.loader.onLoadError.remove(this.onLoadError);
-        app.loader.onLoadComplete.remove(this.onLoadComplete);
-    }
+  override draw(context: RenderingContext): void {
+    const app = this.app;
+    const { width, height } = app;
 
-    /** Leaves for the game - but only while this scene is still the one on screen. */
-    private enterGame(): void {
-        // Check `attached` first: it never throws, unlike `state`, which does
-        // once the scene has been fully detached. `Active` is the only state
-        // allowed to navigate - suspended, unloading, or detached must not.
-        if (!this.attached || this.state !== SceneState.Active) {
-            return;
-        }
+    const barWidth = width * 0.5;
+    const barX = (width - barWidth) / 2;
+    const barY = height / 2;
+    const ratio = this.total > 0 ? this.loaded / this.total : 0;
 
-        const app = this.app;
-        void app.scenes.change(PlayScene);
-    }
-    // #endregion guide:boot-unsubscribe
+    this.bar.clear();
+    this.bar.fillColor = new Color(40, 46, 58);
+    this.bar.drawRectangle(barX, barY, barWidth, 26);
+    this.bar.fillColor = new Color(110, 220, 150);
+    this.bar.drawRectangle(barX, barY, barWidth * ratio, 26);
+    context.render(this.bar);
 
-    override draw(context: RenderingContext): void {
-        const app = this.app;
-        const { width, height } = app;
-
-        const barWidth = width * 0.5;
-        const barX = (width - barWidth) / 2;
-        const barY = height / 2;
-        const ratio = this.total > 0 ? this.loaded / this.total : 0;
-
-        this.bar.clear();
-        this.bar.fillColor = new Color(40, 46, 58);
-        this.bar.drawRectangle(barX, barY, barWidth, 26);
-        this.bar.fillColor = new Color(110, 220, 150);
-        this.bar.drawRectangle(barX, barY, barWidth * ratio, 26);
-        context.render(this.bar);
-
-        this.label.text = this.message;
-        this.label.setPosition(width / 2, barY + 44);
-        context.render(this.label);
-    }
+    this.label.text = this.message;
+    this.label.setPosition(width / 2, barY + 44);
+    context.render(this.label);
+  }
 }
 
 class PlayScene extends Scene {
-    private ship!: Sprite;
-    private label!: Text;
-    private hud!: ReturnType<typeof mountControls>;
+  private ship!: Sprite;
+  private label!: Text;
+  private hud!: ReturnType<typeof mountControls>;
 
-    override init(): void {
-        const app = this.app;
-        const { width, height } = app;
+  override init(): void {
+    const app = this.app;
+    const { width, height } = app;
 
-        app.clearColor.set(16, 26, 22);
+    app.clearColor.set(16, 26, 22);
 
-        // Already resident: BootScene claimed the catalog on the application
-        // loader, so reading the same handles here costs nothing.
-        this.ship = new Sprite(GameAssets.ship).setAnchor(0.5).setPosition(width / 2, height / 2);
+    // Already resident: BootScene claimed the catalog on the application
+    // loader, so reading the same handles here costs nothing.
+    this.ship = new Sprite(GameAssets.ship).setAnchor(0.5).setPosition(width / 2, height / 2);
 
-        this.label = new Text('Loaded — press Space to boot again.', { fillColor: Color.white, fontSize: 22, align: 'center' });
-        this.label.setAnchor(0.5, 0).setPosition(width / 2, height * 0.68);
+    this.label = new Text('Loaded — press Space to boot again.', { fillColor: Color.white, fontSize: 22, align: 'center' });
+    this.label.setAnchor(0.5, 0).setPosition(width / 2, height * 0.68);
 
-        this.inputs.onTrigger(Keyboard.Space, () => {
-            void app.scenes.change(BootScene);
-        });
+    this.inputs.onTrigger(Keyboard.Space, () => {
+      void app.scenes.change(BootScene);
+    });
 
-        this.hud = mountControls({
-            title: 'Loading Screen',
-            controls: [{ keys: 'Space', action: 'return to the boot scene' }],
-            hint: 'The boot scene drives its bar from the loader-wide signals, then navigates once the shared batch drains.',
-        });
-    }
+    this.hud = mountControls({
+      title: 'Loading Screen',
+      controls: [{ keys: 'Space', action: 'return to the boot scene' }],
+      hint: 'The boot scene drives its bar from the loader-wide signals, then navigates once the shared batch drains.',
+    });
+  }
 
-    override draw(context: RenderingContext): void {
-        context.render(this.ship);
-        context.render(this.label);
-    }
+  override draw(context: RenderingContext): void {
+    context.render(this.ship);
+    context.render(this.label);
+  }
 
-    override destroy(): void {
-        this.hud.dispose();
-        super.destroy();
-    }
+  override destroy(): void {
+    this.hud.dispose();
+    super.destroy();
+  }
 }
 
 const app = new Application({
-    scenes: { BootScene, PlayScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { BootScene, PlayScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 
 app.start(BootScene);

@@ -2,30 +2,30 @@
 import { Application, Color, FixedResolutionCanvasSizing, Scene, Sprite } from '@codexo/exojs';
 // #region guide:first-scene
 class HelloWorldScene extends Scene {
-    sprite;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
-        this.sprite.setAnchor(0.5);
-        this.sprite.setPosition(width / 2, height / 2);
-    }
-    draw(context) {
-        context.render(this.sprite);
-    }
+  sprite;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.sprite = new Sprite(this.loader.get('image/ship-a.png'));
+    this.sprite.setAnchor(0.5);
+    this.sprite.setPosition(width / 2, height / 2);
+  }
+  draw(context) {
+    context.render(this.sprite);
+  }
 }
 // #endregion guide:first-scene
 const app = new Application({
-    scenes: { HelloWorldScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { HelloWorldScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 app.start(HelloWorldScene);

@@ -1,10 +1,11 @@
 import { coreInternalDirs, createImportBoundaries } from '@codexo/exojs-config/eslint';
-import eslintReact from '@eslint-react/eslint-plugin';
-import js from '@eslint/js';
-import vitest from '@vitest/eslint-plugin';
+import { languageBaselineConfig, nodeToolingConfig } from '@codexo/exojs-config/eslint/base';
+import { typeAwareCorrectnessRules } from '@codexo/exojs-config/eslint/correctness';
+import { extensionSourceConfig } from '@codexo/exojs-config/eslint/extension';
+import { packageTestConfig } from '@codexo/exojs-config/eslint/package-test';
+import { vitestConfig } from '@codexo/exojs-config/eslint/vitest';
 import { defineConfig } from 'eslint/config';
 import prettier from 'eslint-config-prettier';
-import reactHooks from 'eslint-plugin-react-hooks';
 import security from 'eslint-plugin-security';
 import simpleImportSort from 'eslint-plugin-simple-import-sort';
 import unicorn from 'eslint-plugin-unicorn';
@@ -17,63 +18,7 @@ export default defineConfig([
     ignores: ['dist/**', 'node_modules/**', 'src/vendor/**', 'site/dist/**', 'site/node_modules/**', 'site/public/vendor/**', 'coverage/**', '**/*.min.*'],
   },
 
-  // Base JavaScript recommendations
-  js.configs.recommended,
-
-  // TypeScript recommended + type-aware strict/stylistic baseline
-  ...tseslint.configs.recommendedTypeChecked,
-  ...tseslint.configs.stylisticTypeChecked,
-
-  // typescript-eslint's `eslint-recommended` turns off ~20 core correctness
-  // rules on the grounds that the compiler already reports them. That holds
-  // only where a tsconfig actually covers the file, and most of this repo is
-  // not covered: `tsconfig.json` is `src/**` only, each package tsconfig has
-  // `exclude: ["test"]`, and `test/**`, `scripts/**`, `*.config.ts` and
-  // `site/src/**` are in no typecheck gate at all. A `const` reassignment in
-  // four of those five places passes every check today.
-  //
-  // Re-enabled repo-wide rather than per-directory: the delegation is only
-  // ever safe when it tracks tsconfig coverage exactly, and keeping a second
-  // list in sync with that coverage is what failed in the first place. Over
-  // `src/**` these are simply redundant with the compiler - they are all
-  // syntactic, so the cost is nil.
-  //
-  // Four are deliberately left off - each is blind to the TS type space in a
-  // way that produces false positives on correct code here:
-  //
-  // - `no-undef` misfires on type-only names and ambient globals in TS
-  //   (typescript-eslint recommends against enabling it at all).
-  // - `no-redeclare`, including the TS variant, cannot tell an `interface X` /
-  //   `const X` facade pair from a real redeclaration, and this repo uses that
-  //   pattern deliberately (Asset, Assets, ActionMap).
-  // - `constructor-super` does not recognise `extends (Base as unknown as new
-  //   () => T)` as a constructor, which is how the audio-fx tests build mock
-  //   subclasses.
-  // - `no-new-symbol` is deprecated in favour of `no-new-native-nonconstructor`.
-  //
-  // The compiler reports all four as TS2304/TS2451/TS2377 in the places it
-  // does cover, which is where they would have mattered most.
-  //
-  // `no-dupe-class-members` is taken in its TS variant, which knows overload
-  // signatures are not duplicates.
-  {
-    rules: {
-      'getter-return': 'error',
-      'no-class-assign': 'error',
-      'no-const-assign': 'error',
-      'no-dupe-args': 'error',
-      'no-dupe-keys': 'error',
-      'no-func-assign': 'error',
-      'no-import-assign': 'error',
-      'no-new-native-nonconstructor': 'error',
-      'no-obj-calls': 'error',
-      'no-setter-return': 'error',
-      'no-this-before-super': 'error',
-      'no-unreachable': 'error',
-      'no-unsafe-negation': 'error',
-      '@typescript-eslint/no-dupe-class-members': 'error',
-    },
-  },
+  ...languageBaselineConfig({ tsconfigRootDir: import.meta.dirname }),
 
   // Engine source
   {
@@ -359,14 +304,12 @@ export default defineConfig([
       // Security
       ...security.configs.recommended.rules,
       'security/detect-object-injection': 'off',
-      'security/detect-non-literal-fs-filename': 'off',
       'security/detect-non-literal-regexp': 'off',
       'security/detect-possible-timing-attacks': 'off',
       'security/detect-bidi-characters': 'error',
 
       // Unicorn
       'unicorn/error-message': 'error',
-      'unicorn/no-array-for-each': 'warn',
       'unicorn/no-instanceof-array': 'error',
       'unicorn/no-typeof-undefined': 'error',
       'unicorn/no-useless-undefined': 'error',
@@ -375,312 +318,19 @@ export default defineConfig([
       'unicorn/prefer-array-some': 'error',
       'unicorn/prefer-default-parameters': 'error',
       'unicorn/prefer-node-protocol': 'error',
-      'unicorn/prefer-spread': 'warn',
       'unicorn/prefer-string-replace-all': 'error',
-      'unicorn/prefer-ternary': 'warn',
       'unicorn/throw-new-error': 'error',
+
+      // Measured strict/unicorn additions, plus the promotions of the
+      // warnings above. Last so those promotions take effect.
+      ...typeAwareCorrectnessRules,
     },
   },
 
-  // Extension package source (runtime packages: particles, tilemap, tiled).
-  // Each package owns its tsconfig.json; projectService resolves the nearest
-  // tsconfig that includes the file being linted. This REPLACES the previous
-  // state where typed @typescript-eslint rules crashed with exit code 2 because
-  // no parserOptions.project / projectService was configured for these files.
-  {
-    files: ['packages/exojs-*/src/**/*.ts'],
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.es2024,
-      },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-      security,
-      unicorn,
-    },
-    rules: {
-      // Import management
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
-      'unused-imports/no-unused-vars': [
-        'warn',
-        {
-          argsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
-          destructuredArrayIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          ignoreRestSiblings: true,
-        },
-      ],
+  // Extension package source (runtime packages: particles, tilemap, tiled, ...).
+  // `packages/exojs-react` lints its own tree with the same shared policy.
+  ...extensionSourceConfig({ files: ['packages/exojs-*/src/**/*.ts'], tsconfigRootDir: import.meta.dirname }),
 
-      // Core ESLint
-      complexity: ['error', 20],
-      curly: 'error',
-      'default-case-last': 'error',
-      eqeqeq: ['error', 'always', { null: 'ignore' }],
-      'guard-for-in': 'error',
-      'max-lines': ['warn', { max: 999, skipBlankLines: true, skipComments: true }],
-      'no-bitwise': 'off',
-      'no-caller': 'error',
-      'no-console': 'warn',
-      'no-eval': 'error',
-      'no-extra-bind': 'error',
-      'no-label-var': 'error',
-      'no-nested-ternary': 'warn',
-      'no-new-func': 'error',
-      'no-new-wrappers': 'error',
-      'no-promise-executor-return': 'error',
-      // Scene.init() must be synchronous - see the
-      // matching rule in the engine-source block above for the full rationale.
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'MethodDefinition[value.async=true][key.name="init"]',
-          message:
-            'Scene.init() must be synchronous — an async override runs after activation instead of gating it. Move asynchronous setup into load() instead.',
-        },
-      ],
-      'no-self-compare': 'error',
-      'no-sequences': 'error',
-      'no-template-curly-in-string': 'error',
-      'no-undef-init': 'error',
-      'no-unmodified-loop-condition': 'error',
-      'no-unreachable-loop': 'error',
-      'no-useless-assignment': 'warn',
-      'no-useless-escape': 'warn',
-      'no-useless-return': 'error',
-      'object-shorthand': 'error',
-      'prefer-object-spread': 'error',
-      'prefer-template': 'error',
-      radix: 'error',
-      'no-shadow': 'off',
-      'dot-notation': 'off',
-
-      // TypeScript correctness
-      '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
-      '@typescript-eslint/ban-ts-comment': [
-        'error',
-        {
-          'ts-expect-error': 'allow-with-description',
-          'ts-ignore': false,
-          'ts-nocheck': false,
-          'ts-check': false,
-        },
-      ],
-      '@typescript-eslint/class-literal-property-style': 'warn',
-      '@typescript-eslint/consistent-type-assertions': [
-        'error',
-        {
-          assertionStyle: 'as',
-          objectLiteralTypeAssertions: 'never',
-        },
-      ],
-      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', disallowTypeAnnotations: false, fixStyle: 'inline-type-imports' }],
-      '@typescript-eslint/default-param-last': 'error',
-      '@typescript-eslint/explicit-function-return-type': [
-        'error',
-        {
-          allowExpressions: true,
-          allowTypedFunctionExpressions: true,
-          allowHigherOrderFunctions: true,
-        },
-      ],
-      '@typescript-eslint/explicit-member-accessibility': 'warn',
-      '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
-      '@typescript-eslint/no-deprecated': 'warn',
-      '@typescript-eslint/no-empty-function': [
-        'warn',
-        {
-          allow: ['private-constructors', 'protected-constructors', 'decoratedFunctions', 'overrideMethods'],
-        },
-      ],
-      // Two deliberate uses of `{}` run through the engine: an empty interface
-      // as the declaration-merging point consumers augment (FontRegistry,
-      // SceneRegistry), and `= {}` as the empty-registry default of a generic
-      // that is already fenced in by its `extends` constraint. Both were
-      // carrying inline disables saying so.
-      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'always', allowObjectTypes: 'always' }],
-      // `abstract new (...args: any[]) => T` is the only way to write "any
-      // constructor producing T": with `unknown[]`, parameter contravariance
-      // makes the type reject every constructor that declares real parameters,
-      // so `typeof Texture` would no longer match. Four type aliases carried an
-      // inline disable for exactly this; the rule ships an option for it.
-      '@typescript-eslint/no-explicit-any': ['error', { ignoreRestArgs: true }],
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-meaningless-void-operator': 'error',
-      '@typescript-eslint/no-misused-promises': [
-        'error',
-        {
-          checksVoidReturn: {
-            arguments: false,
-            attributes: false,
-          },
-        },
-      ],
-      '@typescript-eslint/no-mixed-enums': 'error',
-      '@typescript-eslint/no-non-null-asserted-nullish-coalescing': 'error',
-      '@typescript-eslint/no-non-null-assertion': 'warn',
-      '@typescript-eslint/no-redundant-type-constituents': 'warn',
-      '@typescript-eslint/no-require-imports': 'warn',
-      '@typescript-eslint/no-shadow': 'error',
-      '@typescript-eslint/no-unsafe-call': 'warn',
-      '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
-      '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
-      '@typescript-eslint/no-unnecessary-condition': 'warn',
-      '@typescript-eslint/no-unnecessary-type-arguments': 'error',
-      '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
-      '@typescript-eslint/no-unsafe-argument': 'error',
-      '@typescript-eslint/no-unsafe-assignment': 'warn',
-      '@typescript-eslint/no-unsafe-member-access': 'warn',
-      '@typescript-eslint/no-unsafe-return': 'error',
-      '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/non-nullable-type-assertion-style': 'warn',
-      '@typescript-eslint/prefer-for-of': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
-      '@typescript-eslint/prefer-optional-chain': 'warn',
-      '@typescript-eslint/prefer-readonly': 'off',
-      '@typescript-eslint/prefer-reduce-type-parameter': 'error',
-      '@typescript-eslint/prefer-regexp-exec': 'error',
-      '@typescript-eslint/require-await': 'warn',
-      '@typescript-eslint/restrict-template-expressions': [
-        'error',
-        {
-          allowNumber: true,
-          allowBoolean: false,
-          allowAny: false,
-          allowNullish: false,
-          allowRegExp: false,
-        },
-      ],
-      '@typescript-eslint/return-await': ['error', 'in-try-catch'],
-      '@typescript-eslint/strict-boolean-expressions': 'warn',
-      '@typescript-eslint/switch-exhaustiveness-check': 'error',
-      '@typescript-eslint/unbound-method': 'warn',
-      '@typescript-eslint/unified-signatures': 'error',
-
-      // Engine-standard naming convention
-      '@typescript-eslint/naming-convention': [
-        'error',
-        {
-          // Module-level const constants may be UPPER_CASE (mirrors the core config);
-          // const namespace-object facades stay PascalCase, regular consts camelCase.
-          selector: 'variable',
-          modifiers: ['const'],
-          format: ['strictCamelCase', 'StrictPascalCase', 'UPPER_CASE'],
-          leadingUnderscore: 'allow',
-          trailingUnderscore: 'forbid',
-        },
-        {
-          selector: 'variableLike',
-          format: ['strictCamelCase'],
-          leadingUnderscore: 'allow',
-          trailingUnderscore: 'forbid',
-        },
-        {
-          selector: 'memberLike',
-          format: ['strictCamelCase'],
-          leadingUnderscore: 'allow',
-          trailingUnderscore: 'forbid',
-        },
-        {
-          selector: 'typeLike',
-          format: ['StrictPascalCase'],
-          leadingUnderscore: 'forbid',
-          trailingUnderscore: 'forbid',
-        },
-        // Acronyms are the one place the Strict* formats get in the way: they
-        // reject consecutive capitals, so `UIRoot`, `HTMLText` and `_peekUI`
-        // each carried an inline disable repeating the same sentence. These
-        // two entries carry a `filter`, which outranks the generic selectors
-        // above, and relax only the capitalisation - a name without one of
-        // these acronyms stays strict.
-        {
-          selector: 'typeLike',
-          filter: { regex: '(HTML|UI|JSON)', match: true },
-          format: ['PascalCase'],
-          leadingUnderscore: 'forbid',
-          trailingUnderscore: 'forbid',
-        },
-        {
-          selector: ['variableLike', 'memberLike'],
-          filter: { regex: '(HTML|UI|JSON|DPad)', match: true },
-          format: ['camelCase', 'PascalCase'],
-          leadingUnderscore: 'allow',
-          trailingUnderscore: 'forbid',
-        },
-        // Same acronym exception, repeated for the `variable` + `const`
-        // selector above: that one is more specific than the grouped
-        // `variableLike` entry, so it would otherwise win and reject
-        // `GamepadButton.DPadUp`.
-        {
-          selector: 'variable',
-          modifiers: ['const'],
-          filter: { regex: '(HTML|UI|JSON|DPad)', match: true },
-          format: ['camelCase', 'PascalCase', 'UPPER_CASE'],
-          leadingUnderscore: 'allow',
-          trailingUnderscore: 'forbid',
-        },
-        // A type property spelled in SCREAMING_CASE is a verbatim mirror of a
-        // constant some external API hands us under that exact name (WebGL
-        // extension constants, for one). Renaming it would break the lookup,
-        // so the shape declaration has to keep the foreign spelling.
-        {
-          selector: 'typeProperty',
-          filter: { regex: '^[A-Z][A-Z0-9_]*$', match: true },
-          format: ['UPPER_CASE'],
-          leadingUnderscore: 'forbid',
-          trailingUnderscore: 'forbid',
-        },
-        {
-          selector: 'enumMember',
-          format: null,
-          custom: {
-            regex: '^[A-Z][A-Za-z0-9]*$|^[a-z][A-Za-z0-9]*$|^[A-Z][A-Z0-9_]*$',
-            match: true,
-          },
-          leadingUnderscore: 'forbid',
-          trailingUnderscore: 'forbid',
-        },
-      ],
-
-      // Security
-      ...security.configs.recommended.rules,
-      'security/detect-object-injection': 'off',
-      'security/detect-non-literal-fs-filename': 'off',
-      'security/detect-non-literal-regexp': 'off',
-      'security/detect-possible-timing-attacks': 'off',
-      'security/detect-bidi-characters': 'error',
-
-      // Unicorn
-      'unicorn/error-message': 'error',
-      'unicorn/no-array-for-each': 'warn',
-      'unicorn/no-instanceof-array': 'error',
-      'unicorn/no-typeof-undefined': 'error',
-      'unicorn/no-useless-undefined': 'error',
-      'unicorn/no-zero-fractions': 'error',
-      'unicorn/prefer-array-find': 'error',
-      'unicorn/prefer-array-some': 'error',
-      'unicorn/prefer-default-parameters': 'error',
-      'unicorn/prefer-node-protocol': 'error',
-      'unicorn/prefer-spread': 'warn',
-      'unicorn/prefer-string-replace-all': 'error',
-      'unicorn/prefer-ternary': 'warn',
-      'unicorn/throw-new-error': 'error',
-    },
-  },
-
-  // @codexo/exojs-bench is an internal benchmark TOOL - a Node CLI plus an
-  // in-browser rendering harness - not a shipped library. It legitimately
   // The published build tooling runs in Node: it drives esbuild and reads the
   // filesystem. The generic `packages/exojs-*/src` block grants browser
   // globals, which is the wrong environment here, so the Node ones are added on
@@ -693,6 +343,8 @@ export default defineConfig([
     },
   },
 
+  // @codexo/exojs-bench is an internal benchmark TOOL - a Node CLI plus an
+  // in-browser rendering harness - not a shipped library. It legitimately
   // monkeypatches live graphics contexts and casts through `unknown` to
   // instrument arbitrary engines, and it was linted under the relaxed `test/**`
   // profile at its former `test/perf/baseline/` location. Preserve that profile
@@ -745,213 +397,17 @@ export default defineConfig([
       '@typescript-eslint/consistent-type-assertions': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
       'no-console': 'off',
-      'max-lines': 'off',
     },
   },
 
-  // Extension package tests - disable type-aware rules (package tsconfigs
-  // exclude test/), then apply relaxed structural rules matching the core test
-  // policy. Excludes create-exo-app (standalone scaffolding CLI, no ESLint
-  // integration).
-  {
-    files: ['packages/exojs-*/test/**/*.{ts,tsx}'],
-    ...tseslint.configs.disableTypeChecked,
-  },
-  {
-    files: ['packages/exojs-*/test/**/*.{ts,tsx}'],
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      parserOptions: {
-        projectService: false,
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.node,
-        ...globals.jest,
-        ...globals.es2024,
-      },
-    },
-    plugins: {
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-    },
-    rules: {
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
-      '@typescript-eslint/no-floating-promises': 'off',
-      '@typescript-eslint/no-misused-promises': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-argument': 'off',
-      '@typescript-eslint/no-unsafe-return': 'off',
-      '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/unbound-method': 'off',
-      '@typescript-eslint/no-require-imports': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/class-literal-property-style': 'off',
-      '@typescript-eslint/no-base-to-string': 'off',
-      '@typescript-eslint/no-empty-function': 'off',
-      '@typescript-eslint/no-redundant-type-constituents': 'off',
-      '@typescript-eslint/explicit-function-return-type': 'off',
-      '@typescript-eslint/require-await': 'off',
-      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
-      '@typescript-eslint/dot-notation': 'off',
-      'dot-notation': 'off',
-      '@typescript-eslint/consistent-type-imports': [
-        'error',
-        {
-          prefer: 'type-imports',
-          fixStyle: 'inline-type-imports',
-          disallowTypeAnnotations: false,
-        },
-      ],
-      'no-console': 'off',
-      'max-lines': 'off',
-    },
-  },
+  // Extension package tests. `packages/exojs-react` lints its own tree.
+  ...packageTestConfig({ files: ['packages/exojs-*/test/**/*.{ts,tsx}'] }),
 
-  // Site React components. Astro files are type-checked by `astro check`; this
-  // block covers the TypeScript/TSX islands that ship browser interactivity.
-  {
-    files: ['site/src/**/*.{ts,tsx}', 'packages/exojs-react/src/**/*.{ts,tsx}'],
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
-      },
-      globals: {
-        ...globals.browser,
-        ...globals.es2024,
-      },
-    },
-    plugins: {
-      '@eslint-react': eslintReact,
-      'react-hooks': reactHooks,
-      'simple-import-sort': simpleImportSort,
-      'unused-imports': unusedImports,
-    },
-    rules: {
-      ...eslintReact.configs['recommended-typescript'].rules,
-      ...eslintReact.configs['disable-conflict-eslint-plugin-react-hooks'].rules,
-      ...reactHooks.configs.recommended.rules,
-
-      'simple-import-sort/imports': 'error',
-      'simple-import-sort/exports': 'error',
-      'unused-imports/no-unused-imports': 'error',
-      'unused-imports/no-unused-vars': [
-        'warn',
-        {
-          argsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
-          destructuredArrayIgnorePattern: '^_',
-          varsIgnorePattern: '^_',
-          ignoreRestSiblings: true,
-        },
-      ],
-
-      '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports', disallowTypeAnnotations: false, fixStyle: 'inline-type-imports' }],
-      '@typescript-eslint/array-type': 'off',
-      '@typescript-eslint/consistent-indexed-object-style': 'off',
-      '@typescript-eslint/consistent-type-definitions': 'off',
-      // Two deliberate uses of `{}` run through the engine: an empty interface
-      // as the declaration-merging point consumers augment (FontRegistry,
-      // SceneRegistry), and `= {}` as the empty-registry default of a generic
-      // that is already fenced in by its `extends` constraint. Both were
-      // carrying inline disables saying so.
-      '@typescript-eslint/no-empty-object-type': ['error', { allowInterfaces: 'always', allowObjectTypes: 'always' }],
-      // `abstract new (...args: any[]) => T` is the only way to write "any
-      // constructor producing T": with `unknown[]`, parameter contravariance
-      // makes the type reject every constructor that declares real parameters,
-      // so `typeof Texture` would no longer match. Four type aliases carried an
-      // inline disable for exactly this; the rule ships an option for it.
-      '@typescript-eslint/no-explicit-any': ['error', { ignoreRestArgs: true }],
-      '@typescript-eslint/no-floating-promises': 'error',
-      '@typescript-eslint/no-misused-promises': [
-        'error',
-        {
-          checksVoidReturn: {
-            arguments: false,
-            attributes: false,
-          },
-        },
-      ],
-      '@typescript-eslint/no-unsafe-argument': 'off',
-      '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/no-unsafe-call': 'off',
-      '@typescript-eslint/no-unsafe-member-access': 'off',
-      '@typescript-eslint/no-unsafe-return': 'off',
-      '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/prefer-regexp-exec': 'error',
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
-      '@typescript-eslint/prefer-optional-chain': 'warn',
-      '@typescript-eslint/restrict-template-expressions': [
-        'error',
-        {
-          allowNumber: true,
-          allowBoolean: false,
-          allowAny: false,
-          allowNullish: false,
-          allowRegExp: false,
-        },
-      ],
-      // Disabled for site/src to match the engine: `strict-boolean-expressions`
-      // is turned off across every practical src/ directory (core, input, math,
-      // rendering, audio, assets, ...). The site's URL/version/runtime helpers
-      // are the same class of nullable-string code, so holding only site code to
-      // it would be an inconsistent double standard.
-      '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/unbound-method': 'off',
-
-      '@eslint-react/dom-no-unsafe-iframe-sandbox': 'error',
-      '@eslint-react/no-array-index-key': 'warn',
-      '@eslint-react/no-nested-component-definitions': 'error',
-      '@eslint-react/no-unstable-default-props': 'error',
-      'react-hooks/exhaustive-deps': 'warn',
-      'react-hooks/immutability': 'warn',
-      'react-hooks/preserve-manual-memoization': 'warn',
-      'react-hooks/set-state-in-effect': 'warn',
-
-      curly: 'error',
-      eqeqeq: ['error', 'always', { null: 'ignore' }],
-      // Allow console.error/console.warn for intentional diagnostics (e.g. the
-      // fetch/parse error logging in request-manager.ts); only console.log/debug warn.
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'no-nested-ternary': 'warn',
-      'object-shorthand': 'error',
-      'prefer-object-spread': 'error',
-      'prefer-template': 'error',
-      radix: 'error',
-    },
-  },
-
-  // The React integration package holds an imperative ExoJS `Application` handle
-  // in `useState` and mutates it by design (resize / clearColor / sizingMode),
-  // which the immutability rule cannot model. `@eslint-react/exhaustive-deps`
-  // duplicates `react-hooks/exhaustive-deps`; keep the latter as the single
-  // source so the in-code disables apply once.
-  {
-    files: ['packages/exojs-react/src/**/*.{ts,tsx}'],
-    rules: {
-      'react-hooks/immutability': 'off',
-      '@eslint-react/exhaustive-deps': 'off',
-      // Creating the imperative Application/Scene in an effect and exposing it
-      // as state is the defining pattern of this bridge, not a bug.
-      'react-hooks/set-state-in-effect': 'off',
-      '@eslint-react/set-state-in-effect': 'off',
-      // Targets React 18; `<Context.Provider>` / `useContext` are correct there
-      // (the `use()` and bare-`<Context>` forms are React 19+).
-      '@eslint-react/no-context-provider': 'off',
-      '@eslint-react/no-use-context': 'off',
-      // Reading declarative `<Scene>` config via Children.forEach is the
-      // intended pattern (mirrors react-three-fiber / react-router).
-      '@eslint-react/no-children-for-each': 'off',
-    },
-  },
+  // Site sources are deliberately absent here. ESLint resolves the config
+  // nearest to each linted file, so `site/eslint.config.ts` governs them even
+  // when the run starts at the repository root - a block for them here would
+  // never be consulted. The root `lint` script still globs them so they stay in
+  // this gate; what they are linted WITH belongs to the site.
 
   // ---------------------------------------------------------------------------
   // Per-subsystem overrides for src/. Scoped narrowly because these directories
@@ -969,7 +425,6 @@ export default defineConfig([
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
@@ -986,7 +441,6 @@ export default defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/prefer-nullish-coalescing': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
-      '@typescript-eslint/switch-exhaustiveness-check': 'off',
       complexity: 'off',
     },
   },
@@ -1000,7 +454,6 @@ export default defineConfig([
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       '@typescript-eslint/no-unsafe-enum-comparison': 'off',
-      '@typescript-eslint/switch-exhaustiveness-check': 'off',
       complexity: 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
       '@typescript-eslint/no-empty-function': 'off',
@@ -1009,12 +462,23 @@ export default defineConfig([
     },
   },
 
+  // The input channel map addresses a slot as "category base + index", so every
+  // member of the keyboard and pointer enums is an addition. That is the design,
+  // not a literal waiting to be inlined: writing the same values as bitwise ORs
+  // would satisfy the rule while quietly depending on every sub-value staying
+  // under the 256-slot category size.
+  {
+    files: ['src/input/types.ts'],
+    rules: {
+      '@typescript-eslint/prefer-literal-enum-member': 'off',
+    },
+  },
+
   // Claim/refcount tracking, multi-handle fill, and options-equivalence
   // branching are inherently branchy state machines.
   {
     files: ['src/assets/AssetResidency.ts'],
     rules: {
-      '@typescript-eslint/no-unsafe-assignment': 'off',
       complexity: 'off',
     },
   },
@@ -1023,18 +487,9 @@ export default defineConfig([
   {
     files: ['src/assets/IndexedDbDatabase.ts', 'src/assets/factories/**/*.ts'],
     rules: {
-      '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
       complexity: 'off',
-    },
-  },
-
-  {
-    files: ['src/rendering/video/Video.ts', 'src/rendering/filters/WebGpuShaderFilter.ts'],
-    rules: {
-      '@typescript-eslint/no-unused-vars': 'off',
-      'unused-imports/no-unused-vars': 'off',
     },
   },
 
@@ -1147,7 +602,6 @@ export default defineConfig([
       '@typescript-eslint/no-non-null-assertion': 'off',
       '@typescript-eslint/no-unnecessary-condition': 'off',
       '@typescript-eslint/strict-boolean-expressions': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'off',
     },
   },
 
@@ -1306,17 +760,6 @@ export default defineConfig([
     },
   },
 
-  // An AudioWorklet processor ships to the audio thread as one self-contained
-  // source file - it cannot import other modules at runtime - so its body
-  // cannot be split across files the way `max-lines` assumes. The limit
-  // measures something these files cannot act on.
-  {
-    files: ['packages/exojs-audio-fx/src/worklets/*.worklet.ts'],
-    rules: {
-      'max-lines': 'off',
-    },
-  },
-
   // LDtk marks its runtime-computed fields with a `__` prefix (`__identifier`,
   // `__type`, ...). These types mirror an external file format verbatim, so the
   // prefix is data, not a naming choice we get to make.
@@ -1329,23 +772,6 @@ export default defineConfig([
           selector: ['typeProperty', 'objectLiteralProperty'],
           format: null,
           leadingUnderscore: 'allowDouble',
-        },
-      ],
-    },
-  },
-
-  // React passes component and class references as PascalCase parameters
-  // (`SceneClass`), which is the ecosystem's spelling for "this argument is a
-  // constructor", not a naming slip.
-  {
-    files: ['packages/exojs-react/src/**/*.{ts,tsx}'],
-    rules: {
-      '@typescript-eslint/naming-convention': [
-        'error',
-        {
-          selector: 'parameter',
-          format: ['strictCamelCase', 'StrictPascalCase'],
-          leadingUnderscore: 'allow',
         },
       ],
     },
@@ -1371,14 +797,19 @@ export default defineConfig([
     },
   },
 
-  // Tests (Jest)
+  // Root test tree. `test/tsconfig.json` is the nearest project for these files,
+  // so the project service resolves them to the very program `pnpm
+  // typecheck:test` gates them with. That identity is the point: while ESLint
+  // typed this tree through a separate wide-include config, the two programs
+  // enabled different options, and a type-aware autofix could silently turn the
+  // gate red.
   {
     files: ['test/**/*.ts'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
       parserOptions: {
-        project: ['./tsconfig.eslint.json'],
+        projectService: true,
         tsconfigRootDir: import.meta.dirname,
       },
       globals: {
@@ -1416,7 +847,6 @@ export default defineConfig([
       //   unbound-method 236 - `expect(obj.method)` reads the method by design.
       // Revisit any of them by flipping it on and re-measuring, not by
       // reasoning about it.
-      '@typescript-eslint/no-misused-promises': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
@@ -1424,18 +854,19 @@ export default defineConfig([
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/unbound-method': 'off',
-      '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/class-literal-property-style': 'off',
       '@typescript-eslint/no-empty-function': 'off',
       '@typescript-eslint/no-redundant-type-constituents': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/require-await': 'off',
-      // 235 reports, and autofixing them would be actively unsafe: ESLint types
-      // `test/**` through tsconfig.eslint.json while the gate gates it through
-      // tsconfig.test.json, and the two enable different options. A cast this
-      // rule calls unnecessary under one program can be load-bearing under the
-      // other, so `--fix` here can turn `pnpm typecheck:test` red.
+      // 1114 reports across 234 files, all autofixable, none of them a defect.
+      // The test program turns `noUncheckedIndexedAccess` off, which is what
+      // makes the `arr[0]!` on a fixture or a captured mock-call tuple
+      // "unnecessary" - and what would make every one of them load-bearing
+      // again the day that option is reconsidered for this tree. Enabling the
+      // rule buys a repo-wide mechanical churn through test code and no
+      // correctness.
       '@typescript-eslint/no-unnecessary-type-assertion': 'off',
       // Tests deliberately use bracket notation (`obj['_member']`) as a
       // project-wide friend-class convention to spy on protected/private
@@ -1459,33 +890,8 @@ export default defineConfig([
       '@typescript-eslint/array-type': ['error', { default: 'array-simple' }],
     },
   },
-
-  // Vitest test-quality rules: the recommended set + `no-focused-tests` promoted
-  // to error so an accidentally committed `.only` fails CI. Layered on top of the
-  // structural test config above; covers both root and package test suites.
-  {
-    ...vitest.configs.recommended,
-    files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.{ts,tsx}'],
-    rules: {
-      ...vitest.configs.recommended.rules,
-      // Primary value: block an accidentally committed `.only`.
-      'vitest/no-focused-tests': 'error',
-      // 27 deliberate device-conditional skips (WebGPU adapter / device-loss
-      // guards). Keep them visible but non-blocking rather than churn them.
-      'vitest/no-disabled-tests': 'warn',
-      // False positives in this suite, kept off:
-      //  - expect-expect: assertions run through shared helpers (mountControls,
-      //    renderText, ...) the rule cannot see (148 hits).
-      //  - no-conditional-expect / no-standalone-expect: browser tests use
-      //    `if (!device) return` skip guards and assert via helpers.
-      //  - valid-title: parametrised `test(name, ...)` over a case array.
-      'vitest/expect-expect': 'off',
-      'vitest/no-conditional-expect': 'off',
-      'vitest/no-standalone-expect': 'off',
-      'vitest/valid-title': 'off',
-    },
-  },
-
+  // Vitest test-quality rules, over both the root suite and every package's.
+  ...vitestConfig({ files: ['test/**/*.ts', 'packages/exojs-*/test/**/*.{ts,tsx}'] }),
   // Node / config files / scripts - not part of any tsconfig `include`, so
   // type-aware rules (from the global `recommendedTypeChecked`/
   // `stylisticTypeChecked` configs applied unscoped above) have no type
@@ -1499,36 +905,7 @@ export default defineConfig([
   // same way (`no-unsafe-argument` needs type info too) - dropped rather than
   // given a real tsconfig program, since these files intentionally sit
   // outside any typed program.
-  {
-    files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
-    ...tseslint.configs.disableTypeChecked,
-  },
-  {
-    files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'],
-    languageOptions: {
-      ecmaVersion: 'latest',
-      sourceType: 'module',
-      globals: {
-        ...globals.node,
-        ...globals.es2024,
-      },
-      parserOptions: {
-        project: null,
-      },
-    },
-    plugins: {
-      unicorn,
-    },
-    rules: {
-      'no-console': 'warn',
-      '@typescript-eslint/no-require-imports': 'warn',
-      // Base no-unused-vars handled by `unused-imports/no-unused-vars`, which
-      // honours the `_` prefix this repo uses for deliberately unused bindings.
-      '@typescript-eslint/no-unused-vars': 'off',
-      'unicorn/prefer-node-protocol': 'warn',
-      'security/detect-non-literal-fs-filename': 'off',
-    },
-  },
+  ...nodeToolingConfig({ files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'] }),
 
   // scripts/webgpu-probe.mjs runs as a Node process that drives a Playwright
   // page, but several of its callbacks are passed to `page.evaluate()` and

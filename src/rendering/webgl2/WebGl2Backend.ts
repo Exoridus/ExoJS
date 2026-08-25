@@ -1927,7 +1927,7 @@ export class WebGl2Backend implements RenderBackend {
         premultipliedAlpha: true,
         stencil: true,
       });
-    } catch (_e) {
+    } catch {
       return null;
     }
   }

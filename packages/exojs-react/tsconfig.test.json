@@ -1,10 +1,16 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "_comment": "Type-checks this package's own test/** — the package's main program only includes src/**. Run by the package's 'typecheck' script. The loosened flags live in the shared package-test profile.",
+  "_comment": "Type-checks this package's own test/** — the package's main program only includes src/**. Run by the package's 'typecheck' script. The loosened flags live in the shared package-test profile. `paths` is redeclared in full (extends replaces the key rather than merging it) to add the package's own public specifier: test/type-tests/ asserts the published hook/component contract, so it has to import `@codexo/exojs-react` by name, and the mapping resolves that to source so a clean checkout needs no prior build. React itself resolves through this package's own node_modules; the root package carries no react dependency.",
   "extends": [
     "./tsconfig.json",
     "@codexo/exojs-config/typescript/package-test.json"
   ],
+  "compilerOptions": {
+    "paths": {
+      "@codexo/exojs": ["../../src/index.ts"],
+      "@codexo/exojs-react": ["./src/index.ts"]
+    }
+  },
   "include": [
     "test/**/*",
     "../../src/typings.d.ts"

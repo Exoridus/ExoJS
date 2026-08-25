@@ -1,36 +1,23 @@
 {
-  "$schema": "https://json.schemastore.org/tsconfig",
   // Typechecks every `*.worker.ts` in the repository against the Worker global
   // scope and nothing else.
   //
   // A worker source is bundled into a string and handed to `new Worker(blobUrl)`;
-  // it never shares a realm with the module that created it. `lib` therefore
-  // drops `dom`/`dom.iterable` entirely and takes `webworker` instead, so a
+  // it never shares a realm with the module that created it, so the shared
+  // worker profile takes `webworker` in place of `dom`/`dom.iterable` and a
   // `document` or `window` reference is a compile error here rather than a
   // `ReferenceError` on a background thread. Both libs cannot be combined (they
   // declare the same globals), which is why these files are excluded from the
   // programs that own their importers - `tsconfig.examples.json` for the example
   // catalog - and checked here instead.
   //
-  // Mirrors `packages/exojs-audio-fx/tsconfig.worklets.json`, which does the same
-  // for AudioWorkletGlobalScope.
-  "compilerOptions": {
-    "module": "esnext",
-    "moduleResolution": "bundler",
-    "target": "es2022",
-    "lib": ["es2022", "webworker"],
-    "types": [],
-    "noEmit": true,
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    "noFallthroughCasesInSwitch": true,
-    "forceConsistentCasingInFileNames": true,
-    "verbatimModuleSyntax": true,
-    "isolatedModules": true,
-    "skipLibCheck": true
-  },
+  // This stays a repository-level program rather than moving into the packages:
+  // its file set spans `src/`, `test/`, `examples/` and several packages at
+  // once, and the first two of those belong to no package at all. The
+  // package-local counterparts (`packages/exojs-audio-fx/tsconfig.worklets.json`,
+  // `packages/exojs-build/tsconfig.worklets.json`) cover AudioWorkletGlobalScope,
+  // which is a different realm with different globals.
+  "extends": "@codexo/exojs-config/typescript/worker.json",
   // Excluded: a worker that hosts the engine itself rather than a self-contained
   // computation. It is a module worker served by the bundler, so it imports the
   // engine's own modules - which are typed against the DOM and guard their

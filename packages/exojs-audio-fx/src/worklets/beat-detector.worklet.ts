@@ -632,9 +632,7 @@ class BeatDetectorProcessor extends AudioWorkletProcessor {
       // Fresh score of the currently-tracked tempo from this frame.
       let currentScore = 0;
       for (let c = 0; c < this._candidates.length; c++) {
-        if (Math.abs(this._candidates[c]!.bpm / this._bestBpm - 1) < 0.03) {
-          if (this._candidates[c]!.score > currentScore) currentScore = this._candidates[c]!.score;
-        }
+        if (Math.abs(this._candidates[c]!.bpm / this._bestBpm - 1) < 0.03 && this._candidates[c]!.score > currentScore) currentScore = this._candidates[c]!.score;
       }
       if (currentScore <= 0) currentScore = this._bestScore * 0.9;
 

@@ -73,7 +73,7 @@ export const attachWebGl2Probe = (gl: WebGL2RenderingContext): StructuralProbe =
       counters.bufferUploads = 0;
     },
     detach(): void {
-      for (const restore of restores.splice(0, restores.length)) {
+      for (const restore of restores.splice(0)) {
         restore();
       }
     },
@@ -188,7 +188,7 @@ export const attachWebGpuProbe = (device: GPUDevice): StructuralProbe => {
       counters.bufferUploads = 0;
     },
     detach(): void {
-      for (const restore of restores.splice(0, restores.length)) {
+      for (const restore of restores.splice(0)) {
         restore();
       }
     },

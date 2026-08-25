@@ -43,7 +43,7 @@ export class MutableRenderPlan implements RenderPlan {
    */
   public setSinglePass(view: View | null, root: GroupScope): void {
     if (view === null) {
-      if (this.passes.length !== 0) {
+      if (this.passes.length > 0) {
         this.passes.length = 0;
       }
 

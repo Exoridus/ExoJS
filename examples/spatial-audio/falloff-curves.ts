@@ -1,21 +1,19 @@
 import { Application, Asset, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sound, Text } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
-
-
 type FalloffModel = 'linear' | 'inverse' | 'exponential';
 
 interface FalloffModelDef {
-    model: FalloffModel;
-    color: Color;
+  model: FalloffModel;
+  color: Color;
 }
 
 // Horizontal placement (0..1 of canvas width) for each source; absolute pixel
 // positions are resolved against the canvas in init().
 const MODELS: Array<FalloffModelDef & { tx: number }> = [
-    { model: 'linear', tx: 0.25, color: new Color(255, 140, 140) },
-    { model: 'inverse', tx: 0.5, color: new Color(140, 200, 255) },
-    { model: 'exponential', tx: 0.75, color: new Color(200, 255, 140) },
+  { model: 'linear', tx: 0.25, color: new Color(255, 140, 140) },
+  { model: 'inverse', tx: 0.5, color: new Color(140, 200, 255) },
+  { model: 'exponential', tx: 0.75, color: new Color(200, 255, 140) },
 ];
 
 const REF_DISTANCE = 60;
@@ -23,154 +21,154 @@ const MAX_DISTANCE = 460;
 const ROLLOFF = 1;
 
 function attenuation(model: FalloffModel, d: number): number {
-    if (d <= REF_DISTANCE) return 1;
-    if (model === 'linear') {
-        return Math.max(0, 1 - ROLLOFF * ((d - REF_DISTANCE) / (MAX_DISTANCE - REF_DISTANCE)));
-    }
-    if (model === 'inverse') {
-        return REF_DISTANCE / (REF_DISTANCE + ROLLOFF * (d - REF_DISTANCE));
-    }
-    return Math.pow(d / REF_DISTANCE, -ROLLOFF);
+  if (d <= REF_DISTANCE) return 1;
+  if (model === 'linear') {
+    return Math.max(0, 1 - ROLLOFF * ((d - REF_DISTANCE) / (MAX_DISTANCE - REF_DISTANCE)));
+  }
+  if (model === 'inverse') {
+    return REF_DISTANCE / (REF_DISTANCE + ROLLOFF * (d - REF_DISTANCE));
+  }
+  return Math.pow(d / REF_DISTANCE, -ROLLOFF);
 }
 
 interface FalloffSource extends FalloffModelDef {
-    x: number;
-    y: number;
+  x: number;
+  y: number;
 }
 
 class FalloffCurvesScene extends Scene {
-    private listener!: { x: number; y: number };
-    private sources!: FalloffSource[];
-    private sounds!: Sound[];
-    private graphics!: Graphics;
-    private labels!: Text[];
-    private tapPrompt!: Text;
-    // Canvas-relative plot geometry computed in init().
-    private plot = { x: 0, y: 0, w: 0, h: 0 };
-    private hud!: ReturnType<typeof mountControls>;
+  private listener!: { x: number; y: number };
+  private sources!: FalloffSource[];
+  private sounds!: Sound[];
+  private graphics!: Graphics;
+  private labels!: Text[];
+  private tapPrompt!: Text;
+  // Canvas-relative plot geometry computed in init().
+  private plot = { x: 0, y: 0, w: 0, h: 0 };
+  private hud!: ReturnType<typeof mountControls>;
 
-    override async load(): Promise<void> {
-        const app = this.app;
-        const { width, height } = app;
+  override async load(): Promise<void> {
+    const app = this.app;
+    const { width, height } = app;
 
-        // Sources spread across the lower half; the listener starts centred.
-        const sourceY = height * 0.72;
-        this.sources = MODELS.map(({ model, color, tx }) => ({ model, color, x: width * tx, y: sourceY }));
-        this.plot = { x: width * 0.06, y: height * 0.16, w: width * 0.88, h: height * 0.18 };
+    // Sources spread across the lower half; the listener starts centred.
+    const sourceY = height * 0.72;
+    this.sources = MODELS.map(({ model, color, tx }) => ({ model, color, x: width * tx, y: sourceY }));
+    this.plot = { x: width * 0.06, y: height * 0.16, w: width * 0.88, h: height * 0.18 };
 
-        this.listener = { x: width / 2, y: height / 2 };
-        app.audio.listener.target = this.listener;
+    this.listener = { x: width / 2, y: height / 2 };
+    app.audio.listener.target = this.listener;
 
-        // Each derived Sound below reads .audioBuffer synchronously, so the
-        // shared source must be fully decoded first - await load() instead of
-        // the deferred get() (whose placeholder audioBuffer is null until fill).
-        const source = await this.loader.load(Asset.type('sound', 'audio/impact-light.ogg'));
-        this.sounds = this.sources.map(() => new Sound(source.audioBuffer));
+    // Each derived Sound below reads .audioBuffer synchronously, so the
+    // shared source must be fully decoded first - await load() instead of
+    // the deferred get() (whose placeholder audioBuffer is null until fill).
+    const source = await this.loader.load(Asset.type('sound', 'audio/impact-light.ogg'));
+    this.sounds = this.sources.map(() => new Sound(source.audioBuffer));
 
-        this.graphics = new Graphics();
-        this.labels = this.sources.map(({ model, x, y }) => {
-            const label = new Text(model, { fillColor: Color.white, fontSize: 16, align: 'center' });
-            label.setAnchor(0.5, 0).setPosition(x, y + 30);
-            return label;
+    this.graphics = new Graphics();
+    this.labels = this.sources.map(({ model, x, y }) => {
+      const label = new Text(model, { fillColor: Color.white, fontSize: 16, align: 'center' });
+      label.setAnchor(0.5, 0).setPosition(x, y + 30);
+      return label;
+    });
+
+    // Shown while the browser still blocks audio (`app.audio.locked`); the
+    // first click or keypress unlocks it and the loops start.
+    this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height - 24);
+
+    this.hud = mountControls({
+      title: 'Falloff Curves',
+      controls: [{ keys: 'Move', action: 'relocate the listener' }],
+      status: 'Click or press any key to start…',
+      hint: 'Each source uses a different distance model — move the listener to compare attenuation.',
+    });
+
+    app.input.onPointerMove.add(pointer => {
+      this.listener.x = pointer.x;
+      this.listener.y = pointer.y;
+    });
+
+    // A Sound played while audio is still locked is a no-op: a suspended
+    // AudioContext's clock stands still, so nothing can be scheduled
+    // honestly. Start the loops from the unlock gesture instead.
+    // Subscribing is safe even if audio unlocked earlier - onUnlock replays.
+    app.audio.onUnlock.add(() => {
+      for (let i = 0; i < this.sounds.length; i++) {
+        const { model, x, y } = this.sources[i];
+        app.audio.play(this.sounds[i], {
+          loop: true,
+          volume: 0.5,
+          position: { x, y },
+          distanceModel: model,
+          refDistance: REF_DISTANCE,
+          maxDistance: MAX_DISTANCE,
+          rolloffFactor: ROLLOFF,
         });
+      }
+      this.hud.setStatus('Move the pointer to relocate the listener');
+    });
+  }
 
-        // Shown while the browser still blocks audio (`app.audio.locked`); the
-        // first click or keypress unlocks it and the loops start.
-        this.tapPrompt = new Text('Click or press any key to start audio', { fillColor: Color.white, fontSize: 22, align: 'center' })
-            .setAnchor(0.5, 0.5)
-            .setPosition(width / 2, height - 24);
+  override draw(context: RenderingContext): void {
+    const app = this.app;
+    this.graphics.clear();
 
-        this.hud = mountControls({
-            title: 'Falloff Curves',
-            controls: [{ keys: 'Move', action: 'relocate the listener' }],
-            status: 'Click or press any key to start…',
-            hint: 'Each source uses a different distance model — move the listener to compare attenuation.',
-        });
-
-        app.input.onPointerMove.add(pointer => {
-            this.listener.x = pointer.x;
-            this.listener.y = pointer.y;
-        });
-
-        // A Sound played while audio is still locked is a no-op: a suspended
-        // AudioContext's clock stands still, so nothing can be scheduled
-        // honestly. Start the loops from the unlock gesture instead.
-        // Subscribing is safe even if audio unlocked earlier - onUnlock replays.
-        app.audio.onUnlock.add(() => {
-            for (let i = 0; i < this.sounds.length; i++) {
-                const { model, x, y } = this.sources[i];
-                app.audio.play(this.sounds[i], {
-                    loop: true,
-                    volume: 0.5,
-                    position: { x, y },
-                    distanceModel: model,
-                    refDistance: REF_DISTANCE,
-                    maxDistance: MAX_DISTANCE,
-                    rolloffFactor: ROLLOFF,
-                });
-            }
-            this.hud.setStatus('Move the pointer to relocate the listener');
-        });
+    // Falloff-curve plots in the upper canvas area.
+    const { x: plotX, y: plotY, w: plotW, h: plotH } = this.plot;
+    this.graphics.fillColor = new Color(40, 40, 50);
+    this.graphics.drawRectangle(plotX, plotY, plotW, plotH);
+    for (const { model, color } of this.sources) {
+      this.graphics.fillColor = color;
+      for (let i = 0; i < plotW; i += 2) {
+        const d = (i / plotW) * MAX_DISTANCE * 1.2;
+        const v = attenuation(model, d);
+        this.graphics.drawRectangle(plotX + i, plotY + plotH - v * plotH, 2, 2);
+      }
     }
 
-    override draw(context: RenderingContext): void {
-        const app = this.app;
-        this.graphics.clear();
+    // Listener marker.
+    this.graphics.fillColor = new Color(120, 255, 160);
+    this.graphics.drawCircle(this.listener.x, this.listener.y, 10);
 
-        // Falloff-curve plots in the upper canvas area.
-        const { x: plotX, y: plotY, w: plotW, h: plotH } = this.plot;
-        this.graphics.fillColor = new Color(40, 40, 50);
-        this.graphics.drawRectangle(plotX, plotY, plotW, plotH);
-        for (const { model, color } of this.sources) {
-            this.graphics.fillColor = color;
-            for (let i = 0; i < plotW; i += 2) {
-                const d = (i / plotW) * MAX_DISTANCE * 1.2;
-                const v = attenuation(model, d);
-                this.graphics.drawRectangle(plotX + i, plotY + plotH - v * plotH, 2, 2);
-            }
-        }
+    // Source markers + live attenuation readouts.
+    for (let i = 0; i < this.sources.length; i++) {
+      const { x, y, color, model } = this.sources[i];
+      const dx = x - this.listener.x;
+      const dy = y - this.listener.y;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      const v = attenuation(model, d);
 
-        // Listener marker.
-        this.graphics.fillColor = new Color(120, 255, 160);
-        this.graphics.drawCircle(this.listener.x, this.listener.y, 10);
+      this.graphics.fillColor = color;
+      this.graphics.drawCircle(x, y, 18);
+      this.graphics.fillColor = new Color(255, 255, 255, Math.floor(v * 255));
+      this.graphics.drawCircle(x, y, 6);
 
-        // Source markers + live attenuation readouts.
-        for (let i = 0; i < this.sources.length; i++) {
-            const { x, y, color, model } = this.sources[i];
-            const dx = x - this.listener.x;
-            const dy = y - this.listener.y;
-            const d = Math.sqrt(dx * dx + dy * dy);
-            const v = attenuation(model, d);
-
-            this.graphics.fillColor = color;
-            this.graphics.drawCircle(x, y, 18);
-            this.graphics.fillColor = new Color(255, 255, 255, Math.floor(v * 255));
-            this.graphics.drawCircle(x, y, 6);
-
-            this.labels[i].text = `${model}\nvol ${v.toFixed(2)}`;
-        }
-
-        context.render(this.graphics);
-        for (const label of this.labels) context.render(label);
-
-        if (app.audio.locked) {
-            context.render(this.tapPrompt);
-        }
+      this.labels[i].text = `${model}\nvol ${v.toFixed(2)}`;
     }
+
+    context.render(this.graphics);
+    for (const label of this.labels) context.render(label);
+
+    if (app.audio.locked) {
+      context.render(this.tapPrompt);
+    }
+  }
 }
 
 const app = new Application({
-    scenes: { FalloffCurvesScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { FalloffCurvesScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 
 app.start(FalloffCurvesScene);

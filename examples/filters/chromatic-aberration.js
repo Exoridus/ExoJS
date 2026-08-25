@@ -23,59 +23,62 @@ struct Uniforms { uOffset:f32, _pad0:vec3<f32> };
 // default because we drive uOffset directly from the slider, not pointer X.
 const MAX_OFFSET = 0.03;
 class ChromaticAberrationScene extends Scene {
-    filter;
-    sprite;
-    intensity = 0.4;
-    hud;
-    panel;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } });
-        this.sprite = new Sprite(this.loader.get(CHECKER)).setAnchor(0.5).setScale(2.6).setPosition(width / 2, height / 2);
-        this.sprite.filters = [this.filter];
-        // The HUD must exist before applyIntensity() runs - it calls hud.setStatus().
-        this.hud = mountControls({
-            title: 'Chromatic Aberration',
-            controls: [{ keys: 'Intensity', action: 'split the R / B channels apart' }],
-            status: this.statusText(),
-            hint: 'A fragment-shader filter samples red and blue at opposite UV offsets.',
-        });
-        this.panel = mountControlPanel({ title: 'Lens' });
-        this.panel.addSlider({
-            label: 'Intensity',
-            min: 0,
-            max: 1,
-            step: 0.01,
-            value: this.intensity,
-            onChange: value => {
-                this.intensity = value;
-                this.applyIntensity();
-            },
-        });
+  filter;
+  sprite;
+  intensity = 0.4;
+  hud;
+  panel;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uOffset: 0 } });
+    this.sprite = new Sprite(this.loader.get(CHECKER))
+      .setAnchor(0.5)
+      .setScale(2.6)
+      .setPosition(width / 2, height / 2);
+    this.sprite.filters = [this.filter];
+    // The HUD must exist before applyIntensity() runs - it calls hud.setStatus().
+    this.hud = mountControls({
+      title: 'Chromatic Aberration',
+      controls: [{ keys: 'Intensity', action: 'split the R / B channels apart' }],
+      status: this.statusText(),
+      hint: 'A fragment-shader filter samples red and blue at opposite UV offsets.',
+    });
+    this.panel = mountControlPanel({ title: 'Lens' });
+    this.panel.addSlider({
+      label: 'Intensity',
+      min: 0,
+      max: 1,
+      step: 0.01,
+      value: this.intensity,
+      onChange: value => {
+        this.intensity = value;
         this.applyIntensity();
-    }
-    applyIntensity() {
-        this.filter.setUniform('uOffset', this.intensity * MAX_OFFSET);
-        this.hud.setStatus(this.statusText());
-    }
-    statusText() {
-        const pct = Math.round(this.intensity * 100);
-        const offset = (this.intensity * MAX_OFFSET).toFixed(4);
-        return this.intensity === 0 ? 'Intensity: 0% (no split — original)' : `Intensity: ${pct}%  (uOffset ${offset})`;
-    }
-    draw(context) {
-        context.render(this.sprite);
-    }
+      },
+    });
+    this.applyIntensity();
+  }
+  applyIntensity() {
+    this.filter.setUniform('uOffset', this.intensity * MAX_OFFSET);
+    this.hud.setStatus(this.statusText());
+  }
+  statusText() {
+    const pct = Math.round(this.intensity * 100);
+    const offset = (this.intensity * MAX_OFFSET).toFixed(4);
+    return this.intensity === 0 ? 'Intensity: 0% (no split — original)' : `Intensity: ${pct}%  (uOffset ${offset})`;
+  }
+  draw(context) {
+    context.render(this.sprite);
+  }
 }
 const app = new Application({
-    scenes: { ChromaticAberrationScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
+  scenes: { ChromaticAberrationScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
 });
 app.start(ChromaticAberrationScene);

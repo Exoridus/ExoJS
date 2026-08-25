@@ -2731,13 +2731,11 @@ export class WebGpuBackend implements RenderBackend {
         // their pixels are not readable from the CPU side.
         const canvasSource = isCanvasTextureSource(source) ? source : null;
 
-        if (canvasSource !== null && this._canvasExternalImageCopySupported !== true) {
-          if (!this._canvasExternalImageCopyProbeStarted) {
-            this._canvasExternalImageCopyProbeStarted = true;
-            void this._probeCanvasExternalImageCopy().then(supported => {
-              this._canvasExternalImageCopySupported = supported;
-            });
-          }
+        if (canvasSource !== null && this._canvasExternalImageCopySupported !== true && !this._canvasExternalImageCopyProbeStarted) {
+          this._canvasExternalImageCopyProbeStarted = true;
+          void this._probeCanvasExternalImageCopy().then(supported => {
+            this._canvasExternalImageCopySupported = supported;
+          });
         }
 
         const canvasReadbackContext = canvasSource !== null && this._canvasExternalImageCopySupported !== true ? get2dContext(canvasSource) : null;

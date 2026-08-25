@@ -7,10 +7,7 @@
       "title": "Scene-less App",
       "description": "Run an Application with no Scene at all — a single app-level system drives update and draw directly, loading and rendering a sprite without ever touching Scene.",
       "backend": "core",
-      "tags": [
-        "application",
-        "systems"
-      ],
+      "tags": ["application", "systems"],
       "level": "intro"
     },
     {
@@ -21,9 +18,7 @@
       "description": "Observe the full Scene lifecycle: onLoad, onActivate, onUpdate, onDeactivate, and onUnload through a simple counter display.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "scene"
-      ],
+      "tags": ["scene"],
       "level": "intro"
     },
     {
@@ -33,14 +28,8 @@
       "title": "Camera Basic",
       "description": "High-level Camera facade: the camera follows the pointer, the mouse wheel zooms, the world slowly rotates, and a HUD bar is drawn in screen space through a per-render view override.",
       "backend": "core",
-      "tags": [
-        "camera",
-        "view",
-        "pointer"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["camera", "view", "pointer"],
+      "capabilities": ["pointer"],
       "level": "intro"
     },
     {
@@ -50,14 +39,8 @@
       "title": "Camera and View",
       "description": "Pan and zoom the Camera by dragging and scrolling; observe world and screen coordinates update live.",
       "backend": "core",
-      "tags": [
-        "camera",
-        "view",
-        "scene"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["camera", "view", "scene"],
+      "capabilities": ["keyboard"],
       "level": "intermediate"
     },
     {
@@ -67,14 +50,8 @@
       "title": "World Vs Screen Coords",
       "description": "Convert pointer positions between world space and screen space as the camera pans and zooms.",
       "backend": "core",
-      "tags": [
-        "camera",
-        "scene",
-        "pointer"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["camera", "scene", "pointer"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
@@ -84,14 +61,8 @@
       "title": "Pause and Resume",
       "description": "Pause and resume the game loop by pressing Space — freeze updates without stopping the renderer or audio.",
       "backend": "core",
-      "tags": [
-        "scene",
-        "pause"
-      ],
-      "capabilities": [
-        "pointer",
-        "keyboard"
-      ],
+      "tags": ["scene", "pause"],
+      "capabilities": ["pointer", "keyboard"],
       "level": "intro"
     },
     {
@@ -101,14 +72,8 @@
       "title": "Multiple Scenes",
       "description": "Switch between two active Scenes using keyboard shortcuts. Demonstrates addScene, removeScene, and scene priority.",
       "backend": "core",
-      "tags": [
-        "scene",
-        "scenes"
-      ],
-      "capabilities": [
-        "pointer",
-        "keyboard"
-      ],
+      "tags": ["scene", "scenes"],
+      "capabilities": ["pointer", "keyboard"],
       "level": "intermediate"
     },
     {
@@ -118,15 +83,9 @@
       "title": "Loading Screen",
       "description": "Drive one progress bar from the loader-wide signals (onLoadStart, onLoadProgress, onLoadError, onLoadComplete), unsubscribe in unload, and guard the hand-over to the game scene.",
       "backend": "core",
-      "tags": [
-        "scene",
-        "loader",
-        "assets"
-      ],
+      "tags": ["scene", "loader", "assets"],
       "level": "intermediate",
-      "capabilities": [
-        "keyboard"
-      ]
+      "capabilities": ["keyboard"]
     },
     {
       "slug": "hud-overlay-scene",
@@ -135,12 +94,7 @@
       "title": "Hud Overlay Scene",
       "description": "Build a screen-fixed HUD on scene.ui — a Label and a live ProgressBar auto-rendered above the world, with no separate scene or stack.",
       "backend": "core",
-      "tags": [
-        "hud",
-        "overlay",
-        "scene",
-        "camera"
-      ],
+      "tags": ["hud", "overlay", "scene", "camera"],
       "level": "intermediate"
     },
     {
@@ -150,11 +104,7 @@
       "title": "Picture in Picture",
       "description": "Embed a secondary scene view inside the main view — classic minimap or security-camera picture-in-picture layout.",
       "backend": "core",
-      "tags": [
-        "camera",
-        "scene",
-        "rendering"
-      ],
+      "tags": ["camera", "scene", "rendering"],
       "level": "advanced"
     },
     {
@@ -164,15 +114,8 @@
       "title": "Multi View Split Screen",
       "description": "Render two independent camera views side-by-side on a single canvas using viewport scissors.",
       "backend": "core",
-      "tags": [
-        "camera",
-        "view",
-        "scene",
-        "rendering"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["camera", "view", "scene", "rendering"],
+      "capabilities": ["keyboard"],
       "level": "advanced"
     }
   ],
@@ -185,14 +128,8 @@
       "description": "Load a Sound asset and play it on a pointer tap — covers the required user-gesture unlock and basic volume control.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "audio",
-        "sound"
-      ],
-      "capabilities": [
-        "pointer",
-        "audio"
-      ],
+      "tags": ["audio", "sound"],
+      "capabilities": ["pointer", "audio"],
       "level": "intro"
     },
     {
@@ -202,13 +139,8 @@
       "title": "Music Loop",
       "description": "Play a seamlessly looping music track with live controls for volume, playback rate, and looping.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "music"
-      ],
-      "capabilities": [
-        "audio"
-      ],
+      "tags": ["audio", "music"],
+      "capabilities": ["audio"],
       "level": "intro"
     },
     {
@@ -218,15 +150,8 @@
       "title": "Sound Pool",
       "description": "Manage a fixed pool of audio instances so overlapping sounds play without clipping or stacking.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "sound",
-        "pool"
-      ],
-      "capabilities": [
-        "keyboard",
-        "audio"
-      ],
+      "tags": ["audio", "sound", "pool"],
+      "capabilities": ["keyboard", "audio"],
       "level": "intermediate"
     },
     {
@@ -236,15 +161,8 @@
       "title": "Random Pitch Pool",
       "description": "Play the same sound with randomised pitch on each keypress to add variation to repeated sound effects.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "sound",
-        "pool"
-      ],
-      "capabilities": [
-        "keyboard",
-        "audio"
-      ],
+      "tags": ["audio", "sound", "pool"],
+      "capabilities": ["keyboard", "audio"],
       "level": "intermediate"
     },
     {
@@ -254,14 +172,8 @@
       "title": "Audio Buses",
       "description": "Route sounds through named buses (music, sfx, master) and control volume per bus with sliders.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "buses"
-      ],
-      "capabilities": [
-        "pointer",
-        "audio"
-      ],
+      "tags": ["audio", "buses"],
+      "capabilities": ["pointer", "audio"],
       "level": "intermediate"
     },
     {
@@ -271,14 +183,8 @@
       "title": "Crossfade Tracks",
       "description": "Crossfade between two audio tracks by fading out one bus and fading in another over a configurable duration.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "crossfade"
-      ],
-      "capabilities": [
-        "pointer",
-        "audio"
-      ],
+      "tags": ["audio", "crossfade"],
+      "capabilities": ["pointer", "audio"],
       "level": "intermediate"
     }
   ],
@@ -290,16 +196,8 @@
       "title": "Reverb and Delay",
       "description": "Chain a reverb and a delay effect on an audio bus; tweak wet/dry, decay, and feedback live.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "fx",
-        "reverb",
-        "delay"
-      ],
-      "capabilities": [
-        "pointer",
-        "audio"
-      ],
+      "tags": ["audio", "fx", "reverb", "delay"],
+      "capabilities": ["pointer", "audio"],
       "level": "intro"
     },
     {
@@ -309,15 +207,8 @@
       "title": "Compressor",
       "description": "Apply a dynamic compressor to even out loud and quiet audio signals. Adjust threshold, ratio, attack, and release live.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "fx",
-        "compressor"
-      ],
-      "capabilities": [
-        "pointer",
-        "audio"
-      ],
+      "tags": ["audio", "fx", "compressor"],
+      "capabilities": ["pointer", "audio"],
       "level": "intermediate"
     },
     {
@@ -327,15 +218,8 @@
       "title": "Ducking",
       "description": "Automatically lower music volume when a sound effect plays — classic game audio ducking via the DuckingFilter.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "fx",
-        "ducking"
-      ],
-      "capabilities": [
-        "pointer",
-        "audio"
-      ],
+      "tags": ["audio", "fx", "ducking"],
+      "capabilities": ["pointer", "audio"],
       "level": "intermediate"
     },
     {
@@ -345,15 +229,8 @@
       "title": "Vocoder",
       "description": "Vocode a spoken voice phrase with a synth carrier to produce the classic robot-voice effect — pick a phrase and click to speak.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "fx",
-        "vocoder"
-      ],
-      "capabilities": [
-        "pointer",
-        "audio"
-      ],
+      "tags": ["audio", "fx", "vocoder"],
+      "capabilities": ["pointer", "audio"],
       "level": "advanced"
     },
     {
@@ -363,18 +240,8 @@
       "title": "Convolution Rooms",
       "description": "Fire the same dry impact through 30 recorded room impulse responses, from a few milliseconds of colouration to a half-second cavern.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "fx",
-        "convolution",
-        "reverb",
-        "impulse-response"
-      ],
-      "capabilities": [
-        "pointer",
-        "keyboard",
-        "audio"
-      ],
+      "tags": ["audio", "fx", "convolution", "reverb", "impulse-response"],
+      "capabilities": ["pointer", "keyboard"],
       "level": "intermediate"
     },
     {
@@ -384,18 +251,8 @@
       "title": "Effect Chains",
       "description": "Cycle a looping track through ten named effect chains — telephone, underwater, arcade, cathedral — and bypass any of them to A/B against the dry signal.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "fx",
-        "chain",
-        "spectrum",
-        "analyser"
-      ],
-      "capabilities": [
-        "pointer",
-        "keyboard",
-        "audio"
-      ],
+      "tags": ["audio", "fx", "chain", "spectrum", "analyser"],
+      "capabilities": ["pointer", "keyboard", "audio"],
       "level": "intermediate"
     }
   ],
@@ -407,14 +264,8 @@
       "title": "Beat Sync Pulse",
       "description": "Flash a circle in sync with detected beats. BeatDetector fires a callback each time onset energy crosses the threshold.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "beat",
-        "reactive"
-      ],
-      "capabilities": [
-        "audio"
-      ],
+      "tags": ["audio", "beat", "reactive"],
+      "capabilities": ["audio"],
       "level": "intro"
     },
     {
@@ -424,14 +275,8 @@
       "title": "Frequency Bands",
       "description": "Drive animated bars from AudioAnalyser frequency data after a user gesture — sub-bass to brilliance, eight bands.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "reactive",
-        "visualiser"
-      ],
-      "capabilities": [
-        "audio"
-      ],
+      "tags": ["audio", "reactive", "visualiser"],
+      "capabilities": ["audio"],
       "level": "intermediate"
     },
     {
@@ -441,14 +286,8 @@
       "title": "Tempo Tracking",
       "description": "Estimate live BPM from an audio stream and display the running tempo estimate alongside raw onset energy.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "beat",
-        "reactive"
-      ],
-      "capabilities": [
-        "audio"
-      ],
+      "tags": ["audio", "beat", "reactive"],
+      "capabilities": ["audio"],
       "level": "intermediate"
     }
   ],
@@ -460,11 +299,7 @@
       "title": "Custom Render Pass",
       "description": "Compose a RenderPipeline that slots a CallbackRenderPass with procedural geometry between two scene nodes.",
       "backend": "advanced",
-      "tags": [
-        "rendering",
-        "advanced",
-        "custom"
-      ],
+      "tags": ["rendering", "advanced", "custom"],
       "level": "advanced"
     },
     {
@@ -474,15 +309,8 @@
       "title": "Custom Triangle Renderer",
       "description": "Write raw WGSL and wire a custom WebGPU pipeline alongside the built-in renderer — a minimal custom-renderer skeleton.",
       "backend": "advanced",
-      "tags": [
-        "rendering",
-        "advanced",
-        "custom",
-        "webgpu"
-      ],
-      "capabilities": [
-        "webgpu"
-      ],
+      "tags": ["rendering", "advanced", "custom", "webgpu"],
+      "capabilities": ["webgpu"],
       "level": "advanced"
     }
   ],
@@ -495,13 +323,8 @@
       "description": "Enable the built-in debug overlay to monitor FPS, draw calls, sprite count, and GPU memory inside your scene.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "debug",
-        "performance"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["debug", "performance"],
+      "capabilities": ["keyboard"],
       "level": "intro"
     },
     {
@@ -511,10 +334,7 @@
       "title": "Bounding Boxes",
       "description": "Overlay axis-aligned bounding boxes on every rendered node to debug layout, culling, and hit-test regions.",
       "backend": "core",
-      "tags": [
-        "debug",
-        "rendering"
-      ],
+      "tags": ["debug", "rendering"],
       "level": "intro"
     },
     {
@@ -524,11 +344,7 @@
       "title": "Pointer and Hittest",
       "description": "Visualise pointer hit-test regions and see which node receives each event — useful for debugging interactive areas.",
       "backend": "core",
-      "tags": [
-        "debug",
-        "pointer",
-        "input"
-      ],
+      "tags": ["debug", "pointer", "input"],
       "level": "intermediate"
     },
     {
@@ -538,9 +354,7 @@
       "title": "Signal Bus Inspector",
       "description": "List all active Signals on the SignalBus, inspect current values, and monitor subscriber counts in the debug layer.",
       "backend": "core",
-      "tags": [
-        "debug"
-      ],
+      "tags": ["debug"],
       "level": "intermediate"
     },
     {
@@ -550,14 +364,8 @@
       "title": "Asset Browser",
       "description": "Interactive browser for the injected globalThis.assets catalog — inspect textures, sprites, audio, SVG, fonts, video, and input-prompt sheets with per-type previews.",
       "backend": "core",
-      "tags": [
-        "asset",
-        "browser",
-        "debug"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["asset", "browser", "debug"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     }
   ],
@@ -569,11 +377,7 @@
       "title": "Color Matrix Filter",
       "description": "Tint, desaturate, invert, brighten, push contrast and sepia-tone a sprite — one colour matrix, cycled from the control panel.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "color",
-        "filter"
-      ],
+      "tags": ["fx", "color", "filter"],
       "level": "intro"
     },
     {
@@ -583,11 +387,7 @@
       "title": "Blur Filter",
       "description": "Apply a configurable Gaussian blur filter to a Sprite; drag a slider to adjust the radius live.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "blur",
-        "filter"
-      ],
+      "tags": ["fx", "blur", "filter"],
       "level": "intro"
     },
     {
@@ -597,11 +397,7 @@
       "title": "Chromatic Aberration",
       "description": "Offset RGB channels by different amounts to simulate lens chromatic aberration — drag the pointer to control intensity.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "filter",
-        "shader"
-      ],
+      "tags": ["fx", "filter", "shader"],
       "level": "intermediate"
     },
     {
@@ -611,10 +407,7 @@
       "title": "Filter Stack",
       "description": "Chain multiple filters on a single sprite and toggle each layer independently to see how they compose.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "filter"
-      ],
+      "tags": ["fx", "filter"],
       "level": "intermediate"
     },
     {
@@ -624,11 +417,7 @@
       "title": "Noise Vignette",
       "description": "Combine animated film grain and a radial vignette in a single pass filter — common cinematic post-processing.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "filter",
-        "shader"
-      ],
+      "tags": ["fx", "filter", "shader"],
       "level": "intermediate"
     },
     {
@@ -638,11 +427,7 @@
       "title": "Crt Scanlines",
       "description": "Overlay a CRT scanline pattern via a custom fragment shader filter — classic retro screen post-processing.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "filter",
-        "shader"
-      ],
+      "tags": ["fx", "filter", "shader"],
       "level": "intermediate"
     },
     {
@@ -652,11 +437,7 @@
       "title": "Colour Ramp Cycling",
       "description": "Shift an RGB 1D LUT each frame to recolour a sprite — three per-channel curves sweeping the colour wheel.",
       "backend": "core",
-      "tags": [
-        "lut",
-        "ramp",
-        "color"
-      ],
+      "tags": ["lut", "ramp", "color"],
       "level": "advanced"
     },
     {
@@ -666,12 +447,7 @@
       "title": "Custom Fragment Shader",
       "description": "Write a GLSL/WGSL fragment shader and wire it as a Filter on a sprite — shows the minimal filter authoring API.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "filter",
-        "shader",
-        "advanced"
-      ],
+      "tags": ["fx", "filter", "shader", "advanced"],
       "level": "advanced"
     },
     {
@@ -681,11 +457,7 @@
       "title": "Metaballs",
       "description": "Render organic metaball blobs using a threshold-based signed-distance shader filter applied to moving circles.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "filter",
-        "shader"
-      ],
+      "tags": ["fx", "filter", "shader"],
       "level": "advanced"
     }
   ],
@@ -698,13 +470,8 @@
       "description": "Draw filled and stroked rectangles, circles, polygons, and Bézier curves with the Graphics API.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "graphics",
-        "rendering"
-      ],
-      "capabilities": [
-        "webgpu"
-      ],
+      "tags": ["graphics", "rendering"],
+      "capabilities": ["webgpu"],
       "level": "intro"
     },
     {
@@ -714,12 +481,7 @@
       "title": "Graphics Gradient",
       "description": "Paint Graphics shapes with gradients through the fillStyle / strokeStyle API: a linear-gradient rectangle, a radial-gradient circle, a radial-gradient stroked ring, and a spinning linear-gradient star.",
       "backend": "core",
-      "tags": [
-        "graphics",
-        "gradient",
-        "fillStyle",
-        "strokeStyle"
-      ],
+      "tags": ["graphics", "gradient", "fillStyle", "strokeStyle"],
       "level": "intro"
     },
     {
@@ -729,11 +491,7 @@
       "title": "Gradient",
       "description": "Use a Gradient Drawable to fill a rectangle with a smooth linear or radial colour gradient.",
       "backend": "core",
-      "tags": [
-        "graphics",
-        "gradient",
-        "rendering"
-      ],
+      "tags": ["graphics", "gradient", "rendering"],
       "level": "intro"
     },
     {
@@ -743,11 +501,7 @@
       "title": "Mesh Triangle",
       "description": "Render a single vertex-coloured triangle with a custom Mesh — the minimal GPU geometry example.",
       "backend": "core",
-      "tags": [
-        "mesh",
-        "graphics",
-        "rendering"
-      ],
+      "tags": ["mesh", "graphics", "rendering"],
       "level": "intermediate"
     },
     {
@@ -757,11 +511,7 @@
       "title": "Mesh Textured Quad",
       "description": "Map a texture onto a custom Mesh quad and control UV coordinates per vertex.",
       "backend": "core",
-      "tags": [
-        "mesh",
-        "graphics",
-        "rendering"
-      ],
+      "tags": ["mesh", "graphics", "rendering"],
       "level": "intermediate"
     },
     {
@@ -771,11 +521,7 @@
       "title": "Mesh Deformed Grid",
       "description": "Animate vertex positions on a Mesh grid to produce wave and ripple deformation effects.",
       "backend": "core",
-      "tags": [
-        "mesh",
-        "graphics",
-        "rendering"
-      ],
+      "tags": ["mesh", "graphics", "rendering"],
       "level": "advanced"
     },
     {
@@ -785,14 +531,8 @@
       "title": "Infinite Grid",
       "description": "Render an infinite scrolling grid in screen space as a debug aid for level editors and world-space tools.",
       "backend": "core",
-      "tags": [
-        "graphics",
-        "rendering",
-        "debug"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["graphics", "rendering", "debug"],
+      "capabilities": ["keyboard"],
       "level": "advanced"
     },
     {
@@ -802,12 +542,7 @@
       "title": "Immediate-Mode Rendering",
       "description": "Draw procedural geometry without a scene graph: gears via drawGeometry and a 2,400-spark field as a single instanced RenderBatch draw call, with a live drawCalls readout.",
       "backend": "core",
-      "tags": [
-        "rendering",
-        "geometry",
-        "instancing",
-        "performance"
-      ],
+      "tags": ["rendering", "geometry", "instancing", "performance"],
       "level": "advanced"
     }
   ],
@@ -820,11 +555,7 @@
       "description": "Create an Application, attach a Scene, draw a Graphics shape, and see the first render cycle — the minimal ExoJS starting point.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "scene",
-        "graphics",
-        "rendering"
-      ],
+      "tags": ["scene", "graphics", "rendering"],
       "level": "intro"
     },
     {
@@ -835,11 +566,7 @@
       "description": "Run a single Scene with a fixed-step update loop, draw a spinning rectangle, and observe how tick and deltaTime drive motion.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "game",
-        "loop",
-        "scene"
-      ],
+      "tags": ["game", "loop", "scene"],
       "level": "intro"
     },
     {
@@ -849,11 +576,7 @@
       "title": "Resize and DPR",
       "description": "Handle window resizes and device pixel ratio changes so the canvas stays sharp on high-DPI screens without stretching.",
       "backend": "core",
-      "tags": [
-        "resize",
-        "dpr",
-        "responsive"
-      ],
+      "tags": ["resize", "dpr", "responsive"],
       "level": "intro"
     }
   ],
@@ -866,13 +589,8 @@
       "description": "Read key state per-frame and on-event with the Keyboard API. Move a square using the arrow keys.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "input",
-        "keyboard"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["input", "keyboard"],
+      "capabilities": ["keyboard"],
       "level": "intro"
     },
     {
@@ -882,14 +600,8 @@
       "title": "Mouse and Pointer",
       "description": "Track pointer position, button state, and movement delta; fire discrete click and drag events.",
       "backend": "core",
-      "tags": [
-        "input",
-        "pointer",
-        "mouse"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["input", "pointer", "mouse"],
+      "capabilities": ["pointer"],
       "level": "intro"
     },
     {
@@ -899,14 +611,8 @@
       "title": "Pointer to World",
       "description": "Convert screen-space pointer coordinates to world-space positions as the camera pans and zooms.",
       "backend": "core",
-      "tags": [
-        "input",
-        "pointer",
-        "camera"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["input", "pointer", "camera"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
@@ -917,13 +623,8 @@
       "description": "Read axes and buttons from a connected gamepad — plug in a controller and drive a circle around the canvas.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "input",
-        "gamepad"
-      ],
-      "capabilities": [
-        "gamepad"
-      ],
+      "tags": ["input", "gamepad"],
+      "capabilities": ["gamepad"],
       "level": "intro"
     },
     {
@@ -933,15 +634,8 @@
       "title": "Multitouch",
       "description": "Track up to ten simultaneous touch points and render each finger as a labelled circle.",
       "backend": "core",
-      "tags": [
-        "input",
-        "touch",
-        "pointer"
-      ],
-      "capabilities": [
-        "pointer",
-        "touch"
-      ],
+      "tags": ["input", "touch", "pointer"],
+      "capabilities": ["pointer", "touch"],
       "level": "intermediate"
     },
     {
@@ -951,15 +645,8 @@
       "title": "Action Mapping",
       "description": "Map multiple physical inputs (keyboard keys + gamepad buttons) to named actions and read them identically in the update loop.",
       "backend": "core",
-      "tags": [
-        "input",
-        "keyboard",
-        "gamepad"
-      ],
-      "capabilities": [
-        "keyboard",
-        "gamepad"
-      ],
+      "tags": ["input", "keyboard", "gamepad"],
+      "capabilities": ["keyboard", "gamepad"],
       "level": "intermediate"
     },
     {
@@ -969,13 +656,8 @@
       "title": "Key Rebinding",
       "description": "Let players reassign key bindings at runtime and persist the new mapping through a serialisable InputProfile.",
       "backend": "core",
-      "tags": [
-        "input",
-        "keyboard"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["input", "keyboard"],
+      "capabilities": ["keyboard"],
       "level": "advanced"
     },
     {
@@ -985,13 +667,8 @@
       "title": "Multi Gamepad",
       "description": "Handle multiple connected gamepads simultaneously — each controller drives its own coloured square.",
       "backend": "core",
-      "tags": [
-        "input",
-        "gamepad"
-      ],
-      "capabilities": [
-        "gamepad"
-      ],
+      "tags": ["input", "gamepad"],
+      "capabilities": ["gamepad"],
       "level": "advanced"
     }
   ],
@@ -1003,9 +680,7 @@
       "title": "Emitter Basics",
       "description": "Configure a particle emitter — set rate, lifetime, start/end size, colour gradient, and velocity spread.",
       "backend": "core",
-      "tags": [
-        "particles"
-      ],
+      "tags": ["particles"],
       "level": "intro"
     },
     {
@@ -1015,9 +690,7 @@
       "title": "Bonfire",
       "description": "Simulate a campfire with an emitter that varies particle colour, lifetime, and velocity over the flame shape.",
       "backend": "core",
-      "tags": [
-        "particles"
-      ],
+      "tags": ["particles"],
       "level": "intermediate"
     },
     {
@@ -1027,13 +700,8 @@
       "title": "Fireworks",
       "description": "Click to launch a firework rocket that bursts into a radial particle shower at its apex.",
       "backend": "core",
-      "tags": [
-        "particles",
-        "pointer"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["particles", "pointer"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
@@ -1043,13 +711,8 @@
       "title": "Cursor Attractor Particles",
       "description": "Attract and repel particles toward the pointer position using a custom force field on the particle emitter.",
       "backend": "core",
-      "tags": [
-        "particles",
-        "pointer"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["particles", "pointer"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
@@ -1059,11 +722,7 @@
       "title": "Gpu Particles",
       "description": "Run hundreds of thousands of particles on the GPU via WebGPU compute shaders, with a smaller CPU-simulated budget on WebGL2 — the live count shows the active backend.",
       "backend": "core",
-      "tags": [
-        "particles",
-        "webgpu",
-        "performance"
-      ],
+      "tags": ["particles", "webgpu", "performance"],
       "level": "advanced"
     },
     {
@@ -1073,11 +732,7 @@
       "title": "Custom Wgsl Module",
       "description": "Supply a custom WGSL compute module to the GPU particle system to implement non-standard particle behaviour.",
       "backend": "core",
-      "tags": [
-        "particles",
-        "advanced",
-        "webgpu"
-      ],
+      "tags": ["particles", "advanced", "webgpu"],
       "level": "advanced"
     }
   ],
@@ -1090,14 +745,8 @@
       "description": "Render thousands of sprites to measure raw throughput; compare WebGPU and WebGL2 backends at high counts.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "performance",
-        "rendering",
-        "webgpu"
-      ],
-      "capabilities": [
-        "webgpu"
-      ],
+      "tags": ["performance", "rendering", "webgpu"],
+      "capabilities": ["webgpu"],
       "level": "intermediate"
     },
     {
@@ -1107,13 +756,8 @@
       "title": "Multi Texture Stress",
       "description": "Render sprites from many different textures simultaneously to stress-test texture-atlas batching.",
       "backend": "core",
-      "tags": [
-        "performance",
-        "rendering"
-      ],
-      "capabilities": [
-        "webgpu"
-      ],
+      "tags": ["performance", "rendering"],
+      "capabilities": ["webgpu"],
       "level": "intermediate"
     },
     {
@@ -1123,14 +767,8 @@
       "title": "Particle Stress",
       "description": "Push the GPU particle system to its limits — ramp up particle count until frame time degrades.",
       "backend": "core",
-      "tags": [
-        "performance",
-        "particles",
-        "webgpu"
-      ],
-      "capabilities": [
-        "webgpu"
-      ],
+      "tags": ["performance", "particles", "webgpu"],
+      "capabilities": ["webgpu"],
       "level": "intermediate"
     },
     {
@@ -1140,14 +778,8 @@
       "title": "Backend Comparison",
       "description": "Switch between WebGPU and WebGL2 backends at runtime and compare frame times for the same scene.",
       "backend": "core",
-      "tags": [
-        "performance",
-        "webgpu",
-        "rendering"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["performance", "webgpu", "rendering"],
+      "capabilities": ["keyboard"],
       "level": "intermediate"
     }
   ],
@@ -1159,10 +791,7 @@
       "title": "Sprite Follows Body",
       "description": "The minimal physics binding: world.attach builds a body + collider and binds it to a sprite, which then tracks the body each step as it falls onto a static floor.",
       "backend": "core",
-      "tags": [
-        "physics",
-        "binding"
-      ],
+      "tags": ["physics", "binding"],
       "level": "intro"
     },
     {
@@ -1172,11 +801,7 @@
       "title": "Tiled Map + Physics Actor",
       "description": "Build static colliders from a tilemap object layer with the ObjectLayer-to-collider bridge, then drop a dynamic actor that falls and bounces across the rendered level.",
       "backend": "core",
-      "tags": [
-        "physics",
-        "tilemap",
-        "collision"
-      ],
+      "tags": ["physics", "tilemap", "collision"],
       "level": "intermediate"
     }
   ],
@@ -1188,10 +813,7 @@
       "title": "Render to Texture",
       "description": "Draw a scene into a RenderTarget and sample the result as a texture on another sprite in the same frame.",
       "backend": "core",
-      "tags": [
-        "rendering",
-        "advanced"
-      ],
+      "tags": ["rendering", "advanced"],
       "level": "intro"
     },
     {
@@ -1201,11 +823,7 @@
       "title": "Mini Map",
       "description": "Render a second camera view into a RenderTarget and display it as a minimap overlay in the HUD.",
       "backend": "core",
-      "tags": [
-        "rendering",
-        "camera",
-        "advanced"
-      ],
+      "tags": ["rendering", "camera", "advanced"],
       "level": "intermediate"
     },
     {
@@ -1215,11 +833,7 @@
       "title": "Trail Feedback",
       "description": "Create motion trails by feeding the previous frame back into the current frame with slight fade and blur.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "rendering",
-        "advanced"
-      ],
+      "tags": ["fx", "rendering", "advanced"],
       "level": "intermediate"
     },
     {
@@ -1229,11 +843,7 @@
       "title": "Bloom Lite",
       "description": "Multi-pass bloom: render the scene into a RenderTarget, blur it, and composite back with additive blending.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "rendering",
-        "advanced"
-      ],
+      "tags": ["fx", "rendering", "advanced"],
       "level": "advanced"
     },
     {
@@ -1243,11 +853,7 @@
       "title": "Water Mirror",
       "description": "Reflect the scene in a distorted water surface using a flipped RenderTarget and a ripple displacement shader.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "rendering",
-        "advanced"
-      ],
+      "tags": ["fx", "rendering", "advanced"],
       "level": "advanced"
     },
     {
@@ -1257,11 +863,7 @@
       "title": "Post Processing Chain",
       "description": "Chain multiple RenderTarget passes to build a full-scene post-processing pipeline (blur → vignette → colour grade).",
       "backend": "core",
-      "tags": [
-        "fx",
-        "rendering",
-        "advanced"
-      ],
+      "tags": ["fx", "rendering", "advanced"],
       "level": "advanced"
     },
     {
@@ -1271,11 +873,7 @@
       "title": "Render Pipeline",
       "description": "Compose a frame from named RenderPass steps: render the world off-screen, blur it, composite to the screen, and nest a UI pipeline — with a runtime-toggleable blur step and resize wiring.",
       "backend": "core",
-      "tags": [
-        "rendering",
-        "advanced",
-        "fx"
-      ],
+      "tags": ["rendering", "advanced", "fx"],
       "level": "advanced"
     }
   ],
@@ -1287,10 +885,7 @@
       "title": "Containers",
       "description": "Group sprites into a Container node and transform the group as a unit — translation, scale, and alpha propagate to children.",
       "backend": "core",
-      "tags": [
-        "scene-graph",
-        "rendering"
-      ],
+      "tags": ["scene-graph", "rendering"],
       "level": "intro"
     },
     {
@@ -1300,11 +895,7 @@
       "title": "Retained Container",
       "description": "Hold a large static sprite field in a RetainedContainer and pan the whole group as a camera: the retained tier replays the subtree as O(batches) with one group-matrix update, while a plain Container walks every child each frame. Toggle the tier and compare the frame-time readout.",
       "backend": "core",
-      "tags": [
-        "scene-graph",
-        "rendering",
-        "performance"
-      ],
+      "tags": ["scene-graph", "rendering", "performance"],
       "level": "advanced"
     },
     {
@@ -1314,10 +905,7 @@
       "title": "Pivot and Anchor",
       "description": "Set pivot and anchor on a Sprite to control the point around which it rotates and how it aligns to its position.",
       "backend": "core",
-      "tags": [
-        "scene-graph",
-        "sprite"
-      ],
+      "tags": ["scene-graph", "sprite"],
       "level": "intro"
     },
     {
@@ -1327,10 +915,7 @@
       "title": "Nested Transforms",
       "description": "Build a solar-system hierarchy of orbiting nodes to practice parent-child transform composition.",
       "backend": "core",
-      "tags": [
-        "scene-graph",
-        "animation"
-      ],
+      "tags": ["scene-graph", "animation"],
       "level": "intermediate"
     },
     {
@@ -1340,10 +925,7 @@
       "title": "Local Vs Global Transform",
       "description": "Compare local and world transforms on nested nodes and see how parent transforms compose with children.",
       "backend": "core",
-      "tags": [
-        "scene-graph",
-        "rendering"
-      ],
+      "tags": ["scene-graph", "rendering"],
       "level": "intermediate"
     },
     {
@@ -1353,13 +935,8 @@
       "title": "Z Ordering",
       "description": "Change zIndex on sprites at runtime and observe draw order update instantly without re-sorting the scene graph.",
       "backend": "core",
-      "tags": [
-        "scene-graph",
-        "rendering"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["scene-graph", "rendering"],
+      "capabilities": ["keyboard"],
       "level": "intermediate"
     },
     {
@@ -1369,13 +946,8 @@
       "title": "Parallax Starfield",
       "description": "Layer three Container rows at different scroll speeds to create a parallax depth effect driven by pointer movement.",
       "backend": "core",
-      "tags": [
-        "scene-graph",
-        "rendering"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["scene-graph", "rendering"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
@@ -1385,11 +957,7 @@
       "title": "Masks",
       "description": "Apply a stencil mask to a Container so children only render inside the mask's geometry.",
       "backend": "core",
-      "tags": [
-        "scene-graph",
-        "fx",
-        "rendering"
-      ],
+      "tags": ["scene-graph", "fx", "rendering"],
       "level": "advanced"
     }
   ],
@@ -1402,15 +970,8 @@
       "description": "A complete dodge-and-collect loop: move with WASD or arrow keys, collect green orbs for points, avoid red orbs, and restart from the game-over screen.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "game",
-        "input",
-        "collision",
-        "hud"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["game", "input", "collision", "hud"],
+      "capabilities": ["keyboard"],
       "level": "intermediate"
     },
     {
@@ -1421,15 +982,8 @@
       "description": "Fly a spaceship with a gamepad: left stick steers, right trigger fires, and rumble kicks on impact.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "gamepad",
-        "input",
-        "audio",
-        "scene"
-      ],
-      "capabilities": [
-        "gamepad"
-      ],
+      "tags": ["gamepad", "input", "audio", "scene"],
+      "capabilities": ["gamepad"],
       "level": "intermediate"
     },
     {
@@ -1439,13 +993,8 @@
       "title": "Damage Flash",
       "description": "Click a sprite to trigger a red flash tween — a common game-feel pattern for hit feedback.",
       "backend": "core",
-      "tags": [
-        "animation",
-        "fx"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["animation", "fx"],
+      "capabilities": ["pointer"],
       "level": "intro"
     },
     {
@@ -1455,14 +1004,8 @@
       "title": "Screen Shake on Explosion",
       "description": "Click to detonate — trigger an explosion particle burst followed by a camera shake tween.",
       "backend": "core",
-      "tags": [
-        "camera",
-        "fx",
-        "particles"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["camera", "fx", "particles"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
@@ -1472,11 +1015,7 @@
       "title": "Typewriter Text",
       "description": "Reveal text character-by-character with a configurable delay and a key-click sound effect per character.",
       "backend": "core",
-      "tags": [
-        "text",
-        "animation",
-        "audio"
-      ],
+      "tags": ["text", "animation", "audio"],
       "level": "intro"
     },
     {
@@ -1486,14 +1025,8 @@
       "title": "Dialog System",
       "description": "Click through a typewriter-animated dialog box with portrait, name plate, and choice buttons — game UI recipe.",
       "backend": "core",
-      "tags": [
-        "scene",
-        "text",
-        "audio"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["scene", "text", "audio"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
@@ -1503,14 +1036,8 @@
       "title": "Mouse Parallax",
       "description": "Move layered background planes at different speeds relative to pointer position for a depth parallax effect.",
       "backend": "core",
-      "tags": [
-        "scene-graph",
-        "rendering",
-        "pointer"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["scene-graph", "rendering", "pointer"],
+      "capabilities": ["pointer"],
       "level": "intro"
     },
     {
@@ -1520,10 +1047,7 @@
       "title": "Rectangles Collision",
       "description": "Drag rectangles around the canvas and detect AABB overlap in the update loop — foundational collision recipe.",
       "backend": "core",
-      "tags": [
-        "scene",
-        "rendering"
-      ],
+      "tags": ["scene", "rendering"],
       "level": "intro"
     },
     {
@@ -1533,14 +1057,8 @@
       "title": "Pause Blur",
       "description": "Pause the game, fade up a blur filter over the scene, and show a pause menu — common game polish pattern.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "scene"
-      ],
-      "capabilities": [
-        "pointer",
-        "keyboard"
-      ],
+      "tags": ["fx", "scene"],
+      "capabilities": ["pointer", "keyboard"],
       "level": "intermediate"
     },
     {
@@ -1550,16 +1068,8 @@
       "title": "Boss Intro Cinematic",
       "description": "Tween-driven cinematic sequence with a dramatic boss reveal, screen shake, and synced audio sting.",
       "backend": "core",
-      "tags": [
-        "animation",
-        "audio",
-        "scene"
-      ],
-      "capabilities": [
-        "pointer",
-        "keyboard",
-        "audio"
-      ],
+      "tags": ["animation", "audio", "scene"],
+      "capabilities": ["pointer", "keyboard", "audio"],
       "level": "intermediate"
     },
     {
@@ -1569,11 +1079,7 @@
       "title": "Loading Progress with Shader",
       "description": "Show an animated progress ring during asset loading using a custom GLSL fill-sweep shader.",
       "backend": "core",
-      "tags": [
-        "fx",
-        "shader",
-        "scene"
-      ],
+      "tags": ["fx", "shader", "scene"],
       "level": "intermediate"
     },
     {
@@ -1583,11 +1089,7 @@
       "title": "Minimap with Mask",
       "description": "Render a secondary camera view inside a circular stencil mask to create a round minimap overlay.",
       "backend": "core",
-      "tags": [
-        "rendering",
-        "camera",
-        "fx"
-      ],
+      "tags": ["rendering", "camera", "fx"],
       "level": "intermediate"
     },
     {
@@ -1597,14 +1099,8 @@
       "title": "Color Grading",
       "description": "Switch between procedurally-built 3D LUTs (Sepia, Cool Cinematic, Warm Sunset, Bleach Bypass, Protanopia simulation) plus an Identity bypass, on a single sprite.",
       "backend": "core",
-      "tags": [
-        "lut",
-        "color",
-        "grading"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["lut", "color", "grading"],
+      "capabilities": ["keyboard"],
       "level": "intermediate"
     },
     {
@@ -1614,13 +1110,8 @@
       "title": "Vinyl Record",
       "description": "Spin an animated vinyl record that speeds up or slows down as music plays — an audio-driven visual recipe.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "animation"
-      ],
-      "capabilities": [
-        "audio"
-      ],
+      "tags": ["audio", "animation"],
+      "capabilities": ["audio"],
       "level": "intermediate"
     },
     {
@@ -1630,15 +1121,8 @@
       "title": "Audio Visualisation",
       "description": "Full-screen audio visualiser: frequency bars, waveform, and a beat-pulse ring driven by AudioAnalyser data.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "reactive",
-        "visualiser"
-      ],
-      "capabilities": [
-        "pointer",
-        "audio"
-      ],
+      "tags": ["audio", "reactive", "visualiser"],
+      "capabilities": ["pointer", "audio"],
       "level": "intermediate"
     },
     {
@@ -1649,14 +1133,8 @@
       "description": "Emit particles driven by real-time AudioAnalyser frequency data — bass controls density, treble controls spread.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "audio",
-        "reactive",
-        "particles"
-      ],
-      "capabilities": [
-        "audio"
-      ],
+      "tags": ["audio", "reactive", "particles"],
+      "capabilities": ["audio"],
       "level": "intermediate"
     },
     {
@@ -1666,14 +1144,8 @@
       "title": "Low Band Camera Shake",
       "description": "Shake the camera in sync with low-frequency beats using AudioAnalyser band energy as a shake amplitude.",
       "backend": "core",
-      "tags": [
-        "audio",
-        "reactive",
-        "camera"
-      ],
-      "capabilities": [
-        "audio"
-      ],
+      "tags": ["audio", "reactive", "camera"],
+      "capabilities": ["audio"],
       "level": "advanced"
     }
   ],
@@ -1685,15 +1157,8 @@
       "title": "Listener and Source",
       "description": "Drag a sound source around a fixed listener and watch distance-based spatial attenuation update live.",
       "backend": "core",
-      "tags": [
-        "listener",
-        "source",
-        "spatial"
-      ],
-      "capabilities": [
-        "pointer",
-        "audio"
-      ],
+      "tags": ["listener", "source", "spatial"],
+      "capabilities": ["pointer", "audio"],
       "level": "intro"
     },
     {
@@ -1703,14 +1168,8 @@
       "title": "Moving Source",
       "description": "An automatically circling spatial source orbits a fixed listener to demonstrate continuous panning and attenuation.",
       "backend": "core",
-      "tags": [
-        "moving",
-        "source",
-        "spatial"
-      ],
-      "capabilities": [
-        "audio"
-      ],
+      "tags": ["moving", "source", "spatial"],
+      "capabilities": ["audio"],
       "level": "intermediate"
     },
     {
@@ -1720,16 +1179,8 @@
       "title": "Falloff Curves",
       "description": "Compare linear, inverse, and exponential distance attenuation models on three sources around a draggable listener.",
       "backend": "core",
-      "tags": [
-        "falloff",
-        "distance",
-        "model",
-        "spatial"
-      ],
-      "capabilities": [
-        "pointer",
-        "audio"
-      ],
+      "tags": ["falloff", "distance", "model", "spatial"],
+      "capabilities": ["pointer", "audio"],
       "level": "intermediate"
     }
   ],
@@ -1742,10 +1193,7 @@
       "description": "Load a texture, create a Sprite, and control position, rotation, scale, and alpha inside a Scene.",
       "backend": "core",
       "featured": true,
-      "tags": [
-        "sprite",
-        "rendering"
-      ],
+      "tags": ["sprite", "rendering"],
       "level": "intro"
     },
     {
@@ -1755,10 +1203,7 @@
       "title": "Texture Loader",
       "description": "Load image assets at startup, reference them by key, and assign the resulting Texture to a Sprite.",
       "backend": "core",
-      "tags": [
-        "sprite",
-        "rendering"
-      ],
+      "tags": ["sprite", "rendering"],
       "level": "intro"
     },
     {
@@ -1768,15 +1213,9 @@
       "title": "Asset Catalogs",
       "description": "Declare a typed Assets catalog, merge catalogs with compose, derive one with extend, and load them through two parallel queues with per-queue progress.",
       "backend": "core",
-      "tags": [
-        "loader",
-        "assets",
-        "sprite"
-      ],
+      "tags": ["loader", "assets", "sprite"],
       "level": "intermediate",
-      "capabilities": [
-        "keyboard"
-      ]
+      "capabilities": ["keyboard"]
     },
     {
       "slug": "spritesheet-frames",
@@ -1785,10 +1224,7 @@
       "title": "Spritesheet Frames",
       "description": "Slice a spritesheet into named frames and step through them to play a simple frame animation.",
       "backend": "core",
-      "tags": [
-        "sprite",
-        "animation"
-      ],
+      "tags": ["sprite", "animation"],
       "level": "intermediate"
     },
     {
@@ -1798,14 +1234,8 @@
       "title": "Blendmodes",
       "description": "Click through all built-in blend modes applied to an overlapping sprite pair to see how they composite.",
       "backend": "core",
-      "tags": [
-        "sprite",
-        "rendering",
-        "fx"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["sprite", "rendering", "fx"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
@@ -1815,14 +1245,9 @@
       "title": "Svg Drawable",
       "description": "Rasterise an SVG string into a GPU texture and use it as a Sprite — combine vector art with the sprite pipeline.",
       "backend": "core",
-      "tags": [
-        "sprite",
-        "rendering"
-      ],
+      "tags": ["sprite", "rendering"],
       "level": "intermediate",
-      "capabilities": [
-        "audio"
-      ]
+      "capabilities": ["audio"]
     },
     {
       "slug": "video-drawable",
@@ -1831,15 +1256,8 @@
       "title": "Video Drawable",
       "description": "Stream a video element as a live GPU texture and composite it with sprites and filters.",
       "backend": "core",
-      "tags": [
-        "sprite",
-        "rendering"
-      ],
-      "capabilities": [
-        "pointer",
-        "keyboard",
-        "audio"
-      ],
+      "tags": ["sprite", "rendering"],
+      "capabilities": ["pointer", "keyboard", "audio"],
       "level": "advanced"
     }
   ],
@@ -1851,9 +1269,7 @@
       "title": "Basic Text",
       "description": "Render canvas-rasterised text inside a Scene. Set font, size, colour, and alignment via TextStyle.",
       "backend": "core",
-      "tags": [
-        "text"
-      ],
+      "tags": ["text"],
       "level": "intro"
     },
     {
@@ -1863,9 +1279,7 @@
       "title": "Stroke and Shadow",
       "description": "Add outline stroke and drop shadow to text using TextStyle properties — common game UI typography.",
       "backend": "core",
-      "tags": [
-        "text"
-      ],
+      "tags": ["text"],
       "level": "intro"
     },
     {
@@ -1875,9 +1289,7 @@
       "title": "Multiline and Wrap",
       "description": "Configure word-wrap width, line height, and horizontal alignment for multi-line Text drawables.",
       "backend": "core",
-      "tags": [
-        "text"
-      ],
+      "tags": ["text"],
       "level": "intermediate"
     },
     {
@@ -1887,9 +1299,7 @@
       "title": "Web Fonts",
       "description": "Load a custom web font via FontFace API and render it in a Text drawable — use any Google Font or local .ttf.",
       "backend": "core",
-      "tags": [
-        "text"
-      ],
+      "tags": ["text"],
       "level": "intermediate"
     },
     {
@@ -1899,11 +1309,7 @@
       "title": "Bitmap Text Basic",
       "description": "BitmapText rendered from an AngelCode .fnt atlas (Kenney Blocks, CC0). Demonstrates pre-built atlas rendering, word wrap, and live text updates without Canvas 2D rasterisation.",
       "backend": "core",
-      "tags": [
-        "bitmap",
-        "text",
-        "bmfont"
-      ],
+      "tags": ["bitmap", "text", "bmfont"],
       "level": "intermediate"
     },
     {
@@ -1913,11 +1319,7 @@
       "title": "Text Glitch",
       "description": "Animate randomised character substitution on a Text drawable to produce a classic digital glitch effect.",
       "backend": "core",
-      "tags": [
-        "text",
-        "fx",
-        "animation"
-      ],
+      "tags": ["text", "fx", "animation"],
       "level": "advanced"
     }
   ],
@@ -1929,14 +1331,8 @@
       "title": "Tilemap Chunks & Layer Bands",
       "description": "Build a procedural TileMap in code and explore the core @codexo/exojs-tilemap runtime: chunked TileLayerNode rendering, a camera that follows an actor interleaved between TileMapView bands, and the PixelSnapMode cascade.",
       "backend": "core",
-      "tags": [
-        "tilemap",
-        "camera",
-        "pixel-snap"
-      ],
-      "capabilities": [
-        "keyboard"
-      ],
+      "tags": ["tilemap", "camera", "pixel-snap"],
+      "capabilities": ["keyboard"],
       "level": "intermediate"
     },
     {
@@ -1946,11 +1342,7 @@
       "title": "Tiled Map Import",
       "description": "Load a Tiled .tmj map through the advanced parsed-source path (TiledMap.toTileMap()) and query its object layer by type, property, and geometry kind with ObjectLayer.query().",
       "backend": "core",
-      "tags": [
-        "tilemap",
-        "tiled",
-        "objects"
-      ],
+      "tags": ["tilemap", "tiled", "objects"],
       "level": "intermediate"
     },
     {
@@ -1960,11 +1352,7 @@
       "title": "LDtk World Import",
       "description": "Load a multi-level LDtk world, switch between its runtime TileMap levels, resolve IntGrid cells to their named/coloured definitions with getLdtkIntGridValueAt(), and read entity fields from the converted ObjectLayer.",
       "backend": "core",
-      "tags": [
-        "tilemap",
-        "ldtk",
-        "intgrid"
-      ],
+      "tags": ["tilemap", "ldtk", "intgrid"],
       "level": "advanced"
     },
     {
@@ -1974,15 +1362,9 @@
       "title": "Infinite Procedural Terrain",
       "description": "Stream an unbounded TileMap from a deterministic value-noise sampler: a ChunkStreamer loads chunks around the free-flying camera via createSampledChunkSource and evicts what you leave behind — same seed, same world.",
       "backend": "core",
-      "tags": [
-        "tilemap",
-        "procedural",
-        "streaming"
-      ],
+      "tags": ["tilemap", "procedural", "streaming"],
       "level": "intermediate",
-      "capabilities": [
-        "keyboard"
-      ]
+      "capabilities": ["keyboard"]
     },
     {
       "slug": "worker-streamed-terrain",
@@ -1991,16 +1373,9 @@
       "title": "Worker-Streamed Terrain",
       "description": "Move expensive terrain sampling off the main thread with createWorkerSampledChunkSource: the noise lives inside a self-contained workerSource script. Toggle sync vs. worker and raise the sampling cost to feel the main-thread jank disappear.",
       "backend": "core",
-      "tags": [
-        "tilemap",
-        "procedural",
-        "worker"
-      ],
+      "tags": ["tilemap", "procedural", "worker"],
       "level": "advanced",
-      "capabilities": [
-        "keyboard",
-        "webWorkers"
-      ]
+      "capabilities": ["keyboard", "webWorkers"]
     },
     {
       "slug": "tiled-infinite-map",
@@ -2009,15 +1384,9 @@
       "title": "Tiled Infinite Map Streaming",
       "description": "Stream a hand-authored Tiled infinite .tmj map: TiledMap.toTileMap() converts each chunked tile layer to an unbounded TileLayer, and a ChunkStreamer per layer pulls chunks from TiledMap.getChunkSource() around a free-flying WASD camera.",
       "backend": "core",
-      "tags": [
-        "tilemap",
-        "tiled",
-        "streaming"
-      ],
+      "tags": ["tilemap", "tiled", "streaming"],
       "level": "advanced",
-      "capabilities": [
-        "keyboard"
-      ]
+      "capabilities": ["keyboard"]
     }
   ],
   "tweens-animation": [
@@ -2028,10 +1397,7 @@
       "title": "Tween Basics",
       "description": "Animate numeric properties with Tween: set from/to, duration, easing, and chain an onComplete callback.",
       "backend": "core",
-      "tags": [
-        "animation",
-        "tween"
-      ],
+      "tags": ["animation", "tween"],
       "level": "intro"
     },
     {
@@ -2041,10 +1407,7 @@
       "title": "Tween with Yoyo",
       "description": "Ping-pong a tween back and forth with the yoyo option — ideal for pulsing, breathing, or idle animations.",
       "backend": "core",
-      "tags": [
-        "animation",
-        "tween"
-      ],
+      "tags": ["animation", "tween"],
       "level": "intro"
     },
     {
@@ -2054,10 +1417,7 @@
       "title": "Tween Chains",
       "description": "Build a sequence of tweens that fire one after another using tween.then() chaining.",
       "backend": "core",
-      "tags": [
-        "animation",
-        "tween"
-      ],
+      "tags": ["animation", "tween"],
       "level": "intermediate"
     },
     {
@@ -2067,13 +1427,8 @@
       "title": "Interrupt and Replace",
       "description": "Click to interrupt a running tween and start a new one from the current position — no jitter or snap.",
       "backend": "core",
-      "tags": [
-        "animation",
-        "tween"
-      ],
-      "capabilities": [
-        "pointer"
-      ],
+      "tags": ["animation", "tween"],
+      "capabilities": ["pointer"],
       "level": "intermediate"
     },
     {
@@ -2083,10 +1438,7 @@
       "title": "Tween From Array",
       "description": "Drive a tween along a keyframe path defined as an array of values — useful for motion paths and patrol routes.",
       "backend": "core",
-      "tags": [
-        "animation",
-        "tween"
-      ],
+      "tags": ["animation", "tween"],
       "level": "intermediate"
     },
     {
@@ -2096,10 +1448,7 @@
       "title": "Easing Curves",
       "description": "Visualise all built-in easing functions side-by-side and pick the curve that fits your animation.",
       "backend": "core",
-      "tags": [
-        "animation",
-        "tween"
-      ],
+      "tags": ["animation", "tween"],
       "level": "intermediate"
     },
     {
@@ -2109,10 +1458,7 @@
       "title": "Frame Animation",
       "description": "Step through spritesheet frames on a timer to play a looping animation with configurable FPS.",
       "backend": "core",
-      "tags": [
-        "animation",
-        "sprite"
-      ],
+      "tags": ["animation", "sprite"],
       "level": "intermediate"
     }
   ],
@@ -2124,12 +1470,7 @@
       "title": "HUD and Widgets",
       "description": "Build a screen-fixed HUD on scene.ui: anchored score and health widgets, plus a panel of clickable, keyboard-focusable buttons that update them.",
       "backend": "core",
-      "tags": [
-        "ui",
-        "hud",
-        "button",
-        "widget"
-      ],
+      "tags": ["ui", "hud", "button", "widget"],
       "level": "intro"
     }
   ]

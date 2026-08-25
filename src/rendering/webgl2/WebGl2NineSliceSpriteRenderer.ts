@@ -112,10 +112,8 @@ export class WebGl2NineSliceSpriteRenderer extends AbstractWebGl2Renderer<NineSl
     const blendModeChanged = blendMode !== this._currentBlendMode;
 
     // If the batch would overflow with current quads + new quads, flush first.
-    if (this._quadIndex > 0) {
-      if (blendModeChanged || textureChanged || this._quadIndex + quads.length > this._batchSize) {
-        this.flush();
-      }
+    if (this._quadIndex > 0 && (blendModeChanged || textureChanged || this._quadIndex + quads.length > this._batchSize)) {
+      this.flush();
     }
 
     // Establish blend and texture state (may have been cleared by flush).

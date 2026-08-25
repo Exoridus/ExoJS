@@ -199,15 +199,19 @@ export class TweenManager {
    * survives, so a later {@link Tween.start} re-enters it as usual.
    */
   public clear(): this {
-    // Snapshot first: `stop()` calls back into `remove()`, which splices the
-    // live `_tweens` array - iterating that array directly while it shrinks
-    // under us would skip entries.
-    for (const tween of [...this._tweens]) {
-      tween.stop();
-    }
+    // Detach the list before stopping anything. `stop()` calls back into
+    // `remove()`, which splices the live array - so iterating it directly would
+    // skip entries, and iterating a copy would allocate one. Handing the field a
+    // fresh array first makes every re-entrant `remove()` a miss on an empty
+    // list instead, which is both allocation-free and cheaper than the scan.
+    const tweens = this._tweens;
 
     this._tweens = [];
     this._tickers = [];
+
+    for (const tween of tweens) {
+      tween.stop();
+    }
 
     return this;
   }

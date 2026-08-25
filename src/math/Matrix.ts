@@ -152,7 +152,7 @@ export class Matrix implements Cloneable<Matrix> {
    * Apply a translation of `(x, y)` to this matrix. Mutates in place and
    * returns `this` for chaining.
    */
-  public translate(x: number, y: number = x): Matrix {
+  public translate(x: number, y: number = x): this {
     // Expanded from `combine(translationMatrix)` with the zero terms dropped.
     // Routing this through `Matrix.temp` made the shared scratch self-aliasing:
     // `Matrix.temp.translate(...)` overwrote the receiver with the translation
@@ -173,7 +173,7 @@ export class Matrix implements Cloneable<Matrix> {
    * Apply a rotation of `angle` **degrees** around `(centerX, centerY)` to
    * this matrix. Mutates in place and returns `this` for chaining.
    */
-  public rotate(angle: number, centerX = 0, centerY: number = centerX): Matrix {
+  public rotate(angle: number, centerX = 0, centerY: number = centerX): this {
     const radian = degreesToRadians(angle);
     const cos = Math.cos(radian);
     const sin = Math.sin(radian);
@@ -196,7 +196,7 @@ export class Matrix implements Cloneable<Matrix> {
    * Apply a scale of `(scaleX, scaleY)` around `(centerX, centerY)` to this
    * matrix. Mutates in place and returns `this` for chaining.
    */
-  public scale(scaleX: number, scaleY: number = scaleX, centerX = 0, centerY: number = centerX): Matrix {
+  public scale(scaleX: number, scaleY: number = scaleX, centerX = 0, centerY: number = centerX): this {
     const offsetX = centerX * (1 - scaleX);
     const offsetY = centerY * (1 - scaleY);
 

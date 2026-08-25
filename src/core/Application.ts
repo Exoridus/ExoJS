@@ -1694,7 +1694,7 @@ export class Application<Registry extends SceneRegistryShape<Registry> = {}> {
     this._baseWidth = width;
     this._baseHeight = height;
     this.options.canvas = {
-      ...(this.options.canvas ?? {}),
+      ...this.options.canvas,
       width,
       height,
       pixelRatio: this._pixelRatio,

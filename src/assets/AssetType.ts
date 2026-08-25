@@ -251,7 +251,7 @@ export abstract class AssetType<Source, Resource, Options = undefined, Stored = 
     // lifting that constraint is what this API exists for - but both names are
     // resolved through the same app-local lookup, so the widening is a naming
     // question rather than a dispatch one.
-    return new AssetImpl({ type: this.id, source, ...(options ?? {}) } as unknown as AnyAssetConfig, this as AnyAssetType);
+    return new AssetImpl({ type: this.id, source, ...options } as unknown as AnyAssetConfig, this as AnyAssetType);
   }
 }
 

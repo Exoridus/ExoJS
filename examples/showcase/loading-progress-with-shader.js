@@ -15,41 +15,44 @@ struct Uniforms { uProgress:f32, _pad0:vec3<f32> };
     let col=mix(vec3<f32>(0.2),vec3<f32>(0.3,0.8,1.0),fill); return vec4<f32>(col*ring,ring);
 }`;
 class LoadingProgressWithShaderScene extends Scene {
-    progress;
-    label;
-    ring;
-    filter;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.progress = { v: 0 };
-        this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
-        this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
-        this.ring = new Sprite(this.loader.get('image/uv-grid-256.png')).setAnchor(0.5).setScale(2.4).setPosition(width / 2, height / 2);
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uProgress: 0 } });
-        this.ring.filters = [this.filter];
-        app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
-    }
-    update() {
-        this.filter.setUniform('uProgress', this.progress.v);
-        this.label.text = `${(this.progress.v * 100) | 0}%`;
-    }
-    draw(context) {
-        context.render(this.ring);
-        context.render(this.label);
-    }
+  progress;
+  label;
+  ring;
+  filter;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.progress = { v: 0 };
+    this.label = new Text('0%', { fillColor: Color.white, fontSize: 42, align: 'center' });
+    this.label.setAnchor(0.5, 0.5).setPosition(width / 2, height / 2);
+    this.ring = new Sprite(this.loader.get('image/uv-grid-256.png'))
+      .setAnchor(0.5)
+      .setScale(2.4)
+      .setPosition(width / 2, height / 2);
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uProgress: 0 } });
+    this.ring.filters = [this.filter];
+    app.tweens.create(this.progress).to({ v: 1 }, 2.4).start();
+  }
+  update() {
+    this.filter.setUniform('uProgress', this.progress.v);
+    this.label.text = `${(this.progress.v * 100) | 0}%`;
+  }
+  draw(context) {
+    context.render(this.ring);
+    context.render(this.label);
+  }
 }
 const app = new Application({
-    scenes: { LoadingProgressWithShaderScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: new Color(14, 18, 28),
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { LoadingProgressWithShaderScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: new Color(14, 18, 28),
+  loader: {
+    basePath: 'assets/',
+  },
 });
 app.start(LoadingProgressWithShaderScene);

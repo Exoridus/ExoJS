@@ -38,7 +38,7 @@ export async function registerAudioWorkletProcessor(audioContext: BaseAudioConte
       registered.add(processorName);
       pending.delete(processorName);
     })
-    .catch(error => {
+    .catch((error: unknown) => {
       pending.delete(processorName);
       throw error;
     });

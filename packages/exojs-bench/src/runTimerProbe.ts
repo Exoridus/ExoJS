@@ -225,7 +225,8 @@ const runCell = async (spec: TimerProbeSpec, baseUrl: string): Promise<{ result:
     await page.goto(baseUrl, { waitUntil: 'load' });
     await page.waitForFunction(() => typeof globalThis.__runTimerProbe === 'function');
 
-    const adapter = spec.backend === 'webgpu' ? (await readWebGpuAdapter(page)).adapter : 'webgl2';
+    const webGpuAdapter = spec.backend === 'webgpu' ? await readWebGpuAdapter(page) : null;
+    const adapter = webGpuAdapter === null ? 'webgl2' : webGpuAdapter.adapter;
     const result = (await page.evaluate(cell => globalThis.__runTimerProbe!(cell), spec)) as TimerProbeResult;
 
     return { result, adapter };

@@ -2780,7 +2780,7 @@
           ],
           "params": [],
           "returnType": null,
-          "description": "The AudioBus this video's audio routes into, or null when none has been assigned (audio then routes straight to the context destination). Set video.bus = app.audio.master to route through a manager's mix."
+          "description": "The AudioBus this video's audio routes into, or null when none has been assigned. Set video.bus = app.audio.master to route through a manager's mix; assigning null routes straight to the context destination."
         },
         {
           "name": "cacheAsTexture",

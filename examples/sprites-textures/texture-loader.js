@@ -1,65 +1,65 @@
 // Auto-generated from texture-loader.ts - edit the .ts source, not this file.
 import { Application, Color, FixedResolutionCanvasSizing, Graphics, Scene, Sprite, Text } from '@codexo/exojs';
 class TextureLoaderScene extends Scene {
-    sprites;
-    textures;
-    bar;
-    label;
-    barX = 0;
-    barY = 0;
-    barWidth = 0;
-    progress = { loaded: 0, total: 3 };
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        // Seamless get() returns placeholder handles immediately; each pops in
-        // (loadState → 'ready') as its fetch completes, polled in update().
-        this.textures = [this.loader.get('image/ship-a.png'), this.loader.get('image/hue-ramp.png'), this.loader.get('image/uv-grid-256.png')];
-        // Spread the three textures evenly across the width, one per third.
-        this.sprites = this.textures.map((texture, index) => {
-            const sprite = new Sprite(texture);
-            sprite.setAnchor(0.5);
-            sprite.setPosition((width / this.textures.length) * (index + 0.5), height * 0.6);
-            return sprite;
-        });
-        // Centered progress bar in the upper third.
-        this.barWidth = width * 0.5;
-        this.barX = (width - this.barWidth) / 2;
-        this.barY = height * 0.22;
-        this.bar = new Graphics();
-        this.label = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' });
-        this.label.setAnchor(0.5, 0);
-        this.label.setPosition(width / 2, this.barY + 40);
+  sprites;
+  textures;
+  bar;
+  label;
+  barX = 0;
+  barY = 0;
+  barWidth = 0;
+  progress = { loaded: 0, total: 3 };
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    // Seamless get() returns placeholder handles immediately; each pops in
+    // (loadState → 'ready') as its fetch completes, polled in update().
+    this.textures = [this.loader.get('image/ship-a.png'), this.loader.get('image/hue-ramp.png'), this.loader.get('image/uv-grid-256.png')];
+    // Spread the three textures evenly across the width, one per third.
+    this.sprites = this.textures.map((texture, index) => {
+      const sprite = new Sprite(texture);
+      sprite.setAnchor(0.5);
+      sprite.setPosition((width / this.textures.length) * (index + 0.5), height * 0.6);
+      return sprite;
+    });
+    // Centered progress bar in the upper third.
+    this.barWidth = width * 0.5;
+    this.barX = (width - this.barWidth) / 2;
+    this.barY = height * 0.22;
+    this.bar = new Graphics();
+    this.label = new Text('', { fillColor: Color.white, fontSize: 20, align: 'center' });
+    this.label.setAnchor(0.5, 0);
+    this.label.setPosition(width / 2, this.barY + 40);
+  }
+  update() {
+    this.progress.loaded = this.textures.filter(texture => texture.loadState === 'ready').length;
+  }
+  draw(context) {
+    const { loaded, total } = this.progress;
+    this.bar.clear();
+    this.bar.fillColor = new Color(60, 60, 60);
+    this.bar.drawRectangle(this.barX, this.barY, this.barWidth, 24);
+    this.bar.fillColor = new Color(90, 220, 120);
+    this.bar.drawRectangle(this.barX, this.barY, total > 0 ? (this.barWidth * loaded) / total : 0, 24);
+    context.render(this.bar);
+    this.label.text = `Loaded ${loaded} / ${total}`;
+    context.render(this.label);
+    for (const sprite of this.sprites) {
+      context.render(sprite);
     }
-    update() {
-        this.progress.loaded = this.textures.filter(texture => texture.loadState === 'ready').length;
-    }
-    draw(context) {
-        const { loaded, total } = this.progress;
-        this.bar.clear();
-        this.bar.fillColor = new Color(60, 60, 60);
-        this.bar.drawRectangle(this.barX, this.barY, this.barWidth, 24);
-        this.bar.fillColor = new Color(90, 220, 120);
-        this.bar.drawRectangle(this.barX, this.barY, total > 0 ? (this.barWidth * loaded) / total : 0, 24);
-        context.render(this.bar);
-        this.label.text = `Loaded ${loaded} / ${total}`;
-        context.render(this.label);
-        for (const sprite of this.sprites) {
-            context.render(sprite);
-        }
-    }
+  }
 }
 const app = new Application({
-    scenes: { TextureLoaderScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { TextureLoaderScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 app.start(TextureLoaderScene);

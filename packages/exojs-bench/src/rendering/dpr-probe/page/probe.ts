@@ -106,7 +106,7 @@ const resolveStage = (): StageSize => {
 const collected: ProbeCellResult[] = [];
 let busy = false;
 
-const requestedBackend = new URLSearchParams(window.location.search).get('backend');
+const requestedBackend = new URLSearchParams(globalThis.location.search).get('backend');
 
 if (requestedBackend === 'auto' || requestedBackend === 'webgl2' || requestedBackend === 'webgpu') {
   backendSelect.value = requestedBackend;
@@ -135,7 +135,7 @@ const setProgress = (text: string, state: 'running' | 'done' | 'error' | 'idle')
   visualTitle.hidden = state !== 'idle';
 
   if (state === 'idle') {
-    visualProgress.removeAttribute('data-state');
+    delete visualProgress.dataset.state;
 
     return;
   }
@@ -154,7 +154,7 @@ const renderEnvironment = (): void => {
   environmentEl.textContent = [
     `git ${meta.gitSha}  ·  exojs ${meta.engineVersion}`,
     `devicePixelRatio ${window.devicePixelRatio}  ·  engine auto would pick ${engineAutoPixelRatio}`,
-    `crossOriginIsolated ${String(window.crossOriginIsolated)}  ·  performance.now() resolution ${timerResolutionMs.toFixed(4)} ms`,
+    `crossOriginIsolated ${String(globalThis.crossOriginIsolated)}  ·  performance.now() resolution ${timerResolutionMs.toFixed(4)} ms`,
     `navigator.gpu ${'gpu' in navigator ? 'present' : 'absent'}  ·  stage ${stagePreset} ${resolveStage().width}×${resolveStage().height} CSS px`,
   ].join('\n');
 };
@@ -171,7 +171,7 @@ const addButton = (host: HTMLElement, value: string, label: string, onClick: () 
   button.textContent = label;
   button.dataset['value'] = value;
   button.addEventListener('click', onClick);
-  host.appendChild(button);
+  host.append(button);
 };
 
 /**
@@ -292,7 +292,7 @@ const renderResults = (): void => {
     const cell = document.createElement('th');
 
     cell.textContent = header;
-    head.appendChild(cell);
+    head.append(cell);
   }
 
   for (const result of collected) {
@@ -348,7 +348,7 @@ const buildNotes = (backendSelected: string, webgpuTimestampQuery: boolean | nul
     'Nothing in the text stack reads `window.devicePixelRatio`. A cell whose `textPixelRatio` is null must report a `textRasterPixelRatio` equal to its `enginePixelRatio`; anything else is a defect, not a device quirk.',
   ];
 
-  if (!window.crossOriginIsolated) {
+  if (!globalThis.crossOriginIsolated) {
     notes.push('crossOriginIsolated is FALSE — `performance.now()` is coarsened, so the cpuMs columns are quantised. Check `timerResolutionMs` before reading small differences.');
   }
 
@@ -401,7 +401,7 @@ const buildResult = (): ProbeResult => {
     backendSelected,
     webgpuTimestampQuery: lastWebgpuTimestampQuery,
     gpuTimerSource: lastGpuTimerSource,
-    crossOriginIsolated: window.crossOriginIsolated,
+    crossOriginIsolated: globalThis.crossOriginIsolated,
     timerResolutionMs,
     stageWidth: runStage.width,
     stageHeight: runStage.height,
@@ -580,10 +580,10 @@ clearButton.addEventListener('click', () => {
  * backend.
  */
 backendSelect.addEventListener('change', () => {
-  const url = new URL(window.location.href);
+  const url = new URL(globalThis.location.href);
 
   url.searchParams.set('backend', backendSelect.value);
-  window.location.replace(url.toString());
+  globalThis.location.replace(url.toString());
 });
 
 /**

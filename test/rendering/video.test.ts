@@ -520,6 +520,29 @@ describe('Video', () => {
       bus.destroy();
     });
 
+    test('clearing the bus routes back to the context destination', () => {
+      const mockVideo = createMockVideoElement();
+      const video = new Video(mockVideo.element);
+      const bus = new AudioBus('video-test-c');
+
+      video.bus = bus;
+
+      const gainNode = video.analyserTarget!;
+      const disconnectSpy = vi.spyOn(gainNode, 'disconnect');
+      const connectSpy = vi.spyOn(gainNode, 'connect');
+
+      // `bus` reads back as `AudioBus | null`, so it has to be assignable as
+      // one too - otherwise `a.bus = b.bus` does not even compile.
+      video.bus = null;
+
+      expect(video.bus).toBeNull();
+      expect(disconnectSpy).toHaveBeenCalled();
+      expect(connectSpy).toHaveBeenCalledWith(video.analyserTarget!.context.destination);
+
+      video.destroy();
+      bus.destroy();
+    });
+
     test('falls back to the context destination when the bus has no input node', () => {
       const mockVideo = createMockVideoElement();
       const video = new Video(mockVideo.element);

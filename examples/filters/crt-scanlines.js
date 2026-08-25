@@ -9,49 +9,52 @@ void main(){ vec2 uv=vUv*2.0-1.0; uv*=1.0+dot(uv,uv)*0.07; uv=uv*0.5+0.5; vec4 c
 const wgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @binding(2) var uSampler:sampler;
 @fragment fn fragmentMain(@location(0) vUv:vec2<f32>)->@location(0) vec4<f32>{ var uv=vUv*2.0-vec2<f32>(1.0); uv=uv*(1.0+dot(uv,uv)*0.07); uv=uv*0.5+vec2<f32>(0.5); let c=textureSample(uTexture,uSampler,uv); let scan=0.88+0.12*sin(vUv.y*900.0); let vig=1.0-smoothstep(0.45,0.95,length(vUv-vec2<f32>(0.5))); return vec4<f32>(c.rgb*scan*vig,c.a);} `;
 class CrtScanlinesScene extends Scene {
-    sprite;
-    filter;
-    enabled = true;
-    hud;
-    panel;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
-        this.sprite = new Sprite(this.loader.get(PIXEL_GRID)).setAnchor(0.5).setScale(5).setPosition(width / 2, height / 2);
-        this.sprite.filters = [this.filter];
-        this.hud = mountControls({
-            title: 'CRT Scanlines',
-            controls: [{ keys: 'CRT', action: 'toggle the scanline / barrel filter' }],
-            status: this.statusText(),
-            hint: 'Toggle the filter off to compare against the raw sprite.',
-        });
-        this.panel = mountControlPanel({ title: 'Display' });
-        this.panel.addToggle({
-            label: 'CRT',
-            value: true,
-            onChange: on => {
-                this.enabled = on;
-                this.sprite.filters = on ? [this.filter] : [];
-                this.hud.setStatus(this.statusText());
-            },
-        });
-    }
-    statusText() {
-        return this.enabled ? 'CRT: ON (scanlines + barrel + vignette)' : 'CRT: OFF (original sprite)';
-    }
-    draw(context) {
-        context.render(this.sprite);
-    }
+  sprite;
+  filter;
+  enabled = true;
+  hud;
+  panel;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl });
+    this.sprite = new Sprite(this.loader.get(PIXEL_GRID))
+      .setAnchor(0.5)
+      .setScale(5)
+      .setPosition(width / 2, height / 2);
+    this.sprite.filters = [this.filter];
+    this.hud = mountControls({
+      title: 'CRT Scanlines',
+      controls: [{ keys: 'CRT', action: 'toggle the scanline / barrel filter' }],
+      status: this.statusText(),
+      hint: 'Toggle the filter off to compare against the raw sprite.',
+    });
+    this.panel = mountControlPanel({ title: 'Display' });
+    this.panel.addToggle({
+      label: 'CRT',
+      value: true,
+      onChange: on => {
+        this.enabled = on;
+        this.sprite.filters = on ? [this.filter] : [];
+        this.hud.setStatus(this.statusText());
+      },
+    });
+  }
+  statusText() {
+    return this.enabled ? 'CRT: ON (scanlines + barrel + vignette)' : 'CRT: OFF (original sprite)';
+  }
+  draw(context) {
+    context.render(this.sprite);
+  }
 }
 const app = new Application({
-    scenes: { CrtScanlinesScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
+  scenes: { CrtScanlinesScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
 });
 app.start(CrtScanlinesScene);

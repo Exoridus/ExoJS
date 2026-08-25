@@ -94,4 +94,4 @@ export const Asset = AssetImpl as unknown as AssetFacade;
 // backs `Asset.type(...)`.
 (Asset as unknown as { type: (type: keyof AssetDefinitions, source: string, options?: object) => Asset<unknown> }).type = (type, source, options) =>
   // eslint-disable-next-line @typescript-eslint/consistent-type-assertions -- generic `type` widens to `keyof AssetDefinitions`, losing the type/config correlation `AnyAssetConfig` needs; the cast is required here, not just stylistic.
-  new AssetImpl({ type, source, ...(options ?? {}) } as AnyAssetConfig);
+  new AssetImpl({ type, source, ...options } as AnyAssetConfig);

@@ -270,7 +270,7 @@ export class ShaderFilter extends Filter {
     super();
 
     this._shader = options.shader ?? createFilterShaderSource(options);
-    this._uniforms = { ...(options.uniforms ?? {}) };
+    this._uniforms = { ...options.uniforms };
   }
 
   /** The source pair this filter runs, with the default stages already filled in. */

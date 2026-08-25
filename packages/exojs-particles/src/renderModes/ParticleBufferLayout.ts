@@ -37,7 +37,7 @@ const validateAttributes = (attributes: readonly GeometryAttribute[], stride: nu
 
     names.add(attribute.name);
 
-    if (!Number.isInteger(attribute.size) || attribute.size < 1 || attribute.size > 4) {
+    if (!Number.isInteger(attribute.size) || attribute.size === 0 || attribute.size > 4) {
       throw new Error(`ParticleBufferLayout attribute "${attribute.name}" size must be an integer in [1..4] (got ${attribute.size}).`);
     }
 

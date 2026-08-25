@@ -18,7 +18,7 @@ let internalCanvasContext: CanvasRenderingContext2D | null = null;
 let supportsEventOptionsValue: boolean | null = null;
 
 const canUseDocument = (): boolean => typeof document !== 'undefined';
-const canUseWindow = (): boolean => typeof window !== 'undefined';
+const canUseWindow = (): boolean => 'window' in globalThis;
 
 const getAudioElement = (): HTMLAudioElement => {
   if (!canUseDocument()) {
@@ -74,7 +74,7 @@ export const supportsWebAudio: boolean = typeof AudioContext !== 'undefined';
 /** Snapshot at module-load: `true` when `indexedDB` is defined. */
 export const supportsIndexedDb: boolean = typeof indexedDB !== 'undefined';
 /** Snapshot at module-load: `true` when the touch event API is detected. */
-export const supportsTouchEvents: boolean = canUseWindow() && 'ontouchstart' in window;
+export const supportsTouchEvents: boolean = canUseWindow() && 'ontouchstart' in globalThis;
 /** Snapshot at module-load: `true` when `PointerEvent` is defined. */
 export const supportsPointerEvents: boolean = typeof PointerEvent !== 'undefined';
 
@@ -118,15 +118,15 @@ export const supportsEventOptions = (): boolean => {
   let supportsPassive = false;
 
   try {
-    window.addEventListener('test', noop, {
+    globalThis.addEventListener('test', noop, {
       get passive() {
         supportsPassive = true;
 
         return false;
       },
     });
-    window.removeEventListener('test', noop);
-  } catch (_e) {
+    globalThis.removeEventListener('test', noop);
+  } catch {
     // do nothing
   }
 

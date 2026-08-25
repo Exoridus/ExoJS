@@ -6,13 +6,13 @@ import { Application, Color, FixedResolutionCanvasSizing, Sprite } from '@codexo
 // lifecycle, retention, or navigation. Assets load the same way without a
 // Scene: `app.loader` in place of `this.loader`.
 const app = new Application({
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: new Color(18, 22, 33),
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: new Color(18, 22, 33),
 });
 const square = new Sprite(app.loader.get(assets.demo.textures.pixelWhite)).setAnchor(0.5);
 square.width = 80;
@@ -21,12 +21,12 @@ square.tint = new Color(90, 160, 255);
 square.setPosition(app.width / 2, app.height / 2);
 let angle = 0;
 app.systems.add({
-    update(delta) {
-        angle += delta.seconds;
-        square.rotation = angle * 40;
-    },
-    draw(context) {
-        context.render(square);
-    },
+  update(delta) {
+    angle += delta.seconds;
+    square.rotation = angle * 40;
+  },
+  draw(context) {
+    context.render(square);
+  },
 });
 app.start();

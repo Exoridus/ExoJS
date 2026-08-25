@@ -7,81 +7,81 @@ const tints = [new Color(255, 140, 140), new Color(140, 255, 170), new Color(150
 // only *connected* pads are moved and drawn, and an empty canvas shows a
 // "connect a controller" prompt instead of a row of motionless ships.
 class MultiGamepadScene extends Scene {
-    players = [];
-    hasPad = false;
-    connectPrompt;
-    hud;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.players = app.input.gamepads.map((pad, index) => {
-            const sprite = new Sprite(this.loader.get('image/ship-a.png'))
-                .setAnchor(0.5)
-                .setScale(0.6)
-                .setPosition(width * (0.2 + index * 0.2), height / 2)
-                .setTint(tints[index]);
-            const move = { x: 0, y: 0 };
-            pad.onActive(GamepadAxis.LeftStickX, (value) => (move.x = value));
-            pad.onStop(GamepadAxis.LeftStickX, () => (move.x = 0));
-            pad.onActive(GamepadAxis.LeftStickY, (value) => (move.y = value));
-            pad.onStop(GamepadAxis.LeftStickY, () => (move.y = 0));
-            return { pad, sprite, move };
-        });
-        // Track controller presence with the engine's connect/disconnect signals
-        // and prompt with an on-screen Text while none is attached.
-        this.hasPad = app.input.gamepads.some(pad => pad.connected);
-        app.input.onGamepadConnected.add(() => (this.hasPad = true));
-        app.input.onGamepadDisconnected.add(() => (this.hasPad = app.input.gamepads.some(pad => pad.connected)));
-        this.connectPrompt = new Text('Connect one or more controllers to play', { fillColor: Color.white, fontSize: 24, align: 'center' })
-            .setAnchor(0.5, 0.5)
-            .setPosition(width / 2, height / 2);
-        this.hud = mountControls({
-            title: 'Multi Gamepad',
-            controls: [{ keys: 'L-Stick', action: 'move that pad’s ship' }],
-            status: '',
-            hint: 'Up to four pads, one coloured ship each.',
-        });
-        this.refreshHud();
-        app.input.onGamepadConnected.add(() => this.refreshHud());
-        app.input.onGamepadDisconnected.add(() => this.refreshHud());
+  players = [];
+  hasPad = false;
+  connectPrompt;
+  hud;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.players = app.input.gamepads.map((pad, index) => {
+      const sprite = new Sprite(this.loader.get('image/ship-a.png'))
+        .setAnchor(0.5)
+        .setScale(0.6)
+        .setPosition(width * (0.2 + index * 0.2), height / 2)
+        .setTint(tints[index]);
+      const move = { x: 0, y: 0 };
+      pad.onActive(GamepadAxis.LeftStickX, value => (move.x = value));
+      pad.onStop(GamepadAxis.LeftStickX, () => (move.x = 0));
+      pad.onActive(GamepadAxis.LeftStickY, value => (move.y = value));
+      pad.onStop(GamepadAxis.LeftStickY, () => (move.y = 0));
+      return { pad, sprite, move };
+    });
+    // Track controller presence with the engine's connect/disconnect signals
+    // and prompt with an on-screen Text while none is attached.
+    this.hasPad = app.input.gamepads.some(pad => pad.connected);
+    app.input.onGamepadConnected.add(() => (this.hasPad = true));
+    app.input.onGamepadDisconnected.add(() => (this.hasPad = app.input.gamepads.some(pad => pad.connected)));
+    this.connectPrompt = new Text('Connect one or more controllers to play', { fillColor: Color.white, fontSize: 24, align: 'center' })
+      .setAnchor(0.5, 0.5)
+      .setPosition(width / 2, height / 2);
+    this.hud = mountControls({
+      title: 'Multi Gamepad',
+      controls: [{ keys: 'L-Stick', action: 'move that pad’s ship' }],
+      status: '',
+      hint: 'Up to four pads, one coloured ship each.',
+    });
+    this.refreshHud();
+    app.input.onGamepadConnected.add(() => this.refreshHud());
+    app.input.onGamepadDisconnected.add(() => this.refreshHud());
+  }
+  refreshHud() {
+    const lines = this.players.map((player, index) => {
+      const label = player.pad.connected ? (player.pad.info?.label ?? player.pad.info?.name ?? 'connected') : 'empty';
+      return `P${index + 1}: ${label}`;
+    });
+    this.hud.setStatus(lines.join(' · '));
+  }
+  update(delta) {
+    for (const player of this.players) {
+      if (!player.pad.connected) {
+        continue;
+      }
+      player.sprite.move(player.move.x * 260 * delta.seconds, player.move.y * 260 * delta.seconds);
     }
-    refreshHud() {
-        const lines = this.players.map((player, index) => {
-            const label = player.pad.connected ? (player.pad.info?.label ?? player.pad.info?.name ?? 'connected') : 'empty';
-            return `P${index + 1}: ${label}`;
-        });
-        this.hud.setStatus(lines.join(' · '));
+  }
+  draw(context) {
+    for (const player of this.players) {
+      if (player.pad.connected) {
+        context.render(player.sprite);
+      }
     }
-    update(delta) {
-        for (const player of this.players) {
-            if (!player.pad.connected) {
-                continue;
-            }
-            player.sprite.move(player.move.x * 260 * delta.seconds, player.move.y * 260 * delta.seconds);
-        }
+    if (!this.hasPad) {
+      context.render(this.connectPrompt);
     }
-    draw(context) {
-        for (const player of this.players) {
-            if (player.pad.connected) {
-                context.render(player.sprite);
-            }
-        }
-        if (!this.hasPad) {
-            context.render(this.connectPrompt);
-        }
-    }
+  }
 }
 const app = new Application({
-    scenes: { MultiGamepadScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: new Color(10, 12, 20),
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { MultiGamepadScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: new Color(10, 12, 20),
+  loader: {
+    basePath: 'assets/',
+  },
 });
 app.start(MultiGamepadScene);

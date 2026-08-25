@@ -27,35 +27,35 @@ fn fragmentMain(@location(0) vUv: vec2<f32>) -> @location(0) vec4<f32> {
     return vec4(r, g, b, a);
 }`;
 class TextGlitchScene extends Scene {
-    text;
-    filter;
-    init() {
-        const app = this.app;
-        const { width, height } = app;
-        this.text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100, align: 'center' });
-        this.text.setAnchor(0.5, 0.5);
-        this.text.setPosition(width / 2, height / 2);
-        this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uShift: 0 } });
-        this.text.filters = [this.filter];
-    }
-    update() {
-        this.filter.setUniform('uShift', (Math.random() - 0.5) * 0.01);
-    }
-    draw(context) {
-        context.render(this.text);
-    }
+  text;
+  filter;
+  init() {
+    const app = this.app;
+    const { width, height } = app;
+    this.text = new Text('SIGNAL LOST', { fillColor: Color.white, fontSize: 100, align: 'center' });
+    this.text.setAnchor(0.5, 0.5);
+    this.text.setPosition(width / 2, height / 2);
+    this.filter = new ShaderFilter({ glsl: { fragment: glsl }, wgsl, uniforms: { uShift: 0 } });
+    this.text.filters = [this.filter];
+  }
+  update() {
+    this.filter.setUniform('uShift', (Math.random() - 0.5) * 0.01);
+  }
+  draw(context) {
+    context.render(this.text);
+  }
 }
 const app = new Application({
-    scenes: { TextGlitchScene },
-    canvas: {
-        width: 1280,
-        height: 720,
-        mount: document.body,
-        sizing: new FixedResolutionCanvasSizing(),
-    },
-    clearColor: Color.black,
-    loader: {
-        basePath: 'assets/',
-    },
+  scenes: { TextGlitchScene },
+  canvas: {
+    width: 1280,
+    height: 720,
+    mount: document.body,
+    sizing: new FixedResolutionCanvasSizing(),
+  },
+  clearColor: Color.black,
+  loader: {
+    basePath: 'assets/',
+  },
 });
 app.start(TextGlitchScene);

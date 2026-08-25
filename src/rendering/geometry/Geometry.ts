@@ -65,9 +65,7 @@ const readComponent = (view: DataView, type: AttributeType, offset: number, norm
   }
 };
 
-const cloneAttributes = (attributes: readonly GeometryAttribute[]): readonly GeometryAttribute[] => {
-  return attributes.map(attribute => ({ ...attribute }));
-};
+const cloneAttributes = (attributes: readonly GeometryAttribute[]): readonly GeometryAttribute[] => attributes.map(attribute => ({ ...attribute }));
 
 const resolvePositionAttribute = (attributes: readonly GeometryAttribute[]): GeometryAttribute => {
   const directMatch = attributes.find(attribute => positionAttributeNames.has(attribute.name));
@@ -144,7 +142,7 @@ export class Geometry {
       }
       names.add(attribute.name);
 
-      if (!Number.isInteger(attribute.size) || attribute.size < 1 || attribute.size > 4) {
+      if (!Number.isInteger(attribute.size) || attribute.size === 0 || attribute.size > 4) {
         throw new Error(`Geometry attribute "${attribute.name}" size must be an integer in [1..4] (got ${attribute.size}).`);
       }
       if (!Number.isInteger(attribute.offset) || attribute.offset < 0) {
