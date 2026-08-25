@@ -14,7 +14,11 @@ describe('SystemRegistry preUpdate phase', () => {
     const registry = new SystemRegistry();
     const log: string[] = [];
 
-    registry.add({ preUpdate: () => log.push('pre') });
+    registry.add({
+      preUpdate: () => {
+        log.push('pre');
+      },
+    });
 
     registry._beginFrame();
     registry._preUpdate(delta());
@@ -27,10 +31,28 @@ describe('SystemRegistry preUpdate phase', () => {
     const registry = new SystemRegistry();
     const log: string[] = [];
 
-    registry.add({ order: 10, preUpdate: () => log.push('pre:b') });
-    registry.add({ order: -10, preUpdate: () => log.push('pre:a') });
-    registry.add({ fixedUpdate: () => log.push('fixed') });
-    registry.add({ update: () => log.push('update') });
+    registry.add({
+      order: 10,
+      preUpdate: () => {
+        log.push('pre:b');
+      },
+    });
+    registry.add({
+      order: -10,
+      preUpdate: () => {
+        log.push('pre:a');
+      },
+    });
+    registry.add({
+      fixedUpdate: () => {
+        log.push('fixed');
+      },
+    });
+    registry.add({
+      update: () => {
+        log.push('update');
+      },
+    });
 
     registry._beginFrame();
     registry._preUpdate(delta());
@@ -46,8 +68,12 @@ describe('SystemRegistry preUpdate phase', () => {
     const log: string[] = [];
 
     const both: System = {
-      preUpdate: () => log.push('pre'),
-      update: () => log.push('update'),
+      preUpdate: () => {
+        log.push('pre');
+      },
+      update: () => {
+        log.push('update');
+      },
     };
 
     registry.add(both);
@@ -63,7 +89,11 @@ describe('SystemRegistry preUpdate phase', () => {
   test('drops a removed system from the preUpdate phase', () => {
     const registry = new SystemRegistry();
     const log: string[] = [];
-    const system: System = { preUpdate: () => log.push('pre') };
+    const system: System = {
+      preUpdate: () => {
+        log.push('pre');
+      },
+    };
 
     registry.add(system);
     registry.remove(system);

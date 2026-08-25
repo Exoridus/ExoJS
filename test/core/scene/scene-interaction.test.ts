@@ -1,5 +1,3 @@
-import type { MockInstance } from 'vitest';
-
 import type { Application } from '#core/Application';
 import { SceneInteraction } from '#core/scene/SceneInteraction';
 import { SceneState } from '#core/SceneState';
@@ -113,7 +111,7 @@ describe('SceneInteraction', () => {
 
     interaction.observe(fakeRoot());
     interaction.suspend();
-    (app.interaction.detachRoot as MockInstance).mockClear();
+    vi.mocked(app.interaction.detachRoot).mockClear();
 
     interaction.suspend();
 
@@ -125,7 +123,7 @@ describe('SceneInteraction', () => {
     const interaction = new SceneInteraction(app, () => SceneState.Active);
 
     interaction.observe(fakeRoot());
-    (app.interaction.attachRoot as MockInstance).mockClear();
+    vi.mocked(app.interaction.attachRoot).mockClear();
 
     interaction.resume();
 
@@ -140,7 +138,7 @@ describe('SceneInteraction', () => {
     const observation = interaction.observe(root);
     interaction.suspend();
     observation.release();
-    (app.interaction.attachRoot as MockInstance).mockClear();
+    vi.mocked(app.interaction.attachRoot).mockClear();
 
     interaction.resume();
 
@@ -211,7 +209,7 @@ describe('SceneInteraction.scope()', () => {
     const scopeB = interaction.scope(rootB);
     const scopeC = interaction.scope(rootC);
 
-    (app.interaction.pushScope as MockInstance).mockClear();
+    vi.mocked(app.interaction.pushScope).mockClear();
 
     scopeA.release(); // out-of-order: A is at the bottom, B and C are above it
 
@@ -245,7 +243,7 @@ describe('SceneInteraction.scope()', () => {
 
     interaction.scope(rootA);
     interaction.scope(rootB);
-    (app.interaction.pushScope as MockInstance).mockClear();
+    vi.mocked(app.interaction.pushScope).mockClear();
 
     interaction.suspend();
     expect(app.interaction.popScope).toHaveBeenCalledTimes(2);
@@ -267,8 +265,8 @@ describe('SceneInteraction.scope()', () => {
     const scopeC = interaction.scope(rootC);
 
     interaction.suspend();
-    (app.interaction.popScope as MockInstance).mockClear();
-    (app.interaction.pushScope as MockInstance).mockClear();
+    vi.mocked(app.interaction.popScope).mockClear();
+    vi.mocked(app.interaction.pushScope).mockClear();
 
     scopeB.release(); // out-of-order release while suspended: must not touch the live manager at all
 
@@ -362,7 +360,7 @@ describe('SceneInteraction — dormancy (registration while not Active)', () => 
 
     interaction.scope(rootA);
     interaction.scope(rootB);
-    (app.interaction.pushScope as MockInstance).mockClear();
+    vi.mocked(app.interaction.pushScope).mockClear();
 
     state = SceneState.Suspended;
     interaction.suspend();

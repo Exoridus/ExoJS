@@ -135,7 +135,9 @@ const tick = (manager: SceneDirector, app: ReturnType<typeof createApplicationSt
   manager._renderTransition(app.rendering);
 };
 
-type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'fixedUpdate' | 'draw' | 'unload' | 'destroy'>>;
+// `ThisType<Scene>` is what makes `this` inside a hook literal the scene the
+// hook is assigned onto, not the plain hooks object it is written in.
+type SceneHooks = Partial<Pick<Scene, 'load' | 'init' | 'update' | 'fixedUpdate' | 'draw' | 'unload' | 'destroy'>> & ThisType<Scene>;
 
 // Registration key is fixed per constructor ("scene") - every test registers
 // exactly the constructor(s) it needs against a fresh SceneDirector, so key
@@ -1258,7 +1260,7 @@ describe('SceneDirector — preload', () => {
         seenData.push(data);
       }
     }
-    const director = new SceneDirector(app, { preloaded: DataScene as unknown as SceneConstructor<void> });
+    const director = new SceneDirector(app, { preloaded: DataScene });
 
     await director.preload(DataScene, { data: { level: 1 } });
     await director.preload(DataScene, { data: { level: 2 } }); // different object literal — Object.is() mismatch
@@ -1314,7 +1316,7 @@ describe('SceneDirector — preload', () => {
         seenData.push(data);
       }
     }
-    const director = new SceneDirector(app, { game: DataScene as unknown as SceneConstructor<void> });
+    const director = new SceneDirector(app, { game: DataScene });
     const sharedData = { level: 3 };
 
     await director.preload(DataScene, { data: sharedData });
@@ -1332,7 +1334,7 @@ describe('SceneDirector — preload', () => {
         seenData.push(data);
       }
     }
-    const director = new SceneDirector(app, { game: DataScene as unknown as SceneConstructor<void> });
+    const director = new SceneDirector(app, { game: DataScene });
 
     await director.preload(DataScene, { data: { level: 1 } });
     await director.change(DataScene, { data: { level: 2 } }); // different object literal
@@ -1600,7 +1602,7 @@ describe('SceneDirector — transition session driving', () => {
 
     await manager.change(First);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -1642,7 +1644,7 @@ describe('SceneDirector — transition session driving', () => {
     await manager.change(First);
 
     let capturedContext: SceneTransitionContext | null = null;
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
 
     class SelfCommittingSession implements SceneTransitionSession {
       public done = false;
@@ -1696,7 +1698,7 @@ describe('SceneDirector — transition session driving', () => {
     await manager.change(TestScene);
     expect((manager as unknown as { _transitionGateOpen: boolean })._transitionGateOpen).toBe(false);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -1749,7 +1751,7 @@ describe('SceneDirector — transition session driving', () => {
     await manager.change(First);
     const firstInstance = manager.currentScene;
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -1811,7 +1813,7 @@ describe('SceneDirector — transition resource provisioning', () => {
 
     await manager.change(TestScene);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -1852,7 +1854,7 @@ describe('SceneDirector — transition resource provisioning', () => {
     await manager.change(First);
     drawSpy.mockClear();
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const capturedFrames: SceneTransitionFrame[] = [];
     const session = new FakeSession();
     session.render = (_context, frame) => {
@@ -2062,7 +2064,7 @@ describe('SceneDirector — transition resource provisioning', () => {
 
     await manager.change(TestScene);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -2105,7 +2107,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
 
     await manager.change(First);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     session.update = () => {
       environmentRef?.commit();
@@ -2194,7 +2196,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
       throw new Error('releaseRenderTexture exploded');
     });
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -2229,7 +2231,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
 
     await manager.change(First);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -2348,7 +2350,7 @@ describe('SceneDirector — transition lifecycle contract', () => {
       }
     }
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     let session!: LifecycleGuardSession;
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -2401,7 +2403,7 @@ describe('SceneDirector — pre-commit failure semantics', () => {
     await manager.change(First);
     const firstInstance = manager.currentScene;
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -2442,7 +2444,7 @@ describe('SceneDirector — pre-commit failure semantics', () => {
 
     await manager.change(First);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -2475,7 +2477,7 @@ describe('SceneDirector — pre-commit failure semantics', () => {
     await managerB.change(First);
     await managerB.change(Second, { suspendCurrent: true }); // First is now retained
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -2526,7 +2528,7 @@ describe('SceneDirector — composability', () => {
     await manager.change(Second, { suspendCurrent: true });
 
     let capturedContext: SceneTransitionContext | null = null;
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(context: SceneTransitionContext): SceneTransitionRequirements {
@@ -2565,7 +2567,7 @@ describe('SceneDirector — composability', () => {
     await manager.change(Second, { suspendCurrent: true });
 
     const secondInstance = manager.currentScene;
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -2599,7 +2601,7 @@ describe('SceneDirector — composability', () => {
 
     await manager.change(TestScene);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const capturedFrames: SceneTransitionFrame[] = [];
     const session = new FakeSession();
     session.render = (_context, frame) => {
@@ -2916,7 +2918,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     await director.change(First);
     const firstInstance = director.currentScene;
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -2977,7 +2979,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
     await director.change(First);
     const firstInstance = director.currentScene;
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession();
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
@@ -3049,7 +3051,7 @@ describe('SceneDirector._abortInFlightNavigation()', () => {
 
     expect(retained.has(First)).toBe(true);
 
-    let environmentRef: SceneTransitionEnvironment | null = null;
+    let environmentRef = null as SceneTransitionEnvironment | null;
     const session = new FakeSession(); // never reports done — stays "playing" after commit
     const transition = new (class extends SceneTransition {
       public getRequirements(): SceneTransitionRequirements {
