@@ -5,10 +5,12 @@
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-/** @typedef {{ ok: boolean, checks: { name: string, ok: boolean, detail?: string }[] }} PolicyResult */
+/** @typedef {{ name: string, ok: boolean, detail?: string }} PolicyCheck */
+/** @typedef {{ ok: boolean, checks: PolicyCheck[] }} PolicyResult */
 
 const SOURCE_CONDITION_RE = /-source$/;
 
+/** @param {string} dir */
 function read(dir) {
   return JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8'));
 }
@@ -21,7 +23,9 @@ function read(dir) {
  */
 export function verifyRuntimePackage(dir, opts) {
   const pkg = read(dir);
+  /** @type {PolicyCheck[]} */
   const checks = [];
+  /** @type {(name: string, cond: unknown, detail?: string) => number} */
   const ok = (name, cond, detail) => checks.push({ name, ok: Boolean(cond), detail });
 
   ok('name matches', pkg.name === opts.name, `${pkg.name} vs ${opts.name}`);
@@ -34,7 +38,7 @@ export function verifyRuntimePackage(dir, opts) {
   ok('files allowlist', Array.isArray(pkg.files) && pkg.files.length > 0);
   ok(
     'files ship dist/esm',
-    (pkg.files ?? []).some(f => f.includes('dist/esm')),
+    /** @type {string[]} */ (pkg.files ?? []).some(f => f.includes('dist/esm')),
   );
   ok('ships LICENSE', (pkg.files ?? []).includes('LICENSE'));
   ok('publishConfig public', pkg.publishConfig?.access === 'public');
@@ -90,7 +94,9 @@ export function verifyRuntimePackage(dir, opts) {
  */
 export function verifyToolingPackage(dir, opts) {
   const pkg = read(dir);
+  /** @type {PolicyCheck[]} */
   const checks = [];
+  /** @type {(name: string, cond: unknown, detail?: string) => number} */
   const ok = (name, cond, detail) => checks.push({ name, ok: Boolean(cond), detail });
 
   ok('name matches', pkg.name === opts.name, `${pkg.name} vs ${opts.name}`);
@@ -103,7 +109,7 @@ export function verifyToolingPackage(dir, opts) {
   ok('files allowlist', Array.isArray(pkg.files) && pkg.files.length > 0);
   ok(
     'files ship dist/esm',
-    (pkg.files ?? []).some(f => f.includes('dist/esm')),
+    /** @type {string[]} */ (pkg.files ?? []).some(f => f.includes('dist/esm')),
   );
   ok('ships LICENSE', (pkg.files ?? []).includes('LICENSE'));
   ok('publishConfig public', pkg.publishConfig?.access === 'public');
@@ -131,7 +137,9 @@ export function verifyToolingPackage(dir, opts) {
  */
 export function verifyConfigPackage(dir) {
   const pkg = read(dir);
+  /** @type {PolicyCheck[]} */
   const checks = [];
+  /** @type {(name: string, cond: unknown, detail?: string) => number} */
   const ok = (name, cond, detail) => checks.push({ name, ok: Boolean(cond), detail });
   ok('name @codexo/exojs-config', pkg.name === '@codexo/exojs-config');
   ok('private: true', pkg.private === true);

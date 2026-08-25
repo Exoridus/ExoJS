@@ -58,7 +58,7 @@ const browserBase = {
   // sources in a genuine Worker, so both need functioning code, not a stub.
   plugins: [realShaderPlugin, workletTransformPlugin, workerTransformPlugin],
   define: { __DEV__: JSON.stringify(true), __VERSION__: JSON.stringify('0.0.0'), __REVISION__: JSON.stringify('test') },
-} as const;
+};
 
 // Per-project browser headedness:
 //  - WebGL2 Chromium: new headless. EXOJS_BROWSER_HEADED=1 only for local headed debug.
@@ -552,8 +552,8 @@ export default defineConfig({
           browser: {
             enabled: true,
             headless: false,
-            provider: playwright(),
-            instances: [{ browser: 'firefox', contextOptions: { colorScheme: 'dark' } }],
+            provider: playwright({ contextOptions: { colorScheme: 'dark' } }),
+            instances: [{ browser: 'firefox' }],
           },
         },
       },

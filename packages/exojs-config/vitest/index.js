@@ -41,7 +41,7 @@ export const workerTransformPlugin = createWorkerPlugin();
  * the function; it does not otherwise change how V8 collects. Note this is a
  * top-level test option in Vitest 4 - under `poolOptions.forks` it is silently
  * ignored.
- * @param {{ name: string, include: string[], exclude?: string[], setupFiles?: string[], alias?: unknown }} opts
+ * @param {{ name: string, include: string[], exclude?: string[], setupFiles?: string[], alias?: NonNullable<import('vitest/config').ViteUserConfig['resolve']>['alias'] }} opts
  */
 export function createJsdomTestProject(opts) {
   const { name, include, exclude, setupFiles = ['./test/setup-env.vitest.ts'], alias } = opts;

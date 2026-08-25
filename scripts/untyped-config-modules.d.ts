@@ -1,26 +1,14 @@
-// Declaration bridge for the plain-JavaScript modules the tooling imports.
+// Declaration bridge for the one dependency the tooling imports that ships no
+// types of its own.
 //
-// `@codexo/exojs-config` ships ESM `.js` with no declarations: it is consumed
-// by ESLint, Prettier and Vitest, which read its exports as data rather than
-// through a typed API. `scripts/ci/select-lanes.mjs` is the same shape, and
-// `eslint-plugin-security` publishes no types of its own.
+// `eslint-plugin-security` publishes plain JavaScript with no declarations, so
+// without this the ESLint config would not resolve it at all. This is a
+// shorthand ambient declaration, so everything imported from it is `any` -
+// stating that keeps `noImplicitAny` on for everything else in
+// `tsconfig.scripts.json`, where a genuinely missing annotation is an error
+// rather than silent.
 //
-// These are shorthand ambient declarations, so everything imported from them is
-// `any`. That is what crosses the boundary today either way - the difference is
-// that stating it keeps `noImplicitAny` on for everything else in
-// `tsconfig.scripts.json`, so a genuinely missing annotation in the
-// repository's own tooling is still an error rather than silent.
-//
-// Typing `@codexo/exojs-config` for real would remove this file.
+// `@codexo/exojs-config` used to be listed here as well. It is now part of the
+// program (`allowJs` + `checkJs`), so its JSDoc types reach every consumer.
 
-declare module '@codexo/exojs-config/build-defines';
-declare module '@codexo/exojs-config/eslint';
-declare module '@codexo/exojs-config/eslint/base';
-declare module '@codexo/exojs-config/eslint/correctness';
-declare module '@codexo/exojs-config/eslint/extension';
-declare module '@codexo/exojs-config/eslint/package-test';
-declare module '@codexo/exojs-config/eslint/vitest';
-declare module '@codexo/exojs-config/package-policy';
-declare module '@codexo/exojs-config/prettier';
-declare module '@codexo/exojs-config/vitest';
 declare module 'eslint-plugin-security';

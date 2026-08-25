@@ -15,12 +15,21 @@
   // `allowImportingTsExtensions` with `noEmit`. `verbatimModuleSyntax` from the
   // shared base stays on: the scripts are ESM and the distinction between a
   // type and a value import is the same contract here as in the engine.
+  //
+  // `@codexo/exojs-config` is plain ESM `.js` annotated with JSDoc, and it is
+  // in this program rather than behind an ambient `declare module`: with
+  // `allowJs`/`checkJs` its annotations are the real types, so a consumer that
+  // passes the wrong shape to a shared ESLint/Vitest/Rolldown factory fails
+  // here. Converting it to TypeScript is not required for that and would cost
+  // more than it buys - ESLint and Prettier load it directly at runtime.
   "extends": "@codexo/exojs-config/typescript/base.json",
   "compilerOptions": {
     "lib": ["es2023"],
     "types": ["node"],
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": true,
     "noEmit": true,
     "noUncheckedIndexedAccess": false,
     "exactOptionalPropertyTypes": false
@@ -28,6 +37,6 @@
   // `exo-full.entry.ts` is a bundler entry, not a Node program: it re-exports
   // every extension package and is type-checked by `tsconfig.examples.json`
   // against their sources.
-  "include": ["scripts/**/*.ts", "*.config.ts"],
+  "include": ["scripts/**/*.ts", "*.config.ts", "packages/exojs-config/**/*.js"],
   "exclude": ["scripts/exo-full.entry.ts"]
 }
