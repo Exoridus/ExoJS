@@ -30,7 +30,7 @@ export function vitestConfig({ files }) {
       'vitest/no-focused-tests': 'error',
       // 27 deliberate device-conditional skips (WebGPU adapter / device-loss
       // guards). Keep them visible but non-blocking rather than churn them.
-      'vitest/no-disabled-tests': 'warn',
+      'vitest/no-disabled-tests': 'error',
       // False positives in this suite, kept off:
       //  - expect-expect: assertions run through shared helpers (mountControls,
       //    renderText, ...) the rule cannot see (148 hits).

@@ -97,8 +97,8 @@ export function reactConfig({ files, tsconfigRootDir }) {
       '@typescript-eslint/no-unsafe-return': 'off',
       '@typescript-eslint/no-unused-vars': 'off',
       '@typescript-eslint/prefer-regexp-exec': 'error',
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
-      '@typescript-eslint/prefer-optional-chain': 'warn',
+      '@typescript-eslint/prefer-nullish-coalescing': 'error',
+      '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/restrict-template-expressions': [
         'error',
         {
@@ -149,8 +149,8 @@ export function reactConfig({ files, tsconfigRootDir }) {
       eqeqeq: ['error', 'always', { null: 'ignore' }],
       // Allow console.error/console.warn for intentional diagnostics (e.g. the
       // fetch/parse error logging in request-manager.ts); only console.log/debug warn.
-      'no-console': ['warn', { allow: ['warn', 'error'] }],
-      'no-nested-ternary': 'warn',
+      'no-console': ['error', { allow: ['warn', 'error'] }],
+      'no-nested-ternary': 'error',
       'object-shorthand': 'error',
       'prefer-object-spread': 'error',
       'prefer-template': 'error',

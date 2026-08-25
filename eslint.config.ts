@@ -70,14 +70,14 @@ export default defineConfig([
       'default-case-last': 'error',
       eqeqeq: ['error', 'always', { null: 'ignore' }],
       'guard-for-in': 'error',
-      'max-lines': ['warn', { max: 999, skipBlankLines: true, skipComments: true }],
+      'max-lines': ['error', { max: 999, skipBlankLines: true, skipComments: true }],
       'no-bitwise': 'off',
       'no-caller': 'error',
-      'no-console': 'warn',
+      'no-console': 'error',
       'no-eval': 'error',
       'no-extra-bind': 'error',
       'no-label-var': 'error',
-      'no-nested-ternary': 'warn',
+      'no-nested-ternary': 'error',
       'no-new-func': 'error',
       'no-new-wrappers': 'error',
       'no-promise-executor-return': 'error',
@@ -100,10 +100,11 @@ export default defineConfig([
       'no-unmodified-loop-condition': 'error',
       'no-unreachable-loop': 'error',
       // ESLint 10 promoted `no-useless-assignment` to recommended. It catches
-      // real dead stores, but also flags idiomatic safety-net initializers
-      // in hot math/rendering paths. Keeping at warning level repo-wide.
-      'no-useless-assignment': 'warn',
-      'no-useless-escape': 'warn',
+      // real dead stores, and also flags idiomatic safety-net initializers in
+      // hot math/rendering paths - but the tree satisfies it everywhere today,
+      // so there is nothing left for a softer level to buy.
+      'no-useless-assignment': 'error',
+      'no-useless-escape': 'error',
       'no-useless-return': 'error',
       'object-shorthand': 'error',
       'prefer-object-spread': 'error',
@@ -124,7 +125,7 @@ export default defineConfig([
           'ts-check': false,
         },
       ],
-      '@typescript-eslint/class-literal-property-style': 'warn',
+      '@typescript-eslint/class-literal-property-style': 'error',
       '@typescript-eslint/consistent-type-assertions': [
         'error',
         {
@@ -142,9 +143,9 @@ export default defineConfig([
           allowHigherOrderFunctions: true,
         },
       ],
-      '@typescript-eslint/explicit-member-accessibility': 'warn',
+      '@typescript-eslint/explicit-member-accessibility': 'error',
       '@typescript-eslint/no-confusing-void-expression': ['error', { ignoreArrowShorthand: true }],
-      '@typescript-eslint/no-deprecated': 'warn',
+      '@typescript-eslint/no-deprecated': 'error',
       '@typescript-eslint/no-empty-function': [
         'warn',
         {
@@ -177,29 +178,29 @@ export default defineConfig([
       '@typescript-eslint/no-mixed-enums': 'error',
       '@typescript-eslint/no-non-null-asserted-nullish-coalescing': 'error',
       '@typescript-eslint/no-non-null-assertion': 'error',
-      '@typescript-eslint/no-redundant-type-constituents': 'warn',
-      '@typescript-eslint/no-require-imports': 'warn',
+      '@typescript-eslint/no-redundant-type-constituents': 'error',
+      '@typescript-eslint/no-require-imports': 'error',
       '@typescript-eslint/no-shadow': 'error',
-      '@typescript-eslint/no-unsafe-call': 'warn',
-      '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
+      '@typescript-eslint/no-unsafe-call': 'error',
+      '@typescript-eslint/no-unsafe-enum-comparison': 'error',
       '@typescript-eslint/no-unnecessary-boolean-literal-compare': 'error',
-      '@typescript-eslint/no-unnecessary-condition': 'warn',
+      '@typescript-eslint/no-unnecessary-condition': 'error',
       '@typescript-eslint/no-unnecessary-type-arguments': 'error',
-      '@typescript-eslint/no-unnecessary-type-assertion': 'warn',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'error',
       '@typescript-eslint/no-unsafe-argument': 'error',
-      '@typescript-eslint/no-unsafe-assignment': 'warn',
-      '@typescript-eslint/no-unsafe-member-access': 'warn',
+      '@typescript-eslint/no-unsafe-assignment': 'error',
+      '@typescript-eslint/no-unsafe-member-access': 'error',
       '@typescript-eslint/no-unsafe-return': 'error',
       // Base no-unused-vars handled by `unused-imports/no-unused-vars` above.
       '@typescript-eslint/no-unused-vars': 'off',
-      '@typescript-eslint/non-nullable-type-assertion-style': 'warn',
+      '@typescript-eslint/non-nullable-type-assertion-style': 'error',
       '@typescript-eslint/prefer-for-of': 'off',
-      '@typescript-eslint/prefer-nullish-coalescing': 'warn',
-      '@typescript-eslint/prefer-optional-chain': 'warn',
+      '@typescript-eslint/prefer-nullish-coalescing': 'error',
+      '@typescript-eslint/prefer-optional-chain': 'error',
       '@typescript-eslint/prefer-readonly': 'off',
       '@typescript-eslint/prefer-reduce-type-parameter': 'error',
       '@typescript-eslint/prefer-regexp-exec': 'error',
-      '@typescript-eslint/require-await': 'warn',
+      '@typescript-eslint/require-await': 'error',
       '@typescript-eslint/restrict-template-expressions': [
         'error',
         {
@@ -211,9 +212,9 @@ export default defineConfig([
         },
       ],
       '@typescript-eslint/return-await': ['error', 'in-try-catch'],
-      '@typescript-eslint/strict-boolean-expressions': 'warn',
+      '@typescript-eslint/strict-boolean-expressions': 'error',
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
-      '@typescript-eslint/unbound-method': 'warn',
+      '@typescript-eslint/unbound-method': 'error',
       '@typescript-eslint/unified-signatures': 'error',
 
       // Engine-specific naming convention
@@ -985,7 +986,7 @@ export default defineConfig([
       'simple-import-sort/imports': ['error', { groups: [['^\\u0000', '^node:', '^@?\\w', '^', '^\\.']] }],
       'simple-import-sort/exports': 'error',
       'unused-imports/no-unused-imports': 'error',
-      '@typescript-eslint/no-empty-function': 'warn',
+      '@typescript-eslint/no-empty-function': 'error',
       // Base no-unused-vars handled by `unused-imports/no-unused-vars` below,
       // which honours the `_` prefix; leaving both on double-reports.
       '@typescript-eslint/no-unused-vars': 'off',
@@ -1007,7 +1008,7 @@ export default defineConfig([
       'prefer-const': 'error',
       'object-shorthand': 'error',
       'prefer-template': 'error',
-      'unicorn/prefer-node-protocol': 'warn',
+      'unicorn/prefer-node-protocol': 'error',
     },
   },
 
@@ -1015,7 +1016,7 @@ export default defineConfig([
   {
     files: ['examples/debug-layer/signal-bus-inspector.js'],
     rules: {
-      'no-console': 'warn',
+      'no-console': 'error',
     },
   },
 

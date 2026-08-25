@@ -134,12 +134,12 @@ export function nodeToolingConfig({ files }) {
       unicorn,
     },
     rules: {
-      'no-console': 'warn',
-      '@typescript-eslint/no-require-imports': 'warn',
+      'no-console': 'error',
+      '@typescript-eslint/no-require-imports': 'error',
       // Base no-unused-vars handled by `unused-imports/no-unused-vars`, which
       // honours the `_` prefix this repo uses for deliberately unused bindings.
       '@typescript-eslint/no-unused-vars': 'off',
-      'unicorn/prefer-node-protocol': 'warn',
+      'unicorn/prefer-node-protocol': 'error',
       'security/detect-non-literal-fs-filename': 'off',
     },
   },
