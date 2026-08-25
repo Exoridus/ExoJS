@@ -2,7 +2,12 @@ dist
 node_modules
 coverage
 src/vendor
-examples/**
+
+# Vendored third-party asset data and its notices - copied in, not authored here.
+examples/assets/**
+
+# Generated Monaco type shim; its exact shape is pinned by a drift test.
+examples/shared/assets-global.d.ts
 site/**
 packages/**
 *.min.*

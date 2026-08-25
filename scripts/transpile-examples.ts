@@ -15,6 +15,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { createWorkerPlugin } from '@codexo/exojs-build';
+import { format as formatSource } from 'prettier';
+import babelParser from 'prettier/plugins/babel';
+import estreePrinter from 'prettier/plugins/estree';
+import sharedPrettierConfig from '@codexo/exojs-config/prettier';
 import ts from 'typescript';
 
 /**
@@ -74,8 +78,14 @@ export const generatedHeader = (tsFileBasename: string): string => `// Auto-gene
  *
  * `tsFilePath` is the source's location on disk, needed to resolve `?worker`
  * imports; only its basename reaches the emitted output.
+ *
+ * The transpiled body is formatted with the repository's own Prettier options
+ * rather than left as TypeScript emitter output. Examples are a copy-paste
+ * surface, so the shape a reader copies should be the shape the repository
+ * writes - and formatting here rather than afterwards is what lets the drift
+ * gate keep comparing generated output against committed output byte for byte.
  */
-export const transpileExampleSource = (source: string, tsFilePath: string): string => {
+export const transpileExampleSource = async (source: string, tsFilePath: string): Promise<string> => {
   const { outputText } = ts.transpileModule(inlineWorkerImports(source, tsFilePath), {
     compilerOptions: {
       module: ts.ModuleKind.ESNext,
@@ -86,7 +96,18 @@ export const transpileExampleSource = (source: string, tsFilePath: string): stri
     },
   });
 
-  return generatedHeader(path.basename(tsFilePath)) + outputText;
+  // The shared monorepo Prettier options, imported rather than discovered from
+  // disk: `resolveConfig` is absent from the browser build of Prettier, and the
+  // test runner resolves that build even for a node-environment suite. The
+  // parser plugins are passed for the same reason - the browser build ships none
+  // preloaded, and naming them is a no-op for the node build.
+  const formatted = await formatSource(outputText, {
+    ...sharedPrettierConfig,
+    parser: 'babel',
+    plugins: [babelParser, estreePrinter],
+  });
+
+  return generatedHeader(path.basename(tsFilePath)) + formatted;
 };
 
 /** Recursively finds files under `dir` whose name matches `predicate`. */
@@ -112,13 +133,13 @@ export const findFiles = (dir: string, predicate: (file: string) => boolean): st
  * Transpiles every TypeScript example under `dir` to a sibling `.js` file, in
  * place. Returns the number of files written.
  */
-export const transpileTypescriptExamples = (dir: string): number => {
+export const transpileTypescriptExamples = async (dir: string): Promise<number> => {
   const tsFiles = findFiles(dir, isTranspiledExampleSource);
 
   for (const tsFile of tsFiles) {
     const source = fs.readFileSync(tsFile, 'utf8');
     const jsFile = tsFile.replace(/\.ts$/, '.js');
-    fs.writeFileSync(jsFile, transpileExampleSource(source, tsFile), 'utf8');
+    fs.writeFileSync(jsFile, await transpileExampleSource(source, tsFile), 'utf8');
   }
 
   return tsFiles.length;

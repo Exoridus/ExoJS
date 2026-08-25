@@ -34,7 +34,7 @@ const isGeneratedJs = (filePath: string): boolean => {
   }
 };
 
-function main(): void {
+async function main(): Promise<void> {
   console.log('Checking example .js/.ts synchronization...\n');
 
   fs.rmSync(tmpDir, { recursive: true, force: true });
@@ -51,7 +51,7 @@ function main(): void {
     expectedJsRelPaths.add(relJs);
 
     const committedPath = path.join(examplesDir, relJs);
-    const generated = transpileExampleSource(fs.readFileSync(tsFile, 'utf8'), tsFile);
+    const generated = await transpileExampleSource(fs.readFileSync(tsFile, 'utf8'), tsFile);
 
     // Materialize the regenerated output in the scratch directory so a
     // failing run leaves something diffable on disk, not just a verdict.

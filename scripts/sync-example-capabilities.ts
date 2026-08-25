@@ -13,6 +13,9 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import sharedPrettierConfig from '@codexo/exojs-config/prettier';
+import { format as formatSource } from 'prettier';
+
 type Capability = 'webgl2' | 'webgpu' | 'pointer' | 'keyboard' | 'gamepad' | 'touch' | 'audio' | 'fullscreen' | 'vibration' | 'offscreenCanvas' | 'webWorkers';
 
 interface CatalogEntry {
@@ -120,7 +123,7 @@ function deriveCapabilities(source: string, slug: string, sectionSlug: string): 
   return order.filter(c => caps.has(c));
 }
 
-function syncCapabilities(): void {
+async function syncCapabilities(): Promise<void> {
   const raw = readFileSync(manifestPath, 'utf8');
   const catalog = JSON.parse(raw) as Catalog;
 
@@ -148,11 +151,13 @@ function syncCapabilities(): void {
     }
   }
 
-  // Write back with the manifest's existing 4-space indentation - re-indenting
-  // it would rewrite every line of the file.
-  writeFileSync(manifestPath, `${JSON.stringify(catalog, null, 4)}\n`);
+  // Formatted rather than written straight out of `JSON.stringify`: the manifest
+  // is hand-edited as well as machine-updated, and the two only converge if both
+  // produce the same shape. `stringify` expands every array, Prettier collapses
+  // the short ones, so without this the file alternates on every run.
+  writeFileSync(manifestPath, await formatSource(JSON.stringify(catalog), { ...sharedPrettierConfig, parser: 'json' }));
 
   process.stdout.write(`Sync complete. Changed: ${changed}, unchanged: ${unchanged}.\n`);
 }
 
-syncCapabilities();
+void syncCapabilities();

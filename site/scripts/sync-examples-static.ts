@@ -38,7 +38,7 @@ const copyRecursive = (sourceDir: string, targetDir: string): void => {
     fs.cpSync(sourceDir, targetDir, { recursive: true, force: true });
 };
 
-const run = (): void => {
+const run = async (): Promise<void> => {
     ensureSource(sourceExamplesDir);
     ensureSource(sourceAssetsDir);
     ensureSource(sourceCatalogDemoDir);
@@ -46,7 +46,7 @@ const run = (): void => {
 
     // Transpile TypeScript examples to JavaScript before copying so the
     // generated .js files are included in the public/examples snapshot.
-    const transpiled = transpileTypescriptExamples(sourceExamplesDir);
+    const transpiled = await transpileTypescriptExamples(sourceExamplesDir);
     if (transpiled > 0) {
         console.log(`[examples:sync] Transpiled ${transpiled} TypeScript example(s) to JavaScript`);
     }
@@ -98,4 +98,4 @@ const run = (): void => {
     console.log(`[examples:sync] Generated ${path.resolve(targetAssetsDir, 'catalog.js')}`);
 };
 
-run();
+void run();
