@@ -1052,7 +1052,10 @@ export default defineConfig([
       'unused-imports/no-unused-vars': 'off',
       curly: 'error',
       eqeqeq: ['error', 'always', { null: 'ignore' }],
-      'no-console': 'error',
+      // The debugging chapters document logging, so a listing whose subject is
+      // `logger.warn` or a console dump of the pass inspector has to be able to
+      // show one. Nothing here executes.
+      'no-console': 'off',
       'no-var': 'error',
       'prefer-const': 'error',
       'object-shorthand': 'error',

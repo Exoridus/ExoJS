@@ -4,6 +4,7 @@ description: 'Measure scene limits with focused stress examples.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import TryIt from '../../../components/TryIt.astro';
 import Callout from '../../../components/Callout.astro';
 
@@ -95,32 +96,12 @@ Nodes that fall entirely outside the current `View`'s viewport are skipped by th
 
 The automatic check calls `getBounds()`, which for a `Container` walks every visible child and unions their bounds — for a complex `Graphics` node or a container with hundreds of children, that walk runs every frame even when the node's on-screen footprint is trivial to reason about. Set `cullArea` to a `Rectangle` and the cull check uses it directly instead of computing bounds:
 
-```ts
-import { Color, Container, Graphics, Rectangle } from '@codexo/exojs';
-
-// A debris field built from hundreds of small Graphics children — walking
-// all of them for getBounds() every frame is wasted work once we already
-// know the field never exceeds a 200x200 footprint at its spawn position.
-const debris = new Container();
-
-for (let i = 0; i < 300; i++) {
-  const shard = new Graphics();
-  shard.fillColor = Color.slateGray;
-  shard.drawCircle(0, 0, 2);
-  shard.x = Math.random() * 200;
-  shard.y = Math.random() * 200;
-  debris.addChild(shard);
-}
-
-debris.x = 400;
-debris.y = 300;
-
-// cullArea is compared directly against the view's bounds, in the same
-// world-space coordinates getBounds() would otherwise produce — it is not
-// re-transformed by the node's own position/scale/rotation. Since `debris`
-// is positioned once and never moves, a static rectangle here stays correct.
-debris.cullArea = new Rectangle(debris.x, debris.y, 200, 200);
-```
+<SourceSnippet
+  source="examples/guides/performance/cull-area.ts"
+  region="cull-area"
+  language="ts"
+  title="examples/guides/performance/cull-area.ts"
+/>
 
 Two things to keep in mind:
 

@@ -4,6 +4,7 @@ description: 'Mount an ExoJS Application inside a React tree and drive scenes de
 ---
 
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # React integration
 
@@ -133,12 +134,12 @@ initializes the backend and starts the frame loop); later switches call
 The scene classes you reference are ordinary ExoJS scenes — the React layer only decides which
 one is active:
 
-```ts
-import { Scene } from '@codexo/exojs';
-
-export class TitleScene extends Scene {}
-export class GameScene extends Scene {}
-```
+<SourceSnippet
+  source="examples/guides/react/scene-registry.ts"
+  region="scene-registry"
+  language="ts"
+  title="examples/guides/react/scene-registry.ts"
+/>
 
 ```tsx no-check -- JSX; the snippet extractor writes .ts files and the guide program carries no JSX or React types
 import { FadeSceneTransition } from '@codexo/exojs';
