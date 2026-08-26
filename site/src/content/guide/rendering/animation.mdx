@@ -48,16 +48,12 @@ State is readable at `tween.state`: `'idle'`, `'active'`, `'paused'`, `'stopped'
 
 ### Callbacks
 
-```ts
-this.app.tweens.create(this.sprite)
-    .to({ rotation: 360 }, 2)
-    .onStart(() => console.log('started'))
-    .onUpdate(t => console.log(`progress: ${t}`))
-    .onComplete(() => console.log('finished'))
-    .onRepeat(() => console.log('cycled'))
-    .repeat(2)
-    .start();
-```
+<SourceSnippet
+  source="examples/guides/animation/tween-scene.ts"
+  region="tween-callbacks"
+  language="ts"
+  title="examples/guides/animation/tween-scene.ts"
+/>
 
 - `onStart` fires once when interpolation begins (after any delay).
 - `onUpdate` fires every active frame, receiving the eased progress 0–1.

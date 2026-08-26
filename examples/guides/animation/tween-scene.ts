@@ -15,6 +15,20 @@ class Level extends Scene {
   }
   // #endregion guide:tween-init
 
+  private describeCallbacks(): void {
+    // #region guide:tween-callbacks
+    this.app.tweens
+      .create(this.sprite)
+      .to({ rotation: 360 }, 2)
+      .onStart(() => console.log('started'))
+      .onUpdate(t => console.log(`progress: ${t}`))
+      .onComplete(() => console.log('finished'))
+      .onRepeat(() => console.log('cycled'))
+      .repeat(2)
+      .start();
+    // #endregion guide:tween-callbacks
+  }
+
   private retarget(): void {
     // #region guide:tween-interrupt
     // Interrupt the current move and slide to a new position
