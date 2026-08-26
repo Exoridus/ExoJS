@@ -4,6 +4,7 @@ description: 'Validate collision flow and response with interactive shapes.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Collision detection
@@ -34,16 +35,12 @@ All shapes carry a `position` (`Vector`) and expose `collisionType` for dispatch
 
 `shapeA.intersectsWith(shapeB)` returns `true` if the shapes overlap. This is the cheapest query — no penetration depth, no contact normal, just a boolean:
 
-```ts
-import { Circle, Rectangle } from '@codexo/exojs';
-
-const player = new Circle(400, 300, 20);
-const wall = new Rectangle(100, 200, 80, 160);
-
-if (player.intersectsWith(wall)) {
-    // prevent movement into the wall
-}
-```
+<SourceSnippet
+  source="examples/guides/gameplay-collision/circle-overlap.ts"
+  region="circle-overlap"
+  language="ts"
+  title="examples/guides/gameplay-collision/circle-overlap.ts"
+/>
 
 All shape-pair combinations are supported for boolean overlap — rectangle-rectangle, circle-circle, polygon-circle, ellipse-rectangle, etc. (ellipse/poly intersections use internal polygon approximations).
 
@@ -77,73 +74,34 @@ Supported response pairs in the current implementation:
 
 `projectionV` is the minimum-translation vector (MTV): the smallest displacement that separates the two shapes. Move the caller by `projectionV` and the shapes no longer overlap.
 
-```ts
-import { Circle, Rectangle } from '@codexo/exojs';
-
-const player = new Circle(400, 300, 20);
-const wall = new Rectangle(100, 200, 80, 160);
-
-// Top-down wall blocking — push the player out of the wall
-const response = player.collidesWith(wall);
-
-if (response) {
-    player.setPosition(
-        player.x + response.projectionV.x,
-        player.y + response.projectionV.y,
-    );
-}
-```
+<SourceSnippet
+  source="examples/guides/gameplay-collision/collision-response.ts"
+  region="collision-response"
+  language="ts"
+  title="examples/guides/gameplay-collision/collision-response.ts"
+/>
 
 Shape primitives expose `setPosition(x, y)`. Renderable `SceneNode` objects additionally provide the relative `move(dx, dy)` convenience method.
 
 For two-way separation (two dynamic objects), split the MTV:
 
-```ts
-import { Circle } from '@codexo/exojs';
-
-const a = new Circle(100, 100, 20);
-const b = new Circle(130, 100, 20);
-
-const response = a.collidesWith(b);
-
-if (response) {
-    const halfX = response.projectionV.x * 0.5;
-    const halfY = response.projectionV.y * 0.5;
-
-    a.setPosition(a.x + halfX, a.y + halfY);
-    b.setPosition(b.x - halfX, b.y - halfY);
-}
-```
+<SourceSnippet
+  source="examples/guides/gameplay-collision/collision-types.ts"
+  region="collision-types"
+  language="ts"
+  title="examples/guides/gameplay-collision/collision-types.ts"
+/>
 
 ### Using projectionN for directional logic
 
 `projectionN` is the unit normal of the contact surface. Use it to classify which side was hit — without it you cannot distinguish "landed on the floor" from "hit a wall":
 
-```ts
-import { Circle, Rectangle } from '@codexo/exojs';
-
-const player = new Circle(200, 180, 20);
-const surface = new Rectangle(100, 200, 300, 40);
-let isGrounded = false;
-
-const response = player.collidesWith(surface);
-
-if (response) {
-    // Separate first
-    player.setPosition(
-        player.x + response.projectionV.x,
-        player.y + response.projectionV.y,
-    );
-
-    // Then classify direction
-    if (response.projectionN.y < -0.7) {
-        // Normal points upward — player is on a floor
-        isGrounded = true;
-    } else if (Math.abs(response.projectionN.x) > 0.7) {
-        // Normal is mostly horizontal — player hit a wall
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/gameplay-collision/shape-queries.ts"
+  region="shape-queries"
+  language="ts"
+  title="examples/guides/gameplay-collision/shape-queries.ts"
+/>
 
 The sign convention: `projectionN` points **from shapeB toward shapeA** (away from the surface the caller is being pushed out of).
 
@@ -155,17 +113,12 @@ The sign convention: `projectionN` points **from shapeB toward shapeA** (away fr
 
 `shape.contains(x, y)` returns `true` if the world-space point is inside the shape. Every shape implements it:
 
-```ts
-import { Rectangle, Vector } from '@codexo/exojs';
-
-const enemyHitbox: Rectangle = new Rectangle(0, 0, 100, 100);
-const pointer: Vector = new Vector(0, 0);
-function selectEnemy(): void {}
-
-if (enemyHitbox.contains(pointer.x, pointer.y)) {
-    selectEnemy();
-}
-```
+<SourceSnippet
+  source="examples/guides/gameplay-collision/hitbox-tracking.ts"
+  region="hitbox-tracking"
+  language="ts"
+  title="examples/guides/gameplay-collision/hitbox-tracking.ts"
+/>
 
 A `Sprite`'s `contains()` works on the rotated quad — fast AABB check when rotation is a multiple of 90°, exact dot-product test for arbitrary angles.
 

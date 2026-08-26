@@ -4,6 +4,7 @@ description: 'Build reusable dialog and text-flow UI behavior in-scene.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # UI patterns
 
@@ -13,70 +14,21 @@ In-canvas UI means text boxes, dialog panels, progress indicators, and interacti
 
 A dialog system shows text one character at a time, accompanied by a subtle sound. It's built from three primitives: a `Text` node for the dialog text, a `Sound` for the character tick, and a timer (or tween) to drive the reveal:
 
-```ts
-init() {
-    this.lines = [
-        'Commander, the anomaly has entered low orbit.',
-        'All wings hold formation and await my signal.',
-    ];
-
-    this.portrait = new Sprite(this.loader.get('image/portrait.png'))
-        .setAnchor(0.5).setScale(1.7).setPosition(170, 420);
-
-    this.box = new Text('', {
-        fillColor: Color.white, fontSize: 30,
-        maxWidth: 600,
-        lineHeight: 1.4,
-    });
-    this.box.setPosition(270, 360);
-
-    this.beep = this.loader.get('audio/beep.ogg');
-
-    this.lineIndex = 0;
-    this.chars = 0;
-    this.timer = 0;
-    this.done = false;
-}
-
-update(delta: Seconds) {
-    if (this.done) return;
-
-    this.timer += delta;
-    const line = this.lines[this.lineIndex];
-
-    while (this.timer > 0.035 && this.chars < line.length) {
-        this.timer -= 0.035;
-        this.chars++;
-        this.beep.play({ playbackRate: 1.9, volume: 0.14 });
-    }
-
-    this.box.text = line.slice(0, this.chars);
-
-    if (this.chars >= line.length) {
-        this.done = true;
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/ui-patterns/dialog.ts"
+  region="typewriter"
+  language="ts"
+  title="examples/guides/ui-patterns/dialog.ts"
+/>
 
 A click advances to the next line or skips the current reveal to show the full line immediately:
 
-```ts
-this.app.input.onPointerTap.add(() => {
-    const line = this.lines[this.lineIndex];
-
-    if (!this.done) {
-        // Skip reveal — show full line
-        this.chars = line.length;
-        this.done = true;
-        return;
-    }
-
-    // Advance to next line
-    this.lineIndex = (this.lineIndex + 1) % this.lines.length;
-    this.chars = 0;
-    this.done = false;
-});
-```
+<SourceSnippet
+  source="examples/guides/ui-patterns/dialog.ts"
+  region="advance-line"
+  language="ts"
+  title="examples/guides/ui-patterns/dialog.ts"
+/>
 
 The pattern is self-contained: the scene owns the dialog state, `update` drives the reveal, input handles progression. No modal state manager, no extra scenes — just a flag and a counter.
 
@@ -84,32 +36,12 @@ The pattern is self-contained: the scene owns the dialog state, `update` drives 
 
 A radial progress ring using a custom shader filter and a tween. The shader draws a circular arc — a `uProgress` uniform controls how much of the circle is filled. A tween drives `uProgress` from 0 to 1:
 
-```ts
-init() {
-    const progressGlsl: string = '';
-    const progressWgsl: string = '';
-    this.progress = { v: 0 };
-this.label = new Text('0%', { fillColor: Color.white, fontSize: 42 });
-this.label.setPosition(360, 410);
-
-this.ring = new Sprite(this.loader.get('image/uv.png')).setScale(2.2);
-this.filter = new ShaderFilter({
-    glsl: { fragment: progressGlsl as string },
-    wgsl: progressWgsl as string,
-    uniforms: { uProgress: 0 },
-});
-    this.ring.filters = [this.filter];
-
-    this.app.tweens.create(this.progress)
-        .to({ v: 1 }, 2.4)
-        .start();
-}
-
-update() {
-    this.filter.setUniform('uProgress', this.progress.v);
-    this.label.text = `${(this.progress.v * 100) | 0}%`;
-}
-```
+<SourceSnippet
+  source="examples/showcase/loading-progress-with-shader.ts"
+  region="progress-ring"
+  language="ts"
+  title="examples/showcase/loading-progress-with-shader.ts"
+/>
 
 The tween interpolates `{ v: 0 }` → `{ v: 1 }` over 2.4 seconds. Each frame, `update` reads `this.progress.v` and pushes it into the shader uniform. The text label updates to show a percentage. When progress reaches 1, the tween completes.
 

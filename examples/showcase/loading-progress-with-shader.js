@@ -19,6 +19,7 @@ class LoadingProgressWithShaderScene extends Scene {
   label;
   ring;
   filter;
+  // #region guide:progress-ring
   init() {
     const app = this.app;
     const { width, height } = app;
@@ -37,6 +38,7 @@ class LoadingProgressWithShaderScene extends Scene {
     this.filter.setUniform('uProgress', this.progress.v);
     this.label.text = `${(this.progress.v * 100) | 0}%`;
   }
+  // #endregion guide:progress-ring
   draw(context) {
     context.render(this.ring);
     context.render(this.label);

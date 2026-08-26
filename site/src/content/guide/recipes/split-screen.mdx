@@ -4,6 +4,7 @@ description: 'Render multiple viewpoints in a shared scene timeline.'
 ---
 
 import ExamplePreview from '../../../components/ExamplePreview.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 import Callout from '../../../components/Callout.astro';
 
 # Split screen
@@ -14,57 +15,12 @@ Split screen renders the same scene from two (or more) camera viewpoints into se
 
 Create two `View` objects. Each gets its own viewport rectangle — the left view covers the left half of the canvas, the right view covers the right half. In `draw`, set the backend's active view, render the shared world, swap views, render again:
 
-```ts
-init() {
-    const { width, height } = this.app;
-
-    // Left player view — left half of screen
-    this._leftView = new View(0, 0, width / 2, height);
-    this._leftView.viewport.set(0, 0, 0.5, 1);
-
-    // Right player view — right half of screen
-    this._rightView = new View(0, 0, width / 2, height);
-    this._rightView.viewport.set(0.5, 0, 0.5, 1);
-
-    // White divider line between views
-    this._divider = new Graphics();
-    this._divider.fillColor = Color.white;
-    this._divider.drawRectangle(width / 2 - 1, 0, 2, height);
-
-    // Shared world objects — both views see these
-    this._leftPlayer = new Sprite(this.loader.get('image/hero.png'))
-        .setAnchor(0.5)
-        .setTint(new Color(120, 190, 255));
-    this._rightPlayer = new Sprite(this.loader.get('image/hero.png'))
-        .setAnchor(0.5)
-        .setTint(new Color(255, 180, 120));
-}
-
-update(delta: Seconds) {
-    // Move players independently...
-    this._leftPlayer.move(/* WASD */);
-    this._rightPlayer.move(/* Arrows */);
-
-    // Each view follows its player
-    this._leftView.setCenter(this._leftPlayer.position.x, this._leftPlayer.position.y);
-    this._rightView.setCenter(this._rightPlayer.position.x, this._rightPlayer.position.y);
-}
-
-draw(context: RenderingContext) {
-    // Render left view
-    context.render(this._leftPlayer, { view: this._leftView });
-    context.render(this._rightPlayer, { view: this._leftView });
-    // ... world objects ...
-
-    // Render right view
-    context.render(this._leftPlayer, { view: this._rightView });
-    context.render(this._rightPlayer, { view: this._rightView });
-    // ... same world objects ...
-
-    // Divider renders in default camera space
-    context.render(this._divider);
-}
-```
+<SourceSnippet
+  source="examples/guides/split-screen/two-views.ts"
+  region="two-views"
+  language="ts"
+  title="examples/guides/split-screen/two-views.ts"
+/>
 
 <Callout type="pitfall" title="Reset the viewport for anything after the split">
 Each split view leaves a half-screen scissor rect behind. A later pass — a HUD, a full-screen flash — inherits it and gets clipped to one side unless you reset the viewport to full first.
@@ -82,15 +38,12 @@ This means you can have objects visible in both views (a shared flag, a power-up
 
 Two players on one keyboard means binding different key sets to each player — WASD for player 1, arrow keys for player 2 — both registered via the same scene's `this.inputs`. For gamepad co-op, bind each pad slot to a different player:
 
-```ts
-init() {
-    const pad0 = this.app.input.getGamepad(0);
-    pad0.onActive(GamepadAxis.LeftStickX, v => { this._player1.move.x = v; });
-
-    const pad1 = this.app.input.getGamepad(1);
-    pad1.onActive(GamepadAxis.LeftStickX, v => { this._player2.move.x = v; });
-}
-```
+<SourceSnippet
+  source="examples/guides/split-screen/two-views.ts"
+  region="one-pad-each"
+  language="ts"
+  title="examples/guides/split-screen/two-views.ts"
+/>
 
 Four split-screen views with four gamepad slots is the same pattern extended — one view per player, one pad per slot, one shared scene rendered four times.
 
