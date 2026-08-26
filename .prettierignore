@@ -5,8 +5,9 @@ coverage
 # Vendored third-party asset data and its notices - copied in, not authored here.
 examples/assets/**
 
-# Generated Monaco type shim; its exact shape is pinned by a drift test.
+# Generated Monaco type shims; their exact shape is pinned by a drift test.
 examples/shared/assets-global.d.ts
+examples/shared/runtime.d.ts
 
 # Astro's generated cache, and the vendored bundles plus copied example catalog
 # the site serves - none of it authored here.

@@ -134,12 +134,17 @@ and that gate is the only thing that should hold an opinion about it. Never edit
 one by hand — a committed `.js` also shadows its `.ts` for anyone searching the
 tree.
 
-Two files are not that. `examples/shared/runtime.js` is authored, with a
-hand-written `runtime.d.ts` beside it and no `.ts` source. And
-`examples/tilemap/worker-streamed-terrain.js` is the one example whose generation
-is not a plain transpile: its `?worker` import is inlined at generation time, so
-the emitted file carries code its source does not, and it stays in
-`tsconfig.examples.json` for that reason.
+One file is not quite that: `examples/tilemap/worker-streamed-terrain.js` is the
+only example whose generation is not a plain transpile. Its `?worker` import is
+inlined at generation time, so the emitted file carries code its source does not,
+and it stays in `tsconfig.examples.json` for that reason.
+
+`examples/shared/` holds one more generated artifact of a different kind.
+`runtime.d.ts` is emitted from `runtime.ts` during the same sync, because the
+Playground editor resolves `@examples/runtime` through a declaration file it
+fetches from the served snapshot rather than through the implementation. Like
+`assets-global.d.ts` it is Prettier-ignored and pinned by a drift test rather
+than by `examples:sync:check`.
 
 ### Guide sources
 
