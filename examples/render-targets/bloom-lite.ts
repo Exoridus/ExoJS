@@ -99,4 +99,4 @@ const app = new Application({
   },
 });
 
-app.start(BloomLiteScene);
+await app.start(BloomLiteScene);

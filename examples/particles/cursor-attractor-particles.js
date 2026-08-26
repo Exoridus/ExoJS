@@ -102,4 +102,4 @@ const app = new Application({
   clearColor: Color.black,
   extensions: [particlesExtension],
 });
-app.start(CursorAttractorParticlesScene);
+await app.start(CursorAttractorParticlesScene);

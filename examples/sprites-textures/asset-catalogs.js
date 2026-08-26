@@ -171,4 +171,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(AssetCatalogsScene);
+await app.start(AssetCatalogsScene);

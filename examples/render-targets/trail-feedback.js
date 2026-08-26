@@ -91,4 +91,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(TrailFeedbackScene);
+await app.start(TrailFeedbackScene);

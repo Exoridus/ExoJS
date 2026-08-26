@@ -104,4 +104,4 @@ const app = new Application({
   extensions: [particlesExtension],
 });
 
-app.start(CustomWgslModuleScene);
+await app.start(CustomWgslModuleScene);

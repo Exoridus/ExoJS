@@ -132,4 +132,4 @@ const app = new Application({
   // enough for both loading (.ldtk) and rendering (TileMapNode).
   extensions: [ldtkExtension],
 });
-app.start(LdtkWorldImportScene);
+await app.start(LdtkWorldImportScene);

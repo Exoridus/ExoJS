@@ -67,4 +67,4 @@ const app = new Application({
   },
 });
 
-app.start(RenderToTextureScene);
+await app.start(RenderToTextureScene);

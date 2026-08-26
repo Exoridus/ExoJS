@@ -172,4 +172,4 @@ const app = new Application({
   // TileMapNode can draw. Physics is a plain library - no extension needed.
   extensions: [tilemapExtension],
 });
-app.start(TiledMapPhysicsActorScene);
+await app.start(TiledMapPhysicsActorScene);

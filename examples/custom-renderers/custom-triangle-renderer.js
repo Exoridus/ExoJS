@@ -145,5 +145,5 @@ const app = new Application({
 });
 app.start(CustomTriangleRendererScene).catch(() => {
   app.element?.remove();
-  app.destroy();
+  void app.destroy();
 });

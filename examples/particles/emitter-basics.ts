@@ -90,4 +90,4 @@ const app = new Application({
   extensions: [particlesExtension],
 });
 
-app.start(EmitterBasicsScene);
+await app.start(EmitterBasicsScene);

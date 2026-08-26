@@ -120,4 +120,4 @@ const app = new Application({
   extensions: [particlesExtension],
 });
 
-app.start(CursorAttractorParticlesScene);
+await app.start(CursorAttractorParticlesScene);

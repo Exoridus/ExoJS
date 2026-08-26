@@ -54,4 +54,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(SignalBusInspectorScene);
+await app.start(SignalBusInspectorScene);

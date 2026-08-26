@@ -63,4 +63,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(MetaballsScene);
+await app.start(MetaballsScene);

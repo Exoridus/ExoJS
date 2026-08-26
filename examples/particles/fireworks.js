@@ -145,4 +145,4 @@ const app = new Application({
   clearColor: Color.black,
   extensions: [particlesExtension],
 });
-app.start(FireworksScene);
+await app.start(FireworksScene);

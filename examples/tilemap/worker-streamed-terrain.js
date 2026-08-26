@@ -223,4 +223,4 @@ const app = new Application({
   clearColor: new Color(38, 82, 128), // deep-water blue behind unloaded chunks
   extensions: [tilemapExtension],
 });
-app.start(WorkerStreamedTerrainScene);
+await app.start(WorkerStreamedTerrainScene);

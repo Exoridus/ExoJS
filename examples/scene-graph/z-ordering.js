@@ -52,4 +52,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(ZOrderingScene);
+await app.start(ZOrderingScene);

@@ -128,4 +128,4 @@ const app = new Application({
   extensions: [particlesExtension],
 });
 
-app.start(AudioReactiveParticlesScene);
+await app.start(AudioReactiveParticlesScene);

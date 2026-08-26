@@ -123,4 +123,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(CompressorScene);
+await app.start(CompressorScene);

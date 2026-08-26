@@ -108,4 +108,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(FilterStackScene);
+await app.start(FilterStackScene);

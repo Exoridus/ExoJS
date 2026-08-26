@@ -77,7 +77,7 @@ const app = new Application({
 });
 app.start(MultiTextureStressScene).catch(() => {
   app.element?.remove();
-  app.destroy();
+  void app.destroy();
 });
 function createTextureInfos() {
   return [

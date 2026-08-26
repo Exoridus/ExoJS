@@ -96,4 +96,4 @@ const app = new Application({
   clearColor: new Color(22, 24, 34),
 });
 
-app.start(LowBandCameraShakeScene);
+await app.start(LowBandCameraShakeScene);

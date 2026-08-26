@@ -133,4 +133,4 @@ const app = new Application({
   clearColor: new Color(18, 22, 33),
 });
 
-app.start(SpriteFollowsBodyScene);
+await app.start(SpriteFollowsBodyScene);

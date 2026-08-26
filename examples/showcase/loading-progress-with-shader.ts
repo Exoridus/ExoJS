@@ -65,4 +65,4 @@ const app = new Application({
   },
 });
 
-app.start(LoadingProgressWithShaderScene);
+await app.start(LoadingProgressWithShaderScene);

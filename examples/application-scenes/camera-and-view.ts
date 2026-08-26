@@ -92,4 +92,4 @@ const app = new Application({
   },
 });
 
-app.start(CameraViewScene);
+await app.start(CameraViewScene);

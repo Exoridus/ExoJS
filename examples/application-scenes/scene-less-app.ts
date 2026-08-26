@@ -34,4 +34,4 @@ app.systems.add({
   },
 });
 
-app.start();
+await app.start();

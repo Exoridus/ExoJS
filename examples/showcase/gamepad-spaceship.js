@@ -184,4 +184,4 @@ const app = new Application({
   clearColor: new Color(8, 10, 18),
   extensions: [particlesExtension],
 });
-app.start(GamepadSpaceshipScene);
+await app.start(GamepadSpaceshipScene);

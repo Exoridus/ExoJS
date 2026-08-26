@@ -63,7 +63,7 @@ const boot = (type: 'webgl2' | 'webgpu'): void => {
     overlay = null;
   }
   if (app !== null) {
-    app.destroy();
+    void app.destroy();
     app.element?.remove();
     app = null;
   }

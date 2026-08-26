@@ -165,4 +165,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(CrossfadeTracksScene);
+await app.start(CrossfadeTracksScene);

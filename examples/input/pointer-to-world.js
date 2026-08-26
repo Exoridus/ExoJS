@@ -105,4 +105,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(PointerToWorldScene);
+await app.start(PointerToWorldScene);

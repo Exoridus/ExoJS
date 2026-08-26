@@ -85,4 +85,4 @@ const app = new Application({
   },
 });
 
-app.start(LifecycleScene);
+await app.start(LifecycleScene);

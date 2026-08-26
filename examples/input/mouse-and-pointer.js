@@ -87,4 +87,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(MouseAndPointerScene);
+await app.start(MouseAndPointerScene);

@@ -32,4 +32,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(MeshTexturedQuadScene);
+await app.start(MeshTexturedQuadScene);

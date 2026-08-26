@@ -8,7 +8,7 @@ class MyScene extends Scene {
 }
 
 const app = new Application({ scenes: { MyScene } });
-app.start(MyScene);
+await app.start(MyScene);
 // #endregion guide:minimal-app
 
 export { MyScene };

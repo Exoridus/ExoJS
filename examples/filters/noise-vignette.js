@@ -78,4 +78,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(NoiseVignetteScene);
+await app.start(NoiseVignetteScene);

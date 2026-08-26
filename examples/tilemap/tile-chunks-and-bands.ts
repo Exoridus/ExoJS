@@ -231,4 +231,4 @@ const app = new Application({
   // `assets` catalog, whose URLs are already fully resolved.
 });
 
-app.start(TileChunksAndBandsScene);
+await app.start(TileChunksAndBandsScene);

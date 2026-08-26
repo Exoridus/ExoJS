@@ -129,4 +129,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(KeyRebindingScene);
+await app.start(KeyRebindingScene);

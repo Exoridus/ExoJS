@@ -69,4 +69,4 @@ const app = new Application({
   },
 });
 
-app.start(SpriteBasicsScene);
+await app.start(SpriteBasicsScene);

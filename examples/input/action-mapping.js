@@ -84,4 +84,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(ActionMappingScene);
+await app.start(ActionMappingScene);

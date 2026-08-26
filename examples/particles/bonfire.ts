@@ -84,4 +84,4 @@ const app = new Application({
   extensions: [particlesExtension],
 });
 
-app.start(BonfireScene);
+await app.start(BonfireScene);

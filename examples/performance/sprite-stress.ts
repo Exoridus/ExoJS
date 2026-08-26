@@ -113,7 +113,7 @@ const app = new Application({
 
 app.start(SpriteStressScene).catch(() => {
   app.element?.remove();
-  app.destroy();
+  void app.destroy();
 });
 
 function createAtlasTexture(): Texture {

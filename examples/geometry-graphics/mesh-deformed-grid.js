@@ -82,4 +82,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(MeshDeformedGridScene);
+await app.start(MeshDeformedGridScene);

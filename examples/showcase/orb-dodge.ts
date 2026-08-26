@@ -319,4 +319,4 @@ const app = new Application({
 });
 // #endregion guide:application-setup
 
-app.start(PlayScene);
+await app.start(PlayScene);

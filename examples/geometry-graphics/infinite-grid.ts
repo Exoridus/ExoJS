@@ -134,4 +134,4 @@ const app = new Application({
   },
 });
 
-app.start(InfiniteGridScene);
+await app.start(InfiniteGridScene);

@@ -121,4 +121,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(RandomPitchPoolScene);
+await app.start(RandomPitchPoolScene);

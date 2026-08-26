@@ -48,6 +48,8 @@ Navigate to the cinematic scene from the game to fully replace the active scene 
   title="examples/guides/cinematics/cutscene-flow.ts"
 />
 
+`scenes.change` is asynchronous — the incoming scene's `load()` has to run before it can activate — and the `void` says the caller is not waiting for it. Switching from an input handler or a tween callback, as here, is exactly that case: there is nothing to hand the promise to. Await it instead when the code around the switch depends on the new scene being live, and catch it if a failed switch needs to reach the player.
+
 Because the cinematic is now the only active scene, the game scene neither renders nor updates for the duration. When the cinematic ends, switch back:
 
 <SourceSnippet

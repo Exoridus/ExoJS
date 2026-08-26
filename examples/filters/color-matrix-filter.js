@@ -68,4 +68,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(ColorMatrixFilterScene);
+await app.start(ColorMatrixFilterScene);

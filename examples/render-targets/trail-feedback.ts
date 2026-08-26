@@ -103,4 +103,4 @@ const app = new Application({
   },
 });
 
-app.start(TrailFeedbackScene);
+await app.start(TrailFeedbackScene);

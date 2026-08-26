@@ -110,4 +110,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(TiledInfiniteMapScene);
+await app.start(TiledInfiniteMapScene);

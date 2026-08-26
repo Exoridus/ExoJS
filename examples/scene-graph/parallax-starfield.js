@@ -50,4 +50,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(ParallaxStarfieldScene);
+await app.start(ParallaxStarfieldScene);

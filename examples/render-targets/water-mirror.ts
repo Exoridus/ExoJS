@@ -101,4 +101,4 @@ const app = new Application({
   },
 });
 
-app.start(WaterMirrorScene);
+await app.start(WaterMirrorScene);

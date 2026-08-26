@@ -123,4 +123,4 @@ const app = new Application({
   },
 });
 
-app.start(RenderPipelineScene);
+await app.start(RenderPipelineScene);

@@ -176,4 +176,4 @@ const app = new Application({
   clearColor: new Color(16, 16, 24),
 });
 
-app.start(BossIntroCinematicScene);
+await app.start(BossIntroCinematicScene);

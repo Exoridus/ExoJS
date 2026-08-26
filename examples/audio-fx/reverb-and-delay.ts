@@ -156,4 +156,4 @@ const app = new Application({
   },
 });
 
-app.start(ReverbAndDelayScene);
+await app.start(ReverbAndDelayScene);

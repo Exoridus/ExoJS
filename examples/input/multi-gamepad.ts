@@ -118,4 +118,4 @@ const app = new Application({
   },
 });
 
-app.start(MultiGamepadScene);
+await app.start(MultiGamepadScene);

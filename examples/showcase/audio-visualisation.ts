@@ -172,4 +172,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(AudioVisualisationScene);
+await app.start(AudioVisualisationScene);

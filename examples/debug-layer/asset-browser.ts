@@ -1147,4 +1147,4 @@ const app = new Application({
   clearColor: C.bg,
 });
 
-app.start(AssetBrowserScene);
+await app.start(AssetBrowserScene);

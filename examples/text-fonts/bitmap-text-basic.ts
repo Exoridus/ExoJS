@@ -57,4 +57,4 @@ const app = new Application({
   clearColor: new Color(20, 24, 36),
 });
 
-app.start(BitmapTextBasicScene);
+await app.start(BitmapTextBasicScene);

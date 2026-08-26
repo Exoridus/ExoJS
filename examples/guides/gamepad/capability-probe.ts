@@ -35,7 +35,7 @@ class VibrationScene extends Scene {
   override init(): void {
     const pad = this.app.input.getGamepad(0);
     if (pad.canVibrate) {
-      pad.vibrate({
+      void pad.vibrate({
         duration: 200, // ms
         weakMagnitude: 0.5, // low-frequency rumble 0..1
         strongMagnitude: 0.8, // high-frequency rumble 0..1

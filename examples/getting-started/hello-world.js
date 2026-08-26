@@ -28,4 +28,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(HelloWorldScene);
+await app.start(HelloWorldScene);

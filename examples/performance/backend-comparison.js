@@ -56,7 +56,7 @@ const boot = type => {
     overlay = null;
   }
   if (app !== null) {
-    app.destroy();
+    void app.destroy();
     app.element?.remove();
     app = null;
   }

@@ -66,4 +66,4 @@ const app = new Application({
   },
 });
 
-app.start(TextGlitchScene);
+await app.start(TextGlitchScene);

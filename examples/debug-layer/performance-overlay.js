@@ -54,4 +54,4 @@ const app = new Application({
 });
 const debug = new DebugOverlay(app);
 debug.layers.performance.visible = true;
-app.start(PerformanceOverlayScene);
+await app.start(PerformanceOverlayScene);

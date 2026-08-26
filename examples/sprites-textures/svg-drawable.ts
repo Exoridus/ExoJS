@@ -47,4 +47,4 @@ const app = new Application({
   },
 });
 
-app.start(SvgDrawableScene);
+await app.start(SvgDrawableScene);

@@ -136,4 +136,4 @@ const app = new Application({
   },
 });
 
-app.start(MovingSourceScene);
+await app.start(MovingSourceScene);

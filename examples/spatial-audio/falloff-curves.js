@@ -137,4 +137,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(FalloffCurvesScene);
+await app.start(FalloffCurvesScene);

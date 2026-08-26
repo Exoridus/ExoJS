@@ -116,4 +116,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(MovingSourceScene);
+await app.start(MovingSourceScene);

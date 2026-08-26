@@ -131,4 +131,4 @@ const app = new Application({
   },
 });
 
-app.start(TiledInfiniteMapScene);
+await app.start(TiledInfiniteMapScene);

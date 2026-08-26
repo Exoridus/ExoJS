@@ -62,4 +62,4 @@ const app = new Application({
   },
 });
 
-app.start(TweenFromArrayScene);
+await app.start(TweenFromArrayScene);

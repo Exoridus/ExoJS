@@ -144,4 +144,4 @@ const app = new Application({
   clearColor: new Color(48, 54, 68),
 });
 
-app.start(BlendmodesScene);
+await app.start(BlendmodesScene);

@@ -121,4 +121,4 @@ const app = new Application({
   },
 });
 
-app.start(TempoTrackingScene);
+await app.start(TempoTrackingScene);

@@ -31,4 +31,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(InterruptAndReplaceScene);
+await app.start(InterruptAndReplaceScene);

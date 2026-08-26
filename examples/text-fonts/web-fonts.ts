@@ -38,4 +38,4 @@ const app = new Application({
   },
 });
 
-app.start(WebFontsScene);
+await app.start(WebFontsScene);

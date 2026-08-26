@@ -35,4 +35,4 @@ const app = new Application({
   },
 });
 
-app.start(GameLoopScene);
+await app.start(GameLoopScene);

@@ -41,4 +41,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(SvgDrawableScene);
+await app.start(SvgDrawableScene);

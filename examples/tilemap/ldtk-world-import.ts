@@ -164,4 +164,4 @@ const app = new Application({
   extensions: [ldtkExtension],
 });
 
-app.start(LdtkWorldImportScene);
+await app.start(LdtkWorldImportScene);

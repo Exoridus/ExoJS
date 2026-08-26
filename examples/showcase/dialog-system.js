@@ -125,4 +125,4 @@ const app = new Application({
   },
   clearColor: new Color(20, 24, 34),
 });
-app.start(DialogSystemScene);
+await app.start(DialogSystemScene);

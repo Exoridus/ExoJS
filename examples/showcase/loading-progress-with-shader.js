@@ -57,4 +57,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(LoadingProgressWithShaderScene);
+await app.start(LoadingProgressWithShaderScene);

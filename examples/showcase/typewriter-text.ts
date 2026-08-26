@@ -59,4 +59,4 @@ const app = new Application({
   },
 });
 
-app.start(TypewriterTextScene);
+await app.start(TypewriterTextScene);

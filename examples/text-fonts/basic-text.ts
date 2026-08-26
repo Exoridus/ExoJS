@@ -48,4 +48,4 @@ const app = new Application({
   },
 });
 
-app.start(BasicTextScene);
+await app.start(BasicTextScene);

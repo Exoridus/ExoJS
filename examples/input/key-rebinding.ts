@@ -171,4 +171,4 @@ const app = new Application({
   },
 });
 
-app.start(KeyRebindingScene);
+await app.start(KeyRebindingScene);

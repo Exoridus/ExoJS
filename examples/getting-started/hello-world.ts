@@ -33,4 +33,4 @@ const app = new Application({
   },
 });
 
-app.start(HelloWorldScene);
+await app.start(HelloWorldScene);

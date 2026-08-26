@@ -98,4 +98,4 @@ const app = new Application({
   },
   clearColor: new Color(16, 18, 26),
 });
-app.start(VinylRecordScene);
+await app.start(VinylRecordScene);

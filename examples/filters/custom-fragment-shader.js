@@ -57,4 +57,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(CustomFragmentShaderScene);
+await app.start(CustomFragmentShaderScene);

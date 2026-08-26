@@ -26,4 +26,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(TweenWithYoyoScene);
+await app.start(TweenWithYoyoScene);

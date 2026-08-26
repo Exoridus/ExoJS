@@ -54,4 +54,4 @@ const app = new Application({
   extensions: [particlesExtension],
 });
 
-app.start(ScreenShakeOnExplosionScene);
+await app.start(ScreenShakeOnExplosionScene);

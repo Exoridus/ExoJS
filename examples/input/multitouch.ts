@@ -117,4 +117,4 @@ const app = new Application({
   },
 });
 
-app.start(MultitouchScene);
+await app.start(MultitouchScene);

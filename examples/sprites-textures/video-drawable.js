@@ -106,4 +106,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(VideoDrawableScene);
+await app.start(VideoDrawableScene);

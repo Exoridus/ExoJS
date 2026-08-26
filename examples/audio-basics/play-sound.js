@@ -40,4 +40,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(PlaySoundScene);
+await app.start(PlaySoundScene);

@@ -48,4 +48,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(MasksScene);
+await app.start(MasksScene);

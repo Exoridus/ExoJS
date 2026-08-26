@@ -142,4 +142,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(BootScene);
+await app.start(BootScene);

@@ -41,4 +41,4 @@ const app = new Application({
   },
 });
 
-app.start(StrokeAndShadowScene);
+await app.start(StrokeAndShadowScene);

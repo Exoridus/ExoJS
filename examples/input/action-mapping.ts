@@ -111,4 +111,4 @@ const app = new Application({
   },
 });
 
-app.start(ActionMappingScene);
+await app.start(ActionMappingScene);

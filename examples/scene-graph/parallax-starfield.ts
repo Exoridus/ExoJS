@@ -58,4 +58,4 @@ const app = new Application({
   },
 });
 
-app.start(ParallaxStarfieldScene);
+await app.start(ParallaxStarfieldScene);

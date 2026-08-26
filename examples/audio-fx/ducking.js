@@ -113,4 +113,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(DuckingScene);
+await app.start(DuckingScene);

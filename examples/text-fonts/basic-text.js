@@ -40,4 +40,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(BasicTextScene);
+await app.start(BasicTextScene);

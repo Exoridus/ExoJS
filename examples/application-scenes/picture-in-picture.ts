@@ -59,4 +59,4 @@ const app = new Application({
   },
 });
 
-app.start(PictureInPictureScene);
+await app.start(PictureInPictureScene);

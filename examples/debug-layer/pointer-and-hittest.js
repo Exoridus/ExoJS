@@ -42,4 +42,4 @@ const app = new Application({
 const debug = new DebugOverlay(app);
 debug.layers.hitTest.visible = true;
 debug.layers.pointerStack.visible = true;
-app.start(PointerAndHittestScene);
+await app.start(PointerAndHittestScene);

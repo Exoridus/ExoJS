@@ -111,4 +111,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(SplitScreenScene);
+await app.start(SplitScreenScene);

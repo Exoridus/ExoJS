@@ -130,4 +130,4 @@ const app = new Application({
   },
 });
 
-app.start(TiledMapImportScene);
+await app.start(TiledMapImportScene);

@@ -67,4 +67,4 @@ window.addEventListener('resize', () => {
 app.resize(window.innerWidth, window.innerHeight);
 // #endregion guide:resize
 
-app.start(ResizeScene);
+await app.start(ResizeScene);

@@ -171,4 +171,4 @@ const app = new Application({
   },
 });
 
-app.start(FalloffCurvesScene);
+await app.start(FalloffCurvesScene);

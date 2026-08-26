@@ -62,4 +62,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(TextureLoaderScene);
+await app.start(TextureLoaderScene);

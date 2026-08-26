@@ -29,4 +29,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(GameLoopScene);
+await app.start(GameLoopScene);
