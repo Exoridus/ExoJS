@@ -49,4 +49,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(FrameAnimationScene);
+await app.start(FrameAnimationScene);

@@ -237,4 +237,4 @@ const app = new Application({
   extensions: [particlesExtension],
 });
 
-app.start(GamepadSpaceshipScene);
+await app.start(GamepadSpaceshipScene);

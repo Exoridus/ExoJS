@@ -127,4 +127,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(AudioBusesScene);
+await app.start(AudioBusesScene);

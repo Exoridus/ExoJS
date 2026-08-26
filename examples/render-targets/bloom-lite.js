@@ -89,4 +89,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(BloomLiteScene);
+await app.start(BloomLiteScene);

@@ -129,4 +129,4 @@ const app = new Application({
   },
 });
 
-app.start(PointerToWorldScene);
+await app.start(PointerToWorldScene);

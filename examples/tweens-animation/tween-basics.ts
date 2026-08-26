@@ -49,4 +49,4 @@ const app = new Application({
   },
 });
 
-app.start(TweenBasicsScene);
+await app.start(TweenBasicsScene);

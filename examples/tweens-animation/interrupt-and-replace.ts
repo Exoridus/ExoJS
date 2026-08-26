@@ -36,4 +36,4 @@ const app = new Application({
   },
 });
 
-app.start(InterruptAndReplaceScene);
+await app.start(InterruptAndReplaceScene);

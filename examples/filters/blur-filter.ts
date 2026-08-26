@@ -86,4 +86,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(BlurFilterScene);
+await app.start(BlurFilterScene);

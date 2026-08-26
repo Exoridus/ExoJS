@@ -119,4 +119,4 @@ const app = new Application({
   },
 });
 
-app.start(MinimapWithMaskScene);
+await app.start(MinimapWithMaskScene);

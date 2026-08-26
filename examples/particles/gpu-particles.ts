@@ -66,4 +66,4 @@ const isWebGpu = app.backend.backendType === RenderBackendType.WebGpu;
 const CAPACITY = isWebGpu ? 320_000 : 20_000;
 const RATE = isWebGpu ? 75_000 : 3_000;
 
-app.start(GpuParticlesScene);
+await app.start(GpuParticlesScene);

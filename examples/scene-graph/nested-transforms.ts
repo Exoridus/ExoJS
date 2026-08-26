@@ -58,4 +58,4 @@ const app = new Application({
   },
 });
 
-app.start(NestedTransformsScene);
+await app.start(NestedTransformsScene);

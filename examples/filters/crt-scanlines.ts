@@ -67,4 +67,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(CrtScanlinesScene);
+await app.start(CrtScanlinesScene);

@@ -56,4 +56,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(CustomRenderPassScene);
+await app.start(CustomRenderPassScene);

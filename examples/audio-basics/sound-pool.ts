@@ -147,4 +147,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(SoundPoolScene);
+await app.start(SoundPoolScene);

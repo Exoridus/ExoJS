@@ -59,4 +59,4 @@ const app = new Application({
   },
 });
 
-app.start(SignalBusInspectorScene);
+await app.start(SignalBusInspectorScene);

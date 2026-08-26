@@ -49,4 +49,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(NestedTransformsScene);
+await app.start(NestedTransformsScene);

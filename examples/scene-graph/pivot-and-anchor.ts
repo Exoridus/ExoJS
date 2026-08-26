@@ -66,4 +66,4 @@ const app = new Application({
   },
 });
 
-app.start(PivotAndAnchorScene);
+await app.start(PivotAndAnchorScene);

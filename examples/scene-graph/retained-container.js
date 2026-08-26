@@ -119,7 +119,7 @@ const app = new Application({
   },
   clearColor: new Color(6, 9, 18, 1),
 });
-app.start(RetainedContainerScene);
+await app.start(RetainedContainerScene);
 /** Draw a small 2x2 sprite atlas procedurally so the example needs no asset load. */
 function createAtlasTexture() {
   const canvas = document.createElement('canvas');

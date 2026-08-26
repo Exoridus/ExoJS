@@ -148,4 +148,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(MusicLoopScene);
+await app.start(MusicLoopScene);

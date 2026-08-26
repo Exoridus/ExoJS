@@ -78,4 +78,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(SpritesheetFramesScene);
+await app.start(SpritesheetFramesScene);

@@ -75,4 +75,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(ColourRampCyclingScene);
+await app.start(ColourRampCyclingScene);

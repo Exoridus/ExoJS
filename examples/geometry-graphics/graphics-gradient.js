@@ -77,5 +77,5 @@ const app = new Application({
 });
 app.start(GraphicsGradientScene).catch(() => {
   app.element?.remove();
-  app.destroy();
+  void app.destroy();
 });

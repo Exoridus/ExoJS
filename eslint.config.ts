@@ -980,8 +980,15 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
+      // Named project rather than the project service: the service resolves the
+      // nearest `tsconfig.json`, which is the engine's own program over `src/**`
+      // and does not contain these files. The catalog's type-aware rules are off
+      // (above), but `no-floating-promises` below is not, and it cannot run
+      // without a program.
       parserOptions: {
-        project: null,
+        projectService: false,
+        project: './tsconfig.examples.json',
+        tsconfigRootDir: import.meta.dirname,
       },
       globals: {
         ...globals.browser,
@@ -1022,26 +1029,43 @@ export default defineConfig([
       'object-shorthand': 'error',
       'prefer-template': 'error',
       'unicorn/prefer-node-protocol': 'error',
+      // The one type-aware rule the catalog keeps. A dropped promise in an
+      // example is not a style question: the rejection is swallowed, the reader
+      // copies the shape, and the failure surfaces somewhere else entirely.
+      // Everything the rule flags here is either a missing `await` or a
+      // deliberate fire-and-forget that should say so with `void`.
+      '@typescript-eslint/no-floating-promises': 'error',
+    },
+  },
+
+  // Three files in the tree are unreachable through `tsconfig.examples.json`, so
+  // a named project cannot parse them: the Monaco-only shim and the worker
+  // source the generator inlines are outside the program on purpose, and
+  // `runtime.d.ts` is inside the include glob but never lands in the program -
+  // TypeScript resolves that module through the `runtime.ts` it is generated
+  // from and drops the declaration twin. They keep the service-free setup, which
+  // means giving up the catalog's one type-aware rule for these three files.
+  {
+    files: ['examples/**/*.worker.ts', 'examples/shared/editor-support.d.ts', 'examples/shared/runtime.d.ts'],
+    languageOptions: {
+      parserOptions: { projectService: false, project: null },
+    },
+    rules: {
+      '@typescript-eslint/no-floating-promises': 'off',
     },
   },
 
   // Guide sources (examples/guides/**) - the running programs the guide
   // chapters embed regions of. They are authored in TypeScript and never
   // transpiled to a `.js` twin, so unlike the rest of the example catalog the
-  // `.ts` file is what gets linted. Type-aware rules are off for the same
-  // reason they are off for example `.js`: the file belongs to
-  // `tsconfig.examples.json`, which is not the project the service resolves
-  // for it, and `typecheck:examples` already checks it with the right one.
-  {
-    files: ['examples/guides/**/*.ts'],
-    ...tseslint.configs.disableTypeChecked,
-  },
+  // `.ts` file is what gets linted. They inherit the catalog's policy above,
+  // including its program and its one type-aware rule, and add the two
+  // relaxations a listing needs.
   {
     files: ['examples/guides/**/*.ts'],
     languageOptions: {
       ecmaVersion: 'latest',
       sourceType: 'module',
-      parserOptions: { projectService: false, project: null },
       globals: {
         ...globals.browser,
         ...globals.es2024,

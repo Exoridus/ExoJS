@@ -102,4 +102,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(MiniMapScene);
+await app.start(MiniMapScene);

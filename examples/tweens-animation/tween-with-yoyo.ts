@@ -31,4 +31,4 @@ const app = new Application({
   },
 });
 
-app.start(TweenWithYoyoScene);
+await app.start(TweenWithYoyoScene);

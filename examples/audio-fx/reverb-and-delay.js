@@ -139,4 +139,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(ReverbAndDelayScene);
+await app.start(ReverbAndDelayScene);

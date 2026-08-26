@@ -80,4 +80,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(RectanglesCollisionScene);
+await app.start(RectanglesCollisionScene);

@@ -59,4 +59,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(MenuScene);
+await app.start(MenuScene);

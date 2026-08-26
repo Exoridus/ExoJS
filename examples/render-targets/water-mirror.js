@@ -90,4 +90,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(WaterMirrorScene);
+await app.start(WaterMirrorScene);

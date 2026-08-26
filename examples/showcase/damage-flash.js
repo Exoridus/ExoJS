@@ -55,4 +55,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(DamageFlashScene);
+await app.start(DamageFlashScene);

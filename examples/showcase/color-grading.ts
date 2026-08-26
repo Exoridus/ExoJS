@@ -133,4 +133,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(ColorGradingScene);
+await app.start(ColorGradingScene);

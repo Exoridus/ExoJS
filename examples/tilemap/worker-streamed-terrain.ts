@@ -267,4 +267,4 @@ const app = new Application({
   extensions: [tilemapExtension],
 });
 
-app.start(WorkerStreamedTerrainScene);
+await app.start(WorkerStreamedTerrainScene);

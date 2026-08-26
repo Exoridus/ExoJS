@@ -147,4 +147,4 @@ const app = new Application({
   },
 });
 
-app.start(FrequencyBandsScene);
+await app.start(FrequencyBandsScene);

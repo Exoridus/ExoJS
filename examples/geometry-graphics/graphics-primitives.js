@@ -51,5 +51,5 @@ const app = new Application({
 });
 app.start(GraphicsPrimitivesScene).catch(() => {
   app.element?.remove();
-  app.destroy();
+  void app.destroy();
 });

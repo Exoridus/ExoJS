@@ -60,4 +60,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(WorldScreenScene);
+await app.start(WorldScreenScene);

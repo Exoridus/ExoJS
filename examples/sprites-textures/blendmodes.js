@@ -113,4 +113,4 @@ const app = new Application({
   // visible instead of compositing into a black canvas.
   clearColor: new Color(48, 54, 68),
 });
-app.start(BlendmodesScene);
+await app.start(BlendmodesScene);

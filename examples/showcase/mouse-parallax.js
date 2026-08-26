@@ -59,4 +59,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(MouseParallaxScene);
+await app.start(MouseParallaxScene);

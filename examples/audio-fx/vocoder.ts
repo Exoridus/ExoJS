@@ -111,4 +111,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(VocoderScene);
+await app.start(VocoderScene);

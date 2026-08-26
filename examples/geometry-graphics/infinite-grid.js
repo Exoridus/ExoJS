@@ -115,4 +115,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(InfiniteGridScene);
+await app.start(InfiniteGridScene);

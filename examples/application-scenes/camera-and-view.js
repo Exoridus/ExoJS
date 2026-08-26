@@ -81,4 +81,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(CameraViewScene);
+await app.start(CameraViewScene);

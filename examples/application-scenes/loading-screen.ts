@@ -183,4 +183,4 @@ const app = new Application({
   },
 });
 
-app.start(BootScene);
+await app.start(BootScene);

@@ -6,7 +6,7 @@ class GameScene extends Scene {
   private startCutscene(): void {
     // #region guide:enter-cinematic
     // From the game scene - switch to the cinematic:
-    this.app.scenes.change(CinematicScene);
+    void this.app.scenes.change(CinematicScene);
     // #endregion guide:enter-cinematic
   }
 }
@@ -24,7 +24,7 @@ class CutsceneFlowScene extends Scene {
       .to({ v: 70 }, 0.6)
       .delay(3.5) // start closing bars after the sequence plays
       .onComplete(() => {
-        this.app.scenes.change(GameScene, { transition: new FadeSceneTransition() });
+        void this.app.scenes.change(GameScene, { transition: new FadeSceneTransition() });
       })
       .start();
     // #endregion guide:return-to-game
@@ -35,12 +35,12 @@ class CutsceneFlowScene extends Scene {
     // ... cinematic setup ...
 
     this.inputs.onTrigger(Keyboard.Space, () => {
-      this.app.scenes.change(GameScene);
+      void this.app.scenes.change(GameScene);
     });
 
     const pad = this.app.input.getGamepad(0);
     pad.onTrigger(GamepadButton.Start, () => {
-      this.app.scenes.change(GameScene);
+      void this.app.scenes.change(GameScene);
     });
   }
   // #endregion guide:skip-input
@@ -53,7 +53,7 @@ class CutsceneFlowScene extends Scene {
       this.musicVoice.volume = 0.85;
       this.boss.setScale(2.1, 2.1);
       // ... snap other properties ...
-      this.app.scenes.change(GameScene);
+      void this.app.scenes.change(GameScene);
     });
     // #endregion guide:skip-fast-forward
   }

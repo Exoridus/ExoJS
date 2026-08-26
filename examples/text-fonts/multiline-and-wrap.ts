@@ -63,4 +63,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(MultilineAndWrapScene);
+await app.start(MultilineAndWrapScene);

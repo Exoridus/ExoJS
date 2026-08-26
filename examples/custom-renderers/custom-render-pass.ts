@@ -75,4 +75,4 @@ const app = new Application({
   },
 });
 
-app.start(CustomRenderPassScene);
+await app.start(CustomRenderPassScene);

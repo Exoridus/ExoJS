@@ -74,4 +74,4 @@ const app = new Application({
   },
 });
 
-app.start(MenuScene);
+await app.start(MenuScene);

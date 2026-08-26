@@ -100,4 +100,4 @@ const app = new Application({
   },
 });
 
-app.start(KeyboardScene);
+await app.start(KeyboardScene);

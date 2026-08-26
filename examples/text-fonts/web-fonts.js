@@ -32,4 +32,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(WebFontsScene);
+await app.start(WebFontsScene);

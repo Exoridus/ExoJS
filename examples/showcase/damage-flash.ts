@@ -63,4 +63,4 @@ const app = new Application({
   },
 });
 
-app.start(DamageFlashScene);
+await app.start(DamageFlashScene);

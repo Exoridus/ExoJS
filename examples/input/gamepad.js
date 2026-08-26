@@ -232,4 +232,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(GamepadScene);
+await app.start(GamepadScene);

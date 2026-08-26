@@ -56,4 +56,4 @@ const app = new Application({
 const debug = new DebugOverlay(app);
 debug.layers.boundingBoxes.visible = true;
 
-app.start(BoundingBoxesScene);
+await app.start(BoundingBoxesScene);

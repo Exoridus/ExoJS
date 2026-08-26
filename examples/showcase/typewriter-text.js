@@ -51,4 +51,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(TypewriterTextScene);
+await app.start(TypewriterTextScene);

@@ -118,4 +118,4 @@ const app = new Application({
   },
 });
 
-app.start(MiniMapScene);
+await app.start(MiniMapScene);

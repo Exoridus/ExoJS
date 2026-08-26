@@ -232,4 +232,4 @@ const app = new Application({
   extensions: [tilemapExtension],
 });
 
-app.start(InfiniteTerrainScene);
+await app.start(InfiniteTerrainScene);

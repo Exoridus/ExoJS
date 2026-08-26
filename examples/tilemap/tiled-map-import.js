@@ -111,4 +111,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(TiledMapImportScene);
+await app.start(TiledMapImportScene);

@@ -58,4 +58,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(TextGlitchScene);
+await app.start(TextGlitchScene);

@@ -134,4 +134,4 @@ const app = new Application({
   },
 });
 
-app.start(SplitScreenScene);
+await app.start(SplitScreenScene);

@@ -100,4 +100,4 @@ const app = new Application({
   },
 });
 
-app.start(MouseAndPointerScene);
+await app.start(MouseAndPointerScene);

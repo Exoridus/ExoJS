@@ -76,7 +76,7 @@ const app = new Application({
 });
 app.start(SpriteStressScene).catch(() => {
   app.element?.remove();
-  app.destroy();
+  void app.destroy();
 });
 function createAtlasTexture() {
   const atlasCanvas = document.createElement('canvas');

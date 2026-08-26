@@ -149,4 +149,4 @@ const app = new Application({
   },
 });
 
-app.start(CompressorScene);
+await app.start(CompressorScene);

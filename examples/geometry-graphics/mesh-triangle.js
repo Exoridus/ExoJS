@@ -28,4 +28,4 @@ const app = new Application({
   },
   clearColor: Color.black,
 });
-app.start(MeshTriangleScene);
+await app.start(MeshTriangleScene);

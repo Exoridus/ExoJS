@@ -65,4 +65,4 @@ const app = new Application({
   },
 });
 
-app.start(TweenChainsScene);
+await app.start(TweenChainsScene);

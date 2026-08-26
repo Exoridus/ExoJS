@@ -73,4 +73,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(LifecycleScene);
+await app.start(LifecycleScene);

@@ -35,7 +35,9 @@ class KeyRebindingScene extends Scene {
   graphics;
   controls = new ActionMap({
     jump: new ButtonAction(Keyboard.Space),
-    rebind: new ButtonAction(Keyboard.J),
+    // Not `rebind`: an action name has to clear ActionMap's own surface, and
+    // `rebind()` is the method this example calls three lines down.
+    startRebind: new ButtonAction(Keyboard.J),
   });
   profile = loadProfile();
   rebindRequested = false;
@@ -88,7 +90,7 @@ class KeyRebindingScene extends Scene {
   update(delta) {
     // Arm on the RELEASE of J, so the J keydown itself is not captured as
     // the new binding in the same frame.
-    if (this.controls.rebind.released && !this.rebindRequested) {
+    if (this.controls.startRebind.released && !this.rebindRequested) {
       this.rebindRequested = true;
       this.refreshHud();
     }
@@ -129,4 +131,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(KeyRebindingScene);
+await app.start(KeyRebindingScene);

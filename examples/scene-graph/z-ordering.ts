@@ -60,4 +60,4 @@ const app = new Application({
   },
 });
 
-app.start(ZOrderingScene);
+await app.start(ZOrderingScene);

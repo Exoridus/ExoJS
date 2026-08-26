@@ -220,4 +220,4 @@ const app = new Application({
   extensions: [tilemapExtension],
 });
 
-app.start(TiledMapPhysicsActorScene);
+await app.start(TiledMapPhysicsActorScene);

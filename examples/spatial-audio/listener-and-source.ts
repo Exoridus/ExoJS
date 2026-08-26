@@ -148,4 +148,4 @@ const app = new Application({
   },
 });
 
-app.start(ListenerAndSourceScene);
+await app.start(ListenerAndSourceScene);

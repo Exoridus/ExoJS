@@ -116,4 +116,4 @@ const app = new Application({
   extensions: [particlesExtension],
 });
 
-app.start(BeatSyncPulseScene);
+await app.start(BeatSyncPulseScene);

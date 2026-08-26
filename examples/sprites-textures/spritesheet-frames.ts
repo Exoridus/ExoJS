@@ -105,4 +105,4 @@ const app = new Application({
   },
 });
 
-app.start(SpritesheetFramesScene);
+await app.start(SpritesheetFramesScene);

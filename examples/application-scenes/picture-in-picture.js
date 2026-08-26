@@ -48,4 +48,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(PictureInPictureScene);
+await app.start(PictureInPictureScene);

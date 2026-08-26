@@ -75,4 +75,4 @@ const app = new Application({
   },
 });
 
-app.start(CameraBasicScene);
+await app.start(CameraBasicScene);

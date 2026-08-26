@@ -171,7 +171,7 @@ const app = new Application({
 });
 app.start(ParticleStressScene).catch(() => {
   app.element?.remove();
-  app.destroy();
+  void app.destroy();
 });
 function createParticleTexture() {
   const canvas = document.createElement('canvas');

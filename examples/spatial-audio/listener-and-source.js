@@ -128,4 +128,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(ListenerAndSourceScene);
+await app.start(ListenerAndSourceScene);

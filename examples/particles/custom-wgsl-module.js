@@ -91,4 +91,4 @@ const app = new Application({
   clearColor: Color.black,
   extensions: [particlesExtension],
 });
-app.start(CustomWgslModuleScene);
+await app.start(CustomWgslModuleScene);

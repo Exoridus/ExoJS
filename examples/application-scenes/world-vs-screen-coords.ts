@@ -73,4 +73,4 @@ const app = new Application({
   },
 });
 
-app.start(WorldScreenScene);
+await app.start(WorldScreenScene);

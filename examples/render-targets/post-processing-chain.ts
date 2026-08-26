@@ -87,4 +87,4 @@ const app = new Application({
   },
 });
 
-app.start(PostProcessingChainScene);
+await app.start(PostProcessingChainScene);

@@ -202,4 +202,4 @@ const app = new Application({
   // No loader.basePath here: every asset below comes from the shared
   // `assets` catalog, whose URLs are already fully resolved.
 });
-app.start(TileChunksAndBandsScene);
+await app.start(TileChunksAndBandsScene);

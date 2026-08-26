@@ -60,4 +60,4 @@ const app = new Application({
   },
 });
 
-app.start(PauseResumeScene);
+await app.start(PauseResumeScene);

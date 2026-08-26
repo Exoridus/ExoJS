@@ -72,4 +72,4 @@ const app = new Application({
   },
 });
 
-app.start(TextureLoaderScene);
+await app.start(TextureLoaderScene);

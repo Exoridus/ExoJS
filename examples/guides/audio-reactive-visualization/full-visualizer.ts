@@ -56,5 +56,5 @@ class AudioReactiveScene extends Scene {
 
 const app = new Application({ scenes: { AudioReactiveScene }, canvas: { width: 800, height: 600, mount: document.body } });
 
-app.start(AudioReactiveScene);
+await app.start(AudioReactiveScene);
 // #endregion guide:full-visualizer

@@ -99,4 +99,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(TempoTrackingScene);
+await app.start(TempoTrackingScene);

@@ -57,4 +57,4 @@ const app = new Application({
   },
 });
 
-app.start(LocalVsGlobalTransformScene);
+await app.start(LocalVsGlobalTransformScene);

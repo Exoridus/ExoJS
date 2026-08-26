@@ -131,4 +131,4 @@ const app = new Application({
   },
   clearColor: new Color(18, 21, 30),
 });
-app.start(EasingCurvesScene);
+await app.start(EasingCurvesScene);

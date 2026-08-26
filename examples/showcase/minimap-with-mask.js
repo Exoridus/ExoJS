@@ -106,4 +106,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(MinimapWithMaskScene);
+await app.start(MinimapWithMaskScene);

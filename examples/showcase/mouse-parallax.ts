@@ -69,4 +69,4 @@ const app = new Application({
   },
 });
 
-app.start(MouseParallaxScene);
+await app.start(MouseParallaxScene);

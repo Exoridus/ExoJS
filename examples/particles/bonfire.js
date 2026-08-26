@@ -74,4 +74,4 @@ const app = new Application({
   clearColor: Color.black,
   extensions: [particlesExtension],
 });
-app.start(BonfireScene);
+await app.start(BonfireScene);

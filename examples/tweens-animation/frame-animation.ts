@@ -69,4 +69,4 @@ const app = new Application({
   },
 });
 
-app.start(FrameAnimationScene);
+await app.start(FrameAnimationScene);

@@ -258,4 +258,4 @@ const app = new Application({
   clearColor: new Color(10, 14, 26),
 });
 // #endregion guide:application-setup
-app.start(PlayScene);
+await app.start(PlayScene);

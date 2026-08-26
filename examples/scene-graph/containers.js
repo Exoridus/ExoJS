@@ -44,4 +44,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(ContainersScene);
+await app.start(ContainersScene);

@@ -972,4 +972,4 @@ const app = new Application({
   canvas: { width: W, height: H, mount: document.body, sizing: new FixedResolutionCanvasSizing() },
   clearColor: C.bg,
 });
-app.start(AssetBrowserScene);
+await app.start(AssetBrowserScene);

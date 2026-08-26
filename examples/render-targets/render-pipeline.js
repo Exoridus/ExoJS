@@ -105,4 +105,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(RenderPipelineScene);
+await app.start(RenderPipelineScene);

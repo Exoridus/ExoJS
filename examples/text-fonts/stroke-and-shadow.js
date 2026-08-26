@@ -36,4 +36,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(StrokeAndShadowScene);
+await app.start(StrokeAndShadowScene);

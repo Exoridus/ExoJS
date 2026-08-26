@@ -77,4 +77,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(PostProcessingChainScene);
+await app.start(PostProcessingChainScene);

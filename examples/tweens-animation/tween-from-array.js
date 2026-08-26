@@ -55,4 +55,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(TweenFromArrayScene);
+await app.start(TweenFromArrayScene);

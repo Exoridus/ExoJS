@@ -56,4 +56,4 @@ const app = new Application({
   },
 });
 
-app.start(ContainersScene);
+await app.start(ContainersScene);

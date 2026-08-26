@@ -95,4 +95,4 @@ const app = new Application({
   clearColor: Color.black,
 });
 
-app.start(ChromaticAberrationScene);
+await app.start(ChromaticAberrationScene);

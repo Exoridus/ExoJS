@@ -29,4 +29,4 @@ app.systems.add({
     context.render(square);
   },
 });
-app.start();
+await app.start();

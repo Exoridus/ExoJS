@@ -56,4 +56,4 @@ const app = new Application({
     basePath: 'assets/',
   },
 });
-app.start(SpriteBasicsScene);
+await app.start(SpriteBasicsScene);

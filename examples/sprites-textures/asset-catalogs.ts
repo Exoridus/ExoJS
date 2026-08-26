@@ -216,4 +216,4 @@ const app = new Application({
   },
 });
 
-app.start(AssetCatalogsScene);
+await app.start(AssetCatalogsScene);

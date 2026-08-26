@@ -312,4 +312,4 @@ const app = new Application({
   },
 });
 
-app.start(GamepadScene);
+await app.start(GamepadScene);

@@ -64,5 +64,5 @@ const app = new Application({
 });
 app.start(GradientScene).catch(() => {
   app.element?.remove();
-  app.destroy();
+  void app.destroy();
 });

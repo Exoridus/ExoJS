@@ -242,4 +242,4 @@ const app = new Application({
   clearColor: new Color(6, 9, 18, 1),
 });
 
-app.start(ImmediateModeScene);
+await app.start(ImmediateModeScene);
