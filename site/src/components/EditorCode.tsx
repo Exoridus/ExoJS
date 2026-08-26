@@ -6,6 +6,7 @@ import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import TsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 import { type ChangeEvent, type Ref, type RefObject, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
+import { findFootgunCandidates, footgunMessage, type QuickInfoResponse, returnsPromise } from '../lib/footgun-diagnostics';
 import { buildPublicUrl } from '../lib/url-builder';
 import { CURRENT_VERSION_ID } from '../lib/versions';
 import styles from './EditorCode.module.scss';
@@ -125,6 +126,7 @@ export const EditorCode = ({
   const modelRef = useRef<monaco.editor.ITextModel | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const autoRefreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const footgunTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoRefreshRef = useRef(autoRefresh);
   const typingsAppliedVersionRef = useRef<string | null>(null);
   const disposablesRef = useRef<monaco.IDisposable[]>([]);
@@ -174,6 +176,10 @@ export const EditorCode = ({
       if (autoRefreshTimerRef.current !== null) {
         clearTimeout(autoRefreshTimerRef.current);
         autoRefreshTimerRef.current = null;
+      }
+      if (footgunTimerRef.current !== null) {
+        clearTimeout(footgunTimerRef.current);
+        footgunTimerRef.current = null;
       }
       for (const disposable of disposablesRef.current) disposable.dispose();
       disposablesRef.current = [];
@@ -246,6 +252,16 @@ export const EditorCode = ({
       editor.onDidChangeModelContent(() => {
         const dirty = editor.getValue() !== sourceCodeRef.current;
         onDirty(dirty);
+
+        // Scheduled from the content change rather than from
+        // `onDidChangeMarkers`: this handler writes markers itself, and reacting
+        // to marker changes would have it retrigger on its own output.
+        if (footgunTimerRef.current !== null) clearTimeout(footgunTimerRef.current);
+        footgunTimerRef.current = setTimeout(() => {
+          footgunTimerRef.current = null;
+          void updateFootgunMarkers(editor.getModel());
+        }, FOOTGUN_DEBOUNCE_MS);
+
         if (autoRefreshRef.current && dirty) {
           if (autoRefreshTimerRef.current !== null) clearTimeout(autoRefreshTimerRef.current);
           autoRefreshTimerRef.current = setTimeout(() => {
@@ -270,6 +286,7 @@ export const EditorCode = ({
 
     onCursorChange({ lineNumber: 1, column: 1, selectionLength: 0 });
     updateDiagnostics(editor.getModel(), selectedVersionRef.current, typingsAppliedVersionRef.current, onDiagnostic);
+    void updateFootgunMarkers(editor.getModel());
     requestAnimationFrame(() => editor.layout());
   };
 
@@ -472,6 +489,74 @@ const updateDiagnostics = (
     endColumn: marker.endColumn,
   }));
   onDiagnostic(diagnostics);
+};
+
+/**
+ * Marker owner for the dropped-promise hints. Kept separate from the language
+ * service's own owner so setting these never disturbs Monaco's markers - and so
+ * `onDidChangeMarkers` can tell the two apart.
+ */
+const FOOTGUN_OWNER = 'exo-footguns';
+
+/** How long the buffer has to sit still before the hints are recomputed. */
+const FOOTGUN_DEBOUNCE_MS = 500;
+
+type QuickInfoClient = {
+  getQuickInfoAtPosition(uri: string, position: number): Promise<QuickInfoResponse | undefined>;
+};
+
+/**
+ * Asks the language service about each candidate call and marks the ones whose
+ * signature returns a promise.
+ *
+ * Silent on any failure: these are hints layered over a working editor, and a
+ * warming-up worker or a buffer that changed mid-scan is not worth a message.
+ * The next keystroke schedules another pass.
+ */
+const updateFootgunMarkers = async (model: monaco.editor.ITextModel | null): Promise<void> => {
+  if (!model) return;
+
+  const versionAtStart = model.getVersionId();
+  const candidates = findFootgunCandidates(model.getValue());
+
+  if (candidates.length === 0) {
+    monaco.editor.setModelMarkers(model, FOOTGUN_OWNER, []);
+    return;
+  }
+
+  try {
+    const monacoTs = (monaco.languages as unknown as { typescript: { getTypeScriptWorker(): Promise<(...uris: monaco.Uri[]) => Promise<QuickInfoClient>> } })
+      .typescript;
+    const workerFactory = await monacoTs.getTypeScriptWorker();
+    const client = await workerFactory(model.uri);
+    const uri = model.uri.toString();
+
+    const markers: monaco.editor.IMarkerData[] = [];
+
+    for (const candidate of candidates) {
+      const info = await client.getQuickInfoAtPosition(uri, candidate.calleeOffset);
+      if (!returnsPromise(info)) continue;
+
+      markers.push({
+        severity: monaco.MarkerSeverity.Warning,
+        message: footgunMessage(candidate.callee),
+        startLineNumber: candidate.lineNumber,
+        startColumn: candidate.column,
+        endLineNumber: candidate.lineNumber,
+        endColumn: candidate.endColumn,
+        source: FOOTGUN_OWNER,
+      });
+    }
+
+    // The buffer moved while the worker was answering, so these positions
+    // describe text that no longer exists. Drop them; the edit scheduled a
+    // fresh pass of its own.
+    if (model.isDisposed() || model.getVersionId() !== versionAtStart) return;
+
+    monaco.editor.setModelMarkers(model, FOOTGUN_OWNER, markers);
+  } catch {
+    // See the note above: hints never interrupt editing.
+  }
 };
 
 // Emits JS for the editor's current TypeScript buffer via Monaco's TS worker.
