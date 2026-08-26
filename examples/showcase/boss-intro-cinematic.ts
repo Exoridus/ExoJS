@@ -9,10 +9,10 @@ import {
   type Pausable,
   type RenderingContext,
   Scene,
+  type Seconds,
   type Seekable,
   Sprite,
   Text,
-  type Seconds,
   View,
   type Voice,
 } from '@codexo/exojs';

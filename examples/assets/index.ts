@@ -1,2 +1,2 @@
-export { assets } from './assets.js';
 export type { Assets } from './assets.js';
+export { assets } from './assets.js';

@@ -6,9 +6,9 @@ import {
   FixedResolutionCanvasSizing,
   type RenderingContext,
   Scene,
+  type Seconds,
   Sprite,
   Text,
-  type Seconds,
   Vector,
 } from '@codexo/exojs';
 import { BeatDetector } from '@codexo/exojs-audio-fx';

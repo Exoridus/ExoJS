@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, LutFilter, type RenderingContext, Scene, Sprite, Texture, type Seconds } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, LutFilter, type RenderingContext, Scene, type Seconds, Sprite, Texture } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const PRIMARY_RAMP = assets.technical.color.primaryRamp;

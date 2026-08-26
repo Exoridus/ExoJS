@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, type Seconds } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, Sprite } from '@codexo/exojs';
 
 class CameraBasicScene extends Scene {
   private bunny!: Sprite;

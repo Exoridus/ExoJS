@@ -8,9 +8,9 @@ import {
   RenderPipeline,
   RenderTexture,
   Scene,
+  type Seconds,
   ShaderFilter,
   Sprite,
-  type Seconds,
 } from '@codexo/exojs';
 
 const glsl = `#version 300 es

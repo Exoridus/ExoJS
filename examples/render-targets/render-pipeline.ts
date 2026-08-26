@@ -11,8 +11,8 @@ import {
   RenderPipeline,
   RenderTexture,
   Scene,
-  Sprite,
   type Seconds,
+  Sprite,
 } from '@codexo/exojs';
 
 // A composable frame, configured once: the world renders off-screen, a blur step turns it into its

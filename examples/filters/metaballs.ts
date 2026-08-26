@@ -1,4 +1,4 @@
-import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, ShaderFilter, type Seconds } from '@codexo/exojs';
+import { Application, BlurFilter, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, ShaderFilter } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Threshold pass: render solid cyan where the (blurred) red field is dense
@@ -12,7 +12,7 @@ const wgsl = `@group(0) @binding(1) var uTexture:texture_2d<f32>; @group(0) @bin
 
 class MetaballsScene extends Scene {
   private balls!: Graphics;
-  private points!: Array<{ a: number; r: number }>;
+  private points!: { a: number; r: number }[];
   private blur!: BlurFilter;
   private threshold!: ShaderFilter;
 

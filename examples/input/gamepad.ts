@@ -23,8 +23,8 @@ class GamepadScene extends Scene {
   private buttonColor = new Color(255, 255, 255, 0.25);
   private mappingButtons = new Map<InputChannel, Sprite>();
   private mappingFunctions = new Map<InputChannel, (value: number) => void>();
-  private resetFunctions: Array<() => void> = [];
-  private padBindings: Array<{ unbind(): void }> = [];
+  private resetFunctions: (() => void)[] = [];
+  private padBindings: { unbind(): void }[] = [];
   private status!: Sprite;
   private container!: Container;
 

@@ -9,9 +9,9 @@ import {
   Graphics,
   type RenderingContext,
   Scene,
+  type Seconds,
   Sprite,
   Text,
-  type Seconds,
   Vector,
   type Voice,
 } from '@codexo/exojs';
@@ -40,8 +40,8 @@ class GamepadSpaceshipScene extends Scene {
   private thrust = new Vector(0, 0);
   private facing = -Math.PI / 2;
   private engine!: Voice;
-  private bullets: Array<Bullet> = [];
-  private asteroids: Array<Asteroid> = [];
+  private bullets: Bullet[] = [];
+  private asteroids: Asteroid[] = [];
   private fx!: Graphics;
   private particles!: ParticleSystem;
   private burst!: BurstSpawn;

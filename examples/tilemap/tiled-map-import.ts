@@ -27,7 +27,7 @@ const TILE = 64;
 const COLUMNS = 20;
 const ROWS = 12;
 
-const FILTERS: ReadonlyArray<{ label: string; query: ObjectQuery }> = [
+const FILTERS: readonly { label: string; query: ObjectQuery }[] = [
   { label: 'all zones', query: {} },
   { label: 'type: water', query: { type: 'water' } },
   { label: 'type: market', query: { type: 'market' } },

@@ -7,11 +7,11 @@ import {
   Keyboard,
   type RenderingContext,
   Scene,
+  type Seconds,
   Sprite,
   Spritesheet,
   type SpritesheetData,
   TextureRegion,
-  type Seconds,
   View,
 } from '@codexo/exojs';
 import {
@@ -21,8 +21,8 @@ import {
   TileLayer,
   TileMap,
   tilemapExtension,
-  TileSet,
   type TileMapView,
+  TileSet,
 } from '@codexo/exojs-tilemap';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 

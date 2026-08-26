@@ -6,9 +6,9 @@ import {
   FixedResolutionCanvasSizing,
   type RenderingContext,
   Scene,
+  type Seconds,
   Sprite,
   Text,
-  type Seconds,
   View,
   type Voice,
 } from '@codexo/exojs';

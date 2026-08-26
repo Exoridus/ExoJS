@@ -10,8 +10,8 @@ import {
   RenderPipeline,
   RenderTexture,
   Scene,
-  Sprite,
   type Seconds,
+  Sprite,
 } from '@codexo/exojs';
 
 class BloomLiteScene extends Scene {

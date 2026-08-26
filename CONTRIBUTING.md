@@ -118,6 +118,29 @@ part of the engine public API. The canonical catalog is `examples/assets/assets.
 `pnpm --filter @codexo/exojs-examples examples:sync` regenerates the `.js` sources and
 the runtime catalog.
 
+### The `.ts` source and its committed `.js`
+
+The `.ts` file is the authored source. The `.js` beside it is generated from it by
+`examples:sync` and **committed**, which is unusual enough to say why: a release
+bundle ships the whole catalog in both languages, alongside the guides, the API
+reference and a working playground, so a reader can copy either form and run it
+locally without being online. `scripts/release/full-zip.ts` splits them into
+`examples/src/**` and `examples/js/**` from whatever is on disk, and the release
+requires a site build — which runs `examples:sync` — beforehand.
+
+Treat the `.js` as build output that happens to be versioned. It is not linted and
+not type-checked; `pnpm examples:sync:check` compares it against its `.ts` source,
+and that gate is the only thing that should hold an opinion about it. Never edit
+one by hand — a committed `.js` also shadows its `.ts` for anyone searching the
+tree.
+
+Two files are not that. `examples/shared/runtime.js` is authored, with a
+hand-written `runtime.d.ts` beside it and no `.ts` source. And
+`examples/tilemap/worker-streamed-terrain.js` is the one example whose generation
+is not a plain transpile: its `?worker` import is inlined at generation time, so
+the emitted file carries code its source does not, and it stays in
+`tsconfig.examples.json` for that reason.
+
 ### Guide sources
 
 A guide chapter narrates one running program down the page. That program lives

@@ -6,8 +6,8 @@ import {
   RadialGradient,
   type RenderingContext,
   Scene,
-  Sprite,
   type Seconds,
+  Sprite,
 } from '@codexo/exojs';
 
 class GradientScene extends Scene {

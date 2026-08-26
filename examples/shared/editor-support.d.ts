@@ -28,9 +28,11 @@ declare global {
 // them. TypeScript examples should instead extend Scene with a named class
 // and declare fields explicitly.
 declare module '@codexo/exojs' {
-  export interface Scene {
-    [key: string]: any;
-  }
+  // `any` rather than `unknown`: this shim exists so a JavaScript example can
+  // read and write `this._bunny` without declaring it. Under `unknown` every
+  // such access would need a cast, which is the friction the shim removes.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- see above
+  export type Scene = Record<string, any>;
 
   export abstract class Json {
     private readonly __exoJsonToken: never;

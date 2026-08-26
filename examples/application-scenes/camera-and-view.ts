@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, Text, type Seconds, View } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, Keyboard, type RenderingContext, Scene, type Seconds, Text, View } from '@codexo/exojs';
 
 class CameraViewScene extends Scene {
   private camera!: View;

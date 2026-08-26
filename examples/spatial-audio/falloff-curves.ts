@@ -10,7 +10,7 @@ interface FalloffModelDef {
 
 // Horizontal placement (0..1 of canvas width) for each source; absolute pixel
 // positions are resolved against the canvas in init().
-const MODELS: Array<FalloffModelDef & { tx: number }> = [
+const MODELS: (FalloffModelDef & { tx: number })[] = [
   { model: 'linear', tx: 0.25, color: new Color(255, 140, 140) },
   { model: 'inverse', tx: 0.5, color: new Color(140, 200, 255) },
   { model: 'exponential', tx: 0.75, color: new Color(200, 255, 140) },

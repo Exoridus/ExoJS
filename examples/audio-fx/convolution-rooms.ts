@@ -6,9 +6,9 @@ import {
   Keyboard,
   type RenderingContext,
   Scene,
+  type Seconds,
   type Sound,
   Text,
-  type Seconds,
 } from '@codexo/exojs';
 import { ConvolutionEffect } from '@codexo/exojs-audio-fx';
 import { mountControls } from '@examples/runtime';

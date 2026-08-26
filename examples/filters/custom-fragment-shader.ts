@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, ShaderFilter, Sprite, type Seconds } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, ShaderFilter, Sprite } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 
 const HUE_RAMP = assets.technical.color.hueRamp;

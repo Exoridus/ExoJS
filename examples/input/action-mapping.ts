@@ -7,8 +7,8 @@ import {
   Keyboard,
   type RenderingContext,
   Scene,
-  Sprite,
   type Seconds,
+  Sprite,
 } from '@codexo/exojs';
 import { mountControls } from '@examples/runtime';
 

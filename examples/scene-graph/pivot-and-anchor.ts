@@ -1,4 +1,4 @@
-import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, Sprite, Text, type Seconds } from '@codexo/exojs';
+import { Application, Color, FixedResolutionCanvasSizing, Graphics, type RenderingContext, Scene, type Seconds, Sprite, Text } from '@codexo/exojs';
 
 const modes = [
   { name: 'corner', anchor: [0, 0] as [number, number], origin: [0, 0] as [number, number] | null },

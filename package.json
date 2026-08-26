@@ -112,7 +112,7 @@
     "typecheck:test": "tsx scripts/typecheck-tests.ts",
     "typecheck:test:update-baseline": "tsx scripts/typecheck-tests.ts --update-baseline",
     "typecheck:bench": "pnpm --filter @codexo/exojs-bench bench:setup && pnpm --filter @codexo/exojs-bench typecheck",
-    "lint": "eslint --max-warnings=0 \"src/**/*.ts\" \"test/**/*.ts\" \"examples/**/*.js\" \"examples/guides/**/*.ts\" \"examples/**/*.worker.ts\" \"scripts/**/*.{ts,mjs}\" \"packages/exojs-bench/competitors/*.ts\" \"*.config.ts\"",
+    "lint": "eslint --max-warnings=0 \"src/**/*.ts\" \"test/**/*.ts\" \"examples/**/*.ts\" \"scripts/**/*.{ts,mjs}\" \"packages/exojs-bench/competitors/*.ts\" \"*.config.ts\"",
     "lint:fix": "pnpm lint --fix",
     "lint:fast": "pnpm lint --cache --cache-location .cache/eslintcache",
     "lint:fast:fix": "pnpm lint:fast --fix",

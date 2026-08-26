@@ -4,7 +4,7 @@ import { mountControlPanel, mountControls } from '@examples/runtime';
 
 // Spoken phrases (Kenney Voiceover Pack, CC0) - a voice modulator is what makes
 // a vocoder recognisable as the classic "robot voice" effect.
-const PHRASES: Array<{ key: string; label: string; asset: string }> = [
+const PHRASES: { key: string; label: string; asset: string }[] = [
   { key: 'congrats', label: 'Congratulations', asset: assets.demo.voice.congratulations },
   { key: 'mission', label: 'Mission complete', asset: assets.demo.voice.missionComplete },
   { key: 'objective', label: 'Objective achieved', asset: assets.demo.voice.objectiveAchieved },

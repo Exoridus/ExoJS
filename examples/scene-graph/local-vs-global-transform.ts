@@ -1,4 +1,4 @@
-import { Application, Color, Container, FixedResolutionCanvasSizing, type RenderingContext, Scene, Sprite, Text, type Seconds } from '@codexo/exojs';
+import { Application, Color, Container, FixedResolutionCanvasSizing, type RenderingContext, Scene, type Seconds, Sprite, Text } from '@codexo/exojs';
 
 class LocalVsGlobalTransformScene extends Scene {
   private parent!: Container;

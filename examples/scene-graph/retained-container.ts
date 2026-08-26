@@ -7,9 +7,9 @@ import {
   type RenderingContext,
   RetainedContainer,
   Scene,
+  type Seconds,
   Sprite,
   Texture,
-  type Seconds,
 } from '@codexo/exojs';
 import { mountControlPanel, mountControls } from '@examples/runtime';
 

@@ -79,7 +79,7 @@ export const renderAssetsGlobalDts = (assets: Record<string, unknown>): string =
     '//',
     '// It is NOT part of the engine public API and is unavailable in consumer apps.',
     '',
-    `type ExampleAssetCatalog = ${catalogType};`,
+    `interface ExampleAssetCatalog ${catalogType}`,
     '',
     'declare global {',
     '    const assets: ExampleAssetCatalog;',

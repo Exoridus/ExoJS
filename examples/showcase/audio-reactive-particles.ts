@@ -6,8 +6,8 @@ import {
   FixedResolutionCanvasSizing,
   type RenderingContext,
   Scene,
-  Text,
   type Seconds,
+  Text,
   Vector,
   type Voice,
 } from '@codexo/exojs';
