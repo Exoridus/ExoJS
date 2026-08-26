@@ -46,11 +46,6 @@ const EXEMPTIONS: readonly Exemption[] = [
     reason: 'shared presets that ESLint, Prettier, Vitest and Rolldown load at runtime, typed through JSDoc under `checkJs` (see tsconfig.scripts.json)',
   },
   {
-    path: 'packages/exojs-bench/competitors/link.mjs',
-    reason:
-      'runs against the out-of-workspace `competitors` install and sits in no tsconfig program, where a `.ts` extension would claim a checking that does not happen',
-  },
-  {
     path: 'site/public/brand/svgo.config.js',
     reason: 'read by the `svgo` CLI, which loads a config module and understands no TypeScript',
   },

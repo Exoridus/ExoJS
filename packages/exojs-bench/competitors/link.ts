@@ -6,13 +6,18 @@
 // argument is ignored) so it works without elevated privileges / Developer Mode.
 //
 // Run via `pnpm --filter @codexo/exojs-bench bench:setup` -- never by a plain install.
+//
+// Imports nothing but `node:` built-ins, so it type-checks and runs without the
+// competitor install it exists to create. It is a member of the root
+// tsconfig.scripts.json program for that reason; node strips its types, so keep
+// the syntax erasable.
 import { existsSync, mkdirSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const competitorsDir = fileURLToPath(new URL('.', import.meta.url));
 const benchNodeModules = fileURLToPath(new URL('../node_modules/', import.meta.url));
-const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'));
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { dependencies?: Record<string, string> };
 const names = Object.keys(pkg.dependencies ?? {});
 
 if (names.length === 0) {

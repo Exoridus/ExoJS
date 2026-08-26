@@ -5,7 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "bench:setup": "pnpm install --dir competitors --ignore-workspace && node competitors/link.mjs",
+    "bench:setup": "pnpm install --dir competitors --ignore-workspace && node competitors/link.ts",
     "bench": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts",
     "perf:baseline": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/run.ts",
     "timer": "node --conditions=@codexo/exojs-source --import ../../scripts/glsl-register.ts --import tsx/esm src/runTimerProbe.ts",

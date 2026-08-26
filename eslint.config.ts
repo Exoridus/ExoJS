@@ -902,7 +902,7 @@ export default defineConfig([
   // same way (`no-unsafe-argument` needs type info too) - dropped rather than
   // given a real tsconfig program, since these files intentionally sit
   // outside any typed program.
-  ...nodeToolingConfig({ files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs'] }),
+  ...nodeToolingConfig({ files: ['*.config.ts', 'eslint.config.ts', 'scripts/**/*.ts', 'scripts/**/*.mjs', 'packages/exojs-bench/competitors/*.ts'] }),
 
   // scripts/webgpu-probe.ts runs as a Node process that drives a Playwright
   // page, but several of its callbacks are passed to `page.evaluate()` and
@@ -1020,7 +1020,7 @@ export default defineConfig([
   // ship to consumers, and report progress on stdout by design - `no-console`
   // is the wrong rule here, not a violation to silence per-line.
   {
-    files: ['scripts/**/*.ts', '*.config.ts'],
+    files: ['scripts/**/*.ts', 'packages/exojs-bench/competitors/*.ts', '*.config.ts'],
     rules: {
       'no-console': 'off',
     },
@@ -1031,7 +1031,7 @@ export default defineConfig([
   // extension packages, and these trees sit outside a typed program, so they
   // take the rule on its own. The site has its own config and carries it there.
   {
-    files: ['test/**/*.{ts,tsx}', 'packages/exojs-*/test/**/*.{ts,tsx}', 'scripts/**/*.{ts,mjs}', '*.config.ts'],
+    files: ['test/**/*.{ts,tsx}', 'packages/exojs-*/test/**/*.{ts,tsx}', 'scripts/**/*.{ts,mjs}', 'packages/exojs-bench/competitors/*.ts', '*.config.ts'],
     rules: {
       'func-style': ['error', 'expression'],
     },

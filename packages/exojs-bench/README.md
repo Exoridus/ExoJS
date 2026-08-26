@@ -3,7 +3,7 @@
 Private, reproducible cross-library rendering/physics benchmark harness for ExoJS.
 Not published. Compares ExoJS against competitor libraries (Pixi, Phaser,
 Excalibur, matter-js, rapier2d-compat) kept in an isolated `competitors/`
-manifest — see `competitors/package.json` and `competitors/link.mjs` for why
+manifest — see `competitors/package.json` and `competitors/link.ts` for why
 they're excluded from the workspace install.
 
 ## Setup
