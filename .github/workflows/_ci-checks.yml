@@ -43,6 +43,7 @@ jobs:
       site: ${{ steps.decide.outputs.site }}
       audioFx: ${{ steps.decide.outputs.audioFx }}
       tilemapWorker: ${{ steps.decide.outputs.tilemapWorker }}
+      exampleCatalog: ${{ steps.decide.outputs.exampleCatalog }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -1102,6 +1103,75 @@ jobs:
           retention-days: 1
           if-no-files-found: error
 
+  # Boots every entry in the example catalog in headless Chromium. Nothing else
+  # in CI executes an example: `typecheck:examples` compiles the sources,
+  # `examples:sync:check` compares the generated `.js` twins against them, and
+  # the site build only has to render the pages that link them - an example
+  # whose scene throws on start passes all three and still ships a black canvas.
+  #
+  # Consumes the `site-build` job's artifact rather than building the site a
+  # second time: `smoke-examples.ts` serves `site/dist` over a throwaway static
+  # server, so the bytes it smokes are the bytes that job validated.
+  example-smoke:
+    name: Example Smoke
+    needs: [changes, site-build]
+    if: ${{ !cancelled() && needs.changes.outputs.exampleCatalog == 'true' && needs['site-build'].result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: ${{ inputs.pnpm-version }}
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          check-latest: true
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm bootstrap
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Download site artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-dist-${{ github.sha }}
+          path: site/dist
+
+      - name: Smoke the example catalog
+        run: pnpm test:examples:smoke
+
+      # The harness writes a per-example table; keep it when the lane is red so
+      # the failing entry is readable without re-running anything.
+      - name: Upload the smoke report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: example-smoke-report
+          path: .workspace/reports/example-smoke.md
+          retention-days: 7
+          if-no-files-found: ignore
+
   required-ci:
     name: Required CI
     if: ${{ always() }}
@@ -1122,6 +1192,7 @@ jobs:
         build,
         package-verify,
         site-build,
+        example-smoke,
       ]
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -1132,6 +1203,7 @@ jobs:
           SITE: ${{ needs.changes.outputs.site }}
           AUDIOFX: ${{ needs.changes.outputs.audioFx }}
           TILEMAPWORKER: ${{ needs.changes.outputs.tilemapWorker }}
+          EXAMPLECATALOG: ${{ needs.changes.outputs.exampleCatalog }}
           CHANGES_RESULT: ${{ needs.changes.result }}
           TYPECHECK_RESULT: ${{ needs.typecheck.result }}
           LINT_RESULT: ${{ needs.lint.result }}
@@ -1147,8 +1219,9 @@ jobs:
           BUILD_RESULT: ${{ needs.build.result }}
           PACKAGE_VERIFY_RESULT: ${{ needs['package-verify'].result }}
           SITE_BUILD_RESULT: ${{ needs['site-build'].result }}
+          EXAMPLE_SMOKE_RESULT: ${{ needs['example-smoke'].result }}
         run: |
-          echo "areas: engine=$ENGINE site=$SITE audioFx=$AUDIOFX tilemapWorker=$TILEMAPWORKER"
+          echo "areas: engine=$ENGINE site=$SITE audioFx=$AUDIOFX tilemapWorker=$TILEMAPWORKER exampleCatalog=$EXAMPLECATALOG"
           echo "changes: $CHANGES_RESULT"
           echo "typecheck: $TYPECHECK_RESULT"
           echo "lint: $LINT_RESULT"
@@ -1164,6 +1237,7 @@ jobs:
           echo "build: $BUILD_RESULT"
           echo "package-verify: $PACKAGE_VERIFY_RESULT"
           echo "site-build: $SITE_BUILD_RESULT"
+          echo "example-smoke: $EXAMPLE_SMOKE_RESULT"
 
           failed=0
 
@@ -1193,7 +1267,8 @@ jobs:
             "skip-budget=$SKIP_BUDGET_RESULT" \
             "build=$BUILD_RESULT" \
             "package-verify=$PACKAGE_VERIFY_RESULT" \
-            "site-build=$SITE_BUILD_RESULT"; do
+            "site-build=$SITE_BUILD_RESULT" \
+            "example-smoke=$EXAMPLE_SMOKE_RESULT"; do
             name="${entry%%=*}"
             result="${entry#*=}"
             if [ "$result" = "failure" ] || [ "$result" = "cancelled" ]; then
@@ -1248,6 +1323,16 @@ jobs:
           if [ "$SITE" = "true" ] && [ "$PACKAGE_VERIFY_RESULT" != "failure" ]; then
             if [ "$SITE_BUILD_RESULT" = "skipped" ]; then
               echo "::error::Site change detected but 'site-build' was skipped (path-filter regression)."
+              failed=1
+            fi
+          fi
+
+          # An example-catalog change must smoke the catalog - unless the site
+          # build it consumes failed first, in which case example-smoke is
+          # intentionally skipped and the site-build failure is already counted.
+          if [ "$EXAMPLECATALOG" = "true" ] && [ "$SITE_BUILD_RESULT" != "failure" ] && [ "$BUILD_RESULT" != "failure" ]; then
+            if [ "$EXAMPLE_SMOKE_RESULT" = "skipped" ]; then
+              echo "::error::Example-catalog change detected but 'example-smoke' was skipped (path-filter regression)."
               failed=1
             fi
           fi

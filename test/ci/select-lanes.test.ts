@@ -282,3 +282,53 @@ describe('CI lane selection — browser-tilemap-worker lane', () => {
     expect(decide('.github/workflows/ci.yml').lanes.browserTilemapWorker).toBe(true);
   });
 });
+
+describe('CI lane selection - example-smoke lane', () => {
+  it('example SOURCE change runs the example-smoke lane', () => {
+    const { areas, lanes } = decide('examples/input/key-rebinding.ts');
+    expect(areas.exampleCatalog).toBe(true);
+    expect(lanes.exampleSmoke).toBe(true);
+    // The lane consumes the site-build artifact, so that lane has to run too.
+    expect(areas.site).toBe(true);
+    expect(lanes.siteBuild).toBe(true);
+    // The catalog is not engine code.
+    expect(areas.engine).toBe(false);
+    expect(lanes.unit).toBe(false);
+    expect(lanes.browserWebgl2).toBe(false);
+  });
+
+  it('the generated `.js` twin and the catalog manifest run the lane too', () => {
+    expect(decide('examples/input/key-rebinding.js').lanes.exampleSmoke).toBe(true);
+    expect(decide('examples/examples.json').lanes.exampleSmoke).toBe(true);
+    expect(decide('examples/assets/catalog.js').lanes.exampleSmoke).toBe(true);
+  });
+
+  it('the harness, the preview page and the catalog sync script run the lane', () => {
+    expect(decide('site/scripts/smoke-examples.ts').lanes.exampleSmoke).toBe(true);
+    expect(decide('site/public/preview.html').lanes.exampleSmoke).toBe(true);
+    expect(decide('site/scripts/sync-examples-static.ts').lanes.exampleSmoke).toBe(true);
+  });
+
+  it('an unrelated site change does NOT run the lane, but still builds the site', () => {
+    const { areas, lanes } = decide('site/src/pages/index.astro');
+    expect(areas.exampleCatalog).toBe(false);
+    expect(lanes.exampleSmoke).toBe(false);
+    expect(lanes.siteBuild).toBe(true);
+  });
+
+  it('engine and package changes do NOT run the lane (the browser lanes cover that runtime)', () => {
+    expect(decide('src/rendering/Drawable.ts').lanes.exampleSmoke).toBe(false);
+    expect(decide('packages/exojs-tilemap/src/TileMap.ts').lanes.exampleSmoke).toBe(false);
+    expect(decide('packages/exojs-tiled/README.md').lanes.exampleSmoke).toBe(false);
+  });
+
+  it('workflow / lockfile / workspace changes run the lane', () => {
+    expect(decide('.github/workflows/_ci-checks.yml').lanes.exampleSmoke).toBe(true);
+    expect(decide('pnpm-lock.yaml').lanes.exampleSmoke).toBe(true);
+    expect(decide('pnpm-workspace.yaml').lanes.exampleSmoke).toBe(true);
+  });
+
+  it('negative: a root docs-only change selects no example-smoke lane', () => {
+    expect(decide('README.md').lanes.exampleSmoke).toBe(false);
+  });
+});

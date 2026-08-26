@@ -8,6 +8,7 @@ export interface LaneAreas {
   site: boolean;
   audioFx: boolean;
   tilemapWorker: boolean;
+  exampleCatalog: boolean;
 }
 
 export interface EffectiveLanes {
@@ -22,6 +23,7 @@ export interface EffectiveLanes {
   browserTilemapWorker: boolean;
   packageVerify: boolean;
   siteBuild: boolean;
+  exampleSmoke: boolean;
 }
 
 /** Classify a list of changed files into the effective validation areas. */

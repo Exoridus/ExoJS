@@ -73,6 +73,15 @@ export const LOCAL_LANES: readonly Lane[] = [
   { key: 'browserAudio', name: 'browser: audio worklets', command: ['pnpm', 'test:browser:audio'], browser: true },
   { key: 'browserTilemapWorker', name: 'browser: tilemap worker', command: ['pnpm', 'test:browser:tilemap'], browser: true },
   { key: 'siteBuild', name: 'site gates', command: ['pnpm', 'gates', 'site'], gate: true },
+  // The harness serves `site/dist`, so locally the build is part of the lane -
+  // smoking a stale dist is the false green this lane exists to prevent. CI
+  // gets the build for free by reusing the site-build job's artifact.
+  {
+    key: 'exampleSmoke',
+    name: 'example catalog smoke',
+    command: ['pnpm', 'site:build', '&&', 'pnpm', 'test:examples:smoke'],
+    browser: true,
+  },
 ];
 
 const git = (...args: string[]): string => {
@@ -123,7 +132,7 @@ const main = (): void => {
   const base = readFlag(argv, '--base') ?? 'origin/main';
 
   const files = all ? [] : changedFiles(base);
-  const areas = all ? { engine: true, site: true, audioFx: true, tilemapWorker: true } : selectAreas(files);
+  const areas = all ? { engine: true, site: true, audioFx: true, tilemapWorker: true, exampleCatalog: true } : selectAreas(files);
   const effective = effectiveLanes(areas);
 
   const selected = LOCAL_LANES.filter(lane => lane.key === 'always' || effective[lane.key])
@@ -133,7 +142,9 @@ const main = (): void => {
   const scope = all ? 'every lane' : `${files.length} changed file(s) since ${base}`;
 
   process.stdout.write(`lanes: ${scope}\n`);
-  process.stdout.write(`lanes: engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker}\n\n`);
+  process.stdout.write(
+    `lanes: engine=${areas.engine} site=${areas.site} audioFx=${areas.audioFx} tilemapWorker=${areas.tilemapWorker} exampleCatalog=${areas.exampleCatalog}\n\n`,
+  );
 
   for (const lane of selected) {
     process.stdout.write(`  ${lane.command.join(' ')}${lane.browser ? '   (browser)' : ''}\n`);
