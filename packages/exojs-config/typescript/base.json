@@ -1,12 +1,13 @@
 {
   "$schema": "https://json.schemastore.org/tsconfig",
-  "_comment": "Shared baseline compiler options for every ExoJS package. Package-local configs add rootDir/outDir/include/exclude, customConditions (package-specific source condition), and any package-specific lib/types/paths. Strict type-safety flags including noUncheckedIndexedAccess and exactOptionalPropertyTypes are enabled below. Measured and deliberately NOT enabled, with the count that decided it: allowUnreachableCode:false (2) flags the `return` after an `assert(false, ...)` guard, which is unreachable only until the assertion is stripped from a production build - the return is what keeps that path defined; noPropertyAccessFromIndexSignature (554) is almost entirely the serialization layer reading its own field records, where bracket notation carries no extra safety; erasableSyntaxOnly (109) is the runtime `enum` declarations and constructor parameter properties, neither of which has an erasable spelling with the same semantics; isolatedDeclarations (620) would require an explicit annotation on every inferred public return type. module:Preserve and skipLibCheck:false are open questions, not rejections.",
+  "_comment": "Shared baseline compiler options for every ExoJS package. Package-local configs add rootDir/outDir/include/exclude, customConditions (package-specific source condition), and any package-specific lib/types/paths. Strict type-safety flags including noUncheckedIndexedAccess and exactOptionalPropertyTypes are enabled below. Measured and deliberately NOT enabled, with the count that decided it: allowUnreachableCode:false (2) flags the `return` after an `assert(false, ...)` guard, which is unreachable only until the assertion is stripped from a production build - the return is what keeps that path defined; noPropertyAccessFromIndexSignature (554) is almost entirely the serialization layer reading its own field records, where bracket notation carries no extra safety; erasableSyntaxOnly (109) is the runtime `enum` declarations and constructor parameter properties, neither of which has an erasable spelling with the same semantics; isolatedDeclarations (620) would require an explicit annotation on every inferred public return type. module:Preserve and skipLibCheck:false are open questions, not rejections. `allowJs` is written out rather than left to its default, because it is a policy here and not an oversight: JavaScript is an exemption a program has to state for itself (tsconfig.scripts.json and tsconfig.examples.json do), and `lint:js-files` enforces the same rule on the file tree.",
   "compilerOptions": {
     "target": "es2022",
     "module": "esnext",
     "moduleResolution": "bundler",
     "lib": ["es2022", "dom", "dom.iterable"],
     "strict": true,
+    "allowJs": false,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,

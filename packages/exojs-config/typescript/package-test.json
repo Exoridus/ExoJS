@@ -6,7 +6,6 @@
     "declaration": false,
     "declarationMap": false,
     "sourceMap": false,
-    "allowJs": true,
     "verbatimModuleSyntax": false,
     "isolatedModules": false,
     "noUncheckedIndexedAccess": false,
