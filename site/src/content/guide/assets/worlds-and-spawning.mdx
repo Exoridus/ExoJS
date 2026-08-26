@@ -4,6 +4,7 @@ description: 'Model a multi-level world, load and unload levels on demand with t
 ---
 
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Worlds and level streaming
 
@@ -126,21 +127,12 @@ choice for a game small enough not to need any of this. See [LDtk levels](/ExoJS
 
 This is your game's policy, and it is ordinary code:
 
-```ts
-import type { MapBounds, MapWorld, MapWorldRuntime } from '@codexo/exojs-tilemap';
-
-export function updateStreaming(runtime: MapWorldRuntime, world: MapWorld, cameraBounds: MapBounds): void {
-    const wanted = new Set(world.getLevelsInBounds(cameraBounds).map(level => level.id));
-
-    for (const id of wanted) {
-        if (!runtime.isLoaded(id) && !runtime.isLoading(id)) void runtime.loadLevel(id);
-    }
-
-    for (const level of runtime.levels) {
-        if (!wanted.has(level.id)) runtime.unloadLevel(level.id);
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/worlds-and-spawning/streaming.ts"
+  region="level-streaming"
+  language="ts"
+  title="examples/guides/worlds-and-spawning/streaming.ts"
+/>
 
 Neighbour-based streaming is the same shape with `world.getNeighbours(currentLevelId)` instead of a
 bounds query. Add hysteresis, a preload margin or a fade transition where your game wants them —
@@ -151,13 +143,12 @@ already has, and a concurrent call joins the load in flight rather than starting
 
 A load that spawns nothing can still be cancelled — pass the signal on its own:
 
-```ts
-import type { MapWorldRuntime } from '@codexo/exojs-tilemap';
-
-export function loadCancellable(runtime: MapWorldRuntime, signal: AbortSignal): Promise<unknown> {
-    return runtime.loadLevel('level-forest', { signal });
-}
-```
+<SourceSnippet
+  source="examples/guides/worlds-and-spawning/streaming.ts"
+  region="cancellable-load"
+  language="ts"
+  title="examples/guides/worlds-and-spawning/streaming.ts"
+/>
 
 Cancelling a load through `unloadLevel` leaves the level immediately loadable again: a `loadLevel`
 issued in the same turn starts a fresh load rather than joining the one on its way out.
@@ -168,33 +159,12 @@ Level editors place objects; games need entities. A
 [`MapObjectSpawner`](/ExoJS/en/api/map-object-spawner/) is the bridge, and it is a plain object you
 construct — **not** a global registry:
 
-```ts
-import { Container } from '@codexo/exojs';
-import { MapObjectSpawner } from '@codexo/exojs-tilemap';
-
-class Enemy extends Container {}
-class Chest extends Container {}
-
-interface GameContext {
-    difficulty: number;
-    save: Map<string, unknown>;
-}
-
-export const spawner = new MapObjectSpawner<GameContext, Enemy | Chest>({
-    Enemy: (object, context) => {
-        const enemy = new Enemy();
-        enemy.position.set(object.x, object.y);
-        enemy.scale.set(context.difficulty);
-        return enemy;
-    },
-    Chest: (object, context) => {
-        const chest = new Chest();
-        chest.name = object.id;
-        chest.visible = !context.save.has(object.id);
-        return chest;
-    },
-});
-```
+<SourceSnippet
+  source="examples/guides/worlds-and-spawning/spawner.ts"
+  region="object-spawner"
+  language="ts"
+  title="examples/guides/worlds-and-spawning/spawner.ts"
+/>
 
 Because the dispatch table belongs to the instance, several games, tests, editor previews and mods
 can run in one process without seeing each other's factories, and there is nothing to reset between
@@ -255,17 +225,12 @@ There is no dependency injection in the engine. Whatever your entities need trav
 By default the factory key is `object.kind`. Override `identify` when your project keys on something
 else:
 
-```ts
-import { Container } from '@codexo/exojs';
-import { MapObjectSpawner } from '@codexo/exojs-tilemap';
-
-class Enemy extends Container {}
-
-export const eliteAware = new MapObjectSpawner<void, Enemy>(
-    { 'Enemy:elite': () => new Enemy() },
-    { identify: object => `${object.kind}:${String(object.properties.variant)}` },
-);
-```
+<SourceSnippet
+  source="examples/guides/worlds-and-spawning/spawner-identify.ts"
+  region="custom-identify"
+  language="ts"
+  title="examples/guides/worlds-and-spawning/spawner-identify.ts"
+/>
 
 Return `null` from `identify` to treat an object as unknown, and `null` from a factory to
 deliberately create nothing for it.
@@ -276,17 +241,12 @@ Maps legitimately carry editor markers, decoration and metadata objects that no 
 to, so an object no factory matches is **ignored** by default. Set `unknown: 'error'` for a map
 format your project fully controls and wants validated:
 
-```ts
-import { Container } from '@codexo/exojs';
-import { MapObjectSpawner } from '@codexo/exojs-tilemap';
-
-class Enemy extends Container {}
-
-export const strict = new MapObjectSpawner<void, Enemy>(
-    { Enemy: () => new Enemy() },
-    { unknown: 'error' },
-);
-```
+<SourceSnippet
+  source="examples/guides/worlds-and-spawning/spawner-strict.ts"
+  region="unknown-error"
+  language="ts"
+  title="examples/guides/worlds-and-spawning/spawner-strict.ts"
+/>
 
 ### Order, atomicity and cancellation
 
@@ -305,68 +265,34 @@ export const strict = new MapObjectSpawner<void, Enemy>(
 The session is keyed by the same stable ids the editor assigned, which makes restoration a lookup
 rather than a search:
 
-```ts
-import type { Container } from '@codexo/exojs';
-import type { MapSpawnSession } from '@codexo/exojs-tilemap';
-
-export function restore(session: MapSpawnSession<Container>, saved: Map<string, boolean>): void {
-    for (const [id, visible] of saved) {
-        const object = session.get(id);
-        if (object !== undefined) object.visible = visible;
-    }
-}
-```
+<SourceSnippet
+  source="examples/guides/worlds-and-spawning/spawn-session.ts"
+  region="spawn-session"
+  language="ts"
+  title="examples/guides/worlds-and-spawning/spawn-session.ts"
+/>
 
 ## Tiled
 
 Tiled has no world file concept in ExoJS, and this slice does not invent one. Everything else works
 the same way, because the spawner operates on a `TileMap`:
 
-```ts
-import { Asset, type Container, type LoaderScope } from '@codexo/exojs';
-import type { MapObjectSpawner } from '@codexo/exojs-tilemap';
-
-export async function spawnTiledLevel(
-    scope: LoaderScope,
-    spawner: MapObjectSpawner<void, Container>,
-): Promise<void> {
-    const map = await scope.load(Asset.type('tileMap', 'https://example.com/level.tmj'));
-    const session = await spawner.spawn(map, undefined);
-
-    session.destroy();
-}
-```
+<SourceSnippet
+  source="examples/guides/worlds-and-spawning/tiled-spawn.ts"
+  region="tiled-spawn"
+  language="ts"
+  title="examples/guides/worlds-and-spawning/tiled-spawn.ts"
+/>
 
 To stream several Tiled maps as a world, describe their layout with a `MapWorld` you build yourself
 and give the runtime a loader for them:
 
-```ts
-import { Asset, type LoaderScope } from '@codexo/exojs';
-import { MapWorld, MapWorldRuntime } from '@codexo/exojs-tilemap';
-
-export function createTiledWorld(scope: LoaderScope): MapWorldRuntime {
-    const world = new MapWorld({
-        name: 'overworld',
-        levels: [
-            {
-                id: 'town',
-                name: 'Town',
-                index: 0,
-                external: true,
-                neighbours: [],
-                bounds: { x: 0, y: 0, width: 640, height: 480 },
-                properties: {},
-            },
-        ],
-    });
-
-    return new MapWorldRuntime({
-        world,
-        scope,
-        load: (context) => context.scope.load(Asset.type('tileMap', `${context.level.id}.tmj`)),
-    });
-}
-```
+<SourceSnippet
+  source="examples/guides/worlds-and-spawning/tiled-world.ts"
+  region="tiled-world"
+  language="ts"
+  title="examples/guides/worlds-and-spawning/tiled-world.ts"
+/>
 
 <Callout type="pitfall" title="A level runtime owns the map its loader returned">
 `MapLevelRuntime.destroy()` destroys that `TileMap`. Return a map built for this load — never a

@@ -4,6 +4,7 @@ description: 'Load Aseprite JSON sprite sheet exports as AsepriteSheet assets th
 ---
 
 import Callout from '../../../components/Callout.astro';
+import SourceSnippet from '../../../components/SourceSnippet.astro';
 
 # Aseprite sprite sheets
 
@@ -80,17 +81,12 @@ on a malformed document), resolves `meta.image` relative to the JSON source, sub
 [`AnimatedSprite`](/ExoJS/en/api/animated-sprite/) with every Aseprite tag pre-defined as a named,
 playable clip. Call `play(tag)` with a tag name to start it:
 
-```ts
-async load() {
-    this.sheet = await this.loader.load(Asset.type('asepriteSheet', 'sprites/hero.json'));
-}
-
-init() {
-    this.player = this.sheet.createAnimatedSprite();
-    this.player.play('walk');
-    this.root.addChild(this.player);
-}
-```
+<SourceSnippet
+  source="examples/guides/aseprite/hero-sheet.ts"
+  region="aseprite-scene"
+  language="ts"
+  title="examples/guides/aseprite/hero-sheet.ts"
+/>
 
 Like any `AnimatedSprite`, playback advances on its own once the sprite is in the scene tree — the
 engine's `AnimationManager` ticks it every frame. See the
