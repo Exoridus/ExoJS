@@ -41,23 +41,21 @@ Each tween operates independently — they don't need to know about each other. 
 
 Navigate to the cinematic scene from the game to fully replace the active scene while the cutscene plays:
 
-```ts no-check -- app.scenes.change needs a real Scene subclass; the scenes this page names exist only in prose
-// From the game scene — switch to the cinematic:
-this.app.scenes.change(CinematicScene);
-```
+<SourceSnippet
+  source="examples/guides/cinematics/cutscene-flow.ts"
+  region="enter-cinematic"
+  language="ts"
+  title="examples/guides/cinematics/cutscene-flow.ts"
+/>
 
 Because the cinematic is now the only active scene, the game scene neither renders nor updates for the duration. When the cinematic ends, switch back:
 
-```ts no-check -- app.scenes.change needs a real Scene subclass; the scenes this page names exist only in prose
-// At the end of the sequence — chain a tween to transition back to the game:
-this.app.tweens.create(this.barSize)
-    .to({ v: 70 }, 0.6)
-    .delay(3.5) // start closing bars after the sequence plays
-    .onComplete(() => {
-        this.app.scenes.change(GameScene, { transition: new FadeSceneTransition() });
-    })
-    .start();
-```
+<SourceSnippet
+  source="examples/guides/cinematics/cutscene-flow.ts"
+  region="return-to-game"
+  language="ts"
+  title="examples/guides/cinematics/cutscene-flow.ts"
+/>
 
 The closing shutter bars animate over the scene, then `change(...)` transitions back to the game with a fade.
 
@@ -82,33 +80,21 @@ Add a skip mechanism — press any confirm key (Space, Enter, gamepad Start) to 
 Staggering tweens with `Tween.delay()` is what turns independent animations into a timeline — no sequencer needed. To skip the whole cutscene, `app.tweens.clear()` stops every active tween at once so you can snap straight to the end state.
 </Callout>
 
-```ts no-check -- app.scenes.change needs a real Scene subclass; the scenes this page names exist only in prose
-init() {
-    // ... cinematic setup ...
-
-    this.inputs.onTrigger(Keyboard.Space, () => {
-        this.app.scenes.change(GameScene);
-    });
-
-    const pad = this.app.input.getGamepad(0);
-    pad.onTrigger(GamepadButton.Start, () => {
-        this.app.scenes.change(GameScene);
-    });
-}
-```
+<SourceSnippet
+  source="examples/guides/cinematics/cutscene-flow.ts"
+  region="skip-input"
+  language="ts"
+  title="examples/guides/cinematics/cutscene-flow.ts"
+/>
 
 For a smoother skip, fast-forward remaining tweens to completion rather than cutting hard:
 
-```ts no-check -- app.scenes.change needs a real Scene subclass; the scenes this page names exist only in prose
-this.inputs.onTrigger(Keyboard.Space, () => {
-    // Jump all tweens to their end state
-    this.app.tweens.clear(); // stops all active tweens
-    this.musicVoice.volume = 0.85;
-    this.boss.setScale(2.1, 2.1);
-    // ... snap other properties ...
-    this.app.scenes.change(GameScene);
-});
-```
+<SourceSnippet
+  source="examples/guides/cinematics/cutscene-flow.ts"
+  region="skip-fast-forward"
+  language="ts"
+  title="examples/guides/cinematics/cutscene-flow.ts"
+/>
 
 ## When not to build a cinematic system
 
