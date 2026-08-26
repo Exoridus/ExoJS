@@ -179,12 +179,12 @@ Assets.compose(LevelLocalAssets, Assets.from({ ship: 'image/other-ship.png' }));
 
 The same catalog arriving twice along different paths — a diamond — is not a conflict and deduplicates:
 
-```ts no-check -- continues the catalog above; SharedAssets comes from it
-const Left = Assets.compose(SharedAssets, Assets.from({ tree: 'image/tree.png' }));
-const Right = Assets.compose(SharedAssets, Assets.from({ rock: 'image/rock.png' }));
-
-Assets.compose(Left, Right); // { logo, click, atlas, tree, rock } — shared keys counted once
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/compose-diamond.ts"
+  region="compose-diamond"
+  language="ts"
+  title="examples/guides/loading-and-resources/compose-diamond.ts"
+/>
 
 To re-declare a key on purpose, derive with `Assets.extend(base, entries)`. New keys are added, existing keys are deliberately overridden, and the base catalog is never mutated:
 
@@ -609,13 +609,12 @@ makes it loadable, and it makes it loadable on that application alone - two
 applications in one process can map the same suffix to different types without
 seeing each other. Once installed, the type works everywhere the built-ins do:
 
-```ts no-check -- continues the asset type above; this belongs to a scene the block does not show
-// The type itself gives you a fully typed, loadable descriptor
-const field = await this.loader.load(heightFieldType.asset('maps/level-1.hf'));
-
-// Or grouped in a catalog
-const World = Assets.from({ level1: heightFieldType.asset('maps/level-1.hf') });
-```
+<SourceSnippet
+  source="examples/guides/loading-and-resources/height-field-load.ts"
+  region="height-field-load"
+  language="ts"
+  title="examples/guides/loading-and-resources/height-field-load.ts"
+/>
 
 <Callout type="hint" title="Bare-path inference is built-in only">
 `heightFieldType.asset(...)` always works, and so does

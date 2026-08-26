@@ -112,13 +112,12 @@ Two things worth knowing:
 - An empty batch (`count === 0`) is a no-op.
 - Geometry of any `usage` works. `'static'` is uploaded once and cached by identity, which is what you want for a shape that never changes. `'dynamic'` or `'stream'` geometry is re-packed and re-uploaded whenever you call [`invalidate`](/ExoJS/en/api/geometry/) on it, so a mesh you rewrite per frame reaches the GPU without rebuilding the batch:
 
-```ts no-check -- call statement shown without its method; the extractor reads a leading call as a method declaration
-// Rewrite the vertex data in place, then publish the change.
-writeWaveVertices(this.ribbon.vertexData as ArrayBuffer, this.elapsed);
-this.ribbon.invalidate();
-
-context.drawBatch(this.batch);
-```
+<SourceSnippet
+  source="examples/guides/immediate-mode/dynamic-geometry.ts"
+  region="dynamic-geometry"
+  language="ts"
+  title="examples/guides/immediate-mode/dynamic-geometry.ts"
+/>
 
 Call `batch.destroy()` in `Scene.unload`/`destroy` to release the pooled storage. The geometry and any material are owned by you and are not destroyed with the batch.
 
@@ -128,30 +127,21 @@ By default a batch renders through the default mesh material, so the only thing 
 
 Declare those values as `instanceAttributes` when constructing the batch. The engine interleaves them into one buffer and hands each instance its own slice:
 
-```ts no-check -- batch options literal; the geometry and material come from the example above
-const batch = new RenderBatch(sparkGeometry, sparkMaterial, {
-    instanceAttributes: [
-        { name: 'a_offset', format: 'float32x2' },
-        { name: 'a_phase', format: 'float32' },
-    ],
-});
-```
+<SourceSnippet
+  source="examples/guides/immediate-mode/instance-attributes.ts"
+  region="instance-attributes"
+  language="ts"
+  title="examples/guides/immediate-mode/instance-attributes.ts"
+/>
 
 `add` takes the values as its third argument, keyed by attribute name, and **copies** them — exactly like it copies the `Matrix` and `Color`. So hoist one scratch object out of the loop rather than allocating a literal per instance, or the batch stops being allocation-free:
 
-```ts no-check -- update-loop fragment; the batch and the spark list belong to the scene above
-const data = { a_offset: [0, 0], a_phase: 0 };
-
-this.batch.clear();
-for (const spark of this.sparks) {
-    data.a_offset[0] = spark.driftX;
-    data.a_offset[1] = spark.driftY;
-    data.a_phase = spark.phase;
-
-    this.scratch.set(spark.scale, 0, spark.x, 0, spark.scale, spark.y);
-    this.batch.add(this.scratch, spark.tint, data);
-}
-```
+<SourceSnippet
+  source="examples/guides/immediate-mode/instance-attributes.ts"
+  region="instance-data"
+  language="ts"
+  title="examples/guides/immediate-mode/instance-attributes.ts"
+/>
 
 ### The shader contract
 
@@ -219,10 +209,12 @@ struct VertexInput {
 
 The payoff is visible in the per-frame counters. `context.stats.drawCalls` reports the number of GPU draw calls issued this frame. A batched field of 2,400 sparks adds exactly **one** to that count; drawing the same 2,400 sparks with one `drawGeometry` each adds 2,400. Read it at the end of `draw` to surface it in a HUD or the debug overlay:
 
-```ts no-check -- HUD fragment; context and hud come from the example above
-const drawCalls = context.stats.drawCalls;
-hud.setStatus(`sparks via RenderBatch · drawCalls: ${drawCalls}`);
-```
+<SourceSnippet
+  source="examples/guides/immediate-mode/draw-call-readout.ts"
+  region="draw-call-readout"
+  language="ts"
+  title="examples/guides/immediate-mode/draw-call-readout.ts"
+/>
 
 ## Worked example
 
