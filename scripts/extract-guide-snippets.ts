@@ -705,6 +705,8 @@ let skippedMeta = 0;
 let skippedPartial = 0;
 let bareFiles = 0;
 let bareBlocksTotal = 0;
+/** `<SourceSnippet/>` references whose region does not resolve. */
+const brokenSnippetRefs: string[] = [];
 /** Guide-relative MDX path → `partial` blocks seen in it, for the budget gate. */
 const partialsByFile = new Map<string, number>();
 
@@ -713,6 +715,16 @@ for (const file of files) {
   const rel = relative(GUIDE_DIR, file).replaceAll('\\', '/');
   const slug = rel.replace(/\.(mdx?|tsx?)$/, '').replaceAll('/', '__');
   partialsByFile.set(rel, 0);
+
+  // A page embeds its program by region name. A name that no longer resolves -
+  // the region renamed, the file moved, the markers dropped - fails the site
+  // build with the page it broke, but only once someone builds the site. Fail
+  // here instead, where the guide's other checks already run.
+  for (const ref of parseSourceSnippetRefs(content)) {
+    if (tryExtractSnippetRegion(ref.source, ref.region) === null) {
+      brokenSnippetRefs.push(`${rel}: region "${ref.region}" in ${ref.source}`);
+    }
+  }
 
   let blockIndex = 0;
   const bareBodies: string[] = [];
@@ -893,6 +905,13 @@ console.log(
   `guide-snippets: ${pageBlocksTotal} page block(s) (merged into ${pageFiles} file(s)), ${bareBlocksTotal} bare (merged into ${bareFiles} file(s)), ` +
     `${skippedMeta} no-check, ${skippedPartial} partial (${total} total blocks)`,
 );
+
+if (brokenSnippetRefs.length > 0) {
+  console.error(
+    `\nguide-snippets: ${brokenSnippetRefs.length} embedded region(s) do not resolve:\n` + brokenSnippetRefs.map(entry => `  - ${entry}`).join('\n'),
+  );
+  process.exit(1);
+}
 
 // ---------------------------------------------------------------------------
 // Partial-block budget
