@@ -1008,6 +1008,57 @@ export default defineConfig([
     },
   },
 
+  // Guide sources (examples/guides/**) - the running programs the guide
+  // chapters embed regions of. They are authored in TypeScript and never
+  // transpiled to a `.js` twin, so unlike the rest of the example catalog the
+  // `.ts` file is what gets linted. Type-aware rules are off for the same
+  // reason they are off for example `.js`: the file belongs to
+  // `tsconfig.examples.json`, which is not the project the service resolves
+  // for it, and `typecheck:examples` already checks it with the right one.
+  {
+    files: ['examples/guides/**/*.ts'],
+    ...tseslint.configs.disableTypeChecked,
+  },
+  {
+    files: ['examples/guides/**/*.ts'],
+    languageOptions: {
+      ecmaVersion: 'latest',
+      sourceType: 'module',
+      parserOptions: { projectService: false, project: null },
+      globals: {
+        ...globals.browser,
+        ...globals.es2024,
+        // Injected typed asset catalog (see examples/shared/assets-global.d.ts).
+        assets: 'readonly',
+      },
+    },
+    plugins: {
+      'simple-import-sort': simpleImportSort,
+      'unused-imports': unusedImports,
+      unicorn,
+    },
+    rules: {
+      'simple-import-sort/imports': 'error',
+      'simple-import-sort/exports': 'error',
+      'unused-imports/no-unused-imports': 'error',
+      '@typescript-eslint/no-empty-function': 'error',
+      '@typescript-eslint/no-unused-vars': 'off',
+      // A guide listing shows the hook signature the reader has to write, so a
+      // skeleton whose body ignores its own `delta` is the point rather than an
+      // oversight - renaming it `_delta` would put the workaround in the
+      // documentation. Unused module-level values are still reported.
+      'unused-imports/no-unused-vars': ['error', { args: 'none', varsIgnorePattern: '^_' }],
+      curly: 'error',
+      eqeqeq: ['error', 'always', { null: 'ignore' }],
+      'no-console': 'error',
+      'no-var': 'error',
+      'prefer-const': 'error',
+      'object-shorthand': 'error',
+      'prefer-template': 'error',
+      'unicorn/prefer-node-protocol': 'error',
+    },
+  },
+
   // Allow console only in the dedicated debug-layer inspector example
   {
     files: ['examples/debug-layer/signal-bus-inspector.js'],

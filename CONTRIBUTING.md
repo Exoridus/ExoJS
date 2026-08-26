@@ -118,6 +118,34 @@ part of the engine public API. The canonical catalog is `examples/assets/assets.
 `pnpm --filter @codexo/exojs-examples examples:sync` regenerates the `.js` sources and
 the runtime catalog.
 
+### Guide sources
+
+A guide chapter narrates one running program down the page. That program lives
+in `examples/guides/<page>/<variant>.ts`, and the chapter embeds named regions
+of it:
+
+```ts
+// #region guide:spawn-orbs
+const orb = new Graphics();
+// #endregion guide:spawn-orbs
+```
+
+```mdx
+<SourceSnippet source="examples/guides/build-orb-dodge/game.ts" region="spawn-orbs" title="Spawning an orb" />
+```
+
+`<page>` is the guide page's file name, `<variant>` a stage of the chapter when
+one file cannot hold it (`game.ts`, `game-with-score.ts`). Splitting a chapter
+across variants costs the reader nothing, but every listing inside one file is
+checked against the same program state, so prefer one file per chapter.
+
+These sources are part of the example catalog for tooling — `typecheck:examples`,
+ESLint and Prettier cover them — but not for the playground: they get no
+generated `.js` sibling, no `examples.json` entry, and are left out of the
+served example snapshot. A listing that is a fragment (a method body shown
+without its class, a value only the reader owns) stays a fenced block in the
+MDX; `pnpm typecheck:guides` checks those.
+
 ## Compile-time build constants
 
 Three synthetic identifiers (denoted by the `__*__` convention) are statically
